@@ -140,6 +140,113 @@ def normalize99(Y, lower=1,upper=99):
     X = (X - x01) / (x99 - x01)
     return x01, x99
 
+
+class EdgeNetwork(pyg.nn.MessagePassing):
+    """Interaction Network as proposed in this paper:
+    https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
+    def __init__(self):
+        super().__init__(aggr='add')  # "Add" aggregation.
+
+    def forward(self, x, edge_index, edge_feature):
+
+        aggr = self.propagate(edge_index, x=(x, x), edge_feature=edge_feature)
+
+        return self.new_edges
+
+    def message(self, x_i, x_j, edge_feature):
+
+        r = torch.sqrt(torch.sum((x_i[:,0:2] - x_j[:,0:2])**2,axis=1)) / radius  # squared distance
+        r = r[:, None]
+
+        delta_pos=(x_i[:,0:2]-x_j[:,0:2]) / radius
+        x_i_vx = x_i[:, 2:3]  / vnorm[4]
+        x_i_vy = x_i[:, 3:4]  / vnorm[5]
+        x_i_type= x_i[:,4]
+        x_j_vx = x_j[:, 2:3]  / vnorm[4]
+        x_j_vy = x_j[:, 3:4]  / vnorm[5]
+
+        d = r
+
+        self.new_edges = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, x_i_type[:,None].repeat(1,4)), dim=-1)
+
+        return d
+
+class InteractionNetworkEmb(pyg.nn.MessagePassing):
+    """Interaction Network as proposed in this paper:
+    https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
+    def __init__(self, nlayers, embedding, device):
+        super().__init__(aggr='add')  # "Add" aggregation.
+
+        self.nlayers = nlayers
+        self.device = device
+        self.embedding = embedding
+
+        self.lin_edge = MLP(input_size=3*self.embedding, hidden_size=3*self.embedding, output_size=self.embedding, nlayers= self.nlayers, device=self.device)
+        self.lin_node = MLP(input_size=2*self.embedding, hidden_size=2*self.embedding, output_size=self.embedding, nlayers= self.nlayers, device=self.device)
+
+
+    def forward(self, x, edge_index, edge_feature):
+
+        aggr = self.propagate(edge_index, x=(x, x), edge_feature=edge_feature)
+
+        node_out = self.lin_node(torch.cat((x, aggr), dim=-1))
+        node_out = x + node_out
+        edge_out = edge_feature + self.new_edges
+
+        return node_out, edge_out
+
+    def message(self, x_i, x_j, edge_feature):
+
+        x = torch.cat((edge_feature, x_i, x_j ), dim=-1)
+
+        x = self.lin_edge(x)
+        self.new_edges = x
+
+        return x
+
+class ResNetGNN(torch.nn.Module):
+    """Graph Network-based Simulators(GNS)"""
+    def __init__(self,model_config, device):
+        super().__init__()
+
+        self.hidden_size = model_config['hidden_size']
+        self.embedding = model_config['embedding']
+        self.nlayers = model_config['n_mp_layers']
+        self.device = device
+        self.noise_level = model_config['noise_level']
+
+        self.edge_init = EdgeNetwork()
+
+        self.layer = torch.nn.ModuleList([InteractionNetworkEmb(nlayers=3, embedding=self.embedding, device=self.device) for _ in range(self.nlayers)])
+        self.node_out = MLP(input_size=self.embedding, hidden_size=self.hidden_size, output_size=2, nlayers=3, device=self.device)
+
+        self.embedding_node = MLP(input_size=8, hidden_size=self.embedding, output_size=self.embedding, nlayers=3, device=self.device)
+        self.embedding_edges = MLP(input_size=11, hidden_size=self.embedding, output_size=self.embedding, nlayers=3, device=self.device)
+
+        self.a = nn.Parameter(torch.tensor(np.ones((int(nparticles), 1)), device='cuda:0', requires_grad=True))
+
+    def forward(self, data):
+
+        x, edge_index = data.x, data.edge_index
+        x[:, 4] = self.a[x[:, 6].detach().cpu().numpy(), 0]
+        edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+
+        node_feature = torch.cat((x[:,0:4],x[:,4:5].repeat(1,4)), dim=-1)
+
+        noise = torch.randn((node_feature.shape[0], node_feature.shape[1]),requires_grad=False, device='cuda:0') * self.noise_level
+        node_feature= node_feature+noise
+        edge_feature = self.edge_init(node_feature, data.edge_index, edge_feature=data.edge_attr)
+
+        node_feature = self.embedding_node(node_feature)
+        edge_feature = self.embedding_edges(edge_feature)
+
+        for i in range(self.nlayers):
+            node_feature, edge_feature = self.layer[0](node_feature, data.edge_index, edge_feature=edge_feature)
+
+        pred = self.node_out(node_feature)
+
+        return pred
+
 if __name__ == '__main__':
 
     flist = ['ReconsGraph']
@@ -163,6 +270,23 @@ if __name__ == '__main__':
     folder_fig = f'./graphs_data/graphs_particles_{datum}/Fig/'
     os.makedirs(folder_fig, exist_ok=True)
 
+    model_config = {'ntry': 515,
+                    'input_size': 8,
+                    'output_size': 2,
+                    'hidden_size': 16,
+                    'n_mp_layers': 3,
+                    'noise_level': 0,
+                    'datum': '230824',
+                    'model': 'InteractionParticles'}
+
+    # model_config = {'ntry': 516,
+    #                 'embedding': 128,
+    #                 'hidden_size': 32,
+    #                 'n_mp_layers': 4,
+    #                 'noise_level': 0,
+    #                 'datum': '230824',
+    #                 'model': 'ResNetGNN'}
+
 
     for step in range(3):
 
@@ -171,7 +295,6 @@ if __name__ == '__main__':
             for run in tqdm(range(nrun)):
 
                 X1 = torch.rand(nparticles,2,device=device)
-
                 X1t = torch.zeros((nparticles,2,nframes)) # to store all the intermediate time
 
                 p0 = torch.tensor([1.2700, 1.4100, 0.0547, 0.0053])
@@ -250,15 +373,6 @@ if __name__ == '__main__':
 
             l_dir = os.path.join('.', 'log')
 
-            model_config = {'ntry': 515,
-                            'input_size': 8,
-                            'output_size': 2,
-                            'hidden_size': 16,
-                            'n_mp_layers': 3,
-                            'datum':'230824',
-                            'model':'InteractionParticles',
-                            'noise_level': 0}
-
             ntry = model_config['ntry']
 
             log_dir = os.path.join(l_dir, 'try_{}'.format(ntry))
@@ -326,7 +440,13 @@ if __name__ == '__main__':
 
                 print(f'gridsearch: {gridsearch}')
 
-                model = InteractionParticles(model_config,device)
+                if model_config['model'] == 'InteractionParticles':
+                    model = InteractionParticles(model_config,device)
+                    print(f'Training InteractionParticles')
+                if model_config['model'] == 'ResNetGNN':
+                    model = ResNetGNN(model_config,device)
+                    print(f'Training ResNetGNN')
+
                 best_loss = np.inf
 
                 if gridsearch == 0:
@@ -343,8 +463,6 @@ if __name__ == '__main__':
 
                 optimizer = torch.optim.Adam(model.parameters(), lr=1E-3, weight_decay=5e-4)
                 model.train()
-
-                print(' Training  ...')
 
                 for epoch in range(100):
 
@@ -396,18 +514,13 @@ if __name__ == '__main__':
 
         if step == 2:
 
-            model_config = {'ntry': 515,
-                            'input_size': 8,
-                            'output_size': 2,
-                            'hidden_size': 16,
-                            'n_mp_layers': 3,
-                            'datum': '230824',
-                            'model': 'InteractionParticles',
-                            'noise_level': 0}
 
             ntry = model_config['ntry']
 
-            model = InteractionParticles(model_config, device)
+            if model_config['model'] == 'InteractionParticles':
+                model = InteractionParticles(model_config, device)
+            if model_config['model'] == 'ResNetGNN':
+                model = ResNetGNN(model_config, device)
 
             state_dict = torch.load(f"./log/try_{ntry}/models/best_model_with_3_graphs.pt")
             model.load_state_dict(state_dict['model_state_dict'])
