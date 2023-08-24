@@ -260,7 +260,7 @@ if __name__ == '__main__':
     nparticles = 2000  # number of points per classes
     nframes = 200
     sigma = .005
-    nrun= 20
+    nrun= 101
     radius= 0.075
 
     datum = '230824'
@@ -301,7 +301,7 @@ if __name__ == '__main__':
         def bc_diff(D):
             return torch.remainder(D - .5, 1.0) - .5
 
-    for step in range(1):
+    for step in range(3):
 
         if step == 0:
 
@@ -313,9 +313,11 @@ if __name__ == '__main__':
                 p0 = torch.tensor([1.2700, 1.4100, 0.0547, 0.0053])
                 p1 = torch.tensor([1.8200, 1.5200, 0.1640, 0.0500])
 
+                p0 = torch.tensor([2.6011, 1.852, 0.4127/10, 1.1509/10])
+                p1 = torch.tensor([1.0445, 1.4298, 0.2948/10, 0.2112/10])
 
-                p0 = torch.tensor([1+np.random.randn(), 1+np.random.randn(), 0.5+0.5*np.random.randn(), 0.5+0.5*np.random.randn()])
-                p1 = torch.tensor([1+np.random.randn(), 1+np.random.randn(), 0.5+0.5*np.random.randn(), 0.5+0.5*np.random.randn()])
+                # p0 = torch.tensor([1+np.random.randn(), 1+np.random.randn(), 0.5+0.5*np.random.randn(), 0.5+0.5*np.random.randn()])
+                # p1 = torch.tensor([1+np.random.randn(), 1+np.random.randn(), 0.5+0.5*np.random.randn(), 0.5+0.5*np.random.randn()])
 
 
                 V1 = torch.zeros((nparticles,2),device=device)
@@ -360,7 +362,7 @@ if __name__ == '__main__':
 
                     V1 += y
 
-                    if (run>-1) & (it%10==0):
+                    if (run==0) & (it%10==0):
                         c1 = np.array([220, 50, 32]) / 255
                         c2 = np.array([0, 114, 178]) / 255
                         fig = plt.figure(figsize=(14, 7))
@@ -460,7 +462,7 @@ if __name__ == '__main__':
             print(f'ax01={ax01} ax99={ax99}')
             print(f'ay01={ay01} ay99={ay99}')
 
-            gridsearch_list = [5] # [1, 5, 10, 20, 50]
+            gridsearch_list = [20, 50, 100] # [1, 5, 10, 20, 50]
 
             for gridsearch in gridsearch_list:
 
@@ -501,7 +503,6 @@ if __name__ == '__main__':
                         k = np.random.randint(nframes - 1)
 
                         x = torch.load(f'graphs_data/graphs_particles_{datum}/x_{run}_{k}.pt')
-                        # edges=torch.load(f'graphs_data/graphs_particles_{datum}/edge_index_{run}_{k}.pt')
                         distance = torch.sum(bc_diff(x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
                         adj_t = (distance < radius ** 2).float() * 1
                         t = torch.Tensor([radius ** 2])
@@ -548,7 +549,7 @@ if __name__ == '__main__':
             if model_config['model'] == 'ResNetGNN':
                 model = ResNetGNN(model_config, device)
 
-            state_dict = torch.load(f"./log/try_{ntry}/models/best_model_with_3_graphs.pt")
+            state_dict = torch.load(f"./log/try_{ntry}/models/best_model_with_20_graphs.pt")
             model.load_state_dict(state_dict['model_state_dict'])
             model.eval()
             ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt')
@@ -591,7 +592,7 @@ if __name__ == '__main__':
 
                 x0 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{it + 1}.pt')
 
-                distance = torch.sum((x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
+                distance = torch.sum(bc_diff(x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
                 t = torch.Tensor([radius ** 2])  # threshold
                 adj_t = (distance < radius ** 2).float() * 1
                 edge_index = adj_t.nonzero().t().contiguous()
@@ -609,7 +610,7 @@ if __name__ == '__main__':
 
                 x[:, 2:4] = x[:, 2:4] + y  # speed update
 
-                x[:, 0:2] = x[:, 0:2] + x[:, 2:4]  # position update
+                x[:, 0:2] = bc_pos(x[:, 0:2] + x[:, 2:4])  # position update
 
                 if (it % 10 == 0):
                     fig = plt.figure(figsize=(25, 16))
