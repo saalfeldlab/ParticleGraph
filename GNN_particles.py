@@ -104,8 +104,11 @@ class InteractionParticles(pyg.nn.MessagePassing):
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers, hidden_size=self.hidden_size, device=self.device)
 
+        self.a = nn.Parameter(torch.tensor(np.ones((int(nparticles), 1)), device='cuda:0', requires_grad=True))
+
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
+        x[:, 4] = self.a[x[:, 6].detach().cpu().numpy(), 0]
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         acc = self.propagate(edge_index, x=(x,x))
         return acc
@@ -161,7 +164,7 @@ if __name__ == '__main__':
     os.makedirs(folder_fig, exist_ok=True)
 
 
-    step = 1
+    step = 2
 
     if step == 0:
 
@@ -252,10 +255,6 @@ if __name__ == '__main__':
     if step == 1:
 
         l_dir = os.path.join('.', 'log')
-        try:
-            try_index = np.max([int(index.split('_')[1]) for index in os.listdir(l_dir)]) + 1
-        except ValueError:
-            try_index = 0
 
         model_config = {'ntry': 515,
                         'input_size': 8,
@@ -268,7 +267,7 @@ if __name__ == '__main__':
 
         ntry = model_config['ntry']
 
-        log_dir = os.path.join(l_dir, 'try_{}'.format(try_index))
+        log_dir = os.path.join(l_dir, 'try_{}'.format(ntry))
         print('log_dir: {}'.format(log_dir))
 
         os.makedirs(log_dir, exist_ok=True)
