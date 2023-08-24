@@ -104,7 +104,7 @@ if __name__ == '__main__':
     nrun=100
     radius=0.075
 
-    datum = '230823'
+    datum = '230824'
     print(datum)
     folder = f'./graphs_data/graphs_particles_{datum}/'
     os.makedirs(folder, exist_ok=True)
