@@ -24,7 +24,7 @@ def psi(r,p):
 class InteractionParticles_0(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
-    def __init__(self, hidden_size, layers):
+    def __init__(self):
         super(InteractionParticles_0, self).__init__(aggr='mean')  # "Add" aggregation.
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
@@ -44,7 +44,7 @@ class InteractionParticles_0(pyg.nn.MessagePassing):
 class InteractionParticles_1(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
-    def __init__(self, hidden_size, layers):
+    def __init__(self):
         super(InteractionParticles_1, self).__init__(aggr='mean')  # "Add" aggregation.
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
@@ -153,8 +153,8 @@ if __name__ == '__main__':
     nparticles = 2000  # number of points per classes
     nframes = 200
     sigma = .005
-    nrun=100
-    radius=0.075
+    nrun= 5
+    radius= 0.075
 
     datum = '230824'
     print(datum)
@@ -164,407 +164,405 @@ if __name__ == '__main__':
     os.makedirs(folder_fig, exist_ok=True)
 
 
-    step = 2
+    for step in range(3):
 
-    if step == 0:
+        if step == 0:
 
-        for run in tqdm(range(nrun)):
+            for run in tqdm(range(nrun)):
 
-            X1 = torch.rand(nparticles,2,device=device)
+                X1 = torch.rand(nparticles,2,device=device)
 
-            t = torch.tensor(np.linspace(-1.5,1.5,1000))
+                X1t = torch.zeros((nparticles,2,nframes)) # to store all the intermediate time
 
-            X1t = torch.zeros((nparticles,2,nframes)) # to store all the intermediate time
+                p0 = torch.tensor([1.2700, 1.4100, 0.0547, 0.0053])
+                p1 = torch.tensor([1.8200, 1.5200, 0.1640, 0.0500])
 
+                V1 = torch.zeros((nparticles,2),device=device)
+                T1 =  torch.cat( ( torch.zeros(int(nparticles/2), device=device) , torch.ones(int(nparticles/2), device=device) ),0)
+                T1=T1[:,None]
+                T1 = torch.concatenate((T1, T1),1)
+                N1 = torch.arange(nparticles, device=device)
+                N1 = N1[:,None]
 
-            p0 = torch.tensor([1.27, 1.41, 0.82, 0.08])
-            p1 = torch.tensor([1.82, 1.52, 0.82, 0.25])
-            p0[2:4] *= 2E-1 /3
-            p1[2:4] *= 2E-1
+                rr = torch.tensor(np.linspace(0, 0.015, 100),device=device)
+                psi1 = psi(rr,p1)
 
-            V1 = torch.zeros((nparticles,2),device=device)
-            T1 =  torch.cat( ( torch.zeros(int(nparticles/2), device=device) , torch.ones(int(nparticles/2), device=device) ),0)
-            T1=T1[:,None]
-            T1 = torch.concatenate((T1, T1),1)
-            N1 = torch.arange(nparticles, device=device)
-            N1 = N1[:,None]
+                model0 = InteractionParticles_0()
+                model1 = InteractionParticles_1()
 
+                for it in range(nframes):
 
-            rr = torch.tensor(np.linspace(0, 0.015, 100),device=device)
-            psi1 = psi(rr,p1)
+                    X1t[:,:,it] = X1.clone().detach() # for later display
 
-            model0 = InteractionParticles_0(hidden_size=4, layers=5)
-            model1 = InteractionParticles_1(hidden_size=4, layers=5)
+                    X1 = X1 + V1
 
-            for it in range(nframes):
+                    distance=torch.sum((X1[:, None, 0:2] - X1[None, :, 0:2]) ** 2, axis=2)
+                    t = torch.Tensor([radius**2]) # threshold
+                    adj_t = (distance < radius**2).float() * 1
+                    edge_index = adj_t.nonzero().t().contiguous()
+                    # torch.save(edge_index,f'graphs_data/graphs_particles_{datum}/edge_index_{run}_{it}.pt')
 
-                X1t[:,:,it] = X1.clone().detach() # for later display
+                    x=torch.concatenate((X1.clone().detach(),V1.clone().detach(),T1.clone().detach(),N1.clone().detach()),1)
+                    torch.save(x,f'graphs_data/graphs_particles_{datum}/x_{run}_{it}.pt')
 
-                X1 = X1 + V1
+                    dataset = data.Data(x=x, edge_index=edge_index)
 
-                distance=torch.sum((X1[:, None, 0:2] - X1[None, :, 0:2]) ** 2, axis=2)
-                t = torch.Tensor([radius**2]) # threshold
-                adj_t = (distance < radius**2).float() * 1
+                    with torch.no_grad():
+                        y0 = model0(dataset) * (x[:,4:6]==0)
+                        y1 = model1(dataset) * (x[:,4:6]==1)
+
+                    y=y0+y1
+
+                    torch.save(y, f'graphs_data/graphs_particles_{datum}/y_{run}_{it}.pt')
+
+                    V1 += y
+
+                    if (run==-1) & (it%10==0):
+                        c1 = np.array([220, 50, 32]) / 255
+                        c2 = np.array([0, 114, 178]) / 255
+                        fig = plt.figure(figsize=(14, 7))
+                        # plt.ion()
+                        ax = fig.add_subplot(1,2,2)
+                        pos=dict(enumerate(x[:,0:2].detach().cpu().numpy(), 0))
+                        vis = to_networkx(dataset,remove_self_loops=True, to_undirected=True)
+                        nx.draw_networkx(vis, pos=pos, node_size=10, linewidths=0, with_labels=False)
+                        plt.xlim([-0.3, 1.3])
+                        plt.ylim([-0.3, 1.3])
+                        plt.text(-0.25, 1.33, f'Graph    {x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
+
+                        ax = fig.add_subplot(1,2,1)
+                        plt.scatter(X1t[0:int(nparticles/2), 0, it], X1t[0:int(nparticles/2), 1, it], s=3, color=c1)
+                        plt.scatter(X1t[int(nparticles/2):nparticles, 0, it], X1t[int(nparticles/2):nparticles, 1, it], s=3, color=c2)
+                        ax = plt.gca()
+                        ax.axes.xaxis.set_ticklabels([])
+                        ax.axes.yaxis.set_ticklabels([])
+                        plt.xlim([-0.3, 1.3])
+                        plt.ylim([-0.3, 1.3])
+                        # plt.tight_layout()
+                        plt.text(-0.25, 1.33, f'sigma:{sigma} N:{nparticles} nframes:{nframes}')
+                        plt.text(-0.1, 1.25, f'p0: {np.round(np.array(p0.cpu()),4)}', color=c1)
+                        plt.text(-0.1, 1.20, f'p1: {np.round(np.array(p1.cpu()),4)}', color=c2)
+                        plt.text(-0.25, 1.38, f'frame: {it}')
+                        plt.savefig(f"./ReconsGraph/Fig_{run}_{it}.tif")
+                        plt.close()
+
+        if step == 1:
+
+            l_dir = os.path.join('.', 'log')
+
+            model_config = {'ntry': 515,
+                            'input_size': 8,
+                            'output_size': 2,
+                            'hidden_size': 16,
+                            'n_mp_layers': 3,
+                            'datum':'230824',
+                            'model':'InteractionParticles',
+                            'noise_level': 0}
+
+            ntry = model_config['ntry']
+
+            log_dir = os.path.join(l_dir, 'try_{}'.format(ntry))
+            print('log_dir: {}'.format(log_dir))
+
+            os.makedirs(log_dir, exist_ok=True)
+            os.makedirs(os.path.join(log_dir, 'models'), exist_ok=True)
+            os.makedirs(os.path.join(log_dir, 'data', 'val_outputs'), exist_ok=True)
+
+            copyfile(os.path.realpath(__file__), os.path.join(log_dir, 'training_code.py'))
+
+            graph_files = glob.glob(f"graphs_data/graphs_particles_{datum}/x_*")
+            NGraphs = int(len(graph_files) / nframes)
+            print('Graph files N: ', NGraphs)
+
+            arr = np.arange(0, NGraphs - 1, 2)
+            for run in tqdm(arr):
+                kr = np.arange(0, nframes - 1, 4)
+                for k in kr:
+                    x = torch.load(f'graphs_data/graphs_particles_{datum}/x_{run}_{k}.pt')
+                    y = torch.load(f'graphs_data/graphs_particles_{datum}/y_{run}_{k}.pt')
+                    if (run == 0) & (k == 0):
+                        xx = x
+                        yy = y
+                    else:
+                        xx = torch.concatenate((x, xx))
+                        yy = torch.concatenate((y, yy))
+
+            mvx = torch.mean(xx[:, 2])
+            mvy = torch.mean(xx[:, 3])
+            vx = torch.std(xx[:, 2])
+            vy = torch.std(xx[:, 3])
+            nvx = np.array(xx[:, 2].detach().cpu())
+            vx01, vx99 = normalize99(nvx)
+            nvy = np.array(xx[:, 3].detach().cpu())
+            vy01, vy99 = normalize99(nvy)
+            vnorm = torch.tensor([vx01, vx99, vy01, vy99, vx, vy], device=device)
+            torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
+
+            print(f'v_x={mvx} +/- {vx}')
+            print(f'v_y={mvy} +/- {vy}')
+            print(f'vx01={vx01} vx99={vx99}')
+            print(f'vy01={vy01} vy99={vy99}')
+
+            max = torch.mean(yy[:, 0])
+            may = torch.mean(yy[:, 1])
+            ax = torch.std(yy[:, 0])
+            ay = torch.std(yy[:, 1])
+            nax = np.array(yy[:, 0].detach().cpu())
+            ax01, ax99 = normalize99(nax)
+            nay = np.array(yy[:, 1].detach().cpu())
+            ay01, ay99 = normalize99(nay)
+
+            ynorm = torch.tensor([ax01, ax99, ay01, ay99, ax, ay], device=device)
+            torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
+
+            print(f'acc_x={max} +/- {ax}')
+            print(f'acc_y={may} +/- {ay}')
+            print(f'ax01={ax01} ax99={ax99}')
+            print(f'ay01={ay01} ay99={ay99}')
+
+            gridsearch_list = [3] # [1, 5, 10, 20, 50]
+
+            for gridsearch in gridsearch_list:
+
+                print(f'gridsearch: {gridsearch}')
+
+                model = InteractionParticles(model_config,device)
+                best_loss = np.inf
+
+                if gridsearch == 0:
+                    table = PrettyTable(["Modules", "Parameters"])
+                    total_params = 0
+                    for name, parameter in model.named_parameters():
+                        if not parameter.requires_grad:
+                            continue
+                        param = parameter.numel()
+                        table.add_row([name, param])
+                        total_params += param
+                    print(table)
+                    print(f"Total Trainable Params: {total_params}")
+
+                optimizer = torch.optim.Adam(model.parameters(), lr=1E-3, weight_decay=5e-4)
+                model.train()
+
+                print(' Training  ...')
+
+                for epoch in range(100):
+
+                    model.train()
+                    total_loss = 0
+
+                    for N in range(1, gridsearch * nframes):
+
+                        run = 1 + np.random.randint(gridsearch)
+                        k = np.random.randint(nframes - 1)
+
+                        x = torch.load(f'graphs_data/graphs_particles_{datum}/x_{run}_{k}.pt')
+                        # edges=torch.load(f'graphs_data/graphs_particles_{datum}/edge_index_{run}_{k}.pt')
+                        distance = torch.sum((x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
+                        adj_t = (distance < radius ** 2).float() * 1
+                        t = torch.Tensor([radius ** 2])
+                        edges = adj_t.nonzero().t().contiguous()
+                        y = torch.load(f'graphs_data/graphs_particles_{datum}/y_{run}_{k}.pt')
+                        y[:, 0] = y[:, 0] / ynorm[4]
+                        y[:, 1] = y[:, 1] / ynorm[5]
+
+                        dataset = data.Data(x=x[:, :], edge_index=edges)
+
+                        optimizer.zero_grad()
+                        pred = model(dataset)
+
+                        loss = (pred - y).norm(2)
+
+                        loss.backward()
+                        optimizer.step()
+
+                        total_loss += loss.item()
+
+                        if N % 1000 == 0:
+                            print("N {} Loss: {:.6f}".format(N, total_loss / N / nparticles))
+
+                    if (total_loss < best_loss):
+                        best_loss = total_loss
+                        torch.save({'model_state_dict': model.state_dict(),
+                                    'optimizer_state_dict': optimizer.state_dict()},
+                                   os.path.join(log_dir, 'models', f'best_model_with_{gridsearch}_graphs.pt'))
+                        print("Epoch {}. Loss: {:.6f} saving model".format(epoch, total_loss / N / nparticles))
+                        if epoch>10:
+                            fig = plt.figure(figsize=(25, 16))
+                            plt.plot(model.a.detach().cpu().numpy(), '.', color='k')
+                            plt.show()
+                    else:
+                        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / N / nparticles))
+
+        if step == 2:
+
+            model_config = {'ntry': 515,
+                            'input_size': 8,
+                            'output_size': 2,
+                            'hidden_size': 16,
+                            'n_mp_layers': 3,
+                            'datum': '230824',
+                            'model': 'InteractionParticles',
+                            'noise_level': 0}
+
+            ntry = model_config['ntry']
+
+            model = InteractionParticles(model_config, device)
+
+            state_dict = torch.load(f"./log/try_{ntry}/models/best_model_with_3_graphs.pt")
+            model.load_state_dict(state_dict['model_state_dict'])
+            model.eval()
+            ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt')
+            vnorm = torch.load(f'./log/try_{ntry}/vnorm.pt')
+
+            table = PrettyTable(["Modules", "Parameters"])
+            total_params = 0
+            for name, parameter in model.named_parameters():
+                if not parameter.requires_grad:
+                    continue
+                param = parameter.numel()
+                table.add_row([name, param])
+                total_params += param
+            print(table)
+            print(f"Total Trainable Params: {total_params}")
+
+            print(torch.mean(model.a[0:int(nparticles / 2)]))
+            print(torch.std(model.a[0:int(nparticles / 2)]))
+            print(torch.mean(model.a[int(nparticles / 2):nparticles]))
+            print(torch.std(model.a[int(nparticles / 2):nparticles]))
+
+            # plt.ion()
+            # plt.hist(model.a.detach().cpu().numpy(),100)
+            fig = plt.figure(figsize=(25, 16))
+            plt.plot(model.a.detach().cpu().numpy(), '.', color='k')
+            plt.show()
+
+            x = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_0.pt')
+            x00 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_0.pt')
+            y = torch.load(f'graphs_data/graphs_particles_{datum}/y_0_0.pt')
+
+            rmserr_list = []
+            rmserr_list0 = []
+            rmserr_list1 = []
+
+            c1 = np.array([220, 50, 32]) / 255
+            c2 = np.array([0, 114, 178]) / 255
+
+            for it in tqdm(range(nframes - 1)):
+
+                x0 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{it + 1}.pt')
+
+                distance = torch.sum((x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
+                t = torch.Tensor([radius ** 2])  # threshold
+                adj_t = (distance < radius ** 2).float() * 1
                 edge_index = adj_t.nonzero().t().contiguous()
-                # torch.save(edge_index,f'graphs_data/graphs_particles_{datum}/edge_index_{run}_{it}.pt')
-
-                x=torch.concatenate((X1.clone().detach(),V1.clone().detach(),T1.clone().detach(),N1.clone().detach()),1)
-                torch.save(x,f'graphs_data/graphs_particles_{datum}/x_{run}_{it}.pt')
 
                 dataset = data.Data(x=x, edge_index=edge_index)
 
                 with torch.no_grad():
-                    y0 = model0(dataset) * (x[:,4:6]==0)
-                    y1 = model1(dataset) * (x[:,4:6]==1)
+                    y = model(dataset)  # acceleration estimation
 
-                y=y0+y1
+                # y = y * (ynorm[1] - ynorm[0]) + ynorm[0]
+                # y = y * (ynorm[1] - ynorm[0])
 
-                torch.save(y, f'graphs_data/graphs_particles_{datum}/y_{run}_{it}.pt')
+                y[:, 0] = y[:, 0] * ynorm[4]
+                y[:, 1] = y[:, 1] * ynorm[5]
 
-                V1 += y
+                x[:, 2:4] = x[:, 2:4] + y  # speed update
 
-                if (run==0) & (it%10==0):
-                    c1 = np.array([220, 50, 32]) / 255
-                    c2 = np.array([0, 114, 178]) / 255
-                    fig = plt.figure(figsize=(14, 7))
-                    # plt.ion()
-                    ax = fig.add_subplot(1,2,2)
-                    pos=dict(enumerate(x[:,0:2].detach().cpu().numpy(), 0))
-                    vis = to_networkx(dataset,remove_self_loops=True, to_undirected=True)
+                x[:, 0:2] = x[:, 0:2] + x[:, 2:4]  # position update
+
+                if (it % 10 == 0):
+                    fig = plt.figure(figsize=(25, 16))
+
+                    ax = fig.add_subplot(2, 3, 1)
+                    plt.scatter(x00[0:1000, 0].detach().cpu(), x00[0:1000, 1].detach().cpu(), s=3, color=c1)
+                    plt.scatter(x00[1000:, 0].detach().cpu(), x00[1000:, 1].detach().cpu(), s=3, color=c2)
+                    plt.xlim([-0.3, 1.3])
+                    plt.ylim([-0.3, 1.3])
+                    ax.axes.get_xaxis().set_visible(False)
+                    ax.axes.get_yaxis().set_visible(False)
+                    plt.axis('off')
+                    plt.text(-0.25, 1.38, 'Distribution at t0 is 1.0x1.0')
+
+                    ax = fig.add_subplot(2, 3, 2)
+                    plt.scatter(x0[0:1000, 0].detach().cpu(), x0[0:1000, 1].detach().cpu(), s=3, color=c1)
+                    plt.scatter(x0[1000:, 0].detach().cpu(), x0[1000:, 1].detach().cpu(), s=3, color=c2)
+                    ax = plt.gca()
+                    plt.xlim([-0.3, 1.3])
+                    plt.ylim([-0.3, 1.3])
+                    ax.axes.get_xaxis().set_visible(False)
+                    ax.axes.get_yaxis().set_visible(False)
+                    plt.axis('off')
+                    plt.text(-0.25, 1.38, 'True', fontsize=30)
+                    # plt.text(-0.25, 1.38, f'Frame: {min(nframes,it)}')
+                    # plt.text(-0.25, 1.33, f'Physics simulation', fontsize=10)
+
+                    ax = fig.add_subplot(2, 3, 4)
+                    pos = dict(enumerate(np.array(x[:, 0:2].detach().cpu()), 0))
+                    vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
                     nx.draw_networkx(vis, pos=pos, node_size=10, linewidths=0, with_labels=False)
                     plt.xlim([-0.3, 1.3])
                     plt.ylim([-0.3, 1.3])
-                    plt.text(-0.25, 1.33, f'Graph    {x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
+                    ax.axes.get_xaxis().set_visible(False)
+                    ax.axes.get_yaxis().set_visible(False)
+                    plt.axis('off')
+                    plt.text(-0.25, 1.38, f'Frame: {it}')
+                    plt.text(-0.25, 1.33, f'Graph: {x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
 
-                    ax = fig.add_subplot(1,2,1)
-                    plt.scatter(X1t[0:int(nparticles/2), 0, it], X1t[0:int(nparticles/2), 1, it], s=3, color=c1)
-                    plt.scatter(X1t[int(nparticles/2):nparticles, 0, it], X1t[int(nparticles/2):nparticles, 1, it], s=3, color=c2)
+                    ax = fig.add_subplot(2, 3, 5)
+                    plt.scatter(x[0:1000, 0].detach().cpu(), x[0:1000, 1].detach().cpu(), s=3, color=c1)
+                    plt.scatter(x[1000:, 0].detach().cpu(), x[1000:, 1].detach().cpu(), s=3, color=c2)
                     ax = plt.gca()
                     ax.axes.xaxis.set_ticklabels([])
                     ax.axes.yaxis.set_ticklabels([])
                     plt.xlim([-0.3, 1.3])
                     plt.ylim([-0.3, 1.3])
-                    # plt.tight_layout()
-                    plt.text(-0.25, 1.33, f'sigma:{sigma} N:{nparticles} nframes:{nframes}')
-                    plt.text(-0.1, 1.25, f'p0: {np.round(np.array(p0.cpu()),4)}', color=c1)
-                    plt.text(-0.1, 1.20, f'p1: {np.round(np.array(p1.cpu()),4)}', color=c2)
-                    plt.text(-0.25, 1.38, f'frame: {it}')
-                    plt.savefig(f"./ReconsGraph/Fig_{run}_{it}.tif")
+                    ax.axes.get_xaxis().set_visible(False)
+                    ax.axes.get_yaxis().set_visible(False)
+                    plt.axis('off')
+                    plt.text(-0.25, 1.38, 'Model', fontsize=30)
+                    # plt.text(-0.25, 1.38, f'Frame: {it}')
+                    # plt.text(-0.25, 1.33, f'GNN prediction', fontsize=10)
+
+                    rmserr = torch.sqrt(torch.mean(torch.sum((x - x0) ** 2, axis=1)))
+                    rmserr_list.append(rmserr.item())
+                    rmserr0 = torch.sqrt(
+                        torch.mean(torch.sum((x[0:int(nparticles / 2), :] - x0[0:int(nparticles / 2), :]) ** 2, axis=1)))
+                    rmserr_list0.append(rmserr0.item())
+                    rmserr1 = torch.sqrt(torch.mean(
+                        torch.sum((x[int(nparticles / 2):nparticles, :] - x0[int(nparticles / 2):nparticles, :]) ** 2,
+                                  axis=1)))
+                    rmserr_list1.append(rmserr1.item())
+
+                    ax = fig.add_subplot(2, 3, 3)
+                    plt.plot(rmserr_list, 'k', label='RMSE')
+                    plt.plot(rmserr_list0, color=c1, label='RMSE0')
+                    plt.plot(rmserr_list1, color=c2, label='RMSE1')
+                    plt.ylim([0, 0.1])
+                    plt.xlim([0, 200])
+                    plt.tick_params(axis='both', which='major', labelsize=10)
+                    plt.xlabel('Frame [a.u]', fontsize="10")
+                    plt.ylabel('RMSE [a.u]', fontsize="10")
+                    plt.legend(fontsize="10")
+
+                    ax = fig.add_subplot(2, 3, 6)
+                    temp1 = torch.cat((x, x0), 0)
+                    pos = dict(enumerate(np.array(temp1[:, 0:2].detach().cpu()), 0))
+                    temp2 = torch.tensor(np.arange(nparticles), device=device)
+                    temp3 = torch.tensor(np.arange(nparticles) + nparticles, device=device)
+                    temp4 = torch.concatenate((temp2[:, None], temp3[:, None]), 1)
+                    temp4 = torch.t(temp4)
+                    dataset = data.Data(x=temp1, edge_index=temp4)
+                    vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
+                    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False)
+                    plt.xlim([-0.3, 1.3])
+                    plt.ylim([-0.3, 1.3])
+                    ax.axes.get_xaxis().set_visible(False)
+                    ax.axes.get_yaxis().set_visible(False)
+                    plt.axis('off')
+                    plt.text(-0.25, 1.18, f'Frame: {it}')
+                    plt.text(-0.25, 1.13, 'Prediction RMSE: {:.4f}'.format(rmserr.detach()), fontsize=10)
+
+                    plt.savefig(f"./ReconsGraph/Fig_{it}.tif")
                     plt.close()
-
-    if step == 1:
-
-        l_dir = os.path.join('.', 'log')
-
-        model_config = {'ntry': 515,
-                        'input_size': 8,
-                        'output_size': 2,
-                        'hidden_size': 16,
-                        'n_mp_layers': 3,
-                        'datum':'230824',
-                        'model':'InteractionParticles',
-                        'noise_level': 0}
-
-        ntry = model_config['ntry']
-
-        log_dir = os.path.join(l_dir, 'try_{}'.format(ntry))
-        print('log_dir: {}'.format(log_dir))
-
-        os.makedirs(log_dir, exist_ok=True)
-        os.makedirs(os.path.join(log_dir, 'models'), exist_ok=True)
-        os.makedirs(os.path.join(log_dir, 'data', 'val_outputs'), exist_ok=True)
-
-        copyfile(os.path.realpath(__file__), os.path.join(log_dir, 'training_code.py'))
-
-        graph_files = glob.glob(f"graphs_data/graphs_particles_{datum}/x_*")
-        NGraphs = int(len(graph_files) / nframes)
-        print('Graph files N: ', NGraphs)
-
-        arr = np.arange(0, NGraphs - 1, 2)
-        for run in tqdm(arr):
-            kr = np.arange(0, nframes - 1, 4)
-            for k in kr:
-                x = torch.load(f'graphs_data/graphs_particles_{datum}/x_{run}_{k}.pt')
-                y = torch.load(f'graphs_data/graphs_particles_{datum}/y_{run}_{k}.pt')
-                if (run == 0) & (k == 0):
-                    xx = x
-                    yy = y
-                else:
-                    xx = torch.concatenate((x, xx))
-                    yy = torch.concatenate((y, yy))
-
-        mvx = torch.mean(xx[:, 2])
-        mvy = torch.mean(xx[:, 3])
-        vx = torch.std(xx[:, 2])
-        vy = torch.std(xx[:, 3])
-        nvx = np.array(xx[:, 2].detach().cpu())
-        vx01, vx99 = normalize99(nvx)
-        nvy = np.array(xx[:, 3].detach().cpu())
-        vy01, vy99 = normalize99(nvy)
-        vnorm = torch.tensor([vx01, vx99, vy01, vy99, vx, vy], device=device)
-        torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
-
-        print(f'v_x={mvx} +/- {vx}')
-        print(f'v_y={mvy} +/- {vy}')
-        print(f'vx01={vx01} vx99={vx99}')
-        print(f'vy01={vy01} vy99={vy99}')
-
-        max = torch.mean(yy[:, 0])
-        may = torch.mean(yy[:, 1])
-        ax = torch.std(yy[:, 0])
-        ay = torch.std(yy[:, 1])
-        nax = np.array(yy[:, 0].detach().cpu())
-        ax01, ax99 = normalize99(nax)
-        nay = np.array(yy[:, 1].detach().cpu())
-        ay01, ay99 = normalize99(nay)
-
-        ynorm = torch.tensor([ax01, ax99, ay01, ay99, ax, ay], device=device)
-        torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
-
-        print(f'acc_x={max} +/- {ax}')
-        print(f'acc_y={may} +/- {ay}')
-        print(f'ax01={ax01} ax99={ax99}')
-        print(f'ay01={ay01} ay99={ay99}')
-
-        gridsearch_list = [1, 5, 10, 20, 50]
-
-        for gridsearch in gridsearch_list:
-
-            print(f'gridsearch: {gridsearch}')
-
-            model = InteractionParticles(model_config,device)
-            best_loss = np.inf
-
-            if gridsearch == 0:
-                table = PrettyTable(["Modules", "Parameters"])
-                total_params = 0
-                for name, parameter in model.named_parameters():
-                    if not parameter.requires_grad:
-                        continue
-                    param = parameter.numel()
-                    table.add_row([name, param])
-                    total_params += param
-                print(table)
-                print(f"Total Trainable Params: {total_params}")
-
-            optimizer = torch.optim.Adam(model.parameters(), lr=1E-3, weight_decay=5e-4)
-            model.train()
-
-            print(' Training  ...')
-
-            for epoch in range(100):
-
-                model.train()
-                total_loss = 0
-
-                for N in range(1, gridsearch * nframes):
-
-                    run = 1 + np.random.randint(gridsearch)
-                    k = np.random.randint(nframes - 1)
-
-                    x = torch.load(f'graphs_data/graphs_particles_{datum}/x_{run}_{k}.pt')
-                    # edges=torch.load(f'graphs_data/graphs_particles_{datum}/edge_index_{run}_{k}.pt')
-                    distance = torch.sum((x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
-                    adj_t = (distance < radius ** 2).float() * 1
-                    t = torch.Tensor([radius ** 2])
-                    edges = adj_t.nonzero().t().contiguous()
-                    y = torch.load(f'graphs_data/graphs_particles_{datum}/y_{run}_{k}.pt')
-                    y[:, 0] = y[:, 0] / ynorm[4]
-                    y[:, 1] = y[:, 1] / ynorm[5]
-
-                    dataset = data.Data(x=x[:, :], edge_index=edges)
-
-                    optimizer.zero_grad()
-                    pred = model(dataset)
-
-                    loss = (pred - y).norm(2)
-
-                    loss.backward()
-                    optimizer.step()
-
-                    total_loss += loss.item()
-
-                    if N % 1000 == 0:
-                        print("N {} Loss: {:.6f}".format(N, total_loss / N / nparticles))
-
-                print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / N / nparticles))
-
-                if (total_loss < best_loss):
-                    best_loss = total_loss
-                    torch.save({'model_state_dict': model.state_dict(),
-                                'optimizer_state_dict': optimizer.state_dict()},
-                               os.path.join(log_dir, 'models', f'best_model_with_{gridsearch}_graphs.pt'))
-                    print('\t\t Saving model')
-
-    if step == 2:
-
-        model_config = {'ntry': 515,
-                        'input_size': 8,
-                        'output_size': 2,
-                        'hidden_size': 16,
-                        'n_mp_layers': 3,
-                        'datum': '230824',
-                        'model': 'InteractionParticles',
-                        'noise_level': 0}
-
-        ntry = model_config['ntry']
-
-        model = InteractionParticles(model_config, device)
-
-        state_dict = torch.load(f"./log/try_{ntry}/models/best_model_with_1_graphs.pt")
-        model.load_state_dict(state_dict['model_state_dict'])
-        model.eval()
-        ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt')
-        vnorm = torch.load(f'./log/try_{ntry}/vnorm.pt')
-
-        table = PrettyTable(["Modules", "Parameters"])
-        total_params = 0
-        for name, parameter in model.named_parameters():
-            if not parameter.requires_grad:
-                continue
-            param = parameter.numel()
-            table.add_row([name, param])
-            total_params += param
-        print(table)
-        print(f"Total Trainable Params: {total_params}")
-
-        print(torch.mean(model.a[0:int(nparticles / 2)]))
-        print(torch.std(model.a[0:int(nparticles / 2)]))
-        print(torch.mean(model.a[int(nparticles / 2):nparticles]))
-        print(torch.std(model.a[int(nparticles / 2):nparticles]))
-
-        # plt.ion()
-        # plt.hist(model.a.detach().cpu().numpy(),100)
-        fig = plt.figure(figsize=(25, 16))
-        plt.plot(model.a.detach().cpu().numpy(), '.', color='k')
-        plt.show()
-
-        x = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_0.pt')
-        x00 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_0.pt')
-        y = torch.load(f'graphs_data/graphs_particles_{datum}/y_0_0.pt')
-
-        rmserr_list = []
-        rmserr_list0 = []
-        rmserr_list1 = []
-
-        c1 = np.array([220, 50, 32]) / 255
-        c2 = np.array([0, 114, 178]) / 255
-
-        for it in tqdm(range(nframes - 1)):
-
-            x0 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{it + 1}.pt')
-
-            distance = torch.sum((x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
-            t = torch.Tensor([radius ** 2])  # threshold
-            adj_t = (distance < radius ** 2).float() * 1
-            edge_index = adj_t.nonzero().t().contiguous()
-
-            dataset = data.Data(x=x, edge_index=edge_index)
-
-            with torch.no_grad():
-                y = model(dataset)  # acceleration estimation
-
-            # y = y * (ynorm[1] - ynorm[0]) + ynorm[0]
-            # y = y * (ynorm[1] - ynorm[0])
-
-            y[:, 0] = y[:, 0] * ynorm[4]
-            y[:, 1] = y[:, 1] * ynorm[5]
-
-            x[:, 2:4] = x[:, 2:4] + y  # speed update
-
-            x[:, 0:2] = x[:, 0:2] + x[:, 2:4]  # position update
-
-            if (it % 10 == 0):
-                fig = plt.figure(figsize=(25, 16))
-
-                ax = fig.add_subplot(2, 3, 1)
-                plt.scatter(x00[0:1000, 0].detach().cpu(), x00[0:1000, 1].detach().cpu(), s=3, color=c1)
-                plt.scatter(x00[1000:, 0].detach().cpu(), x00[1000:, 1].detach().cpu(), s=3, color=c2)
-                plt.xlim([-0.3, 1.3])
-                plt.ylim([-0.3, 1.3])
-                ax.axes.get_xaxis().set_visible(False)
-                ax.axes.get_yaxis().set_visible(False)
-                plt.axis('off')
-                plt.text(-0.25, 1.38, 'Distribution at t0 is 1.0x1.0')
-
-                ax = fig.add_subplot(2, 3, 2)
-                plt.scatter(x0[0:1000, 0].detach().cpu(), x0[0:1000, 1].detach().cpu(), s=3, color=c1)
-                plt.scatter(x0[1000:, 0].detach().cpu(), x0[1000:, 1].detach().cpu(), s=3, color=c2)
-                ax = plt.gca()
-                plt.xlim([-0.3, 1.3])
-                plt.ylim([-0.3, 1.3])
-                ax.axes.get_xaxis().set_visible(False)
-                ax.axes.get_yaxis().set_visible(False)
-                plt.axis('off')
-                plt.text(-0.25, 1.38, 'True', fontsize=30)
-                # plt.text(-0.25, 1.38, f'Frame: {min(nframes,it)}')
-                # plt.text(-0.25, 1.33, f'Physics simulation', fontsize=10)
-
-                ax = fig.add_subplot(2, 3, 4)
-                pos = dict(enumerate(np.array(x[:, 0:2].detach().cpu()), 0))
-                vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-                nx.draw_networkx(vis, pos=pos, node_size=10, linewidths=0, with_labels=False)
-                plt.xlim([-0.3, 1.3])
-                plt.ylim([-0.3, 1.3])
-                ax.axes.get_xaxis().set_visible(False)
-                ax.axes.get_yaxis().set_visible(False)
-                plt.axis('off')
-                plt.text(-0.25, 1.38, f'Frame: {it}')
-                plt.text(-0.25, 1.33, f'Graph: {x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
-
-                ax = fig.add_subplot(2, 3, 5)
-                plt.scatter(x[0:1000, 0].detach().cpu(), x[0:1000, 1].detach().cpu(), s=3, color=c1)
-                plt.scatter(x[1000:, 0].detach().cpu(), x[1000:, 1].detach().cpu(), s=3, color=c2)
-                ax = plt.gca()
-                ax.axes.xaxis.set_ticklabels([])
-                ax.axes.yaxis.set_ticklabels([])
-                plt.xlim([-0.3, 1.3])
-                plt.ylim([-0.3, 1.3])
-                ax.axes.get_xaxis().set_visible(False)
-                ax.axes.get_yaxis().set_visible(False)
-                plt.axis('off')
-                plt.text(-0.25, 1.38, 'Model', fontsize=30)
-                # plt.text(-0.25, 1.38, f'Frame: {it}')
-                # plt.text(-0.25, 1.33, f'GNN prediction', fontsize=10)
-
-                rmserr = torch.sqrt(torch.mean(torch.sum((x - x0) ** 2, axis=1)))
-                rmserr_list.append(rmserr.item())
-                rmserr0 = torch.sqrt(
-                    torch.mean(torch.sum((x[0:int(nparticles / 2), :] - x0[0:int(nparticles / 2), :]) ** 2, axis=1)))
-                rmserr_list0.append(rmserr0.item())
-                rmserr1 = torch.sqrt(torch.mean(
-                    torch.sum((x[int(nparticles / 2):nparticles, :] - x0[int(nparticles / 2):nparticles, :]) ** 2,
-                              axis=1)))
-                rmserr_list1.append(rmserr1.item())
-
-                ax = fig.add_subplot(2, 3, 3)
-                plt.plot(rmserr_list, 'k', label='RMSE')
-                plt.plot(rmserr_list0, color=c1, label='RMSE0')
-                plt.plot(rmserr_list1, color=c2, label='RMSE1')
-                plt.ylim([0, 0.1])
-                plt.xlim([0, 200])
-                plt.tick_params(axis='both', which='major', labelsize=10)
-                plt.xlabel('Frame [a.u]', fontsize="10")
-                plt.ylabel('RMSE [a.u]', fontsize="10")
-                plt.legend(fontsize="10")
-
-                ax = fig.add_subplot(2, 3, 6)
-                temp1 = torch.cat((x, x0), 0)
-                pos = dict(enumerate(np.array(temp1[:, 0:2].detach().cpu()), 0))
-                temp2 = torch.tensor(np.arange(nparticles), device=device)
-                temp3 = torch.tensor(np.arange(nparticles) + nparticles, device=device)
-                temp4 = torch.concatenate((temp2[:, None], temp3[:, None]), 1)
-                temp4 = torch.t(temp4)
-                dataset = data.Data(x=temp1, edge_index=temp4)
-                vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-                nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False)
-                plt.xlim([-0.3, 1.3])
-                plt.ylim([-0.3, 1.3])
-                ax.axes.get_xaxis().set_visible(False)
-                ax.axes.get_yaxis().set_visible(False)
-                plt.axis('off')
-                plt.text(-0.25, 1.18, f'Frame: {it}')
-                plt.text(-0.25, 1.13, 'Prediction RMSE: {:.4f}'.format(rmserr.detach()), fontsize=10)
-
-                plt.savefig(f"./ReconsGraph/Fig_{it}.tif")
-                plt.close()
