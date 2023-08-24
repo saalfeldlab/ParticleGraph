@@ -128,6 +128,7 @@ class InteractionParticles(pyg.nn.MessagePassing):
         in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, x_i_type), dim=-1)   # [:,None].repeat(1,4)
 
         return self.lin_edge(in_features)
+
     def update(self, aggr_out):
 
         return aggr_out     #self.lin_node(aggr_out)
@@ -258,7 +259,7 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     nparticles = 2000  # number of points per classes
-    nframes = 200
+    nframes = 400
     sigma = .005
     nrun= 101
     radius= 0.075
@@ -363,13 +364,19 @@ if __name__ == '__main__':
                     V1 += y
 
                     if (run==0) & (it%5==0):
+
+                        distance2 = torch.sum((x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
+                        adj_t2 = ((distance < radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
+                        edge_index2 = adj_t2.nonzero().t().contiguous()
+                        dataset2 = data.Data(x=x, edge_index=edge_index2)
+
                         c1 = np.array([220, 50, 32]) / 255
                         c2 = np.array([0, 114, 178]) / 255
                         fig = plt.figure(figsize=(14, 7))
                         # plt.ion()
                         ax = fig.add_subplot(1,2,2)
                         pos=dict(enumerate(x[:,0:2].detach().cpu().numpy(), 0))
-                        vis = to_networkx(dataset,remove_self_loops=True, to_undirected=True)
+                        vis = to_networkx(dataset2,remove_self_loops=True, to_undirected=True)
                         nx.draw_networkx(vis, pos=pos, node_size=10, linewidths=0, with_labels=False)
                         plt.xlim([-0.3, 1.3])
                         plt.ylim([-0.3, 1.3])
@@ -489,7 +496,7 @@ if __name__ == '__main__':
                     print(table)
                     print(f"Total Trainable Params: {total_params}")
 
-                optimizer = torch.optim.Adam(model.parameters(), lr=1E-3, weight_decay=5e-4)
+                optimizer = torch.optim.Adam(model.parameters(), lr=1E-4) #, weight_decay=5e-4)
                 model.train()
 
                 for epoch in range(100):
@@ -620,7 +627,7 @@ if __name__ == '__main__':
                 stp = 5
 
                 if (it % stp == 0):
-                    
+
                     fig = plt.figure(figsize=(25, 16))
 
                     ax = fig.add_subplot(2, 3, 1)
@@ -661,7 +668,7 @@ if __name__ == '__main__':
                     plt.plot(np.arange(0,len(rmserr_list)*stp,stp),rmserr_list0, color=c1, label='RMSE0')
                     plt.plot(np.arange(0,len(rmserr_list)*stp,stp), rmserr_list1, color=c2, label='RMSE1')
                     plt.ylim([0, 0.1])
-                    plt.xlim([0, 200])
+                    plt.xlim([0, nframes])
                     plt.tick_params(axis='both', which='major', labelsize=10)
                     plt.xlabel('Frame [a.u]', fontsize="10")
                     plt.ylabel('RMSE [a.u]', fontsize="10")
