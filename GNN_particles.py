@@ -63,17 +63,19 @@ class InteractionParticles_1(pyg.nn.MessagePassing):
         return psi[:,None] * (x_i[:,0:2] - x_j[:,0:2])
 
 class MLP(nn.Module):
-    def __init__(self, in_feats=2, out_feats=2, num_layers=3, hidden=128):
+
+    def __init__(self, input_size, output_size, nlayers, hidden_size, device):
+
         super(MLP, self).__init__()
         self.layers = nn.ModuleList()
-        self.layers.append(nn.Linear(in_feats, hidden, device=device))
-        if num_layers > 2:
-            for i in range(1, num_layers - 1):
-                layer = nn.Linear(hidden, hidden, device=device)
+        self.layers.append(nn.Linear(input_size, hidden_size, device=device))
+        if nlayers > 2:
+            for i in range(1, nlayers - 1):
+                layer = nn.Linear(hidden_size, hidden_size, device=device)
                 nn.init.normal_(layer.weight, std=0.1)
                 nn.init.zeros_(layer.bias)
                 self.layers.append(layer)
-        layer = nn.Linear(hidden, out_feats, device=device)
+        layer = nn.Linear(hidden_size, output_size, device=device)
         nn.init.normal_(layer.weight, std=0.1)
         nn.init.zeros_(layer.bias)
         self.layers.append(layer)
@@ -88,19 +90,23 @@ class MLP(nn.Module):
 class InteractionParticles(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
-    def __init__(self, in_feats=9, out_feats=2, num_layers=2, hidden=16):
+    def __init__(self, model_config, device):
 
-        super(InteractionParticles, self).__init__(aggr='mean')  # "Add" aggregation.
+        super(InteractionParticles, self).__init__(aggr='add')  # "Add" aggregation.
 
-        self.lin_edge = MLP(in_feats=8, out_feats=2, num_layers=3, hidden=16)
-        self.a = nn.Parameter(torch.tensor(np.ones((int(nparticles), 1)), device='cuda:0', requires_grad=True))
+        self.device = device
+        self.input_size = model_config['input_size']
+        self.output_size = model_config['output_size']
+        self.hidden_size = model_config['hidden_size']
+        self.nlayers = model_config['n_mp_layers']
+
+        self.noise_level = model_config['noise_level']
+
+        self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers, hidden_size=self.hidden_size, device=self.device)
 
     def forward(self, data):
-
         x, edge_index = data.x, data.edge_index
-        x[:, 4] = self.a[x[:,6].detach().cpu().numpy(),0]
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-
         acc = self.propagate(edge_index, x=(x,x))
         return acc
 
@@ -112,14 +118,13 @@ class InteractionParticles(pyg.nn.MessagePassing):
         delta_pos=(x_i[:,0:2]-x_j[:,0:2]) / radius
         x_i_vx = x_i[:, 2:3]  / vnorm[4]
         x_i_vy = x_i[:, 3:4]  / vnorm[5]
-        x_i_type= x_i[:, 4:5]
+        x_i_type = x_i[:,4:5]
         x_j_vx = x_j[:, 2:3]  / vnorm[4]
         x_j_vy = x_j[:, 3:4]  / vnorm[5]
-        x_j_type = x_j[:, 4:5]
-        in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, x_i_type), dim=-1)
+
+        in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, x_i_type), dim=-1)   # [:,None].repeat(1,4)
 
         return self.lin_edge(in_features)
-
     def update(self, aggr_out):
 
         return aggr_out     #self.lin_node(aggr_out)
@@ -136,7 +141,7 @@ if __name__ == '__main__':
 
     flist = ['ReconsGraph']
     for folder in flist:
-        files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/Graph/{folder}/*")
+        files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/{folder}/*")
         for f in files:
             os.remove(f)
 
@@ -156,7 +161,7 @@ if __name__ == '__main__':
     os.makedirs(folder_fig, exist_ok=True)
 
 
-    step = 2
+    step = 1
 
     if step == 0:
 
@@ -244,7 +249,6 @@ if __name__ == '__main__':
                     plt.savefig(f"./ReconsGraph/Fig_{run}_{it}.tif")
                     plt.close()
 
-
     if step == 1:
 
         l_dir = os.path.join('.', 'log')
@@ -253,7 +257,16 @@ if __name__ == '__main__':
         except ValueError:
             try_index = 0
 
-        try_index = 515
+        model_config = {'ntry': 515,
+                        'input_size': 8,
+                        'output_size': 2,
+                        'hidden_size': 16,
+                        'n_mp_layers': 3,
+                        'datum':'230824',
+                        'model':'InteractionParticles',
+                        'noise_level': 0}
+
+        ntry = model_config['ntry']
 
         log_dir = os.path.join(l_dir, 'try_{}'.format(try_index))
         print('log_dir: {}'.format(log_dir))
@@ -320,7 +333,7 @@ if __name__ == '__main__':
 
             print(f'gridsearch: {gridsearch}')
 
-            model = InteractionParticles()
+            model = InteractionParticles(model_config,device)
             best_loss = np.inf
 
             if gridsearch == 0:
@@ -384,12 +397,21 @@ if __name__ == '__main__':
                                os.path.join(log_dir, 'models', f'best_model_with_{gridsearch}_graphs.pt'))
                     print('\t\t Saving model')
 
-
     if step == 2:
 
-        model = InteractionParticles()
+        model_config = {'ntry': 515,
+                        'input_size': 8,
+                        'output_size': 2,
+                        'hidden_size': 16,
+                        'n_mp_layers': 3,
+                        'datum': '230824',
+                        'model': 'InteractionParticles',
+                        'noise_level': 0}
 
-        ntry = 515
+        ntry = model_config['ntry']
+
+        model = InteractionParticles(model_config, device)
+
         state_dict = torch.load(f"./log/try_{ntry}/models/best_model_with_1_graphs.pt")
         model.load_state_dict(state_dict['model_state_dict'])
         model.eval()
@@ -453,7 +475,7 @@ if __name__ == '__main__':
 
             x[:, 0:2] = x[:, 0:2] + x[:, 2:4]  # position update
 
-            if (it % 20 == 0):
+            if (it % 10 == 0):
                 fig = plt.figure(figsize=(25, 16))
 
                 ax = fig.add_subplot(2, 3, 1)
