@@ -35,11 +35,11 @@ class InteractionParticles_0(pyg.nn.MessagePassing):
         return acc
 
     def message(self, x_i, x_j):
-        r = torch.sum((x_i[:,0:2] - x_j[:,0:2])**2,axis=1)   # squared distance
+        r = torch.sum(bc_diff(x_i[:,0:2] - x_j[:,0:2])**2,axis=1)   # squared distance
 
         psi = -p0[2] * torch.exp(-r ** p1[0] / (2 * sigma ** 2)) + p0[3] * torch.exp(-r ** p0[1] / (2 * sigma ** 2))
 
-        return psi[:,None] * (x_i[:,0:2] - x_j[:,0:2])
+        return psi[:,None] * bc_diff(x_i[:,0:2] - x_j[:,0:2])
 
 class InteractionParticles_1(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
@@ -60,7 +60,7 @@ class InteractionParticles_1(pyg.nn.MessagePassing):
 
         psi = -p1[2] * torch.exp(-r ** p1[0] / (2 * sigma ** 2)) + p1[3] * torch.exp(-r ** p1[1] / (2 * sigma ** 2))
 
-        return psi[:,None] * (x_i[:,0:2] - x_j[:,0:2])
+        return psi[:,None] * bc_diff(x_i[:,0:2] - x_j[:,0:2])
 
 class MLP(nn.Module):
 
@@ -115,10 +115,10 @@ class InteractionParticles(pyg.nn.MessagePassing):
 
     def message(self, x_i, x_j):
 
-        r = torch.sqrt(torch.sum((x_i[:,0:2] - x_j[:,0:2])**2,axis=1)) / radius  # squared distance
+        r = torch.sqrt(torch.sum(bc_diff(x_i[:,0:2] - x_j[:,0:2])**2,axis=1)) / radius  # squared distance
         r = r[:, None]
 
-        delta_pos=(x_i[:,0:2]-x_j[:,0:2]) / radius
+        delta_pos=bc_diff(x_i[:,0:2]-x_j[:,0:2]) / radius
         x_i_vx = x_i[:, 2:3]  / vnorm[4]
         x_i_vy = x_i[:, 3:4]  / vnorm[5]
         x_i_type = x_i[:,4:5]
@@ -260,7 +260,7 @@ if __name__ == '__main__':
     nparticles = 2000  # number of points per classes
     nframes = 200
     sigma = .005
-    nrun= 5
+    nrun= 20
     radius= 0.075
 
     datum = '230824'
@@ -288,8 +288,8 @@ if __name__ == '__main__':
     #                 'datum': '230824',
     #                 'model': 'ResNetGNN'}
 
-    boundary = 'no'  # no boundary condition
-    # boundary = 'per' # periodic
+    #boundary = 'no'  # no boundary condition
+    boundary = 'per' # periodic
     if boundary == 'no':  # change this for usual BC
         def bc_pos(X):
             return X
@@ -301,7 +301,7 @@ if __name__ == '__main__':
         def bc_diff(D):
             return torch.remainder(D - .5, 1.0) - .5
 
-    for step in range(3):
+    for step in range(1):
 
         if step == 0:
 
@@ -313,6 +313,11 @@ if __name__ == '__main__':
                 p0 = torch.tensor([1.2700, 1.4100, 0.0547, 0.0053])
                 p1 = torch.tensor([1.8200, 1.5200, 0.1640, 0.0500])
 
+
+                p0 = torch.tensor([1+np.random.randn(), 1+np.random.randn(), 0.5+0.5*np.random.randn(), 0.5+0.5*np.random.randn()])
+                p1 = torch.tensor([1+np.random.randn(), 1+np.random.randn(), 0.5+0.5*np.random.randn(), 0.5+0.5*np.random.randn()])
+
+
                 V1 = torch.zeros((nparticles,2),device=device)
                 T1 =  torch.cat( ( torch.zeros(int(nparticles/2), device=device) , torch.ones(int(nparticles/2), device=device) ),0)
                 T1=T1[:,None]
@@ -323,7 +328,7 @@ if __name__ == '__main__':
                 rr = torch.tensor(np.linspace(0, 0.015, 100))
                 rr = rr.to(device)
                 psi0 = psi(rr, p0)
-                psi0 = psi(rr, p1)
+                psi1 = psi(rr, p1)
 
                 model0 = InteractionParticles_0()
                 model1 = InteractionParticles_1()
@@ -355,7 +360,7 @@ if __name__ == '__main__':
 
                     V1 += y
 
-                    if (run==-1) & (it%10==0):
+                    if (run>-1) & (it%10==0):
                         c1 = np.array([220, 50, 32]) / 255
                         c2 = np.array([0, 114, 178]) / 255
                         fig = plt.figure(figsize=(14, 7))
@@ -386,7 +391,6 @@ if __name__ == '__main__':
                         plt.plot(np.array(psi0.cpu()), color=c1, linewidth=1)
                         plt.plot(np.array(psi1.cpu()), color=c2, linewidth=1)
                         plt.plot(np.array(0 * np.linspace(0, 1, 100)), color=[0, 0, 0], linewidth=0.5)
-
 
                         plt.savefig(f"./ReconsGraph/Fig_{run}_{it}.tif")
                         plt.close()
@@ -527,10 +531,10 @@ if __name__ == '__main__':
                                     'optimizer_state_dict': optimizer.state_dict()},
                                    os.path.join(log_dir, 'models', f'best_model_with_{gridsearch}_graphs.pt'))
                         print("Epoch {}. Loss: {:.6f} saving model".format(epoch, total_loss / N / nparticles))
-                        if epoch>10:
-                            fig = plt.figure(figsize=(25, 16))
-                            plt.plot(model.a.detach().cpu().numpy(), '.', color='k')
-                            plt.show()
+                        fig = plt.figure(figsize=(25, 16))
+                        plt.plot(model.a.detach().cpu().numpy(), '.', color='k')
+                        plt.savefig(f"./ReconsGraph/Fig_{epoch}.tif")
+                        plt.close()
                     else:
                         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / N / nparticles))
 
