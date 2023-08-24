@@ -453,7 +453,7 @@ if __name__ == '__main__':
 
             x[:, 0:2] = x[:, 0:2] + x[:, 2:4]  # position update
 
-            if (it % 10 == 0):
+            if (it % 20 == 0):
                 fig = plt.figure(figsize=(25, 16))
 
                 ax = fig.add_subplot(2, 3, 1)
