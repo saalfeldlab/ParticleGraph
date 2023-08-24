@@ -301,7 +301,7 @@ if __name__ == '__main__':
         def bc_diff(D):
             return torch.remainder(D - .5, 1.0) - .5
 
-    for step in range(3):
+    for step in range(2,3):
 
         if step == 0:
 
@@ -362,7 +362,7 @@ if __name__ == '__main__':
 
                     V1 += y
 
-                    if (run==0) & (it%10==0):
+                    if (run==0) & (it%5==0):
                         c1 = np.array([220, 50, 32]) / 255
                         c2 = np.array([0, 114, 178]) / 255
                         fig = plt.figure(figsize=(14, 7))
@@ -573,7 +573,7 @@ if __name__ == '__main__':
 
             # plt.ion()
             # plt.hist(model.a.detach().cpu().numpy(),100)
-            fig = plt.figure(figsize=(25, 16))
+            fig = plt.figure(figsize=(10, 10))
             plt.plot(model.a.detach().cpu().numpy(), '.', color='k')
             plt.show()
 
@@ -597,7 +597,12 @@ if __name__ == '__main__':
                 adj_t = (distance < radius ** 2).float() * 1
                 edge_index = adj_t.nonzero().t().contiguous()
 
+                distance2 = torch.sum((x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
+                adj_t2 = ((distance < radius ** 2)&(distance2<0.9**2)).float() * 1
+                edge_index2 = adj_t2.nonzero().t().contiguous()
+
                 dataset = data.Data(x=x, edge_index=edge_index)
+                dataset2 = data.Data(x=x, edge_index=edge_index2)
 
                 with torch.no_grad():
                     y = model(dataset)  # acceleration estimation
@@ -612,7 +617,10 @@ if __name__ == '__main__':
 
                 x[:, 0:2] = bc_pos(x[:, 0:2] + x[:, 2:4])  # position update
 
-                if (it % 10 == 0):
+                stp = 5
+
+                if (it % stp == 0):
+                    
                     fig = plt.figure(figsize=(25, 16))
 
                     ax = fig.add_subplot(2, 3, 1)
@@ -638,9 +646,30 @@ if __name__ == '__main__':
                     # plt.text(-0.25, 1.38, f'Frame: {min(nframes,it)}')
                     # plt.text(-0.25, 1.33, f'Physics simulation', fontsize=10)
 
+                    rmserr = torch.mean(torch.sqrt(torch.sum(bc_diff(x[:,0:2] - x0[:,0:2]) ** 2, axis=1)))
+                    rmserr_list.append(rmserr.item())
+                    rmserr0 = torch.mean(
+                        torch.sqrt(torch.sum(bc_diff(x[0:int(nparticles / 2), 0:2] - x0[0:int(nparticles / 2), 0:2]) ** 2, axis=1)))
+                    rmserr_list0.append(rmserr0.item())
+                    rmserr1 = torch.mean(torch.sqrt(
+                        torch.sum(bc_diff(x[int(nparticles / 2):nparticles, 0:2] - x0[int(nparticles / 2):nparticles, 0:2]) ** 2,
+                                  axis=1)))
+                    rmserr_list1.append(rmserr1.item())
+
+                    ax = fig.add_subplot(2, 3, 3)
+                    plt.plot(np.arange(0,len(rmserr_list)*stp,stp),rmserr_list, 'k', label='RMSE')
+                    plt.plot(np.arange(0,len(rmserr_list)*stp,stp),rmserr_list0, color=c1, label='RMSE0')
+                    plt.plot(np.arange(0,len(rmserr_list)*stp,stp), rmserr_list1, color=c2, label='RMSE1')
+                    plt.ylim([0, 0.1])
+                    plt.xlim([0, 200])
+                    plt.tick_params(axis='both', which='major', labelsize=10)
+                    plt.xlabel('Frame [a.u]', fontsize="10")
+                    plt.ylabel('RMSE [a.u]', fontsize="10")
+                    plt.legend(fontsize="10")
+
                     ax = fig.add_subplot(2, 3, 4)
                     pos = dict(enumerate(np.array(x[:, 0:2].detach().cpu()), 0))
-                    vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
+                    vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
                     nx.draw_networkx(vis, pos=pos, node_size=10, linewidths=0, with_labels=False)
                     plt.xlim([-0.3, 1.3])
                     plt.ylim([-0.3, 1.3])
@@ -665,35 +694,22 @@ if __name__ == '__main__':
                     # plt.text(-0.25, 1.38, f'Frame: {it}')
                     # plt.text(-0.25, 1.33, f'GNN prediction', fontsize=10)
 
-                    rmserr = torch.sqrt(torch.mean(torch.sum((x - x0) ** 2, axis=1)))
-                    rmserr_list.append(rmserr.item())
-                    rmserr0 = torch.sqrt(
-                        torch.mean(torch.sum((x[0:int(nparticles / 2), :] - x0[0:int(nparticles / 2), :]) ** 2, axis=1)))
-                    rmserr_list0.append(rmserr0.item())
-                    rmserr1 = torch.sqrt(torch.mean(
-                        torch.sum((x[int(nparticles / 2):nparticles, :] - x0[int(nparticles / 2):nparticles, :]) ** 2,
-                                  axis=1)))
-                    rmserr_list1.append(rmserr1.item())
-
-                    ax = fig.add_subplot(2, 3, 3)
-                    plt.plot(rmserr_list, 'k', label='RMSE')
-                    plt.plot(rmserr_list0, color=c1, label='RMSE0')
-                    plt.plot(rmserr_list1, color=c2, label='RMSE1')
-                    plt.ylim([0, 0.1])
-                    plt.xlim([0, 200])
-                    plt.tick_params(axis='both', which='major', labelsize=10)
-                    plt.xlabel('Frame [a.u]', fontsize="10")
-                    plt.ylabel('RMSE [a.u]', fontsize="10")
-                    plt.legend(fontsize="10")
-
                     ax = fig.add_subplot(2, 3, 6)
                     temp1 = torch.cat((x, x0), 0)
-                    pos = dict(enumerate(np.array(temp1[:, 0:2].detach().cpu()), 0))
                     temp2 = torch.tensor(np.arange(nparticles), device=device)
                     temp3 = torch.tensor(np.arange(nparticles) + nparticles, device=device)
                     temp4 = torch.concatenate((temp2[:, None], temp3[:, None]), 1)
                     temp4 = torch.t(temp4)
-                    dataset = data.Data(x=temp1, edge_index=temp4)
+
+                    distance3 = torch.sqrt(torch.sum((x[:, 0:2] - x0[:, 0:2]) ** 2,1))
+                    adj_t3 = (distance3 < 0.9).float() * 1
+                    adj_t3=adj_t3[:,None]
+                    adj_t3 = torch.concatenate((adj_t3, adj_t3), 1)
+                    adj_t3 = torch.concatenate((adj_t3, adj_t3), 0)
+
+                    pos = dict(enumerate(np.array((temp1[:, 0:2]*adj_t3).detach().cpu()), 0))
+
+                    dataset = data.Data(x=temp1[:,0:2]*adj_t3, edge_index=temp4)
                     vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
                     nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False)
                     plt.xlim([-0.3, 1.3])
