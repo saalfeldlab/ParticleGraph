@@ -56,7 +56,7 @@ class InteractionParticles_1(pyg.nn.MessagePassing):
 
     def message(self, x_i, x_j):
 
-        r = torch.sum((x_i[:,0:2] - x_j[:,0:2])**2,axis=1)   # squared distance
+        r = torch.sum(bc_diff(x_i[:,0:2] - x_j[:,0:2])**2,axis=1)   # squared distance
 
         psi = -p1[2] * torch.exp(-r ** p1[0] / (2 * sigma ** 2)) + p1[3] * torch.exp(-r ** p1[1] / (2 * sigma ** 2))
 
@@ -223,7 +223,7 @@ class ResNetGNN(torch.nn.Module):
         self.embedding_node = MLP(input_size=8, hidden_size=self.embedding, output_size=self.embedding, nlayers=3, device=self.device)
         self.embedding_edges = MLP(input_size=11, hidden_size=self.embedding, output_size=self.embedding, nlayers=3, device=self.device)
 
-        self.a = nn.Parameter(torch.tensor(np.ones((int(nparticles), 1)), device='cuda:0', requires_grad=True))
+        self.a = nn.Parameter(torch.tensor(np.ones((int(nparticles), 1)), device=self.device, requires_grad=True))
 
     def forward(self, data):
 
@@ -235,7 +235,7 @@ class ResNetGNN(torch.nn.Module):
 
         noise = torch.randn((node_feature.shape[0], node_feature.shape[1]),requires_grad=False, device='cuda:0') * self.noise_level
         node_feature= node_feature+noise
-        edge_feature = self.edge_init(node_feature, data.edge_index, edge_feature=data.edge_attr)
+        edge_feature = self.edge_init(node_feature, edge_index)
 
         node_feature = self.embedding_node(node_feature)
         edge_feature = self.embedding_edges(edge_feature)
@@ -265,6 +265,7 @@ if __name__ == '__main__':
 
     datum = '230824'
     print(datum)
+    time.sleep(0.5)
     folder = f'./graphs_data/graphs_particles_{datum}/'
     os.makedirs(folder, exist_ok=True)
     folder_fig = f'./graphs_data/graphs_particles_{datum}/Fig/'
@@ -287,6 +288,18 @@ if __name__ == '__main__':
     #                 'datum': '230824',
     #                 'model': 'ResNetGNN'}
 
+    boundary = 'no'  # no boundary condition
+    # boundary = 'per' # periodic
+    if boundary == 'no':  # change this for usual BC
+        def bc_pos(X):
+            return X
+        def bc_diff(D):
+            return D
+    else:
+        def bc_pos(X):
+            return torch.remainder(X, 1.0)
+        def bc_diff(D):
+            return torch.remainder(D - .5, 1.0) - .5
 
     for step in range(3):
 
@@ -307,8 +320,10 @@ if __name__ == '__main__':
                 N1 = torch.arange(nparticles, device=device)
                 N1 = N1[:,None]
 
-                rr = torch.tensor(np.linspace(0, 0.015, 100),device=device)
-                psi1 = psi(rr,p1)
+                rr = torch.tensor(np.linspace(0, 0.015, 100))
+                rr = rr.to(device)
+                psi0 = psi(rr, p0)
+                psi0 = psi(rr, p1)
 
                 model0 = InteractionParticles_0()
                 model1 = InteractionParticles_1()
@@ -317,9 +332,9 @@ if __name__ == '__main__':
 
                     X1t[:,:,it] = X1.clone().detach() # for later display
 
-                    X1 = X1 + V1
+                    X1 = bc_pos(X1 + V1)
 
-                    distance=torch.sum((X1[:, None, 0:2] - X1[None, :, 0:2]) ** 2, axis=2)
+                    distance=torch.sum(bc_diff(X1[:, None, 0:2] - X1[None, :, 0:2]) ** 2, axis=2)
                     t = torch.Tensor([radius**2]) # threshold
                     adj_t = (distance < radius**2).float() * 1
                     edge_index = adj_t.nonzero().t().contiguous()
@@ -362,10 +377,17 @@ if __name__ == '__main__':
                         plt.xlim([-0.3, 1.3])
                         plt.ylim([-0.3, 1.3])
                         # plt.tight_layout()
-                        plt.text(-0.25, 1.33, f'sigma:{sigma} N:{nparticles} nframes:{nframes}')
-                        plt.text(-0.1, 1.25, f'p0: {np.round(np.array(p0.cpu()),4)}', color=c1)
-                        plt.text(-0.1, 1.20, f'p1: {np.round(np.array(p1.cpu()),4)}', color=c2)
                         plt.text(-0.25, 1.38, f'frame: {it}')
+                        plt.text(-0.25, 1.33, f'sigma:{sigma} N:{nparticles} nframes:{nframes}')
+                        plt.text(-0.25, 1.25, f'p0: {np.round(np.array(p0.cpu()),4)}', color=c1)
+                        plt.text(-0.25, 1.20, f'p1: {np.round(np.array(p1.cpu()),4)}', color=c2)
+
+                        ax = fig.add_subplot(5, 5, 21)
+                        plt.plot(np.array(psi0.cpu()), color=c1, linewidth=1)
+                        plt.plot(np.array(psi1.cpu()), color=c2, linewidth=1)
+                        plt.plot(np.array(0 * np.linspace(0, 1, 100)), color=[0, 0, 0], linewidth=0.5)
+
+
                         plt.savefig(f"./ReconsGraph/Fig_{run}_{it}.tif")
                         plt.close()
 
@@ -434,7 +456,7 @@ if __name__ == '__main__':
             print(f'ax01={ax01} ax99={ax99}')
             print(f'ay01={ay01} ay99={ay99}')
 
-            gridsearch_list = [3] # [1, 5, 10, 20, 50]
+            gridsearch_list = [5] # [1, 5, 10, 20, 50]
 
             for gridsearch in gridsearch_list:
 
@@ -476,7 +498,7 @@ if __name__ == '__main__':
 
                         x = torch.load(f'graphs_data/graphs_particles_{datum}/x_{run}_{k}.pt')
                         # edges=torch.load(f'graphs_data/graphs_particles_{datum}/edge_index_{run}_{k}.pt')
-                        distance = torch.sum((x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
+                        distance = torch.sum(bc_diff(x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
                         adj_t = (distance < radius ** 2).float() * 1
                         t = torch.Tensor([radius ** 2])
                         edges = adj_t.nonzero().t().contiguous()
