@@ -123,18 +123,18 @@ if __name__ == "__main__":
             os.remove(f)
 
 
-    datum = '230823'
+    datum = '230824'
     print(datum)
 
     nparticles=2000
-    niter=400
+    niter=200
     d=2
     sigma = .005;
     radius=0.075
 
     model = InteractionParticles()
 
-    ntry=514
+    ntry=515
     state_dict = torch.load(f"./log/try_{ntry}/models/best_model_with_1_graphs.pt")
     model.load_state_dict(state_dict['model_state_dict'])
     model.eval()
@@ -164,9 +164,9 @@ if __name__ == "__main__":
     plt.show()
 
 
-    x=torch.load(f'graphs_data/graphs_2_particles_{datum}/x_0_0.pt')
-    x00=torch.load(f'graphs_data/graphs_2_particles_{datum}/x_0_0.pt')
-    y=torch.load(f'graphs_data/graphs_2_particles_{datum}/y_0_0.pt')
+    x=torch.load(f'graphs_data/graphs_particles_{datum}/x_0_0.pt')
+    x00=torch.load(f'graphs_data/graphs_particles_{datum}/x_0_0.pt')
+    y=torch.load(f'graphs_data/graphs_particles_{datum}/y_0_0.pt')
 
     rmserr_list=[]
     rmserr_list0=[]
@@ -177,7 +177,7 @@ if __name__ == "__main__":
 
     for it in tqdm(range(niter-1)):
 
-        x0 = torch.load(f'graphs_data/graphs_2_particles_{datum}/x_0_{it+1}.pt')
+        x0 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{it+1}.pt')
 
         distance = torch.sum((x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
         t = torch.Tensor([radius ** 2])  # threshold
@@ -229,7 +229,7 @@ if __name__ == "__main__":
             ax = fig.add_subplot(2,3,4)
             pos=dict(enumerate(np.array(x[:,0:2].detach().cpu()), 0))
             vis = to_networkx(dataset,remove_self_loops=True, to_undirected=True)
-            nx.draw(vis, pos=pos, node_size=10, linewidths=0)
+            nx.draw_networkx(vis, pos=pos, node_size=10, linewidths=0, with_labels=False)
             plt.xlim([-0.3, 1.3])
             plt.ylim([-0.3, 1.3])
             ax.axes.get_xaxis().set_visible(False)
@@ -281,7 +281,7 @@ if __name__ == "__main__":
             temp4 = torch.t(temp4)
             dataset = data.Data(x=temp1, edge_index=temp4)
             vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-            nx.draw(vis, pos=pos, node_size=0, linewidths=0)
+            nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False)
             plt.xlim([-0.3, 1.3])
             plt.ylim([-0.3, 1.3])
             ax.axes.get_xaxis().set_visible(False)
