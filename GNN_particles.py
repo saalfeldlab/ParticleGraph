@@ -252,30 +252,28 @@ if __name__ == '__main__':
 
     # version 1.1 230825
 
-    flist = ['ReconsGraph']
-    for folder in flist:
-        files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/{folder}/*")
-        for f in files:
-            os.remove(f)
+    files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph/*")
+    for f in files:
+        os.remove(f)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
     nrun= 21
 
-    # model_config = {'ntry': 515,
-    #                 'input_size': 8,
-    #                 'output_size': 2,
-    #                 'hidden_size': 16,
-    #                 'n_mp_layers': 3,
-    #                 'noise_level': 0,
-    #                 'radius': 0.075,
-    #                 'datum': '230824',
-    #                 'nparticles' : 2000,  # number of points per classes
-    #                 'nframes' : 400,
-    #                 'sigma' : .005,
-    #                 'boundary' : 'per', # periodic   'no'  # no boundary condition
-    #                 'model': 'InteractionParticles'}
+    model_config = {'ntry': 515,
+                    'input_size': 8,
+                    'output_size': 2,
+                    'hidden_size': 16,
+                    'n_mp_layers': 3,
+                    'noise_level': 0,
+                    'radius': 0.075,
+                    'datum': '230824',
+                    'nparticles' : 2000,  # number of points per classes
+                    'nframes' : 400,
+                    'sigma' : .005,
+                    'boundary' : 'per', # periodic   'no'  # no boundary condition
+                    'model': 'InteractionParticles'}
     #
     # model_config = {'ntry': 516,
     #                 'embedding': 128,
@@ -290,17 +288,31 @@ if __name__ == '__main__':
     #                 'boundary': 'per',  # periodic   'no'  # no boundary condition
     #                 'model': 'ResNetGNN'}
 
-    model_config = {'ntry': 517,
+    # model_config = {'ntry': 517,
+    #                 'input_size': 8,
+    #                 'output_size': 2,
+    #                 'hidden_size': 16,
+    #                 'n_mp_layers': 3,
+    #                 'noise_level': 0,
+    #                 'datum': '230825',
+    #                 'nparticles': 2000,  # number of points per classes
+    #                 'nframes': 400,
+    #                 'sigma': .005,
+    #                 'radius': 0.125,
+    #                 'boundary' : 'per', # periodic   'no'  # no boundary condition
+    #                 'model': 'InteractionParticles'}
+
+    model_config = {'ntry': 518,
                     'input_size': 8,
                     'output_size': 2,
                     'hidden_size': 16,
                     'n_mp_layers': 3,
                     'noise_level': 0,
+                    'radius': 0.075,
                     'datum': '230825',
-                    'nparticles': 2000,  # number of points per classes
-                    'nframes': 400,
-                    'sigma': .005,
-                    'radius': 0.125,
+                    'nparticles' : 2000,  # number of points per classes
+                    'nframes' : 400,
+                    'sigma' : .005,
                     'boundary' : 'per', # periodic   'no'  # no boundary condition
                     'model': 'InteractionParticles'}
 
@@ -324,6 +336,7 @@ if __name__ == '__main__':
     folder = f'./graphs_data/graphs_particles_{datum}/'
     os.makedirs(folder, exist_ok=True)
 
+
     if boundary == 'no':  # change this for usual BC
         def bc_pos(X):
             return X
@@ -335,15 +348,17 @@ if __name__ == '__main__':
         def bc_diff(D):
             return torch.remainder(D - .5, 1.0) - .5
 
-
     time.sleep(0.5)
-
 
     for step in range(3):
 
         if step == 0:
             print('')
             print('Generating data ...')
+
+            files = glob.glob(f"{folder}/*")
+            for f in files:
+                os.remove(f)
 
             for run in tqdm(range(nrun)):
 
@@ -402,7 +417,7 @@ if __name__ == '__main__':
 
                     V1 += y
 
-                    if (run==0) & (it%5==0):
+                    if (run==-1) & (it%5==0):
 
                         distance2 = torch.sum((x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
                         adj_t2 = ((distance < radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
@@ -461,9 +476,10 @@ if __name__ == '__main__':
             graph_files = glob.glob(f"graphs_data/graphs_particles_{datum}/x_*")
             NGraphs = int(len(graph_files) / nframes)
             print('Graph files N: ', NGraphs)
+            time.sleep(0.5)
 
             arr = np.arange(0, NGraphs - 1, 2)
-            for run in tqdm(arr):
+            for run in arr:
                 kr = np.arange(0, nframes - 1, 4)
                 for k in kr:
                     x = torch.load(f'graphs_data/graphs_particles_{datum}/x_{run}_{k}.pt')
@@ -486,10 +502,10 @@ if __name__ == '__main__':
             vnorm = torch.tensor([vx01, vx99, vy01, vy99, vx, vy], device=device)
             torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
 
-            print(f'v_x={mvx} +/- {vx}')
-            print(f'v_y={mvy} +/- {vy}')
-            print(f'vx01={vx01} vx99={vx99}')
-            print(f'vy01={vy01} vy99={vy99}')
+            # print(f'v_x={mvx} +/- {vx}')
+            # print(f'v_y={mvy} +/- {vy}')
+            # print(f'vx01={vx01} vx99={vx99}')
+            # print(f'vy01={vy01} vy99={vy99}')
 
             max = torch.mean(yy[:, 0])
             may = torch.mean(yy[:, 1])
@@ -503,12 +519,12 @@ if __name__ == '__main__':
             ynorm = torch.tensor([ax01, ax99, ay01, ay99, ax, ay], device=device)
             torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
 
-            print(f'acc_x={max} +/- {ax}')
-            print(f'acc_y={may} +/- {ay}')
-            print(f'ax01={ax01} ax99={ax99}')
-            print(f'ay01={ay01} ay99={ay99}')
+            # print(f'acc_x={max} +/- {ax}')
+            # print(f'acc_y={may} +/- {ay}')
+            # print(f'ax01={ax01} ax99={ax99}')
+            # print(f'ay01={ay01} ay99={ay99}')
 
-            gridsearch_list = [5]  # [20, 5, 50, 100] # [1, 5, 10, 20, 50]
+            gridsearch_list = [20]  # [20, 5, 50, 100] # [1, 5, 10, 20, 50]
 
             for gridsearch in gridsearch_list:
 
@@ -535,16 +551,18 @@ if __name__ == '__main__':
                     print(table)
                     print(f"Total Trainable Params: {total_params}")
 
-                optimizer = torch.optim.Adam(model.parameters(), lr=1E-3) #, weight_decay=5e-4)
+                optimizer = torch.optim.Adam(model.parameters(), lr=1E-2) #, weight_decay=5e-4)
 
                 model.train()
 
-                for epoch in range(100):
+                stp=10
+
+                for epoch in range(50):
 
                     model.train()
                     total_loss = 0
 
-                    for N in range(1, gridsearch * nframes):
+                    for N in range(1, gridsearch * nframes,stp):
 
                         run = 1 + np.random.randint(gridsearch)
                         k = np.random.randint(nframes - 1)
@@ -570,23 +588,36 @@ if __name__ == '__main__':
 
                         total_loss += loss.item()
 
-                        if N % 1000 == 0:
-                            print("N {} Loss: {:.6f}".format(N, total_loss / N / nparticles))
+                        if N % 2000 == 0:
+                            print("N {} Loss: {:.6f}".format(N, total_loss / N * stp / nparticles))
+
+                    embedding = model.a.detach().cpu().numpy()
+                    embedding0 = embedding[0:int(nparticles / 2)]
+                    embedding1 = embedding[int(nparticles / 2):nparticles]
+                    gap=np.abs(np.mean(embedding0) - np.mean(embedding1)) / (np.std(embedding0) + np.std(embedding1))
+
+                    if (gap>40) & (model.a.requires_grad==True):
+                        print('model.a.requires_grad=False')
+                        model.a.requires_grad=False
 
                     if (total_loss < best_loss):
                         best_loss = total_loss
                         torch.save({'model_state_dict': model.state_dict(),
                                     'optimizer_state_dict': optimizer.state_dict()},
                                    os.path.join(log_dir, 'models', f'best_model_with_{gridsearch}_graphs.pt'))
-                        print("Epoch {}. Loss: {:.6f} saving model".format(epoch, total_loss / N / nparticles))
+                        print("Epoch {}. Loss: {:.6f} Gap: {:.3f}  saving model  ".format(epoch, total_loss / N / nparticles,gap))
                         fig = plt.figure(figsize=(25, 16))
-                        plt.plot(model.a.detach().cpu().numpy(), '.', color='k')
+                        plt.plot(embedding, '.', color='k')
                         plt.savefig(f"./ReconsGraph/Fig_{epoch}.tif")
                         plt.close()
                     else:
-                        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / N / nparticles))
+                        print("Epoch {}. Loss: {:.6f} Gap: {:.3f} ".format(epoch, total_loss / N / nparticles,gap))
 
         if step == 2:
+
+            files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph/*")
+            for f in files:
+                os.remove(f)
 
             print('')
             print('Testing loop ... ')
@@ -596,7 +627,9 @@ if __name__ == '__main__':
             if model_config['model'] == 'ResNetGNN':
                 model = ResNetGNN(model_config, device)
 
-            state_dict = torch.load(f"./log/try_{ntry}/models/best_model_with_100_graphs.pt")
+            net=f"./log/try_{ntry}/models/best_model_with_20_graphs.pt"
+            print(f'network: {net}')
+            state_dict = torch.load(net)
             model.load_state_dict(state_dict['model_state_dict'])
             model.eval()
             ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt')
@@ -613,10 +646,12 @@ if __name__ == '__main__':
             print(table)
             print(f"Total Trainable Params: {total_params}")
 
-            print(torch.mean(model.a[0:int(nparticles / 2)]))
-            print(torch.std(model.a[0:int(nparticles / 2)]))
-            print(torch.mean(model.a[int(nparticles / 2):nparticles]))
-            print(torch.std(model.a[int(nparticles / 2):nparticles]))
+            embedding = model.a.detach().cpu().numpy()
+            embedding0 = embedding[0:int(nparticles / 2)]
+            embedding1 = embedding[int(nparticles / 2):nparticles]
+            gap = np.abs(np.mean(embedding0) - np.mean(embedding1)) / (np.std(embedding0) + np.std(embedding1))
+
+            print(f'gap: {np.round(gap,2)}')
 
             # plt.ion()
             # plt.hist(model.a.detach().cpu().numpy(),100)
@@ -654,13 +689,12 @@ if __name__ == '__main__':
                 with torch.no_grad():
                     y = model(dataset)  # acceleration estimation
 
-                # y = y * (ynorm[1] - ynorm[0]) + ynorm[0]
-                # y = y * (ynorm[1] - ynorm[0])
-
                 y[:, 0] = y[:, 0] * ynorm[4]
                 y[:, 1] = y[:, 1] * ynorm[5]
 
                 x[:, 2:4] = x[:, 2:4] + y  # speed update
+
+                x[:, 2:4] = x[:, 2:4] - torch.mean(x[:, 2:4])
 
                 x[:, 0:2] = bc_pos(x[:, 0:2] + x[:, 2:4])  # position update
 
