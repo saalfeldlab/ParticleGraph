@@ -545,7 +545,7 @@ if __name__ == '__main__':
             # print(f'ax01={ax01} ax99={ax99}')
             # print(f'ay01={ay01} ay99={ay99}')
 
-            gridsearch_list = [200]  # [20, 5, 50, 100] # [1, 5, 10, 20, 50]
+            gridsearch_list = [20, 50, 100, 200]  # [20, 5, 50, 100] # [1, 5, 10, 20, 50]
 
             for gridsearch in gridsearch_list:
 
@@ -578,7 +578,7 @@ if __name__ == '__main__':
 
                 stp=1
 
-                for epoch in range(100):
+                for epoch in range(25):
 
                     model.train()
                     total_loss = 0
@@ -617,10 +617,10 @@ if __name__ == '__main__':
                     embedding1 = embedding[int(nparticles / 2):nparticles]
                     gap=np.abs(np.mean(embedding0) - np.mean(embedding1)) / (np.std(embedding0) + np.std(embedding1))
 
-                    if (gap>20) & (model.a.requires_grad==True):
+                    if (gap>40) & (model.a.requires_grad==True):
                         print('model.a.requires_grad=False')
                         model.a.requires_grad=False
-                        model.a.data = torch.trunc(model.a.data*5)/5
+                        model.a.data = torch.trunc(model.a.data*20)/20
 
 
                     if (total_loss < best_loss):
