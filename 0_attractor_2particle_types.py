@@ -54,19 +54,15 @@ def Edge_index(X,Y):
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    n = 2000  # number of points per classes
-    niter = 100
+    n = 500  # number of points per classes
+    niter = 200
 
     NN=0
     flag=True
 
-    datum='230329'
+    datum='230825'
 
-    files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph/*")
-    for f in files:
-        os.remove(f)
-
-    folder=f'graphs_2_particles_{datum}'
+    folder=f'graphs_data/graphs_2_particles_{datum}'
 
     if not (os.path.exists(folder)):
         os.mkdir(folder)
@@ -77,7 +73,7 @@ if __name__ == '__main__':
             for f in files:
                 os.remove(f)
 
-    for run in range(10):
+    for run in range():
 
         print(NN)
 
@@ -160,21 +156,21 @@ if __name__ == '__main__':
             X2 = bc_pos(X2 - tau * Speed2)
 
             distance=distmat_square(torch.cat((X1,X2),0),torch.cat((X1,X2),0))
-            t = torch.Tensor([0.05*0.05]) # threshold
-            adj_t = (distance < 0.05*0.05).float() * 1
+            t = torch.Tensor([0.075*0.075]) # threshold
+            adj_t = (distance < 0.075*0.075).float() * 1
             edge_index = adj_t.nonzero().t().contiguous()
             edge_index=edge_index.detach().cpu()
-            torch.save(edge_index,f'graphs_2_particles_{datum}/edge_index_{NN}.pt')
+            torch.save(edge_index,f'graphs_data/graphs_2_particles_{datum}/edge_index_{NN}.pt')
 
             temp1=torch.cat((X1.clone().detach(),X2.clone().detach()),0)
             temp2=torch.cat((Speed1.clone().detach(),Speed2.clone().detach()),0)
             X=torch.concatenate((temp1,temp2),1)
             X=X.detach().cpu()
-            torch.save(X,f'graphs_2_particles_{datum}/X_{NN}.pt')
+            torch.save(X,f'graphs_data/graphs_2_particles_{datum}/X_{NN}.pt')
 
             label=torch.ones((X1.shape[0]*2))
             label[0:X1.shape[0]]=0
-            torch.save(label,f'graphs_2_particles_{datum}/label_{NN}.pt')
+            torch.save(label,f'graphs_data/graphs_2_particles_{datum}/label_{NN}.pt')
 
             NN = NN+1
 
@@ -206,11 +202,11 @@ if __name__ == '__main__':
             plt.ylabel('Interaction Kernel Psi(r)', fontsize=6)
             plt.xlabel('r [a.u]', fontsize=6)
 
-        if run==0:
-            fig = plt.figure(figsize=(9, 9))
-            for t in tqdm(range(0,niter,1)):
-               animate(t)
-               plt.savefig(f"./ReconsGraph/Fig_{NN}_{t}.tif")
+        # if run==0:
+        #     fig = plt.figure(figsize=(9, 9))
+        #     for t in tqdm(range(0,niter,1)):
+        #        animate(t)
+        #        plt.savefig(f"./temp/Fig_{NN}_{t}.tif")
 
         # ani = FuncAnimation(fig, animate, frames=niter, interval=0.1)
         # plt.show()

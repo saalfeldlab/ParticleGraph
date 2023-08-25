@@ -108,7 +108,7 @@ class InteractionParticles(pyg.nn.MessagePassing):
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
-        x[:, 4] = self.a[x[:, 6].detach().cpu().numpy(), 0]
+        # x[:, 4] = self.a[x[:, 6].detach().cpu().numpy(), 0]
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         acc = self.propagate(edge_index, x=(x,x))
         return acc
@@ -259,21 +259,21 @@ if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-    nrun= 21
+    nrun= 200
 
-    model_config = {'ntry': 515,
-                    'input_size': 8,
-                    'output_size': 2,
-                    'hidden_size': 16,
-                    'n_mp_layers': 3,
-                    'noise_level': 0,
-                    'radius': 0.075,
-                    'datum': '230824',
-                    'nparticles' : 2000,  # number of points per classes
-                    'nframes' : 400,
-                    'sigma' : .005,
-                    'boundary' : 'per', # periodic   'no'  # no boundary condition
-                    'model': 'InteractionParticles'}
+    # model_config = {'ntry': 515,
+    #                 'input_size': 8,
+    #                 'output_size': 2,
+    #                 'hidden_size': 16,
+    #                 'n_mp_layers': 3,
+    #                 'noise_level': 0,
+    #                 'radius': 0.075,
+    #                 'datum': '230824',
+    #                 'nparticles' : 2000,  # number of points per classes
+    #                 'nframes' : 400,
+    #                 'sigma' : .005,
+    #                 'boundary' : 'per', # periodic   'no'  # no boundary condition
+    #                 'model': 'InteractionParticles'}
     #
     # model_config = {'ntry': 516,
     #                 'embedding': 128,
@@ -309,11 +309,11 @@ if __name__ == '__main__':
                     'n_mp_layers': 3,
                     'noise_level': 0,
                     'radius': 0.075,
-                    'datum': '230825',
+                    'datum': '230412_test_bis',
                     'nparticles' : 2000,  # number of points per classes
-                    'nframes' : 400,
+                    'nframes' : 200,
                     'sigma' : .005,
-                    'boundary' : 'per', # periodic   'no'  # no boundary condition
+                    'boundary' : 'no', # periodic   'no'  # no boundary condition
                     'model': 'InteractionParticles'}
 
     print('')
@@ -365,11 +365,16 @@ if __name__ == '__main__':
                 X1 = torch.rand(nparticles,2,device=device)
                 X1t = torch.zeros((nparticles,2,nframes)) # to store all the intermediate time
 
-                p0 = torch.tensor([1.2700, 1.4100, 0.0547, 0.0053])
-                p1 = torch.tensor([1.8200, 1.5200, 0.1640, 0.0500])
+                # p0 = torch.tensor([1.2700, 1.4100, 0.0547, 0.0053])
+                # p1 = torch.tensor([1.8200, 1.5200, 0.1640, 0.0500])
 
-                p0 = torch.tensor([2.6011, 1.852, 0.4127/10, 1.1509/10])
-                p1 = torch.tensor([1.0445, 1.4298, 0.2948/10, 0.2112/10])
+                # p0 = torch.tensor([2.6011, 1.852, 0.4127/10, 1.1509/10])
+                # p1 = torch.tensor([1.0445, 1.4298, 0.2948/10, 0.2112/10])
+
+                p0 = torch.tensor([1.27, 1.41, 0.82, 0.08])
+                p1 = torch.tensor([1.82, 1.72, 0.12, 0.45])
+                p0[2:4] *= 2E-1 / 3
+                p1[2:4] *= 2E-1
 
                 # p0 = torch.tensor([1+np.random.randn(), 1+np.random.randn(), 0.5+0.5*np.random.randn(), 0.5+0.5*np.random.randn()])
                 # p1 = torch.tensor([1+np.random.randn(), 1+np.random.randn(), 0.5+0.5*np.random.randn(), 0.5+0.5*np.random.randn()])
@@ -417,7 +422,7 @@ if __name__ == '__main__':
 
                     V1 += y
 
-                    if (run==-1) & (it%5==0):
+                    if (run==0) & (it%5==0):
 
                         distance2 = torch.sum((x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
                         adj_t2 = ((distance < radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
@@ -478,6 +483,8 @@ if __name__ == '__main__':
             print('Graph files N: ', NGraphs)
             time.sleep(0.5)
 
+            NGraphs = 200
+
             arr = np.arange(0, NGraphs - 1, 2)
             for run in arr:
                 kr = np.arange(0, nframes - 1, 4)
@@ -524,7 +531,7 @@ if __name__ == '__main__':
             # print(f'ax01={ax01} ax99={ax99}')
             # print(f'ay01={ay01} ay99={ay99}')
 
-            gridsearch_list = [20]  # [20, 5, 50, 100] # [1, 5, 10, 20, 50]
+            gridsearch_list = [200]  # [20, 5, 50, 100] # [1, 5, 10, 20, 50]
 
             for gridsearch in gridsearch_list:
 
@@ -551,20 +558,20 @@ if __name__ == '__main__':
                     print(table)
                     print(f"Total Trainable Params: {total_params}")
 
-                optimizer = torch.optim.Adam(model.parameters(), lr=1E-2) #, weight_decay=5e-4)
+                optimizer = torch.optim.Adam(model.parameters(), lr=1E-3) #, weight_decay=5e-4)
 
                 model.train()
 
-                stp=10
+                stp=1
 
-                for epoch in range(50):
+                for epoch in range(100):
 
                     model.train()
                     total_loss = 0
 
                     for N in range(1, gridsearch * nframes,stp):
 
-                        run = 1 + np.random.randint(gridsearch)
+                        run = 1 + np.random.randint(gridsearch-1)
                         k = np.random.randint(nframes - 1)
 
                         x = torch.load(f'graphs_data/graphs_particles_{datum}/x_{run}_{k}.pt')
@@ -591,14 +598,16 @@ if __name__ == '__main__':
                         if N % 2000 == 0:
                             print("N {} Loss: {:.6f}".format(N, total_loss / N * stp / nparticles))
 
-                    embedding = model.a.detach().cpu().numpy()
-                    embedding0 = embedding[0:int(nparticles / 2)]
-                    embedding1 = embedding[int(nparticles / 2):nparticles]
-                    gap=np.abs(np.mean(embedding0) - np.mean(embedding1)) / (np.std(embedding0) + np.std(embedding1))
+                    # embedding = model.a.detach().cpu().numpy()
+                    # embedding0 = embedding[0:int(nparticles / 2)]
+                    # embedding1 = embedding[int(nparticles / 2):nparticles]
+                    # gap=np.abs(np.mean(embedding0) - np.mean(embedding1)) / (np.std(embedding0) + np.std(embedding1))
 
-                    if (gap>40) & (model.a.requires_grad==True):
-                        print('model.a.requires_grad=False')
-                        model.a.requires_grad=False
+                    # if (gap>40) & (model.a.requires_grad==True):
+                    #     print('model.a.requires_grad=False')
+                    #     model.a.requires_grad=False
+
+                    gap = 0
 
                     if (total_loss < best_loss):
                         best_loss = total_loss
@@ -606,10 +615,10 @@ if __name__ == '__main__':
                                     'optimizer_state_dict': optimizer.state_dict()},
                                    os.path.join(log_dir, 'models', f'best_model_with_{gridsearch}_graphs.pt'))
                         print("Epoch {}. Loss: {:.6f} Gap: {:.3f}  saving model  ".format(epoch, total_loss / N / nparticles,gap))
-                        fig = plt.figure(figsize=(25, 16))
-                        plt.plot(embedding, '.', color='k')
-                        plt.savefig(f"./ReconsGraph/Fig_{epoch}.tif")
-                        plt.close()
+                        # fig = plt.figure(figsize=(25, 16))
+                        # plt.plot(embedding, '.', color='k')
+                        # plt.savefig(f"./ReconsGraph/Fig_{epoch}.tif")
+                        # plt.close()
                     else:
                         print("Epoch {}. Loss: {:.6f} Gap: {:.3f} ".format(epoch, total_loss / N / nparticles,gap))
 
@@ -627,7 +636,7 @@ if __name__ == '__main__':
             if model_config['model'] == 'ResNetGNN':
                 model = ResNetGNN(model_config, device)
 
-            net=f"./log/try_{ntry}/models/best_model_with_20_graphs.pt"
+            net=f"./log/try_{ntry}/models/best_model_with_200_graphs.pt"
             print(f'network: {net}')
             state_dict = torch.load(net)
             model.load_state_dict(state_dict['model_state_dict'])
@@ -646,12 +655,12 @@ if __name__ == '__main__':
             print(table)
             print(f"Total Trainable Params: {total_params}")
 
-            embedding = model.a.detach().cpu().numpy()
-            embedding0 = embedding[0:int(nparticles / 2)]
-            embedding1 = embedding[int(nparticles / 2):nparticles]
-            gap = np.abs(np.mean(embedding0) - np.mean(embedding1)) / (np.std(embedding0) + np.std(embedding1))
-
-            print(f'gap: {np.round(gap,2)}')
+            # embedding = model.a.detach().cpu().numpy()
+            # embedding0 = embedding[0:int(nparticles / 2)]
+            # embedding1 = embedding[int(nparticles / 2):nparticles]
+            # gap = np.abs(np.mean(embedding0) - np.mean(embedding1)) / (np.std(embedding0) + np.std(embedding1))
+            #
+            # print(f'gap: {np.round(gap,2)}')
 
             # plt.ion()
             # plt.hist(model.a.detach().cpu().numpy(),100)
@@ -694,11 +703,12 @@ if __name__ == '__main__':
 
                 x[:, 2:4] = x[:, 2:4] + y  # speed update
 
-                x[:, 2:4] = x[:, 2:4] - torch.mean(x[:, 2:4])
+                if model_config['boundary']=='per':
+                    x[:, 2:4] = x[:, 2:4] - torch.mean(x[:, 2:4])
 
                 x[:, 0:2] = bc_pos(x[:, 0:2] + x[:, 2:4])  # position update
 
-                stp = 5
+                stp = 1
 
                 if (it % stp == 0):
 

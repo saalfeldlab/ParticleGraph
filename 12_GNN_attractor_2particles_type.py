@@ -81,7 +81,6 @@ class InteractionParticles_1(pyg.nn.MessagePassing):
         return acc
 
     def message(self, x_i, x_j):
-
         r = torch.sum((x_i[:,0:2] - x_j[:,0:2])**2,axis=1)   # squared distance
 
         psi = -p1[2] * torch.exp(-r ** p1[0] / (2 * sigma ** 2)) + p1[3] * torch.exp(-r ** p1[1] / (2 * sigma ** 2))
@@ -90,39 +89,43 @@ class InteractionParticles_1(pyg.nn.MessagePassing):
 
 if __name__ == '__main__':
 
-    flist = ['ReconsGraph']
-    for folder in flist:
-        files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/Graph/{folder}/*")
-        for f in files:
-            os.remove(f)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+    files = glob.glob(f"./ReconsGraph/*")
+    for f in files:
+        os.remove(f)
+
     nparticles = 2000  # number of points per classes
     nframes = 200
-    sigma = .005
-    nrun=100
+    sigma = .005;
+    nrun=200
     radius=0.075
 
-    datum = '230824'
-    print(datum)
-    folder = f'./graphs_data/graphs_particles_{datum}/'
-    os.makedirs(folder, exist_ok=True)
-    folder_fig = f'./graphs_data/graphs_particles_{datum}/Fig/'
-    os.makedirs(folder_fig, exist_ok=True)
+    datum='230412_test_good'
+    run=0
+    folder=f'graphs_data/graphs_particles_{datum}'
+
+    if not (os.path.exists(folder)):
+        os.mkdir(folder)
+    else:
+        files = glob.glob(f"./{folder}/*")
+        for f in files:
+            os.remove(f)
+
 
 
     for run in tqdm(range(nrun)):
 
+        # X1=torch.load("X1.pt")
         X1 = torch.rand(nparticles,2,device=device)
 
         t = torch.tensor(np.linspace(-1.5,1.5,1000))
 
         X1t = torch.zeros((nparticles,2,nframes)) # to store all the intermediate time
 
-
-        p0 = torch.tensor([1.27, 1.41, 0.82, 0.08])
-        p1 = torch.tensor([1.82, 1.52, 0.82, 0.25])
+        p0= torch.tensor([1.27, 1.41, 0.82, 0.08])
+        p1 = torch.tensor([1.82, 1.72, 0.12, 0.45])
         p0[2:4] *= 2E-1 /3
         p1[2:4] *= 2E-1
 
@@ -130,9 +133,6 @@ if __name__ == '__main__':
         T1 =  torch.cat( ( torch.zeros(int(nparticles/2), device=device) , torch.ones(int(nparticles/2), device=device) ),0)
         T1=T1[:,None]
         T1 = torch.concatenate((T1, T1),1)
-        N1 = torch.arange(nparticles, device=device)
-        N1 = N1[:,None]
-
 
         rr = torch.tensor(np.linspace(0, 0.015, 100),device=device)
         psi1 = psi(rr,p1)
@@ -150,9 +150,9 @@ if __name__ == '__main__':
             t = torch.Tensor([radius**2]) # threshold
             adj_t = (distance < radius**2).float() * 1
             edge_index = adj_t.nonzero().t().contiguous()
-            # torch.save(edge_index,f'graphs_data/graphs_particles_{datum}/edge_index_{run}_{it}.pt')
+            torch.save(edge_index,f'graphs_data/graphs_particles_{datum}/edge_index_{run}_{it}.pt')
 
-            x=torch.concatenate((X1.clone().detach(),V1.clone().detach(),T1.clone().detach(),N1.clone().detach()),1)
+            x=torch.concatenate((X1.clone().detach(),V1.clone().detach(),T1.clone().detach()),1)
             torch.save(x,f'graphs_data/graphs_particles_{datum}/x_{run}_{it}.pt')
 
             dataset = data.Data(x=x, edge_index=edge_index)
@@ -167,13 +167,14 @@ if __name__ == '__main__':
 
             V1 += y
 
-            if (run==0) & (it%10==0):
+            if it%10 == 0:
+
                 c1 = np.array([220, 50, 32]) / 255
                 c2 = np.array([0, 114, 178]) / 255
                 fig = plt.figure(figsize=(14, 7))
-                # plt.ion()
+
                 ax = fig.add_subplot(1,2,2)
-                pos=dict(enumerate(x[:,0:2].detach().cpu().numpy(), 0))
+                pos=dict(enumerate(np.array(x[:,0:2].detach().cpu()), 0))
                 vis = to_networkx(dataset,remove_self_loops=True, to_undirected=True)
                 nx.draw_networkx(vis, pos=pos, node_size=10, linewidths=0, with_labels=False)
                 plt.xlim([-0.3, 1.3])
@@ -190,11 +191,12 @@ if __name__ == '__main__':
                 plt.ylim([-0.3, 1.3])
                 # plt.tight_layout()
                 plt.text(-0.25, 1.33, f'sigma:{sigma} N:{nparticles} nframes:{nframes}')
-                plt.text(-0.1, 1.25, f'p0: {np.round(np.array(p0.cpu()),4)}', color=c1)
-                plt.text(-0.1, 1.20, f'p1: {np.round(np.array(p1.cpu()),4)}', color=c2)
+                plt.text(-0.1, 1.25, f'p0: {np.array(p0.cpu())}', color=c1)
+                plt.text(-0.1, 1.20, f'p1: {np.array(p1.cpu())}', color=c2)
                 plt.text(-0.25, 1.38, f'frame: {it}')
                 plt.savefig(f"./ReconsGraph/Fig_{run}_{it}.tif")
                 plt.close()
+
 
 
 
