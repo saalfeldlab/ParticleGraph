@@ -250,7 +250,7 @@ class ResNetGNN(torch.nn.Module):
 
 if __name__ == '__main__':
 
-    # version 1.0 230825
+    # version 1.1 230825
 
     flist = ['ReconsGraph']
     for folder in flist:
@@ -260,39 +260,70 @@ if __name__ == '__main__':
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    nparticles = 2000  # number of points per classes
-    nframes = 400
-    sigma = .005
-    nrun= 101
-    radius= 0.075
 
-    datum = '230824'
-    print(datum)
-    time.sleep(0.5)
-    folder = f'./graphs_data/graphs_particles_{datum}/'
-    os.makedirs(folder, exist_ok=True)
-    folder_fig = f'./graphs_data/graphs_particles_{datum}/Fig/'
-    os.makedirs(folder_fig, exist_ok=True)
+    nrun= 21
 
-    model_config = {'ntry': 515,
-                    'input_size': 8,
-                    'output_size': 2,
-                    'hidden_size': 16,
-                    'n_mp_layers': 3,
-                    'noise_level': 0,
-                    'datum': '230824',
-                    'model': 'InteractionParticles'}
-
+    # model_config = {'ntry': 515,
+    #                 'input_size': 8,
+    #                 'output_size': 2,
+    #                 'hidden_size': 16,
+    #                 'n_mp_layers': 3,
+    #                 'noise_level': 0,
+    #                 'radius': 0.075,
+    #                 'datum': '230824',
+    #                 'nparticles' : 2000,  # number of points per classes
+    #                 'nframes' : 400,
+    #                 'sigma' : .005,
+    #                 'boundary' : 'per', # periodic   'no'  # no boundary condition
+    #                 'model': 'InteractionParticles'}
+    #
     # model_config = {'ntry': 516,
     #                 'embedding': 128,
     #                 'hidden_size': 32,
     #                 'n_mp_layers': 4,
     #                 'noise_level': 0,
+    #                 'radius': 0.075,
     #                 'datum': '230824',
+    #                 'nparticles': 2000,  # number of points per classes
+    #                 'nframes': 400,
+    #                 'sigma': .005,
+    #                 'boundary': 'per',  # periodic   'no'  # no boundary condition
     #                 'model': 'ResNetGNN'}
 
-    #boundary = 'no'  # no boundary condition
-    boundary = 'per' # periodic
+    model_config = {'ntry': 517,
+                    'input_size': 8,
+                    'output_size': 2,
+                    'hidden_size': 16,
+                    'n_mp_layers': 3,
+                    'noise_level': 0,
+                    'datum': '230825',
+                    'nparticles': 2000,  # number of points per classes
+                    'nframes': 400,
+                    'sigma': .005,
+                    'radius': 0.125,
+                    'boundary' : 'per', # periodic   'no'  # no boundary condition
+                    'model': 'InteractionParticles'}
+
+    print('')
+    ntry = model_config['ntry']
+    print(f'ntry: {ntry}')
+    datum = model_config['datum']
+    print(f'datum: {datum}')
+    nparticles = model_config['nparticles']    # number of particles
+    print(f'nparticles: {nparticles}')
+    nframes = model_config['nframes']
+    print(f'nframes: {nframes}')
+    radius = model_config['radius']
+    print(f'radius: {radius}')
+    sigma = model_config['sigma']
+    print(f'sigma: {sigma}')
+    boundary = model_config['boundary']
+    print(f'boundary: {boundary}')
+
+
+    folder = f'./graphs_data/graphs_particles_{datum}/'
+    os.makedirs(folder, exist_ok=True)
+
     if boundary == 'no':  # change this for usual BC
         def bc_pos(X):
             return X
@@ -304,9 +335,15 @@ if __name__ == '__main__':
         def bc_diff(D):
             return torch.remainder(D - .5, 1.0) - .5
 
+
+    time.sleep(0.5)
+
+
     for step in range(3):
 
         if step == 0:
+            print('')
+            print('Generating data ...')
 
             for run in tqdm(range(nrun)):
 
@@ -408,10 +445,10 @@ if __name__ == '__main__':
 
         if step == 1:
 
+            print('')
+            print('Training loop ...')
+
             l_dir = os.path.join('.', 'log')
-
-            ntry = model_config['ntry']
-
             log_dir = os.path.join(l_dir, 'try_{}'.format(ntry))
             print('log_dir: {}'.format(log_dir))
 
@@ -471,7 +508,7 @@ if __name__ == '__main__':
             print(f'ax01={ax01} ax99={ax99}')
             print(f'ay01={ay01} ay99={ay99}')
 
-            gridsearch_list = [20, 5, 50, 100] # [1, 5, 10, 20, 50]
+            gridsearch_list = [5]  # [20, 5, 50, 100] # [1, 5, 10, 20, 50]
 
             for gridsearch in gridsearch_list:
 
@@ -498,11 +535,8 @@ if __name__ == '__main__':
                     print(table)
                     print(f"Total Trainable Params: {total_params}")
 
-<<<<<<< HEAD
                 optimizer = torch.optim.Adam(model.parameters(), lr=1E-3) #, weight_decay=5e-4)
-=======
-                optimizer = torch.optim.Adam(model.parameters(), lr=1E-4) #, weight_decay=5e-4)
->>>>>>> 634e1258f1417b443a629d28d6440166b7550edb
+
                 model.train()
 
                 for epoch in range(100):
@@ -554,15 +588,15 @@ if __name__ == '__main__':
 
         if step == 2:
 
-
-            ntry = model_config['ntry']
+            print('')
+            print('Testing loop ... ')
 
             if model_config['model'] == 'InteractionParticles':
                 model = InteractionParticles(model_config, device)
             if model_config['model'] == 'ResNetGNN':
                 model = ResNetGNN(model_config, device)
 
-            state_dict = torch.load(f"./log/try_{ntry}/models/best_model_with_20_graphs.pt")
+            state_dict = torch.load(f"./log/try_{ntry}/models/best_model_with_100_graphs.pt")
             model.load_state_dict(state_dict['model_state_dict'])
             model.eval()
             ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt')
