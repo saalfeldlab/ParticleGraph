@@ -620,7 +620,7 @@ if __name__ == '__main__':
                     if (gap>40) & (model.a.requires_grad==True):
                         print('model.a.requires_grad=False')
                         model.a.requires_grad=False
-                        model.a.data = torch.trunc(model.a.data*10)/10
+                        model.a.data = torch.round(model.a.data*3)/3
                         torch.save({'model_state_dict': model.state_dict(),
                                     'optimizer_state_dict': optimizer.state_dict()},
                                    os.path.join(log_dir, 'models', f'best_model_with_{gridsearch}_graphs.pt'))
