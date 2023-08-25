@@ -95,7 +95,7 @@ if __name__ == "__main__":
     #     for f in files:
     #         os.remove(f)
 
-    datum = '230412_test_good'
+    datum = '230412'
     print(datum)
 
     niter=200

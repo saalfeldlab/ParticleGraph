@@ -108,7 +108,7 @@ class InteractionParticles(pyg.nn.MessagePassing):
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
-        # x[:, 4] = self.a[x[:, 6].detach().cpu().numpy(), 0]
+        x[:, 4] = self.a[x[:, 6].detach().cpu().numpy(), 0]
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         acc = self.propagate(edge_index, x=(x,x))
         return acc
@@ -350,7 +350,7 @@ if __name__ == '__main__':
 
     time.sleep(0.5)
 
-    for step in range(3):
+    for step in range(2,3):
 
         if step == 0:
             print('')
@@ -598,27 +598,28 @@ if __name__ == '__main__':
                         if N % 2000 == 0:
                             print("N {} Loss: {:.6f}".format(N, total_loss / N * stp / nparticles))
 
-                    # embedding = model.a.detach().cpu().numpy()
-                    # embedding0 = embedding[0:int(nparticles / 2)]
-                    # embedding1 = embedding[int(nparticles / 2):nparticles]
-                    # gap=np.abs(np.mean(embedding0) - np.mean(embedding1)) / (np.std(embedding0) + np.std(embedding1))
+                    embedding = model.a.detach().cpu().numpy()
+                    embedding0 = embedding[0:int(nparticles / 2)]
+                    embedding1 = embedding[int(nparticles / 2):nparticles]
+                    gap=np.abs(np.mean(embedding0) - np.mean(embedding1)) / (np.std(embedding0) + np.std(embedding1))
 
-                    # if (gap>40) & (model.a.requires_grad==True):
-                    #     print('model.a.requires_grad=False')
-                    #     model.a.requires_grad=False
+                    if (gap>10) & (model.a.requires_grad==True):
+                        print('model.a.requires_grad=False')
+                        model.a.requires_grad=False
+                        model.a.data = torch.trunc(model.a.data*10)/10
 
-                    gap = 0
 
                     if (total_loss < best_loss):
                         best_loss = total_loss
                         torch.save({'model_state_dict': model.state_dict(),
                                     'optimizer_state_dict': optimizer.state_dict()},
                                    os.path.join(log_dir, 'models', f'best_model_with_{gridsearch}_graphs.pt'))
-                        print("Epoch {}. Loss: {:.6f} Gap: {:.3f}  saving model  ".format(epoch, total_loss / N / nparticles,gap))
-                        # fig = plt.figure(figsize=(25, 16))
-                        # plt.plot(embedding, '.', color='k')
-                        # plt.savefig(f"./ReconsGraph/Fig_{epoch}.tif")
-                        # plt.close()
+                        print("Epoch {}. Loss: {:.6f} Gap: {:.3f}  saving model  ".format(epoch, total_loss / N / nparticles, gap))
+                        fig = plt.figure(figsize=(25, 16))
+                        plt.ion()
+                        plt.plot(embedding, '.', color='k')
+                        plt.savefig(f"./ReconsGraph/Fig_{epoch}.tif")
+                        plt.close()
                     else:
                         print("Epoch {}. Loss: {:.6f} Gap: {:.3f} ".format(epoch, total_loss / N / nparticles,gap))
 
