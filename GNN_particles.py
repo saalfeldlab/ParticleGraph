@@ -250,6 +250,8 @@ class ResNetGNN(torch.nn.Module):
 
 if __name__ == '__main__':
 
+    # version 1.0 230825
+
     flist = ['ReconsGraph']
     for folder in flist:
         files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/{folder}/*")
@@ -302,7 +304,7 @@ if __name__ == '__main__':
         def bc_diff(D):
             return torch.remainder(D - .5, 1.0) - .5
 
-    for step in range(2,3):
+    for step in range(3):
 
         if step == 0:
 
@@ -469,7 +471,7 @@ if __name__ == '__main__':
             print(f'ax01={ax01} ax99={ax99}')
             print(f'ay01={ay01} ay99={ay99}')
 
-            gridsearch_list = [20, 50, 100] # [1, 5, 10, 20, 50]
+            gridsearch_list = [20, 5, 50, 100] # [1, 5, 10, 20, 50]
 
             for gridsearch in gridsearch_list:
 
@@ -496,7 +498,11 @@ if __name__ == '__main__':
                     print(table)
                     print(f"Total Trainable Params: {total_params}")
 
+<<<<<<< HEAD
+                optimizer = torch.optim.Adam(model.parameters(), lr=1E-3) #, weight_decay=5e-4)
+=======
                 optimizer = torch.optim.Adam(model.parameters(), lr=1E-4) #, weight_decay=5e-4)
+>>>>>>> 634e1258f1417b443a629d28d6440166b7550edb
                 model.train()
 
                 for epoch in range(100):
