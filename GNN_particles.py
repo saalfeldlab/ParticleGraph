@@ -104,11 +104,11 @@ class InteractionParticles(pyg.nn.MessagePassing):
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers, hidden_size=self.hidden_size, device=self.device)
 
-        self.a = nn.Parameter(torch.tensor(np.ones((int(nparticles), 1)), device='cuda:0', requires_grad=True))
+        self.a = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device='cuda:0', requires_grad=True))
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
-        x[:, 4] = self.a[x[:, 6].detach().cpu().numpy(), 0]
+        x[:, 4:6] = self.a[x[:, 6].detach().cpu().numpy(), 0:2]
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         acc = self.propagate(edge_index, x=(x,x))
         return acc
@@ -121,7 +121,7 @@ class InteractionParticles(pyg.nn.MessagePassing):
         delta_pos=bc_diff(x_i[:,0:2]-x_j[:,0:2]) / radius
         x_i_vx = x_i[:, 2:3]  / vnorm[4]
         x_i_vy = x_i[:, 3:4]  / vnorm[5]
-        x_i_type = x_i[:,4:5]
+        x_i_type = x_i[:,4:6]
         x_j_vx = x_j[:, 2:3]  / vnorm[4]
         x_j_vy = x_j[:, 3:4]  / vnorm[5]
 
@@ -250,7 +250,7 @@ class ResNetGNN(torch.nn.Module):
 
 if __name__ == '__main__':
 
-    # version 1.1 230825
+    # version 1.15 230825
 
     files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph/*")
     for f in files:
@@ -302,8 +302,22 @@ if __name__ == '__main__':
     #                 'boundary' : 'per', # periodic   'no'  # no boundary condition
     #                 'model': 'InteractionParticles'}
 
-    model_config = {'ntry': 518,
-                    'input_size': 8,
+    # model_config = {'ntry': 518,
+    #                 'input_size': 8,
+    #                 'output_size': 2,
+    #                 'hidden_size': 16,
+    #                 'n_mp_layers': 3,
+    #                 'noise_level': 0,
+    #                 'radius': 0.075,
+    #                 'datum': '230412_test_bis',
+    #                 'nparticles' : 2000,  # number of points per classes
+    #                 'nframes' : 200,
+    #                 'sigma' : .005,
+    #                 'boundary' : 'no', # periodic   'no'  # no boundary condition
+    #                 'model': 'InteractionParticles'}
+
+    model_config = {'ntry': 519,
+                    'input_size': 9,
                     'output_size': 2,
                     'hidden_size': 16,
                     'n_mp_layers': 3,
@@ -350,7 +364,7 @@ if __name__ == '__main__':
 
     time.sleep(0.5)
 
-    for step in range(2,3):
+    for step in range(1,3):
 
         if step == 0:
             print('')
@@ -598,15 +612,15 @@ if __name__ == '__main__':
                         if N % 2000 == 0:
                             print("N {} Loss: {:.6f}".format(N, total_loss / N * stp / nparticles))
 
-                    embedding = model.a.detach().cpu().numpy()
+                    embedding = model.a[:,0].detach().cpu().numpy()
                     embedding0 = embedding[0:int(nparticles / 2)]
                     embedding1 = embedding[int(nparticles / 2):nparticles]
                     gap=np.abs(np.mean(embedding0) - np.mean(embedding1)) / (np.std(embedding0) + np.std(embedding1))
 
-                    if (gap>10) & (model.a.requires_grad==True):
+                    if (gap>20) & (model.a.requires_grad==True):
                         print('model.a.requires_grad=False')
                         model.a.requires_grad=False
-                        model.a.data = torch.trunc(model.a.data*10)/10
+                        model.a.data = torch.trunc(model.a.data*5)/5
 
 
                     if (total_loss < best_loss):
@@ -616,8 +630,8 @@ if __name__ == '__main__':
                                    os.path.join(log_dir, 'models', f'best_model_with_{gridsearch}_graphs.pt'))
                         print("Epoch {}. Loss: {:.6f} Gap: {:.3f}  saving model  ".format(epoch, total_loss / N / nparticles, gap))
                         fig = plt.figure(figsize=(25, 16))
-                        plt.ion()
-                        plt.plot(embedding, '.', color='k')
+                        # plt.ion()
+                        plt.plot(model.a[:,0].detach().cpu().numpy(), model.a[:,1].detach().cpu().numpy(), '.', color='k')
                         plt.savefig(f"./ReconsGraph/Fig_{epoch}.tif")
                         plt.close()
                     else:
