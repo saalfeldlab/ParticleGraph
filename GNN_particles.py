@@ -486,10 +486,10 @@ if __name__ == '__main__':
     model_config = {'ntry': 524,
                     'input_size': 9,
                     'output_size': 2,
-                    'hidden_size': 16,
+                    'hidden_size': 32,
                     'n_mp_layers': 3,
-                    'noise_level': 1E-2,
-                    'radius': 0.075,
+                    'noise_level': 0,
+                    'radius': 0.125,
                     'datum': '230828',
                     'nparticles': 2000,  # number of points per classes
                     'nframes': 200,
@@ -548,7 +548,7 @@ if __name__ == '__main__':
 
     time.sleep(0.5)
 
-    for step in range(2, 3):
+    for step in range(2,3):
 
         if step == 0:
             print('')
@@ -931,8 +931,6 @@ if __name__ == '__main__':
                     y = model(dataset)  # acceleration estimation
 
                 y = torch.clamp(y, min=-2, max=2)
-
-                # y = y - torch.mean(y)
 
                 y[:, 0] = y[:, 0] * ynorm[4]
                 y[:, 1] = y[:, 1] * ynorm[5]
