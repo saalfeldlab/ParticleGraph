@@ -17,6 +17,12 @@ import time
 from shutil import copyfile
 from prettytable import PrettyTable
 
+from kneed import KneeLocator
+from sklearn.datasets import make_blobs
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
+from sklearn.preprocessing import StandardScaler
+
 
 def psi(r, p):
     return -p[2] * torch.exp(-r ** p[0] / (2 * sigma ** 2)) + p[3] * torch.exp(-r ** p[1] / (2 * sigma ** 2))
@@ -181,6 +187,8 @@ class InteractionParticles(pyg.nn.MessagePassing):
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
 
+        # self.particle_emb = MLP(input_size=2, hidden_size=8, output_size=8, nlayers=3, device=self.device)
+
         self.a = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device='cuda:0', requires_grad=True))
 
     def forward(self, data):
@@ -219,8 +227,15 @@ class InteractionParticles(pyg.nn.MessagePassing):
         x_j_vx = x_j[:, 2:3] / vnorm[4]
         x_j_vy = x_j[:, 3:4] / vnorm[5]
 
-        in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, x_i_type),
-                                dim=-1)  # [:,None].repeat(1,4)
+        if particle_embedding:
+
+            x_i_type_0 = x_i[:, 4]
+            x_i_type_1 = x_i[:, 5]
+            in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, x_i_type_0[:, None].repeat(1, 4), x_i_type_1[:, None].repeat(1, 4)),dim=-1)
+
+        else :
+
+            in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, x_i_type),dim=-1)
 
         return self.lin_edge(in_features)
 
@@ -254,8 +269,7 @@ class EdgeNetwork(pyg.nn.MessagePassing):
 
         d = r
 
-        self.new_edges = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, x_i_type[:, None].repeat(1, 4)),
-                                   dim=-1)
+        self.new_edges = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, x_i_type[:, None].repeat(1, 4)),dim=-1)
 
         return d
 
@@ -275,6 +289,7 @@ class InteractionNetworkEmb(pyg.nn.MessagePassing):
                             nlayers=self.nlayers, device=self.device)
         self.lin_node = MLP(input_size=2 * self.embedding, hidden_size=2 * self.embedding, output_size=self.embedding,
                             nlayers=self.nlayers, device=self.device)
+
 
     def forward(self, x, edge_index, edge_feature):
         aggr = self.propagate(edge_index, x=(x, x), edge_feature=edge_feature)
@@ -361,6 +376,7 @@ if __name__ == '__main__':
     #                 'nparticles' : 2000,  # number of points per classes
     #                 'nframes' : 400,
     #                 'sigma' : .005,
+    #                 'particle_embedding': False,
     #                 'boundary' : 'per', # periodic   'no'  # no boundary condition
     #                 'model': 'InteractionParticles'}
     #
@@ -374,6 +390,7 @@ if __name__ == '__main__':
     #                 'nparticles': 2000,  # number of points per classes
     #                 'nframes': 400,
     #                 'sigma': .005,
+    #                 'particle_embedding': False,
     #                 'boundary': 'per',  # periodic   'no'  # no boundary condition
     #                 'model': 'ResNetGNN'}
 
@@ -388,6 +405,7 @@ if __name__ == '__main__':
     #                 'nframes': 400,
     #                 'sigma': .005,
     #                 'radius': 0.125,
+    #                 'particle_embedding': False,
     #                 'boundary' : 'per', # periodic   'no'  # no boundary condition
     #                 'model': 'InteractionParticles'}
 
@@ -402,6 +420,7 @@ if __name__ == '__main__':
     #                 'nparticles' : 2000,  # number of points per classes
     #                 'nframes' : 200,
     #                 'sigma' : .005,
+    #                 'particle_embedding': False,
     #                 'boundary' : 'no', # periodic   'no'  # no boundary condition
     #                 'model': 'InteractionParticles'}
 
@@ -416,6 +435,7 @@ if __name__ == '__main__':
     #                 'nparticles' : 2000,  # number of points per classes
     #                 'nframes' : 200,
     #                 'sigma' : .005,
+    #                 'particle_embedding': False,
     #                 'boundary' : 'no', # periodic   'no'  # no boundary condition
     #                 'model': 'InteractionParticles'}
 
@@ -432,74 +452,79 @@ if __name__ == '__main__':
                     'sigma': .005,
                     'p0': [1.27, 1.41, 0.0547, 0.0053],
                     'p1': [1.82, 1.72, 0.024, 0.09],
+                    'particle_embedding': False,
                     'boundary': 'no',  # periodic   'no'  # no boundary condition
                     'model': 'InteractionParticles'}
 
-    # model_config = {'ntry': 521,
-    #                 'input_size': 9,
-    #                 'output_size': 2,
-    #                 'hidden_size': 64,
-    #                 'n_mp_layers': 5,
-    #                 'noise_level': 0,
-    #                 'radius': 0.075,
-    #                 'datum': '230828',
-    #                 'nparticles' : 2000,  # number of points per classes
-    #                 'nframes' : 200,
-    #                 'sigma' : .005,
-    #                 'p0' : [1.7531, 1.4331, 0.1408, 0.4354],
-    #                 'p1' : [1.9662, 1.8537, 0.6304, 0.662],
-    #                 'boundary' : 'no', # periodic   'no'  # no boundary condition
-    #                 'model': 'InteractionParticles'}
+    model_config = {'ntry': 521,
+                    'input_size': 15,       # 9 + 8 -1 particle_embedding
+                    'output_size': 2,
+                    'hidden_size': 32,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'radius': 0.125,
+                    'datum': '230828',
+                    'nparticles' : 2000,  # number of points per classes
+                    'nframes' : 200,
+                    'sigma' : .005,
+                    'p0' : [1.7531, 1.4331, 0.1408, 0.4354],
+                    'p1' : [1.9662, 1.8537, 0.6304, 0.662],
+                    'particle_embedding': True,
+                    'boundary' : 'no', # periodic   'no'  # no boundary condition
+                    'model': 'InteractionParticles'}
 
-    # model_config = {'ntry': 522,
-    #                 'input_size': 9,
-    #                 'output_size': 2,
-    #                 'hidden_size': 64,
-    #                 'n_mp_layers': 5,
-    #                 'noise_level': 0,
-    #                 'radius': 0.075,
-    #                 'datum': '230828',
-    #                 'nparticles' : 2000,  # number of points per classes
-    #                 'nframes' : 200,
-    #                 'sigma' : .005,
-    #                 'p0' : [1.9531, 1.1348, 0.6443, 0.4937],
-    #                 'p1' : [1.919, 1.2744, 0.158, 0.4729],
-    #                 'boundary' : 'no', # periodic   'no'  # no boundary condition
-    #                 'model': 'InteractionParticles'}
+    model_config = {'ntry': 522,
+                    'input_size': 15,       # 9 + 8 -1 particle_embedding
+                    'output_size': 2,
+                    'hidden_size': 32,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'radius': 0.075,
+                    'datum': '230828',
+                    'nparticles' : 2000,  # number of points per classes
+                    'nframes' : 200,
+                    'sigma' : .005,
+                    'p0' : [1.9531, 1.1348, 0.6443, 0.4937],
+                    'p1' : [1.919, 1.2744, 0.158, 0.4729],
+                    'particle_embedding': True,
+                    'boundary' : 'no', # periodic   'no'  # no boundary condition
+                    'model': 'InteractionParticles'}
 
     # model_config = {'ntry': 523,
     #                 'input_size': 9,
     #                 'output_size': 2,
-    #                 'hidden_size': 16,
+    #                 'hidden_size': 32,
     #                 'n_mp_layers': 3,
     #                 'noise_level': 0,
-    #                 'radius': 0.075,
+    #                 'radius': 0.125,
     #                 'datum': '230828',
     #                 'nparticles' : 2000,  # number of points per classes
     #                 'nframes' : 200,
     #                 'sigma' : .005,
     #                 'p0' : [1.1305, 1.1122, 0.466, 0.72335],
     #                 'p1' : [1.076, 1.2492, 0.9499, 0.2152],
+    #                 'particle_embedding': False,
     #                 'boundary' : 'no', # periodic   'no'  # no boundary condition
     #                 'model': 'InteractionParticles'}
 
-    model_config = {'ntry': 524,
-                    'input_size': 9,
-                    'output_size': 2,
-                    'hidden_size': 32,
-                    'n_mp_layers': 3,
-                    'noise_level': 0,
-                    'radius': 0.125,
-                    'datum': '230828',
-                    'nparticles': 2000,  # number of points per classes
-                    'nframes': 200,
-                    'sigma': .005,
-                    'p0': [1.4526, 1.8942, 0.2867, 0.477],
-                    'p1': [1.7241, 1.299, 0.0317, 0.3653],
-                    'boundary': 'no',  # periodic   'no'  # no boundary condition
-                    'model': 'InteractionParticles'}
+    # model_config = {'ntry': 524,
+    #                 'input_size': 9,
+    #                 'output_size': 2,
+    #                 'hidden_size': 32,
+    #                 'n_mp_layers': 3,
+    #                 'noise_level': 0,
+    #                 'radius': 0.125,
+    #                 'datum': '230828',
+    #                 'nparticles': 2000,  # number of points per classes
+    #                 'nframes': 200,
+    #                 'sigma': .005,
+    #                 'p0': [1.4526, 1.8942, 0.2867, 0.477],
+    #                 'p1': [1.7241, 1.299, 0.0317, 0.3653],
+    #                 'particle_embedding': False,
+    #                 'boundary': 'no',  # periodic   'no'  # no boundary condition
+    #                 'model': 'InteractionParticles'}
 
-    gridsearch_list = [50]
+    gridsearch_list = [100] #, 20, 50, 100, 200]
     nrun = gridsearch_list[0]
 
     print('')
@@ -515,6 +540,8 @@ if __name__ == '__main__':
     print(f'radius: {radius}')
     sigma = model_config['sigma']
     print(f'sigma: {sigma}')
+    particle_embedding = model_config['particle_embedding']
+    print(f'particle_embedding: {particle_embedding}')
     boundary = model_config['boundary']
     print(f'boundary: {boundary}')
 
@@ -772,44 +799,41 @@ if __name__ == '__main__':
                     embedding = model.a.detach().cpu().numpy()
                     embedding0 = embedding[0:int(nparticles / 2)]
                     embedding1 = embedding[int(nparticles / 2):nparticles]
-                    gap0 = np.abs(np.mean(embedding0[:, 0]) - np.mean(embedding1[:, 0])) / (
-                            np.std(embedding0[:, 0]) + np.std(embedding1[:, 0]))
-                    gap1 = np.abs(np.mean(embedding0[:, 1]) - np.mean(embedding1[:, 1])) / (
-                            np.std(embedding0[:, 1]) + np.std(embedding1[:, 1]))
-                    gap = np.max((gap0, gap1))
 
-                    if ((gap > 30) | (epoch > 25)) & (model.a.requires_grad == True):
+                    scaler = StandardScaler()
+                    scaled_features = scaler.fit_transform(embedding)
+
+                    kmeans = KMeans(init="random", n_clusters=2, n_init=10, max_iter=300, random_state=42)
+                    kmeans.fit(scaled_features)
+
+                    gap = kmeans.inertia_
+
+
+                    # kmeans_kwargs = {"init": "random", "n_init": 10, "max_iter": 300, "random_state": 42}
+                    # sse = []
+                    # for k in range(1, 11):
+                    #     kmeans = KMeans(n_clusters=k, **kmeans_kwargs)
+                    #     kmeans.fit(scaled_features)
+                    #     sse.append(kmeans.inertia_)
+                    # plt.style.use("fivethirtyeight")
+                    # plt.plot(range(1, 11), sse)
+                    # plt.xticks(range(1, 11))
+                    # plt.xlabel("Number of Clusters")
+                    # plt.ylabel("SSE")
+                    # plt.show()
+                    # kl = KneeLocator(range(1, 11), sse, curve="convex", direction="decreasing")
+                    # print(kl.elbow)
+
+
+                    if ((gap < 75) | (epoch > 25)) & (model.a.requires_grad == True):
+
+
                         print('model.a.requires_grad=False')
                         model.a.requires_grad = False
-                        X1 = model.a.clone().detach()
-                        X1[:, 0] = X1[:, 0] / torch.max(X1[:, 0])
-                        X1[:, 1] = X1[:, 1] / torch.max(X1[:, 1])
 
-                        pa = torch.tensor([1.8778, 1.1188, 0.89881, 0.046])
-                        modela = InteractionParticles_attract()
+                        new_a = kmeans.cluster_centers_[kmeans.labels_, :]
+                        model.a.data = torch.tensor(new_a, device=device)
 
-                        V1 = torch.zeros((nparticles, 2), device=device)
-                        T1 = torch.cat((torch.zeros(int(nparticles / 2), device=device),
-                                        torch.ones(int(nparticles / 2), device=device)), 0)
-                        T1 = T1[:, None]
-                        T1 = torch.concatenate((T1, T1), 1)
-                        N1 = torch.arange(nparticles, device=device)
-                        N1 = N1[:, None]
-
-                        for it in range(100):
-                            X1 = bc_pos(X1 + V1)
-                            distance = torch.sum(bc_diff(X1[:, None, 0:2] - X1[None, :, 0:2]) ** 2, axis=2)
-                            t = torch.Tensor([radius ** 2])  # threshold
-                            adj_t = (distance < radius ** 2).float() * 1
-                            edge_index = adj_t.nonzero().t().contiguous()
-                            x = torch.concatenate(
-                                (X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), N1.clone().detach()), 1)
-                            dataset = data.Data(x=x, edge_index=edge_index)
-                            with torch.no_grad():
-                                y = modela(dataset)
-                            V1 += y / 10
-
-                        model.a.data = torch.round(x[:, 0:2] * 10) / 10
                         best_loss = total_loss
                         torch.save(
                             {'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
@@ -820,7 +844,7 @@ if __name__ == '__main__':
                                                                                                         regul / N / nparticles,
                                                                                                         gap))
                         fig = plt.figure(figsize=(8, 8))
-                        # plt.ion()
+                        plt.ion()
                         plt.scatter(embedding0[:, 0], embedding0[:, 1], s=1, color=c1)
                         plt.scatter(embedding1[:, 0], embedding1[:, 1], s=1, color=c2)
                         plt.savefig(f"./ReconsGraph/Fig_{epoch}.tif")
@@ -839,7 +863,7 @@ if __name__ == '__main__':
                                                                                                             regul / N / nparticles,
                                                                                                             gap))
                             fig = plt.figure(figsize=(8, 8))
-                            # plt.ion()
+                            plt.ion()
                             plt.scatter(embedding0[:, 0], embedding0[:, 1], s=1, color=c1)
                             plt.scatter(embedding1[:, 0], embedding1[:, 1], s=1, color=c2)
                             plt.savefig(f"./ReconsGraph/Fig_{epoch}.tif")
@@ -887,11 +911,13 @@ if __name__ == '__main__':
             embedding = model.a.detach().cpu().numpy()
             embedding0 = embedding[0:int(nparticles / 2)]
             embedding1 = embedding[int(nparticles / 2):nparticles]
-            gap0 = np.abs(np.mean(embedding0[:, 0]) - np.mean(embedding1[:, 0])) / (
-                    np.std(embedding0[:, 0]) + np.std(embedding1[:, 0]))
-            gap1 = np.abs(np.mean(embedding0[:, 1]) - np.mean(embedding1[:, 1])) / (
-                    np.std(embedding0[:, 1]) + np.std(embedding1[:, 1]))
-            gap = np.max((gap0, gap1))
+            scaler = StandardScaler()
+            scaled_features = scaler.fit_transform(embedding)
+
+            kmeans = KMeans(init="random", n_clusters=2, n_init=10, max_iter=300, random_state=42)
+            kmeans.fit(scaled_features)
+
+            gap = kmeans.inertia_
 
             print(f'gap: {gap}')
             fig = plt.figure(figsize=(8, 8))
@@ -930,7 +956,7 @@ if __name__ == '__main__':
                 with torch.no_grad():
                     y = model(dataset)  # acceleration estimation
 
-                y = torch.clamp(y, min=-2, max=2)
+                # y = torch.clamp(y, min=-2, max=2)
 
                 y[:, 0] = y[:, 0] * ynorm[4]
                 y[:, 1] = y[:, 1] * ynorm[5]
@@ -942,7 +968,7 @@ if __name__ == '__main__':
 
                 x[:, 0:2] = bc_pos(x[:, 0:2] + x[:, 2:4])  # position update
 
-                stp = 1
+                stp = 5
 
                 if (it % stp == 0):
                     fig = plt.figure(figsize=(25, 16))
