@@ -524,7 +524,7 @@ if __name__ == '__main__':
     #                 'boundary': 'no',  # periodic   'no'  # no boundary condition
     #                 'model': 'InteractionParticles'}
 
-    gridsearch_list = [100] #, 20, 50, 100, 200]
+    gridsearch_list = [2] #, 20, 50, 100, 200]
     nrun = gridsearch_list[0]
 
     print('')
@@ -575,7 +575,7 @@ if __name__ == '__main__':
 
     time.sleep(0.5)
 
-    for step in range(2,3):
+    for step in range(1,3):
 
         if step == 0:
             print('')
