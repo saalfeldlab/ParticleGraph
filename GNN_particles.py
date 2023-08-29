@@ -190,6 +190,7 @@ class InteractionParticles(pyg.nn.MessagePassing):
         # self.particle_emb = MLP(input_size=2, hidden_size=8, output_size=8, nlayers=3, device=self.device)
 
         self.a = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device='cuda:0', requires_grad=True))
+        self.a_bf_kmean = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device='cuda:0', requires_grad=False))
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
@@ -524,7 +525,7 @@ if __name__ == '__main__':
     #                 'boundary': 'no',  # periodic   'no'  # no boundary condition
     #                 'model': 'InteractionParticles'}
 
-    gridsearch_list = [2] #, 20, 50, 100, 200]
+    gridsearch_list = [10] #, 20, 50, 100, 200]
     nrun = gridsearch_list[0]
 
     print('')
@@ -575,7 +576,7 @@ if __name__ == '__main__':
 
     time.sleep(0.5)
 
-    for step in range(1,3):
+    for step in range(2,3):
 
         if step == 0:
             print('')
@@ -796,18 +797,17 @@ if __name__ == '__main__':
                         data_fit += df.item()
                         regul += rg.item()
 
+                    scaler = StandardScaler()
                     embedding = model.a.detach().cpu().numpy()
+                    embedding = scaler.fit_transform(embedding)
                     embedding0 = embedding[0:int(nparticles / 2)]
                     embedding1 = embedding[int(nparticles / 2):nparticles]
 
-                    scaler = StandardScaler()
-                    scaled_features = scaler.fit_transform(embedding)
 
                     kmeans = KMeans(init="random", n_clusters=2, n_init=10, max_iter=300, random_state=42)
-                    kmeans.fit(scaled_features)
+                    kmeans.fit(embedding)
 
                     gap = kmeans.inertia_
-
 
                     # kmeans_kwargs = {"init": "random", "n_init": 10, "max_iter": 300, "random_state": 42}
                     # sse = []
@@ -824,13 +824,13 @@ if __name__ == '__main__':
                     # kl = KneeLocator(range(1, 11), sse, curve="convex", direction="decreasing")
                     # print(kl.elbow)
 
-
                     if ((gap < 75) | (epoch > 25)) & (model.a.requires_grad == True):
 
 
                         print('model.a.requires_grad=False')
                         model.a.requires_grad = False
 
+                        model.a_bf_kmean.data=model.a.data
                         new_a = kmeans.cluster_centers_[kmeans.labels_, :]
                         model.a.data = torch.tensor(new_a, device=device)
 
@@ -843,13 +843,6 @@ if __name__ == '__main__':
                                                                                                         data_fit / N / nparticles,
                                                                                                         regul / N / nparticles,
                                                                                                         gap))
-                        fig = plt.figure(figsize=(8, 8))
-                        plt.ion()
-                        plt.scatter(embedding0[:, 0], embedding0[:, 1], s=1, color=c1)
-                        plt.scatter(embedding1[:, 0], embedding1[:, 1], s=1, color=c2)
-                        plt.savefig(f"./ReconsGraph/Fig_{epoch}.tif")
-                        plt.close()
-
                     else:
 
                         if (total_loss < best_loss):
@@ -862,18 +855,28 @@ if __name__ == '__main__':
                                                                                                             data_fit / N / nparticles,
                                                                                                             regul / N / nparticles,
                                                                                                             gap))
-                            fig = plt.figure(figsize=(8, 8))
-                            plt.ion()
-                            plt.scatter(embedding0[:, 0], embedding0[:, 1], s=1, color=c1)
-                            plt.scatter(embedding1[:, 0], embedding1[:, 1], s=1, color=c2)
-                            plt.savefig(f"./ReconsGraph/Fig_{epoch}.tif")
-                            plt.close()
                         else:
                             print("Epoch {}. Loss: {:.6f} {:.6f} {:.6f} Gap: {:.3f} ".format(epoch,
                                                                                              total_loss / N / nparticles,
                                                                                              data_fit / N / nparticles,
                                                                                              regul / N / nparticles,
                                                                                              gap))
+
+                        fig = plt.figure(figsize=(8, 8))
+                        # plt.ion()
+                        if model.a.requires_grad == False:
+                            plt.scatter(embedding0[:, 0], embedding0[:, 1], s=30, color=c1)
+                            plt.scatter(embedding1[:, 0], embedding1[:, 1], s=30, color=c2)
+                        else:
+                            plt.scatter(embedding0[:, 0], embedding0[:, 1], s=5, color=c1)
+                            plt.scatter(embedding1[:, 0], embedding1[:, 1], s=5, color=c2)
+                        plt.xlim([-2.1, 2.1])
+                        plt.ylim([-2.1, 2.1])
+                        plt.xlabel('Embedding 0',fontsize=18)
+                        plt.ylabel('Embedding 1', fontsize=18)
+                        plt.text(-2, 2, f'kmeans.inertia: {np.round(gap, 0)}')
+                        plt.savefig(f"./ReconsGraph/Fig_{epoch}.tif")
+                        plt.close()
 
         if step == 2:
 
@@ -908,22 +911,30 @@ if __name__ == '__main__':
             print(table)
             print(f"Total Trainable Params: {total_params}")
 
-            embedding = model.a.detach().cpu().numpy()
-            embedding0 = embedding[0:int(nparticles / 2)]
-            embedding1 = embedding[int(nparticles / 2):nparticles]
+
             scaler = StandardScaler()
-            scaled_features = scaler.fit_transform(embedding)
-
-            kmeans = KMeans(init="random", n_clusters=2, n_init=10, max_iter=300, random_state=42)
-            kmeans.fit(scaled_features)
-
-            gap = kmeans.inertia_
-
-            print(f'gap: {gap}')
             fig = plt.figure(figsize=(8, 8))
             # plt.ion()
-            plt.scatter(embedding0[:, 0], embedding0[:, 1], s=1, color=c1)
-            plt.scatter(embedding1[:, 0], embedding1[:, 1], s=1, color=c2)
+            embedding = model.a_bf_kmean.detach().cpu().numpy()
+            embedding = scaler.fit_transform(embedding)
+            embedding0 = embedding[0:int(nparticles / 2)]
+            embedding1 = embedding[int(nparticles / 2):nparticles]
+            plt.scatter(embedding0[:, 0], embedding0[:, 1], s=1, color=c1, alpha=0.5)
+            plt.scatter(embedding1[:, 0], embedding1[:, 1], s=1, color=c2, alpha=0.5)
+            embedding = model.a.detach().cpu().numpy()
+            embedding = scaler.fit_transform(embedding)
+            embedding0 = embedding[0:int(nparticles / 2)]
+            embedding1 = embedding[int(nparticles / 2):nparticles]
+            plt.scatter(embedding0[:, 0], embedding0[:, 1], marker='+', s=200, color='k')
+            plt.scatter(embedding1[:, 0], embedding1[:, 1], marker='+', s=200, color='k')
+            kmeans = KMeans(init="random", n_clusters=2, n_init=10, max_iter=300, random_state=42)
+            kmeans.fit(embedding)
+            gap = kmeans.inertia_
+            plt.xlim([-2.1, 2.1])
+            plt.ylim([-2.1, 2.1])
+            plt.xlabel('Embedding 0', fontsize=18)
+            plt.ylabel('Embedding 1', fontsize=18)
+            plt.text(-2, 2, f'kmeans.inertia: {np.round(gap, 0)}')
             plt.show()
 
             x = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_0.pt')
