@@ -335,7 +335,7 @@ if __name__ == '__main__':
                     'hidden_size': 16,
                     'n_mp_layers': 3,
                     'noise_level': 0,
-                    'radius': 0.075,
+                    'radius': 0.125,
                     'datum': '230412_test_bis',
                     'nparticles' : 2000,  # number of points per classes
                     'nframes' : 200,
