@@ -526,56 +526,56 @@ if __name__ == '__main__':
     #                 'model': 'InteractionParticles'}
 
 
-    # model_config = {'ntry': 525,
+    model_config = {'ntry': 525,
+                    'input_size': 15,       # 9 + 8 -1 particle_embedding
+                    'output_size': 2,
+                    'hidden_size': 32,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'radius': 0.075,
+                    'datum': '230828_525',
+                    'nparticles' : 2000,  # number of points per classes
+                    'nframes' : 200,
+                    'sigma' : .005,
+                    'p0': [1.27, 1.41, 0.0547, 0.0053],
+                    'p1': [1.82, 1.72, 0.024, 0.09],
+                    'particle_embedding': True,
+                    'boundary' : 'no', # periodic   'no'  # no boundary condition
+                    'model': 'InteractionParticles'}
+
+    # model_config = {'ntry': 526,
     #                 'input_size': 15,       # 9 + 8 -1 particle_embedding
     #                 'output_size': 2,
     #                 'hidden_size': 32,
     #                 'n_mp_layers': 5,
     #                 'noise_level': 0,
     #                 'radius': 0.075,
-    #                 'datum': '230828_525',
+    #                 'datum': '230828_524',
     #                 'nparticles' : 2000,  # number of points per classes
     #                 'nframes' : 200,
     #                 'sigma' : .005,
-    #                 'p0': [1.27, 1.41, 0.0547, 0.0053],
-    #                 'p1': [1.82, 1.72, 0.024, 0.09],
+    #                 'p0': [1.4526, 1.8942, 0.2867, 0.477],
+    #                 'p1': [1.7241, 1.299, 0.0317, 0.3653],
     #                 'particle_embedding': True,
     #                 'boundary' : 'no', # periodic   'no'  # no boundary condition
     #                 'model': 'InteractionParticles'}
 
-    model_config = {'ntry': 526,
-                    'input_size': 15,       # 9 + 8 -1 particle_embedding
-                    'output_size': 2,
-                    'hidden_size': 32,
-                    'n_mp_layers': 5,
-                    'noise_level': 0,
-                    'radius': 0.075,
-                    'datum': '230828_524',
-                    'nparticles' : 2000,  # number of points per classes
-                    'nframes' : 200,
-                    'sigma' : .005,
-                    'p0': [1.4526, 1.8942, 0.2867, 0.477],
-                    'p1': [1.7241, 1.299, 0.0317, 0.3653],
-                    'particle_embedding': True,
-                    'boundary' : 'no', # periodic   'no'  # no boundary condition
-                    'model': 'InteractionParticles'}
-
-    model_config = {'ntry': 527,
-                    'input_size': 15,       # 9 + 8 -1 particle_embedding
-                    'output_size': 2,
-                    'hidden_size': 32,
-                    'n_mp_layers': 5,
-                    'noise_level': 0,
-                    'radius': 0.075,
-                    'datum': '230828_523',
-                    'nparticles' : 2000,  # number of points per classes
-                    'nframes' : 200,
-                    'sigma' : .005,
-                    'p0' : [1.1305, 1.1122, 0.466, 0.72335],
-                    'p1' : [1.076, 1.2492, 0.9499, 0.2152],
-                    'particle_embedding': True,
-                    'boundary' : 'no', # periodic   'no'  # no boundary condition
-                    'model': 'InteractionParticles'}
+    # model_config = {'ntry': 527,
+    #                 'input_size': 15,       # 9 + 8 -1 particle_embedding
+    #                 'output_size': 2,
+    #                 'hidden_size': 32,
+    #                 'n_mp_layers': 5,
+    #                 'noise_level': 0,
+    #                 'radius': 0.025,
+    #                 'datum': '230828_523',
+    #                 'nparticles' : 2000,  # number of points per classes
+    #                 'nframes' : 200,
+    #                 'sigma' : .005,
+    #                 'p0' : [1.1305, 1.1122, 0.466, 0.72335],
+    #                 'p1' : [1.076, 1.2492, 0.9499, 0.2152],
+    #                 'particle_embedding': True,
+    #                 'boundary' : 'no', # periodic   'no'  # no boundary condition
+    #                 'model': 'InteractionParticles'}
 
     gridsearch_list = [2] #, 20, 50, 100, 200]
     nrun = 20
@@ -629,7 +629,7 @@ if __name__ == '__main__':
 
     time.sleep(0.5)
 
-    for step in range(1,3):
+    for step in range(2,3):
 
         if step == 0:
             print('')
@@ -920,6 +920,8 @@ if __name__ == '__main__':
                         best_loss = np.inf
 
                     if ((gap < 200) | (epoch > 25)) & (model.a.requires_grad == True):
+                        data_augmentation_loop = 200
+                        print(f'data_augmentation_loop: {data_augmentation_loop}')
                         print('model.a.requires_grad=False')
                         model.a.requires_grad = False
 
@@ -939,25 +941,24 @@ if __name__ == '__main__':
                                    os.path.join(log_dir, 'models', f'best_model_with_{gridsearch}_graphs.pt'))
                         print("saving model")
 
-                        print("Epoch {}. Loss: {:.6f} {:.6f} {:.6f} Gap: {:.3f}  ".format(epoch,total_loss / N / nparticles,data_fit / N / nparticles,regul / N / nparticles,gap))
+                    fig = plt.figure(figsize=(8, 8))
+                    # plt.ion()
+                    if model.a.requires_grad == False:
+                        plt.scatter(embedding0[:, 0], embedding0[:, 1], s=30, color=c1)
+                        plt.scatter(embedding1[:, 0], embedding1[:, 1], s=30, color=c2)
+                    else:
+                        plt.scatter(embedding0[:, 0], embedding0[:, 1], s=5, color=c1)
+                        plt.scatter(embedding1[:, 0], embedding1[:, 1], s=5, color=c2)
+                    plt.xlim([-2.1, 2.1])
+                    plt.ylim([-2.1, 2.1])
+                    plt.xlabel('Embedding 0',fontsize=18)
+                    plt.ylabel('Embedding 1', fontsize=18)
+                    plt.text(-2, 2, f'kmeans.inertia: {np.round(gap, 0)}')
+                    plt.savefig(f"./ReconsGraph/Fig_{ntry}_{epoch}.tif")
+                    plt.close()
 
+                    print("Epoch {}. Loss: {:.6f} {:.6f} {:.6f} Gap: {:.3f}  ".format(epoch,total_loss / N / nparticles,data_fit / N / nparticles,regul / N / nparticles,gap))
 
-
-                        fig = plt.figure(figsize=(8, 8))
-                        # plt.ion()
-                        if model.a.requires_grad == False:
-                            plt.scatter(embedding0[:, 0], embedding0[:, 1], s=30, color=c1)
-                            plt.scatter(embedding1[:, 0], embedding1[:, 1], s=30, color=c2)
-                        else:
-                            plt.scatter(embedding0[:, 0], embedding0[:, 1], s=5, color=c1)
-                            plt.scatter(embedding1[:, 0], embedding1[:, 1], s=5, color=c2)
-                        plt.xlim([-2.1, 2.1])
-                        plt.ylim([-2.1, 2.1])
-                        plt.xlabel('Embedding 0',fontsize=18)
-                        plt.ylabel('Embedding 1', fontsize=18)
-                        plt.text(-2, 2, f'kmeans.inertia: {np.round(gap, 0)}')
-                        plt.savefig(f"./ReconsGraph/Fig_{epoch}_{ntry}.tif")
-                        plt.close()
 
         if step == 2:
 
@@ -1065,7 +1066,7 @@ if __name__ == '__main__':
 
                 if (it % stp == 0):
                     fig = plt.figure(figsize=(25, 16))
-
+                    # plt.ion()
                     ax = fig.add_subplot(2, 3, 1)
                     plt.scatter(x00[0:1000, 0].detach().cpu(), x00[0:1000, 1].detach().cpu(), s=3, color=c1)
                     plt.scatter(x00[1000:, 0].detach().cpu(), x00[1000:, 1].detach().cpu(), s=3, color=c2)
@@ -1158,6 +1159,25 @@ if __name__ == '__main__':
                     plt.axis('off')
                     plt.text(-0.25, 1.18, f'Frame: {it}')
                     plt.text(-0.25, 1.13, 'Prediction RMSE: {:.4f}'.format(rmserr.detach()), fontsize=10)
+
+
+                    ax = fig.add_subplot(8, 10, 54)
+                    embedding = model.a_bf_kmean.detach().cpu().numpy()
+                    embedding = scaler.fit_transform(embedding)
+                    embedding0 = embedding[0:int(nparticles / 2)]
+                    embedding1 = embedding[int(nparticles / 2):nparticles]
+                    plt.scatter(embedding0[:, 0], embedding0[:, 1], s=1, color=c1, alpha=0.5)
+                    plt.scatter(embedding1[:, 0], embedding1[:, 1], s=1, color=c2, alpha=0.5)
+                    embedding = model.a.detach().cpu().numpy()
+                    embedding = scaler.fit_transform(embedding)
+                    embedding0 = embedding[0:int(nparticles / 2)]
+                    embedding1 = embedding[int(nparticles / 2):nparticles]
+                    plt.scatter(embedding0[:, 0], embedding0[:, 1], marker='+', s=20, color='k')
+                    plt.scatter(embedding1[:, 0], embedding1[:, 1], marker='+', s=20, color='k')
+                    plt.xlim([-2.1, 2.1])
+                    plt.ylim([-2.1, 2.1])
+                    plt.xlabel('Embedding 0', fontsize=8)
+                    plt.ylabel('Embedding 1', fontsize=8)
 
                     plt.savefig(f"./ReconsGraph/Fig_{it}.tif")
                     plt.close()
