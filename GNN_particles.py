@@ -606,6 +606,11 @@ if __name__ == '__main__':
     print(f'p1: {p1}')
     p1 = torch.tensor(p1)
 
+    rr = torch.tensor(np.linspace(0, 0.015, 100))
+    rr = rr.to(device)
+    psi0 = psi(rr, p0)
+    psi1 = psi(rr, p1)
+
     folder = f'./graphs_data/graphs_particles_{datum}/'
     os.makedirs(folder, exist_ok=True)
 
@@ -656,11 +661,6 @@ if __name__ == '__main__':
                 T1 = torch.concatenate((T1, T1), 1)
                 N1 = torch.arange(nparticles, device=device)
                 N1 = N1[:, None]
-
-                rr = torch.tensor(np.linspace(0, 0.015, 100))
-                rr = rr.to(device)
-                psi0 = psi(rr, p0)
-                psi1 = psi(rr, p1)
 
                 model0 = InteractionParticles_0()
                 model1 = InteractionParticles_1()
@@ -1066,7 +1066,7 @@ if __name__ == '__main__':
 
                 if (it % stp == 0):
                     fig = plt.figure(figsize=(25, 16))
-                    # plt.ion()
+                    plt.ion()
                     ax = fig.add_subplot(2, 3, 1)
                     plt.scatter(x00[0:1000, 0].detach().cpu(), x00[0:1000, 1].detach().cpu(), s=3, color=c1)
                     plt.scatter(x00[1000:, 0].detach().cpu(), x00[1000:, 1].detach().cpu(), s=3, color=c2)
@@ -1161,7 +1161,7 @@ if __name__ == '__main__':
                     plt.text(-0.25, 1.13, 'Prediction RMSE: {:.4f}'.format(rmserr.detach()), fontsize=10)
 
 
-                    ax = fig.add_subplot(8, 10, 54)
+                    ax = fig.add_subplot(8, 10, 60)
                     embedding = model.a_bf_kmean.detach().cpu().numpy()
                     embedding = scaler.fit_transform(embedding)
                     embedding0 = embedding[0:int(nparticles / 2)]
@@ -1178,6 +1178,12 @@ if __name__ == '__main__':
                     plt.ylim([-2.1, 2.1])
                     plt.xlabel('Embedding 0', fontsize=8)
                     plt.ylabel('Embedding 1', fontsize=8)
+
+                    ax = fig.add_subplot(8, 10, 70)
+                    plt.plot(rr.detach().cpu().numpy(), np.array(psi0.cpu()), color=c1, linewidth=1)
+                    plt.plot(rr.detach().cpu().numpy(), np.array(psi1.cpu()), color=c2, linewidth=1)
+                    plt.plot(rr.detach().cpu().numpy(), rr.detach().cpu().numpy() * 0, color=[0, 0, 0],
+                             linewidth=0.5)
 
                     plt.savefig(f"./ReconsGraph/Fig_{it}.tif")
                     plt.close()
