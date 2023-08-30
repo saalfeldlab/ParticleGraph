@@ -481,7 +481,7 @@ if __name__ == '__main__':
                     'n_mp_layers': 5,
                     'noise_level': 0,
                     'radius': 0.075,
-                    'datum': '230828',
+                    'datum': '230828_522',
                     'nparticles' : 2000,  # number of points per classes
                     'nframes' : 200,
                     'sigma' : .005,
@@ -525,8 +525,61 @@ if __name__ == '__main__':
     #                 'boundary': 'no',  # periodic   'no'  # no boundary condition
     #                 'model': 'InteractionParticles'}
 
-    gridsearch_list = [10] #, 20, 50, 100, 200]
-    nrun = gridsearch_list[0]
+
+    # model_config = {'ntry': 525,
+    #                 'input_size': 15,       # 9 + 8 -1 particle_embedding
+    #                 'output_size': 2,
+    #                 'hidden_size': 32,
+    #                 'n_mp_layers': 5,
+    #                 'noise_level': 0,
+    #                 'radius': 0.075,
+    #                 'datum': '230828_525',
+    #                 'nparticles' : 2000,  # number of points per classes
+    #                 'nframes' : 200,
+    #                 'sigma' : .005,
+    #                 'p0': [1.27, 1.41, 0.0547, 0.0053],
+    #                 'p1': [1.82, 1.72, 0.024, 0.09],
+    #                 'particle_embedding': True,
+    #                 'boundary' : 'no', # periodic   'no'  # no boundary condition
+    #                 'model': 'InteractionParticles'}
+
+    model_config = {'ntry': 526,
+                    'input_size': 15,       # 9 + 8 -1 particle_embedding
+                    'output_size': 2,
+                    'hidden_size': 32,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'radius': 0.075,
+                    'datum': '230828_524',
+                    'nparticles' : 2000,  # number of points per classes
+                    'nframes' : 200,
+                    'sigma' : .005,
+                    'p0': [1.4526, 1.8942, 0.2867, 0.477],
+                    'p1': [1.7241, 1.299, 0.0317, 0.3653],
+                    'particle_embedding': True,
+                    'boundary' : 'no', # periodic   'no'  # no boundary condition
+                    'model': 'InteractionParticles'}
+
+    model_config = {'ntry': 527,
+                    'input_size': 15,       # 9 + 8 -1 particle_embedding
+                    'output_size': 2,
+                    'hidden_size': 32,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'radius': 0.075,
+                    'datum': '230828_523',
+                    'nparticles' : 2000,  # number of points per classes
+                    'nframes' : 200,
+                    'sigma' : .005,
+                    'p0' : [1.1305, 1.1122, 0.466, 0.72335],
+                    'p1' : [1.076, 1.2492, 0.9499, 0.2152],
+                    'particle_embedding': True,
+                    'boundary' : 'no', # periodic   'no'  # no boundary condition
+                    'model': 'InteractionParticles'}
+
+    gridsearch_list = [2] #, 20, 50, 100, 200]
+    nrun = 20
+    data_augmentation = True
 
     print('')
     ntry = model_config['ntry']
@@ -576,7 +629,7 @@ if __name__ == '__main__':
 
     time.sleep(0.5)
 
-    for step in range(2,3):
+    for step in range(1,3):
 
         if step == 0:
             print('')
@@ -724,12 +777,10 @@ if __name__ == '__main__':
 
             for gridsearch in gridsearch_list:
 
-                print(f'gridsearch: {gridsearch}')
-                print('')
-
                 if model_config['model'] == 'InteractionParticles':
                     model = InteractionParticles(model_config, device)
                     print(f'Training InteractionParticles')
+                    model.a_bf_kmean.requires_grad = False
                 if model_config['model'] == 'ResNetGNN':
                     model = ResNetGNN(model_config, device)
                     print(f'Training ResNetGNN')
@@ -751,6 +802,11 @@ if __name__ == '__main__':
                     total_params += param
                 print(table)
                 print(f"Total Trainable Params: {total_params}")
+
+                print('')
+                print(f'gridsearch: {gridsearch}')
+                print('')
+
                 time.sleep(0.5)
 
                 optimizer = torch.optim.Adam(model.parameters(), lr=1E-3)  # , weight_decay=5e-4)
@@ -758,6 +814,12 @@ if __name__ == '__main__':
                 model.train()
 
                 stp = 1
+
+                if data_augmentation:
+                    data_augmentation_loop = 20
+                else:
+                    data_augmentation_loop = 1
+                print(f'data_augmentation_loop: {data_augmentation_loop}')
 
                 for epoch in range(50):
 
@@ -768,11 +830,31 @@ if __name__ == '__main__':
                     data_fit = 0
                     regul = 0
 
-                    for N in range(1, gridsearch * nframes, stp):
+                    for N in range(1, (gridsearch-1) * nframes * data_augmentation_loop, stp):
+
                         run = 1 + np.random.randint(gridsearch - 1)
                         k = np.random.randint(nframes - 1)
 
                         x = torch.load(f'graphs_data/graphs_particles_{datum}/x_{run}_{k}.pt')
+
+                        if data_augmentation:
+                            phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
+                            cos = torch.cos(phi)
+                            sin = torch.sin(phi)
+                            new_x = 0.5 + cos * (x[:, 0]-0.5) + sin * (x[:,1]-0.5)
+                            new_y = 0.5 + -sin * (x[:, 0]-0.5) + cos * (x[:, 1]-0.5)
+                            x[:, 0] = new_x
+                            x[:, 1] = new_y
+                            new_vx = cos * x[:, 2] + sin * x[:, 3]
+                            new_vy = -sin * x[:, 2] + cos * x[:, 3]
+                            x[:, 2] = new_vx
+                            x[:, 3] = new_vy
+
+                        # fig = plt.figure(figsize=(8, 8))
+                        # plt.ion()
+                        # plt.scatter(x[0:1000, 0].detach().cpu(), x[0:1000, 1].detach().cpu(), s=3, color=c1)
+                        # plt.scatter(x[1000:, 0].detach().cpu(), x[1000:, 1].detach().cpu(), s=3, color=c2)
+
                         distance = torch.sum(bc_diff(x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
                         adj_t = (distance < radius ** 2).float() * 1
                         t = torch.Tensor([radius ** 2])
@@ -780,6 +862,12 @@ if __name__ == '__main__':
                         y = torch.load(f'graphs_data/graphs_particles_{datum}/y_{run}_{k}.pt')
                         y[:, 0] = y[:, 0] / ynorm[4]
                         y[:, 1] = y[:, 1] / ynorm[5]
+
+                        if data_augmentation:
+                            new_yx = cos * y[:, 0] + sin * y[:, 1]
+                            new_yy = -sin * y[:, 0] + cos * y[:, 1]
+                            y[:, 0] = new_yx
+                            y[:, 1] = new_yy
 
                         dataset = data.Data(x=x[:, :], edge_index=edges)
 
@@ -824,9 +912,14 @@ if __name__ == '__main__':
                     # kl = KneeLocator(range(1, 11), sse, curve="convex", direction="decreasing")
                     # print(kl.elbow)
 
-                    if ((gap < 75) | (epoch > 25)) & (model.a.requires_grad == True):
 
 
+                    if ((gap < 1000) & (data_augmentation_loop==20)):
+                        data_augmentation_loop = 200
+                        print(f'data_augmentation_loop: {data_augmentation_loop}')
+                        best_loss = np.inf
+
+                    if ((gap < 200) | (epoch > 25)) & (model.a.requires_grad == True):
                         print('model.a.requires_grad=False')
                         model.a.requires_grad = False
 
@@ -834,33 +927,21 @@ if __name__ == '__main__':
                         new_a = kmeans.cluster_centers_[kmeans.labels_, :]
                         model.a.data = torch.tensor(new_a, device=device)
 
-                        best_loss = total_loss
+                        best_loss = np.inf
                         torch.save(
                             {'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
                             os.path.join(log_dir, 'models', f'best_model_with_{gridsearch}_graphs.pt'))
-                        print("Epoch {}. Loss: {:.6f} {:.6f} {:.6f} Gap: {:.3f}  saving model  ".format(epoch,
-                                                                                                        total_loss / N / nparticles,
-                                                                                                        data_fit / N / nparticles,
-                                                                                                        regul / N / nparticles,
-                                                                                                        gap))
-                    else:
 
-                        if (total_loss < best_loss):
-                            best_loss = total_loss
-                            torch.save({'model_state_dict': model.state_dict(),
-                                        'optimizer_state_dict': optimizer.state_dict()},
-                                       os.path.join(log_dir, 'models', f'best_model_with_{gridsearch}_graphs.pt'))
-                            print("Epoch {}. Loss: {:.6f} {:.6f} {:.6f} Gap: {:.3f}  saving model  ".format(epoch,
-                                                                                                            total_loss / N / nparticles,
-                                                                                                            data_fit / N / nparticles,
-                                                                                                            regul / N / nparticles,
-                                                                                                            gap))
-                        else:
-                            print("Epoch {}. Loss: {:.6f} {:.6f} {:.6f} Gap: {:.3f} ".format(epoch,
-                                                                                             total_loss / N / nparticles,
-                                                                                             data_fit / N / nparticles,
-                                                                                             regul / N / nparticles,
-                                                                                             gap))
+                    if (total_loss < best_loss):
+                        best_loss = total_loss
+                        torch.save({'model_state_dict': model.state_dict(),
+                                    'optimizer_state_dict': optimizer.state_dict()},
+                                   os.path.join(log_dir, 'models', f'best_model_with_{gridsearch}_graphs.pt'))
+                        print("saving model")
+
+                        print("Epoch {}. Loss: {:.6f} {:.6f} {:.6f} Gap: {:.3f}  ".format(epoch,total_loss / N / nparticles,data_fit / N / nparticles,regul / N / nparticles,gap))
+
+
 
                         fig = plt.figure(figsize=(8, 8))
                         # plt.ion()
@@ -875,7 +956,7 @@ if __name__ == '__main__':
                         plt.xlabel('Embedding 0',fontsize=18)
                         plt.ylabel('Embedding 1', fontsize=18)
                         plt.text(-2, 2, f'kmeans.inertia: {np.round(gap, 0)}')
-                        plt.savefig(f"./ReconsGraph/Fig_{epoch}.tif")
+                        plt.savefig(f"./ReconsGraph/Fig_{epoch}_{ntry}.tif")
                         plt.close()
 
         if step == 2:
@@ -889,6 +970,7 @@ if __name__ == '__main__':
 
             if model_config['model'] == 'InteractionParticles':
                 model = InteractionParticles(model_config, device)
+                model.a_bf_kmean.requires_grad = False
             if model_config['model'] == 'ResNetGNN':
                 model = ResNetGNN(model_config, device)
 
