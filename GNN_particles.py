@@ -73,29 +73,6 @@ def norm_acceleration(yy, device):
     return torch.tensor([ax01, ax99, ay01, ay99, ax, ay], device=device)
 
 
-class InteractionParticles_attract(pyg.nn.MessagePassing):
-    """Interaction Network as proposed in this paper:
-    https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
-
-    def __init__(self):
-        super(InteractionParticles_attract, self).__init__(aggr='mean')  # "mean" aggregation.
-
-    def forward(self, data):
-        x, edge_index = data.x, data.edge_index
-        edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        newv = self.propagate(edge_index, x=(x, x))
-        oldv = x[:, 2:4]
-        acc = newv - oldv
-        return acc
-
-    def message(self, x_i, x_j):
-        r = torch.sum(bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) ** 2, axis=1)  # squared distance
-
-        psi = -pa[2] * torch.exp(-r ** pa[0] / (2 * sigma ** 2)) + pa[3] * torch.exp(-r ** pa[1] / (2 * sigma ** 2))
-
-        return psi[:, None] * bc_diff(x_i[:, 0:2] - x_j[:, 0:2])
-
-
 class InteractionParticles_0(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -191,8 +168,10 @@ class InteractionParticles(pyg.nn.MessagePassing):
 
         self.a = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device='cuda:0', requires_grad=True))
         self.a_bf_kmean = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device='cuda:0', requires_grad=False))
-        self.p0 = nn.Parameter(torch.zeros(4, device='cuda:0', requires_grad=False))
-        self.p1 = nn.Parameter(torch.zeros(4, device = 'cuda:0', requires_grad = False))
+
+        if model_p:
+            self.p0 = nn.Parameter(torch.zeros(4, device='cuda:0', requires_grad=False))
+            self.p1 = nn.Parameter(torch.zeros(4, device = 'cuda:0', requires_grad = False))
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
@@ -599,6 +578,21 @@ if __name__ == '__main__':
                     'boundary' : 'no', # periodic   'no'  # no boundary condition
                     'model': 'InteractionParticles'}
 
+
+
+
+    files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph/*")
+    for f in files:
+        os.remove(f)
+    files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph2/*")
+    for f in files:
+        os.remove(f)
+    files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph3/*")
+    for f in files:
+        os.remove(f)
+
+
+
     gridsearch_list = [2] #, 20, 50, 100, 200]
     nrun = 4
     data_augmentation = True
@@ -624,18 +618,19 @@ if __name__ == '__main__':
     radius_classif = 0.025
     radius_final = radius
     loop_classif = 20
-    loop_final = 100
+    loop_final = 200
 
-    b_classif = True
+    model_p = False
 
-    for gtest in range(534,550):
+    for gtest in range(1):
 
-            ntry= gtest
+            ntry= 534
 
             datum='230828_'+str(ntry)
 
             print(f'ntry: {ntry}')
             print(f'datum: {datum}')
+            print(f'radius: {radius}')
 
             # p0 = model_config['p0']
             # print(f'p0: {p0}')
@@ -675,7 +670,6 @@ if __name__ == '__main__':
                 def bc_pos(X):
                     return torch.remainder(X, 1.0)
 
-
                 def bc_diff(D):
                     return torch.remainder(D - .5, 1.0) - .5
 
@@ -684,15 +678,11 @@ if __name__ == '__main__':
 
             time.sleep(0.5)
 
-            for step in range(0,2):
+            for step in range(2,3):
 
                 if step == 0:
                     print('')
                     print('Generating data ...')
-
-                    files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph/*")
-                    for f in files:
-                        os.remove(f)
 
                     files = glob.glob(f"{folder}/*")
                     for f in files:
@@ -779,14 +769,14 @@ if __name__ == '__main__':
                                 plt.plot(rr.detach().cpu().numpy(), rr.detach().cpu().numpy() * 0, color=[0, 0, 0],
                                          linewidth=0.5)
 
-                                plt.savefig(f"./ReconsGraph/Fig_{run}_{it}.tif")
+                                plt.savefig(f"./ReconsGraph2/Fig_{ntry}_{it}.tif")
                                 plt.close()
 
                 if step == 1:
 
-                    files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph/*")
-                    for f in files:
-                        os.remove(f)
+                    radius = radius_classif
+
+                    b_classif = True
 
                     print('')
                     print('Training loop ...')
@@ -967,10 +957,13 @@ if __name__ == '__main__':
 
 
                             if ((gap < 200) | (epoch > 25)) & (b_classif == True):
+
                                 b_classif = False
                                 print('end classif step')
-                                print('model.a.requires_grad=False')
+                                radius=radius_final
+                                print(f'radius: {radius}')
                                 model.a.requires_grad = False
+                                print('model.a.requires_grad=False')
                                 model.a_bf_kmean.data=model.a.data
                                 new_a = kmeans.cluster_centers_[kmeans.labels_, :]
                                 model.a.data = torch.tensor(new_a, device=device)
@@ -1004,7 +997,7 @@ if __name__ == '__main__':
                             plt.xlabel('Embedding 0',fontsize=18)
                             plt.ylabel('Embedding 1', fontsize=18)
                             plt.text(-2, 2, f'kmeans.inertia: {np.round(gap, 0)}')
-                            plt.savefig(f"./ReconsGraph/Fig_{epoch}_{ntry}.tif")
+                            plt.savefig(f"./ReconsGraph3/Fig_{epoch}_{ntry}.tif")
                             plt.close()
 
                 if step == 2:
@@ -1220,6 +1213,15 @@ if __name__ == '__main__':
                             plt.ylim([-2.1, 2.1])
                             plt.xlabel('Embedding 0', fontsize=8)
                             plt.ylabel('Embedding 1', fontsize=8)
+                            if model_p:
+                                p0 = model.p0.data
+                                p0 = p0.detach().cpu().numpy()
+                                p0 = np.round(p0, 4)
+                                p1 = model.p1.data
+                                p1 = p1.detach().cpu().numpy()
+                                p1 = np.round(p1, 4)
+                                plt.text(-2,2.5,str(p0),color=c1,fontsize=6)
+                                plt.text(-2,2.2, str(p1), color=c2, fontsize=6)
 
                             ax = fig.add_subplot(8, 10, 14)
                             plt.plot(rr.detach().cpu().numpy(), np.array(psi0.cpu()), color=c1, linewidth=1)

@@ -73,35 +73,12 @@ def norm_acceleration(yy, device):
     return torch.tensor([ax01, ax99, ay01, ay99, ax, ay], device=device)
 
 
-class InteractionParticles_attract(pyg.nn.MessagePassing):
-    """Interaction Network as proposed in this paper:
-    https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
-
-    def __init__(self):
-        super(InteractionParticles_attract, self).__init__(aggr='mean')  # "mean" aggregation.
-
-    def forward(self, data):
-        x, edge_index = data.x, data.edge_index
-        edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        newv = self.propagate(edge_index, x=(x, x))
-        oldv = x[:, 2:4]
-        acc = newv - oldv
-        return acc
-
-    def message(self, x_i, x_j):
-        r = torch.sum(bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) ** 2, axis=1)  # squared distance
-
-        psi = -pa[2] * torch.exp(-r ** pa[0] / (2 * sigma ** 2)) + pa[3] * torch.exp(-r ** pa[1] / (2 * sigma ** 2))
-
-        return psi[:, None] * bc_diff(x_i[:, 0:2] - x_j[:, 0:2])
-
-
 class InteractionParticles_0(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
     def __init__(self):
-        super(InteractionParticles_0, self).__init__(aggr='mean')  # "mean" aggregation.
+        super(InteractionParticles_0, self).__init__(aggr=aggr_type)  # "mean" aggregation.
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
@@ -124,7 +101,7 @@ class InteractionParticles_1(pyg.nn.MessagePassing):
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
     def __init__(self):
-        super(InteractionParticles_1, self).__init__(aggr='mean')  # "mean" aggregation.
+        super(InteractionParticles_1, self).__init__(aggr=aggr_type)  # "mean" aggregation.
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
@@ -174,7 +151,7 @@ class InteractionParticles(pyg.nn.MessagePassing):
 
     def __init__(self, model_config, device):
 
-        super(InteractionParticles, self).__init__(aggr='mean')  # "Add" aggregation.
+        super(InteractionParticles, self).__init__(aggr=aggr_type)  # "Add" aggregation.
 
         self.device = device
         self.input_size = model_config['input_size']
@@ -600,6 +577,7 @@ if __name__ == '__main__':
     gridsearch_list = [2] #, 20, 50, 100, 200]
     nrun = 4
     data_augmentation = True
+    aggr_type = 'add'
 
     print('')
     ntry = model_config['ntry']
@@ -619,9 +597,14 @@ if __name__ == '__main__':
     boundary = model_config['boundary']
     print(f'boundary: {boundary}')
 
-    for gtest in range(20):
+    print(aggr_type)
 
-            ntry=ntry+1
+    for gtest in range(540,545):
+
+            ntry=gtest
+
+            # ntry = 540
+
             datum='230828_'+str(ntry)
 
             print(f'ntry: {ntry}')
@@ -637,17 +620,23 @@ if __name__ == '__main__':
             p0 = torch.squeeze(p0)
             p0[0] = p0[0] + 1
             p0[1] = p0[1] + 1
-            p0[2:4] = p0[2:4] / 10
+            if aggr_type == 'add':
+                p0[2:4] = p0[2:4] / 50
+            else:
+                p0[2:4] = p0[2:4] / 10
             p1 = torch.rand(1, 4)
             p1 = torch.squeeze(p1)
             p1[0] = p1[0] + 1
             p1[1] = p1[1] + 1
-            p1[2:4] = p1[2:4] / 10
+            if aggr_type == 'add':
+                p1[2:4] = p1[2:4] / 50
+            else:
+                p0[2:4] = p0[2:4] / 10
 
             print(f'p0: {p0}')
             print(f'p1: {p1}')
 
-            p1 = torch.tensor(p1)
+
             rr = torch.tensor(np.linspace(0, 0.015, 100))
             rr = rr.to(device)
             psi0 = psi(rr, p0)
@@ -988,7 +977,7 @@ if __name__ == '__main__':
                             plt.xlabel('Embedding 0',fontsize=18)
                             plt.ylabel('Embedding 1', fontsize=18)
                             plt.text(-2, 2, f'kmeans.inertia: {np.round(gap, 0)}')
-                            plt.savefig(f"./ReconsGraph/Fig_{epoch}_{ntry}.tif")
+                            plt.savefig(f"./ReconsGraph/Fig_{ntry}_{epoch}.tif")
                             plt.close()
 
                 if step == 2:
