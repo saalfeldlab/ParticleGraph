@@ -64,6 +64,27 @@ class InteractionParticles_1(pyg.nn.MessagePassing):
 
         return psi[:,None] * bc_diff(x_i[:,0:2] - x_j[:,0:2])
 
+class InteractionParticles_2(pyg.nn.MessagePassing):
+    """Interaction Network as proposed in this paper:
+    https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
+    def __init__(self):
+        super(InteractionParticles_2, self).__init__(aggr=aggr_type)  # "Add" aggregation.
+    def forward(self, data):
+        x, edge_index = data.x, data.edge_index
+        edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+        newv = self.propagate(edge_index, x=(x,x))
+        oldv = x[:,2:4]
+        acc = newv - oldv
+        return acc
+
+    def message(self, x_i, x_j):
+
+        r = torch.sum(bc_diff(x_i[:,0:2] - x_j[:,0:2])**2,axis=1)   # squared distance
+
+        psi = -p2[2] * torch.exp(-r ** p2[0] / (2 * sigma ** 2)) + p2[3] * torch.exp(-r ** p2[1] / (2 * sigma ** 2))
+
+        return psi[:,None] * bc_diff(x_i[:,0:2] - x_j[:,0:2])
+
 class MLP(nn.Module):
 
     def __init__(self, input_size, output_size, nlayers, hidden_size, device):
@@ -254,80 +275,11 @@ if __name__ == '__main__':
 
     # version 1.15 230825
 
-    files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph2/*")
+    files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph3/*")
     for f in files:
         os.remove(f)
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    # model_config = {'ntry': 515,
-    #                 'input_size': 8,
-    #                 'output_size': 2,
-    #                 'hidden_size': 16,
-    #                 'n_mp_layers': 3,
-    #                 'noise_level': 0,
-    #                 'radius': 0.075,
-    #                 'datum': '230824',
-    #                 'nparticles' : 2000,  # number of points per classes
-    #                 'nframes' : 400,
-    #                 'sigma' : .005,
-    #                 'boundary' : 'per', # periodic   'no'  # no boundary condition
-    #                 'model': 'InteractionParticles'}
-    #
-    # model_config = {'ntry': 516,
-    #                 'embedding': 128,
-    #                 'hidden_size': 32,
-    #                 'n_mp_layers': 4,
-    #                 'noise_level': 0,
-    #                 'radius': 0.075,
-    #                 'datum': '230824',
-    #                 'nparticles': 2000,  # number of points per classes
-    #                 'nframes': 400,
-    #                 'sigma': .005,
-    #                 'boundary': 'per',  # periodic   'no'  # no boundary condition
-    #                 'model': 'ResNetGNN'}
-
-    # model_config = {'ntry': 517,
-    #                 'input_size': 8,
-    #                 'output_size': 2,
-    #                 'hidden_size': 16,
-    #                 'n_mp_layers': 3,
-    #                 'noise_level': 0,
-    #                 'datum': '230825',
-    #                 'nparticles': 2000,  # number of points per classes
-    #                 'nframes': 400,
-    #                 'sigma': .005,
-    #                 'radius': 0.125,
-    #                 'boundary' : 'per', # periodic   'no'  # no boundary condition
-    #                 'model': 'InteractionParticles'}
-
-    # model_config = {'ntry': 518,
-    #                 'input_size': 8,
-    #                 'output_size': 2,
-    #                 'hidden_size': 16,
-    #                 'n_mp_layers': 3,
-    #                 'noise_level': 0,
-    #                 'radius': 0.075,
-    #                 'datum': '230412_test_bis',
-    #                 'nparticles' : 2000,  # number of points per classes
-    #                 'nframes' : 200,
-    #                 'sigma' : .005,
-    #                 'boundary' : 'no', # periodic   'no'  # no boundary condition
-    #                 'model': 'InteractionParticles'}
-
-    # model_config = {'ntry': 519,
-    #                 'input_size': 9,
-    #                 'output_size': 2,
-    #                 'hidden_size': 16,
-    #                 'n_mp_layers': 3,
-    #                 'noise_level': 0,
-    #                 'radius': 0.075,
-    #                 'datum': '230412_test_bis',
-    #                 'nparticles' : 2000,  # number of points per classes
-    #                 'nframes' : 200,
-    #                 'sigma' : .005,
-    #                 'boundary' : 'no', # periodic   'no'  # no boundary condition
-    #                 'model': 'InteractionParticles'}
 
     model_config = {'ntry': 520,
                     'input_size': 9,
@@ -337,15 +289,12 @@ if __name__ == '__main__':
                     'noise_level': 0,
                     'radius': 0.075,
                     'datum': '230412_test_bis',
-                    'nparticles' : 2000,  # number of points per classes
+                    'nparticles' : 2100,  # number of points per classes
                     'nframes' : 200,
                     'sigma' : .005,
-                    'aggr': 'add',
+                    'aggr': 'mean',
                     'boundary' : 'no', # periodic   'no'  # no boundary condition
                     'model': 'InteractionParticles'}
-
-
-    nrun= 20
 
     print('')
     ntry = model_config['ntry']
@@ -398,9 +347,14 @@ if __name__ == '__main__':
         p1[0] = p1[0] + 1
         p1[1] = p1[1] + 1
         p1[2:4]=p1[2:4]/10
+        p2 = torch.rand(1, 4)
+        p2 = torch.squeeze(p2)
+        p2[0] = p2[0] + 1
+        p2[1] = p2[1] + 1
+        p2[2:4]=p2[2:4]/10
 
         V1 = torch.zeros((nparticles,2),device=device)
-        T1 = torch.cat( ( torch.zeros(int(nparticles/2), device=device) , torch.ones(int(nparticles/2), device=device) ),0)
+        T1 = torch.cat( ( torch.zeros(int(nparticles/3), device=device) , torch.ones(int(nparticles/3), device=device), 2*torch.ones(int(nparticles/3), device=device) ),0)
         T1 = T1[:,None]
         T1 = torch.concatenate((T1, T1),1)
         N1 = torch.arange(nparticles, device=device)
@@ -410,9 +364,11 @@ if __name__ == '__main__':
         rr = rr.to(device)
         psi0 = psi(rr, p0)
         psi1 = psi(rr, p1)
+        psi2 = psi(rr, p2)
 
         model0 = InteractionParticles_0()
         model1 = InteractionParticles_1()
+        model2 = InteractionParticles_2()
 
         for it in range(nframes):
 
@@ -430,8 +386,9 @@ if __name__ == '__main__':
             with torch.no_grad():
                 y0 = model0(dataset) * (x[:,4:6]==0)
                 y1 = model1(dataset) * (x[:,4:6]==1)
+                y2 = model2(dataset) * (x[:,4:6]==2)
 
-            y=y0+y1
+            y= y0+y1+y2
 
             V1 += y
 
@@ -444,6 +401,7 @@ if __name__ == '__main__':
 
                 c1 = np.array([220, 50, 32]) / 255
                 c2 = np.array([0, 114, 178]) / 255
+                c3= np.array([50, 205, 50]) / 255
 
                 fig = plt.figure(figsize=(14, 6.5))
                 # plt.ion()
@@ -456,8 +414,9 @@ if __name__ == '__main__':
                 plt.text(-0.25, 1.33, f'Graph    {x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
 
                 ax = fig.add_subplot(1,2,1)
-                plt.scatter(X1t[0:int(nparticles/2), 0, it], X1t[0:int(nparticles/2), 1, it], s=3, color=c1)
-                plt.scatter(X1t[int(nparticles/2):nparticles, 0, it], X1t[int(nparticles/2):nparticles, 1, it], s=3, color=c2)
+                plt.scatter(X1t[0:int(nparticles/3), 0, it], X1t[0:int(nparticles/3), 1, it], s=3, color=c1)
+                plt.scatter(X1t[int(nparticles/3):int(nparticles/3)*2, 0, it], X1t[int(nparticles/3):int(nparticles/3)*2, 1, it], s=3, color=c2)
+                plt.scatter(X1t[int(nparticles/3)*2:int(nparticles/3)*3, 0, it], X1t[int(nparticles/3)*2:int(nparticles/3)*3, 1, it], s=3, color=c3)
                 ax = plt.gca()
                 ax.axes.xaxis.set_ticklabels([])
                 ax.axes.yaxis.set_ticklabels([])
@@ -468,12 +427,14 @@ if __name__ == '__main__':
                 plt.text(-0.25, 1.33, f'sigma:{sigma} N:{nparticles} nframes:{nframes}')
                 plt.text(-0.25, 1.25, f'p0: {np.round(np.array(p0.cpu()),4)}', color=c1)
                 plt.text(-0.25, 1.20, f'p1: {np.round(np.array(p1.cpu()),4)}', color=c2)
+                plt.text(-0.25, 1.15, f'p2: {np.round(np.array(p2.cpu()),4)}', color=c3)
 
                 ax = fig.add_subplot(5, 5, 21)
                 plt.plot(rr.detach().cpu().numpy(),np.array(psi0.cpu()), color=c1, linewidth=1)
                 plt.plot(rr.detach().cpu().numpy(),np.array(psi1.cpu()), color=c2, linewidth=1)
+                plt.plot(rr.detach().cpu().numpy(),np.array(psi2.cpu()), color=c3, linewidth=1)
                 plt.plot(rr.detach().cpu().numpy(),rr.detach().cpu().numpy()*0, color=[0, 0, 0], linewidth=0.5)
 
-                plt.savefig(f"./ReconsGraph2/Fig_{run}_{it}.tif")
+                plt.savefig(f"./ReconsGraph3/Fig_{run}_{it}.tif")
                 plt.close()
 
