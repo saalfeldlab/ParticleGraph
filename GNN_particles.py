@@ -642,20 +642,74 @@ if __name__ == '__main__':
                     'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                     'model': 'InteractionParticles'}
 
-    model_config = {'ntry': 552,
+    # model_config = {'ntry': 552,
+    #                 'input_size': 15,       # 9 + 8 -1 particle_embedding
+    #                 'output_size': 2,
+    #                 'hidden_size': 32,
+    #                 'n_mp_layers': 5,
+    #                 'noise_level': 0,
+    #                 'radius': 0.075,
+    #                 'datum': '230828',
+    #                 'nparticles': 2000,  # number of points per classes
+    #                 'nframes': 200,
+    #                 'aggr': 'add',
+    #                 'sigma': .005,
+    #                 'p0': [1.27, 1.41, 0.00547, 0.00053],
+    #                 'p1': [1.82, 1.72, 0.0024, 0.009],
+    #                 'particle_embedding': True,
+    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+    #                 'model': 'InteractionParticles'}
+    #
+    # model_config = {'ntry': 553,
+    #                 'input_size': 15,       # 9 + 8 -1 particle_embedding
+    #                 'output_size': 2,
+    #                 'hidden_size': 32,
+    #                 'n_mp_layers': 5,
+    #                 'noise_level': 1E-4,
+    #                 'radius': 0.15,
+    #                 'datum': '230828',
+    #                 'nparticles': 2000,  # number of points per classes
+    #                 'nframes': 200,
+    #                 'aggr': 'add',
+    #                 'sigma': .005,
+    #                 'p0': [1.27, 1.41, 0.00547/5, 0.00053/5],
+    #                 'p1': [1.82, 1.72, 0.0024/5, 0.009/5],
+    #                 'particle_embedding': True,
+    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+    #                 'model': 'InteractionParticles'}
+    #
+    model_config = {'ntry': 554,
                     'input_size': 15,       # 9 + 8 -1 particle_embedding
                     'output_size': 2,
                     'hidden_size': 32,
                     'n_mp_layers': 5,
                     'noise_level': 0,
-                    'radius': 0.075,
+                    'radius': 0.25,
                     'datum': '230828',
                     'nparticles': 2000,  # number of points per classes
                     'nframes': 200,
                     'aggr': 'add',
                     'sigma': .005,
-                    'p0': [1.27, 1.41, 0.00547, 0.00053],
-                    'p1': [1.82, 1.72, 0.0024, 0.009],
+                    'p0': [1.27, 1.41, 0.00547/5, 0.00053/5],
+                    'p1': [1.82, 1.72, 0.0024/5, 0.009/5],
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'model': 'InteractionParticles'}
+
+    model_config = {'ntry': 555,
+                    'input_size': 15,       # 9 + 8 -1 particle_embedding
+                    'output_size': 2,
+                    'hidden_size': 32,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'radius': 0.15,
+                    'datum': '230828',
+                    'nparticles': 2000,  # number of points per classes
+                    'nframes': 200,
+                    'aggr': 'add',
+                    'sigma': .005,
+                    'p0': [1.27, 1.41, 0.00547/5, 0.00053/5],
+                    'p1': [1.82, 1.72, 0.0024/5, 0.009/5],
                     'particle_embedding': True,
                     'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                     'model': 'InteractionParticles'}
@@ -675,6 +729,8 @@ if __name__ == '__main__':
     print(f'nframes: {nframes}')
     radius = model_config['radius']
     print(f'radius: {radius}')
+    noise_level = model_config['noise_level']
+    print(f'noise_level: {noise_level}')
     sigma = model_config['sigma']
     print(f'sigma: {sigma}')
     particle_embedding = model_config['particle_embedding']
@@ -688,7 +744,7 @@ if __name__ == '__main__':
 
             ntry=gtest
 
-            ntry = 552
+            ntry = 555
 
             datum='230828_'+str(ntry)
 
@@ -748,7 +804,7 @@ if __name__ == '__main__':
 
             time.sleep(0.5)
 
-            for step in range(1, 3):
+            for step in range(2, 3):
 
                 if step == 0:
                     print('')
@@ -923,7 +979,7 @@ if __name__ == '__main__':
                         print(f"Total Trainable Params: {total_params}")
 
                         print('')
-                        print(f'gridsearch: {gridsearch}')
+                        print(f'gridsearch / Ngraphs: {gridsearch}')
                         print('')
 
                         time.sleep(0.5)
@@ -1038,6 +1094,7 @@ if __name__ == '__main__':
 
                             if ((gap < 200) | (epoch > 25)) & (model.a.requires_grad == True):
 
+                                print('training MLP only ...')
                                 print('model.a.requires_grad=False')
                                 model.a.requires_grad = False
                                 if data_augmentation:
@@ -1113,6 +1170,7 @@ if __name__ == '__main__':
                     scaler = StandardScaler()
                     fig = plt.figure(figsize=(8, 8))
                     # plt.ion()
+
                     embedding = model.a_bf_kmean.detach().cpu().numpy()
                     embedding = scaler.fit_transform(embedding)
                     embedding0 = embedding[0:int(nparticles / 2)]
@@ -1148,7 +1206,9 @@ if __name__ == '__main__':
 
                     for it in tqdm(range(nframes - 1)):
 
-                        x0 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{it + 1}.pt')
+                        x0 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{it +1}.pt')
+
+                        x = x0
 
                         distance = torch.sum(bc_diff(x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
                         t = torch.Tensor([radius ** 2])  # threshold
@@ -1162,18 +1222,17 @@ if __name__ == '__main__':
                         dataset = data.Data(x=x, edge_index=edge_index)
                         dataset2 = data.Data(x=x, edge_index=edge_index2)
 
+                        # ygt = torch.load(f'graphs_data/graphs_particles_{datum}/y_0_{it +1}.pt')
+                        # ygt[:, 0] = ygt[:, 0] / ynorm[4]
+                        # ygt[:, 1] = ygt[:, 1] / ynorm[5]
+
                         with torch.no_grad():
                             y = model(dataset)  # acceleration estimation
-
-                        # y = torch.clamp(y, min=-2, max=2)
 
                         y[:, 0] = y[:, 0] * ynorm[4]
                         y[:, 1] = y[:, 1] * ynorm[5]
 
                         x[:, 2:4] = x[:, 2:4] + y  # speed update
-
-                        if model_config['boundary'] == 'per':
-                            x[:, 2:4] = x[:, 2:4] - torch.mean(x[:, 2:4])
 
                         x[:, 0:2] = bc_pos(x[:, 0:2] + x[:, 2:4])  # position update
 
