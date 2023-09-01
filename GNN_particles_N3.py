@@ -185,12 +185,11 @@ class InteractionParticles(pyg.nn.MessagePassing):
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
 
-        # self.particle_emb = MLP(input_size=2, hidden_size=8, output_size=8, nlayers=3, device=self.device)
-
         self.a = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device='cuda:0', requires_grad=True))
         self.a_bf_kmean = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device='cuda:0', requires_grad=False))
 
     def forward(self, data):
+
         x, edge_index = data.x, data.edge_index
         x[:, 4:6] = self.a[x[:, 6].detach().cpu().numpy(), 0:2]
 
@@ -407,11 +406,11 @@ if __name__ == '__main__':
 
     print(aggr_type)
 
-    for gtest in range(545,550):
+    for gtest in range(1):
 
             ntry=gtest
 
-            # ntry = 540
+            ntry = 547
 
             datum='230828_'+str(ntry)
 
@@ -482,7 +481,7 @@ if __name__ == '__main__':
 
             time.sleep(0.5)
 
-            for step in range(0,2):
+            for step in range(2,3):
 
                 if step == 0:
                     print('')
@@ -879,6 +878,7 @@ if __name__ == '__main__':
                     rmserr_list = []
                     rmserr_list0 = []
                     rmserr_list1 = []
+                    rmserr_list2 = []
 
                     c1 = np.array([220, 50, 32]) / 255
                     c2 = np.array([0, 114, 178]) / 255
@@ -921,8 +921,8 @@ if __name__ == '__main__':
                             # plt.ion()
                             ax = fig.add_subplot(2, 3, 1)
                             plt.scatter(x00[0:int(nparticles / 3), 0].detach().cpu(), x00[0:int(nparticles / 3), 1].detach().cpu(), s=3, color=c1)
-                            plt.scatter(x00[int(nparticles / 3):int(nparticles / 3) * 2].detach().cpu(), x00[int(nparticles / 3):int(nparticles / 3) * 2].detach().cpu(), s=3, color=c2)
-                            plt.scatter(x00[int(nparticles / 3)*2:int(nparticles / 3) * 3].detach().cpu(), x00[int(nparticles / 3)*2:int(nparticles / 3) * 3].detach().cpu(), s=3, color=c3)
+                            plt.scatter(x00[int(nparticles / 3):int(nparticles / 3) * 2, 0].detach().cpu(), x00[int(nparticles / 3):int(nparticles / 3) * 2, 1].detach().cpu(), s=3, color=c2)
+                            plt.scatter(x00[int(nparticles / 3)*2:int(nparticles / 3) * 3, 0].detach().cpu(), x00[int(nparticles / 3)*2:int(nparticles / 3) * 3, 1].detach().cpu(), s=3, color=c3)
                             plt.xlim([-0.3, 1.3])
                             plt.ylim([-0.3, 1.3])
                             ax.axes.get_xaxis().set_visible(False)
@@ -932,8 +932,8 @@ if __name__ == '__main__':
 
                             ax = fig.add_subplot(2, 3, 2)
                             plt.scatter(x0[0:int(nparticles / 3), 0].detach().cpu(), x0[0:int(nparticles / 3), 1].detach().cpu(), s=3, color=c1)
-                            plt.scatter(x0[int(nparticles / 3):int(nparticles / 3) * 2].detach().cpu(), x0[int(nparticles / 3):int(nparticles / 3) * 2].detach().cpu(), s=3, color=c2)
-                            plt.scatter(x0[int(nparticles / 3)*2:int(nparticles / 3) * 3].detach().cpu(), x0[int(nparticles / 3)*2:int(nparticles / 3) * 3].detach().cpu(), s=3, color=c3)
+                            plt.scatter(x0[int(nparticles / 3):int(nparticles / 3) * 2, 0].detach().cpu(), x0[int(nparticles / 3):int(nparticles / 3) * 2, 1].detach().cpu(), s=3, color=c2)
+                            plt.scatter(x0[int(nparticles / 3)*2:int(nparticles / 3) * 3, 0].detach().cpu(), x0[int(nparticles / 3)*2:int(nparticles / 3) * 3, 1].detach().cpu(), s=3, color=c3)
                             ax = plt.gca()
                             plt.xlim([-0.3, 1.3])
                             plt.ylim([-0.3, 1.3])
@@ -944,15 +944,18 @@ if __name__ == '__main__':
 
                             rmserr = torch.mean(torch.sqrt(torch.sum(bc_diff(x[:, 0:2] - x0[:, 0:2]) ** 2, axis=1)))
                             rmserr_list.append(rmserr.item())
-                            rmserr0 = torch.mean(torch.sqrt( torch.sum(bc_diff(x[0:int(nparticles / 2), 0:2] - x0[0:int(nparticles / 2), 0:2]) ** 2,axis=1)))
+                            rmserr0 = torch.mean(torch.sqrt( torch.sum(bc_diff(x[0:int(nparticles / 3), 0:2] - x0[0:int(nparticles / 3), 0:2]) ** 2,axis=1)))
                             rmserr_list0.append(rmserr0.item())
-                            rmserr1 = torch.mean(torch.sqrt(torch.sum(bc_diff(x[int(nparticles / 2):nparticles, 0:2] - x0[int(nparticles / 2):nparticles, 0:2]) ** 2,axis=1)))
+                            rmserr1 = torch.mean(torch.sqrt(torch.sum(bc_diff(x[int(nparticles / 3)*1:int(nparticles / 3) * 2, 0:2] - x0[int(nparticles / 3)*1:int(nparticles / 3) * 2, 0:2]) ** 2,axis=1)))
                             rmserr_list1.append(rmserr1.item())
+                            rmserr2 = torch.mean(torch.sqrt(torch.sum(bc_diff(x[int(nparticles / 3)*2:int(nparticles / 3) * 3, 0:2] - x0[int(nparticles / 3)*2:int(nparticles / 3) * 3, 0:2]) ** 2,axis=1)))
+                            rmserr_list2.append(rmserr2.item())
 
                             ax = fig.add_subplot(2, 3, 3)
                             plt.plot(np.arange(0, len(rmserr_list) * stp, stp), rmserr_list, 'k', label='RMSE')
                             plt.plot(np.arange(0, len(rmserr_list) * stp, stp), rmserr_list0, color=c1, label='RMSE0')
                             plt.plot(np.arange(0, len(rmserr_list) * stp, stp), rmserr_list1, color=c2, label='RMSE1')
+                            plt.plot(np.arange(0, len(rmserr_list) * stp, stp), rmserr_list2, color=c3, label='RMSE2')
                             plt.ylim([0, 0.1])
                             plt.xlim([0, nframes])
                             plt.tick_params(axis='both', which='major', labelsize=10)
@@ -974,8 +977,8 @@ if __name__ == '__main__':
 
                             ax = fig.add_subplot(2, 3, 5)
                             plt.scatter(x[0:int(nparticles / 3), 0].detach().cpu(), x[0:int(nparticles / 3), 1].detach().cpu(), s=3, color=c1)
-                            plt.scatter(x[int(nparticles / 3):int(nparticles / 3) * 2].detach().cpu(), x[int(nparticles / 3):int(nparticles / 3) * 2].detach().cpu(), s=3, color=c2)
-                            plt.scatter(x[int(nparticles / 3)*2:int(nparticles / 3) * 3].detach().cpu(), x[int(nparticles / 3)*2:int(nparticles / 3) * 3].detach().cpu(), s=3, color=c3)
+                            plt.scatter(x[int(nparticles / 3):int(nparticles / 3) * 2, 0].detach().cpu(), x[int(nparticles / 3):int(nparticles / 3) * 2, 1].detach().cpu(), s=3, color=c2)
+                            plt.scatter(x[int(nparticles / 3)*2:int(nparticles / 3) * 3, 0].detach().cpu(), x[int(nparticles / 3)*2:int(nparticles / 3) * 3, 1].detach().cpu(), s=3, color=c3)
                             ax = plt.gca()
                             ax.axes.xaxis.set_ticklabels([])
                             ax.axes.yaxis.set_ticklabels([])
