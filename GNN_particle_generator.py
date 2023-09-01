@@ -340,8 +340,8 @@ if __name__ == '__main__':
                     'nparticles' : 2000,  # number of points per classes
                     'nframes' : 200,
                     'sigma' : .005,
-                    'aggr': 'add',
-                    'boundary' : 'no', # periodic   'no'  # no boundary condition
+                    'aggr': 'mean',
+                    'boundary' : 'periodic', # periodic   'no'  # no boundary condition
                     'model': 'InteractionParticles'}
 
 

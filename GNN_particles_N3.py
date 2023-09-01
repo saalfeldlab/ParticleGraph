@@ -410,7 +410,7 @@ if __name__ == '__main__':
 
             ntry=gtest
 
-            ntry = 547
+            ntry = 549
 
             datum='230828_'+str(ntry)
 
@@ -774,6 +774,8 @@ if __name__ == '__main__':
                             if ((gap < 200) | (epoch > 25)) & (model.a.requires_grad == True):
                                 print('model.a.requires_grad=False')
                                 model.a.requires_grad = False
+                                data_augmentation_loop = 100
+                                print(f'data_augmentation_loop: {data_augmentation_loop}')
                                 model.a_bf_kmean.data=model.a.data
                                 new_a = kmeans.cluster_centers_[kmeans.labels_, :]
                                 model.a.data = torch.tensor(new_a, device=device)
@@ -809,7 +811,7 @@ if __name__ == '__main__':
 
                 if step == 2:
 
-                    files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph/*")
+                    files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph3/*")
                     for f in files:
                         os.remove(f)
 
@@ -1043,5 +1045,5 @@ if __name__ == '__main__':
                             plt.plot(rr.detach().cpu().numpy(), rr.detach().cpu().numpy() * 0, color=[0, 0, 0],
                                      linewidth=0.5)
 
-                            plt.savefig(f"./ReconsGraph/Fig_{it}.tif")
+                            plt.savefig(f"./ReconsGraph3/Fig_{it}.tif")
                             plt.close()

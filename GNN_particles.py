@@ -164,12 +164,14 @@ class InteractionParticles(pyg.nn.MessagePassing):
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
 
-        # self.particle_emb = MLP(input_size=2, hidden_size=8, output_size=8, nlayers=3, device=self.device)
-
         self.a = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device='cuda:0', requires_grad=True))
         self.a_bf_kmean = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device='cuda:0', requires_grad=False))
 
+        self.p0 = nn.Parameter(torch.tensor(np.ones(4), device='cuda:0', requires_grad=False))
+        self.p1 = nn.Parameter(torch.tensor(np.ones(4), device='cuda:0', requires_grad=False))
+
     def forward(self, data):
+
         x, edge_index = data.x, data.edge_index
         x[:, 4:6] = self.a[x[:, 6].detach().cpu().numpy(), 0:2]
 
@@ -342,8 +344,6 @@ if __name__ == '__main__':
     # version 1.15 230825
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
 
 
     # model_config = {'ntry': 515,
@@ -585,35 +585,88 @@ if __name__ == '__main__':
                     'p0': [1.27, 1.41, 0.0547, 0.0053],
                     'p1': [1.82, 1.72, 0.024, 0.09],
                     'particle_embedding': True,
-                    'boundary' : 'no', # periodic   'no'  # no boundary condition
+                    'boundary' : 'periodic', # periodic   'no'  # no boundary condition
                     'model': 'InteractionParticles'}
 
-    model_config = {'ntry': 540,
+    # model_config = {'ntry': 540,
+    #                 'input_size': 15,       # 9 + 8 -1 particle_embedding
+    #                 'output_size': 2,
+    #                 'hidden_size': 32,
+    #                 'n_mp_layers': 5,
+    #                 'noise_level': 0,
+    #                 'radius': 0.15,
+    #                 'datum': '230828_528',
+    #                 'nparticles' : 2000,  # number of points per classes
+    #                 'nframes' : 200,
+    #                 'sigma' : .005,
+    #                 'aggr': 'add',
+    #                 'p0': [1.27, 1.41, 0.0547, 0.0053],
+    #                 'p1': [1.82, 1.72, 0.024, 0.09],
+    #                 'particle_embedding': True,
+    #                 'boundary' : 'no', # periodic   'no'  # no boundary condition
+    #                 'model': 'InteractionParticles'}
+
+    model_config = {'ntry': 550,
                     'input_size': 15,       # 9 + 8 -1 particle_embedding
                     'output_size': 2,
                     'hidden_size': 32,
                     'n_mp_layers': 5,
                     'noise_level': 0,
-                    'radius': 0.15,
-                    'datum': '230828_528',
-                    'nparticles' : 2000,  # number of points per classes
-                    'nframes' : 200,
-                    'sigma' : .005,
-                    'aggr': 'add',
+                    'radius': 0.075,
+                    'datum': '230828',
+                    'nparticles': 2000,  # number of points per classes
+                    'nframes': 200,
+                    'aggr': 'mean',
+                    'sigma': .005,
                     'p0': [1.27, 1.41, 0.0547, 0.0053],
                     'p1': [1.82, 1.72, 0.024, 0.09],
                     'particle_embedding': True,
-                    'boundary' : 'no', # periodic   'no'  # no boundary condition
+                    'boundary': 'no',  # periodic   'no'  # no boundary condition
                     'model': 'InteractionParticles'}
 
-    gridsearch_list = [2] #, 20, 50, 100, 200]
-    nrun = 4
-    data_augmentation = True
-    aggr_type = 'add'
+    model_config = {'ntry': 551,
+                    'input_size': 15,       # 9 + 8 -1 particle_embedding
+                    'output_size': 2,
+                    'hidden_size': 32,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'radius': 0.075,
+                    'datum': '230828',
+                    'nparticles': 2000,  # number of points per classes
+                    'nframes': 200,
+                    'aggr': 'mean',
+                    'sigma': .005,
+                    'p0': [1.27, 1.41, 0.0547, 0.0053],
+                    'p1': [1.82, 1.72, 0.024, 0.09],
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'model': 'InteractionParticles'}
+
+    model_config = {'ntry': 552,
+                    'input_size': 15,       # 9 + 8 -1 particle_embedding
+                    'output_size': 2,
+                    'hidden_size': 32,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'radius': 0.075,
+                    'datum': '230828',
+                    'nparticles': 2000,  # number of points per classes
+                    'nframes': 200,
+                    'aggr': 'add',
+                    'sigma': .005,
+                    'p0': [1.27, 1.41, 0.00547, 0.00053],
+                    'p1': [1.82, 1.72, 0.0024, 0.009],
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'model': 'InteractionParticles'}
+
+    gridsearch_list = [20] #, 20, 50, 100, 200]
+    nrun = 20
+    data_augmentation = False
 
     print('')
-    ntry = model_config['ntry']
-    print(f'ntry: {ntry}')
+    # ntry = model_config['ntry']
+    # print(f'ntry: {ntry}')
     datum = model_config['datum']
     print(f'datum: {datum}')
     nparticles = model_config['nparticles']  # number of particles
@@ -631,42 +684,42 @@ if __name__ == '__main__':
     aggr_type = model_config['aggr']
     print(f'aggr_type: {aggr_type}')
 
-    for gtest in range(540, 545):
+    for gtest in range(1):
 
             ntry=gtest
 
-            # ntry = 541
+            ntry = 552
 
             datum='230828_'+str(ntry)
 
             print(f'ntry: {ntry}')
             print(f'datum: {datum}')
 
-            # p0 = model_config['p0']
-            # print(f'p0: {p0}')
-            # p0 = torch.tensor(p0)
-            # p1 = model_config['p1']
-            # print(f'p1: {p1}')
-
-            p0 = torch.rand(1, 4)
-            p0 = torch.squeeze(p0)
-            p0[0] = p0[0] + 1
-            p0[1] = p0[1] + 1
-            if aggr_type == 'add':
-                p0[2:4] = p0[2:4] / 50
-            else:
-                p0[2:4] = p0[2:4] / 10
-            p1 = torch.rand(1, 4)
-            p1 = torch.squeeze(p1)
-            p1[0] = p1[0] + 1
-            p1[1] = p1[1] + 1
-            if aggr_type == 'add':
-                p1[2:4] = p1[2:4] / 50
-            else:
-                p0[2:4] = p0[2:4] / 10
-
+            p0 = model_config['p0']
             print(f'p0: {p0}')
+            p0 = torch.tensor(p0)
+            p1 = model_config['p1']
             print(f'p1: {p1}')
+            p1 = torch.tensor(p1)
+
+            # p0 = torch.rand(1, 4)
+            # p0 = torch.squeeze(p0)
+            # p0[0] = p0[0] + 1
+            # p0[1] = p0[1] + 1
+            # if aggr_type == 'add':
+            #     p0[2:4] = p0[2:4] / 50
+            # else:
+            #     p0[2:4] = p0[2:4] / 10
+            # p1 = torch.rand(1, 4)
+            # p1 = torch.squeeze(p1)
+            # p1[0] = p1[0] + 1
+            # p1[1] = p1[1] + 1
+            # if aggr_type == 'add':
+            #     p1[2:4] = p1[2:4] / 50
+            # else:
+            #     p0[2:4] = p0[2:4] / 10
+            # print(f'p0: {p0}')
+            # print(f'p1: {p1}')
 
 
             rr = torch.tensor(np.linspace(0, 0.015, 100))
@@ -687,7 +740,6 @@ if __name__ == '__main__':
                 def bc_pos(X):
                     return torch.remainder(X, 1.0)
 
-
                 def bc_diff(D):
                     return torch.remainder(D - .5, 1.0) - .5
 
@@ -696,13 +748,13 @@ if __name__ == '__main__':
 
             time.sleep(0.5)
 
-            for step in range(0, 2):
+            for step in range(1, 3):
 
                 if step == 0:
                     print('')
                     print('Generating data ...')
 
-                    files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph/*")
+                    files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph2/*")
                     for f in files:
                         os.remove(f)
 
@@ -791,7 +843,7 @@ if __name__ == '__main__':
                                 plt.plot(rr.detach().cpu().numpy(), rr.detach().cpu().numpy() * 0, color=[0, 0, 0],
                                          linewidth=0.5)
 
-                                plt.savefig(f"./ReconsGraph/Fig_{run}_{it}.tif")
+                                plt.savefig(f"./ReconsGraph2/Fig_{run}_{it}.tif")
                                 plt.close()
 
                 if step == 1:
@@ -851,6 +903,11 @@ if __name__ == '__main__':
                         print(f'network: {net}')
                         # state_dict = torch.load(net)
                         # model.load_state_dict(state_dict['model_state_dict'])
+
+                        model.p0.data = p0
+                        model.p1.data = p1
+                        model.p0.requires_grad = False
+                        model.p1.requires_grad = False
 
                         best_loss = np.inf
 
@@ -980,8 +1037,14 @@ if __name__ == '__main__':
                             #     best_loss = np.inf
 
                             if ((gap < 200) | (epoch > 25)) & (model.a.requires_grad == True):
+
                                 print('model.a.requires_grad=False')
                                 model.a.requires_grad = False
+                                if data_augmentation:
+                                    data_augmentation_loop = 100
+                                else:
+                                    data_augmentation_loop = 1
+                                print(f'data_augmentation_loop: {data_augmentation_loop}')
                                 model.a_bf_kmean.data=model.a.data
                                 new_a = kmeans.cluster_centers_[kmeans.labels_, :]
                                 model.a.data = torch.tensor(new_a, device=device)
@@ -1014,7 +1077,7 @@ if __name__ == '__main__':
 
                 if step == 2:
 
-                    files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph/*")
+                    files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph3/*")
                     for f in files:
                         os.remove(f)
 
@@ -1232,5 +1295,5 @@ if __name__ == '__main__':
                             plt.plot(rr.detach().cpu().numpy(), rr.detach().cpu().numpy() * 0, color=[0, 0, 0],
                                      linewidth=0.5)
 
-                            plt.savefig(f"./ReconsGraph/Fig_{it}.tif")
+                            plt.savefig(f"./ReconsGraph3/Fig_{it}.tif")
                             plt.close()
