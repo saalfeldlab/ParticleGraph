@@ -347,69 +347,7 @@ if __name__ == '__main__':
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-
-
-
-    # model_config = {'ntry': 515,
-    #                 'input_size': 8,
-    #                 'output_size': 2,
-    #                 'hidden_size': 16,
-    #                 'n_mp_layers': 3,
-    #                 'noise_level': 0,
-    #                 'radius': 0.075,
-    #                 'datum': '230824',
-    #                 'nparticles' : 2000,  # number of points per classes
-    #                 'nframes' : 400,
-    #                 'sigma' : .005,
-    #                 'particle_embedding': False,
-    #                 'boundary' : 'per', # periodic   'no'  # no boundary condition
-    #                 'model': 'InteractionParticles'}
-    #
-    # model_config = {'ntry': 516,
-    #                 'embedding': 128,
-    #                 'hidden_size': 32,
-    #                 'n_mp_layers': 4,
-    #                 'noise_level': 0,
-    #                 'radius': 0.075,
-    #                 'datum': '230824',
-    #                 'nparticles': 2000,  # number of points per classes
-    #                 'nframes': 400,
-    #                 'sigma': .005,
-    #                 'particle_embedding': False,
-    #                 'boundary': 'per',  # periodic   'no'  # no boundary condition
-    #                 'model': 'ResNetGNN'}
-
-    # model_config = {'ntry': 517,
-    #                 'input_size': 8,
-    #                 'output_size': 2,
-    #                 'hidden_size': 16,
-    #                 'n_mp_layers': 3,
-    #                 'noise_level': 0,
-    #                 'datum': '230825',
-    #                 'nparticles': 2000,  # number of points per classes
-    #                 'nframes': 400,
-    #                 'sigma': .005,
-    #                 'radius': 0.125,
-    #                 'particle_embedding': False,
-    #                 'boundary' : 'per', # periodic   'no'  # no boundary condition
-    #                 'model': 'InteractionParticles'}
-
-    # model_config = {'ntry': 518,
-    #                 'input_size': 8,
-    #                 'output_size': 2,
-    #                 'hidden_size': 16,
-    #                 'n_mp_layers': 3,
-    #                 'noise_level': 0,
-    #                 'radius': 0.075,
-    #                 'datum': '230828',
-    #                 'nparticles' : 2000,  # number of points per classes
-    #                 'nframes' : 200,
-    #                 'sigma' : .005,
-    #                 'particle_embedding': False,
-    #                 'boundary' : 'no', # periodic   'no'  # no boundary condition
-    #                 'model': 'InteractionParticles'}
-
-    # model_config = {'ntry': 519,
+    # model_config = {'ntry': 520,
     #                 'input_size': 9,
     #                 'output_size': 2,
     #                 'hidden_size': 16,
@@ -417,64 +355,52 @@ if __name__ == '__main__':
     #                 'noise_level': 0,
     #                 'radius': 0.075,
     #                 'datum': '230828',
+    #                 'nparticles': 2000,  # number of points per classes
+    #                 'nframes': 200,
+    #                 'sigma': .005,
+    #                 'p0': [1.27, 1.41, 0.0547, 0.0053],
+    #                 'p1': [1.82, 1.72, 0.024, 0.09],
+    #                 'aggr_type' : 'mean',
+    #                 'particle_embedding': False,
+    #                 'boundary': 'no',  # periodic   'no'  # no boundary condition
+    #                 'model': 'InteractionParticles'}
+    #
+    # model_config = {'ntry': 521,
+    #                 'input_size': 15,       # 9 + 8 -1 particle_embedding
+    #                 'output_size': 2,
+    #                 'hidden_size': 32,
+    #                 'n_mp_layers': 5,
+    #                 'noise_level': 0,
+    #                 'radius': 0.125,
+    #                 'datum': '230828',
     #                 'nparticles' : 2000,  # number of points per classes
     #                 'nframes' : 200,
     #                 'sigma' : .005,
-    #                 'particle_embedding': False,
+    #                 'p0' : [1.7531, 1.4331, 0.1408, 0.4354],
+    #                 'p1' : [1.9662, 1.8537, 0.6304, 0.662],
+    #                 'aggr_type' : 'mean',
+    #                 'particle_embedding': True,
     #                 'boundary' : 'no', # periodic   'no'  # no boundary condition
     #                 'model': 'InteractionParticles'}
-
-    model_config = {'ntry': 520,
-                    'input_size': 9,
-                    'output_size': 2,
-                    'hidden_size': 16,
-                    'n_mp_layers': 3,
-                    'noise_level': 0,
-                    'radius': 0.075,
-                    'datum': '230828',
-                    'nparticles': 2000,  # number of points per classes
-                    'nframes': 200,
-                    'sigma': .005,
-                    'p0': [1.27, 1.41, 0.0547, 0.0053],
-                    'p1': [1.82, 1.72, 0.024, 0.09],
-                    'particle_embedding': False,
-                    'boundary': 'no',  # periodic   'no'  # no boundary condition
-                    'model': 'InteractionParticles'}
-
-    model_config = {'ntry': 521,
-                    'input_size': 15,       # 9 + 8 -1 particle_embedding
-                    'output_size': 2,
-                    'hidden_size': 32,
-                    'n_mp_layers': 5,
-                    'noise_level': 0,
-                    'radius': 0.125,
-                    'datum': '230828',
-                    'nparticles' : 2000,  # number of points per classes
-                    'nframes' : 200,
-                    'sigma' : .005,
-                    'p0' : [1.7531, 1.4331, 0.1408, 0.4354],
-                    'p1' : [1.9662, 1.8537, 0.6304, 0.662],
-                    'particle_embedding': True,
-                    'boundary' : 'no', # periodic   'no'  # no boundary condition
-                    'model': 'InteractionParticles'}
-
-    model_config = {'ntry': 522,
-                    'input_size': 15,       # 9 + 8 -1 particle_embedding
-                    'output_size': 2,
-                    'hidden_size': 32,
-                    'n_mp_layers': 5,
-                    'noise_level': 0,
-                    'radius': 0.075,
-                    'datum': '230828',
-                    'nparticles' : 2000,  # number of points per classes
-                    'nframes' : 200,
-                    'sigma' : .005,
-                    'p0' : [1.9531, 1.1348, 0.6443, 0.4937],
-                    'p1' : [1.919, 1.2744, 0.158, 0.4729],
-                    'particle_embedding': True,
-                    'boundary' : 'no', # periodic   'no'  # no boundary condition
-                    'model': 'InteractionParticles'}
-
+    #
+    # model_config = {'ntry': 522,
+    #                 'input_size': 15,       # 9 + 8 -1 particle_embedding
+    #                 'output_size': 2,
+    #                 'hidden_size': 32,
+    #                 'n_mp_layers': 5,
+    #                 'noise_level': 0,
+    #                 'radius': 0.075,
+    #                 'datum': '230828',
+    #                 'nparticles' : 2000,  # number of points per classes
+    #                 'nframes' : 200,
+    #                 'sigma' : .005,
+    #                 'p0' : [1.9531, 1.1348, 0.6443, 0.4937],
+    #                 'p1' : [1.919, 1.2744, 0.158, 0.4729],
+    #                 'aggr_type' : 'mean',
+    #                 'particle_embedding': True,
+    #                 'boundary' : 'no', # periodic   'no'  # no boundary condition
+    #                 'model': 'InteractionParticles'}
+    #
     # model_config = {'ntry': 523,
     #                 'input_size': 9,
     #                 'output_size': 2,
@@ -488,10 +414,11 @@ if __name__ == '__main__':
     #                 'sigma' : .005,
     #                 'p0' : [1.1305, 1.1122, 0.466, 0.72335],
     #                 'p1' : [1.076, 1.2492, 0.9499, 0.2152],
+    #                 'aggr_type' : 'mean',
     #                 'particle_embedding': False,
     #                 'boundary' : 'no', # periodic   'no'  # no boundary condition
     #                 'model': 'InteractionParticles'}
-
+    #
     # model_config = {'ntry': 524,
     #                 'input_size': 9,
     #                 'output_size': 2,
@@ -505,44 +432,47 @@ if __name__ == '__main__':
     #                 'sigma': .005,
     #                 'p0': [1.4526, 1.8942, 0.2867, 0.477],
     #                 'p1': [1.7241, 1.299, 0.0317, 0.3653],
+    #                 'aggr_type' : 'mean',
     #                 'particle_embedding': False,
     #                 'boundary': 'no',  # periodic   'no'  # no boundary condition
     #                 'model': 'InteractionParticles'}
-
-
-    model_config = {'ntry': 525,
-                    'input_size': 15,       # 9 + 8 -1 particle_embedding
-                    'output_size': 2,
-                    'hidden_size': 32,
-                    'n_mp_layers': 5,
-                    'noise_level': 0,
-                    'radius': 0.075,
-                    'datum': '230828_525',
-                    'nparticles' : 2000,  # number of points per classes
-                    'nframes' : 200,
-                    'sigma' : .005,
-                    'p0': [1.27, 1.41, 0.0547, 0.0053],
-                    'p1': [1.82, 1.72, 0.024, 0.09],
-                    'particle_embedding': True,
-                    'boundary' : 'no', # periodic   'no'  # no boundary condition
-                    'model': 'InteractionParticles'}
-
-    model_config = {'ntry': 526,
-                    'input_size': 15,       # 9 + 8 -1 particle_embedding
-                    'output_size': 2,
-                    'hidden_size': 32,
-                    'n_mp_layers': 5,
-                    'noise_level': 0,
-                    'radius': 0.075,
-                    'datum': '230828_524',
-                    'nparticles' : 2000,  # number of points per classes
-                    'nframes' : 200,
-                    'sigma' : .005,
-                    'p0': [1.4526, 1.8942, 0.2867, 0.477],
-                    'p1': [1.7241, 1.299, 0.0317, 0.3653],
-                    'particle_embedding': True,
-                    'boundary' : 'no', # periodic   'no'  # no boundary condition
-                    'model': 'InteractionParticles'}
+    #
+    #
+    # model_config = {'ntry': 525,
+    #                 'input_size': 15,       # 9 + 8 -1 particle_embedding
+    #                 'output_size': 2,
+    #                 'hidden_size': 32,
+    #                 'n_mp_layers': 5,
+    #                 'noise_level': 0,
+    #                 'radius': 0.075,
+    #                 'datum': '230828_525',
+    #                 'nparticles' : 2000,  # number of points per classes
+    #                 'nframes' : 200,
+    #                 'sigma' : .005,
+    #                 'p0': [1.27, 1.41, 0.0547, 0.0053],
+    #                 'p1': [1.82, 1.72, 0.024, 0.09],
+    #                 'aggr_type' : 'mean',
+    #                 'particle_embedding': True,
+    #                 'boundary' : 'no', # periodic   'no'  # no boundary condition
+    #                 'model': 'InteractionParticles'}
+    #
+    # model_config = {'ntry': 526,
+    #                 'input_size': 15,       # 9 + 8 -1 particle_embedding
+    #                 'output_size': 2,
+    #                 'hidden_size': 32,
+    #                 'n_mp_layers': 5,
+    #                 'noise_level': 0,
+    #                 'radius': 0.075,
+    #                 'datum': '230828_524',
+    #                 'nparticles' : 2000,  # number of points per classes
+    #                 'nframes' : 200,
+    #                 'sigma' : .005,
+    #                 'p0': [1.4526, 1.8942, 0.2867, 0.477],
+    #                 'p1': [1.7241, 1.299, 0.0317, 0.3653],
+    #                 'aggr_type': 'mean',
+    #                 'particle_embedding': True,
+    #                 'boundary' : 'no', # periodic   'no'  # no boundary condition
+    #                 'model': 'InteractionParticles'}
     #
     # model_config = {'ntry': 527,
     #                 'input_size': 15,       # 9 + 8 -1 particle_embedding
@@ -557,6 +487,7 @@ if __name__ == '__main__':
     #                 'sigma' : .005,
     #                 'p0' : [1.1305, 1.1122, 0.466, 0.72335],
     #                 'p1' : [1.076, 1.2492, 0.9499, 0.2152],
+    #                 'aggr_type' : 'mean',
     #                 'particle_embedding': True,
     #                 'boundary' : 'no', # periodic   'no'  # no boundary condition
     #                 'model': 'InteractionParticles'}
@@ -574,6 +505,7 @@ if __name__ == '__main__':
                     'sigma' : .005,
                     'p0': [1.27, 1.41, 0.0547, 0.0053],
                     'p1': [1.82, 1.72, 0.024, 0.09],
+                    'aggr_type': 'mean',
                     'particle_embedding': True,
                     'boundary' : 'no', # periodic   'no'  # no boundary condition
                     'model': 'InteractionParticles'}
@@ -582,7 +514,7 @@ if __name__ == '__main__':
                     'input_size': 15,
                     'output_size': 2,
                     'hidden_size': 32,
-                    'n_mp_layers': 3,
+                    'n_mp_layers': 5,
                     'noise_level': 0,
                     'radius': 0.075,
                     'datum': '230828',
@@ -591,20 +523,19 @@ if __name__ == '__main__':
                     'sigma': .005,
                     'p0': [1.27, 1.41, 0.0547, 0.0053],
                     'p1': [1.82, 1.72, 0.024, 0.09],
+                    'aggr_type' : 'mean',
                     'particle_embedding': True,
                     'boundary': 'no',  # periodic   'no'  # no boundary condition
                     'model': 'InteractionParticles'}
 
     gridsearch_list = [2] #, 20, 50, 100, 200]
-    nrun = 2
     data_augmentation = True
-    aggr_type = 'mean'
 
     print('')
     ntry = model_config['ntry']
-    print(f'ntry: {ntry}')
+    print(f'init ntry: {ntry}')
     datum = model_config['datum']
-    print(f'datum: {datum}')
+    print(f'init datum: {datum}')
     nparticles = model_config['nparticles']  # number of particles
     print(f'nparticles: {nparticles}')
     nframes = model_config['nframes']
@@ -613,10 +544,13 @@ if __name__ == '__main__':
     print(f'radius: {radius}')
     sigma = model_config['sigma']
     print(f'sigma: {sigma}')
+    aggr_type = model_config['aggr_type']
+    print(f'aggr_type: {aggr_type}')
     particle_embedding = model_config['particle_embedding']
     print(f'particle_embedding: {particle_embedding}')
     boundary = model_config['boundary']
     print(f'boundary: {boundary}')
+    print('')
 
     for gtest in range(1):
 
@@ -676,7 +610,7 @@ if __name__ == '__main__':
 
             time.sleep(0.5)
 
-            for step in range(0,2):
+            for step in range(1,2):
 
                 if step == 0:
                     print('')
@@ -690,7 +624,7 @@ if __name__ == '__main__':
                     for f in files:
                         os.remove(f)
 
-                    for run in tqdm(range(nrun + 1)):
+                    for run in tqdm(range(gridsearch_list[0] + 1)):
 
                         X1 = torch.rand(nparticles, 2, device=device)
                         X1t = torch.zeros((nparticles, 2, nframes))  # to store all the intermediate time
@@ -982,13 +916,13 @@ if __name__ == '__main__':
                                 plt.scatter(embedding0[:, 0], embedding0[:, 1], s=30, color=c1)
                                 plt.scatter(embedding1[:, 0], embedding1[:, 1], s=30, color=c2)
                             else:
-                                plt.scatter(embedding0[:, 0], embedding0[:, 1], s=5, color=c1)
-                                plt.scatter(embedding1[:, 0], embedding1[:, 1], s=5, color=c2)
+                                plt.scatter(embedding0[:, 0], embedding0[:, 1], s=1, color=c1)
+                                plt.scatter(embedding1[:, 0], embedding1[:, 1], s=1, color=c2)
                             plt.xlim([-4.1, 4.1])
                             plt.ylim([-4.1, 4.1])
                             plt.xlabel('Embedding 0',fontsize=12)
                             plt.ylabel('Embedding 1', fontsize=12)
-                            plt.text(-3.9, 3.9, f'kmeans.inertia: {np.round(gap, 0)}')
+                            plt.text(-3.9, 3.8, f'kmeans.inertia: {np.round(gap, 0)}', fontsize=12)
                             plt.savefig(f"./ReconsGraph/Fig_{ntry}_{epoch}.tif")
                             ax = fig.add_subplot(1, 2, 2)
                             plt.plot(range(1, 11), sse)
