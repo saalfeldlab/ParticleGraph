@@ -607,10 +607,11 @@ if __name__ == '__main__':
 
             c1 = np.array([220, 50, 32]) / 255
             c2 = np.array([0, 114, 178]) / 255
+            c3 = np.array([50, 205, 50]) / 255
 
             time.sleep(0.5)
 
-            for step in range(1,2):
+            for step in range(0,2):
 
                 if step == 0:
                     print('')
@@ -923,12 +924,12 @@ if __name__ == '__main__':
                             plt.xlabel('Embedding 0',fontsize=12)
                             plt.ylabel('Embedding 1', fontsize=12)
                             plt.text(-3.9, 3.8, f'kmeans.inertia: {np.round(gap, 0)}', fontsize=12)
-                            plt.savefig(f"./ReconsGraph/Fig_{ntry}_{epoch}.tif")
                             ax = fig.add_subplot(1, 2, 2)
                             plt.plot(range(1, 11), sse)
                             plt.xticks(range(1, 11))
                             plt.xlabel("Number of Clusters", fontsize=12)
                             plt.ylabel("SSE", fontsize=12)
+                            plt.savefig(f"./ReconsGraph/Fig_{ntry}_{epoch}.tif")
                             plt.close()
 
                 if step == 2:
