@@ -333,13 +333,13 @@ if __name__ == '__main__':
                     'hidden_size': 32,
                     'n_mp_layers': 5,
                     'noise_level': 0,
-                    'radius': 0.025,
+                    'radius': 0.05,
                     'datum': '230828',
                     'nparticles': 10000,
                     'nparticle_types': 5,
                     'nframes': 200,
                     'sigma': .005,
-                    'tau': 0.1,
+                    'tau': 0.25,
                     'p0': [1.27, 1.41, 0.0547, 0.0053],
                     'p1': [1.82, 1.72, 0.024, 0.09],
                     'aggr_type' : 'mean',
@@ -350,10 +350,10 @@ if __name__ == '__main__':
     # with open(f"{folder}/model_config.json", 'r') as f:
     #     model_config = json.load(f)
 
-    gridsearch_list = [20] #, 20, 50, 100, 200]
+    gridsearch_list = [100] #, 20, 50, 100, 200]
     data_augmentation = False
 
-    for gtest in range(600,620):
+    for gtest in range(600,605):
 
             ntry=gtest
             model_config['ntry'] = ntry
@@ -397,9 +397,9 @@ if __name__ == '__main__':
                 def bc_diff(D):
                     return torch.remainder(D - .5, 1.0) - .5
 
-            c1 = np.array([220, 50, 32]) / 255
-            c2 = np.array([0, 114, 178]) / 255
-            c3 = np.array([50, 205, 50]) / 255
+            index_particles = []
+            for n in range(nparticle_types):
+                index_particles.append(np.arange(int(nparticles / nparticle_types) * n, int(nparticles / nparticle_types) * (n + 1)))
 
             time.sleep(0.5)
 
@@ -427,13 +427,11 @@ if __name__ == '__main__':
                     psi_output = []
                     rr = torch.tensor(np.linspace(0, 0.015, 100))
                     rr = rr.to(device)
-                    index_particles = []
                     for n in range(nparticle_types):
                         model.append(InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p[n]), tau=tau))
                         torch.save({'model_state_dict': model[n].state_dict()},f'graphs_data/graphs_particles_{datum}/model_{n}.pt')
                         psi_output.append(psi(rr, torch.squeeze(p[n])))
                         print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
-                        index_particles.append(np.arange(int(nparticles / nparticle_types)*n,int(nparticles / nparticle_types)*(n+1)))
                     time.sleep(0.5)
 
                     for run in tqdm(range(gridsearch_list[0] + 1)):
@@ -609,8 +607,6 @@ if __name__ == '__main__':
                                 optimizer = torch.optim.Adam(model.parameters(), lr=1E-4)  # , weight_decay=5e-4)
 
                             total_loss = 0
-                            data_fit = 0
-                            regul = 0
 
                             for N in range(1, (gridsearch-1) * nframes * data_augmentation_loop, stp):
 
@@ -656,16 +652,11 @@ if __name__ == '__main__':
                                 optimizer.zero_grad()
                                 pred = model(dataset)
 
-                                df = (pred - y).norm(2)
-                                rg = (torch.std(pred) - torch.std(y)).norm(1) * 1E1 * 0
-
-                                loss = df + rg
+                                loss = (pred - y).norm(2)
                                 loss.backward()
                                 optimizer.step()
 
                                 total_loss += loss.item()
-                                data_fit += df.item()
-                                regul += rg.item()
 
                             scaler = StandardScaler()
                             embedding = model.a.detach().cpu().numpy()
@@ -693,7 +684,7 @@ if __name__ == '__main__':
                             else:
                                 print("Epoch {}. Loss: {:.6f} Gap: {:.3f} kl.elbow {:d} ".format(epoch,total_loss / N / nparticles, gap, kl.elbow))
 
-                            if ((gap < 200) | (epoch > 24)) & (model.a.requires_grad == True):
+                            if ( ((gap < 100)&(kl.elbow==nparticle_types)) | (epoch > 24)) & (model.a.requires_grad == True):
 
                                 if data_augmentation:
                                     data_augmentation_loop = 200
@@ -712,7 +703,7 @@ if __name__ == '__main__':
                                 best_loss = np.inf
 
                             fig = plt.figure(figsize=(12, 6))
-                            # plt.ion()
+                            plt.ion()
                             ax = fig.add_subplot(1, 2, 1)
                             for n in range(nparticle_types):
                                 plt.scatter(embedding_particle[n][:,0], embedding_particle[n][:,1], s=3)
@@ -734,6 +725,18 @@ if __name__ == '__main__':
                     files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph3/*")
                     for f in files:
                         os.remove(f)
+
+                    model_ = []
+                    psi_output = []
+                    rr = torch.tensor(np.linspace(0, 0.015, 100))
+                    rr = rr.to(device)
+                    index_particles = []
+                    for n in range(nparticle_types):
+                        model.append(InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p[n]), tau=tau))
+                        torch.load({'model_state_dict': model[n].state_dict()},f'graphs_data/graphs_particles_{datum}/model_{n}.pt')
+                        psi_output.append(psi(rr, torch.squeeze(p[n])))
+                        print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
+                        index_particles.append(np.arange(int(nparticles / nparticle_types)*n,int(nparticles / nparticle_types)*(n+1)))
 
                     print('')
                     print('Testing loop ... ')
@@ -763,25 +766,21 @@ if __name__ == '__main__':
                     print(table)
                     print(f"Total Trainable Params: {total_params}")
 
-
                     scaler = StandardScaler()
-
-
                     fig = plt.figure(figsize=(12, 6))
                     # plt.ion()
                     ax = fig.add_subplot(1, 2, 1)
                     embedding = model.a_bf_kmean.detach().cpu().numpy()
                     embedding = scaler.fit_transform(embedding)
-                    embedding0 = embedding[0:int(nparticles / 2)]
-                    embedding1 = embedding[int(nparticles / 2):nparticles]
-                    plt.scatter(embedding0[:, 0], embedding0[:, 1], s=1, color=c1, alpha=0.5)
-                    plt.scatter(embedding1[:, 0], embedding1[:, 1], s=1, color=c2, alpha=0.5)
+                    embedding_particle = []
+                    for n in range(nparticle_types):
+                        embedding_particle.append(embedding[index_particles[n], :])
+                        plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
                     embedding = model.a.detach().cpu().numpy()
                     embedding = scaler.fit_transform(embedding)
-                    embedding0 = embedding[0:int(nparticles / 2)]
-                    embedding1 = embedding[int(nparticles / 2):nparticles]
-                    plt.scatter(embedding0[:, 0], embedding0[:, 1], marker='+', s=200, color='k')
-                    plt.scatter(embedding1[:, 0], embedding1[:, 1], marker='+', s=200, color='k')
+                    for n in range(nparticle_types):
+                        embedding_particle.append(embedding[index_particles[n], :])
+                        plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], marker='+', s=200, color='k')
                     kmeans = KMeans(init="random", n_clusters=2, n_init=10, max_iter=300, random_state=42)
                     kmeans.fit(embedding)
                     gap = kmeans.inertia_
@@ -851,8 +850,9 @@ if __name__ == '__main__':
                             fig = plt.figure(figsize=(25, 16))
                             # plt.ion()
                             ax = fig.add_subplot(2, 3, 1)
-                            plt.scatter(x00[0:1000, 0].detach().cpu(), x00[0:1000, 1].detach().cpu(), s=3, color=c1)
-                            plt.scatter(x00[1000:, 0].detach().cpu(), x00[1000:, 1].detach().cpu(), s=3, color=c2)
+                            for n in range(nparticle_types):
+                                plt.scatter(x00[index_particles[n], 0, it], x00[index_particles[n], 1, it], s=3)
+
                             plt.xlim([-0.3, 1.3])
                             plt.ylim([-0.3, 1.3])
                             ax.axes.get_xaxis().set_visible(False)
@@ -861,8 +861,8 @@ if __name__ == '__main__':
                             plt.text(-0.25, 1.38, 'Distribution at t0 is 1.0x1.0')
 
                             ax = fig.add_subplot(2, 3, 2)
-                            plt.scatter(x0[0:1000, 0].detach().cpu(), x0[0:1000, 1].detach().cpu(), s=3, color=c1)
-                            plt.scatter(x0[1000:, 0].detach().cpu(), x0[1000:, 1].detach().cpu(), s=3, color=c2)
+                            for n in range(nparticle_types):
+                                plt.scatter(x0[index_particles[n], 0, it], x0[index_particles[n], 1, it], s=3)
                             ax = plt.gca()
                             plt.xlim([-0.3, 1.3])
                             plt.ylim([-0.3, 1.3])
@@ -872,16 +872,9 @@ if __name__ == '__main__':
                             plt.text(-0.25, 1.38, 'True', fontsize=30)
 
                             rmserr = torch.mean(torch.sqrt(torch.sum(bc_diff(x[:, 0:2] - x0[:, 0:2]) ** 2, axis=1)))
-                            rmserr_list.append(rmserr.item())
-                            rmserr0 = torch.mean(torch.sqrt( torch.sum(bc_diff(x[0:int(nparticles / 2), 0:2] - x0[0:int(nparticles / 2), 0:2]) ** 2,axis=1)))
-                            rmserr_list0.append(rmserr0.item())
-                            rmserr1 = torch.mean(torch.sqrt(torch.sum(bc_diff(x[int(nparticles / 2):nparticles, 0:2] - x0[int(nparticles / 2):nparticles, 0:2]) ** 2,axis=1)))
-                            rmserr_list1.append(rmserr1.item())
 
                             ax = fig.add_subplot(2, 3, 3)
                             plt.plot(np.arange(0, len(rmserr_list) * stp, stp), rmserr_list, 'k', label='RMSE')
-                            plt.plot(np.arange(0, len(rmserr_list) * stp, stp), rmserr_list0, color=c1, label='RMSE0')
-                            plt.plot(np.arange(0, len(rmserr_list) * stp, stp), rmserr_list1, color=c2, label='RMSE1')
                             plt.ylim([0, 0.1])
                             plt.xlim([0, nframes])
                             plt.tick_params(axis='both', which='major', labelsize=10)
@@ -902,8 +895,8 @@ if __name__ == '__main__':
                             plt.text(-0.25, 1.33, f'Graph: {x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
 
                             ax = fig.add_subplot(2, 3, 5)
-                            plt.scatter(x[0:1000, 0].detach().cpu(), x[0:1000, 1].detach().cpu(), s=3, color=c1)
-                            plt.scatter(x[1000:, 0].detach().cpu(), x[1000:, 1].detach().cpu(), s=3, color=c2)
+                            for n in range(nparticle_types):
+                                plt.scatter(x[index_particles[n], 0, it], x[index_particles[n], 1, it], s=3)
                             ax = plt.gca()
                             ax.axes.xaxis.set_ticklabels([])
                             ax.axes.yaxis.set_ticklabels([])
@@ -942,26 +935,25 @@ if __name__ == '__main__':
                             ax = fig.add_subplot(8, 10, 54)
                             embedding = model.a_bf_kmean.detach().cpu().numpy()
                             embedding = scaler.fit_transform(embedding)
-                            embedding0 = embedding[0:int(nparticles / 2)]
-                            embedding1 = embedding[int(nparticles / 2):nparticles]
-                            plt.scatter(embedding0[:, 0], embedding0[:, 1], s=1, color=c1, alpha=0.5)
-                            plt.scatter(embedding1[:, 0], embedding1[:, 1], s=1, color=c2, alpha=0.5)
+                            embedding_particle = []
+                            for n in range(nparticle_types):
+                                embedding_particle.append(embedding[index_particles[n], :])
+                                plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
                             embedding = model.a.detach().cpu().numpy()
                             embedding = scaler.fit_transform(embedding)
-                            embedding0 = embedding[0:int(nparticles / 2)]
-                            embedding1 = embedding[int(nparticles / 2):nparticles]
-                            plt.scatter(embedding0[:, 0], embedding0[:, 1], marker='+', s=20, color='k')
-                            plt.scatter(embedding1[:, 0], embedding1[:, 1], marker='+', s=20, color='k')
+                            for n in range(nparticle_types):
+                                embedding_particle.append(embedding[index_particles[n], :])
+                                plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], marker='+', s=200,
+                                            color='k')
                             plt.xlim([-2.1, 2.1])
                             plt.ylim([-2.1, 2.1])
                             plt.xlabel('Embedding 0', fontsize=8)
                             plt.ylabel('Embedding 1', fontsize=8)
 
-                            ax = fig.add_subplot(8, 10, 14)
-                            plt.plot(rr.detach().cpu().numpy(), np.array(psi0.cpu()), color=c1, linewidth=1)
-                            plt.plot(rr.detach().cpu().numpy(), np.array(psi1.cpu()), color=c2, linewidth=1)
-                            plt.plot(rr.detach().cpu().numpy(), rr.detach().cpu().numpy() * 0, color=[0, 0, 0],
-                                     linewidth=0.5)
+                            # ax = fig.add_subplot(8, 10, 14)
+                            # plt.plot(rr.detach().cpu().numpy(), np.array(psi0.cpu()), color=c1, linewidth=1)
+                            # plt.plot(rr.detach().cpu().numpy(), np.array(psi1.cpu()), color=c2, linewidth=1)
+                            # plt.plot(rr.detach().cpu().numpy(), rr.detach().cpu().numpy() * 0, color=[0, 0, 0],linewidth=0.5)
 
                             plt.savefig(f"./ReconsGraph3/Fig_{it}.tif")
                             plt.close()
