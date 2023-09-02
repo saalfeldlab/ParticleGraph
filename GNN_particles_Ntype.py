@@ -333,10 +333,10 @@ if __name__ == '__main__':
                     'hidden_size': 32,
                     'n_mp_layers': 5,
                     'noise_level': 0,
-                    'radius': 0.075,
+                    'radius': 0.025,
                     'datum': '230828',
-                    'nparticles': 2000,
-                    'nparticle_types': 2,
+                    'nparticles': 10000,
+                    'nparticle_types': 5,
                     'nframes': 200,
                     'sigma': .005,
                     'tau': 0.1,
@@ -350,12 +350,12 @@ if __name__ == '__main__':
     # with open(f"{folder}/model_config.json", 'r') as f:
     #     model_config = json.load(f)
 
-    gridsearch_list = [200] #, 20, 50, 100, 200]
+    gridsearch_list = [20] #, 20, 50, 100, 200]
     data_augmentation = False
 
-    for gtest in range(1):
+    for gtest in range(600,620):
 
-            ntry=600
+            ntry=gtest
             model_config['ntry'] = ntry
             model_config['datum']='230902_'+str(ntry)
 
@@ -382,7 +382,6 @@ if __name__ == '__main__':
             print(f'particle_embedding: {particle_embedding}')
             boundary = model_config['boundary']
             print(f'boundary: {boundary}')
-            print('')
 
             folder = f'./graphs_data/graphs_particles_{datum}/'
             os.makedirs(folder, exist_ok=True)
@@ -435,7 +434,6 @@ if __name__ == '__main__':
                         psi_output.append(psi(rr, torch.squeeze(p[n])))
                         print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
                         index_particles.append(np.arange(int(nparticles / nparticle_types)*n,int(nparticles / nparticle_types)*(n+1)))
-
                     time.sleep(0.5)
 
                     for run in tqdm(range(gridsearch_list[0] + 1)):
@@ -598,9 +596,12 @@ if __name__ == '__main__':
 
                         if data_augmentation:
                             data_augmentation_loop = 20
+                            print(f'data_augmentation_loop: {data_augmentation_loop}')
                         else:
                             data_augmentation_loop = 1
-                        print(f'data_augmentation_loop: {data_augmentation_loop}')
+                            print('no data augmentation ...')
+                        print('')
+                        time.sleep(0.5)
 
                         for epoch in range(50):
 
