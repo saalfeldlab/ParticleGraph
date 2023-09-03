@@ -851,7 +851,7 @@ if __name__ == '__main__':
 
                             ax = fig.add_subplot(2, 3, 2)
                             for n in range(nparticle_types):
-                                plt.scatter(x0[index_particles[n], 0].detach().cpu(), x0[index_particles[n].detach().cpu(), 1], s=3)
+                                plt.scatter(x0[index_particles[n], 0].detach().cpu(), x0[index_particles[n], 1].detach().cpu(), s=3)
                             ax = plt.gca()
                             plt.xlim([-0.3, 1.3])
                             plt.ylim([-0.3, 1.3])
@@ -864,7 +864,7 @@ if __name__ == '__main__':
 
                             ax = fig.add_subplot(2, 3, 3)
                             plt.plot(np.arange(0, len(rmserr_list) * stp, stp), rmserr_list, 'k', label='RMSE')
-                            plt.ylim([0, 0.1])
+                            plt.ylim([0, 0.1])c
                             plt.xlim([0, nframes])
                             plt.tick_params(axis='both', which='major', labelsize=10)
                             plt.xlabel('Frame [a.u]', fontsize="10")
@@ -885,7 +885,7 @@ if __name__ == '__main__':
 
                             ax = fig.add_subplot(2, 3, 5)
                             for n in range(nparticle_types):
-                                plt.scatter(x[index_particles[n], 0].detach().cpu(), x[index_particles[n].detach().cpu(), 1], s=3)
+                                plt.scatter(x[index_particles[n], 0].detach().cpu(), x[index_particles[n], 1].detach().cpu(), s=3)
                             ax = plt.gca()
                             ax.axes.xaxis.set_ticklabels([])
                             ax.axes.yaxis.set_ticklabels([])
