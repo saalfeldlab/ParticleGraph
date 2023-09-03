@@ -835,15 +835,12 @@ if __name__ == '__main__':
 
                         stp = 5
 
-                        print(index_particles[0].shape)
-                        print(x00.shape)
-
                         if (it % stp == 0):
                             fig = plt.figure(figsize=(25, 16))
                             # plt.ion()
                             ax = fig.add_subplot(2, 3, 1)
                             for n in range(nparticle_types):
-                                plt.scatter(x00[index_particles[n], 0, it], x00[index_particles[n], 1, it], s=3)
+                                plt.scatter(x00[index_particles[n], 0], x00[index_particles[n], 1], s=3)
 
                             plt.xlim([-0.3, 1.3])
                             plt.ylim([-0.3, 1.3])
@@ -854,7 +851,7 @@ if __name__ == '__main__':
 
                             ax = fig.add_subplot(2, 3, 2)
                             for n in range(nparticle_types):
-                                plt.scatter(x0[index_particles[n], 0, it], x0[index_particles[n], 1, it], s=3)
+                                plt.scatter(x0[index_particles[n], 0], x0[index_particles[n], 1], s=3)
                             ax = plt.gca()
                             plt.xlim([-0.3, 1.3])
                             plt.ylim([-0.3, 1.3])
@@ -888,7 +885,7 @@ if __name__ == '__main__':
 
                             ax = fig.add_subplot(2, 3, 5)
                             for n in range(nparticle_types):
-                                plt.scatter(x[index_particles[n], 0, it], x[index_particles[n], 1, it], s=3)
+                                plt.scatter(x[index_particles[n], 0], x[index_particles[n], 1], s=3)
                             ax = plt.gca()
                             ax.axes.xaxis.set_ticklabels([])
                             ax.axes.yaxis.set_ticklabels([])
