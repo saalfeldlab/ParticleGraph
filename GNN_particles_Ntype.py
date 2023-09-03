@@ -835,7 +835,7 @@ if __name__ == '__main__':
 
                         stp = 5
 
-                        print(index_particles.shape)
+                        print(index_particles[0].shape)
                         print(x00.shape)
 
                         if (it % stp == 0):
