@@ -333,7 +333,7 @@ if __name__ == '__main__':
                     'hidden_size': 32,
                     'n_mp_layers': 5,
                     'noise_level': 0,
-                    'radius': 0.05,
+                    'radius': 0.1,
                     'datum': '230828',
                     'nparticles': 10000,
                     'nparticle_types': 5,
@@ -353,7 +353,7 @@ if __name__ == '__main__':
     gridsearch_list = [50] #, 20, 50, 100, 200]
     data_augmentation = False
 
-    for gtest in range(601,611):
+    for gtest in range(611,615):
 
             ntry=gtest
             model_config['ntry'] = ntry
