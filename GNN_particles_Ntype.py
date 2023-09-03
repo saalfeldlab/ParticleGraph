@@ -409,9 +409,9 @@ if __name__ == '__main__':
                     print('')
                     print('Generating data ...')
 
-                    files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph2/*")
-                    for f in files:
-                        os.remove(f)
+                    # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph2/*")
+                    # for f in files:
+                    #     os.remove(f)
 
                     files = glob.glob(f"{folder}/*")
                     for f in files:
@@ -516,9 +516,9 @@ if __name__ == '__main__':
 
                 if step == 1:
 
-                    files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph/*")
-                    for f in files:
-                        os.remove(f)
+                    # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph/*")
+                    # for f in files:
+                    #     os.remove(f)
 
                     print('')
                     print('Training loop ...')
@@ -722,9 +722,9 @@ if __name__ == '__main__':
 
                 if step == 2:
 
-                    files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph3/*")
-                    for f in files:
-                        os.remove(f)
+                    # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph3/*")
+                    # for f in files:
+                    #     os.remove(f)
 
                     print('')
                     print('Testing loop ... ')
