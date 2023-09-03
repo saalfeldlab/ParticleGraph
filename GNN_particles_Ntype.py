@@ -835,6 +835,9 @@ if __name__ == '__main__':
 
                         stp = 5
 
+                        print(index_particles.shape)
+                        print(x00.shape)
+
                         if (it % stp == 0):
                             fig = plt.figure(figsize=(25, 16))
                             # plt.ion()
