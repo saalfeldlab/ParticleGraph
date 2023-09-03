@@ -403,7 +403,7 @@ if __name__ == '__main__':
 
             time.sleep(0.5)
 
-            for step in range(0,2):
+            for step in range(0,3):
 
                 if step == 0:
                     print('')
@@ -511,7 +511,7 @@ if __name__ == '__main__':
                                 plt.plot(rr.detach().cpu().numpy(), psi_output[0].detach().cpu().numpy() * 0, color=[0, 0, 0],
                                          linewidth=0.5)
 
-                                plt.savefig(f"./ReconsGraph2/Fig_{run}_{it}.tif")
+                                plt.savefig(f"./ReconsGraph2/Fig_{ntry}_{it}.tif")
                                 plt.close()
 
                 if step == 1:
@@ -767,40 +767,41 @@ if __name__ == '__main__':
                     print(f"Total Trainable Params: {total_params}")
 
                     scaler = StandardScaler()
-                    fig = plt.figure(figsize=(12, 6))
-                    # plt.ion()
-                    ax = fig.add_subplot(1, 2, 1)
-                    embedding = model.a_bf_kmean.detach().cpu().numpy()
-                    embedding = scaler.fit_transform(embedding)
-                    embedding_particle = []
-                    for n in range(nparticle_types):
-                        embedding_particle.append(embedding[index_particles[n], :])
-                        plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
-                    embedding = model.a.detach().cpu().numpy()
-                    embedding = scaler.fit_transform(embedding)
-                    for n in range(nparticle_types):
-                        embedding_particle.append(embedding[index_particles[n], :])
-                        plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], marker='+', s=200, color='k')
-                    kmeans = KMeans(init="random", n_clusters=2, n_init=10, max_iter=300, random_state=42)
-                    kmeans.fit(embedding)
-                    gap = kmeans.inertia_
-                    plt.xlim([-2.1, 2.1])
-                    plt.ylim([-2.1, 2.1])
-                    plt.xlabel('Embedding 0', fontsize=12)
-                    plt.ylabel('Embedding 1', fontsize=12)
-                    plt.text(-2, 1.8, f'kmeans.inertia: {np.round(gap, 0)}')
-                    kmeans_kwargs = {"init": "random", "n_init": 10, "max_iter": 300, "random_state": 42}
-                    sse = []
-                    for k in range(1, 11):
-                        kmeans = KMeans(n_clusters=k, **kmeans_kwargs)
+                    if False:
+                        fig = plt.figure(figsize=(12, 6))
+                        # plt.ion()
+                        ax = fig.add_subplot(1, 2, 1)
+                        embedding = model.a_bf_kmean.detach().cpu().numpy()
+                        embedding = scaler.fit_transform(embedding)
+                        embedding_particle = []
+                        for n in range(nparticle_types):
+                            embedding_particle.append(embedding[index_particles[n], :])
+                            plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
+                        embedding = model.a.detach().cpu().numpy()
+                        embedding = scaler.fit_transform(embedding)
+                        for n in range(nparticle_types):
+                            embedding_particle.append(embedding[index_particles[n], :])
+                            plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], marker='+', s=200, color='k')
+                        kmeans = KMeans(init="random", n_clusters=2, n_init=10, max_iter=300, random_state=42)
                         kmeans.fit(embedding)
-                        sse.append(kmeans.inertia_)
-                    ax = fig.add_subplot(1, 2, 2)
-                    plt.plot(range(1, 11), sse)
-                    plt.xticks(range(1, 11))
-                    plt.xlabel("Number of Clusters", fontsize=12)
-                    plt.ylabel("SSE", fontsize=12)
-                    plt.show()
+                        gap = kmeans.inertia_
+                        plt.xlim([-2.1, 2.1])
+                        plt.ylim([-2.1, 2.1])
+                        plt.xlabel('Embedding 0', fontsize=12)
+                        plt.ylabel('Embedding 1', fontsize=12)
+                        plt.text(-2, 1.8, f'kmeans.inertia: {np.round(gap, 0)}')
+                        kmeans_kwargs = {"init": "random", "n_init": 10, "max_iter": 300, "random_state": 42}
+                        sse = []
+                        for k in range(1, 11):
+                            kmeans = KMeans(n_clusters=k, **kmeans_kwargs)
+                            kmeans.fit(embedding)
+                            sse.append(kmeans.inertia_)
+                        ax = fig.add_subplot(1, 2, 2)
+                        plt.plot(range(1, 11), sse)
+                        plt.xticks(range(1, 11))
+                        plt.xlabel("Number of Clusters", fontsize=12)
+                        plt.ylabel("SSE", fontsize=12)
+                        plt.show()
 
                     x = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_0.pt')
                     x00 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_0.pt')
@@ -955,5 +956,5 @@ if __name__ == '__main__':
                             # plt.plot(rr.detach().cpu().numpy(), np.array(psi1.cpu()), color=c2, linewidth=1)
                             # plt.plot(rr.detach().cpu().numpy(), rr.detach().cpu().numpy() * 0, color=[0, 0, 0],linewidth=0.5)
 
-                            plt.savefig(f"./ReconsGraph3/Fig_{it}.tif")
+                            plt.savefig(f"./ReconsGraph3/Fig_{ntry}_{it}.tif")
                             plt.close()
