@@ -353,9 +353,9 @@ if __name__ == '__main__':
     gridsearch_list = [50] #, 20, 50, 100, 200]
     data_augmentation = False
 
-    for gtest in range(600,605):
+    for gtest in range(1):
 
-            ntry=gtest
+            ntry=600
             model_config['ntry'] = ntry
             model_config['datum']='230902_'+str(ntry)
 
@@ -403,7 +403,7 @@ if __name__ == '__main__':
 
             time.sleep(0.5)
 
-            for step in range(0,3):
+            for step in range(2,3):
 
                 if step == 0:
                     print('')
@@ -725,18 +725,6 @@ if __name__ == '__main__':
                     files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph3/*")
                     for f in files:
                         os.remove(f)
-
-                    model_ = []
-                    psi_output = []
-                    rr = torch.tensor(np.linspace(0, 0.015, 100))
-                    rr = rr.to(device)
-                    index_particles = []
-                    for n in range(nparticle_types):
-                        model.append(InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p[n]), tau=tau))
-                        torch.load({'model_state_dict': model[n].state_dict()},f'graphs_data/graphs_particles_{datum}/model_{n}.pt')
-                        psi_output.append(psi(rr, torch.squeeze(p[n])))
-                        print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
-                        index_particles.append(np.arange(int(nparticles / nparticle_types)*n,int(nparticles / nparticle_types)*(n+1)))
 
                     print('')
                     print('Testing loop ... ')
