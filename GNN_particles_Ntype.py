@@ -864,7 +864,7 @@ if __name__ == '__main__':
 
                             ax = fig.add_subplot(2, 3, 3)
                             plt.plot(np.arange(0, len(rmserr_list) * stp, stp), rmserr_list, 'k', label='RMSE')
-                            plt.ylim([0, 0.1])c
+                            plt.ylim([0, 0.1])
                             plt.xlim([0, nframes])
                             plt.tick_params(axis='both', which='major', labelsize=10)
                             plt.xlabel('Frame [a.u]', fontsize="10")
