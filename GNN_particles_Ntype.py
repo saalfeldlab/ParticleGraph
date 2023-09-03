@@ -353,9 +353,9 @@ if __name__ == '__main__':
     gridsearch_list = [50] #, 20, 50, 100, 200]
     data_augmentation = False
 
-    for gtest in range(1):
+    for gtest in range(601,611):
 
-            ntry=600
+            ntry=gtest
             model_config['ntry'] = ntry
             model_config['datum']='230902_'+str(ntry)
 
@@ -403,7 +403,7 @@ if __name__ == '__main__':
 
             time.sleep(0.5)
 
-            for step in range(2,3):
+            for step in range(0,3):
 
                 if step == 0:
                     print('')
