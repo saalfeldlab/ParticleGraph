@@ -350,7 +350,7 @@ if __name__ == '__main__':
     # with open(f"{folder}/model_config.json", 'r') as f:
     #     model_config = json.load(f)
 
-    gridsearch_list = [100] #, 20, 50, 100, 200]
+    gridsearch_list = [50] #, 20, 50, 100, 200]
     data_augmentation = False
 
     for gtest in range(600,605):
