@@ -333,7 +333,7 @@ if __name__ == '__main__':
                     'hidden_size': 32,
                     'n_mp_layers': 5,
                     'noise_level': 0,
-                    'radius': 0.05,
+                    'radius': 0.1,
                     'datum': '230828',
                     'nparticles': 10000,
                     'nparticle_types': 5,
@@ -348,37 +348,17 @@ if __name__ == '__main__':
                     'model': 'InteractionParticles'}
 
 
-    model_config = {'ntry': 620,
-                    'input_size': 15,
-                    'output_size': 2,
-                    'hidden_size': 32,
-                    'n_mp_layers': 5,
-                    'noise_level': 0,
-                    'radius': 0.075,
-                    'datum': '230828',
-                    'nparticles': 2000,
-                    'nparticle_types': 2,
-                    'nframes': 200,
-                    'sigma': .005,
-                    'tau': 0.1,
-                    'p0': [1.27, 1.41, 0.0547, 0.0053],
-                    'p1': [1.82, 1.72, 0.024, 0.09],
-                    'aggr_type' : 'mean',
-                    'particle_embedding': True,
-                    'boundary': 'no',  # periodic   'no'  # no boundary condition
-                    'model': 'InteractionParticles'}
-
     # with open(f"{folder}/model_config.json", 'r') as f:
     #     model_config = json.load(f)
 
-    gridsearch_list = [20] #, 20, 50, 100, 200]
+    gridsearch_list = [50] #, 20, 50, 100, 200]
     data_augmentation = False
 
     scaler = StandardScaler()
 
     for gtest in range(1):
 
-            ntry=620
+            ntry=611
             model_config['ntry'] = ntry
             model_config['datum']='230902_'+str(ntry)
 
@@ -426,7 +406,7 @@ if __name__ == '__main__':
 
             time.sleep(0.5)
 
-            for step in range(1,4):
+            for step in range(2,3):
 
                 if step == 0:
                     print('')
@@ -756,7 +736,8 @@ if __name__ == '__main__':
                             plt.xlim([0, 50])
                             plt.xlabel('Epoch',fontsize=10)
                             plt.ylabel('Gap', fontsize=10)
-
+                            print(ntry)
+                            print(epoch)
                             plt.savefig(f"./ReconsGraph/Fig_{ntry}_{epoch}.tif")
                             plt.close()
 
@@ -810,7 +791,7 @@ if __name__ == '__main__':
                         edge_index = adj_t.nonzero().t().contiguous()
 
                         distance2 = torch.sum((x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
-                        adj_t2 = ((distance < radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
+                        adj_t2 = ((distance2 < radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
                         edge_index2 = adj_t2.nonzero().t().contiguous()
 
                         dataset = data.Data(x=x, edge_index=edge_index)
