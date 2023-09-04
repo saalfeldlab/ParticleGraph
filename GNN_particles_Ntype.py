@@ -739,7 +739,7 @@ if __name__ == '__main__':
                             plt.ylim([-4.1, 4.1])
                             plt.xlabel('Embedding 0',fontsize=12)
                             plt.ylabel('Embedding 1', fontsize=12)
-                            plt.text(-3.9, 3.8, f'kmeans.inertia: {np.round(gap, 0)}', fontsize=12)
+                            plt.text(-3.9, 3.6, f'kmeans.inertia: {np.round(gap, 2)}   kl.elbow: {kl.elbow}', fontsize=10)
                             ax = fig.add_subplot(1, 3, 2)
                             plt.plot(range(1, 11), sse)
                             plt.xticks(range(1, 11))
