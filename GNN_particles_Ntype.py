@@ -406,7 +406,7 @@ if __name__ == '__main__':
 
             time.sleep(0.5)
 
-            for step in range(1,3):
+            for step in range(2,3):
 
                 if step == 0:
                     print('')
@@ -607,9 +607,9 @@ if __name__ == '__main__':
                         list_loss=[]
                         list_gap=[]
 
-                        for epoch in range(50):
+                        for epoch in range(60):
 
-                            if epoch == 25:
+                            if epoch == 30:
                                 optimizer = torch.optim.Adam(model.parameters(), lr=1E-4)  # , weight_decay=5e-4)
 
                             total_loss = 0
@@ -690,7 +690,7 @@ if __name__ == '__main__':
                             else:
                                 print("Epoch {}. Loss: {:.6f} Gap: {:.3f} kl.elbow {:d} ".format(epoch,total_loss / N / nparticles, gap, kl.elbow))
 
-                            if ( ((gap < 100)&(kl.elbow==nparticle_types)) | (epoch > 24)) & (model.a.requires_grad == True):
+                            if ( ((gap < 100) & (kl.elbow==nparticle_types)) | (epoch > 29)) & (model.a.requires_grad == True):
 
                                 if data_augmentation:
                                     data_augmentation_loop = 200
