@@ -737,8 +737,6 @@ if __name__ == '__main__':
                             plt.xlim([0, 50])
                             plt.xlabel('Epoch',fontsize=10)
                             plt.ylabel('Gap', fontsize=10)
-                            print(ntry)
-                            print(epoch)
                             plt.savefig(f"./ReconsGraph/Fig_{ntry}_{epoch}.tif")
                             plt.close()
 
