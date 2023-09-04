@@ -351,14 +351,14 @@ if __name__ == '__main__':
     # with open(f"{folder}/model_config.json", 'r') as f:
     #     model_config = json.load(f)
 
-    gridsearch_list = [50] #, 20, 50, 100, 200]
+    gridsearch_list = [20] #, 20, 50, 100, 200]
     data_augmentation = False
 
     scaler = StandardScaler()
 
     for gtest in range(1):
 
-            ntry=611
+            ntry=612
             model_config['ntry'] = ntry
             model_config['datum']='230902_'+str(ntry)
 
@@ -406,7 +406,7 @@ if __name__ == '__main__':
 
             time.sleep(0.5)
 
-            for step in range(2,3):
+            for step in range(1,3):
 
                 if step == 0:
                     print('')
