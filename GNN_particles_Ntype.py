@@ -790,12 +790,7 @@ if __name__ == '__main__':
                         adj_t = (distance < radius ** 2).float() * 1
                         edge_index = adj_t.nonzero().t().contiguous()
 
-                        distance2 = torch.sum((x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
-                        adj_t2 = ((distance2 < radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
-                        edge_index2 = adj_t2.nonzero().t().contiguous()
-
                         dataset = data.Data(x=x, edge_index=edge_index)
-                        dataset2 = data.Data(x=x, edge_index=edge_index2)
 
                         with torch.no_grad():
                             y = model(dataset)  # acceleration estimation
@@ -812,6 +807,12 @@ if __name__ == '__main__':
                         stp = 5
 
                         if (it % stp == 0):
+
+                            distance2 = torch.sum((x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
+                            adj_t2 = ((distance2 < radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
+                            edge_index2 = adj_t2.nonzero().t().contiguous()
+                            dataset2 = data.Data(x=x, edge_index=edge_index2)
+
                             fig = plt.figure(figsize=(25, 16))
                             # plt.ion()
                             ax = fig.add_subplot(2, 3, 1)
@@ -1015,14 +1016,16 @@ if __name__ == '__main__':
 
                         xx_ = bc_pos(xx[:, 0:2])
 
-                        distance2 = torch.sum((xx_[:, None, 0:2] - xx_[None, :, 0:2]) ** 2, axis=2)
-                        adj_t2 = ((distance < radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
-                        edge_index2 = adj_t2.nonzero().t().contiguous()
-                        dataset2 = data.Data(x=torch.cat((xx_, x[:, 4:7]), axis=1), edge_index=edge_index2)
-
                         stp = 1
 
                         if (it % stp == 0):
+
+                            distance2 = torch.sum((x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
+                            adj_t2 = ((distance2 < radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
+                            edge_index2 = adj_t2.nonzero().t().contiguous()
+                            dataset2 = data.Data(x=x, edge_index=edge_index2)
+
+
                             fig = plt.figure(figsize=(25, 16))
                             # plt.ion()
                             ax = fig.add_subplot(2, 3, 1)
