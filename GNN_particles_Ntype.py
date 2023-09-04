@@ -146,8 +146,8 @@ class InteractionParticles(pyg.nn.MessagePassing):
 
         # self.particle_emb = MLP(input_size=2, hidden_size=8, output_size=8, nlayers=3, device=self.device)
 
-        self.a = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device='cuda:0', requires_grad=True))
-        self.a_bf_kmean = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device='cuda:0', requires_grad=False))
+        self.a = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device=self.device, requires_grad=True))
+        self.a_bf_kmean = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device=self.device, requires_grad=False))
 
         self.p0 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
         self.p1 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
@@ -347,15 +347,38 @@ if __name__ == '__main__':
                     'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                     'model': 'InteractionParticles'}
 
+
+    model_config = {'ntry': 620,
+                    'input_size': 15,
+                    'output_size': 2,
+                    'hidden_size': 32,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'radius': 0.075,
+                    'datum': '230828',
+                    'nparticles': 2000,
+                    'nparticle_types': 2,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'p0': [1.27, 1.41, 0.0547, 0.0053],
+                    'p1': [1.82, 1.72, 0.024, 0.09],
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'no',  # periodic   'no'  # no boundary condition
+                    'model': 'InteractionParticles'}
+
     # with open(f"{folder}/model_config.json", 'r') as f:
     #     model_config = json.load(f)
 
-    gridsearch_list = [50] #, 20, 50, 100, 200]
+    gridsearch_list = [20] #, 20, 50, 100, 200]
     data_augmentation = False
 
-    for gtest in range(601,611):
+    scaler = StandardScaler()
 
-            ntry=gtest
+    for gtest in range(1):
+
+            ntry=620
             model_config['ntry'] = ntry
             model_config['datum']='230902_'+str(ntry)
 
@@ -403,7 +426,7 @@ if __name__ == '__main__':
 
             time.sleep(0.5)
 
-            for step in range(0,3):
+            for step in range(1,4):
 
                 if step == 0:
                     print('')
@@ -480,7 +503,7 @@ if __name__ == '__main__':
                                 edge_index2 = adj_t2.nonzero().t().contiguous()
                                 dataset2 = data.Data(x=x, edge_index=edge_index2)
 
-                                fig = plt.figure(figsize=(14, 7))
+                                fig = plt.figure(figsize=(14, 7*0.95))
                                 # plt.ion()
                                 ax = fig.add_subplot(1, 2, 2)
                                 pos = dict(enumerate(x[:, 0:2].detach().cpu().numpy(), 0))
@@ -601,6 +624,9 @@ if __name__ == '__main__':
                         print('')
                         time.sleep(0.5)
 
+                        list_loss=[]
+                        list_gap=[]
+
                         for epoch in range(50):
 
                             if epoch == 25:
@@ -658,7 +684,6 @@ if __name__ == '__main__':
 
                                 total_loss += loss.item()
 
-                            scaler = StandardScaler()
                             embedding = model.a.detach().cpu().numpy()
                             embedding = scaler.fit_transform(embedding)
                             embedding_particle=[]
@@ -702,9 +727,12 @@ if __name__ == '__main__':
                                     embedding_particle.append(embedding[index_particles[n], :])
                                 best_loss = np.inf
 
-                            fig = plt.figure(figsize=(12, 6))
-                            plt.ion()
-                            ax = fig.add_subplot(1, 2, 1)
+                            list_loss.append(total_loss / N / nparticles)
+                            list_gap.append(gap)
+
+                            fig = plt.figure(figsize=(15, 5))
+                            # plt.ion()
+                            ax = fig.add_subplot(1, 3, 1)
                             for n in range(nparticle_types):
                                 plt.scatter(embedding_particle[n][:,0], embedding_particle[n][:,1], s=3)
                             plt.xlim([-4.1, 4.1])
@@ -712,11 +740,23 @@ if __name__ == '__main__':
                             plt.xlabel('Embedding 0',fontsize=12)
                             plt.ylabel('Embedding 1', fontsize=12)
                             plt.text(-3.9, 3.8, f'kmeans.inertia: {np.round(gap, 0)}', fontsize=12)
-                            ax = fig.add_subplot(1, 2, 2)
+                            ax = fig.add_subplot(1, 3, 2)
                             plt.plot(range(1, 11), sse)
                             plt.xticks(range(1, 11))
                             plt.xlabel("Number of Clusters", fontsize=12)
                             plt.ylabel("SSE", fontsize=12)
+
+                            ax = fig.add_subplot(2, 4, 4)
+                            plt.plot(list_loss,color='k')
+                            plt.xlim([0, 50])
+                            plt.ylabel('Loss', fontsize=10)
+
+                            ax = fig.add_subplot(2, 4, 8)
+                            plt.plot(list_gap,color='k')
+                            plt.xlim([0, 50])
+                            plt.xlabel('Epoch',fontsize=10)
+                            plt.ylabel('Gap', fontsize=10)
+
                             plt.savefig(f"./ReconsGraph/Fig_{ntry}_{epoch}.tif")
                             plt.close()
 
@@ -754,53 +794,11 @@ if __name__ == '__main__':
                     print(table)
                     print(f"Total Trainable Params: {total_params}")
 
-                    scaler = StandardScaler()
-                    if False:
-                        fig = plt.figure(figsize=(12, 6))
-                        # plt.ion()
-                        ax = fig.add_subplot(1, 2, 1)
-                        embedding = model.a_bf_kmean.detach().cpu().numpy()
-                        embedding = scaler.fit_transform(embedding)
-                        embedding_particle = []
-                        for n in range(nparticle_types):
-                            embedding_particle.append(embedding[index_particles[n], :])
-                            plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
-                        embedding = model.a.detach().cpu().numpy()
-                        embedding = scaler.fit_transform(embedding)
-                        for n in range(nparticle_types):
-                            embedding_particle.append(embedding[index_particles[n], :])
-                            plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], marker='+', s=200, color='k')
-                        kmeans = KMeans(init="random", n_clusters=2, n_init=10, max_iter=300, random_state=42)
-                        kmeans.fit(embedding)
-                        gap = kmeans.inertia_
-                        plt.xlim([-2.1, 2.1])
-                        plt.ylim([-2.1, 2.1])
-                        plt.xlabel('Embedding 0', fontsize=12)
-                        plt.ylabel('Embedding 1', fontsize=12)
-                        plt.text(-2, 1.8, f'kmeans.inertia: {np.round(gap, 0)}')
-                        kmeans_kwargs = {"init": "random", "n_init": 10, "max_iter": 300, "random_state": 42}
-                        sse = []
-                        for k in range(1, 11):
-                            kmeans = KMeans(n_clusters=k, **kmeans_kwargs)
-                            kmeans.fit(embedding)
-                            sse.append(kmeans.inertia_)
-                        ax = fig.add_subplot(1, 2, 2)
-                        plt.plot(range(1, 11), sse)
-                        plt.xticks(range(1, 11))
-                        plt.xlabel("Number of Clusters", fontsize=12)
-                        plt.ylabel("SSE", fontsize=12)
-                        plt.show()
-
                     x = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_0.pt')
                     x00 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_0.pt')
                     y = torch.load(f'graphs_data/graphs_particles_{datum}/y_0_0.pt')
 
                     rmserr_list = []
-                    rmserr_list0 = []
-                    rmserr_list1 = []
-
-                    c1 = np.array([220, 50, 32]) / 255
-                    c2 = np.array([0, 114, 178]) / 255
 
                     for it in tqdm(range(nframes - 1)):
 
@@ -827,9 +825,6 @@ if __name__ == '__main__':
                         y[:, 1] = y[:, 1] * ynorm[5]
 
                         x[:, 2:4] = x[:, 2:4] + y  # speed update
-
-                        if model_config['boundary'] == 'per':
-                            x[:, 2:4] = x[:, 2:4] - torch.mean(x[:, 2:4])
 
                         x[:, 0:2] = bc_pos(x[:, 0:2] + x[:, 2:4])  # position update
 
@@ -861,6 +856,7 @@ if __name__ == '__main__':
                             plt.text(-0.25, 1.38, 'True', fontsize=30)
 
                             rmserr = torch.mean(torch.sqrt(torch.sum(bc_diff(x[:, 0:2] - x0[:, 0:2]) ** 2, axis=1)))
+                            rmserr_list.append(rmserr.item())
 
                             ax = fig.add_subplot(2, 3, 3)
                             plt.plot(np.arange(0, len(rmserr_list) * stp, stp), rmserr_list, 'k', label='RMSE')
@@ -930,9 +926,221 @@ if __name__ == '__main__':
                                 plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
                             embedding = model.a.detach().cpu().numpy()
                             embedding = scaler.fit_transform(embedding)
+                            embedding_particle = []
                             for n in range(nparticle_types):
                                 embedding_particle.append(embedding[index_particles[n], :])
-                                plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], marker='+', s=200,
+                                plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], marker='+', s=50,
+                                            color='k')
+                            plt.xlim([-2.1, 2.1])
+                            plt.ylim([-2.1, 2.1])
+                            plt.xlabel('Embedding 0', fontsize=8)
+                            plt.ylabel('Embedding 1', fontsize=8)
+
+                            # ax = fig.add_subplot(8, 10, 14)
+                            # plt.plot(rr.detach().cpu().numpy(), np.array(psi0.cpu()), color=c1, linewidth=1)
+                            # plt.plot(rr.detach().cpu().numpy(), np.array(psi1.cpu()), color=c2, linewidth=1)
+                            # plt.plot(rr.detach().cpu().numpy(), rr.detach().cpu().numpy() * 0, color=[0, 0, 0],linewidth=0.5)
+
+                            plt.savefig(f"./ReconsGraph3/Fig_{ntry}_{it}.tif")
+                            plt.close()
+
+                if step == 3:
+
+                    # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph3/*")
+                    # for f in files:
+                    #     os.remove(f)
+
+                    print('')
+                    print('Testing loop ... ')
+
+                    if model_config['model'] == 'InteractionParticles':
+                        model = InteractionParticles(model_config, device)
+                        model.a_bf_kmean.requires_grad = False
+                    if model_config['model'] == 'ResNetGNN':
+                        model = ResNetGNN(model_config, device)
+
+                    net = f"./log/try_{ntry}/models/best_model_with_{gridsearch_list[0]}_graphs.pt"
+                    print(f'network: {net}')
+                    state_dict = torch.load(net)
+                    model.load_state_dict(state_dict['model_state_dict'])
+                    model.eval()
+                    ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt')
+                    vnorm = torch.load(f'./log/try_{ntry}/vnorm.pt')
+
+                    table = PrettyTable(["Modules", "Parameters"])
+                    total_params = 0
+                    for name, parameter in model.named_parameters():
+                        if not parameter.requires_grad:
+                            continue
+                        parameter.requires_grad = False
+                        param = parameter.numel()
+                        table.add_row([name, param])
+                        total_params += param
+                    print(table)
+                    print(f"Total Trainable Params: {total_params}")
+
+                    x = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{nframes - 1}.pt')
+                    x00 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{nframes - 1}.pt')
+                    y = torch.load(f'graphs_data/graphs_particles_{datum}/y_0_{nframes - 1}.pt')
+
+                    xx = torch.tensor(np.zeros((int(nparticles), 4)), dtype=torch.float32, device=device, requires_grad=True)
+                    xx.data[:,0:4] = x[:,0:4]
+
+                    optimizer = torch.optim.Adam([xx], lr=1E-4)  # , weight_decay=5e-4)
+
+                    rmserr_list = []
+
+                    for it in range(nframes - 1, 0, -1):
+
+                        x0 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{it - 1}.pt')
+
+                        xx_target = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{it}.pt')
+                        xx_target[:, 0:2] = xx[:, 0:2]
+
+                        distance = torch.sum(bc_diff(x0[:, None, 0:2] - x0[None, :, 0:2]) ** 2, axis=2)
+                        t = torch.Tensor([radius ** 2])  # threshold
+                        adj_t = (distance < radius ** 2).float() * 1
+                        edge_index = adj_t.nonzero().t().contiguous()
+
+                        for loop in range(6000):
+
+                            optimizer.zero_grad()
+
+                            # distance = torch.sum(bc_diff(xx[:, None, 0:2] - xx[None, :, 0:2]) ** 2, axis=2)
+                            # t = torch.Tensor([radius ** 2])  # threshold
+                            # adj_t = (distance < radius ** 2).float() * 1
+                            # edge_index = adj_t.nonzero().t().contiguous()
+
+                            dataset = data.Data(x=torch.cat((xx,x[:,4:7]),axis=1), edge_index=edge_index)
+
+                            y = model(dataset)  # acceleration estimation
+
+                            y[:, 0] = y[:, 0] * ynorm[4]
+                            y[:, 1] = y[:, 1] * ynorm[5]
+
+                            xx_p= 0 * xx
+                            xx_p[:, 2:4] = xx[:, 2:4] + y
+                            # xx_p[:, 2:4] = torch.clamp(xx_p[:, 2:4], min=-3*torch.std(xx_target[:,2:4]), max=3*torch.std(xx_target[:,2:4]) )# speed update
+                            xx_p[:, 0:2] = xx[:, 0:2] + xx_p[:, 2:4]  # position update
+
+                            loss = (bc_pos(xx_p[:,0:2]) - xx_target[:,0:2]).norm(2) + (torch.std(xx_p[:,2:4])-torch.std(xx_target[:,2:4])).norm(2) + (torch.mean(xx_p[:,2:4])-torch.mean(xx_target[:,2:4])).norm(2) + xx_p[:,2:4].norm(2)/10
+                            loss.backward()
+
+                            xx.grad = torch.nan_to_num(xx.grad, nan=0.0)
+
+                            optimizer.step()
+
+                        print (f"{it} {loss.item()}")
+
+                        xx_ = bc_pos(xx[:, 0:2])
+
+                        distance2 = torch.sum((xx_[:, None, 0:2] - xx_[None, :, 0:2]) ** 2, axis=2)
+                        adj_t2 = ((distance < radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
+                        edge_index2 = adj_t2.nonzero().t().contiguous()
+                        dataset2 = data.Data(x=torch.cat((xx_, x[:, 4:7]), axis=1), edge_index=edge_index2)
+
+                        stp = 1
+
+                        if (it % stp == 0):
+                            fig = plt.figure(figsize=(25, 16))
+                            # plt.ion()
+                            ax = fig.add_subplot(2, 3, 1)
+                            for n in range(nparticle_types):
+                                plt.scatter(x00[index_particles[n], 0].detach().cpu(), x00[index_particles[n], 1].detach().cpu(), s=3)
+
+                            plt.xlim([-0.3, 1.3])
+                            plt.ylim([-0.3, 1.3])
+                            ax.axes.get_xaxis().set_visible(False)
+                            ax.axes.get_yaxis().set_visible(False)
+                            plt.axis('off')
+                            plt.text(-0.25, 1.38, 'Distribution at t0 is 1.0x1.0')
+
+                            ax = fig.add_subplot(2, 3, 2)
+                            for n in range(nparticle_types):
+                                plt.scatter(x0[index_particles[n], 0].detach().cpu(), x0[index_particles[n], 1].detach().cpu(), s=3)
+                            ax = plt.gca()
+                            plt.xlim([-0.3, 1.3])
+                            plt.ylim([-0.3, 1.3])
+                            ax.axes.get_xaxis().set_visible(False)
+                            ax.axes.get_yaxis().set_visible(False)
+                            plt.axis('off')
+                            plt.text(-0.25, 1.38, 'True', fontsize=30)
+
+                            rmserr = torch.mean(torch.sqrt(torch.sum(bc_diff(x[:, 0:2] - x0[:, 0:2]) ** 2, axis=1)))
+                            rmserr_list.append(rmserr.item())
+
+                            ax = fig.add_subplot(2, 3, 3)
+                            plt.plot(np.arange(0, len(rmserr_list) * stp, stp), rmserr_list, 'k', label='RMSE')
+                            plt.ylim([0, 0.1])
+                            plt.xlim([0, nframes])
+                            plt.tick_params(axis='both', which='major', labelsize=10)
+                            plt.xlabel('Frame [a.u]', fontsize="10")
+                            plt.ylabel('RMSE [a.u]', fontsize="10")
+                            plt.legend(fontsize="10")
+
+                            ax = fig.add_subplot(2, 3, 4)
+                            pos = dict(enumerate(np.array(xx_[:, 0:2].detach().cpu()), 0))
+                            vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
+                            nx.draw_networkx(vis, pos=pos, node_size=10, linewidths=0, with_labels=False)
+                            plt.xlim([-0.3, 1.3])
+                            plt.ylim([-0.3, 1.3])
+                            ax.axes.get_xaxis().set_visible(False)
+                            ax.axes.get_yaxis().set_visible(False)
+                            plt.axis('off')
+                            plt.text(-0.25, 1.38, f'Frame: {it}')
+                            plt.text(-0.25, 1.33, f'Graph: {x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
+
+                            ax = fig.add_subplot(2, 3, 5)
+                            for n in range(nparticle_types):
+                                plt.scatter(xx_[index_particles[n], 0].detach().cpu(), xx_[index_particles[n], 1].detach().cpu(), s=3)
+                            ax = plt.gca()
+                            ax.axes.xaxis.set_ticklabels([])
+                            ax.axes.yaxis.set_ticklabels([])
+                            plt.xlim([-0.3, 1.3])
+                            plt.ylim([-0.3, 1.3])
+                            ax.axes.get_xaxis().set_visible(False)
+                            ax.axes.get_yaxis().set_visible(False)
+                            plt.axis('off')
+                            plt.text(-0.25, 1.38, 'Model', fontsize=30)
+
+                            ax = fig.add_subplot(2, 3, 6)
+                            temp1 = torch.cat((xx_[:,0:2], x0[:,0:2]), 0)
+                            temp2 = torch.tensor(np.arange(nparticles), device=device)
+                            temp3 = torch.tensor(np.arange(nparticles) + nparticles, device=device)
+                            temp4 = torch.concatenate((temp2[:, None], temp3[:, None]), 1)
+                            temp4 = torch.t(temp4)
+
+                            distance3 = torch.sqrt(torch.sum((xx_[:, 0:2] - x0[:, 0:2]) ** 2, 1))
+                            adj_t3 = (distance3 < 0.9).float() * 1
+                            adj_t3 = adj_t3[:, None]
+                            adj_t3 = torch.concatenate((adj_t3, adj_t3), 1)
+                            adj_t3 = torch.concatenate((adj_t3, adj_t3), 0)
+
+                            pos = dict(enumerate(np.array((temp1[:, 0:2] * adj_t3).detach().cpu()), 0))
+                            dataset = data.Data(x=temp1[:, 0:2] * adj_t3, edge_index=temp4)
+                            vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
+                            nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False)
+                            plt.xlim([-0.3, 1.3])
+                            plt.ylim([-0.3, 1.3])
+                            ax.axes.get_xaxis().set_visible(False)
+                            ax.axes.get_yaxis().set_visible(False)
+                            plt.axis('off')
+                            plt.text(-0.25, 1.18, f'Frame: {it}')
+                            plt.text(-0.25, 1.13, 'Prediction RMSE: {:.4f}'.format(rmserr.detach()), fontsize=10)
+
+                            ax = fig.add_subplot(8, 10, 54)
+                            embedding = model.a_bf_kmean.detach().cpu().numpy()
+                            embedding = scaler.fit_transform(embedding)
+                            embedding_particle = []
+                            for n in range(nparticle_types):
+                                embedding_particle.append(embedding[index_particles[n], :])
+                                plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
+                            embedding = model.a.detach().cpu().numpy()
+                            embedding = scaler.fit_transform(embedding)
+                            embedding_particle = []
+                            for n in range(nparticle_types):
+                                embedding_particle.append(embedding[index_particles[n], :])
+                                plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], marker='+', s=50,
                                             color='k')
                             plt.xlim([-2.1, 2.1])
                             plt.ylim([-2.1, 2.1])
