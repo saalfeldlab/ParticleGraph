@@ -664,6 +664,7 @@ if __name__ == '__main__':
 
                                 total_loss += loss.item()
 
+                            model.a.data = torch.clamp(model.a.data,min=-4,max=4)
                             embedding = model.a.detach().cpu().numpy()
                             embedding = scaler.fit_transform(embedding)
                             embedding_particle=[]
