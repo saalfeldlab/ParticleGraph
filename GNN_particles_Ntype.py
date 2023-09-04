@@ -406,7 +406,7 @@ if __name__ == '__main__':
 
             time.sleep(0.5)
 
-            for step in range(2,3):
+            for step in range(1,3):
 
                 if step == 0:
                     print('')
@@ -910,7 +910,7 @@ if __name__ == '__main__':
                             embedding_particle = []
                             for n in range(nparticle_types):
                                 embedding_particle.append(embedding[index_particles[n], :])
-                                plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], marker='+', s=50,
+                                plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], marker='+', s=10,
                                             color='k')
                             plt.xlim([-2.1, 2.1])
                             plt.ylim([-2.1, 2.1])
