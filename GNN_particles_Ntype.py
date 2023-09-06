@@ -718,7 +718,8 @@ if __name__ == '__main__':
                                 model.a_bf_kmean.data=model.a.data
                                 new_a = kmeans.cluster_centers_[kmeans.labels_, :]
 
-                                # model.a.data = torch.tensor(new_a, device=device)
+                                if gap < 100:
+                                    model.a.data = torch.tensor(new_a, device=device)
 
                                 embedding = model.a.detach().cpu().numpy()
                                 embedding = scaler.fit_transform(embedding)
@@ -925,13 +926,12 @@ if __name__ == '__main__':
                             for n in range(nparticle_types):
                                 embedding_particle.append(embedding[index_particles[n], :])
                                 plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
-                            # embedding = model.a.detach().cpu().numpy()
-                            # embedding = scaler.fit_transform(embedding)
-                            # embedding_particle = []
-                            # for n in range(nparticle_types):
-                            #     embedding_particle.append(embedding[index_particles[n], :])
-                            #     plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], marker='+', s=10,
-                            #                 color='k')
+                            embedding = model.a.detach().cpu().numpy()
+                            embedding = scaler.fit_transform(embedding)
+                            embedding_particle = []
+                            for n in range(nparticle_types):
+                                embedding_particle.append(embedding[index_particles[n], :])
+                                plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
                             plt.xlim([-2.1, 2.1])
                             plt.ylim([-2.1, 2.1])
                             plt.xlabel('Embedding 0', fontsize=8)
