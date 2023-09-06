@@ -165,7 +165,7 @@ class InteractionParticles(pyg.nn.MessagePassing):
         acc = self.propagate(edge_index, x=(x, x))
 
         if step == 2:
-            deg = pyg_utils.degree(data.edge_index[0], data.num_nodes)
+            deg = pyg_utils.degree(edge_index[0], data.num_nodes)
             deg = (deg > 0)
             deg = (deg > 0).type(torch.float32)
             deg = torch.concatenate((deg[:, None], deg[:, None]), axis=1)
@@ -210,14 +210,15 @@ class EdgeNetwork(pyg.nn.MessagePassing):
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
     def __init__(self):
-        super().__init__(aggr='mean')  # "mean" aggregation.
+        super().__init__(aggr=aggr_type)  # "mean" aggregation.
 
-    def forward(self, x, edge_index, edge_feature):
-        aggr = self.propagate(edge_index, x=(x, x), edge_feature=edge_feature)
+    def forward(self, x, edge_index):
+        aggr = self.propagate(edge_index, x=(x, x))
 
         return self.new_edges
 
-    def message(self, x_i, x_j, edge_feature):
+    def message(self, x_i, x_j):
+
         r = torch.sqrt(torch.sum((x_i[:, 0:2] - x_j[:, 0:2]) ** 2, axis=1)) / radius  # squared distance
         r = r[:, None]
 
@@ -240,7 +241,7 @@ class InteractionNetworkEmb(pyg.nn.MessagePassing):
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
     def __init__(self, nlayers, embedding, device):
-        super().__init__(aggr='mean')  # "mean" aggregation.
+        super().__init__(aggr=aggr_type)  # "mean" aggregation.
 
         self.nlayers = nlayers
         self.device = device
@@ -284,26 +285,30 @@ class ResNetGNN(torch.nn.Module):
 
         self.edge_init = EdgeNetwork()
 
-        self.layer = torch.nn.ModuleList(
-            [InteractionNetworkEmb(nlayers=3, embedding=self.embedding, device=self.device) for _ in
-             range(self.nlayers)])
+        # self.layer = torch.nn.ModuleList(
+        #     [InteractionNetworkEmb(nlayers=3, embedding=self.embedding, device=self.device) for _ in
+        #      range(self.nlayers)])
+
+        self.layer = InteractionNetworkEmb(nlayers=3, embedding=self.embedding, device=self.device)
+
         self.node_out = MLP(input_size=self.embedding, hidden_size=self.hidden_size, output_size=2, nlayers=3,
                             device=self.device)
 
-        self.embedding_node = MLP(input_size=8, hidden_size=self.embedding, output_size=self.embedding, nlayers=3,
+        self.embedding_node = MLP(input_size=12, hidden_size=self.embedding, output_size=self.embedding, nlayers=3,
                                   device=self.device)
         self.embedding_edges = MLP(input_size=11, hidden_size=self.embedding, output_size=self.embedding, nlayers=3,
                                    device=self.device)
 
-        self.a = nn.Parameter(torch.tensor(np.ones((int(nparticles), 1)), device=self.device, requires_grad=True))
+        self.a = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device=self.device, requires_grad=True))
 
 
     def forward(self, data):
+
         x, edge_index = data.x, data.edge_index
-        x[:, 4] = self.a[x[:, 6].detach().cpu().numpy(), 0]
+        x[:, 4:6] = self.a[x[:, 6].detach().cpu().numpy(), 0:2]
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
-        node_feature = torch.cat((x[:, 0:4], x[:, 4:5].repeat(1, 4)), dim=-1)
+        node_feature = torch.cat((x[:, 0:4], x[:, 4:5].repeat(1, 4),x[:, 5:6].repeat(1, 4)), dim=-1)
 
         noise = torch.randn((node_feature.shape[0], node_feature.shape[1]), requires_grad=False,
                             device='cuda:0') * self.noise_level
@@ -314,7 +319,7 @@ class ResNetGNN(torch.nn.Module):
         edge_feature = self.embedding_edges(edge_feature)
 
         for i in range(self.nlayers):
-            node_feature, edge_feature = self.layer[0](node_feature, data.edge_index, edge_feature=edge_feature)
+            node_feature, edge_feature = self.layer(node_feature, edge_index, edge_feature=edge_feature)
 
         pred = self.node_out(node_feature)
 
@@ -362,6 +367,25 @@ if __name__ == '__main__':
                     'particle_embedding': True,
                     'boundary': 'no',  # periodic   'no'  # no boundary condition
                     'model': 'InteractionParticles'}
+
+    # model_config = {'ntry': 621,
+    #                 'input_size': 15,
+    #                 'output_size': 2,
+    #                 'hidden_size': 32,
+    #                 'n_mp_layers': 5,
+    #                 'noise_level': 0,
+    #                 'radius': 0.075,
+    #                 'datum': '230902_620',
+    #                 'nparticles': 2000,
+    #                 'nparticle_types': 2,
+    #                 'nframes': 200,
+    #                 'sigma': .005,
+    #                 'tau': 0.1,
+    #                 'aggr_type' : 'mean',
+    #                 'embedding': 128,
+    #                 'particle_embedding': True,
+    #                 'boundary': 'no',  # periodic   'no'  # no boundary condition
+    #                 'model': 'ResNetGNN'}
 
 
     gridsearch_list = [2] #, 20, 50, 100, 200]
@@ -419,7 +443,7 @@ if __name__ == '__main__':
 
             time.sleep(0.5)
 
-            for step in range(1,3):
+            for step in range(2,3):
 
                 if step == 0:
                     print('')
@@ -581,6 +605,8 @@ if __name__ == '__main__':
                         if model_config['model'] == 'ResNetGNN':
                             model = ResNetGNN(model_config, device)
                             print(f'Training ResNetGNN')
+                            embedding = model_config['embedding']
+                            print(f'embedding: {embedding}')
                         # state_dict = torch.load(net)
                         # model.load_state_dict(state_dict['model_state_dict'])
 
@@ -837,7 +863,7 @@ if __name__ == '__main__':
                             # plt.ion()
                             ax = fig.add_subplot(2, 3, 1)
                             for n in range(nparticle_types):
-                                plt.scatter(x00[index_particles[n], 0].detach().cpu(), x00[index_particles[n], 1].detach().cpu(), s=3)
+                                plt.scatter(x00[index_particles[n], 0].detach().cpu(), x00[index_particles[n], 1].detach().cpu(), s=3, color='k')
 
                             plt.xlim([-0.3, 1.3])
                             plt.ylim([-0.3, 1.3])
@@ -848,7 +874,7 @@ if __name__ == '__main__':
 
                             ax = fig.add_subplot(2, 3, 2)
                             for n in range(nparticle_types):
-                                plt.scatter(x0[index_particles[n], 0].detach().cpu(), x0[index_particles[n], 1].detach().cpu(), s=3)
+                                plt.scatter(x0[index_particles[n], 0].detach().cpu(), x0[index_particles[n], 1].detach().cpu(), s=3, color='k')
                             ax = plt.gca()
                             plt.xlim([-0.3, 1.3])
                             plt.ylim([-0.3, 1.3])
@@ -883,7 +909,7 @@ if __name__ == '__main__':
 
                             ax = fig.add_subplot(2, 3, 5)
                             for n in range(nparticle_types):
-                                plt.scatter(x[index_particles[n], 0].detach().cpu(), x[index_particles[n], 1].detach().cpu(), s=3)
+                                plt.scatter(x[index_particles[n], 0].detach().cpu(), x[index_particles[n], 1].detach().cpu(), s=3, color='k')
                             ax = plt.gca()
                             ax.axes.xaxis.set_ticklabels([])
                             ax.axes.yaxis.set_ticklabels([])
@@ -926,14 +952,14 @@ if __name__ == '__main__':
                             for n in range(nparticle_types):
                                 embedding_particle.append(embedding[index_particles[n], :])
                                 plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
-                            embedding = model.a.detach().cpu().numpy()
-                            embedding = scaler.fit_transform(embedding)
-                            embedding_particle = []
-                            for n in range(nparticle_types):
-                                embedding_particle.append(embedding[index_particles[n], :])
-                                plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
-                            plt.xlim([-2.1, 2.1])
-                            plt.ylim([-2.1, 2.1])
+                            # embedding = model.a.detach().cpu().numpy()
+                            # embedding = scaler.fit_transform(embedding)
+                            # embedding_particle = []
+                            # for n in range(nparticle_types):
+                            #     embedding_particle.append(embedding[index_particles[n], :])
+                            #     plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
+                            plt.xlim([-4.1, 4.1])
+                            plt.ylim([-4.1, 4.1])
                             plt.xlabel('Embedding 0', fontsize=8)
                             plt.ylabel('Embedding 1', fontsize=8)
 
