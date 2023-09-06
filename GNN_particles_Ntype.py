@@ -157,7 +157,7 @@ class InteractionParticles(pyg.nn.MessagePassing):
         x[:, 4:6] = self.a[x[:, 6].detach().cpu().numpy(), 0:2]
 
         if step == 1:
-            noise = torch.randn((x.shape[0], 4), requires_grad=False, device='cuda:0') * self.noise_level
+            noise = torch.randn((x.shape[0], 4), requires_grad=False, device=device) * self.noise_level
             x[:, 0:2] = x[:, 0:2] + noise[:, 0:2]
             x[:, 2:4] = x[:, 2:4] + noise[:, 2:4] / 100
 
@@ -311,7 +311,7 @@ class ResNetGNN(torch.nn.Module):
         node_feature = torch.cat((x[:, 0:4], x[:, 4:5].repeat(1, 4),x[:, 5:6].repeat(1, 4)), dim=-1)
 
         noise = torch.randn((node_feature.shape[0], node_feature.shape[1]), requires_grad=False,
-                            device='cuda:0') * self.noise_level
+                            device=self.device) * self.noise_level
         node_feature = node_feature + noise
         edge_feature = self.edge_init(node_feature, edge_index)
 
@@ -330,7 +330,10 @@ if __name__ == '__main__':
 
     # version 1.17 230901
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    print(device)
 
     model_config = {'ntry': 612,
                     'input_size': 15,
@@ -353,7 +356,7 @@ if __name__ == '__main__':
     model_config = {'ntry': 620,
                     'input_size': 15,
                     'output_size': 2,
-                    'hidden_size': 32,
+                    'hidden_size': 48,
                     'n_mp_layers': 5,
                     'noise_level': 0,
                     'radius': 0.075,
@@ -443,7 +446,7 @@ if __name__ == '__main__':
 
             time.sleep(0.5)
 
-            for step in range(2,3):
+            for step in range(3,4):
 
                 if step == 0:
                     print('')
@@ -659,6 +662,7 @@ if __name__ == '__main__':
                                 k = np.random.randint(nframes - 1)
 
                                 x = torch.load(f'graphs_data/graphs_particles_{datum}/x_{run}_{k}.pt')
+                                x = x.to(device)
 
                                 if data_augmentation:
 
@@ -687,6 +691,7 @@ if __name__ == '__main__':
                                 t = torch.Tensor([radius ** 2])
                                 edges = adj_t.nonzero().t().contiguous()
                                 y = torch.load(f'graphs_data/graphs_particles_{datum}/y_{run}_{k}.pt')
+                                y = y.to(device)
                                 y[:, 0] = y[:, 0] / ynorm[4]
                                 y[:, 1] = y[:, 1] / ynorm[5]
 
@@ -744,8 +749,8 @@ if __name__ == '__main__':
                                 model.a_bf_kmean.data=model.a.data
                                 new_a = kmeans.cluster_centers_[kmeans.labels_, :]
 
-                                if gap < 100:
-                                    model.a.data = torch.tensor(new_a, device=device)
+                                # if gap < 100:
+                                #     model.a.data = torch.tensor(new_a, device=device)
 
                                 embedding = model.a.detach().cpu().numpy()
                                 embedding = scaler.fit_transform(embedding)
@@ -781,7 +786,7 @@ if __name__ == '__main__':
 
                             ax = fig.add_subplot(2, 4, 8)
                             plt.plot(list_gap,color='k')
-                            plt.xlim([0, 50])
+                            plt.xlim([0, 60])
                             plt.xlabel('Epoch',fontsize=10)
                             plt.ylabel('Gap', fontsize=10)
                             plt.savefig(f"./ReconsGraph/Fig_{ntry}_{epoch}.tif")
@@ -824,12 +829,16 @@ if __name__ == '__main__':
                     x = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_0.pt')
                     x00 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_0.pt')
                     y = torch.load(f'graphs_data/graphs_particles_{datum}/y_0_0.pt')
+                    x = x.to(device)
+                    x00 = x00.to(device)
+                    y = y.to(device)
 
                     rmserr_list = []
 
                     for it in tqdm(range(nframes - 1)):
 
                         x0 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{it + 1}.pt')
+                        x0 = x0.to(device)
 
                         distance = torch.sum(bc_diff(x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
                         t = torch.Tensor([radius ** 2])  # threshold
@@ -1007,8 +1016,11 @@ if __name__ == '__main__':
                     print(f"Total Trainable Params: {total_params}")
 
                     x = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{nframes - 1}.pt')
+                    x= x.to(device)
                     x00 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{nframes - 1}.pt')
+                    x00 = x00.to(device)
                     y = torch.load(f'graphs_data/graphs_particles_{datum}/y_0_{nframes - 1}.pt')
+                    y = y.to(device)
 
                     xx = torch.tensor(np.zeros((int(nparticles), 4)), dtype=torch.float32, device=device, requires_grad=True)
                     xx.data[:,0:4] = x[:,0:4]
@@ -1019,12 +1031,12 @@ if __name__ == '__main__':
 
                     for it in range(nframes - 1, 0, -1):
 
-                        x0 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{it - 1}.pt')
+                        target = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{it}.pt')
+                        target = target.to(device)
 
-                        xx_target = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{it}.pt')
-                        xx_target[:, 0:2] = xx[:, 0:2]
+                        # target[:, 0:2] = xx[:, 0:2].detach().cpu()
 
-                        distance = torch.sum(bc_diff(x0[:, None, 0:2] - x0[None, :, 0:2]) ** 2, axis=2)
+                        distance = torch.sum(bc_diff(target[:, None, 0:2] - target[None, :, 0:2]) ** 2, axis=2)
                         t = torch.Tensor([radius ** 2])  # threshold
                         adj_t = (distance < radius ** 2).float() * 1
                         edge_index = adj_t.nonzero().t().contiguous()
@@ -1041,16 +1053,15 @@ if __name__ == '__main__':
                             dataset = data.Data(x=torch.cat((xx,x[:,4:7]),axis=1), edge_index=edge_index)
 
                             y = model(dataset)  # acceleration estimation
+                            y = y.to(device)
 
                             y[:, 0] = y[:, 0] * ynorm[4]
                             y[:, 1] = y[:, 1] * ynorm[5]
 
-                            xx_p= 0 * xx
-                            xx_p[:, 2:4] = xx[:, 2:4] + y
-                            # xx_p[:, 2:4] = torch.clamp(xx_p[:, 2:4], min=-3*torch.std(xx_target[:,2:4]), max=3*torch.std(xx_target[:,2:4]) )# speed update
-                            xx_p[:, 0:2] = xx[:, 0:2] + xx_p[:, 2:4]  # position update
+                            v_p= xx[:, 2:4] + y
+                            x_p = xx[:, 0:2] + v_p  # position update
 
-                            loss = (bc_pos(xx_p[:,0:2]) - xx_target[:,0:2]).norm(2) + (torch.std(xx_p[:,2:4])-torch.std(xx_target[:,2:4])).norm(2) + (torch.mean(xx_p[:,2:4])-torch.mean(xx_target[:,2:4])).norm(2) + xx_p[:,2:4].norm(2)/10
+                            loss = (x_p - target[:,0:2]).norm(2) + (v_p - target[:,0:2]).norm(2)
                             loss.backward()
 
                             xx.grad = torch.nan_to_num(xx.grad, nan=0.0)
@@ -1058,8 +1069,6 @@ if __name__ == '__main__':
                             optimizer.step()
 
                         print (f"{it} {loss.item()}")
-
-                        xx_ = bc_pos(xx[:, 0:2])
 
                         stp = 1
 
@@ -1108,7 +1117,7 @@ if __name__ == '__main__':
                             plt.legend(fontsize="10")
 
                             ax = fig.add_subplot(2, 3, 4)
-                            pos = dict(enumerate(np.array(xx_[:, 0:2].detach().cpu()), 0))
+                            pos = dict(enumerate(np.array(xx[:, 0:2].detach().cpu()), 0))
                             vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
                             nx.draw_networkx(vis, pos=pos, node_size=10, linewidths=0, with_labels=False)
                             plt.xlim([-0.3, 1.3])
@@ -1121,7 +1130,7 @@ if __name__ == '__main__':
 
                             ax = fig.add_subplot(2, 3, 5)
                             for n in range(nparticle_types):
-                                plt.scatter(xx_[index_particles[n], 0].detach().cpu(), xx_[index_particles[n], 1].detach().cpu(), s=3)
+                                plt.scatter(xx[index_particles[n], 0].detach().cpu(), xx[index_particles[n], 1].detach().cpu(), s=3)
                             ax = plt.gca()
                             ax.axes.xaxis.set_ticklabels([])
                             ax.axes.yaxis.set_ticklabels([])
@@ -1133,13 +1142,13 @@ if __name__ == '__main__':
                             plt.text(-0.25, 1.38, 'Model', fontsize=30)
 
                             ax = fig.add_subplot(2, 3, 6)
-                            temp1 = torch.cat((xx_[:,0:2], x0[:,0:2]), 0)
+                            temp1 = torch.cat((xx[:,0:2], x0[:,0:2]), 0)
                             temp2 = torch.tensor(np.arange(nparticles), device=device)
                             temp3 = torch.tensor(np.arange(nparticles) + nparticles, device=device)
                             temp4 = torch.concatenate((temp2[:, None], temp3[:, None]), 1)
                             temp4 = torch.t(temp4)
 
-                            distance3 = torch.sqrt(torch.sum((xx_[:, 0:2] - x0[:, 0:2]) ** 2, 1))
+                            distance3 = torch.sqrt(torch.sum((xx[:, 0:2] - x0[:, 0:2]) ** 2, 1))
                             adj_t3 = (distance3 < 0.9).float() * 1
                             adj_t3 = adj_t3[:, None]
                             adj_t3 = torch.concatenate((adj_t3, adj_t3), 1)
@@ -1181,5 +1190,5 @@ if __name__ == '__main__':
                             # plt.plot(rr.detach().cpu().numpy(), np.array(psi1.cpu()), color=c2, linewidth=1)
                             # plt.plot(rr.detach().cpu().numpy(), rr.detach().cpu().numpy() * 0, color=[0, 0, 0],linewidth=0.5)
 
-                            plt.savefig(f"./ReconsGraph3/Fig_{ntry}_{it}.tif")
+                            plt.savefig(f"./ReconsGraph4/Fig_{ntry}_{it}.tif")
                             plt.close()
