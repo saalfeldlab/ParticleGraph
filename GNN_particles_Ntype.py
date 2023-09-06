@@ -327,40 +327,53 @@ if __name__ == '__main__':
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    model_config = {'ntry': 600,
+    model_config = {'ntry': 612,
                     'input_size': 15,
                     'output_size': 2,
                     'hidden_size': 32,
                     'n_mp_layers': 5,
                     'noise_level': 0,
                     'radius': 0.1,
-                    'datum': '230828',
+                    'datum': '230902_612',
                     'nparticles': 10000,
                     'nparticle_types': 5,
                     'nframes': 200,
                     'sigma': .005,
                     'tau': 0.1,
-                    'p0': [1.27, 1.41, 0.0547, 0.0053],
-                    'p1': [1.82, 1.72, 0.024, 0.09],
                     'aggr_type' : 'mean',
                     'particle_embedding': True,
                     'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                     'model': 'InteractionParticles'}
 
+    model_config = {'ntry': 620,
+                    'input_size': 15,
+                    'output_size': 2,
+                    'hidden_size': 32,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'radius': 0.075,
+                    'datum': '230902_620',
+                    'nparticles': 2000,
+                    'nparticle_types': 2,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'no',  # periodic   'no'  # no boundary condition
+                    'model': 'InteractionParticles'}
 
-    # with open(f"{folder}/model_config.json", 'r') as f:
-    #     model_config = json.load(f)
 
-    gridsearch_list = [20] #, 20, 50, 100, 200]
-    data_augmentation = False
+    gridsearch_list = [2] #, 20, 50, 100, 200]
+    data_augmentation = True
 
     scaler = StandardScaler()
 
     for gtest in range(1):
 
-            ntry=612
-            model_config['ntry'] = ntry
-            model_config['datum']='230902_'+str(ntry)
+            # ntry=612
+            # model_config['ntry'] = ntry
+            # model_config['datum']='230902_'+str(ntry)
 
             print('')
             ntry = model_config['ntry']
@@ -622,13 +635,17 @@ if __name__ == '__main__':
                                 x = torch.load(f'graphs_data/graphs_particles_{datum}/x_{run}_{k}.pt')
 
                                 if data_augmentation:
+
                                     phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
                                     cos = torch.cos(phi)
                                     sin = torch.sin(phi)
+
                                     new_x = 0.5 + cos * (x[:, 0]-0.5) + sin * (x[:,1]-0.5)
                                     new_y = 0.5 + -sin * (x[:, 0]-0.5) + cos * (x[:, 1]-0.5)
                                     x[:, 0] = new_x
                                     x[:, 1] = new_y
+                                    x[:,0:2] = bc_pos(x[:,0:2])
+
                                     new_vx = cos * x[:, 2] + sin * x[:, 3]
                                     new_vy = -sin * x[:, 2] + cos * x[:, 3]
                                     x[:, 2] = new_vx
@@ -636,8 +653,8 @@ if __name__ == '__main__':
 
                                 # fig = plt.figure(figsize=(8, 8))
                                 # plt.ion()
-                                # plt.scatter(x[0:1000, 0].detach().cpu(), x[0:1000, 1].detach().cpu(), s=3, color=c1)
-                                # plt.scatter(x[1000:, 0].detach().cpu(), x[1000:, 1].detach().cpu(), s=3, color=c2)
+                                # plt.scatter(x[0:1000, 0].detach().cpu(), x[0:1000, 1].detach().cpu(), s=3)
+                                # plt.scatter(x[1000:, 0].detach().cpu(), x[1000:, 1].detach().cpu(), s=3)
 
                                 distance = torch.sum(bc_diff(x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
                                 adj_t = (distance < radius ** 2).float() * 1
@@ -700,7 +717,9 @@ if __name__ == '__main__':
                                 model.a.requires_grad = False
                                 model.a_bf_kmean.data=model.a.data
                                 new_a = kmeans.cluster_centers_[kmeans.labels_, :]
-                                model.a.data = torch.tensor(new_a, device=device)
+
+                                # model.a.data = torch.tensor(new_a, device=device)
+
                                 embedding = model.a.detach().cpu().numpy()
                                 embedding = scaler.fit_transform(embedding)
                                 embedding_particle = []
@@ -729,7 +748,8 @@ if __name__ == '__main__':
 
                             ax = fig.add_subplot(2, 4, 4)
                             plt.plot(list_loss,color='k')
-                            plt.xlim([0, 50])
+                            plt.xlim([0, 60])
+                            plt.ylim([0, 0.02])
                             plt.ylabel('Loss', fontsize=10)
 
                             ax = fig.add_subplot(2, 4, 8)
@@ -823,7 +843,7 @@ if __name__ == '__main__':
                             ax.axes.get_xaxis().set_visible(False)
                             ax.axes.get_yaxis().set_visible(False)
                             plt.axis('off')
-                            plt.text(-0.25, 1.38, 'Distribution at t0 is 1.0x1.0')
+                            plt.text(-0.25, 1.38, f'T0 {nparticles} particles', fontsize=30)
 
                             ax = fig.add_subplot(2, 3, 2)
                             for n in range(nparticle_types):
@@ -844,8 +864,8 @@ if __name__ == '__main__':
                             plt.ylim([0, 0.1])
                             plt.xlim([0, nframes])
                             plt.tick_params(axis='both', which='major', labelsize=10)
-                            plt.xlabel('Frame [a.u]', fontsize="10")
-                            plt.ylabel('RMSE [a.u]', fontsize="10")
+                            plt.xlabel('Frame [a.u]', fontsize="14")
+                            plt.ylabel('RMSE [a.u]', fontsize="14")
                             plt.legend(fontsize="10")
 
                             ax = fig.add_subplot(2, 3, 4)
@@ -905,13 +925,13 @@ if __name__ == '__main__':
                             for n in range(nparticle_types):
                                 embedding_particle.append(embedding[index_particles[n], :])
                                 plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
-                            embedding = model.a.detach().cpu().numpy()
-                            embedding = scaler.fit_transform(embedding)
-                            embedding_particle = []
-                            for n in range(nparticle_types):
-                                embedding_particle.append(embedding[index_particles[n], :])
-                                plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], marker='+', s=10,
-                                            color='k')
+                            # embedding = model.a.detach().cpu().numpy()
+                            # embedding = scaler.fit_transform(embedding)
+                            # embedding_particle = []
+                            # for n in range(nparticle_types):
+                            #     embedding_particle.append(embedding[index_particles[n], :])
+                            #     plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], marker='+', s=10,
+                            #                 color='k')
                             plt.xlim([-2.1, 2.1])
                             plt.ylim([-2.1, 2.1])
                             plt.xlabel('Embedding 0', fontsize=8)
