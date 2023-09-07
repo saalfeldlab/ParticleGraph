@@ -300,6 +300,7 @@ class ResNetGNN(torch.nn.Module):
                                    device=self.device)
 
         self.a = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device=self.device, requires_grad=True))
+        self.a_bf_kmean = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device=self.device, requires_grad=False))
 
 
     def forward(self, data):
@@ -335,23 +336,23 @@ if __name__ == '__main__':
     device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(device)
 
-    model_config = {'ntry': 612,
-                    'input_size': 15,
-                    'output_size': 2,
-                    'hidden_size': 32,
-                    'n_mp_layers': 5,
-                    'noise_level': 0,
-                    'radius': 0.1,
-                    'datum': '230902_612',
-                    'nparticles': 10000,
-                    'nparticle_types': 5,
-                    'nframes': 200,
-                    'sigma': .005,
-                    'tau': 0.1,
-                    'aggr_type' : 'mean',
-                    'particle_embedding': True,
-                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-                    'model': 'InteractionParticles'}
+    # model_config = {'ntry': 612,
+    #                 'input_size': 15,
+    #                 'output_size': 2,
+    #                 'hidden_size': 32,
+    #                 'n_mp_layers': 5,
+    #                 'noise_level': 0,
+    #                 'radius': 0.1,
+    #                 'datum': '230902_612',
+    #                 'nparticles': 10000,
+    #                 'nparticle_types': 5,
+    #                 'nframes': 200,
+    #                 'sigma': .005,
+    #                 'tau': 0.1,
+    #                 'aggr_type' : 'mean',
+    #                 'particle_embedding': True,
+    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+    #                 'model': 'InteractionParticles'}
 
     model_config = {'ntry': 620,
                     'input_size': 15,
@@ -390,15 +391,33 @@ if __name__ == '__main__':
     #                 'boundary': 'no',  # periodic   'no'  # no boundary condition
     #                 'model': 'ResNetGNN'}
 
+    # model_config = {'ntry': 630,
+    #                 'input_size': 15,
+    #                 'output_size': 2,
+    #                 'hidden_size': 48,
+    #                 'n_mp_layers': 5,
+    #                 'noise_level': 0,
+    #                 'radius': 0.075,
+    #                 'datum': '230902_620',
+    #                 'nparticles': 3000,
+    #                 'nparticle_types': 3,
+    #                 'nframes': 200,
+    #                 'sigma': .005,
+    #                 'tau': 0.1,
+    #                 'aggr_type' : 'mean',
+    #                 'particle_embedding': True,
+    #                 'boundary': 'no',  # periodic   'no'  # no boundary condition
+    #                 'model': 'InteractionParticles'}
+
 
     gridsearch_list = [2] #, 20, 50, 100, 200]
     data_augmentation = True
 
     scaler = StandardScaler()
 
-    for gtest in range(1):
+    for gtest in range(8):
 
-            # ntry=612
+            # ntry=622+gtest
             # model_config['ntry'] = ntry
             # model_config['datum']='230902_'+str(ntry)
 
@@ -872,7 +891,7 @@ if __name__ == '__main__':
                             # plt.ion()
                             ax = fig.add_subplot(2, 3, 1)
                             for n in range(nparticle_types):
-                                plt.scatter(x00[index_particles[n], 0].detach().cpu(), x00[index_particles[n], 1].detach().cpu(), s=3, color='k')
+                                plt.scatter(x00[index_particles[n], 0].detach().cpu(), x00[index_particles[n], 1].detach().cpu(), s=3)
 
                             plt.xlim([-0.3, 1.3])
                             plt.ylim([-0.3, 1.3])
@@ -883,7 +902,7 @@ if __name__ == '__main__':
 
                             ax = fig.add_subplot(2, 3, 2)
                             for n in range(nparticle_types):
-                                plt.scatter(x0[index_particles[n], 0].detach().cpu(), x0[index_particles[n], 1].detach().cpu(), s=3, color='k')
+                                plt.scatter(x0[index_particles[n], 0].detach().cpu(), x0[index_particles[n], 1].detach().cpu(), s=3)
                             ax = plt.gca()
                             plt.xlim([-0.3, 1.3])
                             plt.ylim([-0.3, 1.3])
@@ -918,7 +937,7 @@ if __name__ == '__main__':
 
                             ax = fig.add_subplot(2, 3, 5)
                             for n in range(nparticle_types):
-                                plt.scatter(x[index_particles[n], 0].detach().cpu(), x[index_particles[n], 1].detach().cpu(), s=3, color='k')
+                                plt.scatter(x[index_particles[n], 0].detach().cpu(), x[index_particles[n], 1].detach().cpu(), s=3)
                             ax = plt.gca()
                             ax.axes.xaxis.set_ticklabels([])
                             ax.axes.yaxis.set_ticklabels([])
@@ -986,8 +1005,10 @@ if __name__ == '__main__':
                     # for f in files:
                     #     os.remove(f)
 
+                    nframes = 100
+
                     print('')
-                    print('Testing loop ... ')
+                    print(f'Backward starting frame {nframes}... ')
 
                     if model_config['model'] == 'InteractionParticles':
                         model = InteractionParticles(model_config, device)
@@ -1015,33 +1036,49 @@ if __name__ == '__main__':
                     print(table)
                     print(f"Total Trainable Params: {total_params}")
 
-                    x = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{nframes - 1}.pt')
+                    x = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_0.pt')
                     x= x.to(device)
-                    x00 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{nframes - 1}.pt')
+
+                    x00 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{nframes - 2}.pt')
                     x00 = x00.to(device)
-                    y = torch.load(f'graphs_data/graphs_particles_{datum}/y_0_{nframes - 1}.pt')
+                    y = torch.load(f'graphs_data/graphs_particles_{datum}/y_0_{nframes - 2}.pt')
                     y = y.to(device)
 
                     xx = torch.tensor(np.zeros((int(nparticles), 4)), dtype=torch.float32, device=device, requires_grad=True)
                     xx.data[:,0:4] = x[:,0:4]
 
-                    optimizer = torch.optim.Adam([xx], lr=1E-4)  # , weight_decay=5e-4)
+                    optimizer = torch.optim.Adam([xx], lr=1E-5)  # , weight_decay=5e-4)
 
                     rmserr_list = []
 
-                    for it in range(nframes - 1, 0, -1):
+                    for it in range(nframes, 0, -1):
 
-                        target = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{it}.pt')
-                        target = target.to(device)
+                        x0 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{it - 2}.pt')
+                        x0 = x0.to(device)
 
-                        # target[:, 0:2] = xx[:, 0:2].detach().cpu()
+                        # target = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{it}.pt')        # t-1 backward
+                        # target = target.to(device)
 
-                        distance = torch.sum(bc_diff(target[:, None, 0:2] - target[None, :, 0:2]) ** 2, axis=2)
+                        if (it == nframes):
+
+                            target_t = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{it}.pt')
+                            target_t = target_t[:, 0:4]
+                            target_t = target_t.to(device)
+
+                            target_t_1 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{it-1}.pt')
+                            target_t_1 = target_t_1[:, 0:4]
+                            target_t_1 = target_t_1.to(device)
+
+                        else:
+                            target_t = target_t_1
+                            target_t_1 = xx[:, 0:4].clone().detach()            # estimation of t-2 > t-1 > t
+
+                        distance = torch.sum((x0[:, None, 0:2] - x0[None, :, 0:2]) ** 2, axis=2)
                         t = torch.Tensor([radius ** 2])  # threshold
                         adj_t = (distance < radius ** 2).float() * 1
                         edge_index = adj_t.nonzero().t().contiguous()
 
-                        for loop in range(6000):
+                        for loop in range(10000):
 
                             optimizer.zero_grad()
 
@@ -1052,6 +1089,8 @@ if __name__ == '__main__':
 
                             dataset = data.Data(x=torch.cat((xx,x[:,4:7]),axis=1), edge_index=edge_index)
 
+                            # start t-2
+
                             y = model(dataset)  # acceleration estimation
                             y = y.to(device)
 
@@ -1061,7 +1100,27 @@ if __name__ == '__main__':
                             v_p= xx[:, 2:4] + y
                             x_p = xx[:, 0:2] + v_p  # position update
 
-                            loss = (x_p - target[:,0:2]).norm(2) + (v_p - target[:,0:2]).norm(2)
+                            # move forward t-1
+
+                            loss1 = (x_p - target_t_1[:,0:2]).norm(2) + (v_p - target_t_1[:,2:4]).norm(2) # + 10*(torch.std(v_p) - torch.std(target[:,2:4])).norm(2) + 10*(torch.mean(v_p) - torch.mean(target[:,2:4])).norm(2)
+
+                            dataset = data.Data(x=torch.cat((x_p,v_p,x[:,4:7]),axis=1), edge_index=edge_index)
+
+                            y = model(dataset)  # acceleration estimation
+                            y = y.to(device)
+
+                            y[:, 0] = y[:, 0] * ynorm[4]
+                            y[:, 1] = y[:, 1] * ynorm[5]
+
+                            v_pp = v_p + y
+                            x_pp = x_p + v_pp  # position update
+
+                            # move forward t
+
+                            loss2 = (x_pp - target_t[:, 0:2]).norm(2) + (v_pp - target_t[:, 2:4]).norm(2)  # + 10*(torch.std(v_p) - torch.std(target[:,2:4])).norm(2) + 10*(torch.mean(v_p) - torch.mean(target[:,2:4])).norm(2)
+
+                            loss = loss1 + loss2
+
                             loss.backward()
 
                             xx.grad = torch.nan_to_num(xx.grad, nan=0.0)
