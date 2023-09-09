@@ -442,23 +442,23 @@ if __name__ == '__main__':
     #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
     #                 'model': 'InteractionParticles'}
 
-    model_config = {'ntry': 620,
-                    'input_size': 15,
-                    'output_size': 2,
-                    'hidden_size': 48,
-                    'n_mp_layers': 5,
-                    'noise_level': 0,
-                    'radius': 0.075,
-                    'datum': '230902_620',
-                    'nparticles': 2000,
-                    'nparticle_types': 2,
-                    'nframes': 200,
-                    'sigma': .005,
-                    'tau': 0.1,
-                    'aggr_type' : 'mean',
-                    'particle_embedding': True,
-                    'boundary': 'no',  # periodic   'no'  # no boundary condition
-                    'model': 'InteractionParticles'}
+    # model_config = {'ntry': 620,
+    #                 'input_size': 15,
+    #                 'output_size': 2,
+    #                 'hidden_size': 48,
+    #                 'n_mp_layers': 5,
+    #                 'noise_level': 0,
+    #                 'radius': 0.075,
+    #                 'datum': '230902_620',
+    #                 'nparticles': 2000,
+    #                 'nparticle_types': 2,
+    #                 'nframes': 200,
+    #                 'sigma': .005,
+    #                 'tau': 0.1,
+    #                 'aggr_type' : 'mean',
+    #                 'particle_embedding': True,
+    #                 'boundary': 'no',  # periodic   'no'  # no boundary condition
+    #                 'model': 'InteractionParticles'}
 
     # model_config = {'ntry': 621,
     #                 'input_size': 15,
@@ -847,7 +847,7 @@ if __name__ == '__main__':
                             else:
                                 print("Epoch {}. Loss: {:.6f} Gap: {:.3f} kl.elbow {:d} ".format(epoch,total_loss / N / nparticles, gap, kl.elbow))
 
-                            if ( ((gap < 100) & (kl.elbow==nparticle_types)) | (epoch > 29)) & (model.a.requires_grad == True):
+                            if ( ((gap < 100) & (kl.elbow==nparticle_types)) | ((epoch > 49))) & (model.a.requires_grad == True):
 
                                 if data_augmentation:
                                     data_augmentation_loop = 200
@@ -1874,7 +1874,7 @@ if __name__ == '__main__':
                             else:
                                 print("Epoch {}. Loss: {:.6f} Gap: {:.3f} kl.elbow {:d} ".format(epoch,total_loss / N / nparticles, gap, kl.elbow))
 
-                            if ( ((gap < 100) & (kl.elbow==nparticle_types)) | (epoch > 29)) & (model.a.requires_grad == True):
+                            if ( ((gap < 100) & (kl.elbow==nparticle_types)) | ((epoch > 49))) & (model.a.requires_grad == True):
 
                                 if data_augmentation:
                                     data_augmentation_loop = 200
@@ -2901,7 +2901,7 @@ if __name__ == '__main__':
                             else:
                                 print("Epoch {}. Loss: {:.6f} Gap: {:.3f} kl.elbow {:d} ".format(epoch,total_loss / N / nparticles, gap, kl.elbow))
 
-                            if ( ((gap < 100) & (kl.elbow==nparticle_types)) | (epoch > 29)) & (model.a.requires_grad == True):
+                            if ( ((gap < 100) & (kl.elbow==nparticle_types)) | ((epoch > 49))) & (model.a.requires_grad == True):
 
                                 if data_augmentation:
                                     data_augmentation_loop = 200
