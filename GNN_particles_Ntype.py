@@ -819,7 +819,7 @@ if __name__ == '__main__':
                                         t_list=[[1,0],[-1,0],[0,1],[0,-1]]
                                         for t in t_list:
                                             x_ = x.clone().detach()
-                                            x_[:,0:2]=x[:,0:2]+ torch.tensor(t)
+                                            x_[:,0:2]=x[:,0:2]+ torch.tensor(t,device=device)
                                             xx = torch.cat((xx, x_), axis=0)
                                         x = xx.to(device)
 
