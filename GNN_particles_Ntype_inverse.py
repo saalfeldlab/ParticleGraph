@@ -439,7 +439,7 @@ if __name__ == '__main__':
     #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
     #                 'model': 'InteractionParticles'}
 
-    model_config = {'ntry': 620,
+    model_config = {'ntry': 619,
                     'input_size': 15,
                     'output_size': 2,
                     'hidden_size': 48,
@@ -454,8 +454,26 @@ if __name__ == '__main__':
                     'tau': 0.1,
                     'aggr_type' : 'mean',
                     'particle_embedding': True,
-                    'boundary': 'no',  # periodic   'no'  # no boundary condition
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                     'model': 'InteractionParticles'}
+
+    # model_config = {'ntry': 620,
+    #                 'input_size': 15,
+    #                 'output_size': 2,
+    #                 'hidden_size': 48,
+    #                 'n_mp_layers': 5,
+    #                 'noise_level': 0,
+    #                 'radius': 0.075,
+    #                 'datum': '230902_620',
+    #                 'nparticles': 2000,
+    #                 'nparticle_types': 2,
+    #                 'nframes': 200,
+    #                 'sigma': .005,
+    #                 'tau': 0.1,
+    #                 'aggr_type' : 'mean',
+    #                 'particle_embedding': True,
+    #                 'boundary': 'no',  # periodic   'no'  # no boundary condition
+    #                 'model': 'InteractionParticles'}
 
     # model_config = {'ntry': 621,
     #                 'input_size': 15,
@@ -476,14 +494,14 @@ if __name__ == '__main__':
     #                 'boundary': 'no',  # periodic   'no'  # no boundary condition
     #                 'model': 'ResNetGNN'}
 
-    # model_config = {'ntry': 631,
+    # model_config = {'ntry': 630,
     #                 'input_size': 15,
     #                 'output_size': 2,
     #                 'hidden_size': 48,
     #                 'n_mp_layers': 5,
     #                 'noise_level': 0,
     #                 'radius': 0.075,
-    #                 'datum': '230902_631',
+    #                 'datum': '230902_620',
     #                 'nparticles': 3000,
     #                 'nparticle_types': 3,
     #                 'nframes': 200,
@@ -494,17 +512,33 @@ if __name__ == '__main__':
     #                 'boundary': 'no',  # periodic   'no'  # no boundary condition
     #                 'model': 'InteractionParticles'}
 
+    model_config = {'ntry': 640,
+                    'input_size': 15,
+                    'output_size': 2,
+                    'hidden_size': 48,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'radius': 0.075,
+                    'datum': '230902_620',
+                    'nparticles': 3000,
+                    'nparticle_types': 4,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'no',  # periodic   'no'  # no boundary condition
+                    'model': 'InteractionParticles'}
+
 
     gridsearch_list = [2] #, 20, 50, 100, 200]
     data_augmentation = True
 
     scaler = StandardScaler()
 
-    for gtest in range(1):
+    for gtest in range(7):
 
-            # # ntry=630+gtest
-            #
-            # ntry = 620
+            # ntry=640+gtest
             # model_config['ntry'] = ntry
             # model_config['datum']='230902_'+str(ntry)
 
@@ -945,7 +979,7 @@ if __name__ == '__main__':
 
                     for it in tqdm(range(nframes - 1)):
 
-                        x0 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{min(it + 1,nframes - 2)}.pt')
+                        x0 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{it + 1}.pt')
                         x0 = x0.to(device)
 
                         distance = torch.sum(bc_diff(x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
@@ -1354,10 +1388,7 @@ if __name__ == '__main__':
 
 
                     model = InteractionParticlesLoop(model_config, device)
-
                     model.a_bf_kmean.requires_grad = False
-
-
                     net = f"./log/try_{ntry}/models/best_model_with_{gridsearch_list[0]}_graphs.pt"
                     print(f'network: {net}')
                     state_dict = torch.load(net)
@@ -1391,6 +1422,10 @@ if __name__ == '__main__':
                         x.data[:,2:4]= V1
 
                         optimizer = torch.optim.Adam([x], lr=1E-4)  # , weight_decay=5e-4)
+                        model.a.requires_grad = True
+                        optimizer_a = torch.optim.Adam([model.a], lr=1E-4) # Image optimizer
+
+
                         g_loss = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
                         rmserr_list = []
@@ -1403,10 +1438,8 @@ if __name__ == '__main__':
                             if it==750:
                                 optimizer = torch.optim.Adam([x], lr=5E-5)  # , weight_decay=5e-4)
 
-                            if it==2000:
-                                optimizer = torch.optim.Adam([x], lr=1E-5)  # , weight_decay=5e-4)
-
                             optimizer.zero_grad()
+                            optimizer_a.zero_grad()
 
                             distance = torch.sum(bc_diff(x0[:, None, 0:2] - x0[None, :, 0:2]) ** 2, axis=2)
                             t = torch.Tensor([radius ** 2])  # threshold
@@ -1417,17 +1450,22 @@ if __name__ == '__main__':
 
                             y = model(dataset,nframes)  # acceleration estimation
 
+                            # loss = (y[:,0:2] - x0[:,0:2]).norm(2)
+
                             loss = 0
+
+                            loss += (y[:, 0:2] - x0[:, 0:2]).norm(2)
+
                             for n in range(nparticle_types):
-                                loss += 1E1 * (y[index_particles[n], 0:2] - x0[index_particles[n], 0:2]).norm(2) + (y[index_particles[n], 2:4] - x0[index_particles[n], 2:4]).norm(2)
-                                loss += g_loss(y[index_particles[n], 0:4], x0[index_particles[n], 0:4]) * 1E2
-                                loss += g_loss(y[index_particles[n], 0:4], x0[index_particles[n], 0:4]) * 1E4
+                                for d in range(4):
+                                    loss += g_loss(y[index_particles[n], d:d+1], x0[index_particles[n], d:d+1]) *1E4
 
                             loss.backward()
 
                             x.grad = torch.nan_to_num(x.grad, nan=0.0)
 
                             optimizer.step()
+                            optimizer_a.step()
 
                             # with torch.no_grad():
                             #     x[:,0:2] = torch.clamp(x[:,0:2],min=0,max=1)
@@ -1465,9 +1503,9 @@ if __name__ == '__main__':
                                 plt.text(-0.25, 1.38, 'True', fontsize=30)
 
                                 ax = fig.add_subplot(2, 3, 3)
-                                plt.plot(rmserr_list, 'k', label='RMSE')
-                                plt.ylim([0, 600])
+                                plt.plot(np.log(rmserr_list), 'k', label='RMSE')
                                 plt.xlim([0, 10000])
+                                # plt.ylim([0, np.round(rmserr_list[0]*1.1)])
                                 plt.tick_params(axis='both', which='major', labelsize=10)
                                 plt.xlabel('Frame [a.u]', fontsize="10")
                                 plt.ylabel('RMSE [a.u]', fontsize="10")
@@ -1499,7 +1537,17 @@ if __name__ == '__main__':
                                 plt.axis('off')
                                 plt.text(-0.25, 1.38, 'Model', fontsize=30)
 
+                                ax = fig.add_subplot(2, 3, 6)
+                                embedding = model.a.detach().cpu().numpy()
+                                embedding = scaler.fit_transform(embedding)
+                                embedding_particle = []
+                                for n in range(nparticle_types):
+                                    embedding_particle.append(embedding[index_particles[n], :])
+                                    plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
+                                plt.xlim([-4.1, 4.1])
+                                plt.ylim([-4.1, 4.1])
+                                plt.xlabel('Embedding 0', fontsize=8)
+                                plt.ylabel('Embedding 1', fontsize=8)
+
                                 plt.savefig(f"./ReconsGraph4/{grid}_Fig_{ntry}_{it}.tif")
                                 plt.close()
-
-
