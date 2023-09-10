@@ -583,7 +583,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
 
     gtest_list=[32,64,128,256]
-    for gtest in range(1):
+    for gtest in range(4):
 
             ntry=625+gtest
             model_config['ntry'] = ntry
@@ -636,7 +636,7 @@ if __name__ == '__main__':
 
             time.sleep(0.5)
 
-            for step in range(2,3):
+            for step in range(1,3):
 
                 if step == 0:
                     print('')
