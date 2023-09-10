@@ -437,7 +437,7 @@ if __name__ == '__main__':
     print('')
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # model_config = {'ntry': 612,
@@ -556,34 +556,16 @@ if __name__ == '__main__':
 
     scaler = StandardScaler()
 
-    # model_config = {'ntry': 635,
-    #                 'input_size': 15,
-    #                 'output_size': 2,
-    #                 'hidden_size': 32,
-    #                 'n_mp_layers': 5,
-    #                 'noise_level': 0,
-    #                 'radius': 0.075,
-    #                 'datum': '230902_635',
-    #                 'nparticles': 3000,
-    #                 'nparticle_types': 3,
-    #                 'nframes': 200,
-    #                 'sigma': .005,
-    #                 'tau': 0.1,
-    #                 'aggr_type' : 'mean',
-    #                 'particle_embedding': True,
-    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-    #                 'model': 'InteractionParticles'}
-
-    model_config = {'ntry': 625,
+    model_config = {'ntry': 635,
                     'input_size': 15,
                     'output_size': 2,
                     'hidden_size': 32,
                     'n_mp_layers': 5,
                     'noise_level': 0,
                     'radius': 0.075,
-                    'datum': '230902_625',
-                    'nparticles': 2000,
-                    'nparticle_types': 2,
+                    'datum': '230902_635',
+                    'nparticles': 3000,
+                    'nparticle_types': 3,
                     'nframes': 200,
                     'sigma': .005,
                     'tau': 0.1,
@@ -592,13 +574,31 @@ if __name__ == '__main__':
                     'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                     'model': 'InteractionParticles'}
 
+    # model_config = {'ntry': 625,
+    #                 'input_size': 15,
+    #                 'output_size': 2,
+    #                 'hidden_size': 32,
+    #                 'n_mp_layers': 5,
+    #                 'noise_level': 0,
+    #                 'radius': 0.075,
+    #                 'datum': '230902_625',
+    #                 'nparticles': 2000,
+    #                 'nparticle_types': 2,
+    #                 'nframes': 200,
+    #                 'sigma': .005,
+    #                 'tau': 0.1,
+    #                 'aggr_type' : 'mean',
+    #                 'particle_embedding': True,
+    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+    #                 'model': 'InteractionParticles'}
+
     gridsearch_list = [2] #, 20, 50, 100, 200]
     data_augmentation = True
 
     gtest_list=[32,64,128,256]
     for gtest in range(1,4):
 
-            ntry=625+gtest
+            ntry=635+gtest
             model_config['ntry'] = ntry
             model_config['hidden_size'] = gtest_list[gtest]
 
