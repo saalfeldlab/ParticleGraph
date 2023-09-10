@@ -583,7 +583,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
 
     gtest_list=[32,64,128,256]
-    for gtest in range(1):
+    for gtest in range(4):
 
             ntry=625+gtest
             model_config['ntry'] = ntry
@@ -635,6 +635,11 @@ if __name__ == '__main__':
                 index_particles.append(np.arange(int(nparticles / nparticle_types) * n, int(nparticles / nparticle_types) * (n + 1)))
 
             time.sleep(0.5)
+
+            if gtest==0:
+                start=0
+            else
+                start=1
 
             for step in range(2,3):
 
