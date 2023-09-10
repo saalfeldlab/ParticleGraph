@@ -520,7 +520,7 @@ if __name__ == '__main__':
     model_config = {'ntry': 654,
                     'input_size': 15,
                     'output_size': 2,
-                    'hidden_size': 32,
+                    'hidden_size': 256,
                     'n_mp_layers': 5,
                     'noise_level': 0,
                     'radius': 0.075,
