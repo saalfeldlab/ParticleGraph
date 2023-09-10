@@ -558,6 +558,24 @@ if __name__ == '__main__':
                     'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                     'model': 'InteractionParticles'}
 
+    model_config = {'ntry': 625,
+                    'input_size': 15,
+                    'output_size': 2,
+                    'hidden_size': 32,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'radius': 0.075,
+                    'datum': '230902_625',
+                    'nparticles': 2000,
+                    'nparticle_types': 2,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'model': 'InteractionParticles'}
+
     gridsearch_list = [2] #, 20, 50, 100, 200]
     data_augmentation = True
 
@@ -566,7 +584,7 @@ if __name__ == '__main__':
     gtest_list=[32,64,128,256]
     for gtest in range(4):
 
-            ntry=635+gtest
+            ntry=625+gtest
             model_config['ntry'] = ntry
 
             model_config['hidden_size'] = gtest_list[gtest]
