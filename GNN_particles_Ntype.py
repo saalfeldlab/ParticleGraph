@@ -1169,7 +1169,7 @@ if __name__ == '__main__':
                             plt.text(-0.25, 1.13, 'Prediction RMSE: {:.4f}'.format(rmserr.detach()), fontsize=10)
 
                             ax = fig.add_subplot(8, 10, 54)
-                            embedding = model.a_kmean.detach().cpu().numpy()
+                            embedding = model.a.detach().cpu().numpy()
                             embedding = scaler.fit_transform(embedding)
                             embedding_particle = []
                             for n in range(nparticle_types):
