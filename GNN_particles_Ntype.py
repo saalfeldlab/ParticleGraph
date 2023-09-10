@@ -583,14 +583,14 @@ if __name__ == '__main__':
     scaler = StandardScaler()
 
     gtest_list=[32,64,128,256]
-    for gtest in range(1):
+    for gtest in range(4):
 
             ntry=625+gtest
             model_config['ntry'] = ntry
             model_config['hidden_size'] = gtest_list[gtest]
 
             if gtest==0:
-                start=2
+                start=0
             else:
                 start=1
 
