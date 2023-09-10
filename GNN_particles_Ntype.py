@@ -583,15 +583,19 @@ if __name__ == '__main__':
     scaler = StandardScaler()
 
     gtest_list=[32,64,128,256]
-    for gtest in range(4):
+    for gtest in range(1):
 
             ntry=625+gtest
             model_config['ntry'] = ntry
-
             model_config['hidden_size'] = gtest_list[gtest]
 
+            if gtest==0:
+                start=2
+            else:
+                start=1
+
             print('')
-            ntry = model_config['ntry']
+            # ntry = model_config['ntry']
             print(f'ntry: {ntry}')
             datum = model_config['datum']
             print(f'datum: {datum}')
@@ -635,11 +639,6 @@ if __name__ == '__main__':
                 index_particles.append(np.arange(int(nparticles / nparticle_types) * n, int(nparticles / nparticle_types) * (n + 1)))
 
             time.sleep(0.5)
-
-            if gtest==0:
-                start=0
-            else:
-                start=1
 
             for step in range(start,3):
 
@@ -1201,10 +1200,8 @@ if __name__ == '__main__':
                     # for f in files:
                     #     os.remove(f)
 
-                    nframes = 100
-
                     print('')
-                    print(f'Backward starting frame {nframes}... ')
+                    print('Testing loop ... ')
 
                     if model_config['model'] == 'InteractionParticles':
                         model = InteractionParticles(model_config, device)
@@ -1219,13 +1216,14 @@ if __name__ == '__main__':
                     model.eval()
                     ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt')
                     vnorm = torch.load(f'./log/try_{ntry}/vnorm.pt')
+                    ynorm=ynorm.to(device)
+                    vnorm=vnorm.to(device)
 
                     table = PrettyTable(["Modules", "Parameters"])
                     total_params = 0
                     for name, parameter in model.named_parameters():
                         if not parameter.requires_grad:
                             continue
-                        parameter.requires_grad = False
                         param = parameter.numel()
                         table.add_row([name, param])
                         total_params += param
@@ -1233,99 +1231,39 @@ if __name__ == '__main__':
                     print(f"Total Trainable Params: {total_params}")
 
                     x = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_0.pt')
-                    x= x.to(device)
-
-                    x00 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{nframes - 2}.pt')
+                    x00 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_0.pt')
+                    y = torch.load(f'graphs_data/graphs_particles_{datum}/y_0_0.pt')
+                    x = x.to(device)
                     x00 = x00.to(device)
-                    y = torch.load(f'graphs_data/graphs_particles_{datum}/y_0_{nframes - 2}.pt')
                     y = y.to(device)
-
-                    xx = torch.tensor(np.zeros((int(nparticles), 4)), dtype=torch.float32, device=device, requires_grad=True)
-                    xx.data[:,0:4] = x[:,0:4]
-
-                    optimizer = torch.optim.Adam([xx], lr=1E-5)  # , weight_decay=5e-4)
 
                     rmserr_list = []
 
-                    for it in range(nframes, 0, -1):
+                    for it in tqdm(range(nframes - 1)):
 
-                        x0 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{it - 2}.pt')
+                        x0 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{min(it + 1,nframes - 2)}.pt')
                         x0 = x0.to(device)
 
-                        # target = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{it}.pt')        # t-1 backward
-                        # target = target.to(device)
-
-                        if (it == nframes):
-
-                            target_t = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{it}.pt')
-                            target_t = target_t[:, 0:4]
-                            target_t = target_t.to(device)
-
-                            target_t_1 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{it-1}.pt')
-                            target_t_1 = target_t_1[:, 0:4]
-                            target_t_1 = target_t_1.to(device)
-
-                        else:
-                            target_t = target_t_1
-                            target_t_1 = xx[:, 0:4].clone().detach()            # estimation of t-2 > t-1 > t
-
-                        distance = torch.sum((x0[:, None, 0:2] - x0[None, :, 0:2]) ** 2, axis=2)
+                        distance = torch.sum(bc_diff(x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
                         t = torch.Tensor([radius ** 2])  # threshold
                         adj_t = (distance < radius ** 2).float() * 1
                         edge_index = adj_t.nonzero().t().contiguous()
 
-                        for loop in range(10000):
+                        dataset = data.Data(x=x, edge_index=edge_index)
 
-                            optimizer.zero_grad()
-
-                            # distance = torch.sum(bc_diff(xx[:, None, 0:2] - xx[None, :, 0:2]) ** 2, axis=2)
-                            # t = torch.Tensor([radius ** 2])  # threshold
-                            # adj_t = (distance < radius ** 2).float() * 1
-                            # edge_index = adj_t.nonzero().t().contiguous()
-
-                            dataset = data.Data(x=torch.cat((xx,x[:,4:7]),axis=1), edge_index=edge_index)
-
-                            # start t-2
-
+                        with torch.no_grad():
                             y = model(dataset)  # acceleration estimation
-                            y = y.to(device)
 
-                            y[:, 0] = y[:, 0] * ynorm[4]
-                            y[:, 1] = y[:, 1] * ynorm[5]
+                        # y = torch.clamp(y, min=-2, max=2)
 
-                            v_p= xx[:, 2:4] + y
-                            x_p = xx[:, 0:2] + v_p  # position update
+                        y[:, 0] = y[:, 0] * ynorm[4]
+                        y[:, 1] = y[:, 1] * ynorm[5]
 
-                            # move forward t-1
+                        x[:, 2:4] = x[:, 2:4] + y  # speed update
 
-                            loss1 = (x_p - target_t_1[:,0:2]).norm(2) + (v_p - target_t_1[:,2:4]).norm(2) # + 10*(torch.std(v_p) - torch.std(target[:,2:4])).norm(2) + 10*(torch.mean(v_p) - torch.mean(target[:,2:4])).norm(2)
+                        x[:, 0:2] = bc_pos(x[:, 0:2] + x[:, 2:4])  # position update
 
-                            dataset = data.Data(x=torch.cat((x_p,v_p,x[:,4:7]),axis=1), edge_index=edge_index)
-
-                            y = model(dataset)  # acceleration estimation
-                            y = y.to(device)
-
-                            y[:, 0] = y[:, 0] * ynorm[4]
-                            y[:, 1] = y[:, 1] * ynorm[5]
-
-                            v_pp = v_p + y
-                            x_pp = x_p + v_pp  # position update
-
-                            # move forward t
-
-                            loss2 = (x_pp - target_t[:, 0:2]).norm(2) + (v_pp - target_t[:, 2:4]).norm(2)  # + 10*(torch.std(v_p) - torch.std(target[:,2:4])).norm(2) + 10*(torch.mean(v_p) - torch.mean(target[:,2:4])).norm(2)
-
-                            loss = loss1 + loss2
-
-                            loss.backward()
-
-                            xx.grad = torch.nan_to_num(xx.grad, nan=0.0)
-
-                            optimizer.step()
-
-                        print (f"{it} {loss.item()}")
-
-                        stp = 1
+                        stp = 5
 
                         if (it % stp == 0):
 
@@ -1333,7 +1271,6 @@ if __name__ == '__main__':
                             adj_t2 = ((distance2 < radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
                             edge_index2 = adj_t2.nonzero().t().contiguous()
                             dataset2 = data.Data(x=x, edge_index=edge_index2)
-
 
                             fig = plt.figure(figsize=(25, 16))
                             # plt.ion()
@@ -1346,7 +1283,7 @@ if __name__ == '__main__':
                             ax.axes.get_xaxis().set_visible(False)
                             ax.axes.get_yaxis().set_visible(False)
                             plt.axis('off')
-                            plt.text(-0.25, 1.38, 'Distribution at t0 is 1.0x1.0')
+                            plt.text(-0.25, 1.38, f'T0 {nparticles} particles', fontsize=30)
 
                             ax = fig.add_subplot(2, 3, 2)
                             for n in range(nparticle_types):
@@ -1367,12 +1304,12 @@ if __name__ == '__main__':
                             plt.ylim([0, 0.1])
                             plt.xlim([0, nframes])
                             plt.tick_params(axis='both', which='major', labelsize=10)
-                            plt.xlabel('Frame [a.u]', fontsize="10")
-                            plt.ylabel('RMSE [a.u]', fontsize="10")
+                            plt.xlabel('Frame [a.u]', fontsize="14")
+                            plt.ylabel('RMSE [a.u]', fontsize="14")
                             plt.legend(fontsize="10")
 
                             ax = fig.add_subplot(2, 3, 4)
-                            pos = dict(enumerate(np.array(xx[:, 0:2].detach().cpu()), 0))
+                            pos = dict(enumerate(np.array(x[:, 0:2].detach().cpu()), 0))
                             vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
                             nx.draw_networkx(vis, pos=pos, node_size=10, linewidths=0, with_labels=False)
                             plt.xlim([-0.3, 1.3])
@@ -1385,7 +1322,7 @@ if __name__ == '__main__':
 
                             ax = fig.add_subplot(2, 3, 5)
                             for n in range(nparticle_types):
-                                plt.scatter(xx[index_particles[n], 0].detach().cpu(), xx[index_particles[n], 1].detach().cpu(), s=3)
+                                plt.scatter(x[index_particles[n], 0].detach().cpu(), x[index_particles[n], 1].detach().cpu(), s=3)
                             ax = plt.gca()
                             ax.axes.xaxis.set_ticklabels([])
                             ax.axes.yaxis.set_ticklabels([])
@@ -1397,13 +1334,13 @@ if __name__ == '__main__':
                             plt.text(-0.25, 1.38, 'Model', fontsize=30)
 
                             ax = fig.add_subplot(2, 3, 6)
-                            temp1 = torch.cat((xx[:,0:2], x0[:,0:2]), 0)
+                            temp1 = torch.cat((x, x0), 0)
                             temp2 = torch.tensor(np.arange(nparticles), device=device)
                             temp3 = torch.tensor(np.arange(nparticles) + nparticles, device=device)
                             temp4 = torch.concatenate((temp2[:, None], temp3[:, None]), 1)
                             temp4 = torch.t(temp4)
 
-                            distance3 = torch.sqrt(torch.sum((xx[:, 0:2] - x0[:, 0:2]) ** 2, 1))
+                            distance3 = torch.sqrt(torch.sum((x[:, 0:2] - x0[:, 0:2]) ** 2, 1))
                             adj_t3 = (distance3 < 0.9).float() * 1
                             adj_t3 = adj_t3[:, None]
                             adj_t3 = torch.concatenate((adj_t3, adj_t3), 1)
@@ -1428,15 +1365,14 @@ if __name__ == '__main__':
                             for n in range(nparticle_types):
                                 embedding_particle.append(embedding[index_particles[n], :])
                                 plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
-                            embedding = model.a.detach().cpu().numpy()
-                            embedding = scaler.fit_transform(embedding)
-                            embedding_particle = []
-                            for n in range(nparticle_types):
-                                embedding_particle.append(embedding[index_particles[n], :])
-                                plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], marker='+', s=50,
-                                            color='k')
-                            plt.xlim([-2.1, 2.1])
-                            plt.ylim([-2.1, 2.1])
+                            # embedding = model.a.detach().cpu().numpy()
+                            # embedding = scaler.fit_transform(embedding)
+                            # embedding_particle = []
+                            # for n in range(nparticle_types):
+                            #     embedding_particle.append(embedding[index_particles[n], :])
+                            #     plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
+                            plt.xlim([-4.1, 4.1])
+                            plt.ylim([-4.1, 4.1])
                             plt.xlabel('Embedding 0', fontsize=8)
                             plt.ylabel('Embedding 1', fontsize=8)
 
@@ -1445,7 +1381,7 @@ if __name__ == '__main__':
                             # plt.plot(rr.detach().cpu().numpy(), np.array(psi1.cpu()), color=c2, linewidth=1)
                             # plt.plot(rr.detach().cpu().numpy(), rr.detach().cpu().numpy() * 0, color=[0, 0, 0],linewidth=0.5)
 
-                            plt.savefig(f"./ReconsGraph4/Fig_{ntry}_{it}.tif")
+                            plt.savefig(f"./ReconsGraph3/Fig_{ntry}_{it}.tif")
                             plt.close()
 
                 if step == 4:
