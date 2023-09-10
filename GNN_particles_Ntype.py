@@ -417,12 +417,13 @@ class ResNetGNN(torch.nn.Module):
 
 if __name__ == '__main__':
 
-    # version 1.17 230901
-
+    print('')
+    print('version 1.2 230910')
+    print('')
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
-    print(device)
+    print(f'device {device}')
 
     # model_config = {'ntry': 612,
     #                 'input_size': 15,
