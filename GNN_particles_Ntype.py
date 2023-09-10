@@ -1169,27 +1169,16 @@ if __name__ == '__main__':
                             plt.text(-0.25, 1.13, 'Prediction RMSE: {:.4f}'.format(rmserr.detach()), fontsize=10)
 
                             ax = fig.add_subplot(8, 10, 54)
-                            embedding = model.a_bf_kmean.detach().cpu().numpy()
+                            embedding = model.a_kmean.detach().cpu().numpy()
                             embedding = scaler.fit_transform(embedding)
                             embedding_particle = []
                             for n in range(nparticle_types):
                                 embedding_particle.append(embedding[index_particles[n], :])
                                 plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
-                            # embedding = model.a.detach().cpu().numpy()
-                            # embedding = scaler.fit_transform(embedding)
-                            # embedding_particle = []
-                            # for n in range(nparticle_types):
-                            #     embedding_particle.append(embedding[index_particles[n], :])
-                            #     plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
                             plt.xlim([-4.1, 4.1])
                             plt.ylim([-4.1, 4.1])
                             plt.xlabel('Embedding 0', fontsize=8)
                             plt.ylabel('Embedding 1', fontsize=8)
-
-                            # ax = fig.add_subplot(8, 10, 14)
-                            # plt.plot(rr.detach().cpu().numpy(), np.array(psi0.cpu()), color=c1, linewidth=1)
-                            # plt.plot(rr.detach().cpu().numpy(), np.array(psi1.cpu()), color=c2, linewidth=1)
-                            # plt.plot(rr.detach().cpu().numpy(), rr.detach().cpu().numpy() * 0, color=[0, 0, 0],linewidth=0.5)
 
                             plt.savefig(f"./ReconsGraph3/Fig_{ntry}_{it}.tif")
                             plt.close()
