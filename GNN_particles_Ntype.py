@@ -638,10 +638,10 @@ if __name__ == '__main__':
 
             if gtest==0:
                 start=0
-            else
+            else:
                 start=1
 
-            for step in range(2,3):
+            for step in range(start,3):
 
                 if step == 0:
                     print('')
