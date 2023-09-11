@@ -684,7 +684,7 @@ if __name__ == '__main__':
 
             time.sleep(0.5)
 
-            for step in range(2,3):
+            for step in range(3,1,-1):
 
                 if step == 0:
                     print('')
@@ -708,14 +708,15 @@ if __name__ == '__main__':
                     psi_output = []
                     rr = torch.tensor(np.linspace(0, 0.015, 100))
                     rr = rr.to(device)
-                    for n in range(nparticle_types):
-                        torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{datum}/p_{n}.pt')
+
                     for n in range(nparticle_types):
                         model.append(InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p[n]), tau=tau))
                         torch.save({'model_state_dict': model[n].state_dict()},f'graphs_data/graphs_particles_{datum}/model_{n}.pt')
-                        torch.save(torch.squeeze(p[n]),f'graphs_data/graphs_particles_{datum}/p_{n}.pt')
                         psi_output.append(psi(rr, torch.squeeze(p[n])))
                         print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
+                    for n in range(nparticle_types):
+                        torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{datum}/p_{n}.pt')
+
                     time.sleep(0.5)
 
                     for run in tqdm(range(gridsearch_list[0] + 1)):
@@ -1065,6 +1066,9 @@ if __name__ == '__main__':
                     print('')
                     print('Testing loop ... ')
 
+                    prev_nparticles = nparticles
+                    nparticles = model_config['nparticles']
+
                     if model_config['model'] == 'InteractionParticles':
                         model = InteractionParticles(model_config, device)
                         model.a_bf_kmean.requires_grad = False
@@ -1076,6 +1080,26 @@ if __name__ == '__main__':
                     state_dict = torch.load(net)
                     model.load_state_dict(state_dict['model_state_dict'])
                     model.eval()
+
+                    if True:        # nparticles larger than initially
+                        ratio_particles = int(prev_nparticles / nparticles)
+                        print('')
+                        print(f'New_number of particles: {prev_nparticles}  ratio:{ratio_particles}')
+                        print('')
+                        t=model.a.data
+                        t1 = t[0:int(nparticles/2),:]
+                        t2 = t[int(nparticles/2):int(nparticles), :]
+                        t3=t1
+                        t4=t2
+                        for n in range(ratio_particles-1):
+                            t3 = torch.cat((t3,t1),axis=0)
+                            t4 = torch.cat((t4,t2), axis=0)
+
+                        model.a = nn.Parameter(torch.tensor(np.ones((int(prev_nparticles), 2)), device=device, requires_grad=False))
+                        model.a.data = torch.cat((t3,t4),axis=0)
+                        nparticles = prev_nparticles
+                        model_config['nparticles']=prev_nparticles
+
                     ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt')
                     vnorm = torch.load(f'./log/try_{ntry}/vnorm.pt')
                     ynorm=ynorm.to(device)
@@ -1249,6 +1273,8 @@ if __name__ == '__main__':
                     print('')
                     print('Plotting data ...')
 
+                    nframes = 200
+
                     p = torch.ones(nparticle_types, 4, device=device) + torch.rand(nparticle_types, 4, device=device)
                     model = []
                     psi_output = []
@@ -1262,13 +1288,19 @@ if __name__ == '__main__':
 
                     time.sleep(0.5)
 
+                    nparticles = 4000
+
+                    index_particles = []
+                    for n in range(nparticle_types):
+                        index_particles.append(np.arange(int(nparticles / nparticle_types) * n,
+                                                         int(nparticles / nparticle_types) * (n + 1)))
+
                     X1 = torch.rand(nparticles, 2, device=device)
 
-
                     # scenario A
-                    X1[:,0]=X1[:,0]/nparticle_types
-                    for n in range(nparticle_types):
-                        X1[index_particles[n], 0] = X1[index_particles[n], 0] + n/nparticle_types
+                    # X1[:,0]=X1[:,0]/nparticle_types
+                    # for n in range(nparticle_types):
+                    #     X1[index_particles[n], 0] = X1[index_particles[n], 0] + n/nparticle_types
 
                     # scenario B
                     # X1[index_particles[0], :] = X1[index_particles[0], :]/2 + 1/4
