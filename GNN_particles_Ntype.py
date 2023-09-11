@@ -454,7 +454,7 @@ if __name__ == '__main__':
     print('')
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # model_config = {'ntry': 612,
@@ -621,6 +621,42 @@ if __name__ == '__main__':
     #                 'boundary': 'no',  # periodic   'no'  # no boundary condition
     #                 'model': 'InteractionParticles'}
 
+    model_config = {'ntry': 635,
+                    'input_size': 15,
+                    'output_size': 2,
+                    'hidden_size': 32,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'radius': 0.075,
+                    'datum': '230902_635',
+                    'nparticles': 3000,
+                    'nparticle_types': 3,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'model': 'InteractionParticles'}
+
+    # model_config = {'ntry': 700,
+    #                 'input_size': 15,
+    #                 'output_size': 2,
+    #                 'hidden_size': 32,
+    #                 'n_mp_layers': 5,
+    #                 'noise_level': 0,
+    #                 'radius': 0.075,
+    #                 'datum': '230902_700',
+    #                 'nparticles': 5000,
+    #                 'nparticle_types': 10,
+    #                 'nframes': 200,
+    #                 'sigma': .005,
+    #                 'tau': 0.1,
+    #                 'aggr_type' : 'mean',
+    #                 'particle_embedding': True,
+    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+    #                 'model': 'InteractionParticles'}
+
     gridsearch_list = [2] #, 20, 50, 100, 200]
     data_augmentation = True
 
@@ -630,11 +666,6 @@ if __name__ == '__main__':
             # ntry=625+gtest
             # model_config['ntry'] = ntry
             # model_config['hidden_size'] = gtest_list[gtest]
-
-            # if gtest==0:
-            #     start=5
-            # else:
-            #     start=1
 
             print('')
             ntry = model_config['ntry']
@@ -684,7 +715,7 @@ if __name__ == '__main__':
 
             time.sleep(0.5)
 
-            for step in range(3,1,-1):
+            for step in range(0,2):
 
                 if step == 0:
                     print('')
@@ -910,32 +941,6 @@ if __name__ == '__main__':
                                     phi = torch.randn(1, dtype=torch.float32, requires_grad=False,device=device) * np.pi * 2
                                     cos_phi = torch.cos(phi)
                                     sin_phi = torch.sin(phi)
-                                #
-                                #     if model_config['boundary']=='periodic':
-                                #
-                                #         xx = x.clone().detach()
-                                #         t_list=[[1,0],[-1,0],[0,1],[0,-1]]
-                                #         for t in t_list:
-                                #             x_ = x.clone().detach()
-                                #             x_[:,0:2]=x[:,0:2]+ torch.tensor(t,device=device)
-                                #             xx = torch.cat((xx, x_), axis=0)
-                                #         x = xx.to(device)
-                                #
-                                #     phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
-                                #     cos = torch.cos(phi)
-                                #     sin = torch.sin(phi)
-                                #     new_x = 0.5 + cos * (x[:, 0]-0.5) + sin * (x[:,1]-0.5)
-                                #     new_y = 0.5 + -sin * (x[:, 0]-0.5) + cos * (x[:, 1]-0.5)
-                                #     x[:, 0] = new_x
-                                #     x[:, 1] = new_y
-                                #     # x[:,0:2] = bc_pos(x[:,0:2])
-                                #     new_vx = cos * x[:, 2] + sin * x[:, 3]
-                                #     new_vy = -sin * x[:, 2] + cos * x[:, 3]
-                                #     x[:, 2] = new_vx
-                                #     x[:, 3] = new_vy
-                                #
-                                #     pos = torch.argwhere((x[:, 0] >= 0)&(x[:, 0] <= 1)&(x[:, 1] >= 0)&(x[:, 1] <= 1))
-                                #     x=x[torch.squeeze(pos),:]
 
                                 distance = torch.sum(bc_diff(x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
                                 adj_t = (distance < radius ** 2).float() * 1
@@ -951,20 +956,6 @@ if __name__ == '__main__':
                                     new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
                                     y[:, 0] = new_x
                                     y[:, 1] = new_y
-
-                                #
-                                #     if model_config['boundary'] == 'periodic':
-                                #         yy = y.clone().detach()
-                                #         for t in range(4):
-                                #             yy=torch.cat((yy,y),axis=0)
-                                #
-                                #         y = yy.to(device)
-                                #         y = y[torch.squeeze(pos), :]
-                                #
-                                #     new_yx = cos * y[:, 0] + sin * y[:, 1]
-                                #     new_yy = -sin * y[:, 0] + cos * y[:, 1]
-                                #     y[:, 0] = new_yx
-                                #     y[:, 1] = new_yy
 
                                 dataset = data.Data(x=x[:, :], edge_index=edges)
 
@@ -1288,7 +1279,7 @@ if __name__ == '__main__':
 
                     time.sleep(0.5)
 
-                    nparticles = 4000
+                    nparticles = 3000
 
                     index_particles = []
                     for n in range(nparticle_types):
@@ -1298,9 +1289,9 @@ if __name__ == '__main__':
                     X1 = torch.rand(nparticles, 2, device=device)
 
                     # scenario A
-                    # X1[:,0]=X1[:,0]/nparticle_types
-                    # for n in range(nparticle_types):
-                    #     X1[index_particles[n], 0] = X1[index_particles[n], 0] + n/nparticle_types
+                    X1[:,0]=X1[:,0]/nparticle_types
+                    for n in range(nparticle_types):
+                        X1[index_particles[n], 0] = X1[index_particles[n], 0] + n/nparticle_types
 
                     # scenario B
                     # X1[index_particles[0], :] = X1[index_particles[0], :]/2 + 1/4
@@ -1310,11 +1301,11 @@ if __name__ == '__main__':
                     # pos = np.argwhere(i0 == 255)
                     # l = np.arange(pos.shape[0])
                     # l = np.random.permutation(l)
-                    # X1[index_particles[0],:] = torch.tensor(pos[l[0:1000],:]/255,dtype=torch.float32,device=device)
+                    # X1[index_particles[0],:] = torch.tensor(pos[l[index_particles[0]],:]/255,dtype=torch.float32,device=device)
                     # pos = np.argwhere(i0 == 0)
                     # l = np.arange(pos.shape[0])
                     # l = np.random.permutation(l)
-                    # X1[index_particles[1],:] = torch.tensor(pos[l[0:1000],:]/255,dtype=torch.float32,device=device)
+                    # X1[index_particles[1],:] = torch.tensor(pos[l[index_particles[0]],:]/255,dtype=torch.float32,device=device)
 
                     # scenario D
                     # i0 = imread('graphs_data/pattern_2.tif')
