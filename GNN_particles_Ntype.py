@@ -1,4 +1,4 @@
-# version 1.07 230909
+# version 1.08 230909
 
 # use of https://github.com/gpeyre/numerical-tours/blob/master/python/ml_10_particle_system.ipynb
 
@@ -503,7 +503,7 @@ if __name__ == '__main__':
     #                 'n_mp_layers': 5,
     #                 'noise_level': 0,
     #                 'radius': 0.075,
-    #                 'datum': '230902_631',
+    #                 'datum': '230902_630',
     #                 'nparticles': 3000,
     #                 'nparticle_types': 3,
     #                 'nframes': 200,
@@ -513,6 +513,25 @@ if __name__ == '__main__':
     #                 'particle_embedding': True,
     #                 'boundary': 'no',  # periodic   'no'  # no boundary condition
     #                 'model': 'InteractionParticles'}
+
+    # model_config = {'ntry': 634,
+    #                 'input_size': 15,
+    #                 'output_size': 2,
+    #                 'hidden_size': 256,
+    #                 'n_mp_layers': 5,
+    #                 'noise_level': 0,
+    #                 'radius': 0.075,
+    #                 'datum': '230902_630',
+    #                 'nparticles': 3000,
+    #                 'nparticle_types': 3,
+    #                 'nframes': 200,
+    #                 'sigma': .005,
+    #                 'tau': 0.1,
+    #                 'aggr_type' : 'mean',
+    #                 'particle_embedding': True,
+    #                 'boundary': 'no',  # periodic   'no'  # no boundary condition
+    #                 'model': 'InteractionParticles'}
+
     #
     #
     # model_config = {'ntry': 640,
@@ -552,10 +571,7 @@ if __name__ == '__main__':
     #                 'boundary': 'no',  # periodic   'no'  # no boundary condition
     #                 'model': 'InteractionParticles'}
 
-    gridsearch_list = [2] #, 20, 50, 100, 200]
-    data_augmentation = True
 
-    scaler = StandardScaler()
 
     # model_config = {'ntry': 635,
     #                 'input_size': 15,
@@ -599,14 +615,13 @@ if __name__ == '__main__':
     gtest_list=[32,64,128,256]
     for gtest in range(1):
 
-            ntry=625+gtest
-            model_config['ntry'] = ntry
-            model_config['hidden_size'] = gtest_list[gtest]
-
-            if gtest==0:
-                start=5
-            else:
-                start=1
+            # ntry=625+gtest
+            # model_config['ntry'] = ntry
+            # model_config['hidden_size'] = gtest_list[gtest]
+            # if gtest==0:
+            #     start=5
+            # else:
+            #     start=1
 
             print('')
             ntry = model_config['ntry']
@@ -637,6 +652,8 @@ if __name__ == '__main__':
             folder = f'./graphs_data/graphs_particles_{datum}/'
             os.makedirs(folder, exist_ok=True)
 
+            scaler = StandardScaler()
+
             if boundary == 'no':  # change this for usual BC
                 def bc_pos(X):
                     return X
@@ -654,7 +671,7 @@ if __name__ == '__main__':
 
             time.sleep(0.5)
 
-            for step in range(3,1,-1):
+            for step in range(1,3):
 
                 if step == 0:
                     print('')
@@ -678,6 +695,8 @@ if __name__ == '__main__':
                     psi_output = []
                     rr = torch.tensor(np.linspace(0, 0.015, 100))
                     rr = rr.to(device)
+                    for n in range(nparticle_types):
+                        torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{datum}/p_{n}.pt')
                     for n in range(nparticle_types):
                         model.append(InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p[n]), tau=tau))
                         torch.save({'model_state_dict': model[n].state_dict()},f'graphs_data/graphs_particles_{datum}/model_{n}.pt')
@@ -1202,7 +1221,7 @@ if __name__ == '__main__':
                             plt.savefig(f"./ReconsGraph3/Fig_{ntry}_{it}.tif")
                             if it==0:
                                 for n in range(5):
-                                    plt.savefig(f"./ReconsGraph3/Fig_{ntry}_{-n}.tif")
+                                    plt.savefig(f"./ReconsGraph3/Fig_{ntry}_t0_{n}.tif")
 
 
                             plt.close()
@@ -1220,7 +1239,6 @@ if __name__ == '__main__':
                     for n in range(nparticle_types):
                         p[n]=torch.load(f'graphs_data/graphs_particles_{datum}/p_{n}.pt')
                         model.append(InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p[n]), tau=tau))
-                        torch.save({'model_state_dict': model[n].state_dict()},f'graphs_data/graphs_particles_{datum}/model_{n}.pt')
                         psi_output.append(psi(rr, torch.squeeze(p[n])))
                         print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
 
@@ -1235,15 +1253,15 @@ if __name__ == '__main__':
                     # scenario B
                     # X1[index_particles[0], :] = X1[index_particles[0], :]/2 + 1/4
                     # scenario C
-                    i0 = imread('graphs_data/pattern_1.tif')
-                    pos = np.argwhere(i0 == 255)
-                    l = np.arange(pos.shape[0])
-                    l = np.random.permutation(l)
-                    X1[index_particles[0],:] = torch.tensor(pos[l[0:1000],:]/255,dtype=torch.float32,device=device)
-                    pos = np.argwhere(i0 == 0)
-                    l = np.arange(pos.shape[0])
-                    l = np.random.permutation(l)
-                    X1[index_particles[1],:] = torch.tensor(pos[l[0:1000],:]/255,dtype=torch.float32,device=device)
+                    # i0 = imread('graphs_data/pattern_1.tif')
+                    # pos = np.argwhere(i0 == 255)
+                    # l = np.arange(pos.shape[0])
+                    # l = np.random.permutation(l)
+                    # X1[index_particles[0],:] = torch.tensor(pos[l[0:1000],:]/255,dtype=torch.float32,device=device)
+                    # pos = np.argwhere(i0 == 0)
+                    # l = np.arange(pos.shape[0])
+                    # l = np.random.permutation(l)
+                    # X1[index_particles[1],:] = torch.tensor(pos[l[0:1000],:]/255,dtype=torch.float32,device=device)
 
                     X1t = torch.zeros((nparticles, 2, nframes))  # to store all the intermediate time
 
