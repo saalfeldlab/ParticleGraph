@@ -454,7 +454,7 @@ if __name__ == '__main__':
     print('')
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # model_config = {'ntry': 612,
@@ -639,23 +639,23 @@ if __name__ == '__main__':
                     'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                     'model': 'InteractionParticles'}
 
-    # model_config = {'ntry': 700,
-    #                 'input_size': 15,
-    #                 'output_size': 2,
-    #                 'hidden_size': 32,
-    #                 'n_mp_layers': 5,
-    #                 'noise_level': 0,
-    #                 'radius': 0.075,
-    #                 'datum': '230902_700',
-    #                 'nparticles': 5000,
-    #                 'nparticle_types': 10,
-    #                 'nframes': 200,
-    #                 'sigma': .005,
-    #                 'tau': 0.1,
-    #                 'aggr_type' : 'mean',
-    #                 'particle_embedding': True,
-    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-    #                 'model': 'InteractionParticles'}
+    model_config = {'ntry': 701,
+                    'input_size': 15,
+                    'output_size': 2,
+                    'hidden_size': 64,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'radius': 0.075,
+                    'datum': '230902_700',
+                    'nparticles': 5000,
+                    'nparticle_types': 10,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'model': 'InteractionParticles'}
 
     gridsearch_list = [2] #, 20, 50, 100, 200]
     data_augmentation = True
@@ -663,7 +663,7 @@ if __name__ == '__main__':
     gtest_list=[32,64,128,256]
     for gtest in range(1):
 
-            # ntry=625+gtest
+            # ntry=700+gtest
             # model_config['ntry'] = ntry
             # model_config['hidden_size'] = gtest_list[gtest]
 
@@ -715,13 +715,13 @@ if __name__ == '__main__':
 
             time.sleep(0.5)
 
-            for step in range(0,2):
+            for step in range(2,3):
 
                 if step == 0:
                     print('')
                     print('Generating data ...')
 
-                    # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph2/*")
+                    # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_data/*")
                     # for f in files:
                     #     os.remove(f)
 
@@ -827,12 +827,12 @@ if __name__ == '__main__':
                                 plt.plot(rr.detach().cpu().numpy(), psi_output[0].detach().cpu().numpy() * 0, color=[0, 0, 0],
                                          linewidth=0.5)
 
-                                plt.savefig(f"./ReconsGraph2/Fig_{ntry}_{it}.tif")
+                                plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
                                 plt.close()
 
                 if step == 1:
 
-                    # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph/*")
+                    # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_training/*")
                     # for f in files:
                     #     os.remove(f)
 
@@ -1045,12 +1045,12 @@ if __name__ == '__main__':
                             plt.xlim([0, 60])
                             plt.xlabel('Epoch',fontsize=10)
                             plt.ylabel('Gap', fontsize=10)
-                            plt.savefig(f"./ReconsGraph/Fig_{ntry}_{epoch}.tif")
+                            plt.savefig(f"./tmp_training/Fig_{ntry}_{epoch}.tif")
                             plt.close()
 
                 if step == 2:
 
-                    # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph3/*")
+                    # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_recons/*")
                     # for f in files:
                     #     os.remove(f)
 
@@ -1251,10 +1251,10 @@ if __name__ == '__main__':
                             plt.xlabel('Embedding 0', fontsize=8)
                             plt.ylabel('Embedding 1', fontsize=8)
 
-                            plt.savefig(f"./ReconsGraph3/Fig_{ntry}_{it}.tif")
+                            plt.savefig(f"./tmp_recons/Fig_{ntry}_{it}.tif")
                             if it==0:
                                 for n in range(5):
-                                    plt.savefig(f"./ReconsGraph3/Fig_{ntry}_t0_{n}.tif")
+                                    plt.savefig(f"./tmp_recons/Fig_{ntry}_t0_{n}.tif")
 
 
                             plt.close()
@@ -1279,7 +1279,7 @@ if __name__ == '__main__':
 
                     time.sleep(0.5)
 
-                    nparticles = 3000
+                    nparticles = 10000
 
                     index_particles = []
                     for n in range(nparticle_types):
@@ -1390,13 +1390,13 @@ if __name__ == '__main__':
                                 plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), linewidth=1)
                                 plt.plot(rr.detach().cpu().numpy(), psi_output[0].detach().cpu().numpy() * 0,color=[0, 0, 0],linewidth=0.5)
 
-                            plt.savefig(f"./ReconsGraph2/Fig_{ntry}_{it}.tif")
+                            plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
                             plt.close()
 
 
                 if step == 4:
 
-                    files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/ReconsGraph4/*")
+                    files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_backward/*")
                     for f in files:
                         os.remove(f)
 
@@ -1552,7 +1552,7 @@ if __name__ == '__main__':
                                 plt.axis('off')
                                 plt.text(-0.25, 1.38, 'Model', fontsize=30)
 
-                                plt.savefig(f"./ReconsGraph4/{grid}_Fig_{ntry}_{it}.tif")
+                                plt.savefig(f"./tmp_backward/{grid}_Fig_{ntry}_{it}.tif")
                                 plt.close()
 
 
