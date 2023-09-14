@@ -454,7 +454,7 @@ if __name__ == '__main__':
     print('')
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # model_config = {'ntry': 612,
@@ -567,23 +567,23 @@ if __name__ == '__main__':
     #                 'boundary': 'no',  # periodic   'no'  # no boundary condition
     #                 'model': 'InteractionParticles'}
 
-    # model_config = {'ntry': 635,
-    #                 'input_size': 15,
-    #                 'output_size': 2,
-    #                 'hidden_size': 32,
-    #                 'n_mp_layers': 5,
-    #                 'noise_level': 0,
-    #                 'radius': 0.075,
-    #                 'datum': '230902_635',
-    #                 'nparticles': 3000,
-    #                 'nparticle_types': 3,
-    #                 'nframes': 200,
-    #                 'sigma': .005,
-    #                 'tau': 0.1,
-    #                 'aggr_type' : 'mean',
-    #                 'particle_embedding': True,
-    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-    #                 'model': 'InteractionParticles'}
+    model_config = {'ntry': 636,
+                    'input_size': 15,
+                    'output_size': 2,
+                    'hidden_size': 64,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'radius': 0.075,
+                    'datum': '230902_635',
+                    'nparticles': 3000,
+                    'nparticle_types': 3,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'model': 'InteractionParticles'}
 
     model_config = {'ntry': 625,
                     'input_size': 15,
@@ -621,10 +621,10 @@ if __name__ == '__main__':
     #                 'boundary': 'no',  # periodic   'no'  # no boundary condition
     #                 'model': 'InteractionParticles'}
 
-    model_config = {'ntry': 635,
+    model_config = {'ntry': 638,
                     'input_size': 15,
                     'output_size': 2,
-                    'hidden_size': 32,
+                    'hidden_size': 256,
                     'n_mp_layers': 5,
                     'noise_level': 0,
                     'radius': 0.075,
@@ -639,31 +639,52 @@ if __name__ == '__main__':
                     'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                     'model': 'InteractionParticles'}
 
-    model_config = {'ntry': 701,
-                    'input_size': 15,
-                    'output_size': 2,
-                    'hidden_size': 64,
-                    'n_mp_layers': 5,
-                    'noise_level': 0,
-                    'radius': 0.075,
-                    'datum': '230902_700',
-                    'nparticles': 5000,
-                    'nparticle_types': 10,
-                    'nframes': 200,
-                    'sigma': .005,
-                    'tau': 0.1,
-                    'aggr_type' : 'mean',
-                    'particle_embedding': True,
-                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-                    'model': 'InteractionParticles'}
+    # model_config = {'ntry': 700,
+    #                 'input_size': 15,
+    #                 'output_size': 2,
+    #                 'hidden_size': 32,
+    #                 'n_mp_layers': 5,
+    #                 'noise_level': 0,
+    #                 'radius': 0.075,
+    #                 'datum': '230902_700',
+    #                 'nparticles': 5000,
+    #                 'nparticle_types': 10,
+    #                 'nframes': 200,
+    #                 'sigma': .005,
+    #                 'tau': 0.1,
+    #                 'aggr_type' : 'mean',
+    #                 'particle_embedding': True,
+    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+    #                 'model': 'InteractionParticles'}
+
+    # model_config = {'ntry': 660,
+    #                 'input_size': 15,
+    #                 'output_size': 2,
+    #                 'hidden_size': 32,
+    #                 'n_mp_layers': 5,
+    #                 'noise_level': 0,
+    #                 'radius': 0.075,
+    #                 'datum': '230902_660',
+    #                 'nparticles': 3000,
+    #                 'nparticle_types': 3,
+    #                 'nframes': 200,
+    #                 'sigma': .005,
+    #                 'tau': 0.1,
+    #                 'aggr_type' : 'mean',
+    #                 'particle_embedding': True,
+    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+    #                 'model': 'InteractionParticles'}
 
     gridsearch_list = [2] #, 20, 50, 100, 200]
     data_augmentation = True
 
     gtest_list=[32,64,128,256]
+
+
+
     for gtest in range(1):
 
-            # ntry=700+gtest
+            # ntry=635+gtest
             # model_config['ntry'] = ntry
             # model_config['hidden_size'] = gtest_list[gtest]
 
@@ -715,7 +736,7 @@ if __name__ == '__main__':
 
             time.sleep(0.5)
 
-            for step in range(2,3):
+            for step in range(3,1,-1):
 
                 if step == 0:
                     print('')
@@ -728,6 +749,8 @@ if __name__ == '__main__':
                     files = glob.glob(f"{folder}/*")
                     for f in files:
                         os.remove(f)
+
+                    copyfile(os.path.realpath(__file__), os.path.join(folder, 'generation_code.py'))
 
                     json_ = json.dumps(model_config)
                     f = open(f"{folder}/model_config.json", "w")
@@ -1057,12 +1080,10 @@ if __name__ == '__main__':
                     print('')
                     print('Testing loop ... ')
 
-                    prev_nparticles = nparticles
                     nparticles = model_config['nparticles']
 
                     if model_config['model'] == 'InteractionParticles':
                         model = InteractionParticles(model_config, device)
-                        model.a_bf_kmean.requires_grad = False
                     if model_config['model'] == 'ResNetGNN':
                         model = ResNetGNN(model_config, device)
 
@@ -1073,22 +1094,25 @@ if __name__ == '__main__':
                     model.eval()
 
                     if True:        # nparticles larger than initially
-                        ratio_particles = int(prev_nparticles / nparticles)
-                        print('')
-                        print(f'New_number of particles: {prev_nparticles}  ratio:{ratio_particles}')
-                        print('')
-                        t=model.a.data
-                        t1 = t[0:int(nparticles/2),:]
-                        t2 = t[int(nparticles/2):int(nparticles), :]
-                        t3=t1
-                        t4=t2
-                        for n in range(ratio_particles-1):
-                            t3 = torch.cat((t3,t1),axis=0)
-                            t4 = torch.cat((t4,t2), axis=0)
 
-                        model.a = nn.Parameter(torch.tensor(np.ones((int(prev_nparticles), 2)), device=device, requires_grad=False))
-                        model.a.data = torch.cat((t3,t4),axis=0)
-                        nparticles = prev_nparticles
+                        ratio_particles = int(new_nparticles / prev_nparticles)
+                        print('')
+                        print(f'New_number of particles: {new_nparticles}  ratio:{ratio_particles}')
+                        print('')
+
+                        embedding=model.a.data
+                        new_embedding=[]
+
+                        for n in range(nparticle_types):
+                            for m in range(ratio_particles):
+                                if (n==0) & (m==0):
+                                    new_embedding = embedding[prev_index_particles[n]]
+                                else:
+                                    new_embedding=torch.cat((new_embedding,embedding[prev_index_particles[n]]),axis=0)
+
+                        model.a = nn.Parameter(torch.tensor(np.ones((int(prev_nparticles)*ratio_particles, 2)), device=device, requires_grad=False))
+                        model.a.data = new_embedding
+                        nparticles = new_nparticles
                         model_config['nparticles']=prev_nparticles
 
                     ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt')
@@ -1252,9 +1276,9 @@ if __name__ == '__main__':
                             plt.ylabel('Embedding 1', fontsize=8)
 
                             plt.savefig(f"./tmp_recons/Fig_{ntry}_{it}.tif")
-                            if it==0:
-                                for n in range(5):
-                                    plt.savefig(f"./tmp_recons/Fig_{ntry}_t0_{n}.tif")
+                            # if it==0:
+                            #     for n in range(5):
+                            #         plt.savefig(f"./tmp_recons/Fig_{ntry}_t0_{n}.tif")
 
 
                             plt.close()
@@ -1277,9 +1301,11 @@ if __name__ == '__main__':
                         psi_output.append(psi(rr, torch.squeeze(p[n])))
                         print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
 
-                    time.sleep(0.5)
+                    prev_nparticles = nparticles
+                    prev_index_particles = index_particles
 
-                    nparticles = 10000
+                    new_nparticles = 600
+                    nparticles = new_nparticles
 
                     index_particles = []
                     for n in range(nparticle_types):
@@ -1288,7 +1314,7 @@ if __name__ == '__main__':
 
                     X1 = torch.rand(nparticles, 2, device=device)
 
-                    # scenario A
+                    #scenario A
                     X1[:,0]=X1[:,0]/nparticle_types
                     for n in range(nparticle_types):
                         X1[index_particles[n], 0] = X1[index_particles[n], 0] + n/nparticle_types
@@ -1394,166 +1420,6 @@ if __name__ == '__main__':
                             plt.close()
 
 
-                if step == 4:
-
-                    files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_backward/*")
-                    for f in files:
-                        os.remove(f)
-
-                    nframes = 25
-
-                    print('')
-                    print(f'Forward frame {nframes}... ')
-
-
-                    model = InteractionParticlesLoop(model_config, device)
-
-                    model.a_bf_kmean.requires_grad = False
-
-
-                    net = f"./log/try_{ntry}/models/best_model_with_{gridsearch_list[0]}_graphs.pt"
-                    print(f'network: {net}')
-                    state_dict = torch.load(net)
-                    model.load_state_dict(state_dict['model_state_dict'])
-                    model.eval()
-                    ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt')
-                    vnorm = torch.load(f'./log/try_{ntry}/vnorm.pt')
-
-                    table = PrettyTable(["Modules", "Parameters"])
-                    total_params = 0
-                    for name, parameter in model.named_parameters():
-                        if not parameter.requires_grad:
-                            continue
-                        parameter.requires_grad = False
-                        param = parameter.numel()
-                        table.add_row([name, param])
-                        total_params += param
-                    print(table)
-                    print(f"Total Trainable Params: {total_params}")
-
-                    for grid in range(1):
-
-                        x00 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_0.pt')
-                        x00 = x00.to(device)
-
-                        X1 = torch.rand(nparticles, 2, device=device, dtype=torch.float32)
-                        V1 = torch.zeros((nparticles, 2), device=device, dtype=torch.float32,)
-
-                        x = torch.tensor(np.zeros((int(nparticles), 4)), dtype=torch.float32, device=device, requires_grad=True)
-                        x.data[:,0:2] = X1
-                        x.data[:,2:4]= V1
-
-                        optimizer = torch.optim.Adam([x], lr=1E-4)  # , weight_decay=5e-4)
-                        g_loss = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
-
-                        rmserr_list = []
-
-                        x0 = torch.load(f'graphs_data/graphs_particles_{datum}/x_0_{nframes}.pt')
-                        x0 = x0.to(device)
-
-                        for it in range(10000):
-
-                            if it==750:
-                                optimizer = torch.optim.Adam([x], lr=5E-5)  # , weight_decay=5e-4)
-
-                            if it==2000:
-                                optimizer = torch.optim.Adam([x], lr=1E-5)  # , weight_decay=5e-4)
-
-                            optimizer.zero_grad()
-
-                            distance = torch.sum(bc_diff(x0[:, None, 0:2] - x0[None, :, 0:2]) ** 2, axis=2)
-                            t = torch.Tensor([radius ** 2])  # threshold
-                            adj_t = (distance < radius ** 2).float() * 1
-                            edge_index = adj_t.nonzero().t().contiguous()
-
-                            dataset = data.Data(x=torch.cat((x,x0[:,4:7]),axis=1), edge_index=edge_index)
-
-                            y = model(dataset,nframes)  # acceleration estimation
-
-                            loss = 0
-                            for n in range(nparticle_types):
-                                loss += 1E1 * (y[index_particles[n], 0:2] - x0[index_particles[n], 0:2]).norm(2) + (y[index_particles[n], 2:4] - x0[index_particles[n], 2:4]).norm(2)
-                                loss += g_loss(y[index_particles[n], 0:4], x0[index_particles[n], 0:4]) * 1E2
-                                loss += g_loss(y[index_particles[n], 0:4], x0[index_particles[n], 0:4]) * 1E4
-
-                            loss.backward()
-
-                            x.grad = torch.nan_to_num(x.grad, nan=0.0)
-
-                            optimizer.step()
-
-                            # with torch.no_grad():
-                            #     x[:,0:2] = torch.clamp(x[:,0:2],min=0,max=1)
-
-                            rmserr_list.append(loss.item())
-
-                            stp = 20
-
-                            if (it % stp == 0):
-
-                                print(f"{it} {loss.item()}")
-
-                                fig = plt.figure(figsize=(25, 16))
-                                # plt.ion()
-                                ax = fig.add_subplot(2, 3, 1)
-                                for n in range(nparticle_types):
-                                    plt.scatter(x00[index_particles[n], 0].detach().cpu(), x00[index_particles[n], 1].detach().cpu(), s=3)
-
-                                plt.xlim([-0.3, 1.3])
-                                plt.ylim([-0.3, 1.3])
-                                ax.axes.get_xaxis().set_visible(False)
-                                ax.axes.get_yaxis().set_visible(False)
-                                plt.axis('off')
-                                plt.text(-0.25, 1.38, 'Distribution at t0 is 1.0x1.0')
-
-                                ax = fig.add_subplot(2, 3, 2)
-                                for n in range(nparticle_types):
-                                    plt.scatter(x0[index_particles[n], 0].detach().cpu(), x0[index_particles[n], 1].detach().cpu(), s=3)
-                                ax = plt.gca()
-                                plt.xlim([-0.3, 1.3])
-                                plt.ylim([-0.3, 1.3])
-                                ax.axes.get_xaxis().set_visible(False)
-                                ax.axes.get_yaxis().set_visible(False)
-                                plt.axis('off')
-                                plt.text(-0.25, 1.38, 'True', fontsize=30)
-
-                                ax = fig.add_subplot(2, 3, 3)
-                                plt.plot(rmserr_list, 'k', label='RMSE')
-                                plt.ylim([0, 600])
-                                plt.xlim([0, 10000])
-                                plt.tick_params(axis='both', which='major', labelsize=10)
-                                plt.xlabel('Frame [a.u]', fontsize="10")
-                                plt.ylabel('RMSE [a.u]', fontsize="10")
-                                plt.legend(fontsize="10")
-
-                                ax = fig.add_subplot(2, 3, 4)
-                                for n in range(nparticle_types):
-                                    plt.scatter(x[index_particles[n], 0].detach().cpu(), x[index_particles[n], 1].detach().cpu(), s=3)
-                                ax = plt.gca()
-                                ax.axes.xaxis.set_ticklabels([])
-                                ax.axes.yaxis.set_ticklabels([])
-                                plt.xlim([-0.3, 1.3])
-                                plt.ylim([-0.3, 1.3])
-                                ax.axes.get_xaxis().set_visible(False)
-                                ax.axes.get_yaxis().set_visible(False)
-                                plt.axis('off')
-                                plt.text(-0.25, 1.38, 'Model', fontsize=30)
-
-                                ax = fig.add_subplot(2, 3, 5)
-                                for n in range(nparticle_types):
-                                    plt.scatter(y[index_particles[n], 0].detach().cpu(), y[index_particles[n], 1].detach().cpu(), s=3)
-                                ax = plt.gca()
-                                ax.axes.xaxis.set_ticklabels([])
-                                ax.axes.yaxis.set_ticklabels([])
-                                plt.xlim([-0.3, 1.3])
-                                plt.ylim([-0.3, 1.3])
-                                ax.axes.get_xaxis().set_visible(False)
-                                ax.axes.get_yaxis().set_visible(False)
-                                plt.axis('off')
-                                plt.text(-0.25, 1.38, 'Model', fontsize=30)
-
-                                plt.savefig(f"./tmp_backward/{grid}_Fig_{ntry}_{it}.tif")
-                                plt.close()
 
 
 
