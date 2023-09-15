@@ -621,10 +621,10 @@ if __name__ == '__main__':
     #                 'boundary': 'no',  # periodic   'no'  # no boundary condition
     #                 'model': 'InteractionParticles'}
 
-    model_config = {'ntry': 638,
+    model_config = {'ntry': 635,
                     'input_size': 15,
                     'output_size': 2,
-                    'hidden_size': 256,
+                    'hidden_size': 32,
                     'n_mp_layers': 5,
                     'noise_level': 0,
                     'radius': 0.075,
@@ -639,23 +639,23 @@ if __name__ == '__main__':
                     'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                     'model': 'InteractionParticles'}
 
-    # model_config = {'ntry': 700,
-    #                 'input_size': 15,
-    #                 'output_size': 2,
-    #                 'hidden_size': 32,
-    #                 'n_mp_layers': 5,
-    #                 'noise_level': 0,
-    #                 'radius': 0.075,
-    #                 'datum': '230902_700',
-    #                 'nparticles': 5000,
-    #                 'nparticle_types': 10,
-    #                 'nframes': 200,
-    #                 'sigma': .005,
-    #                 'tau': 0.1,
-    #                 'aggr_type' : 'mean',
-    #                 'particle_embedding': True,
-    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-    #                 'model': 'InteractionParticles'}
+    model_config = {'ntry': 700,
+                    'input_size': 15,
+                    'output_size': 2,
+                    'hidden_size': 32,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'radius': 0.075,
+                    'datum': '230902_700',
+                    'nparticles': 5000,
+                    'nparticle_types': 10,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'model': 'InteractionParticles'}
 
     # model_config = {'ntry': 660,
     #                 'input_size': 15,
@@ -682,11 +682,11 @@ if __name__ == '__main__':
 
 
 
-    for gtest in range(1):
+    for gtest in range(0,3):
 
-            # ntry=635+gtest
-            # model_config['ntry'] = ntry
-            # model_config['hidden_size'] = gtest_list[gtest]
+            ntry=700+gtest
+            model_config['ntry'] = ntry
+            model_config['hidden_size'] = gtest_list[gtest]
 
             print('')
             ntry = model_config['ntry']
@@ -1304,7 +1304,7 @@ if __name__ == '__main__':
                     prev_nparticles = nparticles
                     prev_index_particles = index_particles
 
-                    new_nparticles = 600
+                    new_nparticles = 10000
                     nparticles = new_nparticles
 
                     index_particles = []
