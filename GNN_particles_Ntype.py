@@ -156,11 +156,10 @@ class InteractionParticles(pyg.nn.MessagePassing):
         self.nlayers = model_config['n_mp_layers']
         self.nparticles = model_config['nparticles']
         self.radius = model_config['radius']
-        self.noise_level = model_config['noise_level']
         self.particle_embedding = model_config['particle_embedding']
         self.data_augmentation = model_config['data_augmentation']
-
-
+        self.noise_level = model_config['noise_level']
+        self.noise_type = model_config['noise_type']
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
 
@@ -179,14 +178,15 @@ class InteractionParticles(pyg.nn.MessagePassing):
         self.cos_phi = cos_phi
         self.sin_phi = sin_phi
 
-
         x, edge_index = data.x, data.edge_index
         x[:, 4:6] = self.a[x[:, 6].detach().cpu().numpy(), 0:2]
 
-        if step == 1:
+        if (step == 1) & (self.noise_type>0) :
+
             noise = torch.randn((x.shape[0], 4), requires_grad=False, device=device) * self.noise_level
-            x[:, 0:2] = x[:, 0:2] + noise[:, 0:2]
-            x[:, 2:4] = x[:, 2:4] + noise[:, 2:4] / 100
+            if (self.noise_type == 1) | (self.noise_type == 3):
+                x[:, 0:2] = x[:, 0:2] + noise[:, 0:2] * self.radius
+                x[:, 2:4] = x[:, 2:4] + noise[:, 2:4] * torch.std(x[:, 2:4])
 
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         acc = self.propagate(edge_index, x=(x, x))
@@ -621,6 +621,12 @@ def data_train(model_config,index_particles):
     print(f'hidden_size: {hidden_size}')
     data_augmentation = model_config['data_augmentation']
     print(f'data_augmentation: {data_augmentation}')
+    noise_level = model_config['noise_level']
+    print(f'noise_level: {noise_level}')
+    noise_type = model_config['noise_type']
+    print(f'noise_type: {noise_type}')
+
+    print(f'{ntry} {noise_type} {noise_level}')
 
     print('')
     print('Training loop ...')
@@ -734,6 +740,10 @@ def data_train(model_config,index_particles):
             y = y.to(device)
             y[:, 0] = y[:, 0] / ynorm[4]
             y[:, 1] = y[:, 1] / ynorm[5]
+
+            if (noise_type >1):
+                noise = torch.randn((y.shape[0], 2), requires_grad=False, device=device) * noise_level
+                y[:, 0:2] = y[:, 0:2] + noise[:, 0:2] * torch.std(y[:, 0:2])
 
             if data_augmentation:
                 new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
@@ -1240,7 +1250,7 @@ if __name__ == '__main__':
     print('')
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     model_config = {'ntry': 602,
@@ -1262,24 +1272,7 @@ if __name__ == '__main__':
                     'data_augmentation' : True,
                     'model': 'InteractionParticles'}
 
-    model_config = {'ntry': 635,
-                    'input_size': 15,
-                    'output_size': 2,
-                    'hidden_size': 32,
-                    'n_mp_layers': 5,
-                    'noise_level': 0,
-                    'radius': 0.075,
-                    'datum': '230902_635',
-                    'nparticles': 3000,
-                    'nparticle_types': 3,
-                    'nframes': 200,
-                    'sigma': .005,
-                    'tau': 0.1,
-                    'aggr_type' : 'mean',
-                    'particle_embedding': True,
-                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-                    'data_augmentation' : True,
-                    'model': 'InteractionParticles'}
+
 
     # model_config = {'ntry': 700,
     #                 'input_size': 15,
@@ -1325,6 +1318,7 @@ if __name__ == '__main__':
                     'hidden_size': 32,
                     'n_mp_layers': 5,
                     'noise_level': 0,
+                    'noise type': 0,
                     'radius': 0.075,
                     'datum': '230902_602',
                     'nparticles': 2000,
@@ -1338,15 +1332,38 @@ if __name__ == '__main__':
                     'data_augmentation' : True,
                     'model': 'InteractionParticles'}
 
-    gtest_list=[32,64,128,256]
+    model_config = {'ntry': 535,
+                    'input_size': 15,
+                    'output_size': 2,
+                    'hidden_size': 32,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'noise type': 0,
+                    'radius': 0.075,
+                    'datum': '230902_635',
+                    'nparticles': 3000,
+                    'nparticle_types': 3,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'model': 'InteractionParticles'}
 
-    for gtest in range(10):
+    gtest_list=[1,2,5,10]
 
-            ntry=602+gtest
+
+    for gtest in range(12):
+
+            ntry=585+gtest
+            model_config['noise_level'] =  gtest_list[gtest%4] / 100
+            model_config['noise_type'] = 1 + gtest // 4
             model_config['ntry'] = ntry
             # model_config['hidden_size'] = gtest_list[gtest]
-            # datum = model_config['datum']
-            datum = '230902_' + str(ntry)
+            datum = model_config['datum']
+            # datum = '230902_' + str(ntry)
 
             folder = f'./graphs_data/graphs_particles_{datum}/'
             os.makedirs(folder, exist_ok=True)
@@ -1375,7 +1392,7 @@ if __name__ == '__main__':
 
             time.sleep(0.5)
 
-            data_generate(model_config,index_particles)
+            # data_generate(model_config,index_particles)
             data_train(model_config,index_particles)
             data_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0)
             # prev_nparticles, new_nparticles, prev_index_particles = data_test_generate(model_config,index_particles)
