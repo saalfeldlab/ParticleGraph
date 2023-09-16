@@ -1,4 +1,4 @@
-# version 1.09 230916
+# version 1.1 230916
 
 # use of https://github.com/gpeyre/numerical-tours/blob/master/python/ml_10_particle_system.ipynb
 
@@ -90,7 +90,6 @@ def norm_acceleration(yy, device):
     # print(f'ay01={ay01} ay99={ay99}')
 
     return torch.tensor([ax01, ax99, ay01, ay99, ax, ay], device=device)
-
 
 class InteractionParticles_0(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
@@ -1341,13 +1340,14 @@ if __name__ == '__main__':
 
     gtest_list=[32,64,128,256]
 
-    for gtest in range(1):
+    for gtest in range(10):
 
-            # ntry=700+gtest
-            # model_config['ntry'] = ntry
+            ntry=602+gtest
+            model_config['ntry'] = ntry
             # model_config['hidden_size'] = gtest_list[gtest]
+            # datum = model_config['datum']
+            datum = '230902_' + str(ntry)
 
-            datum = model_config['datum']
             folder = f'./graphs_data/graphs_particles_{datum}/'
             os.makedirs(folder, exist_ok=True)
 
@@ -1375,8 +1375,8 @@ if __name__ == '__main__':
 
             time.sleep(0.5)
 
-            # data_generate(model_config,index_particles)
-            # data_train(model_config,index_particles)
+            data_generate(model_config,index_particles)
+            data_train(model_config,index_particles)
             data_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0)
             # prev_nparticles, new_nparticles, prev_index_particles = data_test_generate(model_config,index_particles)
             # data_test(model_config,index_particles,prev_nparticles, new_nparticles, prev_index_particles)
