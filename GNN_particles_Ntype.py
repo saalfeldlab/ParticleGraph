@@ -511,7 +511,7 @@ def data_generate(model_config,index_particles):
 
     time.sleep(0.5)
 
-    for run in tqdm(range(gridsearch_list[0] + 1)):
+    for run in tqdm(range(2)):
 
         X1 = torch.rand(nparticles, 2, device=device)
         X1t = torch.zeros((nparticles, 2, nframes))  # to store all the intermediate time
