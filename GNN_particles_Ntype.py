@@ -1346,7 +1346,7 @@ if __name__ == '__main__':
             # ntry=585+gtest
             # model_config['noise_level'] =  gtest_list[gtest%4] / 100
             # model_config['noise_type'] = 1 + gtest // 4
-            model_config['ntry'] = ntry
+            # model_config['ntry'] = ntry
             # model_config['hidden_size'] = gtest_list[gtest]
             datum = model_config['datum']
             # datum = '230902_' + str(ntry)
