@@ -180,14 +180,6 @@ class InteractionParticles(pyg.nn.MessagePassing):
 
         x, edge_index = data.x, data.edge_index
         x[:, 4:6] = self.a[x[:, 6].detach().cpu().numpy(), 0:2]
-
-        if (step == 1) & (self.noise_type>0) :
-
-            noise = torch.randn((x.shape[0], 4), requires_grad=False, device=device) * self.noise_level
-            if (self.noise_type == 1) | (self.noise_type == 3):
-                x[:, 0:2] = x[:, 0:2] + noise[:, 0:2] * self.radius
-                x[:, 2:4] = x[:, 2:4] + noise[:, 2:4] * torch.std(x[:, 2:4])
-
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         acc = self.propagate(edge_index, x=(x, x))
 
@@ -727,6 +719,13 @@ def data_train(model_config,index_particles):
             x = torch.load(f'graphs_data/graphs_particles_{datum}/x_{run}_{k}.pt')
             x = x.to(device)
 
+            if (step == 1) & (noise_type > 0):
+
+                noise = torch.randn((x.shape[0], 4), device=device) * noise_level
+                if (noise_type == 1) | (noise_type == 3):
+                    x[:, 0:2] = x[:, 0:2] + noise[:, 0:2] * radius
+                    x[:, 2:4] = x[:, 2:4] + noise[:, 2:4] * torch.std(x[:, 2:4])
+
             if data_augmentation:
                 phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
                 cos_phi = torch.cos(phi)
@@ -742,7 +741,7 @@ def data_train(model_config,index_particles):
             y[:, 1] = y[:, 1] / ynorm[5]
 
             if (noise_type >1):
-                noise = torch.randn((y.shape[0], 2), requires_grad=False, device=device) * noise_level
+                noise = torch.randn((y.shape[0], 2), device=device) * noise_level
                 y[:, 0:2] = y[:, 0:2] + noise[:, 0:2] * torch.std(y[:, 0:2])
 
             if data_augmentation:
