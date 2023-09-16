@@ -618,8 +618,6 @@ def data_train(model_config,index_particles):
     noise_type = model_config['noise_type']
     print(f'noise_type: {noise_type}')
 
-    print(f'{ntry} {noise_type} {noise_level}')
-
     print('')
     print('Training loop ...')
 
@@ -796,7 +794,7 @@ def data_train(model_config,index_particles):
                 data_augmentation_loop = 200
                 print(f'data_augmentation_loop: {data_augmentation_loop}')
 
-        if (epoch > 49):
+        if epoch == 49:
             print('training MLP only ...')
             model.a.requires_grad = False
             model.a_bf_kmean.data = model.a.data
@@ -1354,7 +1352,7 @@ if __name__ == '__main__':
     gtest_list=[1,2,5,10]
 
 
-    for gtest in range(12):
+    for gtest in range(1,12):
 
             ntry=585+gtest
             model_config['noise_level'] =  gtest_list[gtest%4] / 100
@@ -1393,7 +1391,7 @@ if __name__ == '__main__':
 
             # data_generate(model_config,index_particles)
             data_train(model_config,index_particles)
-            data_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0)
+            # data_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0)
             # prev_nparticles, new_nparticles, prev_index_particles = data_test_generate(model_config,index_particles)
             # data_test(model_config,index_particles,prev_nparticles, new_nparticles, prev_index_particles)
 
