@@ -719,7 +719,7 @@ def data_train(model_config,index_particles):
             x = torch.load(f'graphs_data/graphs_particles_{datum}/x_{run}_{k}.pt')
             x = x.to(device)
 
-            if (step == 1) & (noise_type > 0):
+            if (noise_type > 0):
 
                 noise = torch.randn((x.shape[0], 4), device=device) * noise_level
                 if (noise_type == 1) | (noise_type == 3):
