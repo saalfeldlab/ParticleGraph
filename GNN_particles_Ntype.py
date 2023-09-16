@@ -35,7 +35,6 @@ from tifffile import imread
 def distmat_square(X, Y):
     return torch.sum(bc_diff(X[:, None, :] - Y[None, :, :]) ** 2, axis=2)
 
-
 def kernel(X, Y):
     return -torch.sqrt(distmat_square(X, Y))
 
@@ -74,7 +73,6 @@ def norm_velocity(xx, device):
     # print(f'vy01={vy01} vy99={vy99}')
 
     return torch.tensor([vx01, vx99, vy01, vy99, vx, vy], device=device)
-
 
 def norm_acceleration(yy, device):
     max = torch.mean(yy[:, 0])
@@ -160,6 +158,9 @@ class InteractionParticles(pyg.nn.MessagePassing):
         self.nparticles = model_config['nparticles']
         self.radius = model_config['radius']
         self.noise_level = model_config['noise_level']
+        self.particle_embedding = model_config['particle_embedding']
+        self.data_augmentation = model_config['data_augmentation']
+
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
@@ -172,10 +173,13 @@ class InteractionParticles(pyg.nn.MessagePassing):
         self.p0 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
         self.p1 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
 
-    def forward(self, data, step, vnorm):
+    def forward(self, data, step, vnorm, cos_phi, sin_phi):
 
         self.vnorm = vnorm
         self.step = step
+        self.cos_phi = cos_phi
+        self.sin_phi = sin_phi
+
 
         x, edge_index = data.x, data.edge_index
         x[:, 4:6] = self.a[x[:, 6].detach().cpu().numpy(), 0:2]
@@ -212,22 +216,22 @@ class InteractionParticles(pyg.nn.MessagePassing):
         x_j_vx = x_j[:, 2:3] / self.vnorm[4]
         x_j_vy = x_j[:, 3:4] / self.vnorm[5]
 
-        if (data_augmentation) & (self.step==1):
+        if (self.data_augmentation) & (self.step==1):
 
-            new_x = cos_phi * delta_pos[:,0] + sin_phi * delta_pos[:,1]
-            new_y = -sin_phi * delta_pos[:,0] + cos_phi * delta_pos[:,1]
+            new_x = self.cos_phi * delta_pos[:,0] + self.sin_phi * delta_pos[:,1]
+            new_y = -self.sin_phi * delta_pos[:,0] + self.cos_phi * delta_pos[:,1]
             delta_pos[:,0] = new_x
             delta_pos[:,1] = new_y
-            new_x = cos_phi * x_i_vx + sin_phi * x_i_vy
-            new_y = -sin_phi * x_i_vx + cos_phi * x_i_vy
+            new_x = self.cos_phi * x_i_vx + self.sin_phi * x_i_vy
+            new_y = -self.sin_phi * x_i_vx + self.cos_phi * x_i_vy
             x_i_vx = new_x
             x_i_vy = new_y
-            new_x = cos_phi * x_j_vx + sin_phi * x_j_vy
-            new_y = -sin_phi * x_j_vx + cos_phi * x_j_vy
+            new_x = self.cos_phi * x_j_vx + self.sin_phi * x_j_vy
+            new_y = -self.sin_phi * x_j_vx + self.cos_phi * x_j_vy
             x_j_vx = new_x
             x_j_vy = new_y
 
-        if particle_embedding:
+        if self.particle_embedding>0:
 
             x_i_type_0 = x_i[:, 4]
             x_i_type_1 = x_i[:, 5]
@@ -616,6 +620,8 @@ def data_train(model_config,index_particles):
     print(f'boundary: {boundary}')
     hidden_size = model_config['hidden_size']
     print(f'hidden_size: {hidden_size}')
+    data_augmentation = model_config['data_augmentation']
+    print(f'data_augmentation: {data_augmentation}')
 
     print('')
     print('Training loop ...')
@@ -632,7 +638,7 @@ def data_train(model_config,index_particles):
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{datum}/x_*")
     NGraphs = int(len(graph_files) / nframes)
-    print('Graph files N: ', NGraphs)
+    print('Graph files N: ', NGraphs-1)
     time.sleep(0.5)
 
     arr = np.arange(0, NGraphs - 1, 2)
@@ -653,185 +659,183 @@ def data_train(model_config,index_particles):
     ynorm = norm_acceleration(yy, device)
     torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
 
-    for gridsearch in gridsearch_list:
+    if model_config['model'] == 'InteractionParticles':
+        model = InteractionParticles(model_config, device)
+        print(f'Training InteractionParticles')
+        model.a_bf_kmean.requires_grad = False
+    if model_config['model'] == 'ResNetGNN':
+        model = ResNetGNN(model_config, device)
+        print(f'Training ResNetGNN')
+        embedding = model_config['embedding']
+        print(f'embedding: {embedding}')
+    # state_dict = torch.load(net)
+    # model.load_state_dict(state_dict['model_state_dict'])
 
-        if model_config['model'] == 'InteractionParticles':
-            model = InteractionParticles(model_config, device)
-            print(f'Training InteractionParticles')
-            model.a_bf_kmean.requires_grad = False
-        if model_config['model'] == 'ResNetGNN':
-            model = ResNetGNN(model_config, device)
-            print(f'Training ResNetGNN')
-            embedding = model_config['embedding']
-            print(f'embedding: {embedding}')
-        # state_dict = torch.load(net)
-        # model.load_state_dict(state_dict['model_state_dict'])
+    table = PrettyTable(["Modules", "Parameters"])
+    total_params = 0
+    for name, parameter in model.named_parameters():
+        if not parameter.requires_grad:
+            continue
+        param = parameter.numel()
+        table.add_row([name, param])
+        total_params += param
+    print(table)
+    print(f"Total Trainable Params: {total_params}")
 
-        table = PrettyTable(["Modules", "Parameters"])
-        total_params = 0
-        for name, parameter in model.named_parameters():
-            if not parameter.requires_grad:
-                continue
-            param = parameter.numel()
-            table.add_row([name, param])
-            total_params += param
-        print(table)
-        print(f"Total Trainable Params: {total_params}")
+    print('')
+    net = f"./log/try_{ntry}/models/best_model_with_{NGraphs-1}_graphs.pt"
+    print(f'network: {net}')
+    print('')
 
-        print('')
-        net = f"./log/try_{ntry}/models/best_model_with_{gridsearch}_graphs.pt"
-        print(f'network: {net}')
-        print('')
+    time.sleep(0.5)
 
-        time.sleep(0.5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1E-3)  # , weight_decay=5e-4)
 
-        optimizer = torch.optim.Adam(model.parameters(), lr=1E-3)  # , weight_decay=5e-4)
+    model.train()
+    best_loss = np.inf
+    stp = 1
 
-        model.train()
-        best_loss = np.inf
-        stp = 1
+    if data_augmentation:
+        data_augmentation_loop = 20
+        print(f'data_augmentation_loop: {data_augmentation_loop}')
+    else:
+        data_augmentation_loop = 1
+        print('no data augmentation ...')
+    print('')
+    time.sleep(0.5)
 
-        if data_augmentation:
-            data_augmentation_loop = 20
-            print(f'data_augmentation_loop: {data_augmentation_loop}')
+    list_loss = []
+    list_gap = []
+
+    for epoch in range(60):
+
+        if epoch == 30:
+            optimizer = torch.optim.Adam(model.parameters(), lr=1E-4)  # , weight_decay=5e-4)
+
+        total_loss = 0
+
+        for N in range(1, nframes * data_augmentation_loop, stp):
+
+            run = 1 + np.random.randint(NGraphs - 1)
+            k = np.random.randint(nframes - 1)
+
+            x = torch.load(f'graphs_data/graphs_particles_{datum}/x_{run}_{k}.pt')
+            x = x.to(device)
+
+            if data_augmentation:
+                phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
+                cos_phi = torch.cos(phi)
+                sin_phi = torch.sin(phi)
+
+            distance = torch.sum(bc_diff(x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
+            adj_t = (distance < radius ** 2).float() * 1
+            t = torch.Tensor([radius ** 2])
+            edges = adj_t.nonzero().t().contiguous()
+            y = torch.load(f'graphs_data/graphs_particles_{datum}/y_{run}_{k}.pt')
+            y = y.to(device)
+            y[:, 0] = y[:, 0] / ynorm[4]
+            y[:, 1] = y[:, 1] / ynorm[5]
+
+            if data_augmentation:
+                new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
+                new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
+                y[:, 0] = new_x
+                y[:, 1] = new_y
+
+            dataset = data.Data(x=x[:, :], edge_index=edges)
+
+            optimizer.zero_grad()
+            pred = model(dataset, step = 1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
+
+            loss = (pred - y).norm(2)
+            loss.backward()
+            optimizer.step()
+
+            total_loss += loss.item()
+
+        model.a.data = torch.clamp(model.a.data, min=-4, max=4)
+        embedding = model.a.detach().cpu().numpy()
+        embedding = scaler.fit_transform(embedding)
+        embedding_particle = []
+        for n in range(nparticle_types):
+            embedding_particle.append(embedding[index_particles[n], :])
+        kmeans = KMeans(init="random", n_clusters=nparticle_types, n_init=10, max_iter=300, random_state=42)
+        kmeans.fit(embedding)
+        gap = kmeans.inertia_
+        kmeans_kwargs = {"init": "random", "n_init": 10, "max_iter": 300, "random_state": 42}
+        sse = []
+        for k in range(1, 11):
+            kmeans_ = KMeans(n_clusters=k, **kmeans_kwargs)
+            kmeans_.fit(embedding)
+            sse.append(kmeans_.inertia_)
+        kl = KneeLocator(range(1, 11), sse, curve="convex", direction="decreasing")
+
+        if (total_loss / nframes / data_augmentation_loop / nparticles < best_loss):
+            best_loss = total_loss / nframes / data_augmentation_loop / nparticles
+            torch.save({'model_state_dict': model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict()},
+                       os.path.join(log_dir, 'models', f'best_model_with_{NGraphs-1}_graphs.pt'))
+            print("Epoch {}. Loss: {:.6f} Gap: {:.3f} kl.elbow {:d} saving model  ".format(epoch,
+                                                                                           total_loss / N / nparticles,
+                                                                                           gap, kl.elbow))
         else:
-            data_augmentation_loop = 1
-            print('no data augmentation ...')
-        print('')
-        time.sleep(0.5)
+            print(
+                "Epoch {}. Loss: {:.6f} Gap: {:.3f} kl.elbow {:d} ".format(epoch, total_loss / N / nparticles, gap,
+                                                                           kl.elbow))
 
-        list_loss = []
-        list_gap = []
+        if epoch == 29:
+            if data_augmentation:
+                data_augmentation_loop = 200
+                print(f'data_augmentation_loop: {data_augmentation_loop}')
 
-        for epoch in range(60):
+        if (epoch > 49):
+            print('training MLP only ...')
+            model.a.requires_grad = False
+            model.a_bf_kmean.data = model.a.data
+            new_a = kmeans.cluster_centers_[kmeans.labels_, :]
 
-            if epoch == 30:
-                optimizer = torch.optim.Adam(model.parameters(), lr=1E-4)  # , weight_decay=5e-4)
+            # if gap < 100:
+            #     model.a.data = torch.tensor(new_a, device=device)
 
-            total_loss = 0
-
-            for N in range(1, (gridsearch - 1) * nframes * data_augmentation_loop, stp):
-
-                run = 1 + np.random.randint(gridsearch - 1)
-                k = np.random.randint(nframes - 1)
-
-                x = torch.load(f'graphs_data/graphs_particles_{datum}/x_{run}_{k}.pt')
-                x = x.to(device)
-
-                if data_augmentation:
-                    phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
-                    cos_phi = torch.cos(phi)
-                    sin_phi = torch.sin(phi)
-
-                distance = torch.sum(bc_diff(x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
-                adj_t = (distance < radius ** 2).float() * 1
-                t = torch.Tensor([radius ** 2])
-                edges = adj_t.nonzero().t().contiguous()
-                y = torch.load(f'graphs_data/graphs_particles_{datum}/y_{run}_{k}.pt')
-                y = y.to(device)
-                y[:, 0] = y[:, 0] / ynorm[4]
-                y[:, 1] = y[:, 1] / ynorm[5]
-
-                if data_augmentation:
-                    new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
-                    new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
-                    y[:, 0] = new_x
-                    y[:, 1] = new_y
-
-                dataset = data.Data(x=x[:, :], edge_index=edges)
-
-                optimizer.zero_grad()
-                pred = model(dataset, step = 1, vnorm=vnorm)
-
-                loss = (pred - y).norm(2)
-                loss.backward()
-                optimizer.step()
-
-                total_loss += loss.item()
-
-            model.a.data = torch.clamp(model.a.data, min=-4, max=4)
             embedding = model.a.detach().cpu().numpy()
             embedding = scaler.fit_transform(embedding)
             embedding_particle = []
             for n in range(nparticle_types):
                 embedding_particle.append(embedding[index_particles[n], :])
-            kmeans = KMeans(init="random", n_clusters=nparticle_types, n_init=10, max_iter=300, random_state=42)
-            kmeans.fit(embedding)
-            gap = kmeans.inertia_
-            kmeans_kwargs = {"init": "random", "n_init": 10, "max_iter": 300, "random_state": 42}
-            sse = []
-            for k in range(1, 11):
-                kmeans_ = KMeans(n_clusters=k, **kmeans_kwargs)
-                kmeans_.fit(embedding)
-                sse.append(kmeans_.inertia_)
-            kl = KneeLocator(range(1, 11), sse, curve="convex", direction="decreasing")
+            best_loss = np.inf
 
-            if (total_loss / N / nparticles < best_loss):
-                best_loss = total_loss / N / nparticles
-                torch.save({'model_state_dict': model.state_dict(),
-                            'optimizer_state_dict': optimizer.state_dict()},
-                           os.path.join(log_dir, 'models', f'best_model_with_{gridsearch}_graphs.pt'))
-                print("Epoch {}. Loss: {:.6f} Gap: {:.3f} kl.elbow {:d} saving model  ".format(epoch,
-                                                                                               total_loss / N / nparticles,
-                                                                                               gap, kl.elbow))
-            else:
-                print(
-                    "Epoch {}. Loss: {:.6f} Gap: {:.3f} kl.elbow {:d} ".format(epoch, total_loss / N / nparticles, gap,
-                                                                               kl.elbow))
+        list_loss.append(total_loss / N / nparticles)
+        list_gap.append(gap)
 
-            if epoch == 29:
-                if data_augmentation:
-                    data_augmentation_loop = 200
-                    print(f'data_augmentation_loop: {data_augmentation_loop}')
+        fig = plt.figure(figsize=(15, 5))
+        # plt.ion()
+        ax = fig.add_subplot(1, 3, 1)
+        for n in range(nparticle_types):
+            plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
+        plt.xlim([-4.1, 4.1])
+        plt.ylim([-4.1, 4.1])
+        plt.xlabel('Embedding 0', fontsize=12)
+        plt.ylabel('Embedding 1', fontsize=12)
+        plt.text(-3.9, 3.6, f'kmeans.inertia: {np.round(gap, 2)}   kl.elbow: {kl.elbow}', fontsize=10)
+        ax = fig.add_subplot(1, 3, 2)
+        plt.plot(range(1, 11), sse)
+        plt.xticks(range(1, 11))
+        plt.xlabel("Number of Clusters", fontsize=12)
+        plt.ylabel("SSE", fontsize=12)
 
-            if (epoch > 49):
-                print('training MLP only ...')
-                model.a.requires_grad = False
-                model.a_bf_kmean.data = model.a.data
-                new_a = kmeans.cluster_centers_[kmeans.labels_, :]
+        ax = fig.add_subplot(2, 4, 4)
+        plt.plot(list_loss, color='k')
+        plt.xlim([0, 60])
+        plt.ylim([0, 0.02])
+        plt.ylabel('Loss', fontsize=10)
 
-                # if gap < 100:
-                #     model.a.data = torch.tensor(new_a, device=device)
-
-                embedding = model.a.detach().cpu().numpy()
-                embedding = scaler.fit_transform(embedding)
-                embedding_particle = []
-                for n in range(nparticle_types):
-                    embedding_particle.append(embedding[index_particles[n], :])
-                best_loss = np.inf
-
-            list_loss.append(total_loss / N / nparticles)
-            list_gap.append(gap)
-
-            fig = plt.figure(figsize=(15, 5))
-            # plt.ion()
-            ax = fig.add_subplot(1, 3, 1)
-            for n in range(nparticle_types):
-                plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
-            plt.xlim([-4.1, 4.1])
-            plt.ylim([-4.1, 4.1])
-            plt.xlabel('Embedding 0', fontsize=12)
-            plt.ylabel('Embedding 1', fontsize=12)
-            plt.text(-3.9, 3.6, f'kmeans.inertia: {np.round(gap, 2)}   kl.elbow: {kl.elbow}', fontsize=10)
-            ax = fig.add_subplot(1, 3, 2)
-            plt.plot(range(1, 11), sse)
-            plt.xticks(range(1, 11))
-            plt.xlabel("Number of Clusters", fontsize=12)
-            plt.ylabel("SSE", fontsize=12)
-
-            ax = fig.add_subplot(2, 4, 4)
-            plt.plot(list_loss, color='k')
-            plt.xlim([0, 60])
-            plt.ylim([0, 0.02])
-            plt.ylabel('Loss', fontsize=10)
-
-            ax = fig.add_subplot(2, 4, 8)
-            plt.plot(list_gap, color='k')
-            plt.xlim([0, 60])
-            plt.xlabel('Epoch', fontsize=10)
-            plt.ylabel('Gap', fontsize=10)
-            plt.savefig(f"./tmp_training/Fig_{ntry}_{epoch}.tif")
-            plt.close()
+        ax = fig.add_subplot(2, 4, 8)
+        plt.plot(list_gap, color='k')
+        plt.xlim([0, 60])
+        plt.xlabel('Epoch', fontsize=10)
+        plt.ylabel('Gap', fontsize=10)
+        plt.savefig(f"./tmp_training/Fig_{ntry}_{epoch}.tif")
+        plt.close()
 
 def data_test(model_config,index_particles, prev_nparticles, new_nparticles, prev_index_particles):
     # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_recons/*")
@@ -874,13 +878,17 @@ def data_test(model_config,index_particles, prev_nparticles, new_nparticles, pre
     if model_config['model'] == 'ResNetGNN':
         model = ResNetGNN(model_config, device)
 
-    net = f"./log/try_{ntry}/models/best_model_with_{gridsearch_list[0]}_graphs.pt"
+    graph_files = glob.glob(f"graphs_data/graphs_particles_{datum}/x_*")
+    NGraphs = int(len(graph_files) / nframes)
+    print('Graph files N: ', NGraphs-1)
+
+    net = f"./log/try_{ntry}/models/best_model_with_{NGraphs-1}_graphs.pt"
     print(f'network: {net}')
     state_dict = torch.load(net)
     model.load_state_dict(state_dict['model_state_dict'])
     model.eval()
 
-    if True:  # nparticles larger than initially
+    if new_nparticles>0:  # nparticles larger than initially
 
         ratio_particles = int(new_nparticles / prev_nparticles)
         print('')
@@ -941,7 +949,7 @@ def data_test(model_config,index_particles, prev_nparticles, new_nparticles, pre
         dataset = data.Data(x=x, edge_index=edge_index)
 
         with torch.no_grad():
-            y = model(dataset, step=2, vnorm=v)  # acceleration estimation
+            y = model(dataset, step=2, vnorm=v, cos_phi=0, sin_phi=0)  # acceleration estimation
 
         # y = torch.clamp(y, min=-2, max=2)
 
@@ -1236,6 +1244,25 @@ if __name__ == '__main__':
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
+    model_config = {'ntry': 602,
+                    'input_size': 15,
+                    'output_size': 2,
+                    'hidden_size': 32,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'radius': 0.075,
+                    'datum': '230902_602',
+                    'nparticles': 2000,
+                    'nparticle_types': 2,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'model': 'InteractionParticles'}
+
     model_config = {'ntry': 635,
                     'input_size': 15,
                     'output_size': 2,
@@ -1252,6 +1279,7 @@ if __name__ == '__main__':
                     'aggr_type' : 'mean',
                     'particle_embedding': True,
                     'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
                     'model': 'InteractionParticles'}
 
     # model_config = {'ntry': 700,
@@ -1270,6 +1298,7 @@ if __name__ == '__main__':
     #                 'aggr_type' : 'mean',
     #                 'particle_embedding': True,
     #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+    #                 'data_augmentation' : True,
     #                 'model': 'InteractionParticles'}
 
     # model_config = {'ntry': 660,
@@ -1288,10 +1317,27 @@ if __name__ == '__main__':
     #                 'aggr_type' : 'mean',
     #                 'particle_embedding': True,
     #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+    #                 'data_augmentation' : True,
     #                 'model': 'InteractionParticles'}
 
-    gridsearch_list = [2] #, 20, 50, 100, 200]
-    data_augmentation = True
+    model_config = {'ntry': 602,
+                    'input_size': 15,
+                    'output_size': 2,
+                    'hidden_size': 32,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'radius': 0.075,
+                    'datum': '230902_602',
+                    'nparticles': 2000,
+                    'nparticle_types': 2,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'model': 'InteractionParticles'}
 
     gtest_list=[32,64,128,256]
 
@@ -1331,8 +1377,9 @@ if __name__ == '__main__':
 
             # data_generate(model_config,index_particles)
             # data_train(model_config,index_particles)
-            prev_nparticles, new_nparticles, prev_index_particles = data_test_generate(model_config,index_particles)
-            data_test(model_config,index_particles,prev_nparticles, new_nparticles, prev_index_particles)
+            data_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0)
+            # prev_nparticles, new_nparticles, prev_index_particles = data_test_generate(model_config,index_particles)
+            # data_test(model_config,index_particles,prev_nparticles, new_nparticles, prev_index_particles)
 
 
 
