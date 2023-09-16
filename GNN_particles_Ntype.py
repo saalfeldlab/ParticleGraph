@@ -166,7 +166,6 @@ class InteractionParticles(pyg.nn.MessagePassing):
         # self.particle_emb = MLP(input_size=2, hidden_size=8, output_size=8, nlayers=3, device=self.device)
 
         self.a = nn.Parameter(torch.tensor(np.ones((int(self.nparticles), 2)), device=self.device, requires_grad=True))
-        self.a_bf_kmean = nn.Parameter(torch.tensor(np.ones((int(self.nparticles), 2)), device=self.device, requires_grad=False))
 
         self.p0 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
         self.p1 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
@@ -260,7 +259,6 @@ class InteractionParticlesLoop(pyg.nn.MessagePassing):
         # self.particle_emb = MLP(input_size=2, hidden_size=8, output_size=8, nlayers=3, device=self.device)
 
         self.a = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device=self.device, requires_grad=True))
-        self.a_bf_kmean = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device=self.device, requires_grad=False))
 
         self.p0 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
         self.p1 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
@@ -415,7 +413,6 @@ class ResNetGNN(torch.nn.Module):
                                    device=self.device)
 
         self.a = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device=self.device, requires_grad=True))
-        self.a_bf_kmean = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device=self.device, requires_grad=False))
 
 
     def forward(self, data):
@@ -657,7 +654,6 @@ def data_train(model_config,index_particles):
     if model_config['model'] == 'InteractionParticles':
         model = InteractionParticles(model_config, device)
         print(f'Training InteractionParticles')
-        model.a_bf_kmean.requires_grad = False
     if model_config['model'] == 'ResNetGNN':
         model = ResNetGNN(model_config, device)
         print(f'Training ResNetGNN')
@@ -797,7 +793,6 @@ def data_train(model_config,index_particles):
         if epoch == 49:
             print('training MLP only ...')
             model.a.requires_grad = False
-            model.a_bf_kmean.data = model.a.data
             new_a = kmeans.cluster_centers_[kmeans.labels_, :]
 
             # if gap < 100:
@@ -1078,9 +1073,6 @@ def data_test(model_config,index_particles, prev_nparticles, new_nparticles, pre
             plt.ylabel('Embedding 1', fontsize=8)
 
             plt.savefig(f"./tmp_recons/Fig_{ntry}_{it}.tif")
-            # if it==0:
-            #     for n in range(5):
-            #         plt.savefig(f"./tmp_recons/Fig_{ntry}_t0_{n}.tif")
 
             plt.close()
 
@@ -1352,7 +1344,7 @@ if __name__ == '__main__':
     gtest_list=[1,2,5,10]
 
 
-    for gtest in range(1,12):
+    for gtest in range(1):
 
             ntry=585+gtest
             model_config['noise_level'] =  gtest_list[gtest%4] / 100
@@ -1390,8 +1382,8 @@ if __name__ == '__main__':
             time.sleep(0.5)
 
             # data_generate(model_config,index_particles)
-            data_train(model_config,index_particles)
-            # data_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0)
+            # data_train(model_config,index_particles)
+            data_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0)
             # prev_nparticles, new_nparticles, prev_index_particles = data_test_generate(model_config,index_particles)
             # data_test(model_config,index_particles,prev_nparticles, new_nparticles, prev_index_particles)
 
