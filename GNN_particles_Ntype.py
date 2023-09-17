@@ -1350,7 +1350,7 @@ if __name__ == '__main__':
 
     gtest_list=[1,2,5,10]
 
-    for gtest in range(9,12):
+    for gtest in range(8,12):
 
             ntry=585+gtest
             model_config['noise_level'] =  gtest_list[gtest%4] / 100
