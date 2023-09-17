@@ -1241,7 +1241,7 @@ if __name__ == '__main__':
     print('')
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     model_config = {'ntry': 602,
@@ -1332,7 +1332,7 @@ if __name__ == '__main__':
                     'noise_level': 0,
                     'noise_type': 0,
                     'radius': 0.075,
-                    'datum': '230902_635',
+                    'datum': '230902_685',
                     'nparticles': 3000,
                     'nparticle_types': 3,
                     'nframes': 200,
@@ -1383,7 +1383,7 @@ if __name__ == '__main__':
 
             time.sleep(0.5)
 
-            # data_generate(model_config,index_particles)
+            data_generate(model_config,index_particles)
             data_train(model_config,index_particles)
             data_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0)
             # prev_nparticles, new_nparticles, prev_index_particles = data_test_generate(model_config,index_particles)
