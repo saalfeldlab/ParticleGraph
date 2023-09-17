@@ -836,7 +836,7 @@ def data_train(model_config, index_particles):
         plt.savefig(f"./tmp_training/Fig_{ntry}_{epoch}.tif")
         plt.close()
 
-def data_test(model_config, index_particles, prev_nparticles, new_nparticles, prev_index_particles):
+def data_test(model_config, index_particles, prev_nparticles, new_nparticles, prev_index_particles, index_particles):
     # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_recons/*")
     # for f in files:
     #     os.remove(f)
@@ -938,7 +938,7 @@ def data_test(model_config, index_particles, prev_nparticles, new_nparticles, pr
 
     print(f'x: {x.shape}')
     print(f'index_particles: {index_particles[0].shape}')
-        
+
 
     rmserr_list = []
     discrepency_list = []
@@ -1235,7 +1235,7 @@ def data_test_generate(model_config, index_particles):
             plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
             plt.close()
 
-    return prev_nparticles, new_nparticles, prev_index_particles
+    return prev_nparticles, new_nparticles, prev_index_particles, index_particles
 
 
 if __name__ == '__main__':
@@ -1391,8 +1391,8 @@ if __name__ == '__main__':
             # data_generate(model_config,index_particles)
             # data_train(model_config,index_particles)
             # cdata_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0)
-            prev_nparticles, new_nparticles, prev_index_particles = data_test_generate(model_config,index_particles)
-            data_test(model_config, index_particles, prev_nparticles, new_nparticles, prev_index_particles)
+            prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, index_particles)
+            data_test(model_config, index_particles, prev_nparticles, new_nparticles, prev_index_particles, index_particles)
 
 
 
