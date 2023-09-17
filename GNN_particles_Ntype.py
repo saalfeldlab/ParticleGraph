@@ -1115,7 +1115,7 @@ def data_test_generate(model_config,index_particles):
     prev_nparticles = nparticles
     prev_index_particles = index_particles
 
-    new_nparticles = 6000
+    new_nparticles = 4000
     nparticles = new_nparticles
 
     index_particles = []
@@ -1386,9 +1386,9 @@ if __name__ == '__main__':
 
             # data_generate(model_config,index_particles)
             # data_train(model_config,index_particles)
-            data_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0)
-            #prev_nparticles, new_nparticles, prev_index_particles = data_test_generate(model_config,index_particles)
-            #data_test(model_config,index_particles,prev_nparticles, new_nparticles, prev_index_particles)
+            # cdata_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0)
+            prev_nparticles, new_nparticles, prev_index_particles = data_test_generate(model_config,index_particles)
+            data_test(model_config,index_particles,prev_nparticles, new_nparticles, prev_index_particles)
 
 
 
