@@ -1241,7 +1241,7 @@ if __name__ == '__main__':
     print('')
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     model_config = {'ntry': 602,
@@ -1327,7 +1327,7 @@ if __name__ == '__main__':
     model_config = {'ntry': 585,
                     'input_size': 15,
                     'output_size': 2,
-                    'hidden_size': 32,
+                    'hidden_size': 64,
                     'n_mp_layers': 5,
                     'noise_level': 0,
                     'noise_type': 0,
@@ -1346,12 +1346,12 @@ if __name__ == '__main__':
 
     gtest_list=[1,2,5,10]
 
-    for gtest in range(1):
+    for gtest in range(12):
 
-            # ntry=585+gtest
-            # model_config['noise_level'] =  gtest_list[gtest%4] / 100
-            # model_config['noise_type'] = 1 + gtest // 4
-            # model_config['ntry'] = ntry
+            ntry=585+gtest
+            model_config['noise_level'] =  gtest_list[gtest%4] / 100
+            model_config['noise_type'] = 1 + gtest // 4
+            model_config['ntry'] = ntry
             # model_config['hidden_size'] = gtest_list[gtest]
             datum = model_config['datum']
             # datum = '230902_' + str(ntry)
@@ -1383,7 +1383,7 @@ if __name__ == '__main__':
 
             time.sleep(0.5)
 
-            data_generate(model_config,index_particles)
+            # data_generate(model_config,index_particles)
             data_train(model_config,index_particles)
             data_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0)
             # prev_nparticles, new_nparticles, prev_index_particles = data_test_generate(model_config,index_particles)
