@@ -885,7 +885,7 @@ def data_test(model_config,index_particles, prev_nparticles, new_nparticles, pre
     NGraphs = int(len(graph_files) / nframes)
     print('Graph files N: ', NGraphs-1)
 
-    net = f"./log/try_{ntry}/models/best_model_with_2_graphs.pt"
+    net = f"./log/try_{ntry}/models/best_model_with_{NGraphs-1}_graphs.pt"
     print(f'network: {net}')
     state_dict = torch.load(net)
     model.load_state_dict(state_dict['model_state_dict'])
