@@ -5,8 +5,8 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 print(f'device {device}')
 
 # Create some large point clouds in 3D
-x = torch.randn(100000, 3, requires_grad=True).cuda()
-y = torch.randn(200000, 3).cuda()
+x = torch.randn(1000, 3, requires_grad=True).cuda()
+y = torch.randn(2000, 3).cuda()
 # Define a Sinkhorn (~Wasserstein) loss between sampled measures
 S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
