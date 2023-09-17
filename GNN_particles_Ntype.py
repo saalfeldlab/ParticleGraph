@@ -1274,6 +1274,7 @@ if __name__ == '__main__':
                     'hidden_size': 32,
                     'n_mp_layers': 5,
                     'noise_level': 0,
+                    'noise_type': 0,
                     'radius': 0.075,
                     'datum': '230902_700',
                     'nparticles': 5000,
