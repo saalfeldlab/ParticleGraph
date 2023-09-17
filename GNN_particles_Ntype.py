@@ -696,7 +696,7 @@ def data_train(model_config,index_particles):
     list_loss = []
     list_gap = []
 
-    for epoch in range(1):
+    for epoch in range(60):
 
         if epoch == 30:
             optimizer = torch.optim.Adam(model.parameters(), lr=1E-4)  # , weight_decay=5e-4)
@@ -1383,7 +1383,8 @@ if __name__ == '__main__':
 
             time.sleep(0.5)
 
-            # data_generate(model_config,index_particles)
+            if gtest==0:
+                data_generate(model_config,index_particles)
             data_train(model_config,index_particles)
             data_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0)
             # prev_nparticles, new_nparticles, prev_index_particles = data_test_generate(model_config,index_particles)
