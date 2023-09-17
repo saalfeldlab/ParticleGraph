@@ -872,7 +872,7 @@ def data_test(model_config, index_particles, prev_nparticles, new_nparticles, pr
     print(f'noise_type: {noise_type}')
 
     print('')
-    print('Testing loop ... ')
+    print('Plot validation test ... ')
 
     nparticles = model_config['nparticles']
 
@@ -935,6 +935,10 @@ def data_test(model_config, index_particles, prev_nparticles, new_nparticles, pr
     x = x.to(device)
     x00 = x00.to(device)
     y = y.to(device)
+
+    print(f'x: {x.shape}')
+    print(f'index_particles: {index_particles[0].shape}')
+        
 
     rmserr_list = []
     discrepency_list = []
@@ -1097,7 +1101,7 @@ def data_test_generate(model_config, index_particles):
     hidden_size = model_config['hidden_size']
 
     print('')
-    print('Plotting data ...')
+    print('Generating test data ...')
 
     nframes = 200
 
