@@ -1117,7 +1117,7 @@ def data_test_generate(model_config, index_particles):
     prev_nparticles = nparticles
     prev_index_particles = index_particles
 
-    new_nparticles = 2000
+    new_nparticles = 10000
     nparticles = new_nparticles
 
     index_particles = []
