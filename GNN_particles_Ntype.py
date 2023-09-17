@@ -942,6 +942,7 @@ def data_test(model_config, index_particles, prev_nparticles, new_nparticles, pr
 
     rmserr_list = []
     discrepency_list = []
+    Sxy_list = []
 
     for it in tqdm(range(nframes - 1)):
 
@@ -970,6 +971,9 @@ def data_test(model_config, index_particles, prev_nparticles, new_nparticles, pr
 
         discrepency = MMD(x[:, 0:2], x0[:, 0:2])
         discrepency_list.append(discrepency)
+
+        Sxy = S_e(x[:, 0:2], x0[:, 0:2])
+        Sxy_list.append(Sxy.item())
 
         stp = 5
         if (it % stp == 0) & bVisu:
@@ -1078,9 +1082,11 @@ def data_test(model_config, index_particles, prev_nparticles, new_nparticles, pr
             plt.savefig(f"./tmp_recons/Fig_{ntry}_{it}.tif")
 
             plt.close()
-
+    print('')
+    print(f'ntry: {ntry}')
     print(f'Final RMSE: {rmserr.item()}')
     print(f'Final MMD: {discrepency}')
+    print(f'Final Sxy: {Sxy.item()}')
 
 def data_test_generate(model_config, index_particles):
 
@@ -1368,6 +1374,8 @@ if __name__ == '__main__':
             radius = model_config['radius']
 
             scaler = StandardScaler()
+            S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
+
 
             if model_config['boundary'] == 'no':  # change this for usual BC
                 def bc_pos(X):
