@@ -865,6 +865,10 @@ def data_test(model_config,index_particles, prev_nparticles, new_nparticles, pre
     print(f'boundary: {boundary}')
     hidden_size = model_config['hidden_size']
     print(f'hidden_size: {hidden_size}')
+    noise_level = model_config['noise_level']
+    print(f'noise_level: {noise_level}')
+    noise_type = model_config['noise_type']
+    print(f'noise_type: {noise_type}')
 
     print('')
     print('Testing loop ... ')
