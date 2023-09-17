@@ -1119,7 +1119,7 @@ def data_test_generate(model_config, index_particles):
     prev_nparticles = nparticles
     prev_index_particles = index_particles
 
-    new_nparticles = 4000
+    new_nparticles = 2000
     nparticles = new_nparticles
 
     index_particles = []
@@ -1130,9 +1130,9 @@ def data_test_generate(model_config, index_particles):
     X1 = torch.rand(nparticles, 2, device=device)
 
     # scenario A
-    X1[:, 0] = X1[:, 0] / nparticle_types
-    for n in range(nparticle_types):
-        X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / nparticle_types
+    # X1[:, 0] = X1[:, 0] / nparticle_types
+    # for n in range(nparticle_types):
+    #     X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / nparticle_types
 
     # scenario B
     # X1[index_particles[0], :] = X1[index_particles[0], :]/2 + 1/4
