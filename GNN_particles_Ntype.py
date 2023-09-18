@@ -1354,7 +1354,7 @@ if __name__ == '__main__':
                     'model': 'InteractionParticles'}
 
 
-    gtest_list=[0,1,2,3,4,8]
+    gtest_list=[5,9]
 
     for gtest in gtest_list:
 
@@ -1375,7 +1375,6 @@ if __name__ == '__main__':
 
             scaler = StandardScaler()
             S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
-
 
             if model_config['boundary'] == 'no':  # change this for usual BC
                 def bc_pos(X):
