@@ -1008,14 +1008,14 @@ def data_test(model_config, index_particles, prev_nparticles, new_nparticles, pr
             plt.text(-0.25, 1.38, 'True', fontsize=30)
 
             ax = fig.add_subplot(2, 3, 3)
-            plt.plot(np.arange(0, len(rmserr_list) * stp, stp), rmserr_list, label='RMSE', c='r')
+            plt.plot(np.arange(len(rmserr_list)), rmserr_list, label='RMSE', c='r')
             plt.ylim([0, 0.1])
             plt.xlim([0, nframes])
             plt.tick_params(axis='both', which='major', labelsize=10)
             plt.xlabel('Frame [a.u]', fontsize="14")
             ax.set_ylabel('RMSE [a.u]', fontsize="14", color='r')
             ax2 = ax.twinx()
-            plt.plot(np.arange(0, len(discrepency_list) * stp, stp), discrepency_list,
+            plt.plot(np.arange(len(discrepency_list)), discrepency_list,
                      label='Maximum Mean Discrepencies', c='b')
             ax2.set_ylabel('MMD [a.u]', fontsize="14", color='b')
             ax2.set_ylim([0, 2E-3])
@@ -1125,7 +1125,7 @@ def data_test_generate(model_config, index_particles):
     prev_nparticles = nparticles
     prev_index_particles = index_particles
 
-    new_nparticles = 10000
+    new_nparticles = 2000
     nparticles = new_nparticles
 
     index_particles = []
@@ -1136,9 +1136,9 @@ def data_test_generate(model_config, index_particles):
     X1 = torch.rand(nparticles, 2, device=device)
 
     # scenario A
-    X1[:, 0] = X1[:, 0] / nparticle_types
-    for n in range(nparticle_types):
-        X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / nparticle_types
+    # X1[:, 0] = X1[:, 0] / nparticle_types
+    # for n in range(nparticle_types):
+    #     X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / nparticle_types
 
     # scenario B
     # X1[index_particles[0], :] = X1[index_particles[0], :]/2 + 1/4
@@ -1277,7 +1277,7 @@ if __name__ == '__main__':
     # model_config = {'ntry': 700,
     #                 'input_size': 15,
     #                 'output_size': 2,
-    #                 'hidden_size': 32,
+    #                 'hidden_size': 64,
     #                 'n_mp_layers': 5,
     #                 'noise_level': 0,
     #                 'noise_type': 0,
@@ -1332,8 +1332,48 @@ if __name__ == '__main__':
     #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
     #                 'data_augmentation' : True,
     #                 'model': 'InteractionParticles'}
-    #
-    model_config = {'ntry': 585,
+
+    # model_config = {'ntry': 585,
+    #                 'input_size': 15,
+    #                 'output_size': 2,
+    #                 'hidden_size': 64,
+    #                 'n_mp_layers': 5,
+    #                 'noise_level': 0,
+    #                 'noise_type': 0,
+    #                 'radius': 0.075,
+    #                 'datum': '230902_585',
+    #                 'nparticles': 2000,
+    #                 'nparticle_types': 2,
+    #                 'nframes': 200,
+    #                 'sigma': .005,
+    #                 'tau': 0.1,
+    #                 'aggr_type' : 'mean',
+    #                 'particle_embedding': True,
+    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+    #                 'data_augmentation' : True,
+    #                 'model': 'InteractionParticles'}
+
+    # model_config = {'ntry': 597,
+    #                 'input_size': 15,
+    #                 'output_size': 2,
+    #                 'hidden_size': 64,
+    #                 'n_mp_layers': 5,
+    #                 'noise_level': 0,
+    #                 'noise_type': 2,
+    #                 'radius': 0.075,
+    #                 'datum': '230902_597',
+    #                 'nparticles': 4000,
+    #                 'nparticle_types': 2,
+    #                 'nframes': 200,
+    #                 'sigma': .005,
+    #                 'tau': 0.1,
+    #                 'aggr_type' : 'mean',
+    #                 'particle_embedding': True,
+    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+    #                 'data_augmentation' : True,
+    #                 'model': 'InteractionParticles'}
+
+    model_config = {'ntry': 30,
                     'input_size': 15,
                     'output_size': 2,
                     'hidden_size': 64,
@@ -1341,9 +1381,9 @@ if __name__ == '__main__':
                     'noise_level': 0,
                     'noise_type': 0,
                     'radius': 0.075,
-                    'datum': '230902_685',
-                    'nparticles': 2000,
-                    'nparticle_types': 2,
+                    'datum': '230902_30',
+                    'nparticles': 3000,
+                    'nparticle_types': 3,
                     'nframes': 200,
                     'sigma': .005,
                     'tau': 0.1,
@@ -1354,15 +1394,15 @@ if __name__ == '__main__':
                     'model': 'InteractionParticles'}
 
 
-    gtest_list=[5,9]
+    gtest_list=[64,128,256]
 
-    for gtest in gtest_list:
+    for gtest in range(3):
 
-            ntry=585+gtest
-            model_config['noise_level'] =  gtest_list[gtest%4] / 100
-            model_config['noise_type'] = 1 + gtest // 4
+            ntry=30+gtest
+            # model_config['noise_level'] =  gtest_list[gtest%4] / 100
+            # model_config['noise_type'] = 1 + gtest // 4
             model_config['ntry'] = ntry
-            # model_config['hidden_size'] = gtest_list[gtest]
+            model_config['hidden_size'] = gtest_list[gtest]
             datum = model_config['datum']
             # datum = '230902_' + str(ntry)
 
@@ -1395,10 +1435,10 @@ if __name__ == '__main__':
             time.sleep(0.5)
 
             # data_generate(model_config,index_particles)
-            # data_train(model_config,index_particles)
-            data_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0, bVisu = False)
+            data_train(model_config,index_particles)
+            data_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0, bVisu = True)
             # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, index_particles)
-            # data_test(model_config, index_particles, prev_nparticles, new_nparticles, prev_index_particles)
+            # data_test(model_config, index_particles, prev_nparticles, new_nparticles, prev_index_particles, bVisu = True)
 
 
 
