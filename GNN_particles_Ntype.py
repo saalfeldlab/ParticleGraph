@@ -544,17 +544,18 @@ def data_generate(model_config, index_particles):
     rr = torch.tensor(np.linspace(0, 0.015, 100))
     rr = rr.to(device)
 
-    for n in range(nparticle_types):
-        p[n] = torch.load(f'graphs_data/graphs_particles_230902_30/p_{n}.pt')
-        model.append(InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p[n]), tau=tau))
-        psi_output.append(psi(rr, torch.squeeze(p[n])))
-        print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
+    # read previous data
+    # for n in range(nparticle_types):
+    #     p[n] = torch.load(f'graphs_data/graphs_particles_230902_30/p_{n}.pt')
+    #     print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
+    # p[2]=p[1]*0.975
 
     for n in range(nparticle_types):
         model.append(InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p[n]), tau=tau))
         torch.save({'model_state_dict': model[n].state_dict()}, f'graphs_data/graphs_particles_{datum}/model_{n}.pt')
         psi_output.append(psi(rr, torch.squeeze(p[n])))
         print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
+
     for n in range(nparticle_types):
         torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{datum}/p_{n}.pt')
 
@@ -836,18 +837,21 @@ def data_train(model_config, index_particles):
             sse.append(kmeans_.inertia_)
         kl = KneeLocator(range(1, 11), sse, curve="convex", direction="decreasing")
 
+        for n in range(nparticle_types-1):
+            for m in range(n+1,nparticle_types):
+                D_nm[epoch,n,m] = S_e(torch.tensor(embedding_particle[n]), torch.tensor(embedding_particle[m]))
+
+        torch.save(D_nm, f"./tmp_training/D_nm_{ntry}.pt")
+
         if (total_loss / nframes / data_augmentation_loop / nparticles < best_loss):
             best_loss = total_loss / nframes / data_augmentation_loop / nparticles
             torch.save({'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict()},
                        os.path.join(log_dir, 'models', f'best_model_with_{NGraphs-1}_graphs.pt'))
-            print("Epoch {}. Loss: {:.6f} Gap: {:.3f} kl.elbow {:d} saving model  ".format(epoch,
-                                                                                           total_loss / N / nparticles,
-                                                                                           gap, kl.elbow))
+            print("Epoch {}. Loss: {:.6f} geomloss {:.2f} saving model  ".format(epoch,total_loss / N / nparticles,torch.sum(D_nm).item()))
         else:
             print(
-                "Epoch {}. Loss: {:.6f} Gap: {:.3f} kl.elbow {:d} ".format(epoch, total_loss / N / nparticles, gap,
-                                                                           kl.elbow))
+                "Epoch {}. Loss: {:.6f} geomloss {:.2f} ".format(epoch, total_loss / N / nparticles,torch.sum(D_nm).item()))
 
         if epoch == 29:
             if data_augmentation:
@@ -875,21 +879,16 @@ def data_train(model_config, index_particles):
         list_gap.append(gap)
 
 
-        for n in range(nparticle_types-1):
-            for m in range(n+1,nparticle_types):
-                D_nm[epoch,n,m] = S_e(torch.tensor(embedding_particle[n]), torch.tensor(embedding_particle[m]))
-
-        torch.save(D_nm, f"./tmp_training/D_nm_{ntry}.pt")
-
-
-
         fig = plt.figure(figsize=(13, 8))
-        plt.ion()
+        #plt.ion()
         ax = fig.add_subplot(2, 3, 1,projection='3d')
 
         if (embedding_type == 'none') & (embedding.shape[1]>2):
             for n in range(nparticle_types):
                 ax.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], embedding_particle[n][:, 2],s=1)
+        else :
+            for n in range(nparticle_types):
+                ax.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], embedding_particle[n][:, 1]*0,s=1)
 
         ax = fig.add_subplot(2, 3, 2)
         for n in range(nparticle_types):
@@ -1362,7 +1361,7 @@ if __name__ == '__main__':
     print('')
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # model_config = {'ntry': 602,
@@ -1512,7 +1511,7 @@ if __name__ == '__main__':
     #                 'model': 'InteractionParticles'}
     #
     model_config = {'ntry': 37,
-                    'input_size': 15,
+                    'input_size': 9,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
@@ -1532,11 +1531,33 @@ if __name__ == '__main__':
                     'embedding_type': 'none',
                     'model': 'InteractionParticles'}
 
-    gtest_list=[9]
+    model_config = {'ntry': 39,
+                    'input_size': 15,
+                    'output_size': 2,
+                    'hidden_size': 64,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'noise_type': 0,
+                    'radius': 0.075,
+                    'datum': '230902_39',
+                    'nparticles': 3000,
+                    'nparticle_types': 3,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'embedding_type': 'none',
+                    'model': 'InteractionParticles'}
 
-    for gtest in range(1):
 
-            ntry= 37  + gtest
+    gtest_list=[9,10,11,15]
+
+    for gtest in range(4):
+
+            ntry= 39  + gtest
             model_config['ntry'] = ntry
             # model_config['noise_level'] =  gtest_list[gtest%4] / 100
             # model_config['noise_type'] = 1 + gtest // 4
