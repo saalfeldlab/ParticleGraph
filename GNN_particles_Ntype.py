@@ -200,8 +200,11 @@ class InteractionParticles(pyg.nn.MessagePassing):
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
+        if self.embedding_type == 'none':
+            self.a = nn.Parameter(torch.tensor(np.ones((int(self.nparticles), self.input_size-7)), device=self.device, requires_grad=True, dtype=torch.float32))
+        else:
+            self.a = nn.Parameter(torch.tensor(np.ones((int(self.nparticles), 2)), device=self.device, requires_grad=True, dtype=torch.float32))
 
-        self.a = nn.Parameter(torch.tensor(np.ones((int(self.nparticles), 2)), device=self.device, requires_grad=True))
         self.a_bf_kmean = nn.Parameter(torch.tensor(np.ones((int(self.nparticles), 2)), device=self.device, requires_grad=False))
         self.p0 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
         self.p1 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
@@ -262,6 +265,9 @@ class InteractionParticles(pyg.nn.MessagePassing):
             x_i_type_0 = x_i[:, 4]
             x_i_type_1 = x_i[:, 5]
 
+            if self.embedding_type=='none':
+                embedding = self.a[x_i[:, 6].detach().cpu().numpy(), :]
+                in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding),dim=-1)
             if self.embedding_type=='repeat':
                 in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, x_i_type_0[:, None].repeat(1, 4), x_i_type_1[:, None].repeat(1, 4)),dim=-1)
             if self.embedding_type=='frequency':
@@ -507,6 +513,12 @@ def data_generate(model_config, index_particles):
     print(f'boundary: {boundary}')
     hidden_size = model_config['hidden_size']
     print(f'hidden_size: {hidden_size}')
+    noise_level = model_config['noise_level']
+    print(f'noise_level: {noise_level}')
+    noise_type = model_config['noise_type']
+    print(f'noise_type: {noise_type}')
+    embedding_type = model_config['embedding_type']
+    print(f'embedding_type: {embedding_type}')
 
     print('')
     print('Generating data ...')
@@ -747,6 +759,8 @@ def data_train(model_config, index_particles):
 
     list_loss = []
     list_gap = []
+    embedding_list=[]
+    D_nm = torch.zeros((60,nparticle_types, nparticle_types))
 
     for epoch in range(60):
 
@@ -850,6 +864,8 @@ def data_train(model_config, index_particles):
 
             embedding = model.a.detach().cpu().numpy()
             embedding = scaler.fit_transform(embedding)
+            embedding_list.append(torch.tensor(embedding,device=device))
+            torch.save(embedding_list,f"./tmp_training/Embedding_{ntry}.pt")
             embedding_particle = []
             for n in range(nparticle_types):
                 embedding_particle.append(embedding[index_particles[n], :])
@@ -858,33 +874,57 @@ def data_train(model_config, index_particles):
         list_loss.append(total_loss / N / nparticles)
         list_gap.append(gap)
 
-        fig = plt.figure(figsize=(15, 5))
-        # plt.ion()
-        ax = fig.add_subplot(1, 3, 1)
+
+        for n in range(nparticle_types-1):
+            for m in range(n+1,nparticle_types):
+                D_nm[epoch,n,m] = S_e(torch.tensor(embedding_particle[n]), torch.tensor(embedding_particle[m]))
+
+        torch.save(D_nm, f"./tmp_training/D_nm_{ntry}.pt")
+
+
+
+        fig = plt.figure(figsize=(13, 8))
+        plt.ion()
+        ax = fig.add_subplot(2, 3, 1,projection='3d')
+
+        if (embedding_type == 'none') & (embedding.shape[1]>2):
+            for n in range(nparticle_types):
+                ax.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], embedding_particle[n][:, 2],s=1)
+
+        ax = fig.add_subplot(2, 3, 2)
         for n in range(nparticle_types):
             plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
         plt.xlim([-4.1, 4.1])
         plt.ylim([-4.1, 4.1])
         plt.xlabel('Embedding 0', fontsize=12)
         plt.ylabel('Embedding 1', fontsize=12)
+
+
         plt.text(-3.9, 3.6, f'kmeans.inertia: {np.round(gap, 2)}   kl.elbow: {kl.elbow}', fontsize=10)
-        ax = fig.add_subplot(1, 3, 2)
+        ax = fig.add_subplot(2, 3, 3)
+        plt.plot(list_loss, color='k')
+        plt.xlim([0, 60])
+        plt.ylim([0, 0.02])
+        plt.ylabel('Loss', fontsize=10)
+        plt.xlabel('Epochs', fontsize=10)
+
+        ax = fig.add_subplot(2, 3, 4)
         plt.plot(range(1, 11), sse)
         plt.xticks(range(1, 11))
         plt.xlabel("Number of Clusters", fontsize=12)
         plt.ylabel("SSE", fontsize=12)
 
-        ax = fig.add_subplot(2, 4, 4)
-        plt.plot(list_loss, color='k')
-        plt.xlim([0, 60])
-        plt.ylim([0, 0.02])
-        plt.ylabel('Loss', fontsize=10)
+        ax = fig.add_subplot(2, 3, 5)
+        for n in range(nparticle_types - 1):
+            for m in range(n + 1, nparticle_types):
+                plt.plot(D_nm[0:epoch, n, m])
 
-        ax = fig.add_subplot(2, 4, 8)
-        plt.plot(list_gap, color='k')
         plt.xlim([0, 60])
-        plt.xlabel('Epoch', fontsize=10)
-        plt.ylabel('Gap', fontsize=10)
+        plt.ylabel('Geomloss', fontsize=10)
+        plt.xlabel('Epochs', fontsize=10)
+
+        plt.tight_layout()
+
         plt.savefig(f"./tmp_training/Fig_{ntry}_{epoch}.tif")
         plt.close()
 
@@ -924,6 +964,7 @@ def data_test(model_config, index_particles, prev_nparticles, new_nparticles, pr
     print(f'noise_type: {noise_type}')
     embedding_type = model_config['embedding_type']
     print(f'embedding_type: {embedding_type}')
+
 
     print('')
     print('Plot validation test ... ')
@@ -1150,15 +1191,31 @@ def data_test_generate(model_config, index_particles):
     datum = model_config['datum']
     print(f'datum: {datum}')
     nparticles = model_config['nparticles']  # number of particles
+    print(f'nparticles: {nparticles}')
     nparticle_types = model_config['nparticle_types']  # number of particles
+    print(f'nparticle_types: {nparticle_types}')
     nframes = model_config['nframes']
+    print(f'nframes: {nframes}')
     radius = model_config['radius']
+    print(f'radius: {radius}')
     sigma = model_config['sigma']
+    print(f'sigma: {sigma}')
     tau = model_config['tau']
+    print(f'tau: {tau}')
     aggr_type = model_config['aggr_type']
+    print(f'aggr_type: {aggr_type}')
     particle_embedding = model_config['particle_embedding']
+    print(f'particle_embedding: {particle_embedding}')
     boundary = model_config['boundary']
+    print(f'boundary: {boundary}')
     hidden_size = model_config['hidden_size']
+    print(f'hidden_size: {hidden_size}')
+    noise_level = model_config['noise_level']
+    print(f'noise_level: {noise_level}')
+    noise_type = model_config['noise_type']
+    print(f'noise_type: {noise_type}')
+    embedding_type = model_config['embedding_type']
+    print(f'embedding_type: {embedding_type}')
 
     print('')
     print('Generating test data ...')
@@ -1454,35 +1511,37 @@ if __name__ == '__main__':
     #                 'embedding_type': 'repeat',
     #                 'model': 'InteractionParticles'}
     #
-    # model_config = {'ntry': 36,
-    #                 'input_size': 15,
-    #                 'output_size': 2,
-    #                 'hidden_size': 64,
-    #                 'n_mp_layers': 5,
-    #                 'noise_level': 0,
-    #                 'noise_type': 0,
-    #                 'radius': 0.075,
-    #                 'datum': '230902_30',
-    #                 'nparticles': 3000,
-    #                 'nparticle_types': 3,
-    #                 'nframes': 200,
-    #                 'sigma': .005,
-    #                 'tau': 0.1,
-    #                 'aggr_type' : 'mean',
-    #                 'particle_embedding': True,
-    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-    #                 'data_augmentation' : True,
-    #                 'embedding_type': 'frequency',
-    #                 'model': 'InteractionParticles'}
+    model_config = {'ntry': 37,
+                    'input_size': 15,
+                    'output_size': 2,
+                    'hidden_size': 64,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'noise_type': 0,
+                    'radius': 0.075,
+                    'datum': '230902_30',
+                    'nparticles': 3000,
+                    'nparticle_types': 3,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'embedding_type': 'none',
+                    'model': 'InteractionParticles'}
 
-    gtest_list=[1,2,5,10]
+    gtest_list=[9]
 
-    for gtest in range(4):
+    for gtest in range(1):
 
-            ntry= 597  + gtest
-            model_config['noise_level'] =  gtest_list[gtest%4] / 100
+            ntry= 37  + gtest
+            model_config['ntry'] = ntry
+            # model_config['noise_level'] =  gtest_list[gtest%4] / 100
             # model_config['noise_type'] = 1 + gtest // 4
-            ntry = model_config['ntry']
+            # ntry = model_config['ntry']
+            model_config['input_size'] = gtest_list[gtest]
             # model_config['ntry'] = ntry
             # model_config['hidden_size'] = gtest_list[gtest]
             datum = model_config['datum']
