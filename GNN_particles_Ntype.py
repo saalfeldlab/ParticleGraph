@@ -856,10 +856,10 @@ def data_train(model_config, index_particles):
             torch.save({'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict()},
                        os.path.join(log_dir, 'models', f'best_model_with_{NGraphs-1}_graphs.pt'))
-            print("Epoch {}. Loss: {:.6f} geomloss {:.2f} saving model  ".format(epoch,total_loss / N / nparticles,torch.sum(D_nm).item()))
+            print("Epoch {}. Loss: {:.6f} geomloss {:.2f} saving model  ".format(epoch,total_loss / N / nparticles,torch.sum(D_nm[epoch]).item()))
         else:
             print(
-                "Epoch {}. Loss: {:.6f} geomloss {:.2f} ".format(epoch, total_loss / N / nparticles,torch.sum(D_nm).item()))
+                "Epoch {}. Loss: {:.6f} geomloss {:.2f} ".format(epoch, total_loss / N / nparticles,torch.sum(D_nm[epoch]).item()))
 
         if epoch == 29:
             if data_augmentation:
@@ -1548,18 +1548,18 @@ def data_train_generate(model_config, index_particles, arrow, prev_folder):
 
         for run in tqdm(range(2)):
             N=0
-            for it in range(nframes-2, 0,-1):
+            for it in range(nframes-3, -1,-1):
 
-                x_prev = torch.load(f'{prev_folder}/x_{run}_{it+1}.pt')
-                x_prev = x_prev.to(device)
                 x_current = torch.load(f'{prev_folder}/x_{run}_{it}.pt')
                 x_current = x_current.to(device)
-                x_next = torch.load(f'{prev_folder}/x_{run}_{it-1}.pt')
-                x_next = x_next.to(device)
+                x_prev = torch.load(f'{prev_folder}/x_{run}_{it+1}.pt')
+                x_prev = x_prev.to(device)
+                x_prev_prev = torch.load(f'{prev_folder}/x_{run}_{it+2}.pt')
+                x_prev_prev = x_prev_prev.to(device)
 
                 x = x_current
                 x[:,2:4] = x_current[:,0:2] - x_prev[:,0:2]
-                y = x_next[:,0:2] - 2*x_prev[:,0:2] + x_prev[:,0:2]
+                y = x_current[:,0:2] - 2*x_prev[:,0:2] + x_prev_prev[:,0:2]
 
                 torch.save(x, f'graphs_data/graphs_particles_{datum}/x_{run}_{N}.pt')
                 torch.save(y, f'graphs_data/graphs_particles_{datum}/y_{run}_{N}.pt')
@@ -1776,7 +1776,7 @@ if __name__ == '__main__':
                     'model': 'InteractionParticles'}
 
     model_config = {'ntry': 39,
-                    'input_size': 15,
+                    'input_size': 9,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
@@ -1796,7 +1796,7 @@ if __name__ == '__main__':
                     'embedding_type': 'none',
                     'model': 'InteractionParticles'}
 
-    model_config = {'ntry':43,
+    model_config = {'ntry':44,
                     'input_size': 9,
                     'output_size': 2,
                     'hidden_size': 64,
@@ -1804,7 +1804,7 @@ if __name__ == '__main__':
                     'noise_level': 0,
                     'noise_type': 0,
                     'radius': 0.075,
-                    'datum': '230902_43',
+                    'datum': '230902_44',
                     'nparticles': 3000,
                     'nparticle_types': 3,
                     'nframes': 200,
@@ -1827,7 +1827,7 @@ if __name__ == '__main__':
             # model_config['noise_level'] =  gtest_list[gtest%4] / 100
             # model_config['noise_type'] = 1 + gtest // 4
             # ntry = model_config['ntry']
-            model_config['input_size'] = gtest_list[gtest]
+            # model_config['input_size'] = gtest_list[gtest]
             # model_config['ntry'] = ntry
             # model_config['hidden_size'] = gtest_list[gtest]
             datum = model_config['datum']
@@ -1868,7 +1868,7 @@ if __name__ == '__main__':
             data_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0, bVisu = True)
             # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, index_particles)
             # data_test(model_config, index_particles, prev_nparticles, new_nparticles, prev_index_particles, bVisu = True)
-            # data_train_generate(model_config, index_particles, 'backward', f'./graphs_data/graphs_particles_230902_30/')
+            # data_train_generate(model_config, index_particles, 'backward', f'./graphs_data/graphs_particles_230902_43/')
 
 
 
