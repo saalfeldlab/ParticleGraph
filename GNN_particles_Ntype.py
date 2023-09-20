@@ -181,6 +181,62 @@ class InteractionParticles_1(pyg.nn.MessagePassing):
 
         return psi[:, None] * bc_diff(x_i[:, 0:2] - x_j[:, 0:2])
 
+class InteractionParticles_2(pyg.nn.MessagePassing):
+    """Interaction Network as proposed in this paper:
+    https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
+
+    def __init__(self, aggr_type=[], p=[], tau=[]):
+        super(InteractionParticles_2, self).__init__(aggr=aggr_type)  # "mean" aggregation.
+
+        self.p = p
+        self.tau = tau
+
+    def forward(self, data):
+        x, edge_index = data.x, data.edge_index
+        edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+        newv = self.tau * self.propagate(edge_index, x=(x, x))
+        oldv = x[:, 3:6]
+        acc = newv - oldv
+        return acc
+
+    def message(self, x_i, x_j):
+        r = torch.sum(bc_diff(x_i[:, 0:3] - x_j[:, 0:3]) ** 2, axis=1)  # squared distance
+
+        # psi = -self.p[2] * torch.exp(-r ** self.p[0] / (2 * sigma ** 2)) + self.p[3] * torch.exp(-r ** self.p[1] / (2 * sigma ** 2))
+
+        pp = self.p[x_i[:, 6].detach().cpu().numpy(),:]
+        psi = -pp[:,2] * torch.exp(-r ** pp[:,0] / (2 * sigma ** 2)) + pp[:,3] * torch.exp(-r ** pp[:,1] / (2 * sigma ** 2))
+
+        return psi[:, None] * bc_diff(x_i[:, 0:3] - x_j[:, 0:3])
+
+class InteractionParticles_3(pyg.nn.MessagePassing):
+    """Interaction Network as proposed in this paper:
+    https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
+
+    def __init__(self, aggr_type=[], p=[], tau=[]):
+        super(InteractionParticles_3, self).__init__(aggr=aggr_type)  # "mean" aggregation.
+
+        self.p = p
+        self.tau = tau
+
+    def forward(self, data):
+        x, edge_index = data.x, data.edge_index
+        edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+        newv = self.tau * self.propagate(edge_index, x=(x, x))
+        oldv = x[:, 3:6]
+        acc = newv - oldv
+        return acc
+
+    def message(self, x_i, x_j):
+        r = torch.sum(bc_diff(x_i[:, 0:3] - x_j[:, 0:3]) ** 2, axis=1)  # squared distance
+
+        # psi = -self.p[2] * torch.exp(-r ** self.p[0] / (2 * sigma ** 2)) + self.p[3] * torch.exp(-r ** self.p[1] / (2 * sigma ** 2))
+
+        pp = torch.squeeze(self.p[x_i[:, 6].detach().cpu().numpy(),x_j[:, 6].detach().cpu().numpy(),:])
+        psi = -pp[:,2] * torch.exp(-r ** pp[:,0] / (2 * sigma ** 2)) + pp[:,3] * torch.exp(-r ** pp[:,1] / (2 * sigma ** 2))
+
+        return psi[:, None] * bc_diff(x_i[:, 0:3] - x_j[:, 0:3])
+
 class MLP(nn.Module):
 
     def __init__(self, input_size, output_size, nlayers, hidden_size, device):
@@ -684,27 +740,61 @@ def data_generate(model_config, index_particles):
     f.write(json_)
     f.close()
 
-    p = torch.ones(nparticle_types, 4, device=device) + torch.rand(nparticle_types, 4, device=device)
-    model = []
-    psi_output = []
-    rr = torch.tensor(np.linspace(0, 0.015, 100))
-    rr = rr.to(device)
+    if model_config['model'] == 'MixInteractionParticles':
+        print(f'Generate MixInteractionParticles')
 
-    # read previous data
-    # for n in range(nparticle_types):
-    #     p[n] = torch.load(f'graphs_data/graphs_particles_230902_30/p_{n}.pt')
-    #     print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
-    # p[2]=p[1]*0.975
+        p = torch.ones(nparticle_types, nparticle_types, 4, device=device) + torch.rand(nparticle_types,nparticle_types, 4, device=device)
 
-    for n in range(nparticle_types):
-        # model.append(InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p[n]), tau=tau))
-        # torch.save({'model_state_dict': model[n].state_dict()}, f'graphs_data/graphs_particles_{datum}/model_{n}.pt')
-        psi_output.append(psi(rr, torch.squeeze(p[n])))
-        print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
-        torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{datum}/p_{n}.pt')
+        model = []
+        psi_output = []
+        rr = torch.tensor(np.linspace(0, 0.015, 100))
+        rr = rr.to(device)
 
-    model = InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p), tau=tau)
-    torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{datum}/model.pt')
+        # read previous data
+        # for n in range(nparticle_types):
+        #     p[n] = torch.load(f'graphs_data/graphs_particles_230902_30/p_{n}.pt')
+        #     print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
+        # p[2]=p[1]*0.975
+
+        for n in range(nparticle_types):
+            for m in range(n, nparticle_types):
+                p[m, n] = p[n, m]
+                psi_output.append(psi(rr, torch.squeeze(p[n, m])))
+                print(f'p{n, m}: {np.round(torch.squeeze(p[n, m]).detach().cpu().numpy(), 4)}')
+                torch.save(torch.squeeze(p[n, m]), f'graphs_data/graphs_particles_{datum}/p_{n}_{m}.pt')
+
+        model = InteractionParticles_1(aggr_type=aggr_type, p=torch.squeeze(p), tau=tau)
+        torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{datum}/model.pt')
+
+    else:
+
+        print(f'Generate InteractionParticles')
+
+        p = torch.ones(nparticle_types, 4, device=device) + torch.rand(nparticle_types, 4, device=device)
+        model = []
+        psi_output = []
+        rr = torch.tensor(np.linspace(0, 0.015, 100))
+        rr = rr.to(device)
+
+        # read previous data
+        # for n in range(nparticle_types):
+        #     p[n] = torch.load(f'graphs_data/graphs_particles_230902_30/p_{n}.pt')
+        #     print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
+        # p[2]=p[1]*0.975
+        # p[0] = torch.tensor([1.0413, 1.5615, 1.6233, 1.6012])
+        # p[1] = torch.tensor([1.8308, 1.9055, 1.7667, 1.0855])
+        # p[2] = torch.tensor([1.785, 1.8579,1.7226, 1.0584])
+
+
+        for n in range(nparticle_types):
+            # model.append(InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p[n]), tau=tau))
+            # torch.save({'model_state_dict': model[n].state_dict()}, f'graphs_data/graphs_particles_{datum}/model_{n}.pt')
+            psi_output.append(psi(rr, torch.squeeze(p[n])))
+            print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
+            torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{datum}/p_{n}.pt')
+
+        model = InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p), tau=tau)
+        torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{datum}/model.pt')
 
     time.sleep(0.5)
 
@@ -741,8 +831,6 @@ def data_generate(model_config, index_particles):
             y = 0
             with torch.no_grad():
                 y = model(dataset)
-                # for n in range(nparticle_types):
-                #     y += model[n](dataset) * (x[:, 4:6] == n)
 
             torch.save(y, f'graphs_data/graphs_particles_{datum}/y_{run}_{it}.pt')
 
@@ -775,22 +863,38 @@ def data_generate(model_config, index_particles):
                 plt.xlim([-0.3, 1.3])
                 plt.ylim([-0.3, 1.3])
                 plt.text(-0.25, 1.38, f'frame: {it}')
-                plt.text(-0.25, 1.33, f'sigma:{sigma} N:{nparticles} nframes:{nframes}')
-                for n in range(nparticle_types):
-                    plt.text(-0.25, 1.25 - n * 0.05, f'p{n}: {np.round(p[n].detach().cpu().numpy(), 4)}',
-                             color='k')
+
+                if model_config['model'] == 'MixInteractionParticles':
+                    N=0
+                    for n in range(nparticle_types):
+                        for m in range(n, nparticle_types):
+                            plt.text(-0.25, 1.25 - N * 0.05, f'p{n}: {np.round(p[n,m].detach().cpu().numpy(), 4)}',color='k')
+                            N+=1
+                else:
+                    plt.text(-0.25, 1.33, f'sigma:{sigma} N:{nparticles} nframes:{nframes}')
+                    for n in range(nparticle_types):
+                        plt.text(-0.25, 1.25 - n * 0.05, f'p{n}: {np.round(p[n].detach().cpu().numpy(), 4)}',
+                                 color='k')
 
                 ax = fig.add_subplot(5, 5, 21)
 
-                for n in range(nparticle_types):
-                    plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), linewidth=1)
-                plt.plot(rr.detach().cpu().numpy(), psi_output[0].detach().cpu().numpy() * 0, color=[0, 0, 0],
-                         linewidth=0.5)
+                if model_config['model'] == 'MixInteractionParticles':
+                    N = 0
+                    for n in range(nparticle_types):
+                        for m in range(n, nparticle_types):
+                            plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[N].cpu()), linewidth=1)
+                            plt.plot(rr.detach().cpu().numpy(), psi_output[0].detach().cpu().numpy() * 0,
+                                     color=[0, 0, 0], linewidth=0.5)
+                            N += 1
+                else:
+                    for n in range(nparticle_types):
+                        plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), linewidth=1)
+                        plt.plot(rr.detach().cpu().numpy(), psi_output[0].detach().cpu().numpy() * 0, color=[0, 0, 0],linewidth=0.5)
 
                 plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
                 plt.close()
 
-def data_generate_mix_interaction(model_config, index_particles):
+def data_generate_3D(model_config, index_particles):
 
     print('')
     ntry = model_config['ntry']
@@ -846,36 +950,72 @@ def data_generate_mix_interaction(model_config, index_particles):
     f.write(json_)
     f.close()
 
-    p = torch.ones(nparticle_types,nparticle_types, 4, device=device) + torch.rand(nparticle_types,nparticle_types, 4, device=device)
-    model = []
-    psi_output = []
-    rr = torch.tensor(np.linspace(0, 0.015, 100))
-    rr = rr.to(device)
+    if model_config['model'] == 'MixInteractionParticles':
+        print(f'Generate MixInteractionParticles')
 
-    # read previous data
-    # for n in range(nparticle_types):
-    #     p[n] = torch.load(f'graphs_data/graphs_particles_230902_30/p_{n}.pt')
-    #     print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
-    # p[2]=p[1]*0.975
+        p = torch.ones(nparticle_types, nparticle_types, 4, device=device) + torch.rand(nparticle_types,nparticle_types, 4, device=device)
 
-    for n in range(nparticle_types):
-        for m in range(n,nparticle_types):
-            p[m, n] = p[n, m]
-            psi_output.append(psi(rr, torch.squeeze(p[n,m])))
-            print(f'p{n,m}: {np.round(torch.squeeze(p[n,m]).detach().cpu().numpy(), 4)}')
-            torch.save(torch.squeeze(p[n,m]), f'graphs_data/graphs_particles_{datum}/p_{n}_{m}.pt')
+        model = []
+        psi_output = []
+        rr = torch.tensor(np.linspace(0, 0.015, 100))
+        rr = rr.to(device)
 
-    model = InteractionParticles_1(aggr_type=aggr_type, p=torch.squeeze(p), tau=tau)
-    torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{datum}/model.pt')
+        # read previous data
+        # for n in range(nparticle_types):
+        #     p[n] = torch.load(f'graphs_data/graphs_particles_230902_30/p_{n}.pt')
+        #     print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
+        # p[2]=p[1]*0.975
+
+        for n in range(nparticle_types):
+            for m in range(n, nparticle_types):
+                p[m, n] = p[n, m]
+                psi_output.append(psi(rr, torch.squeeze(p[n, m])))
+                print(f'p{n, m}: {np.round(torch.squeeze(p[n, m]).detach().cpu().numpy(), 4)}')
+                torch.save(torch.squeeze(p[n, m]), f'graphs_data/graphs_particles_{datum}/p_{n}_{m}.pt')
+
+        model = InteractionParticles_3(aggr_type=aggr_type, p=torch.squeeze(p), tau=tau)
+        torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{datum}/model.pt')
+
+    else:
+
+        print(f'Generate InteractionParticles')
+
+        p = torch.ones(nparticle_types, 4, device=device) + torch.rand(nparticle_types, 4, device=device)
+        model = []
+        psi_output = []
+        rr = torch.tensor(np.linspace(0, 0.015, 100))
+        rr = rr.to(device)
+
+        # read previous data
+        # for n in range(nparticle_types):
+        #     p[n] = torch.load(f'graphs_data/graphs_particles_230902_30/p_{n}.pt')
+        #     print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
+        # p[2]=p[1]*0.975
+        # p[0] = torch.tensor([1.0413, 1.5615, 1.6233, 1.6012])
+        # p[1] = torch.tensor([1.8308, 1.9055, 1.7667, 1.0855])
+        # p[2] = torch.tensor([1.785, 1.8579,1.7226, 1.0584])
+
+
+        for n in range(nparticle_types):
+            # model.append(InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p[n]), tau=tau))
+            # torch.save({'model_state_dict': model[n].state_dict()}, f'graphs_data/graphs_particles_{datum}/model_{n}.pt')
+            psi_output.append(psi(rr, torch.squeeze(p[n])))
+            print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
+            torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{datum}/p_{n}.pt')
+
+        model = InteractionParticles_2(aggr_type=aggr_type, p=torch.squeeze(p), tau=tau)
+        torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{datum}/model.pt')
 
     time.sleep(0.5)
 
     for run in tqdm(range(2)):
 
-        X1 = torch.rand(nparticles, 2, device=device)
-        X1t = torch.zeros((nparticles, 2, nframes))  # to store all the intermediate time
 
-        V1 = torch.zeros((nparticles, 2), device=device)
+
+        X1 = torch.rand(nparticles, 3, device=device)
+        X1t = torch.zeros((nparticles, 3, nframes))  # to store all the intermediate time
+
+        V1 = torch.zeros((nparticles, 3), device=device)
         T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
         for n in range(1, nparticle_types):
             T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
@@ -903,8 +1043,6 @@ def data_generate_mix_interaction(model_config, index_particles):
             y = 0
             with torch.no_grad():
                 y = model(dataset)
-                # for n in range(nparticle_types):
-                #     y += model[n](dataset) * (x[:, 4:6] == n)
 
             torch.save(y, f'graphs_data/graphs_particles_{datum}/y_{run}_{it}.pt')
 
@@ -912,47 +1050,42 @@ def data_generate_mix_interaction(model_config, index_particles):
 
             if (run == 0) & (it % 5 == 0):
 
-                distance2 = torch.sum((x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
-                adj_t2 = ((distance < radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
-                edge_index2 = adj_t2.nonzero().t().contiguous()
-                dataset2 = data.Data(x=x, edge_index=edge_index2)
+                fig = plt.figure(figsize=(14, 12))
+                plt.ion()
 
-                fig = plt.figure(figsize=(14, 7 * 0.95))
-                # plt.ion()
-                ax = fig.add_subplot(1, 2, 2)
-                pos = dict(enumerate(x[:, 0:2].detach().cpu().numpy(), 0))
-                vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
-                nx.draw_networkx(vis, pos=pos, node_size=10, linewidths=0, edge_color='b', with_labels=False)
-                plt.xlim([-0.3, 1.3])
-                plt.ylim([-0.3, 1.3])
-                plt.text(-0.25, 1.33, f'Graph    {x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
-
-                ax = fig.add_subplot(1, 2, 1)
+                ax = fig.add_subplot(1, 2, 1,projection='3d')
 
                 for n in range(nparticle_types):
-                    plt.scatter(X1t[index_particles[n], 0, it], X1t[index_particles[n], 1, it], s=3)
+                    ax.scatter(X1t[index_particles[n], 0, it], X1t[index_particles[n], 1, it], X1t[index_particles[n], 2, it])
                 ax = plt.gca()
-                ax.axes.xaxis.set_ticklabels([])
-                ax.axes.yaxis.set_ticklabels([])
-                plt.xlim([-0.3, 1.3])
-                plt.ylim([-0.3, 1.3])
-                plt.text(-0.25, 1.38, f'frame: {it}')
-                plt.text(-0.25, 1.33, f'sigma:{sigma} N:{nparticles} nframes:{nframes}')
+                plt.tight_layout()
 
-                N=0
-                for n in range(nparticle_types):
-                    for m in range(n, nparticle_types):
-                        plt.text(-0.25, 1.25 - N * 0.05, f'p{n}: {np.round(p[n,m].detach().cpu().numpy(), 4)}',color='k')
-                        N+=1
+                if model_config['model'] == 'MixInteractionParticles':
+                    N=0
+                    for n in range(nparticle_types):
+                        for m in range(n, nparticle_types):
+                            plt.text(-0.25, 1.25 - N * 0.05, f'p{n}: {np.round(p[n,m].detach().cpu().numpy(), 4)}',color='k')
+                            N+=1
+                else:
+                    plt.text(-0.25, 1.33, f'sigma:{sigma} N:{nparticles} nframes:{nframes}')
+                    for n in range(nparticle_types):
+                        plt.text(-0.25, 1.25 - n * 0.05, f'p{n}: {np.round(p[n].detach().cpu().numpy(), 4)}',
+                                 color='k')
 
                 ax = fig.add_subplot(5, 5, 21)
 
-                N=0
-                for n in range(nparticle_types):
-                    for m in range(n, nparticle_types):
-                        plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[N].cpu()), linewidth=1)
+                if model_config['model'] == 'MixInteractionParticles':
+                    N = 0
+                    for n in range(nparticle_types):
+                        for m in range(n, nparticle_types):
+                            plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[N].cpu()), linewidth=1)
+                            plt.plot(rr.detach().cpu().numpy(), psi_output[0].detach().cpu().numpy() * 0,
+                                     color=[0, 0, 0], linewidth=0.5)
+                            N += 1
+                else:
+                    for n in range(nparticle_types):
+                        plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), linewidth=1)
                         plt.plot(rr.detach().cpu().numpy(), psi_output[0].detach().cpu().numpy() * 0, color=[0, 0, 0],linewidth=0.5)
-                        N+=1
 
                 plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
                 plt.close()
@@ -1038,6 +1171,7 @@ def data_train(model_config, index_particles):
         print(f'Training InteractionParticles')
     if model_config['model'] == 'MixInteractionParticles':
         model = MixInteractionParticles(model_config, device)
+        print(f'Training MixInteractionParticles')
     if model_config['model'] == 'ResNetGNN':
         model = ResNetGNN(model_config, device)
         print(f'Training ResNetGNN')
@@ -1394,8 +1528,8 @@ def data_test(model_config, index_particles, prev_nparticles, new_nparticles, pr
         discrepency = MMD(x[:, 0:2], x0[:, 0:2])
         discrepency_list.append(discrepency)
 
-        Sxy = S_e(x[:, 0:2], x0[:, 0:2])
-        Sxy_list.append(Sxy.item())
+        # Sxy = S_e(x[:, 0:2], x0[:, 0:2])
+        # Sxy_list.append(Sxy.item())
 
         stp = 5
         if (it % stp == 0) & bVisu:
@@ -1508,7 +1642,7 @@ def data_test(model_config, index_particles, prev_nparticles, new_nparticles, pr
     print(f'ntry: {ntry}')
     print(f'Final RMSE: {rmserr.item()}')
     print(f'Final MMD: {discrepency}')
-    print(f'Final Sxy: {Sxy.item()}')
+    # print(f'Final Sxy: {Sxy.item()}')
 
 def data_test_generate(model_config, index_particles):
 
@@ -1549,23 +1683,53 @@ def data_test_generate(model_config, index_particles):
 
     nframes = 200
 
-    p = torch.ones(nparticle_types, 4, device=device) + torch.rand(nparticle_types, 4, device=device)
-    model = []
-    psi_output = []
-    rr = torch.tensor(np.linspace(0, 0.015, 100))
-    rr = rr.to(device)
-    for n in range(nparticle_types):
-        p[n] = torch.load(f'graphs_data/graphs_particles_{datum}/p_{n}.pt')
-        # model.append(InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p[n]), tau=tau))
-        psi_output.append(psi(rr, torch.squeeze(p[n])))
-        print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
 
-    model = InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p), tau=tau)
+    if model_config['model'] == 'MixInteractionParticles':
+        print(f'Generate MixInteractionParticles')
+
+        p = torch.ones(nparticle_types, nparticle_types, 4, device=device) + torch.rand(nparticle_types,nparticle_types, 4, device=device)
+
+        model = []
+        psi_output = []
+        rr = torch.tensor(np.linspace(0, 0.015, 100))
+        rr = rr.to(device)
+
+        # read previous data
+        # for n in range(nparticle_types):
+        #     p[n] = torch.load(f'graphs_data/graphs_particles_230902_30/p_{n}.pt')
+        #     print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
+        # p[2]=p[1]*0.975
+
+        for n in range(nparticle_types):
+            for m in range(n, nparticle_types):
+                p[n,m] = torch.load(f'graphs_data/graphs_particles_{datum}/p_{n}_{m}.pt')
+                p[m, n] = p[n, m]
+                psi_output.append(psi(rr, torch.squeeze(p[n, m])))
+                print(f'p{n, m}: {np.round(torch.squeeze(p[n, m]).detach().cpu().numpy(), 4)}')
+
+        model = InteractionParticles_1(aggr_type=aggr_type, p=torch.squeeze(p), tau=tau)
+
+    else:
+        print(f'Generate InteractionParticles')
+
+        p = torch.ones(nparticle_types, 4, device=device) + torch.rand(nparticle_types, 4, device=device)
+        model = []
+        psi_output = []
+        rr = torch.tensor(np.linspace(0, 0.015, 100))
+        rr = rr.to(device)
+        for n in range(nparticle_types):
+            p[n] = torch.load(f'graphs_data/graphs_particles_{datum}/p_{n}.pt')
+            # model.append(InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p[n]), tau=tau))
+            psi_output.append(psi(rr, torch.squeeze(p[n])))
+            print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
+
+        model = InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p), tau=tau)
+
 
     prev_nparticles = nparticles
     prev_index_particles = index_particles
 
-    new_nparticles = 3000
+    new_nparticles = 6000
     nparticles = new_nparticles
 
     index_particles = []
@@ -1576,9 +1740,9 @@ def data_test_generate(model_config, index_particles):
     X1 = torch.rand(nparticles, 2, device=device)
 
     # scenario A
-    # X1[:, 0] = X1[:, 0] / nparticle_types
-    # for n in range(nparticle_types):
-    #     X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / nparticle_types
+    X1[:, 0] = X1[:, 0] / nparticle_types
+    for n in range(nparticle_types):
+        X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / nparticle_types
 
     # scenario B
     # X1[index_particles[0], :] = X1[index_particles[0], :]/2 + 1/4
@@ -1641,10 +1805,6 @@ def data_test_generate(model_config, index_particles):
         with torch.no_grad():
             y = model(dataset)
 
-
-            # for n in range(nparticle_types):
-            #     y += model[n](dataset) * (x[:, 4:6] == n)
-
         torch.save(y, f'graphs_data/graphs_particles_{datum}/y_{0}_{it}.pt')
 
         V1 += y
@@ -1671,15 +1831,32 @@ def data_test_generate(model_config, index_particles):
             plt.ylim([-0.3, 1.3])
             plt.text(-0.25, 1.38, f'frame: {it}')
             plt.text(-0.25, 1.33, f'sigma:{sigma} N:{nparticles} nframes:{nframes}')
-            for n in range(nparticle_types):
-                plt.text(-0.25, 1.25 - n * 0.05, f'p{n}: {np.round(p[n].detach().cpu().numpy(), 4)}', color='k')
+            if model_config['model'] == 'MixInteractionParticles':
+                N = 0
+                for n in range(nparticle_types):
+                    for m in range(n, nparticle_types):
+                        plt.text(-0.25, 1.25 - N * 0.05, f'p{n}: {np.round(p[n, m].detach().cpu().numpy(), 4)}',
+                                 color='k')
+                        N += 1
+            else:
+                for n in range(nparticle_types):
+                    plt.text(-0.25, 1.25 - n * 0.05, f'p{n}: {np.round(p[n].detach().cpu().numpy(), 4)}', color='k')
 
             ax = fig.add_subplot(5, 5, 21)
 
-            for n in range(nparticle_types):
-                plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), linewidth=1)
-                plt.plot(rr.detach().cpu().numpy(), psi_output[0].detach().cpu().numpy() * 0, color=[0, 0, 0],
-                         linewidth=0.5)
+            if model_config['model'] == 'MixInteractionParticles':
+                N = 0
+                for n in range(nparticle_types):
+                    for m in range(n, nparticle_types):
+                        plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[N].cpu()), linewidth=1)
+                        plt.plot(rr.detach().cpu().numpy(), psi_output[0].detach().cpu().numpy() * 0,
+                                 color=[0, 0, 0], linewidth=0.5)
+                        N += 1
+            else:
+                for n in range(nparticle_types):
+                    plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), linewidth=1)
+                    plt.plot(rr.detach().cpu().numpy(), psi_output[0].detach().cpu().numpy() * 0, color=[0, 0, 0],
+                             linewidth=0.5)
 
             plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
             plt.close()
@@ -1998,8 +2175,6 @@ def data_train_generate(model_config, index_particles, arrow, prev_folder):
                     plt.close()
 
 
-
-
 if __name__ == '__main__':
 
     print('')
@@ -2007,7 +2182,7 @@ if __name__ == '__main__':
     print('')
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
 
@@ -2125,7 +2300,7 @@ if __name__ == '__main__':
                     'noise_level': 0,
                     'noise_type': 0,
                     'radius': 0.075,
-                    'datum': '230902_40',
+                    'datum': '230902_41',
                     'nparticles': 3000,
                     'nparticle_types': 3,
                     'nframes': 200,
@@ -2138,16 +2313,38 @@ if __name__ == '__main__':
                     'embedding_type': 'none',
                     'model': 'MixInteractionParticles'}
 
-    model_config = {'ntry': 42,
-                    'input_size': 10,
+    # model_config = {'ntry': 42,
+    #                 'input_size': 10,
+    #                 'output_size': 2,
+    #                 'hidden_size': 64,
+    #                 'n_mp_layers': 5,
+    #                 'noise_level': 0,
+    #                 'noise_type': 0,
+    #                 'radius': 0.075,
+    #                 'datum': '230902_39',
+    #                 'nparticles': 3000,
+    #                 'nparticle_types': 3,
+    #                 'nframes': 200,
+    #                 'sigma': .005,
+    #                 'tau': 0.1,
+    #                 'aggr_type' : 'mean',
+    #                 'particle_embedding': True,
+    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+    #                 'data_augmentation' : True,
+    #                 'embedding_type': 'none',
+    #                 'model': 'InteractionParticles'}
+    #
+
+    model_config = {'ntry': 44,
+                    'input_size': 13,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
                     'noise_level': 0,
                     'noise_type': 0,
                     'radius': 0.075,
-                    'datum': '230902_39',
-                    'nparticles': 3000,
+                    'datum': '230902_44',
+                    'nparticles': 4800,
                     'nparticle_types': 3,
                     'nframes': 200,
                     'sigma': .005,
@@ -2157,15 +2354,37 @@ if __name__ == '__main__':
                     'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                     'data_augmentation' : True,
                     'embedding_type': 'none',
-                    'model': 'InteractionParticles'}
+                    'model': 'MixInteractionParticles'}
+
+    model_config = {'ntry': 48,
+                    'input_size': 13,
+                    'output_size': 2,
+                    'hidden_size': 64,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'noise_type': 0,
+                    'radius': 0.075,
+                    'datum': '230902_48',
+                    'nparticles': 4800,
+                    'nparticle_types': 3,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'embedding_type': 'none',
+                    'model': 'MixInteractionParticles'}
 
 
     gtest_list=[10,11,15]
 
     for gtest in range(1):
 
-            # ntry= 40  + gtest
+            # ntry= 43  + gtest
             # model_config['ntry'] = ntry
+            # model_config['nparticles'] = 3000
             # model_config['noise_level'] =  gtest_list[gtest%4] / 100
             # model_config['noise_type'] = 1 + gtest // 4
             # ntry = model_config['ntry']
@@ -2205,10 +2424,10 @@ if __name__ == '__main__':
 
             time.sleep(0.5)
 
-            # data_generate_mix_interaction(model_config,index_particles)
+            # data_generate(model_config, index_particles)
+            data_generate_3D(model_config, index_particles)
             # data_train(model_config, index_particles)
-
-            data_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0, bVisu = True)
+            # data_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0, bVisu = True)
 
             # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, index_particles)
             # data_test(model_config, index_particles, prev_nparticles, new_nparticles, prev_index_particles, bVisu = True)
