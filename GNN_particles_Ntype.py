@@ -89,8 +89,6 @@ def norm_acceleration(yy, device):
     # print(f'ay01={ay01} ay99={ay99}')
 
     return torch.tensor([ax01, ax99, ay01, ay99, ax, ay], device=device)
-
-
 def norm_velocity3D(xx, device):
     mvx = torch.mean(xx[:, 2])
     mvy = torch.mean(xx[:, 3])
@@ -188,7 +186,6 @@ class InteractionParticles_0(pyg.nn.MessagePassing):
         psi = -pp[:,2] * torch.exp(-r ** pp[:,0] / (2 * sigma ** 2)) + pp[:,3] * torch.exp(-r ** pp[:,1] / (2 * sigma ** 2))
 
         return psi[:, None] * bc_diff(x_i[:, 0:2] - x_j[:, 0:2])
-
 class InteractionParticles_1(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -244,7 +241,6 @@ class InteractionParticles_2(pyg.nn.MessagePassing):
         psi = -pp[:,2] * torch.exp(-r ** pp[:,0] / (2 * sigma ** 2)) + pp[:,3] * torch.exp(-r ** pp[:,1] / (2 * sigma ** 2))
 
         return psi[:, None] * bc_diff(x_i[:, 0:3] - x_j[:, 0:3])
-
 class InteractionParticles_3(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -318,13 +314,14 @@ class InteractionParticles(pyg.nn.MessagePassing):
         self.noise_level = model_config['noise_level']
         self.noise_type = model_config['noise_type']
         self.embedding_type = model_config['embedding_type']
+        self.embedding = model_config['embedding']
         num_t_freq = 2
         self.embedding_freq = Embedding_freq(2, num_t_freq)
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
         if self.embedding_type == 'none':
-            self.a = nn.Parameter(torch.tensor(np.ones((int(self.nparticles), self.input_size-7)), device=self.device, requires_grad=True, dtype=torch.float32))
+            self.a = nn.Parameter(torch.tensor(np.ones((int(self.nparticles), self.embedding)), device=self.device, requires_grad=True, dtype=torch.float32))
         else:
             self.a = nn.Parameter(torch.tensor(np.ones((int(self.nparticles), 2)), device=self.device, requires_grad=True, dtype=torch.float32))
 
@@ -340,7 +337,6 @@ class InteractionParticles(pyg.nn.MessagePassing):
         self.sin_phi = sin_phi
 
         x, edge_index = data.x, data.edge_index
-        x[:, 4:6] = self.a[x[:, 6].detach().cpu().numpy(), 0:2]
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         acc = self.propagate(edge_index, x=(x, x))
 
@@ -383,15 +379,13 @@ class InteractionParticles(pyg.nn.MessagePassing):
             x_j_vx = new_x
             x_j_vy = new_y
 
-        if self.particle_embedding>0:
-
-            x_i_type_0 = x_i[:, 4]
-            x_i_type_1 = x_i[:, 5]
-
+        if self.particle_embedding > 0:
             if self.embedding_type=='none':
                 embedding = self.a[x_i[:, 6].detach().cpu().numpy(), :]
                 in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding),dim=-1)
             if self.embedding_type=='repeat':
+                x_i_type_0 = x_i[:, 4]
+                x_i_type_1 = x_i[:, 5]
                 in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, x_i_type_0[:, None].repeat(1, 4), x_i_type_1[:, None].repeat(1, 4)),dim=-1)
             if self.embedding_type=='frequency':
                 embedding=self.embedding_freq(x_i[:, 4:6])
@@ -428,13 +422,14 @@ class MixInteractionParticles(pyg.nn.MessagePassing):
         self.noise_level = model_config['noise_level']
         self.noise_type = model_config['noise_type']
         self.embedding_type = model_config['embedding_type']
+        self.embedding = model_config['embedding']
         num_t_freq = 2
         self.embedding_freq = Embedding_freq(2, num_t_freq)
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
         if self.embedding_type == 'none':
-            self.a = nn.Parameter(torch.tensor(np.ones((int(self.nparticles), 3)), device=self.device, requires_grad=True, dtype=torch.float32))
+            self.a = nn.Parameter(torch.tensor(np.ones((int(self.nparticles), self.embedding)), device=self.device, requires_grad=True, dtype=torch.float32))
         else:
             self.a = nn.Parameter(torch.tensor(np.ones((int(self.nparticles), 2)), device=self.device, requires_grad=True, dtype=torch.float32))
 
@@ -450,7 +445,6 @@ class MixInteractionParticles(pyg.nn.MessagePassing):
         self.sin_phi = sin_phi
 
         x, edge_index = data.x, data.edge_index
-        x[:, 4:6] = self.a[x[:, 6].detach().cpu().numpy(), 0:2]
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         acc = self.propagate(edge_index, x=(x, x))
 
@@ -495,17 +489,16 @@ class MixInteractionParticles(pyg.nn.MessagePassing):
 
         if self.particle_embedding>0:
 
-            x_i_type_0 = x_i[:, 4]
-            x_i_type_1 = x_i[:, 5]
-
             if self.embedding_type=='none':
                 embedding0 = self.a[x_i[:, 6].detach().cpu().numpy(), :]
                 embedding1 = self.a[x_j[:, 6].detach().cpu().numpy(), :]
                 in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding0,embedding1),dim=-1)
             if self.embedding_type=='repeat':
+                x_i_type_0 = self.a[x_i[:, 6].detach().cpu().numpy(), 4]
+                x_i_type_1 = self.a[x_i[:, 6].detach().cpu().numpy(), 5]
                 in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, x_i_type_0[:, None].repeat(1, 4), x_i_type_1[:, None].repeat(1, 4), x_j_type_0[:, None].repeat(1, 4), x_j_type_1[:, None].repeat(1, 4)),dim=-1)
             if self.embedding_type=='frequency':
-                embedding=self.embedding_freq(x_i[:, 4:6])
+                embedding=self.embedding_freq(self.a[x_i[:, 6].detach().cpu().numpy(), 0:2])
                 embedding=embedding[:,0:8]
                 in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding),dim=-1)
 
@@ -1105,6 +1098,13 @@ def data_generate_3D(model_config, index_particles):
         #     print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
         # p[2]=p[1]*0.975
 
+        p[0,0] = torch.tensor([1.0696,1.8843,1.322,1.252])
+        p[0, 1] = torch.tensor([1.7112,1.7178,1.108,1.471])
+        p[0, 2] = torch.tensor([1.8224,1.4711,1.7202,1.2569])
+        p[1, 1] = torch.tensor([1.078,1.3741,1.053,1.0633])
+        p[1, 2] = torch.tensor([1.0395,1.8933,1.5266,1.5097])
+        p[2, 2] = torch.tensor([1.0833,1.2819,1.6062,1.0675])
+
         for n in range(nparticle_types):
             for m in range(n, nparticle_types):
                 p[m, n] = p[n, m]
@@ -1252,6 +1252,8 @@ def data_train(model_config, index_particles):
     print(f'noise_type: {noise_type}')
     embedding_type = model_config['embedding_type']
     print(f'embedding_type: {embedding_type}')
+    embedding = model_config['embedding']
+    print(f'embedding: {embedding}')
 
     print('')
     print('Training loop ...')
@@ -1305,8 +1307,6 @@ def data_train(model_config, index_particles):
     if model_config['model'] == 'ResNetGNN':
         model = ResNetGNN(model_config, device)
         print(f'Training ResNetGNN')
-        embedding = model_config['embedding']
-        print(f'embedding: {embedding}')
     # state_dict = torch.load(net)
     # model.load_state_dict(state_dict['model_state_dict'])
 
@@ -1554,7 +1554,8 @@ def data_test(model_config, index_particles, prev_nparticles, new_nparticles, pr
     print(f'noise_type: {noise_type}')
     embedding_type = model_config['embedding_type']
     print(f'embedding_type: {embedding_type}')
-
+    embedding = model_config['embedding']
+    print(f'embedding: {embedding}')
 
     print('')
     print('Plot validation test ... ')
@@ -2313,7 +2314,7 @@ if __name__ == '__main__':
     print('')
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
 
@@ -2400,6 +2401,7 @@ if __name__ == '__main__':
     #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
     #                 'data_augmentation' : True,
     #                 'embedding_type': 'none',
+    #                 'embedding': 2,
     #                 'model': 'InteractionParticles'}
 
     # model_config = {'ntry': 40,
@@ -2442,6 +2444,7 @@ if __name__ == '__main__':
                     'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                     'data_augmentation' : True,
                     'embedding_type': 'none',
+                    'embedding': 3,
                     'model': 'MixInteractionParticles'}
 
     # model_config = {'ntry': 42,
@@ -2466,27 +2469,28 @@ if __name__ == '__main__':
     #                 'model': 'InteractionParticles'}
     #
 
-    model_config = {'ntry': 43,
-                    'input_size': 13,
-                    'output_size': 2,
-                    'hidden_size': 64,
-                    'n_mp_layers': 5,
-                    'noise_level': 0,
-                    'noise_type': 0,
-                    'radius': 0.075,
-                    'datum': '230902_43',
-                    'nparticles': 4800,
-                    'nparticle_types': 3,
-                    'nframes': 200,
-                    'sigma': .005,
-                    'tau': 0.1,
-                    'aggr_type' : 'mean',
-                    'particle_embedding': True,
-                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-                    'data_augmentation' : True,
-                    'embedding_type': 'none',
-                    'model': 'MixInteractionParticles'}
-
+    # model_config = {'ntry': 43,
+    #                 'input_size': 13,
+    #                 'output_size': 2,
+    #                 'hidden_size': 64,
+    #                 'n_mp_layers': 5,
+    #                 'noise_level': 0,
+    #                 'noise_type': 0,
+    #                 'radius': 0.075,
+    #                 'datum': '230902_43',
+    #                 'nparticles': 4800,
+    #                 'nparticle_types': 3,
+    #                 'nframes': 200,
+    #                 'sigma': .005,
+    #                 'tau': 0.1,
+    #                 'aggr_type' : 'mean',
+    #                 'particle_embedding': True,
+    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+    #                 'data_augmentation' : True,
+    #                 'embedding_type': 'none',
+    #                 'embedding': 3,
+    #                 'model': 'MixInteractionParticles'}
+    #
     # model_config = {'ntry': 48,
     #                 'input_size': 13,
     #                 'output_size': 3,
@@ -2557,7 +2561,8 @@ if __name__ == '__main__':
 
         # data_generate(model_config, index_particles)
         # data_generate_3D(model_config, index_particles)
-        data_train(model_config, index_particles)
+
+        # data_train(model_config, index_particles)
         data_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0, bVisu = True)
 
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, index_particles)
