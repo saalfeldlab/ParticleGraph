@@ -2447,50 +2447,51 @@ if __name__ == '__main__':
                     'embedding': 3,
                     'model': 'MixInteractionParticles'}
 
-    # model_config = {'ntry': 42,
-    #                 'input_size': 10,
-    #                 'output_size': 2,
-    #                 'hidden_size': 64,
-    #                 'n_mp_layers': 5,
-    #                 'noise_level': 0,
-    #                 'noise_type': 0,
-    #                 'radius': 0.075,
-    #                 'datum': '230902_39',
-    #                 'nparticles': 3000,
-    #                 'nparticle_types': 3,
-    #                 'nframes': 200,
-    #                 'sigma': .005,
-    #                 'tau': 0.1,
-    #                 'aggr_type' : 'mean',
-    #                 'particle_embedding': True,
-    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-    #                 'data_augmentation' : True,
-    #                 'embedding_type': 'none',
-    #                 'model': 'InteractionParticles'}
-    #
+    model_config = {'ntry': 42,
+                    'input_size': 10,
+                    'output_size': 2,
+                    'hidden_size': 64,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'noise_type': 0,
+                    'radius': 0.075,
+                    'datum': '230902_39',
+                    'nparticles': 3000,
+                    'nparticle_types': 3,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'embedding_type': 'none',
+                    'embedding': 3,
+                    'model': 'InteractionParticles'}
 
-    # model_config = {'ntry': 43,
-    #                 'input_size': 13,
-    #                 'output_size': 2,
-    #                 'hidden_size': 64,
-    #                 'n_mp_layers': 5,
-    #                 'noise_level': 0,
-    #                 'noise_type': 0,
-    #                 'radius': 0.075,
-    #                 'datum': '230902_43',
-    #                 'nparticles': 4800,
-    #                 'nparticle_types': 3,
-    #                 'nframes': 200,
-    #                 'sigma': .005,
-    #                 'tau': 0.1,
-    #                 'aggr_type' : 'mean',
-    #                 'particle_embedding': True,
-    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-    #                 'data_augmentation' : True,
-    #                 'embedding_type': 'none',
-    #                 'embedding': 3,
-    #                 'model': 'MixInteractionParticles'}
-    #
+
+    model_config = {'ntry': 43,
+                    'input_size': 23,
+                    'output_size': 2,
+                    'hidden_size': 128,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'noise_type': 0,
+                    'radius': 0.075,
+                    'datum': '230902_43',
+                    'nparticles': 4800,
+                    'nparticle_types': 3,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'embedding_type': 'none',
+                    'embedding': 8,
+                    'model': 'MixInteractionParticles'}
+
     # model_config = {'ntry': 48,
     #                 'input_size': 13,
     #                 'output_size': 3,
@@ -2559,8 +2560,9 @@ if __name__ == '__main__':
 
         time.sleep(0.5)
 
-        # data_generate(model_config, index_particles)
+
         # data_generate_3D(model_config, index_particles)
+        # data_generate(model_config, index_particles)
 
         # data_train(model_config, index_particles)
         data_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0, bVisu = True)
