@@ -313,6 +313,7 @@ class InteractionParticles(pyg.nn.MessagePassing):
         num_t_freq = 2
         self.embedding_freq = Embedding_freq(2, num_t_freq)
         self.upgrade_type = model_config['upgrade_type']
+        print(f'Alors self.upgrade_type {self.upgrade_type}')
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
