@@ -2566,7 +2566,7 @@ if __name__ == '__main__':
         # model_config['ntry'] = ntry
         # model_config['hidden_size'] = gtest_list[gtest]
         # dataset = model_config['dataset']
-        dataset = '230902_' + str(ntry)
+        dataset = '230902_' + str(49 + gtest)
         model_config['dataset'] = dataset
         # model_config['nparticles'] = gtest_list[gtest]
 
