@@ -1192,6 +1192,7 @@ def data_train(model_config, index_particles):
     nparticles = model_config['nparticles']
     dataset_name = model_config['dataset']
     nframes = model_config['nframes']
+    data_augmentation = model_config['data_augmentation']
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(ntry))
