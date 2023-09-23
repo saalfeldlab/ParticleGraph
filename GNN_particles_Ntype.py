@@ -341,6 +341,7 @@ class InteractionParticles(pyg.nn.MessagePassing):
         acc = self.propagate(edge_index, x=(x, x))
 
         if self.upgrade_type == 1:
+            print('new upgrade ...')
             embedding = self.a[x[:, 6].detach().cpu().numpy(), :]
             x_vx = x[:, 2:3] / self.vnorm[4]
             x_vy = x[:, 3:4] / self.vnorm[5]
@@ -349,7 +350,7 @@ class InteractionParticles(pyg.nn.MessagePassing):
                 new_vy = -self.sin_phi * x_vx + self.cos_phi * x_vy
                 x_vx = new_vx
                 x_vy = new_vy
-            acc = self.lin_acc(torch.cat((acc, x_vx, x_vy,embedding), dim=-1))
+            acc = self.lin_acc(torch.cat((acc, x_vx, x_vy, embedding), dim=-1))
 
         if step == 2:
             deg = pyg_utils.degree(edge_index[0], data.num_nodes)
@@ -1194,6 +1195,8 @@ def data_train(model_config, index_particles):
     nframes = model_config['nframes']
     data_augmentation = model_config['data_augmentation']
     noise_type = model_config['noise_type']
+    embedding_type = model_config['embedding_type']
+    embedding = model_config['embedding']
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(ntry))
