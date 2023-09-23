@@ -1,4 +1,3 @@
-# version 1.2 230923
 
 # use of https://github.com/gpeyre/numerical-tours/blob/master/python/ml_10_particle_system.ipynb
 
@@ -463,6 +462,19 @@ class MixInteractionParticles(pyg.nn.MessagePassing):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         acc = self.propagate(edge_index, x=(x, x))
+
+        if self.upgrade_type == 1:
+            print('new upgrade ...')
+            embedding = self.a[x[:, 6].detach().cpu().numpy(), :]
+            x_vx = x[:, 2:3] / self.vnorm[4]
+            x_vy = x[:, 3:4] / self.vnorm[5]
+            if (self.data_augmentation) & (self.step == 1):
+                new_vx = self.cos_phi * x_vx + self.sin_phi * x_vy
+                new_vy = -self.sin_phi * x_vx + self.cos_phi * x_vy
+                x_vx = new_vx
+                x_vy = new_vy
+            acc = self.lin_acc(torch.cat((acc, x_vx, x_vy, embedding), dim=-1))
+
 
         if step == 2:
             deg = pyg_utils.degree(edge_index[0], data.num_nodes)
@@ -2208,7 +2220,7 @@ def print_model_config (model_config):
 if __name__ == '__main__':
 
     print('')
-    print('version 1.2 230910')
+    print('version 1.2 230923')
     print('')
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
