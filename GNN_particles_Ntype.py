@@ -1888,7 +1888,7 @@ def data_train_generate(model_config, index_particles, arrow, prev_folder):
         print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
 
     for n in range(nparticle_types):
-        model.append(InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p[n]), tau=tau))
+        model.append(InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p[n]), tau=model_config['tau']))
         torch.save({'model_state_dict': model[n].state_dict()}, f'graphs_data/graphs_particles_{dataset}/model_{n}.pt')
         psi_output.append(psi(rr, torch.squeeze(p[n])))
         print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
@@ -2520,7 +2520,6 @@ if __name__ == '__main__':
 
         sigma = model_config['sigma']
         aggr_type = model_config['aggr_type']
-        radius = model_config['radius']
 
         scaler = StandardScaler()
         S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
@@ -2543,7 +2542,7 @@ if __name__ == '__main__':
 
         time.sleep(0.5)
 
-        # print_model_config(model_config)
+        print_model_config(model_config)
         data_generate(model_config, index_particles)
         # data_train(model_config, index_particles)
         # data_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0, bVisu = True)
