@@ -846,7 +846,7 @@ def data_generate_2D(model_config, index_particles):
     radius = model_config['radius']
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
-    dataset = model_config['dataset']
+    dataset_name = model_config['dataset']
     nframes = model_config['nframes']
 
     if model_config['model'] == 'MixInteractionParticles':
@@ -877,10 +877,10 @@ def data_generate_2D(model_config, index_particles):
                 p[m, n] = p[n, m]
                 psi_output.append(psi(rr, torch.squeeze(p[n, m])))
                 print(f'p{n, m}: {np.round(torch.squeeze(p[n, m]).detach().cpu().numpy(), 4)}')
-                torch.save(torch.squeeze(p[n, m]), f'graphs_data/graphs_particles_{dataset}/p_{n}_{m}.pt')
+                torch.save(torch.squeeze(p[n, m]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}_{m}.pt')
 
         model = InteractionParticles_1(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'])
-        torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset}/model.pt')
+        torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model.pt')
 
     else:
 
@@ -904,13 +904,13 @@ def data_generate_2D(model_config, index_particles):
 
         for n in range(nparticle_types):
             # model.append(InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p[n]), tau=tau))
-            # torch.save({'model_state_dict': model[n].state_dict()}, f'graphs_data/graphs_particles_{dataset}/model_{n}.pt')
+            # torch.save({'model_state_dict': model[n].state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model_{n}.pt')
             psi_output.append(psi(rr, torch.squeeze(p[n])))
             print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
-            torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset}/p_{n}.pt')
+            torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
 
         model = InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p), tau=tau)
-        torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset}/model.pt')
+        torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model.pt')
 
     time.sleep(0.5)
 
@@ -943,7 +943,7 @@ def data_generate_2D(model_config, index_particles):
 
             x = torch.concatenate(
                 (X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), N1.clone().detach()), 1)
-            torch.save(x, f'graphs_data/graphs_particles_{dataset}/x_{run}_{it}.pt')
+            torch.save(x, f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{it}.pt')
 
             dataset = data.Data(x=x, edge_index=edge_index)
 
@@ -951,8 +951,7 @@ def data_generate_2D(model_config, index_particles):
             with torch.no_grad():
                 y = model(dataset)
 
-            print(f'save graphs_data/graphs_particles_{dataset}/y_{run}_{it}.pt')
-            torch.save(y, f'graphs_data/graphs_particles_{dataset}/y_{run}_{it}.pt')
+            torch.save(y, f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{it}.pt')
 
             V1 += y
 
@@ -1037,7 +1036,7 @@ def data_generate_3D(model_config, index_particles):
     radius = model_config['radius']
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
-    dataset = model_config['dataset']
+    dataset_name = model_config['dataset']
     nframes = model_config['nframes']
 
     if True:
@@ -1068,10 +1067,10 @@ def data_generate_3D(model_config, index_particles):
                 p[m, n] = p[n, m]
                 psi_output.append(psi(rr, torch.squeeze(p[n, m])))
                 print(f'p{n, m}: {np.round(torch.squeeze(p[n, m]).detach().cpu().numpy(), 4)}')
-                torch.save(torch.squeeze(p[n, m]), f'graphs_data/graphs_particles_{dataset}/p_{n}_{m}.pt')
+                torch.save(torch.squeeze(p[n, m]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}_{m}.pt')
 
         model = InteractionParticles_3(aggr_type=aggr_type, p=torch.squeeze(p), tau=tau)
-        torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset}/model.pt')
+        torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model.pt')
 
     else:
 
@@ -1095,13 +1094,13 @@ def data_generate_3D(model_config, index_particles):
 
         for n in range(nparticle_types):
             # model.append(InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p[n]), tau=tau))
-            # torch.save({'model_state_dict': model[n].state_dict()}, f'graphs_data/graphs_particles_{dataset}/model_{n}.pt')
+            # torch.save({'model_state_dict': model[n].state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model_{n}.pt')
             psi_output.append(psi(rr, torch.squeeze(p[n])))
             print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
-            torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset}/p_{n}.pt')
+            torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
 
         model = InteractionParticles_2(aggr_type=aggr_type, p=torch.squeeze(p), tau=tau)
-        torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset}/model.pt')
+        torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model.pt')
 
     time.sleep(0.5)
 
@@ -1143,7 +1142,7 @@ def data_generate_3D(model_config, index_particles):
 
             x = torch.concatenate(
                 (X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), N1.clone().detach()), 1)
-            torch.save(x, f'graphs_data/graphs_particles_{dataset}/x_{run}_{it}.pt')
+            torch.save(x, f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{it}.pt')
 
             dataset = data.Data(x=x, edge_index=edge_index)
 
@@ -1151,7 +1150,7 @@ def data_generate_3D(model_config, index_particles):
             with torch.no_grad():
                 y = model(dataset)
 
-            torch.save(y, f'graphs_data/graphs_particles_{dataset}/y_{run}_{it}.pt')
+            torch.save(y, f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{it}.pt')
 
             V1 += y
 
@@ -1191,7 +1190,7 @@ def data_train(model_config, index_particles):
     radius = model_config['radius']
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
-    dataset = model_config['dataset']
+    dataset_name = model_config['dataset']
     nframes = model_config['nframes']
 
     l_dir = os.path.join('.', 'log')
@@ -1204,7 +1203,7 @@ def data_train(model_config, index_particles):
 
     copyfile(os.path.realpath(__file__), os.path.join(log_dir, 'training_code.py'))
 
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset}/x_*")
+    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_*")
     NGraphs = int(len(graph_files) / nframes)
     print('Graph files N: ', NGraphs-1)
     time.sleep(0.5)
@@ -1213,8 +1212,8 @@ def data_train(model_config, index_particles):
     for run in arr:
         kr = np.arange(0, nframes - 1, 4)
         for k in kr:
-            x = torch.load(f'graphs_data/graphs_particles_{dataset}/x_{run}_{k}.pt')
-            y = torch.load(f'graphs_data/graphs_particles_{dataset}/y_{run}_{k}.pt')
+            x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{k}.pt')
+            y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{k}.pt')
             if (run == 0) & (k == 0):
                 xx = x
                 yy = y
@@ -1296,7 +1295,7 @@ def data_train(model_config, index_particles):
             run = 1 + np.random.randint(NGraphs - 1)
             k = np.random.randint(nframes - 1)
 
-            x = torch.load(f'graphs_data/graphs_particles_{dataset}/x_{run}_{k}.pt')
+            x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{k}.pt')
             x = x.to(device)
 
             if (noise_type > 0):
@@ -1315,7 +1314,7 @@ def data_train(model_config, index_particles):
             adj_t = (distance < radius ** 2).float() * 1
             t = torch.Tensor([radius ** 2])
             edges = adj_t.nonzero().t().contiguous()
-            y = torch.load(f'graphs_data/graphs_particles_{dataset}/y_{run}_{k}.pt')
+            y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{k}.pt')
             y = y.to(device)
             # y.requires_grad = False
             y[:, 0] = y[:, 0] / ynorm[4]
@@ -1461,7 +1460,7 @@ def data_test(model_config, index_particles, prev_nparticles, new_nparticles, pr
     radius = model_config['radius']
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
-    dataset = model_config['dataset']
+    dataset_name = model_config['dataset']
     nframes = model_config['nframes']
 
     if model_config['model'] == 'InteractionParticles':
@@ -1471,7 +1470,7 @@ def data_test(model_config, index_particles, prev_nparticles, new_nparticles, pr
     if model_config['model'] == 'ResNetGNN':
         model = ResNetGNN(model_config, device)
 
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset}/x_*")
+    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_*")
     NGraphs = int(len(graph_files) / nframes)
     print('Graph files N: ', NGraphs-1)
 
@@ -1519,9 +1518,9 @@ def data_test(model_config, index_particles, prev_nparticles, new_nparticles, pr
     print(table)
     print(f"Total Trainable Params: {total_params}")
 
-    x = torch.load(f'graphs_data/graphs_particles_{dataset}/x_0_0.pt')
-    x00 = torch.load(f'graphs_data/graphs_particles_{dataset}/x_0_0.pt')
-    y = torch.load(f'graphs_data/graphs_particles_{dataset}/y_0_0.pt')
+    x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_0.pt')
+    x00 = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_0.pt')
+    y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_0_0.pt')
     x = x.to(device)
     x00 = x00.to(device)
     y = y.to(device)
@@ -1536,7 +1535,7 @@ def data_test(model_config, index_particles, prev_nparticles, new_nparticles, pr
 
     for it in tqdm(range(nframes - 1)):
 
-        x0 = torch.load(f'graphs_data/graphs_particles_{dataset}/x_0_{min(it + 1, nframes - 2)}.pt')
+        x0 = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_{min(it + 1, nframes - 2)}.pt')
         x0 = x0.to(device)
 
         distance = torch.sum(bc_diff(x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
@@ -1687,7 +1686,7 @@ def data_test_generate(model_config, index_particles):
     radius = model_config['radius']
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
-    dataset = model_config['dataset']
+    dataset_name = model_config['dataset']
     nframes = model_config['nframes']
 
     if model_config['model'] == 'MixInteractionParticles':
@@ -1708,7 +1707,7 @@ def data_test_generate(model_config, index_particles):
 
         for n in range(nparticle_types):
             for m in range(n, nparticle_types):
-                p[n,m] = torch.load(f'graphs_data/graphs_particles_{dataset}/p_{n}_{m}.pt')
+                p[n,m] = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p_{n}_{m}.pt')
                 p[m, n] = p[n, m]
                 psi_output.append(psi(rr, torch.squeeze(p[n, m])))
                 print(f'p{n, m}: {np.round(torch.squeeze(p[n, m]).detach().cpu().numpy(), 4)}')
@@ -1724,7 +1723,7 @@ def data_test_generate(model_config, index_particles):
         rr = torch.tensor(np.linspace(0, 0.015, 100))
         rr = rr.to(device)
         for n in range(nparticle_types):
-            p[n] = torch.load(f'graphs_data/graphs_particles_{dataset}/p_{n}.pt')
+            p[n] = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
             # model.append(InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p[n]), tau=tau))
             psi_output.append(psi(rr, torch.squeeze(p[n])))
             print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
@@ -1803,7 +1802,7 @@ def data_test_generate(model_config, index_particles):
         x = torch.concatenate(
             (X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), N1.clone().detach()), 1)
 
-        torch.save(x, f'graphs_data/graphs_particles_{dataset}/x_{0}_{it}.pt')
+        torch.save(x, f'graphs_data/graphs_particles_{dataset_name}/x_{0}_{it}.pt')
 
         dataset = data.Data(x=x, edge_index=edge_index)
 
@@ -1811,7 +1810,7 @@ def data_test_generate(model_config, index_particles):
         with torch.no_grad():
             y = model(dataset)
 
-        torch.save(y, f'graphs_data/graphs_particles_{dataset}/y_{0}_{it}.pt')
+        torch.save(y, f'graphs_data/graphs_particles_{dataset_name}/y_{0}_{it}.pt')
 
         V1 += y
 
@@ -1878,7 +1877,7 @@ def data_train_generate(model_config, index_particles, arrow, prev_folder):
     radius = model_config['radius']
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
-    dataset = model_config['dataset']
+    dataset_name = model_config['dataset']
 
     p = torch.ones(nparticle_types, 4, device=device) + torch.rand(nparticle_types, 4, device=device)
     model = []
@@ -1893,12 +1892,12 @@ def data_train_generate(model_config, index_particles, arrow, prev_folder):
 
     for n in range(nparticle_types):
         model.append(InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p[n]), tau=model_config['tau']))
-        torch.save({'model_state_dict': model[n].state_dict()}, f'graphs_data/graphs_particles_{dataset}/model_{n}.pt')
+        torch.save({'model_state_dict': model[n].state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model_{n}.pt')
         psi_output.append(psi(rr, torch.squeeze(p[n])))
         print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
 
     for n in range(nparticle_types):
-        torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset}/p_{n}.pt')
+        torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
 
     prev_nparticles = nparticles
     prev_index_particles = index_particles
@@ -1972,7 +1971,7 @@ def data_train_generate(model_config, index_particles, arrow, prev_folder):
             x = torch.concatenate(
                 (X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), N1.clone().detach()), 1)
 
-            torch.save(x, f'graphs_data/graphs_particles_{dataset}/x_{0}_{it}.pt')
+            torch.save(x, f'graphs_data/graphs_particles_{dataset_name}/x_{0}_{it}.pt')
 
             dataset = data.Data(x=x, edge_index=edge_index)
 
@@ -1981,7 +1980,7 @@ def data_train_generate(model_config, index_particles, arrow, prev_folder):
                 for n in range(nparticle_types):
                     y += model[n](dataset) * (x[:, 4:6] == n)
 
-            torch.save(y, f'graphs_data/graphs_particles_{dataset}/y_{0}_{it}.pt')
+            torch.save(y, f'graphs_data/graphs_particles_{dataset_name}/y_{0}_{it}.pt')
 
             V1 += y
 
@@ -2041,8 +2040,8 @@ def data_train_generate(model_config, index_particles, arrow, prev_folder):
                 x[:,2:4] = x_current[:,0:2] - x_prev[:,0:2]
                 y = x_current[:,0:2] - 2*x_prev[:,0:2] + x_prev_prev[:,0:2]
 
-                torch.save(x.detach(), f'graphs_data/graphs_particles_{dataset}/x_{run}_{N}.pt')
-                torch.save(y.detach(), f'graphs_data/graphs_particles_{dataset}/y_{run}_{N}.pt')
+                torch.save(x.detach(), f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{N}.pt')
+                torch.save(y.detach(), f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{N}.pt')
 
                 if (it % 5 == 0) & (run==0):
                     fig = plt.figure(figsize=(14, 7 * 0.95))
@@ -2068,11 +2067,11 @@ def data_train_generate(model_config, index_particles, arrow, prev_folder):
                     plt.close()
 
                 N += 1
-            torch.save(x.detach(), f'graphs_data/graphs_particles_{dataset}/x_{run}_{N}.pt')
-            torch.save(y.detach(), f'graphs_data/graphs_particles_{dataset}/y_{run}_{N}.pt')
+            torch.save(x.detach(), f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{N}.pt')
+            torch.save(y.detach(), f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{N}.pt')
             N += 1
-            torch.save(x.detach(), f'graphs_data/graphs_particles_{dataset}/x_{run}_{N}.pt')
-            torch.save(y.detach(), f'graphs_data/graphs_particles_{dataset}/y_{run}_{N}.pt')
+            torch.save(x.detach(), f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{N}.pt')
+            torch.save(y.detach(), f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{N}.pt')
 
     if arrow == 'geomloss':
 
@@ -2119,7 +2118,7 @@ def data_train_generate(model_config, index_particles, arrow, prev_folder):
                 with torch.no_grad():
                     x.data =  bc_pos(x.data)
 
-                torch.save(x.detach(), f'graphs_data/graphs_particles_{dataset}/x_{run}_{it}.pt')
+                torch.save(x.detach(), f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{it}.pt')
 
                 if (it % 5 == 0) & (run==0):
                     fig = plt.figure(figsize=(14, 7 * 0.95))
@@ -2157,8 +2156,8 @@ def print_model_config (model_config):
     print('')
     ntry = model_config['ntry']
     print(f'ntry: {ntry}')
-    dataset = model_config['dataset']
-    print(f'dataset: {dataset}')
+    dataset_name = model_config['dataset']
+    print(f'dataset: {dataset_name}')
     nparticles = model_config['nparticles']  # number of particles
     print(f'nparticles: {nparticles}')
     nparticle_types = model_config['nparticle_types']  # number of particles
@@ -2512,12 +2511,12 @@ if __name__ == '__main__':
         # model_config['input_size'] = gtest_list[gtest]
         # model_config['ntry'] = ntry
         # model_config['hidden_size'] = gtest_list[gtest]
-        # dataset = model_config['dataset']
-        dataset = '230902_' + str(49 + gtest)
-        model_config['dataset'] = dataset
+        # dataset_name = model_config['dataset']
+        dataset_name = '230902_' + str(49 + gtest)
+        model_config['dataset'] = dataset_name
         # model_config['nparticles'] = gtest_list[gtest]
 
-        folder = f'./graphs_data/graphs_particles_{dataset}/'
+        folder = f'./graphs_data/graphs_particles_{dataset_name}/'
         os.makedirs(folder, exist_ok=True)
 
         sigma = model_config['sigma']
