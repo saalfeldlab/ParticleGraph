@@ -313,7 +313,6 @@ class InteractionParticles(pyg.nn.MessagePassing):
         num_t_freq = 2
         self.embedding_freq = Embedding_freq(2, num_t_freq)
         self.upgrade_type = model_config['upgrade_type']
-        print(f'Alors self.upgrade_type {self.upgrade_type}')
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
@@ -325,9 +324,9 @@ class InteractionParticles(pyg.nn.MessagePassing):
         else:
             self.a = nn.Parameter(torch.tensor(np.ones((int(self.nparticles), 2)), device=self.device, requires_grad=True, dtype=torch.float32))
 
-        self.a_bf_kmean = nn.Parameter(torch.tensor(np.ones((int(self.nparticles), 2)), device=self.device, requires_grad=False))
         self.p0 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
         self.p1 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
+
 
     def forward(self, data, step, vnorm, cos_phi, sin_phi):
 
@@ -414,7 +413,6 @@ class InteractionParticles(pyg.nn.MessagePassing):
     def update(self, aggr_out):
 
         return aggr_out  # self.lin_node(aggr_out)
-
 class MixInteractionParticles(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -438,17 +436,21 @@ class MixInteractionParticles(pyg.nn.MessagePassing):
         self.embedding = model_config['embedding']
         num_t_freq = 2
         self.embedding_freq = Embedding_freq(2, num_t_freq)
+        self.upgrade_type = model_config['upgrade_type']
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
+        self.lin_acc = MLP(input_size=4+self.embedding, output_size=self.output_size, nlayers=3,
+                            hidden_size=self.hidden_size, device=self.device)
+
         if self.embedding_type == 'none':
             self.a = nn.Parameter(torch.tensor(np.ones((int(self.nparticles), self.embedding)), device=self.device, requires_grad=True, dtype=torch.float32))
         else:
             self.a = nn.Parameter(torch.tensor(np.ones((int(self.nparticles), 2)), device=self.device, requires_grad=True, dtype=torch.float32))
 
-        # self.a_bf_kmean = nn.Parameter(torch.tensor(np.ones((int(self.nparticles), 3)), device=self.device, requires_grad=False))
         self.p0 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
         self.p1 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
+
 
     def forward(self, data, step, vnorm, cos_phi, sin_phi):
 
