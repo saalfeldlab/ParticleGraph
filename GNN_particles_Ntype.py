@@ -2190,9 +2190,9 @@ def print_model_config (model_config):
     print(f'embedding_type: {embedding_type}')
     embedding = model_config['embedding']
     print(f'embedding: {embedding}')
-    if model['upgrade_type']==0:
+    if model_config['upgrade_type']==0:
         print ('Acc = aggr(message)')
-    if model['upgrade_type']==1:
+    if model_config['upgrade_type']==1:
         print ('Acc = MLP(aggr(message),velocity,embedding')
 
 
