@@ -848,6 +848,7 @@ def data_generate_2D(model_config, index_particles):
     radius = model_config['radius']
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
+    dataset = model_config['dataset']
 
     if model_config['model'] == 'MixInteractionParticles':
         print(f'Generate MixInteractionParticles')
@@ -1036,6 +1037,7 @@ def data_generate_3D(model_config, index_particles):
     radius = model_config['radius']
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
+    dataset = model_config['dataset']
 
     if True:
         print(f'Generate MixInteractionParticles')
@@ -1188,6 +1190,7 @@ def data_train(model_config, index_particles):
     radius = model_config['radius']
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
+    dataset = model_config['dataset']
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(ntry))
@@ -1456,6 +1459,7 @@ def data_test(model_config, index_particles, prev_nparticles, new_nparticles, pr
     radius = model_config['radius']
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
+    dataset = model_config['dataset']
 
     if model_config['model'] == 'InteractionParticles':
         model = InteractionParticles(model_config, device)
@@ -1680,6 +1684,7 @@ def data_test_generate(model_config, index_particles):
     radius = model_config['radius']
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
+    dataset = model_config['dataset']
 
     if model_config['model'] == 'MixInteractionParticles':
         print(f'Generate MixInteractionParticles')
@@ -1869,6 +1874,7 @@ def data_train_generate(model_config, index_particles, arrow, prev_folder):
     radius = model_config['radius']
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
+    dataset = model_config['dataset']
 
     p = torch.ones(nparticle_types, 4, device=device) + torch.rand(nparticle_types, 4, device=device)
     model = []
