@@ -2520,6 +2520,7 @@ if __name__ == '__main__':
 
         sigma = model_config['sigma']
         aggr_type = model_config['aggr_type']
+        nframes = model_config['nframes']
 
         scaler = StandardScaler()
         S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
