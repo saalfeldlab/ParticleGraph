@@ -440,7 +440,7 @@ class MixInteractionParticles(pyg.nn.MessagePassing):
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
         self.lin_acc = MLP(input_size=4+self.embedding, output_size=self.output_size, nlayers=3,
-                            hidden_size=self.hidden_size, device=self.device)
+                            hidden_size=16, device=self.device)
 
         if self.embedding_type == 'none':
             self.a = nn.Parameter(torch.tensor(np.ones((int(self.nparticles), self.embedding)), device=self.device, requires_grad=True, dtype=torch.float32))
@@ -472,7 +472,6 @@ class MixInteractionParticles(pyg.nn.MessagePassing):
                 x_vx = new_vx
                 x_vy = new_vy
             acc = self.lin_acc(torch.cat((acc, x_vx, x_vy, embedding), dim=-1))
-
 
         if step == 2:
             deg = pyg_utils.degree(edge_index[0], data.num_nodes)
