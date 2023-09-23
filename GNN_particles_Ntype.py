@@ -323,9 +323,9 @@ class InteractionParticles(pyg.nn.MessagePassing):
         else:
             self.a = nn.Parameter(torch.tensor(np.ones((int(self.nparticles), 2)), device=self.device, requires_grad=True, dtype=torch.float32))
 
-        self.p0 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
-        self.p1 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
-        self.a_bf_kmean = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device='cuda:0', requires_grad=False))
+        # self.p0 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
+        # self.p1 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
+        # self.a_bf_kmean = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device='cuda:0', requires_grad=False))
 
 
     def forward(self, data, step, vnorm, cos_phi, sin_phi):
@@ -447,8 +447,8 @@ class MixInteractionParticles(pyg.nn.MessagePassing):
         else:
             self.a = nn.Parameter(torch.tensor(np.ones((int(self.nparticles), 2)), device=self.device, requires_grad=True, dtype=torch.float32))
 
-        self.p0 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
-        self.p1 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
+        # self.p0 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
+        # self.p1 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
 
 
     def forward(self, data, step, vnorm, cos_phi, sin_phi):
@@ -566,9 +566,9 @@ class InteractionParticles3D(pyg.nn.MessagePassing):
         else:
             self.a = nn.Parameter(torch.tensor(np.ones((int(self.nparticles), 2)), device=self.device, requires_grad=True, dtype=torch.float32))
 
-        self.a_bf_kmean = nn.Parameter(torch.tensor(np.ones((int(self.nparticles), 2)), device=self.device, requires_grad=False))
-        self.p0 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
-        self.p1 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
+        # self.a_bf_kmean = nn.Parameter(torch.tensor(np.ones((int(self.nparticles), 2)), device=self.device, requires_grad=False))
+        # self.p0 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
+        # self.p1 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
 
     def forward(self, data, step, vnorm, cos_phi, sin_phi):
 
