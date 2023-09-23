@@ -341,7 +341,6 @@ class InteractionParticles(pyg.nn.MessagePassing):
         acc = self.propagate(edge_index, x=(x, x))
 
         if self.upgrade_type == 1:
-            print('new upgrade ...')
             embedding = self.a[x[:, 6].detach().cpu().numpy(), :]
             x_vx = x[:, 2:3] / self.vnorm[4]
             x_vy = x[:, 3:4] / self.vnorm[5]
@@ -464,7 +463,6 @@ class MixInteractionParticles(pyg.nn.MessagePassing):
         acc = self.propagate(edge_index, x=(x, x))
 
         if self.upgrade_type == 1:
-            print('new upgrade ...')
             embedding = self.a[x[:, 6].detach().cpu().numpy(), :]
             x_vx = x[:, 2:3] / self.vnorm[4]
             x_vy = x[:, 3:4] / self.vnorm[5]
