@@ -180,7 +180,6 @@ class InteractionParticles_0(pyg.nn.MessagePassing):
         r = torch.sum(bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) ** 2, axis=1)  # squared distance
 
         # psi = -self.p[2] * torch.exp(-r ** self.p[0] / (2 * sigma ** 2)) + self.p[3] * torch.exp(-r ** self.p[1] / (2 * sigma ** 2))
-        print(sigma)
         pp = self.p[x_i[:, 5].detach().cpu().numpy(),:]
         psi = -pp[:,2] * torch.exp(-r ** pp[:,0] / (2 * sigma ** 2)) + pp[:,3] * torch.exp(-r ** pp[:,1] / (2 * sigma ** 2))
 
@@ -952,6 +951,7 @@ def data_generate_2D(model_config, index_particles):
             with torch.no_grad():
                 y = model(dataset)
 
+            print(f'save graphs_data/graphs_particles_{dataset}/y_{run}_{it}.pt')
             torch.save(y, f'graphs_data/graphs_particles_{dataset}/y_{run}_{it}.pt')
 
             V1 += y
