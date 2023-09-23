@@ -880,7 +880,7 @@ def data_generate_2D(model_config, index_particles):
                 print(f'p{n, m}: {np.round(torch.squeeze(p[n, m]).detach().cpu().numpy(), 4)}')
                 torch.save(torch.squeeze(p[n, m]), f'graphs_data/graphs_particles_{dataset}/p_{n}_{m}.pt')
 
-        model = InteractionParticles_1(aggr_type=aggr_type, p=torch.squeeze(p), tau=tau)
+        model = InteractionParticles_1(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'])
         torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset}/model.pt')
 
     else:
