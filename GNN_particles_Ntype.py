@@ -1,4 +1,4 @@
-# version 1.15 230916
+# version 1.2 230923
 
 # use of https://github.com/gpeyre/numerical-tours/blob/master/python/ml_10_particle_system.ipynb
 
@@ -326,6 +326,7 @@ class InteractionParticles(pyg.nn.MessagePassing):
 
         self.p0 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
         self.p1 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
+        self.a_bf_kmean = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device='cuda:0', requires_grad=False))
 
 
     def forward(self, data, step, vnorm, cos_phi, sin_phi):
