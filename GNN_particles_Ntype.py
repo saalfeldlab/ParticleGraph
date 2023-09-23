@@ -2567,7 +2567,7 @@ if __name__ == '__main__':
 
         print_model_config(model_config)
         # data_generate(model_config, index_particles)
-        data_train(model_config, index_particles)
+        # data_train(model_config, index_particles)
         data_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0, bVisu = True)
 
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, index_particles)
