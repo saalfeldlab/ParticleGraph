@@ -180,7 +180,7 @@ class InteractionParticles_0(pyg.nn.MessagePassing):
         r = torch.sum(bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) ** 2, axis=1)  # squared distance
 
         # psi = -self.p[2] * torch.exp(-r ** self.p[0] / (2 * sigma ** 2)) + self.p[3] * torch.exp(-r ** self.p[1] / (2 * sigma ** 2))
-
+        print(sigma)
         pp = self.p[x_i[:, 5].detach().cpu().numpy(),:]
         psi = -pp[:,2] * torch.exp(-r ** pp[:,0] / (2 * sigma ** 2)) + pp[:,3] * torch.exp(-r ** pp[:,1] / (2 * sigma ** 2))
 
@@ -404,7 +404,6 @@ class InteractionParticles(pyg.nn.MessagePassing):
                 in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding),dim=-1)
 
         else :
-
             in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, x_i_type),dim=-1)
 
 
@@ -849,6 +848,7 @@ def data_generate_2D(model_config, index_particles):
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
     dataset = model_config['dataset']
+    nframes = model_config['nframes']
 
     if model_config['model'] == 'MixInteractionParticles':
         print(f'Generate MixInteractionParticles')
@@ -1038,6 +1038,7 @@ def data_generate_3D(model_config, index_particles):
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
     dataset = model_config['dataset']
+    nframes = model_config['nframes']
 
     if True:
         print(f'Generate MixInteractionParticles')
@@ -1191,6 +1192,7 @@ def data_train(model_config, index_particles):
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
     dataset = model_config['dataset']
+    nframes = model_config['nframes']
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(ntry))
@@ -1460,6 +1462,7 @@ def data_test(model_config, index_particles, prev_nparticles, new_nparticles, pr
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
     dataset = model_config['dataset']
+    nframes = model_config['nframes']
 
     if model_config['model'] == 'InteractionParticles':
         model = InteractionParticles(model_config, device)
@@ -1685,6 +1688,7 @@ def data_test_generate(model_config, index_particles):
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
     dataset = model_config['dataset']
+    nframes = model_config['nframes']
 
     if model_config['model'] == 'MixInteractionParticles':
         print(f'Generate MixInteractionParticles')
@@ -2199,8 +2203,6 @@ if __name__ == '__main__':
     device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
-
-    #
     # model_config = {'ntry': 700,
     #                 'input_size': 15,
     #                 'output_size': 2,
@@ -2520,7 +2522,6 @@ if __name__ == '__main__':
 
         sigma = model_config['sigma']
         aggr_type = model_config['aggr_type']
-        nframes = model_config['nframes']
 
         scaler = StandardScaler()
         S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
