@@ -2554,9 +2554,9 @@ if __name__ == '__main__':
 
     gtest_list=[10,11,15]
 
-    for gtest in range(1,10):
+    for gtest in range(3,4):
 
-        ntry = 59 + gtest
+        ntry = 49 + gtest
         model_config['ntry'] = ntry
         # model_config['nparticles'] = 3000
         # model_config['noise_level'] =  gtest_list[gtest%4] / 100
@@ -2598,10 +2598,10 @@ if __name__ == '__main__':
 
         time.sleep(0.5)
 
-        print_model_config(model_config)
-        # data_generate(model_config, index_particles)
-        data_train(model_config, index_particles)
-        data_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0, bVisu = True)
+        # print_model_config(model_config)
+        data_generate(model_config, index_particles)
+        # data_train(model_config, index_particles)
+        # data_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0, bVisu = True)
 
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, index_particles)
         # data_test(model_config, index_particles, prev_nparticles, new_nparticles, prev_index_particles, bVisu = True)
