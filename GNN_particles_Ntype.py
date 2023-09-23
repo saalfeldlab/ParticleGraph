@@ -846,6 +846,8 @@ def data_generate_2D(model_config, index_particles):
     f.close()
 
     radius = model_config['radius']
+    nparticle_types = model_config['nparticle_types']
+    nparticles = model_config['nparticles']
 
     if model_config['model'] == 'MixInteractionParticles':
         print(f'Generate MixInteractionParticles')
@@ -1014,42 +1016,6 @@ def data_generate_2D(model_config, index_particles):
 def data_generate_3D(model_config, index_particles):
 
     print('')
-    ntry = model_config['ntry']
-    print(f'ntry: {ntry}')
-    dataset = model_config['dataset']
-    print(f'dataset: {dataset}')
-    nparticles = model_config['nparticles']  # number of particles
-    print(f'nparticles: {nparticles}')
-    nparticle_types = model_config['nparticle_types']  # number of particles
-    print(f'nparticle_types: {nparticle_types}')
-    nframes = model_config['nframes']
-    print(f'nframes: {nframes}')
-    radius = model_config['radius']
-    print(f'radius: {radius}')
-    sigma = model_config['sigma']
-    print(f'sigma: {sigma}')
-    tau = model_config['tau']
-    print(f'tau: {tau}')
-    aggr_type = model_config['aggr_type']
-    print(f'aggr_type: {aggr_type}')
-    particle_embedding = model_config['particle_embedding']
-    print(f'particle_embedding: {particle_embedding}')
-    boundary = model_config['boundary']
-    print(f'boundary: {boundary}')
-    input_size = model_config['input_size']
-    print(f'input_size: {input_size}')
-    hidden_size = model_config['hidden_size']
-    print(f'hidden_size: {hidden_size}')
-    output_size = model_config['output_size']
-    print(f'output_size: {output_size}')
-    noise_level = model_config['noise_level']
-    print(f'noise_level: {noise_level}')
-    noise_type = model_config['noise_type']
-    print(f'noise_type: {noise_type}')
-    embedding_type = model_config['embedding_type']
-    print(f'embedding_type: {embedding_type}')
-
-    print('')
     print('Generating data ...')
 
     # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_data/*")
@@ -1066,6 +1032,10 @@ def data_generate_3D(model_config, index_particles):
     f = open(f"{folder}/model_config.json", "w")
     f.write(json_)
     f.close()
+
+    radius = model_config['radius']
+    nparticle_types = model_config['nparticle_types']
+    nparticles = model_config['nparticles']
 
     if True:
         print(f'Generate MixInteractionParticles')
@@ -1213,47 +1183,11 @@ def data_generate_3D(model_config, index_particles):
 def data_train(model_config, index_particles):
 
     print('')
-    ntry = model_config['ntry']
-    print(f'ntry: {ntry}')
-    dataset = model_config['dataset']
-    print(f'dataset: {dataset}')
-    nparticles = model_config['nparticles']  # number of particles
-    print(f'nparticles: {nparticles}')
-    nparticle_types = model_config['nparticle_types']  # number of particles
-    print(f'nparticle_types: {nparticle_types}')
-    nframes = model_config['nframes']
-    print(f'nframes: {nframes}')
-    radius = model_config['radius']
-    print(f'radius: {radius}')
-    sigma = model_config['sigma']
-    print(f'sigma: {sigma}')
-    tau = model_config['tau']
-    print(f'tau: {tau}')
-    aggr_type = model_config['aggr_type']
-    print(f'aggr_type: {aggr_type}')
-    particle_embedding = model_config['particle_embedding']
-    print(f'particle_embedding: {particle_embedding}')
-    boundary = model_config['boundary']
-    print(f'boundary: {boundary}')
-    input_size = model_config['input_size']
-    print(f'input_size: {input_size}')
-    hidden_size = model_config['hidden_size']
-    print(f'hidden_size: {hidden_size}')
-    output_size = model_config['output_size']
-    print(f'output_size: {output_size}')
-    data_augmentation = model_config['data_augmentation']
-    print(f'data_augmentation: {data_augmentation}')
-    noise_level = model_config['noise_level']
-    print(f'noise_level: {noise_level}')
-    noise_type = model_config['noise_type']
-    print(f'noise_type: {noise_type}')
-    embedding_type = model_config['embedding_type']
-    print(f'embedding_type: {embedding_type}')
-    embedding = model_config['embedding']
-    print(f'embedding: {embedding}')
-
-    print('')
     print('Training loop ...')
+
+    radius = model_config['radius']
+    nparticle_types = model_config['nparticle_types']
+    nparticles = model_config['nparticles']
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(ntry))
@@ -1520,6 +1454,7 @@ def data_test(model_config, index_particles, prev_nparticles, new_nparticles, pr
     print('Plot validation test ... ')
 
     radius = model_config['radius']
+    nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
 
     if model_config['model'] == 'InteractionParticles':
@@ -1743,6 +1678,8 @@ def data_test_generate(model_config, index_particles):
 
     nframes = 200
     radius = model_config['radius']
+    nparticle_types = model_config['nparticle_types']
+    nparticles = model_config['nparticles']
 
     if model_config['model'] == 'MixInteractionParticles':
         print(f'Generate MixInteractionParticles')
@@ -1930,6 +1867,8 @@ def data_train_generate(model_config, index_particles, arrow, prev_folder):
 
     nframes = 200
     radius = model_config['radius']
+    nparticle_types = model_config['nparticle_types']
+    nparticles = model_config['nparticles']
 
     p = torch.ones(nparticle_types, 4, device=device) + torch.rand(nparticle_types, 4, device=device)
     model = []
