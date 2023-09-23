@@ -2157,7 +2157,7 @@ def print_model_config (model_config):
     ntry = model_config['ntry']
     print(f'ntry: {ntry}')
     dataset_name = model_config['dataset']
-    print(f'dataset: {dataset_name}')
+    print(f'dataset_name: {dataset_name}')
     nparticles = model_config['nparticles']  # number of particles
     print(f'nparticles: {nparticles}')
     nparticle_types = model_config['nparticle_types']  # number of particles
@@ -2190,6 +2190,10 @@ def print_model_config (model_config):
     print(f'embedding_type: {embedding_type}')
     embedding = model_config['embedding']
     print(f'embedding: {embedding}')
+    if model['upgrade_type']==0
+        print ('Acc = aggr(message)')
+    if model['upgrade_type']==1
+        print ('Acc = MLP(aggr(message),velocity,embedding')
 
 
 if __name__ == '__main__':
@@ -2500,9 +2504,9 @@ if __name__ == '__main__':
 
     gtest_list=[10,11,15]
 
-    for gtest in range(3,4):
+    for gtest in range(10):
 
-        ntry = 49 + gtest
+        ntry = 59 + gtest
         model_config['ntry'] = ntry
         # model_config['nparticles'] = 3000
         # model_config['noise_level'] =  gtest_list[gtest%4] / 100
@@ -2544,9 +2548,9 @@ if __name__ == '__main__':
         time.sleep(0.5)
 
         print_model_config(model_config)
-        data_generate(model_config, index_particles)
-        # data_train(model_config, index_particles)
-        # data_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0, bVisu = True)
+        # data_generate(model_config, index_particles)
+        data_train(model_config, index_particles)
+        data_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0, bVisu = True)
 
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, index_particles)
         # data_test(model_config, index_particles, prev_nparticles, new_nparticles, prev_index_particles, bVisu = True)
