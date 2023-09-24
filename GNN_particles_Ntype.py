@@ -831,6 +831,11 @@ class ResNetGNN(torch.nn.Module):
 
 def data_generate(model_config, index_particles):
 
+    dataset_name = model_config['dataset']
+
+    folder = f'./graphs_data/graphs_particles_{dataset_name}/'
+    os.makedirs(folder, exist_ok=True)
+
     if model_config['model']=='InteractionParticles3D' :
         data_generate_3D(model_config, index_particles)
     else:
@@ -862,6 +867,11 @@ def data_generate_2D(model_config, index_particles):
     nparticles = model_config['nparticles']
     dataset_name = model_config['dataset']
     nframes = model_config['nframes']
+
+    index_particles = []
+    np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
+    for n in range(model_config['nparticle_types']):
+        index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
     if model_config['model'] == 'MixInteractionParticles':
         print(f'Generate MixInteractionParticles')
@@ -1056,6 +1066,11 @@ def data_generate_3D(model_config, index_particles):
     dataset_name = model_config['dataset']
     nframes = model_config['nframes']
 
+    index_particles = []
+    np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
+    for n in range(model_config['nparticle_types']):
+        index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
+
     if True:
         print(f'Generate MixInteractionParticles')
 
@@ -1214,6 +1229,11 @@ def data_train(model_config, index_particles,gtest):
     noise_type = model_config['noise_type']
     embedding_type = model_config['embedding_type']
     embedding = model_config['embedding']
+
+    index_particles = []
+    np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
+    for n in range(model_config['nparticle_types']):
+        index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
     gtest_list= [1, 2, 5, 10, 100]
     weight_model_a = gtest_list[gtest]
@@ -1481,7 +1501,7 @@ def data_train(model_config, index_particles,gtest):
         plt.savefig(f"./tmp_training/Fig_{ntry}_{epoch}.tif")
         plt.close()
 
-def data_test(model_config, index_particles, prev_nparticles, new_nparticles, prev_index_particles, bVisu):
+def data_test(model_config, bVisu=False, index_particles=0, prev_nparticles=0, new_nparticles=0, prev_index_particles=0):
     # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_recons/*")
     # for f in files:
     #     os.remove(f)
@@ -1494,6 +1514,13 @@ def data_test(model_config, index_particles, prev_nparticles, new_nparticles, pr
     nparticles = model_config['nparticles']
     dataset_name = model_config['dataset']
     nframes = model_config['nframes']
+
+    if index_particles == 0:
+        index_particles = []
+        np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
+        for n in range(model_config['nparticle_types']):
+            index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
+
 
     if model_config['model'] == 'InteractionParticles':
         model = InteractionParticles(model_config, device)
@@ -1709,7 +1736,7 @@ def data_test(model_config, index_particles, prev_nparticles, new_nparticles, pr
     print(f'Final MMD: {discrepency}')
     # print(f'Final Sxy: {Sxy.item()}')
 
-def data_test_generate(model_config, index_particles):
+def data_test_generate(model_config):
 
     print('')
     print('Generating test data ...')
@@ -1720,6 +1747,11 @@ def data_test_generate(model_config, index_particles):
     nparticles = model_config['nparticles']
     dataset_name = model_config['dataset']
     nframes = model_config['nframes']
+
+    index_particles = []
+    np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
+    for n in range(model_config['nparticle_types']):
+        index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
     if model_config['model'] == 'MixInteractionParticles':
         print(f'Generate MixInteractionParticles')
@@ -1900,7 +1932,7 @@ def data_test_generate(model_config, index_particles):
 
     return prev_nparticles, new_nparticles, prev_index_particles, index_particles
 
-def data_train_generate(model_config, index_particles, arrow, prev_folder):
+def data_train_generate(model_config, arrow, prev_folder):
 
     print('')
     print('Generating training data ...')
@@ -2238,6 +2270,9 @@ if __name__ == '__main__':
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
+    scaler = StandardScaler()
+    S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
+
     # model_config = {'ntry': 700,
     #                 'input_size': 15,
     #                 'output_size': 2,
@@ -2532,6 +2567,7 @@ if __name__ == '__main__':
                     'embedding': 3,
                     'model': 'MixInteractionParticles',
                     'upgrade_type':1}
+
     #
     # model_config = {'ntry': 70,
     #                 'input_size': 10,
@@ -2607,16 +2643,9 @@ if __name__ == '__main__':
         # dataset_name = model_config['dataset']
         dataset_name = '230902_' + str(56)
         model_config['dataset'] = dataset_name
-        # model_config['nparticles'] = gtest_list[gtest]
-
-        folder = f'./graphs_data/graphs_particles_{dataset_name}/'
-        os.makedirs(folder, exist_ok=True)
 
         sigma = model_config['sigma']
         aggr_type = model_config['aggr_type']
-
-        scaler = StandardScaler()
-        S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
         if model_config['boundary'] == 'no':  # change this for usual BC
             def bc_pos(X):
@@ -2629,23 +2658,19 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        index_particles = []
-        np_i =int(model_config['nparticles'] / model_config['nparticle_types'])
-        for n in range(model_config['nparticle_types']):
-            index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
-
         time.sleep(0.5)
 
         print_model_config(model_config)
-        # data_generate(model_config, index_particles)
-        data_train(model_config, index_particles,gtest)
-        data_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0, bVisu = True)
+        # data_generate(model_config)
+        data_train(model_config,gtest)
+
+        data_test(model_config, bVisu = True)
 
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, index_particles)
-        # data_test(model_config, index_particles, prev_nparticles, new_nparticles, prev_index_particles, bVisu = True)
+        # data_test(model_config, bVisu = True, index_particles, prev_nparticles, new_nparticles, prev_index_particles)
 
-        # data_train_generate(model_config, index_particles, 'geomloss', f'./graphs_data/graphs_particles_230902_43/')
-        # data_train_generate(model_config, index_particles, 'backward', f'./graphs_data/graphs_particles_230902_43/')
+        # data_train_generate(model_config, 'geomloss', f'./graphs_data/graphs_particles_230902_43/')
+        # data_train_generate(model_config, 'backward', f'./graphs_data/graphs_particles_230902_43/')
 
 
 
