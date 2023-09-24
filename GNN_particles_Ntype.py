@@ -207,7 +207,6 @@ class InteractionParticles_1(pyg.nn.MessagePassing):
         psi = -pp[:,2] * torch.exp(-r ** pp[:,0] / (2 * sigma ** 2)) + pp[:,3] * torch.exp(-r ** pp[:,1] / (2 * sigma ** 2))
 
         return psi[:, None] * bc_diff(x_i[:, 0:2] - x_j[:, 0:2])
-
 class InteractionParticles_2(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -1229,14 +1228,15 @@ def data_train(model_config,gtest):
     noise_type = model_config['noise_type']
     embedding_type = model_config['embedding_type']
     embedding = model_config['embedding']
+    batch_size = model_config['batch_size']
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
     for n in range(model_config['nparticle_types']):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
-    gtest_list= [1, 2, 5, 10, 100]
-    weight_model_a = gtest_list[gtest]
+    gtest_list = [8, 4, 2, 1]
+    batch_size = gtest_list[gtest]
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(ntry))
@@ -1278,15 +1278,16 @@ def data_train(model_config,gtest):
     if model_config['model'] == 'InteractionParticles':
         model = InteractionParticles(model_config, device)
         print(f'Training InteractionParticles')
-    if model_config['model'] == 'InteractionParticles3D':
-        model = InteractionParticles3D(model_config, device)
-        print(f'Training InteractionParticles3d')
     if model_config['model'] == 'MixInteractionParticles':
         model = MixInteractionParticles(model_config, device)
         print(f'Training MixInteractionParticles')
     if model_config['model'] == 'ResNetGNN':
         model = ResNetGNN(model_config, device)
         print(f'Training ResNetGNN')
+    if model_config['model'] == 'InteractionParticles3D':
+        model = InteractionParticles3D(model_config, device)
+        print(f'Training InteractionParticles3d')
+
     # state_dict = torch.load(net)
     # model.load_state_dict(state_dict['model_state_dict'])
 
@@ -1312,7 +1313,6 @@ def data_train(model_config,gtest):
 
     model.train()
     best_loss = np.inf
-    stp = 1
 
     if data_augmentation:
         data_augmentation_loop = 20
@@ -1335,61 +1335,57 @@ def data_train(model_config,gtest):
 
         total_loss = 0
 
-        for N in range(1, nframes * data_augmentation_loop, stp):
+        for N in range(1, nframes * data_augmentation_loop // batch_size):
+
+            phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
+            cos_phi = torch.cos(phi)
+            sin_phi = torch.sin(phi)
 
             run = 1 + np.random.randint(NGraphs - 1)
-            k = np.random.randint(nframes - 1)
 
-            x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{k}.pt')
-            x = x.to(device)
+            dataset_batch = []
+            for batch in range(batch_size):
 
-            if (noise_type > 0):
+                k = np.random.randint(nframes - 1)
+                x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{k}.pt').to(device)
+                if (noise_type > 0):
+                    noise = torch.randn((x.shape[0], 4), device=device) * noise_level
+                    if (noise_type == 1) | (noise_type == 3):
+                        x[:, 0:2] = x[:, 0:2] + noise[:, 0:2] * radius
+                        x[:, 2:4] = x[:, 2:4] + noise[:, 2:4] * torch.std(x[:, 2:4])
+                distance = torch.sum(bc_diff(x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
+                adj_t = (distance < radius ** 2).float() * 1
+                t = torch.Tensor([radius ** 2])
+                edges = adj_t.nonzero().t().contiguous()
+                dataset = data.Data(x=x[:, :], edge_index=edges)
+                dataset_batch.append(dataset)
 
-                noise = torch.randn((x.shape[0], 4), device=device) * noise_level
-                if (noise_type == 1) | (noise_type == 3):
-                    x[:, 0:2] = x[:, 0:2] + noise[:, 0:2] * radius
-                    x[:, 2:4] = x[:, 2:4] + noise[:, 2:4] * torch.std(x[:, 2:4])
+                y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{k}.pt')
+                y = y.to(device)
+                y[:, 0] = y[:, 0] / ynorm[4]
+                y[:, 1] = y[:, 1] / ynorm[5]
+                if model_config['model'] == 'InteractionParticles3D':
+                    y[:, 2] = y[:, 2] / ynorm[6]
+                if (noise_type > 1):
+                    noise = torch.randn((y.shape[0], 2), device=device) * noise_level
+                    y[:, 0:2] = y[:, 0:2] + noise[:, 0:2] * torch.std(y[:, 0:2])
+                if data_augmentation:
+                    new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
+                    new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
+                    y[:, 0] = new_x
+                    y[:, 1] = new_y
+                if batch==0:
+                    y_batch=y
+                else:
+                    y_batch=torch.cat((y_batch, y), axis=0)
+            my_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
 
-            if data_augmentation:
-                phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
-                cos_phi = torch.cos(phi)
-                sin_phi = torch.sin(phi)
-
-            distance = torch.sum(bc_diff(x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
-            adj_t = (distance < radius ** 2).float() * 1
-            t = torch.Tensor([radius ** 2])
-            edges = adj_t.nonzero().t().contiguous()
-            y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{k}.pt')
-            y = y.to(device)
-            # y.requires_grad = False
-            y[:, 0] = y[:, 0] / ynorm[4]
-            y[:, 1] = y[:, 1] / ynorm[5]
-            if model_config['model'] == 'InteractionParticles3D':
-                y[:, 2] = y[:, 2] / ynorm[6]
-
-            if (noise_type >1):
-                noise = torch.randn((y.shape[0], 2), device=device) * noise_level
-                y[:, 0:2] = y[:, 0:2] + noise[:, 0:2] * torch.std(y[:, 0:2])
-
-            if data_augmentation:
-                new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
-                new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
-                y[:, 0] = new_x
-                y[:, 1] = new_y
-
-            dataset = data.Data(x=x[:, :], edge_index=edges)
-
-            # dataset1 = data.Data(x=x[:, :], edge_index=edges)
-            # dataset2 = data.Data(x=x[:, :], edge_index=edges)
-            # my_loader = DataLoader([dataset1, dataset2], batch_size=2, shuffle=False)
-            # for batch in my_loader:
-            #     pred = model(batch, step = 1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
+            for batch in my_loader:
+                pred = model(batch, step = 1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
 
             optimizer.zero_grad()
-
             pred = model(dataset, step = 1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
-
-            loss = (pred - y).norm(2) + weight_model_a * torch.std(model.a,axis=0).norm(1)
+            loss = (pred - y_batch).norm(2)
             loss.backward()
             optimizer.step()
 
@@ -1452,7 +1448,6 @@ def data_train(model_config,gtest):
 
         list_loss.append(total_loss / N / nparticles)
         list_gap.append(gap)
-
 
         fig = plt.figure(figsize=(13, 8))
         # plt.ion()
@@ -1623,8 +1618,7 @@ def data_test(model_config, bVisu=False, index_particles=0, prev_nparticles=0, n
         # Sxy = S_e(x[:, 0:2], x0[:, 0:2])
         # Sxy_list.append(Sxy.item())
 
-        stp = 5
-        if (it % stp == 0) & bVisu:
+        if (it % 5 == 0) & bVisu:
 
             distance2 = torch.sum((x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
             adj_t2 = ((distance2 < radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
@@ -2255,9 +2249,12 @@ def print_model_config (model_config):
     embedding = model_config['embedding']
     print(f'embedding: {embedding}')
     if model_config['upgrade_type']==0:
-        print ('Acc = aggr(message)')
+        print ('acc = aggr(message)')
     if model_config['upgrade_type']==1:
-        print ('Acc = MLP(aggr(message),velocity,embedding')
+        print ('acc = MLP(aggr(message),velocity,embedding')
+    batch_size = model_config['batch_size']
+    print(f'batch_size = {batch_size}')
+
 
 if __name__ == '__main__':
 
@@ -2266,7 +2263,7 @@ if __name__ == '__main__':
     print('')
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -2561,6 +2558,7 @@ if __name__ == '__main__':
                     'aggr_type' : 'mean',
                     'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                     'data_augmentation' : True,
+                    'batch_size': 2,
                     'particle_embedding': True,
                     'embedding_type': 'none',
                     'embedding': 3,
@@ -2627,8 +2625,24 @@ if __name__ == '__main__':
     # # data_generate(model_config, index_particles)
     # data_train(model_config, index_particles, gtest=0)
 
+    if model_config['boundary'] == 'no':  # change this for usual BC
+        def bc_pos(X):
+            return X
 
-    for gtest in range(5):
+
+        def bc_diff(D):
+            return D
+    else:
+        def bc_pos(X):
+            return torch.remainder(X, 1.0)
+
+
+        def bc_diff(D):
+            return torch.remainder(D - .5, 1.0) - .5
+    sigma = model_config['sigma']
+    aggr_type = model_config['aggr_type']
+
+    for gtest in range(4):
 
         ntry = 66+gtest
         model_config['ntry'] = ntry
@@ -2643,25 +2657,9 @@ if __name__ == '__main__':
         dataset_name = '230902_' + str(56)
         model_config['dataset'] = dataset_name
 
-        if model_config['boundary'] == 'no':  # change this for usual BC
-            def bc_pos(X):
-                return X
-            def bc_diff(D):
-                return D
-        else:
-            def bc_pos(X):
-                return torch.remainder(X, 1.0)
-            def bc_diff(D):
-                return torch.remainder(D - .5, 1.0) - .5
-        sigma = model_config['sigma']
-        aggr_type = model_config['aggr_type']
-
-        time.sleep(0.5)
-
-        print_model_config(model_config)
-        data_generate(model_config)
+        # print_model_config(model_config)
+        # data_generate(model_config)
         data_train(model_config,gtest)
-
         data_test(model_config, bVisu = True)
 
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, index_particles)
