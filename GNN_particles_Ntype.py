@@ -1215,7 +1215,7 @@ def data_train(model_config, index_particles,gtest):
     embedding_type = model_config['embedding_type']
     embedding = model_config['embedding']
 
-    gtest_list= [1, 10, 100, 1E3]
+    gtest_list= [1, 2, 5, 10, 100]
     weight_model_a = gtest_list[gtest]
 
     l_dir = os.path.join('.', 'log')
@@ -2593,7 +2593,7 @@ if __name__ == '__main__':
     # data_train(model_config, index_particles, gtest=0)
 
 
-    for gtest in range(4):
+    for gtest in range(5):
 
         ntry = 66+gtest
         model_config['ntry'] = ntry
