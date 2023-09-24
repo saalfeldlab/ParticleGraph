@@ -33,10 +33,8 @@ from tifffile import imread
 
 def distmat_square(X, Y):
     return torch.sum(bc_diff(X[:, None, :] - Y[None, :, :]) ** 2, axis=2)
-
 def kernel(X, Y):
     return -torch.sqrt(distmat_square(X, Y))
-
 def MMD(X, Y):
     n = X.shape[0]
     m = Y.shape[0]
@@ -44,10 +42,8 @@ def MMD(X, Y):
         torch.sum(kernel(Y, Y)) / m ** 2 - \
         2 * torch.sum(kernel(X, Y)) / (n * m)
     return a.item()
-
 def psi(r, p):
     return -p[2] * torch.exp(-r ** p[0] / (2 * sigma ** 2)) + p[3] * torch.exp(-r ** p[1] / (2 * sigma ** 2))
-
 def normalize99(Y, lower=1, upper=99):
     """ normalize image so 0.0 is 1st percentile and 1.0 is 99th percentile """
     X = Y.copy()
@@ -175,14 +171,16 @@ class InteractionParticles_0(pyg.nn.MessagePassing):
         acc = newv - oldv
         return acc
 
+
     def message(self, x_i, x_j):
         r = torch.sum(bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) ** 2, axis=1)  # squared distance
 
         # psi = -self.p[2] * torch.exp(-r ** self.p[0] / (2 * sigma ** 2)) + self.p[3] * torch.exp(-r ** self.p[1] / (2 * sigma ** 2))
         pp = self.p[x_i[:, 5].detach().cpu().numpy(),:]
-        psi = -pp[:,2] * torch.exp(-r ** pp[:,0] / (2 * sigma ** 2)) + pp[:,3] * torch.exp(-r ** pp[:,1] / (2 * sigma ** 2))
+        psi = 10 * torch.exp(-r**2 / (2 * sigma ** 2)) - pp[:,2] * torch.exp(-r ** pp[:,0] / (2 * sigma ** 2)) + pp[:,3] * torch.exp(-r ** pp[:,1] / (2 * sigma ** 2))
 
         return psi[:, None] * bc_diff(x_i[:, 0:2] - x_j[:, 0:2])
+
 class InteractionParticles_1(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -857,6 +855,7 @@ def data_generate_2D(model_config, index_particles):
     f.write(json_)
     f.close()
 
+    ntry = model_config['ntry']
     radius = model_config['radius']
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
@@ -911,10 +910,14 @@ def data_generate_2D(model_config, index_particles):
         #     p[n] = torch.load(f'graphs_data/graphs_particles_230902_30/p_{n}.pt')
         #     print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
         # p[2]=p[1]*0.975
+
         # p[0] = torch.tensor([1.0413, 1.5615, 1.6233, 1.6012])
         # p[1] = torch.tensor([1.8308, 1.9055, 1.7667, 1.0855])
         # p[2] = torch.tensor([1.785, 1.8579,1.7226, 1.0584])
 
+        p[0] = torch.tensor([1.8194, 1.1017, 1.059, 1.0362])
+        p[1] = torch.tensor([1.7327, 1.2579, 1.6714, 1.9119])
+        p[2] = torch.tensor([1.9372, 1.8061, 1.2267, 1.702])
 
         for n in range(nparticle_types):
             # model.append(InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p[n]), tau=tau))
@@ -923,7 +926,7 @@ def data_generate_2D(model_config, index_particles):
             print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
             torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
 
-        model = InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p), tau=tau)
+        model = InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'])
         torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model.pt')
 
     time.sleep(0.5)
@@ -1004,7 +1007,6 @@ def data_generate_2D(model_config, index_particles):
                             plt.text(-0.25, 1.25 - N * 0.05, f'p{n}: {np.round(p[n,m].detach().cpu().numpy(), 4)}',color='k')
                             N+=1
                 else:
-                    plt.text(-0.25, 1.33, f'sigma:{sigma} N:{nparticles} nframes:{nframes}')
                     for n in range(nparticle_types):
                         plt.text(-0.25, 1.25 - n * 0.05, f'p{n}: {np.round(p[n].detach().cpu().numpy(), 4)}',
                                  color='k')
@@ -1196,7 +1198,7 @@ def data_generate_3D(model_config, index_particles):
                 plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
                 plt.close()
 
-def data_train(model_config, index_particles):
+def data_train(model_config, index_particles,gtest):
 
     print('')
     print('Training loop ...')
@@ -1210,6 +1212,9 @@ def data_train(model_config, index_particles):
     noise_type = model_config['noise_type']
     embedding_type = model_config['embedding_type']
     embedding = model_config['embedding']
+
+    gtest_list= [1, 10, 100, 1E3]
+    weight_model_a = gtest_list[gtest]
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(ntry))
@@ -1355,7 +1360,7 @@ def data_train(model_config, index_particles):
             optimizer.zero_grad()
             pred = model(dataset, step = 1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
 
-            loss = (pred - y).norm(2)
+            loss = (pred - y).norm(2) + weight_model_a * model.a.norm(1)
             loss.backward()
             optimizer.step()
 
@@ -2221,7 +2226,7 @@ if __name__ == '__main__':
     print('')
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # model_config = {'ntry': 700,
@@ -2519,12 +2524,69 @@ if __name__ == '__main__':
                     'model': 'MixInteractionParticles',
                     'upgrade_type':1}
 
+    # model_config = {'ntry': 70,
+    #                 'input_size': 13,
+    #                 'output_size': 2,
+    #                 'hidden_size': 64,
+    #                 'n_mp_layers': 5,
+    #                 'noise_level': 0,
+    #                 'noise_type': 0,
+    #                 'radius': 0.075,
+    #                 'dataset': '230902_70',
+    #                 'nparticles': 4800,
+    #                 'nparticle_types': 3,
+    #                 'nframes': 200,
+    #                 'sigma': .005,
+    #                 'tau': 0.1,
+    #                 'aggr_type' : 'mean',
+    #                 'particle_embedding': True,
+    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+    #                 'data_augmentation' : True,
+    #                 'embedding_type': 'none',
+    #                 'embedding': 3,
+    #                 'model': 'InteractionParticles',
+    #                 'upgrade_type':1}
+    #
+    # dataset_name = model_config['dataset']
+    # folder = f'./graphs_data/graphs_particles_{dataset_name}/'
+    # os.makedirs(folder, exist_ok=True)
+    #
+    # sigma = model_config['sigma']
+    # aggr_type = model_config['aggr_type']
+    #
+    # scaler = StandardScaler()
+    # S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
+    #
+    # if model_config['boundary'] == 'no':  # change this for usual BC
+    #     def bc_pos(X):
+    #         return X
+    #
+    #
+    #     def bc_diff(D):
+    #         return D
+    # else:
+    #     def bc_pos(X):
+    #         return torch.remainder(X, 1.0)
+    #
+    #
+    #     def bc_diff(D):
+    #         return torch.remainder(D - .5, 1.0) - .5
+    #
+    # index_particles = []
+    # np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
+    # for n in range(model_config['nparticle_types']):
+    #     index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
+    #
+    # time.sleep(0.5)
+    #
+    # print_model_config(model_config)
+    # data_generate(model_config, index_particles)
+    #
+    # gtest_list=[10,11,15]
 
-    gtest_list=[10,11,15]
+    for gtest in range(4):
 
-    for gtest in range(1,10):
-
-        ntry = 59 + gtest
+        ntry = 66+gtest
         model_config['ntry'] = ntry
         # model_config['nparticles'] = 3000
         # model_config['noise_level'] =  gtest_list[gtest%4] / 100
@@ -2534,7 +2596,7 @@ if __name__ == '__main__':
         # model_config['ntry'] = ntry
         # model_config['hidden_size'] = gtest_list[gtest]
         # dataset_name = model_config['dataset']
-        dataset_name = '230902_' + str(49 + gtest)
+        dataset_name = '230902_' + str(56)
         model_config['dataset'] = dataset_name
         # model_config['nparticles'] = gtest_list[gtest]
 
@@ -2567,7 +2629,7 @@ if __name__ == '__main__':
 
         print_model_config(model_config)
         # data_generate(model_config, index_particles)
-        data_train(model_config, index_particles)
+        data_train(model_config, index_particles,gtest)
         data_test(model_config, index_particles, prev_nparticles=0, new_nparticles=0, prev_index_particles=0, bVisu = True)
 
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, index_particles)
