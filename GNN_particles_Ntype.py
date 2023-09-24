@@ -1235,8 +1235,8 @@ def data_train(model_config,gtest):
     for n in range(model_config['nparticle_types']):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
-    gtest_list = [8, 4, 2, 1]
-    batch_size = gtest_list[gtest]
+    gtest_list = [5E-4, ]
+    weight_decay = gtest_list[gtest]
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(ntry))
@@ -1309,7 +1309,7 @@ def data_train(model_config,gtest):
 
     time.sleep(0.5)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=1E-3)  # , weight_decay=5e-4)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1E-2) #, weight_decay=weight_decay)
 
     model.train()
     best_loss = np.inf
@@ -1331,7 +1331,7 @@ def data_train(model_config,gtest):
     for epoch in range(40):
 
         if epoch == 30:
-            optimizer = torch.optim.Adam(model.parameters(), lr=1E-4)  # , weight_decay=5e-4)
+            optimizer = torch.optim.Adam(model.parameters(), lr=1E-3) # weight_decay=weight_decay)
 
         total_loss = 0
 
@@ -1414,12 +1414,12 @@ def data_train(model_config,gtest):
 
         torch.save(D_nm, f"./tmp_training/D_nm_{ntry}.pt")
 
-        if (total_loss / nframes / data_augmentation_loop / nparticles < best_loss):
-            best_loss = total_loss / nframes / data_augmentation_loop / nparticles
+        if (total_loss  < best_loss):
+            best_loss = total_loss
             torch.save({'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict()},
                        os.path.join(log_dir, 'models', f'best_model_with_{NGraphs-1}_graphs.pt'))
-            print("Epoch {}. Loss: {:.6f} geomloss {:.2f} saving model  ".format(epoch,total_loss / N / nparticles,torch.sum(D_nm[epoch]).item()))
+            print("Epoch {}. Loss: {:.6f} geomloss {:.2f} saving model  ".format(epoch,total_loss / N / nparticles / batch_size ,torch.sum(D_nm[epoch]).item()))
         else:
             print(
                 "Epoch {}. Loss: {:.6f} geomloss {:.2f} ".format(epoch, total_loss / N / nparticles,torch.sum(D_nm[epoch]).item()))
@@ -1446,7 +1446,7 @@ def data_train(model_config,gtest):
                 embedding_particle.append(embedding[index_particles[n], :])
             best_loss = np.inf
 
-        list_loss.append(total_loss / N / nparticles)
+        list_loss.append(total_loss / N / nparticles / batch_size)
         list_gap.append(gap)
 
         fig = plt.figure(figsize=(13, 8))
@@ -2642,7 +2642,7 @@ if __name__ == '__main__':
     sigma = model_config['sigma']
     aggr_type = model_config['aggr_type']
 
-    for gtest in range(4):
+    for gtest in range(1):
 
         ntry = 66+gtest
         model_config['ntry'] = ntry
