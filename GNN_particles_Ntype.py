@@ -1379,11 +1379,10 @@ def data_train(model_config,gtest):
                 else:
                     y_batch=torch.cat((y_batch, y), axis=0)
 
-            my_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
+            batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
 
-            for batch in my_loader:
-                print(batch)
+            for batch in batch_loader:
                 pred = model(batch, step = 1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
 
             loss = (pred - y_batch).norm(2)
