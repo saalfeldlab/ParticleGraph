@@ -14,6 +14,7 @@ import torch_geometric as pyg
 import torch_geometric.data as data
 import math
 import torch_geometric.utils as pyg_utils
+from torch_geometric.loader import DataLoader
 import torch.nn as nn
 from torch.nn import functional as F
 import time
@@ -177,7 +178,7 @@ class InteractionParticles_0(pyg.nn.MessagePassing):
 
         # psi = -self.p[2] * torch.exp(-r ** self.p[0] / (2 * sigma ** 2)) + self.p[3] * torch.exp(-r ** self.p[1] / (2 * sigma ** 2))
         pp = self.p[x_i[:, 5].detach().cpu().numpy(),:]
-        psi = 10 * torch.exp(-r**2 / (2 * sigma ** 2)) - pp[:,2] * torch.exp(-r ** pp[:,0] / (2 * sigma ** 2)) + pp[:,3] * torch.exp(-r ** pp[:,1] / (2 * sigma ** 2))
+        psi = - pp[:,2] * torch.exp(-r ** pp[:,0] / (2 * sigma ** 2)) + pp[:,3] * torch.exp(-r ** pp[:,1] / (2 * sigma ** 2))
 
         return psi[:, None] * bc_diff(x_i[:, 0:2] - x_j[:, 0:2])
 
@@ -1203,6 +1204,7 @@ def data_train(model_config, index_particles,gtest):
     print('')
     print('Training loop ...')
 
+    ntry = model_config['ntry']
     radius = model_config['radius']
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
@@ -1357,10 +1359,17 @@ def data_train(model_config, index_particles,gtest):
 
             dataset = data.Data(x=x[:, :], edge_index=edges)
 
+            # dataset1 = data.Data(x=x[:, :], edge_index=edges)
+            # dataset2 = data.Data(x=x[:, :], edge_index=edges)
+            # my_loader = DataLoader([dataset1, dataset2], batch_size=2, shuffle=False)
+            # for batch in my_loader:
+            #     pred = model(batch, step = 1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
+
             optimizer.zero_grad()
+
             pred = model(dataset, step = 1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
 
-            loss = (pred - y).norm(2) + weight_model_a * model.a.norm(1)
+            loss = (pred - y).norm(2) + weight_model_a * torch.std(model.a,axis=0).norm(1)
             loss.backward()
             optimizer.step()
 
@@ -2523,9 +2532,9 @@ if __name__ == '__main__':
                     'embedding': 3,
                     'model': 'MixInteractionParticles',
                     'upgrade_type':1}
-
+    #
     # model_config = {'ntry': 70,
-    #                 'input_size': 13,
+    #                 'input_size': 10,
     #                 'output_size': 2,
     #                 'hidden_size': 64,
     #                 'n_mp_layers': 5,
@@ -2545,7 +2554,7 @@ if __name__ == '__main__':
     #                 'embedding_type': 'none',
     #                 'embedding': 3,
     #                 'model': 'InteractionParticles',
-    #                 'upgrade_type':1}
+    #                 'upgrade_type':0}
     #
     # dataset_name = model_config['dataset']
     # folder = f'./graphs_data/graphs_particles_{dataset_name}/'
@@ -2580,9 +2589,9 @@ if __name__ == '__main__':
     # time.sleep(0.5)
     #
     # print_model_config(model_config)
-    # data_generate(model_config, index_particles)
-    #
-    # gtest_list=[10,11,15]
+    # # data_generate(model_config, index_particles)
+    # data_train(model_config, index_particles, gtest=0)
+
 
     for gtest in range(4):
 
