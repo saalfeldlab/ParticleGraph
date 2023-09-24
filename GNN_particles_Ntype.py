@@ -828,17 +828,12 @@ class ResNetGNN(torch.nn.Module):
 
         return pred
 
-def data_generate(model_config, index_particles):
-
-    dataset_name = model_config['dataset']
-
-    folder = f'./graphs_data/graphs_particles_{dataset_name}/'
-    os.makedirs(folder, exist_ok=True)
+def data_generate(model_config):
 
     if model_config['model']=='InteractionParticles3D' :
-        data_generate_3D(model_config, index_particles)
+        data_generate_3D(model_config)
     else:
-        data_generate_2D(model_config, index_particles)
+        data_generate_2D(model_config)
 
 def data_generate_2D(model_config):
 
@@ -849,6 +844,9 @@ def data_generate_2D(model_config):
     # for f in files:
     #     os.remove(f)
 
+    dataset_name = model_config['dataset']
+    folder = f'./graphs_data/graphs_particles_{dataset_name}/'
+    os.makedirs(folder, exist_ok=True)
     files = glob.glob(f"{folder}/*")
     for f in files:
         os.remove(f)
@@ -1048,6 +1046,9 @@ def data_generate_3D(model_config):
     # for f in files:
     #     os.remove(f)
 
+    dataset_name = model_config['dataset']
+    folder = f'./graphs_data/graphs_particles_{dataset_name}/'
+    os.makedirs(folder, exist_ok=True)
     files = glob.glob(f"{folder}/*")
     for f in files:
         os.remove(f)
@@ -2658,7 +2659,7 @@ if __name__ == '__main__':
         time.sleep(0.5)
 
         print_model_config(model_config)
-        # data_generate(model_config)
+        data_generate(model_config)
         data_train(model_config,gtest)
 
         data_test(model_config, bVisu = True)
