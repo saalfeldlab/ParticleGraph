@@ -1422,7 +1422,7 @@ def data_train(model_config,gtest):
             print("Epoch {}. Loss: {:.6f} geomloss {:.2f} saving model  ".format(epoch,total_loss / N / nparticles / batch_size ,torch.sum(D_nm[epoch]).item()))
         else:
             print(
-                "Epoch {}. Loss: {:.6f} geomloss {:.2f} ".format(epoch, total_loss / N / nparticles,torch.sum(D_nm[epoch]).item()))
+                "Epoch {}. Loss: {:.6f} geomloss {:.2f} ".format(epoch, total_loss / N / nparticles / batch_size,torch.sum(D_nm[epoch]).item()))
 
         if epoch == 29:
             if data_augmentation:
@@ -2659,7 +2659,7 @@ if __name__ == '__main__':
 
         # print_model_config(model_config)
         # data_generate(model_config)
-        data_train(model_config,gtest)
+        # data_train(model_config,gtest)
         data_test(model_config, bVisu = True)
 
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, index_particles)
