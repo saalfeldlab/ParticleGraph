@@ -1378,13 +1378,14 @@ def data_train(model_config,gtest):
                     y_batch=y
                 else:
                     y_batch=torch.cat((y_batch, y), axis=0)
+
             my_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
+            optimizer.zero_grad()
 
             for batch in my_loader:
+                print(batch)
                 pred = model(batch, step = 1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
 
-            optimizer.zero_grad()
-            pred = model(dataset, step = 1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
             loss = (pred - y_batch).norm(2)
             loss.backward()
             optimizer.step()
@@ -2558,7 +2559,7 @@ if __name__ == '__main__':
                     'aggr_type' : 'mean',
                     'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                     'data_augmentation' : True,
-                    'batch_size': 2,
+                    'batch_size': 8,
                     'particle_embedding': True,
                     'embedding_type': 'none',
                     'embedding': 3,
