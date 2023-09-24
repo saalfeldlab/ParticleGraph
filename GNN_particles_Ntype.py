@@ -840,7 +840,7 @@ def data_generate(model_config, index_particles):
     else:
         data_generate_2D(model_config, index_particles)
 
-def data_generate_2D(model_config, index_particles):
+def data_generate_2D(model_config):
 
     print('')
     print('Generating data ...')
@@ -1039,7 +1039,7 @@ def data_generate_2D(model_config, index_particles):
                 plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
                 plt.close()
 
-def data_generate_3D(model_config, index_particles):
+def data_generate_3D(model_config):
 
     print('')
     print('Generating data ...')
@@ -1213,7 +1213,7 @@ def data_generate_3D(model_config, index_particles):
                 plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
                 plt.close()
 
-def data_train(model_config, index_particles,gtest):
+def data_train(model_config,gtest):
 
     print('')
     print('Training loop ...')
