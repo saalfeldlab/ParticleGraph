@@ -31,7 +31,6 @@ import json
 from geomloss import SamplesLoss
 from tifffile import imread
 
-
 def distmat_square(X, Y):
     return torch.sum(bc_diff(X[:, None, :] - Y[None, :, :]) ** 2, axis=2)
 def kernel(X, Y):
@@ -181,7 +180,6 @@ class InteractionParticles_0(pyg.nn.MessagePassing):
         psi = - pp[:,2] * torch.exp(-r ** pp[:,0] / (2 * sigma ** 2)) + pp[:,3] * torch.exp(-r ** pp[:,1] / (2 * sigma ** 2))
 
         return psi[:, None] * bc_diff(x_i[:, 0:2] - x_j[:, 0:2])
-
 class InteractionParticles_1(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -209,6 +207,7 @@ class InteractionParticles_1(pyg.nn.MessagePassing):
         psi = -pp[:,2] * torch.exp(-r ** pp[:,0] / (2 * sigma ** 2)) + pp[:,3] * torch.exp(-r ** pp[:,1] / (2 * sigma ** 2))
 
         return psi[:, None] * bc_diff(x_i[:, 0:2] - x_j[:, 0:2])
+
 class InteractionParticles_2(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -2259,7 +2258,6 @@ def print_model_config (model_config):
     if model_config['upgrade_type']==1:
         print ('Acc = MLP(aggr(message),velocity,embedding')
 
-
 if __name__ == '__main__':
 
     print('')
@@ -2560,13 +2558,13 @@ if __name__ == '__main__':
                     'sigma': .005,
                     'tau': 0.1,
                     'aggr_type' : 'mean',
-                    'particle_embedding': True,
                     'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                     'data_augmentation' : True,
+                    'particle_embedding': True,
                     'embedding_type': 'none',
                     'embedding': 3,
                     'model': 'MixInteractionParticles',
-                    'upgrade_type':1}
+                    'upgrade_type':0}
 
     #
     # model_config = {'ntry': 70,
@@ -2644,9 +2642,6 @@ if __name__ == '__main__':
         dataset_name = '230902_' + str(56)
         model_config['dataset'] = dataset_name
 
-        sigma = model_config['sigma']
-        aggr_type = model_config['aggr_type']
-
         if model_config['boundary'] == 'no':  # change this for usual BC
             def bc_pos(X):
                 return X
@@ -2657,6 +2652,8 @@ if __name__ == '__main__':
                 return torch.remainder(X, 1.0)
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
+        sigma = model_config['sigma']
+        aggr_type = model_config['aggr_type']
 
         time.sleep(0.5)
 
