@@ -1426,7 +1426,7 @@ def data_train(model_config,gtest):
         S_geomD = torch.sum(D_nm[epoch]).item()
         # print(f'total_loss / S_geomD: {total_loss / S_geomD}  best_loss {best_loss}')
 
-        if (total_loss / S_geomD < best_loss) | (epoch=60):
+        if (total_loss / S_geomD < best_loss) | (epoch==60):
             best_loss = total_loss / S_geomD
             torch.save({'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict()},
