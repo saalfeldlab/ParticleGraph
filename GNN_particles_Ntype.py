@@ -1239,8 +1239,7 @@ def data_train(model_config,gtest):
     for n in range(model_config['nparticle_types']):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
-    gtest_list = [5E-4, ]
-    weight_decay = gtest_list[gtest]
+    gtest_list = [1E-4, 1E-5, 1E-3]
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(ntry))
@@ -1313,7 +1312,7 @@ def data_train(model_config,gtest):
 
     time.sleep(0.5)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=1E-3) #, weight_decay=weight_decay)
+    optimizer = torch.optim.Adam(model.parameters(), lr=gtest_list[gtest]) #, weight_decay=weight_decay)
 
     model.train()
     best_loss = np.inf
@@ -1332,10 +1331,10 @@ def data_train(model_config,gtest):
     embedding_list=[]
     D_nm = torch.zeros((60,nparticle_types, nparticle_types))
 
-    for epoch in range(40):
+    for epoch in range(50):
 
-        if epoch == 30:
-            optimizer = torch.optim.Adam(model.parameters(), lr=1E-4) # weight_decay=weight_decay)
+        # if epoch == 30:
+        #     optimizer = torch.optim.Adam(model.parameters(), lr=1E-4) # weight_decay=weight_decay)
 
         total_loss = 0
 
@@ -2708,10 +2707,10 @@ if __name__ == '__main__':
     sigma = model_config['sigma']
     aggr_type = model_config['aggr_type']
 
-    for gtest in range(1):
+    for gtest in range(3):
 
-        # ntry = 66+gtest
-        # model_config['ntry'] = ntry
+        ntry = 48+gtest
+        model_config['ntry'] = ntry
         # # model_config['nparticles'] = 3000
         # # model_config['noise_level'] =  gtest_list[gtest%4] / 100
         # # model_config['noise_type'] = 1 + gtest // 4
@@ -2720,8 +2719,8 @@ if __name__ == '__main__':
         # # model_config['ntry'] = ntry
         # # model_config['hidden_size'] = gtest_list[gtest]
         # # dataset_name = model_config['dataset']
-        # dataset_name = '230902_' + str(56)
-        # model_config['dataset'] = dataset_name
+        dataset_name = '230902_38'
+        model_config['dataset'] = dataset_name
 
         print_model_config(model_config)
         # data_generate(model_config)
