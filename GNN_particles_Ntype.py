@@ -926,6 +926,9 @@ def data_generate_2D(model_config):
         # p[0] = torch.tensor([1.8194, 1.1017, 1.059, 1.0362])
         # p[1] = torch.tensor([1.7327, 1.2579, 1.6714, 1.9119])
         # p[2] = torch.tensor([1.9372, 1.8061, 1.2267, 1.702])
+        p[0] = torch.tensor([1.0528,1.7399,1.3132,1.5296])
+        p[1] = torch.tensor([1.6041,1.2173,1.5712,1.1609])
+        p[2] = torch.tensor([1.1036,1.9147,1.743,1.3342])
 
         for n in range(nparticle_types):
             # model.append(InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p[n]), tau=tau))
