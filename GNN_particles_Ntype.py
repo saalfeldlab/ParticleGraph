@@ -1239,7 +1239,7 @@ def data_train(model_config,gtest):
     for n in range(model_config['nparticle_types']):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
-    gtest_list = [1E-4, 1E-5, 1E-3]
+    gtest_list = [1E-4, 1E-5, 1E-3, 1E-2, 1E-1]
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(ntry))
@@ -2307,7 +2307,7 @@ if __name__ == '__main__':
     print('')
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -2711,7 +2711,7 @@ if __name__ == '__main__':
     sigma = model_config['sigma']
     aggr_type = model_config['aggr_type']
 
-    for gtest in range(3):
+    for gtest in range(3,5):
 
         ntry = 48+gtest
         model_config['ntry'] = ntry
