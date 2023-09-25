@@ -2590,7 +2590,7 @@ if __name__ == '__main__':
                     'aggr_type' : 'mean',
                     'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                     'data_augmentation' : True,
-                    'batch_size': 2,
+                    'batch_size': 8,
                     'particle_embedding': True,
                     'embedding_type': 'none',
                     'embedding': 3,
@@ -2692,11 +2692,10 @@ if __name__ == '__main__':
         # print_model_config(model_config)
         # data_generate(model_config)
         data_train(model_config,gtest)
-        rmserr_list = data_test(model_config, bVisu = True)
-        x, rmserr_list = data_test(model_config, bVisu=False, bPrint=False)
+        x, rmserr_list = data_test(model_config, bVisu=False, bPrint=True)
 
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, index_particles)
-        # data_test(model_config, bVisu = True, bPrint=True, index_particles, prev_nparticles, new_nparticles, prev_index_particles)
+        # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles, prev_nparticles, new_nparticles, prev_index_particles)
 
         # data_train_generate(model_config, 'geomloss', f'./graphs_data/graphs_particles_230902_43/')
         # data_train_generate(model_config, 'backward', f'./graphs_data/graphs_particles_230902_43/')
