@@ -1343,7 +1343,7 @@ def data_train(model_config,gtest):
 
     for epoch in range(81):
 
-        if epoch == 70:
+        if epoch == 29:
             lr = 2E-4
             optimizer = torch.optim.Adam(model.parameters(), lr=lr)  # , weight_decay=weight_decay)
             print(f'Learning rate: {lr}')
@@ -1449,7 +1449,7 @@ def data_train(model_config,gtest):
                 data_augmentation_loop = 200
                 print(f'data_augmentation_loop: {data_augmentation_loop}')
 
-        if epoch == 49:
+        if epoch == 69:
             print('training MLP only ...')
             model.a.requires_grad = False
             new_a = kmeans.cluster_centers_[kmeans.labels_, :]
@@ -1496,11 +1496,9 @@ def data_train(model_config,gtest):
                 plt.hist(embedding_particle[n][:, 0],100, alpha=0.5)
             plt.xlim([-2.1, 2.1])
 
-
-
         ax = fig.add_subplot(2, 3, 3)
         plt.plot(list_loss, color='k')
-        plt.xlim([0, 60])
+        plt.xlim([0, 100])
         plt.ylim([0, 0.02])
         plt.ylabel('Loss', fontsize=10)
         plt.xlabel('Epochs', fontsize=10)
@@ -2838,7 +2836,7 @@ if __name__ == '__main__':
     print('')
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -2863,7 +2861,7 @@ if __name__ == '__main__':
     sigma = model_config['sigma']
     aggr_type = model_config['aggr_type']
 
-    for gtest in range(57,62):
+    for gtest in range(53,57):
         model_config = load_model_config(id=gtest)
 
         # ntry = 49+gtest
