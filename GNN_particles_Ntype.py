@@ -1450,7 +1450,7 @@ def data_train(model_config,gtest):
         list_gap.append(gap)
 
         fig = plt.figure(figsize=(13, 8))
-        plt.ion()
+        # plt.ion()
         ax = fig.add_subplot(2, 3, 1,projection='3d')
 
         if (embedding_type == 'none') & (embedding.shape[1]>2):
@@ -1490,9 +1490,6 @@ def data_train(model_config,gtest):
 
         ax2.set_ylabel('Geomloss', fontsize=10)
 
-
-        plt.tight_layout()
-
         if (epoch%10==0) & (epoch>0):
 
             xx, rmserr_list = data_test(model_config, bVisu=False, bPrint=False)
@@ -1519,6 +1516,7 @@ def data_train(model_config,gtest):
 
             model.train()
 
+        plt.tight_layout()
         plt.savefig(f"./tmp_training/Fig_{ntry}_{epoch}.tif")
         plt.close()
 
