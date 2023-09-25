@@ -2723,7 +2723,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    model_config = load_model_config(id=49)
+    model_config = load_model_config(id=53)
 
     if model_config['boundary'] == 'no':  # change this for usual BC
         def bc_pos(X):
