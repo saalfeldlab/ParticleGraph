@@ -1420,7 +1420,7 @@ def data_train(model_config,gtest):
         torch.save(D_nm, f"./tmp_training/D_nm_{ntry}.pt")
 
         S_geomD = torch.sum(D_nm[epoch]).item()
-        print(f'total_loss / S_geomD: {total_loss / S_geomD}  best_loss {best_loss} )
+        print(f'total_loss / S_geomD: {total_loss / S_geomD}  best_loss {best_loss}')
 
         if (total_loss / S_geomD < best_loss):
             best_loss = total_loss / S_geomD
