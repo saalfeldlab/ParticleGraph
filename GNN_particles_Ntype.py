@@ -1391,7 +1391,8 @@ def data_train(model_config,gtest):
 
             total_loss += loss.item()
 
-        model.a.data = torch.clamp(model.a.data, min=-4, max=4)
+        # model.a.data = torch.clamp(model.a.data, min=-4, max=4)
+
         embedding = model.a.detach().cpu().numpy()
         embedding = scaler.fit_transform(embedding)
         embedding_particle = []
@@ -1463,11 +1464,11 @@ def data_train(model_config,gtest):
         ax = fig.add_subplot(2, 3, 2)
         for n in range(nparticle_types):
             plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
-        plt.xlim([-4.1, 4.1])
-        plt.ylim([-4.1, 4.1])
+        plt.xlim([-2.1, 2.1])
+        plt.ylim([-2.1, 2.1])
         plt.xlabel('Embedding 0', fontsize=12)
         plt.ylabel('Embedding 1', fontsize=12)
-        plt.text(-3.9, 3.6, f'kmeans.inertia: {np.round(gap, 2)}   kl.elbow: {kl.elbow}', fontsize=10)
+        plt.text(-1.9, 1.6, f'kmeans.inertia: {np.round(gap, 2)}   kl.elbow: {kl.elbow}', fontsize=10)
 
         ax = fig.add_subplot(2, 3, 3)
         plt.plot(list_loss, color='k')
@@ -1494,6 +1495,10 @@ def data_train(model_config,gtest):
 
             xx, rmserr_list = data_test(model_config, bVisu=False, bPrint=False)
 
+            model.train()
+
+        if (epoch>9):
+
             ax = fig.add_subplot(2, 3, 5)
             for n in range(nparticle_types):
                 plt.scatter(xx[index_particles[n], 0], xx[index_particles[n], 1], s=3)
@@ -1514,7 +1519,7 @@ def data_train(model_config,gtest):
             plt.xlabel('Frame [a.u]', fontsize="14")
             ax.set_ylabel('RMSE [a.u]', fontsize="14", color='r')
 
-            model.train()
+
 
         plt.tight_layout()
         plt.savefig(f"./tmp_training/Fig_{ntry}_{epoch}.tif")
