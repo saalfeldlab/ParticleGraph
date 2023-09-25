@@ -534,6 +534,7 @@ class MixInteractionParticles(pyg.nn.MessagePassing):
     def update(self, aggr_out):
 
         return aggr_out  # self.lin_node(aggr_out)
+
 class InteractionParticles3D(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -2605,6 +2606,33 @@ def load_model_config (id=48):
     if model_config_test['ntry']==id:
         return model_config_test
 
+    model_config_test = {'ntry': 50,
+                    'input_size': 10,
+                    'output_size': 2,
+                    'hidden_size': 64,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'noise_type': 0,
+                    'radius': 0.075,
+                    'dataset': '230902_39',
+                    'nparticles': 3000,
+                    'nparticle_types': 3,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'batch_size': 8,
+                    'embedding_type': 'none',
+                    'embedding': 3,
+                    'model': 'InteractionParticles',
+                    'upgrade_type':0}
+
+    if model_config_test['ntry']==id:
+        return model_config_test
+
     model_config_test = {'ntry': 49,
                     'input_size': 8,
                     'output_size': 2,
@@ -2730,7 +2758,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    model_config = load_model_config(id=53)
+    model_config = load_model_config(id=50)
 
     if model_config['boundary'] == 'no':  # change this for usual BC
         def bc_pos(X):
@@ -2766,7 +2794,7 @@ if __name__ == '__main__':
 
         print_model_config(model_config)
         # data_generate(model_config)
-        data_train(model_config,gtest)
+        # data_train(model_config,gtest)
         x, rmserr_list = data_test(model_config, bVisu=False, bPrint=True)
 
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, index_particles)
