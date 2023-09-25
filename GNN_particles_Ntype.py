@@ -1333,7 +1333,7 @@ def data_train(model_config,gtest):
     embedding_list=[]
     D_nm = torch.zeros((60,nparticle_types, nparticle_types))
 
-    for epoch in range(51):
+    for epoch in range(61):
 
         if epoch == 30:
             lr = 1E-4
@@ -1426,7 +1426,7 @@ def data_train(model_config,gtest):
         S_geomD = torch.sum(D_nm[epoch]).item()
         # print(f'total_loss / S_geomD: {total_loss / S_geomD}  best_loss {best_loss}')
 
-        if (total_loss / S_geomD < best_loss) | (epoch==50):
+        if (total_loss / S_geomD < best_loss) | (epoch==60):
             best_loss = total_loss / S_geomD
             torch.save({'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict()},
