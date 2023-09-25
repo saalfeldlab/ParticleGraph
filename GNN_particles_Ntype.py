@@ -333,6 +333,7 @@ class InteractionParticles(pyg.nn.MessagePassing):
         self.sin_phi = sin_phi
 
         x, edge_index = data.x, data.edge_index
+        model.a.data = torch.sigmoid(model.a.data)
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
         acc = self.propagate(edge_index, x=(x, x))
@@ -1392,6 +1393,7 @@ def data_train(model_config,gtest):
             total_loss += loss.item()
 
         # model.a.data = torch.clamp(model.a.data, min=-4, max=4)
+        # model.a.data = torch.sigmoid(model.a.data)
 
         embedding = model.a.detach().cpu().numpy()
         embedding = scaler.fit_transform(embedding)
