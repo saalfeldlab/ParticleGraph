@@ -2712,7 +2712,7 @@ if __name__ == '__main__':
     sigma = model_config['sigma']
     aggr_type = model_config['aggr_type']
 
-    for gtest in range(3):
+    for gtest in range(3,5):
 
         ntry = 48+gtest
         model_config['ntry'] = ntry
