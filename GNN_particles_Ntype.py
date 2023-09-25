@@ -926,9 +926,9 @@ def data_generate_2D(model_config):
         # p[0] = torch.tensor([1.8194, 1.1017, 1.059, 1.0362])
         # p[1] = torch.tensor([1.7327, 1.2579, 1.6714, 1.9119])
         # p[2] = torch.tensor([1.9372, 1.8061, 1.2267, 1.702])
-        p[0] = torch.tensor([1.0528,1.7399,1.3132,1.5296])
-        p[1] = torch.tensor([1.6041,1.2173,1.5712,1.1609])
-        p[2] = torch.tensor([1.1036,1.9147,1.743,1.3342])
+        # p[0] = torch.tensor([1.0528,1.7399,1.3132,1.5296])
+        # p[1] = torch.tensor([1.6041,1.2173,1.5712,1.1609])
+        # p[2] = torch.tensor([1.1036,1.9147,1.743,1.3342])
 
         for n in range(nparticle_types):
             # model.append(InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p[n]), tau=tau))
@@ -1219,9 +1219,11 @@ def data_generate_3D(model_config):
 
 def data_train(model_config,gtest):
 
+
     print('')
     print('Training loop ...')
 
+    model=[]
     ntry = model_config['ntry']
     radius = model_config['radius']
     nparticle_types = model_config['nparticle_types']
@@ -1238,8 +1240,6 @@ def data_train(model_config,gtest):
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
     for n in range(model_config['nparticle_types']):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
-
-    gtest_list = [1E-4, 1E-5, 1E-3, 1E-2, 1E-1]
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(ntry))
@@ -1312,7 +1312,7 @@ def data_train(model_config,gtest):
 
     time.sleep(0.5)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=gtest_list[gtest]) #, weight_decay=weight_decay)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1E-3) #, weight_decay=weight_decay)
 
     model.train()
     best_loss = np.inf
@@ -1333,8 +1333,8 @@ def data_train(model_config,gtest):
 
     for epoch in range(51):
 
-        # if epoch == 30:
-        #     optimizer = torch.optim.Adam(model.parameters(), lr=1E-4) # weight_decay=weight_decay)
+        if epoch == 30:
+            optimizer = torch.optim.Adam(model.parameters(), lr=1E-4) # weight_decay=weight_decay)
 
         total_loss = 0
 
@@ -1422,7 +1422,7 @@ def data_train(model_config,gtest):
         S_geomD = torch.sum(D_nm[epoch]).item()
         # print(f'total_loss / S_geomD: {total_loss / S_geomD}  best_loss {best_loss}')
 
-        if (total_loss / S_geomD < best_loss):
+        if (total_loss / S_geomD < best_loss) | (epoch==50):
             best_loss = total_loss / S_geomD
             torch.save({'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict()},
@@ -1458,24 +1458,30 @@ def data_train(model_config,gtest):
         list_gap.append(gap)
 
         fig = plt.figure(figsize=(13, 8))
-        # plt.ion()
-        ax = fig.add_subplot(2, 3, 1,projection='3d')
+        plt.ion()
 
-        if (embedding_type == 'none') & (embedding.shape[1]>2):
+        if (embedding.shape[1]>2):
+            ax = fig.add_subplot(2, 3, 1, projection='3d')
             for n in range(nparticle_types):
                 ax.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], embedding_particle[n][:, 2],s=1)
-        else :
+        if (embedding.shape[1] == 2):
+            ax = fig.add_subplot(2, 3, 1, projection='3d')
             for n in range(nparticle_types):
                 ax.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], embedding_particle[n][:, 1]*0,s=1)
 
         ax = fig.add_subplot(2, 3, 2)
-        for n in range(nparticle_types):
-            plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
-        plt.xlim([-2.1, 2.1])
-        plt.ylim([-2.1, 2.1])
-        plt.xlabel('Embedding 0', fontsize=12)
-        plt.ylabel('Embedding 1', fontsize=12)
-        plt.text(-1.9, 1.6, f'kmeans.inertia: {np.round(gap, 2)}   kl.elbow: {kl.elbow}', fontsize=10)
+        if (embedding.shape[1] > 1):
+            for n in range(nparticle_types):
+                plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
+                plt.xlim([-2.1, 2.1])
+                plt.ylim([-2.1, 2.1])
+                plt.xlabel('Embedding 0', fontsize=12)
+                plt.ylabel('Embedding 1', fontsize=12)
+                plt.text(-1.9, 1.6, f'kmeans.inertia: {np.round(gap, 2)}   kl.elbow: {kl.elbow}', fontsize=10)
+        else:
+            for n in range(nparticle_types):
+                plt.hist(embedding_particle[n][:, 0],100, alpha=0.5)
+
 
         ax = fig.add_subplot(2, 3, 3)
         plt.plot(list_loss, color='k')
@@ -1526,8 +1532,6 @@ def data_train(model_config,gtest):
             plt.xlabel('Frame [a.u]', fontsize="14")
             ax.set_ylabel('RMSE [a.u]', fontsize="14", color='r')
 
-
-
         plt.tight_layout()
         plt.savefig(f"./tmp_training/Fig_{ntry}_{epoch}.tif")
         plt.close()
@@ -1540,6 +1544,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         print('')
         print('Plot validation test ... ')
 
+    model = []
     ntry = model_config['ntry']
     radius = model_config['radius']
     nparticle_types = model_config['nparticle_types']
@@ -1754,13 +1759,20 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             embedding = model.a.detach().cpu().numpy()
             embedding = scaler.fit_transform(embedding)
             embedding_particle = []
-            for n in range(nparticle_types):
-                embedding_particle.append(embedding[index_particles[n], :])
-                plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
-            plt.xlim([-4.1, 4.1])
-            plt.ylim([-4.1, 4.1])
-            plt.xlabel('Embedding 0', fontsize=8)
-            plt.ylabel('Embedding 1', fontsize=8)
+
+            if (embedding.shape[1] > 1):
+
+                for n in range(nparticle_types):
+                    embedding_particle.append(embedding[index_particles[n], :])
+                    plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
+                plt.xlim([-4.1, 4.1])
+                plt.ylim([-4.1, 4.1])
+                plt.xlabel('Embedding 0', fontsize=8)
+                plt.ylabel('Embedding 1', fontsize=8)
+
+            else:
+                for n in range(nparticle_types):
+                    plt.hist(embedding_particle[n][:, 0], 100, alpha=0.5)
 
             plt.savefig(f"./tmp_recons/Fig_{ntry}_{it}.tif")
 
@@ -2300,155 +2312,266 @@ def print_model_config (model_config):
     batch_size = model_config['batch_size']
     print(f'batch_size = {batch_size}')
 
+def load_model_config (id=48):
 
-if __name__ == '__main__':
 
-    print('')
-    print('version 1.21 230923')
-    print('')
-    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model_config_test = {'ntry': 700,
+                    'input_size': 15,
+                    'output_size': 2,
+                    'hidden_size': 64,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'noise_type': 0,
+                    'radius': 0.075,
+                    'dataset': '230902_700',
+                    'nparticles': 5000,
+                    'nparticle_types': 10,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'embedding_type': 'repeat',
+                    'model': 'InteractionParticles',
+                        'upgrade_type':0}
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
-    print(f'device {device}')
+    if model_config_test['ntry']==id:
+        return model_config_test
 
-    scaler = StandardScaler()
-    S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
+    model_config_test = {'ntry': 30,
+                    'input_size': 15,
+                    'output_size': 2,
+                    'hidden_size': 64,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'noise_type': 0,
+                    'radius': 0.075,
+                    'dataset': '230902_30',
+                    'nparticles': 3000,
+                    'nparticle_types': 3,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'embedding_type': 'repeat',
+                    'model': 'InteractionParticles',
+                    'upgrade_type':0}
 
-    # model_config = {'ntry': 700,
-    #                 'input_size': 15,
-    #                 'output_size': 2,
-    #                 'hidden_size': 64,
-    #                 'n_mp_layers': 5,
-    #                 'noise_level': 0,
-    #                 'noise_type': 0,
-    #                 'radius': 0.075,
-    #                 'dataset': '230902_700',
-    #                 'nparticles': 5000,
-    #                 'nparticle_types': 10,
-    #                 'nframes': 200,
-    #                 'sigma': .005,
-    #                 'tau': 0.1,
-    #                 'aggr_type' : 'mean',
-    #                 'particle_embedding': True,
-    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-    #                 'data_augmentation' : True,
-    #                 'embedding_type': 'repeat',
-    #                 'model': 'InteractionParticles',
-    #                     'upgrade_type':0}
+    if model_config_test['ntry']==id:
+        return model_config_test
 
-    # model_config = {'ntry': 30,
-    #                 'input_size': 15,
-    #                 'output_size': 2,
-    #                 'hidden_size': 64,
-    #                 'n_mp_layers': 5,
-    #                 'noise_level': 0,
-    #                 'noise_type': 0,
-    #                 'radius': 0.075,
-    #                 'dataset': '230902_30',
-    #                 'nparticles': 3000,
-    #                 'nparticle_types': 3,
-    #                 'nframes': 200,
-    #                 'sigma': .005,
-    #                 'tau': 0.1,
-    #                 'aggr_type' : 'mean',
-    #                 'particle_embedding': True,
-    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-    #                 'data_augmentation' : True,
-    #                 'embedding_type': 'repeat',
-    #                 'model': 'InteractionParticles',
-    #                 'upgrade_type':0}
-    #
-    # model_config = {'ntry': 37,
-    #                 'input_size': 9,
-    #                 'output_size': 2,
-    #                 'hidden_size': 64,
-    #                 'n_mp_layers': 5,
-    #                 'noise_level': 0,
-    #                 'noise_type': 0,
-    #                 'radius': 0.075,
-    #                 'dataset': '230902_30',
-    #                 'nparticles': 3000,
-    #                 'nparticle_types': 3,
-    #                 'nframes': 200,
-    #                 'sigma': .005,
-    #                 'tau': 0.1,
-    #                 'aggr_type' : 'mean',
-    #                 'particle_embedding': True,
-    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-    #                 'data_augmentation' : True,
-    #                 'embedding_type': 'none',
-    #                 'model': 'InteractionParticles',
-    #                 'upgrade_type':0}
+    model_config_test = {'ntry': 37,
+                    'input_size': 9,
+                    'output_size': 2,
+                    'hidden_size': 64,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'noise_type': 0,
+                    'radius': 0.075,
+                    'dataset': '230902_30',
+                    'nparticles': 3000,
+                    'nparticle_types': 3,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'embedding_type': 'none',
+                    'model': 'InteractionParticles',
+                    'upgrade_type':0}
 
-    # model_config = {'ntry': 39,
-    #                 'input_size': 9,
-    #                 'output_size': 2,
-    #                 'hidden_size': 64,
-    #                 'n_mp_layers': 5,
-    #                 'noise_level': 0,
-    #                 'noise_type': 0,
-    #                 'radius': 0.075,
-    #                 'dataset': '230902_39',
-    #                 'nparticles': 3000,
-    #                 'nparticle_types': 3,
-    #                 'nframes': 200,
-    #                 'sigma': .005,
-    #                 'tau': 0.1,
-    #                 'aggr_type' : 'mean',
-    #                 'particle_embedding': True,
-    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-    #                 'data_augmentation' : True,
-    #                 'embedding_type': 'none',
-    #                 'embedding': 2,
-    #                 'model': 'InteractionParticles',
-    #                 'upgrade_type':0}
+    if model_config_test['ntry']==id:
+        return model_config_test
 
-    # model_config = {'ntry': 40,
-    #                 'input_size': 9,
-    #                 'output_size': 2,
-    #                 'hidden_size': 64,
-    #                 'n_mp_layers': 5,
-    #                 'noise_level': 0,
-    #                 'noise_type': 0,
-    #                 'radius': 0.075,
-    #                 'dataset': '230902_40',
-    #                 'nparticles': 3000,
-    #                 'nparticle_types': 3,
-    #                 'nframes': 200,
-    #                 'sigma': .005,
-    #                 'tau': 0.1,
-    #                 'aggr_type' : 'mean',
-    #                 'particle_embedding': True,
-    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-    #                 'data_augmentation' : True,
-    #                 'embedding_type': 'none',
-    #                 'model': 'InteractionParticles',
-    #                 'upgrade_type':0}
+    model_config_test = {'ntry': 39,
+                    'input_size': 9,
+                    'output_size': 2,
+                    'hidden_size': 64,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'noise_type': 0,
+                    'radius': 0.075,
+                    'dataset': '230902_39',
+                    'nparticles': 3000,
+                    'nparticle_types': 3,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'embedding_type': 'none',
+                    'embedding': 2,
+                    'model': 'InteractionParticles',
+                    'upgrade_type':0}
 
-    # model_config = {'ntry': 41,
-    #                 'input_size': 13,
-    #                 'output_size': 2,
-    #                 'hidden_size': 64,
-    #                 'n_mp_layers': 5,
-    #                 'noise_level': 0,
-    #                 'noise_type': 0,
-    #                 'radius': 0.075,
-    #                 'dataset': '230902_41',
-    #                 'nparticles': 3000,
-    #                 'nparticle_types': 3,
-    #                 'nframes': 200,
-    #                 'sigma': .005,
-    #                 'tau': 0.1,
-    #                 'aggr_type' : 'mean',
-    #                 'particle_embedding': True,
-    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-    #                 'data_augmentation' : True,
-    #                 'embedding_type': 'none',
-    #                 'embedding': 3,
-    #                 'model': 'MixInteractionParticles',
-    #                 'upgrade_type':0}
+    if model_config_test['ntry']==id:
+        return model_config_test
 
-    model_config = {'ntry': 48,
+    model_config_test = {'ntry': 40,
+                    'input_size': 9,
+                    'output_size': 2,
+                    'hidden_size': 64,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'noise_type': 0,
+                    'radius': 0.075,
+                    'dataset': '230902_40',
+                    'nparticles': 3000,
+                    'nparticle_types': 3,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'embedding_type': 'none',
+                    'model': 'InteractionParticles',
+                    'upgrade_type':0}
+
+    if model_config_test['ntry']==id:
+        return model_config_test
+
+    model_config_test = {'ntry': 41,
+                    'input_size': 13,
+                    'output_size': 2,
+                    'hidden_size': 64,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'noise_type': 0,
+                    'radius': 0.075,
+                    'dataset': '230902_41',
+                    'nparticles': 3000,
+                    'nparticle_types': 3,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'embedding_type': 'none',
+                    'embedding': 3,
+                    'model': 'MixInteractionParticles',
+                    'upgrade_type':0}
+
+    if model_config_test['ntry']==id:
+        return model_config_test
+
+    model_config_test = {'ntry': 43,
+                    'input_size': 13,
+                    'output_size': 2,
+                    'hidden_size': 128,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'noise_type': 0,
+                    'radius': 0.075,
+                    'dataset': '230902_43',
+                    'nparticles': 4800,
+                    'nparticle_types': 3,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'embedding_type': 'none',
+                    'embedding': 3,
+                    'model': 'MixInteractionParticles',
+                    'upgrade_type':0}
+
+    if model_config_test['ntry']==id:
+        return model_config_test
+
+    model_config_test = {'ntry': 44,
+                    'input_size': 13,
+                    'output_size': 2,
+                    'hidden_size': 64,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'noise_type': 0,
+                    'radius': 0.075,
+                    'dataset': '230902_41',
+                    'nparticles': 3000,
+                    'nparticle_types': 3,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'embedding_type': 'none',
+                    'embedding': 3,
+                    'model': 'MixInteractionParticles',
+                    'upgrade_type':0}
+
+    if model_config_test['ntry']==id:
+        return model_config_test
+
+    model_config_test = {'ntry': 45,
+                    'input_size': 23,
+                    'output_size': 2,
+                    'hidden_size': 128,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'noise_type': 0,
+                    'radius': 0.075,
+                    'dataset': '230902_43',
+                    'nparticles': 4800,
+                    'nparticle_types': 3,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'embedding_type': 'none',
+                    'embedding': 8,
+                    'model': 'MixInteractionParticles',
+                    'upgrade_type':0}
+
+    if model_config_test['ntry']==id:
+        return model_config_test
+
+    model_config_test = {'ntry': 46,
+                    'input_size': 23,
+                    'output_size': 2,
+                    'hidden_size': 128,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'noise_type': 0,
+                    'radius': 0.075,
+                    'dataset': '230902_46',
+                    'nparticles': 9600,
+                    'nparticle_types': 3,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'embedding_type': 'none',
+                    'embedding': 8,
+                    'model': 'MixInteractionParticles',
+                    'upgrade_type':0}
+
+    if model_config_test['ntry']==id:
+        return model_config_test
+
+    model_config_test = {'ntry': 48,
                     'input_size': 10,
                     'output_size': 2,
                     'hidden_size': 64,
@@ -2472,228 +2595,135 @@ if __name__ == '__main__':
                     'model': 'InteractionParticles',
                     'upgrade_type':0}
 
-    # model_config = {'ntry': 43,
-    #                 'input_size': 13,
-    #                 'output_size': 2,
-    #                 'hidden_size': 128,
-    #                 'n_mp_layers': 5,
-    #                 'noise_level': 0,
-    #                 'noise_type': 0,
-    #                 'radius': 0.075,
-    #                 'dataset': '230902_43',
-    #                 'nparticles': 4800,
-    #                 'nparticle_types': 3,
-    #                 'nframes': 200,
-    #                 'sigma': .005,
-    #                 'tau': 0.1,
-    #                 'aggr_type' : 'mean',
-    #                 'particle_embedding': True,
-    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-    #                 'data_augmentation' : True,
-    #                 'embedding_type': 'none',
-    #                 'embedding': 3,
-    #                 'model': 'MixInteractionParticles',
-    #                 'upgrade_type':0}
-    #
-    # model_config = {'ntry': 44,
-    #                 'input_size': 13,
-    #                 'output_size': 2,
-    #                 'hidden_size': 64,
-    #                 'n_mp_layers': 5,
-    #                 'noise_level': 0,
-    #                 'noise_type': 0,
-    #                 'radius': 0.075,
-    #                 'dataset': '230902_41',
-    #                 'nparticles': 3000,
-    #                 'nparticle_types': 3,
-    #                 'nframes': 200,
-    #                 'sigma': .005,
-    #                 'tau': 0.1,
-    #                 'aggr_type' : 'mean',
-    #                 'particle_embedding': True,
-    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-    #                 'data_augmentation' : True,
-    #                 'embedding_type': 'none',
-    #                 'embedding': 3,
-    #                 'model': 'MixInteractionParticles',
-    #                 'upgrade_type':0}
-    #
-    # model_config = {'ntry': 45,
-    #                 'input_size': 23,
-    #                 'output_size': 2,
-    #                 'hidden_size': 128,
-    #                 'n_mp_layers': 5,
-    #                 'noise_level': 0,
-    #                 'noise_type': 0,
-    #                 'radius': 0.075,
-    #                 'dataset': '230902_43',
-    #                 'nparticles': 4800,
-    #                 'nparticle_types': 3,
-    #                 'nframes': 200,
-    #                 'sigma': .005,
-    #                 'tau': 0.1,
-    #                 'aggr_type' : 'mean',
-    #                 'particle_embedding': True,
-    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-    #                 'data_augmentation' : True,
-    #                 'embedding_type': 'none',
-    #                 'embedding': 8,
-    #                 'model': 'MixInteractionParticles',
-    #                 'upgrade_type':0}
-    #
-    # model_config = {'ntry': 46,
-    #                 'input_size': 23,
-    #                 'output_size': 2,
-    #                 'hidden_size': 128,
-    #                 'n_mp_layers': 5,
-    #                 'noise_level': 0,
-    #                 'noise_type': 0,
-    #                 'radius': 0.075,
-    #                 'dataset': '230902_46',
-    #                 'nparticles': 9600,
-    #                 'nparticle_types': 3,
-    #                 'nframes': 200,
-    #                 'sigma': .005,
-    #                 'tau': 0.1,
-    #                 'aggr_type' : 'mean',
-    #                 'particle_embedding': True,
-    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-    #                 'data_augmentation' : True,
-    #                 'embedding_type': 'none',
-    #                 'embedding': 8,
-    #                 'model': 'MixInteractionParticles',
-    #                 'upgrade_type':0}
-    #
-    # # model_config = {'ntry': 48,
-    # #                 'input_size': 13,
-    # #                 'output_size': 3,
-    # #                 'hidden_size': 64,
-    # #                 'n_mp_layers': 5,
-    # #                 'noise_level': 0,
-    # #                 'noise_type': 0,
-    # #                 'radius': 0.125,
-    # #                 'dataset': '230902_48',
-    # #                 'nparticles': 9600,
-    # #                 'nparticle_types': 3,
-    # #                 'nframes': 200,
-    # #                 'sigma': .005,
-    # #                 'tau': 0.25,
-    # #                 'aggr_type' : 'mean',
-    # #                 'particle_embedding': True,
-    # #                 'boundary': 'no',  # periodic   'no'  # no boundary condition
-    # #                 'data_augmentation' : True,
-    # #                 'embedding_type': 'none',
-    # #                 'model': 'InteractionParticles3D',
-    # #                 'embedding': 8,
-    # #                 'upgrade_type':0}
-    #
-    # model_config = {'ntry': 49,
-    #                 'input_size': 13,
-    #                 'output_size': 2,
-    #                 'hidden_size': 64,
-    #                 'n_mp_layers': 5,
-    #                 'noise_level': 0,
-    #                 'noise_type': 0,
-    #                 'radius': 0.075,
-    #                 'dataset': '230902_49',
-    #                 'nparticles': 4800,
-    #                 'nparticle_types': 3,
-    #                 'nframes': 200,
-    #                 'sigma': .005,
-    #                 'tau': 0.1,
-    #                 'aggr_type' : 'mean',
-    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-    #                 'data_augmentation' : True,
-    #                 'batch_size': 8,
-    #                 'particle_embedding': True,
-    #                 'embedding_type': 'none',
-    #                 'embedding': 3,
-    #                 'model': 'MixInteractionParticles',
-    #                 'upgrade_type':0}
-    #
-    # #
-    # # model_config = {'ntry': 70,
-    # #                 'input_size': 10,
-    # #                 'output_size': 2,
-    # #                 'hidden_size': 64,
-    # #                 'n_mp_layers': 5,
-    # #                 'noise_level': 0,
-    # #                 'noise_type': 0,
-    # #                 'radius': 0.075,
-    # #                 'dataset': '230902_70',
-    # #                 'nparticles': 4800,
-    # #                 'nparticle_types': 3,
-    # #                 'nframes': 200,
-    # #                 'sigma': .005,
-    # #                 'tau': 0.1,
-    # #                 'aggr_type' : 'mean',
-    # #                 'particle_embedding': True,
-    # #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-    # #                 'data_augmentation' : True,
-    # #                 'embedding_type': 'none',
-    # #                 'embedding': 3,
-    # #                 'model': 'InteractionParticles',
-    # #                 'upgrade_type':0}
-    # #
-    # # dataset_name = model_config['dataset']
-    # # folder = f'./graphs_data/graphs_particles_{dataset_name}/'
-    # # os.makedirs(folder, exist_ok=True)
-    # #
-    # # sigma = model_config['sigma']
-    # # aggr_type = model_config['aggr_type']
-    # #
-    # # scaler = StandardScaler()
-    # # S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
-    # #
-    # # if model_config['boundary'] == 'no':  # change this for usual BC
-    # #     def bc_pos(X):
-    # #         return X
-    # #
-    # #
-    # #     def bc_diff(D):
-    # #         return D
-    # # else:
-    # #     def bc_pos(X):
-    # #         return torch.remainder(X, 1.0)
-    # #
-    # #
-    # #     def bc_diff(D):
-    # #         return torch.remainder(D - .5, 1.0) - .5
-    # #
-    # # index_particles = []
-    # # np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
-    # # for n in range(model_config['nparticle_types']):
-    # #     index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
-    # #
-    # # time.sleep(0.5)
-    # #
-    # # print_model_config(model_config)
-    # # # data_generate(model_config, index_particles)
-    # # data_train(model_config, index_particles, gtest=0)
-    #
-    # model_config = {'ntry': 67,
-    #                 'input_size': 10,
-    #                 'output_size': 2,
-    #                 'hidden_size': 64,
-    #                 'n_mp_layers': 5,
-    #                 'noise_level': 0,
-    #                 'noise_type': 0,
-    #                 'radius': 0.075,
-    #                 'dataset': '230902_67',
-    #                 'nparticles': 4800,
-    #                 'nparticle_types': 3,
-    #                 'nframes': 200,
-    #                 'sigma': .005,
-    #                 'tau': 0.1,
-    #                 'aggr_type' : 'mean',
-    #                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-    #                 'data_augmentation' : True,
-    #                 'batch_size': 8,
-    #                 'particle_embedding': True,
-    #                 'embedding_type': 'none',
-    #                 'embedding': 3,
-    #                 'model': 'InteractionParticles',
-    #                 'upgrade_type':0}
+    if model_config_test['ntry']==id:
+        return model_config_test
+
+    model_config_test = {'ntry': 49,
+                    'input_size': 8,
+                    'output_size': 2,
+                    'hidden_size': 64,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'noise_type': 0,
+                    'radius': 0.075,
+                    'dataset': '230902_49',
+                    'nparticles': 4800,
+                    'nparticle_types': 3,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'batch_size': 1,
+                    'particle_embedding': True,
+                    'embedding_type': 'none',
+                    'embedding': 1,
+                    'model': 'InteractionParticles',
+                    'upgrade_type':0}
+
+    if model_config_test['ntry']==id:
+        return model_config_test
+
+    model_config_test = {'ntry': 70,
+                    'input_size': 10,
+                    'output_size': 2,
+                    'hidden_size': 64,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'noise_type': 0,
+                    'radius': 0.075,
+                    'dataset': '230902_70',
+                    'nparticles': 4800,
+                    'nparticle_types': 3,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'embedding_type': 'none',
+                    'embedding': 3,
+                    'model': 'InteractionParticles',
+                    'upgrade_type':0}
+
+    if model_config_test['ntry']==id:
+        return model_config_test
+
+    model_config_test = {'ntry': 67,
+                    'input_size': 10,
+                    'output_size': 2,
+                    'hidden_size': 64,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'noise_type': 0,
+                    'radius': 0.075,
+                    'dataset': '230902_67',
+                    'nparticles': 4800,
+                    'nparticle_types': 3,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'batch_size': 8,
+                    'particle_embedding': True,
+                    'embedding_type': 'none',
+                    'embedding': 3,
+                    'model': 'InteractionParticles',
+                    'upgrade_type':0}
+
+    if model_config_test['ntry']==id:
+        return model_config_test
+
+    model_config_test = {'ntry': 53,
+                    'input_size': 8,
+                    'output_size': 2,
+                    'hidden_size': 64,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'noise_type': 0,
+                    'radius': 0.075,
+                    'dataset': '230902_39',
+                    'nparticles': 3000,
+                    'nparticle_types': 3,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'batch_size': 8,
+                    'embedding_type': 'none',
+                    'embedding': 1,
+                    'model': 'InteractionParticles',
+                    'upgrade_type':0}
+
+    if model_config_test['ntry']==id:
+        return model_config_test
+
+    return model_config_test
+
+
+
+
+if __name__ == '__main__':
+
+    print('')
+    print('version 1.21 230923')
+    print('')
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    print(f'device {device}')
+
+    scaler = StandardScaler()
+    S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
+
+    model_config = load_model_config(id=49)
 
     if model_config['boundary'] == 'no':  # change this for usual BC
         def bc_pos(X):
@@ -2712,10 +2742,10 @@ if __name__ == '__main__':
     sigma = model_config['sigma']
     aggr_type = model_config['aggr_type']
 
-    for gtest in range(3,5):
+    for gtest in range(1):
 
-        ntry = 48+gtest
-        model_config['ntry'] = ntry
+        # ntry = 49+gtest
+        # model_config['ntry'] = ntry
         # # model_config['nparticles'] = 3000
         # # model_config['noise_level'] =  gtest_list[gtest%4] / 100
         # # model_config['noise_type'] = 1 + gtest // 4
@@ -2724,8 +2754,8 @@ if __name__ == '__main__':
         # # model_config['ntry'] = ntry
         # # model_config['hidden_size'] = gtest_list[gtest]
         # # dataset_name = model_config['dataset']
-        dataset_name = '230902_39'
-        model_config['dataset'] = dataset_name
+        # dataset_name = '230902_49'
+        # model_config['dataset'] = dataset_name
 
         print_model_config(model_config)
         # data_generate(model_config)
