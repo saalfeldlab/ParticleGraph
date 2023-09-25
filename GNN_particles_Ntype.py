@@ -2662,6 +2662,30 @@ if __name__ == '__main__':
     # # data_generate(model_config, index_particles)
     # data_train(model_config, index_particles, gtest=0)
 
+    model_config = {'ntry': 67,
+                    'input_size': 13,
+                    'output_size': 2,
+                    'hidden_size': 64,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'noise_type': 0,
+                    'radius': 0.075,
+                    'dataset': '230902_49',
+                    'nparticles': 4800,
+                    'nparticle_types': 3,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'batch_size': 8,
+                    'particle_embedding': True,
+                    'embedding_type': 'none',
+                    'embedding': 3,
+                    'model': 'InteractionParticles',
+                    'upgrade_type':0}
+
     if model_config['boundary'] == 'no':  # change this for usual BC
         def bc_pos(X):
             return X
@@ -2681,21 +2705,21 @@ if __name__ == '__main__':
 
     for gtest in range(1):
 
-        ntry = 66+gtest
-        model_config['ntry'] = ntry
-        # model_config['nparticles'] = 3000
-        # model_config['noise_level'] =  gtest_list[gtest%4] / 100
-        # model_config['noise_type'] = 1 + gtest // 4
-        # ntry = model_config['ntry']
-        # model_config['input_size'] = gtest_list[gtest]
+        # ntry = 66+gtest
         # model_config['ntry'] = ntry
-        # model_config['hidden_size'] = gtest_list[gtest]
-        # dataset_name = model_config['dataset']
-        dataset_name = '230902_' + str(56)
-        model_config['dataset'] = dataset_name
+        # # model_config['nparticles'] = 3000
+        # # model_config['noise_level'] =  gtest_list[gtest%4] / 100
+        # # model_config['noise_type'] = 1 + gtest // 4
+        # # ntry = model_config['ntry']
+        # # model_config['input_size'] = gtest_list[gtest]
+        # # model_config['ntry'] = ntry
+        # # model_config['hidden_size'] = gtest_list[gtest]
+        # # dataset_name = model_config['dataset']
+        # dataset_name = '230902_' + str(56)
+        # model_config['dataset'] = dataset_name
 
-        # print_model_config(model_config)
-        # data_generate(model_config)
+        print_model_config(model_config)
+        data_generate(model_config)
         data_train(model_config,gtest)
         x, rmserr_list = data_test(model_config, bVisu=False, bPrint=True)
 
