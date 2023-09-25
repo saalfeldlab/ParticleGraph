@@ -2663,7 +2663,7 @@ if __name__ == '__main__':
     # data_train(model_config, index_particles, gtest=0)
 
     model_config = {'ntry': 67,
-                    'input_size': 13,
+                    'input_size': 10,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
