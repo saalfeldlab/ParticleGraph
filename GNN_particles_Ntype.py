@@ -1342,10 +1342,10 @@ def data_train(model_config,gtest):
     embedding_list=[]
     D_nm = torch.zeros((60,nparticle_types, nparticle_types))
 
-    for epoch in range(61):
+    for epoch in range(101):
 
-        if epoch == 30:
-            lr = 1E-4
+        if epoch == 90:
+            lr = 2E-4
             optimizer = torch.optim.Adam(model.parameters(), lr=lr)  # , weight_decay=weight_decay)
             print(f'Learning rate: {lr}')
 
@@ -1436,7 +1436,7 @@ def data_train(model_config,gtest):
         S_geomD = torch.sum(D_nm[epoch]).item()
         # print(f'total_loss / S_geomD: {total_loss / S_geomD}  best_loss {best_loss}')
 
-        if (total_loss / S_geomD < best_loss) | (epoch==60):
+        if (total_loss / S_geomD < best_loss) | (epoch==100):
             best_loss = total_loss / S_geomD
             torch.save({'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict()},
@@ -2840,7 +2840,7 @@ if __name__ == '__main__':
     print('')
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -2865,7 +2865,7 @@ if __name__ == '__main__':
     sigma = model_config['sigma']
     aggr_type = model_config['aggr_type']
 
-    for gtest in range(57,62):
+    for gtest in range(53,57):
         model_config = load_model_config(id=gtest)
 
         # ntry = 49+gtest
