@@ -1426,7 +1426,7 @@ def data_train(model_config,gtest):
         S_geomD = torch.sum(D_nm[epoch]).item()
         # print(f'total_loss / S_geomD: {total_loss / S_geomD}  best_loss {best_loss}')
 
-        if (total_loss / S_geomD < best_loss) | (epoch==60):
+        if (total_loss / S_geomD < best_loss) | (epoch=60):
             best_loss = total_loss / S_geomD
             torch.save({'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict()},
@@ -1776,11 +1776,13 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
 
             else:
                 for n in range(nparticle_types):
+                    embedding_particle.append(embedding[index_particles[n], :])
                     plt.hist(embedding_particle[n][:, 0], 100, alpha=0.5)
 
             plt.savefig(f"./tmp_recons/Fig_{ntry}_{it}.tif")
 
             plt.close()
+
     if bPrint:
         print('')
         print(f'ntry: {ntry}')
@@ -2291,8 +2293,7 @@ def print_model_config (model_config):
     print(f'tau: {tau}')
     aggr_type = model_config['aggr_type']
     print(f'aggr_type: {aggr_type}')
-    particle_embedding = model_config['particle_embedding']
-    print(f'particle_embedding: {particle_embedding}')
+
     boundary = model_config['boundary']
     print(f'boundary: {boundary}')
     input_size = model_config['input_size']
@@ -2305,6 +2306,8 @@ def print_model_config (model_config):
     print(f'noise_level: {noise_level}')
     noise_type = model_config['noise_type']
     print(f'noise_type: {noise_type}')
+    particle_embedding = model_config['particle_embedding']
+    print(f'particle_embedding: {particle_embedding}')
     embedding_type = model_config['embedding_type']
     print(f'embedding_type: {embedding_type}')
     embedding = model_config['embedding']
