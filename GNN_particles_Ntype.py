@@ -1535,6 +1535,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         print('')
         print('Plot validation test ... ')
 
+    ntry = model_config['ntry']
     radius = model_config['radius']
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
