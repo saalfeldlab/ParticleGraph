@@ -1309,7 +1309,7 @@ def data_train(model_config,gtest):
 
     time.sleep(0.5)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=1E-2) #, weight_decay=weight_decay)
+    optimizer = torch.optim.Adam(model.parameters(), lr=5E-2) #, weight_decay=weight_decay)
 
     model.train()
     best_loss = np.inf
@@ -1331,7 +1331,7 @@ def data_train(model_config,gtest):
     for epoch in range(40):
 
         if epoch == 30:
-            optimizer = torch.optim.Adam(model.parameters(), lr=1E-3) # weight_decay=weight_decay)
+            optimizer = torch.optim.Adam(model.parameters(), lr=5E-3) # weight_decay=weight_decay)
 
         total_loss = 0
 
@@ -1450,7 +1450,7 @@ def data_train(model_config,gtest):
         list_gap.append(gap)
 
         fig = plt.figure(figsize=(13, 8))
-        # plt.ion()
+        plt.ion()
         ax = fig.add_subplot(2, 3, 1,projection='3d')
 
         if (embedding_type == 'none') & (embedding.shape[1]>2):
@@ -1467,8 +1467,8 @@ def data_train(model_config,gtest):
         plt.ylim([-4.1, 4.1])
         plt.xlabel('Embedding 0', fontsize=12)
         plt.ylabel('Embedding 1', fontsize=12)
-
         plt.text(-3.9, 3.6, f'kmeans.inertia: {np.round(gap, 2)}   kl.elbow: {kl.elbow}', fontsize=10)
+
         ax = fig.add_subplot(2, 3, 3)
         plt.plot(list_loss, color='k')
         plt.xlim([0, 60])
@@ -1481,28 +1481,54 @@ def data_train(model_config,gtest):
         plt.xticks(range(1, 11))
         plt.xlabel("Number of Clusters", fontsize=12)
         plt.ylabel("SSE", fontsize=12)
+        plt.xlabel('Epochs', fontsize=10)
 
-        ax = fig.add_subplot(2, 3, 5)
+        ax2 = ax.twinx()
         for n in range(nparticle_types - 1):
             for m in range(n + 1, nparticle_types):
                 plt.plot(D_nm[0:epoch, n, m])
 
-        plt.xlim([0, 60])
-        plt.ylabel('Geomloss', fontsize=10)
-        plt.xlabel('Epochs', fontsize=10)
+        ax2.set_ylabel('Geomloss', fontsize=10)
+
 
         plt.tight_layout()
+
+        if (epoch%10==0) & (epoch>0):
+
+            xx, rmserr_list = data_test(model_config, bVisu=False, bPrint=False)
+
+            ax = fig.add_subplot(2, 3, 5)
+            for n in range(nparticle_types):
+                plt.scatter(xx[index_particles[n], 0], xx[index_particles[n], 1], s=3)
+            ax = plt.gca()
+            ax.axes.xaxis.set_ticklabels([])
+            ax.axes.yaxis.set_ticklabels([])
+            plt.xlim([-0.3, 1.3])
+            plt.ylim([-0.3, 1.3])
+            ax.axes.get_xaxis().set_visible(False)
+            ax.axes.get_yaxis().set_visible(False)
+            plt.axis('off')
+
+            ax = fig.add_subplot(2, 3, 6)
+            plt.plot(np.arange(len(rmserr_list)), rmserr_list, label='RMSE', c='r')
+            plt.ylim([0, 0.1])
+            plt.xlim([0, nframes])
+            plt.tick_params(axis='both', which='major', labelsize=10)
+            plt.xlabel('Frame [a.u]', fontsize="14")
+            ax.set_ylabel('RMSE [a.u]', fontsize="14", color='r')
+
+            model.train()
 
         plt.savefig(f"./tmp_training/Fig_{ntry}_{epoch}.tif")
         plt.close()
 
-def data_test(model_config, bVisu=False, index_particles=0, prev_nparticles=0, new_nparticles=0, prev_index_particles=0):
+def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0, prev_index_particles=0):
     # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_recons/*")
     # for f in files:
     #     os.remove(f)
-
-    print('')
-    print('Plot validation test ... ')
+    if bPrint:
+        print('')
+        print('Plot validation test ... ')
 
     radius = model_config['radius']
     nparticle_types = model_config['nparticle_types']
@@ -1516,7 +1542,6 @@ def data_test(model_config, bVisu=False, index_particles=0, prev_nparticles=0, n
         for n in range(model_config['nparticle_types']):
             index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
-
     if model_config['model'] == 'InteractionParticles':
         model = InteractionParticles(model_config, device)
     if model_config['model'] == 'MixInteractionParticles':
@@ -1526,10 +1551,12 @@ def data_test(model_config, bVisu=False, index_particles=0, prev_nparticles=0, n
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_*")
     NGraphs = int(len(graph_files) / nframes)
-    print('Graph files N: ', NGraphs-1)
+    if bPrint:
+        print('Graph files N: ', NGraphs-1)
 
     net = f"./log/try_{ntry}/models/best_model_with_{NGraphs-1}_graphs.pt"
-    print(f'network: {net}')
+    if bPrint:
+        print(f'network: {net}')
     state_dict = torch.load(net)
     model.load_state_dict(state_dict['model_state_dict'])
     model.eval()
@@ -1569,8 +1596,9 @@ def data_test(model_config, bVisu=False, index_particles=0, prev_nparticles=0, n
         param = parameter.numel()
         table.add_row([name, param])
         total_params += param
-    print(table)
-    print(f"Total Trainable Params: {total_params}")
+    if bPrint:
+        print(table)
+        print(f"Total Trainable Params: {total_params}")
 
     x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_0.pt')
     x00 = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_0.pt')
@@ -1724,11 +1752,15 @@ def data_test(model_config, bVisu=False, index_particles=0, prev_nparticles=0, n
             plt.savefig(f"./tmp_recons/Fig_{ntry}_{it}.tif")
 
             plt.close()
-    print('')
-    print(f'ntry: {ntry}')
+    if bPrint:
+        print('')
+        print(f'ntry: {ntry}')
     print(f'Final RMSE: {rmserr.item()}')
-    print(f'Final MMD: {discrepency}')
+    if bPrint:
+        print(f'Final MMD: {discrepency}')
     # print(f'Final Sxy: {Sxy.item()}')
+
+    return x.detach().cpu().numpy(), rmserr_list
 
 def data_test_generate(model_config):
 
@@ -2263,7 +2295,7 @@ if __name__ == '__main__':
     print('')
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -2558,7 +2590,7 @@ if __name__ == '__main__':
                     'aggr_type' : 'mean',
                     'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                     'data_augmentation' : True,
-                    'batch_size': 8,
+                    'batch_size': 2,
                     'particle_embedding': True,
                     'embedding_type': 'none',
                     'embedding': 3,
@@ -2659,11 +2691,12 @@ if __name__ == '__main__':
 
         # print_model_config(model_config)
         # data_generate(model_config)
-        # data_train(model_config,gtest)
-        data_test(model_config, bVisu = True)
+        data_train(model_config,gtest)
+        rmserr_list = data_test(model_config, bVisu = True)
+        x, rmserr_list = data_test(model_config, bVisu=False, bPrint=False)
 
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, index_particles)
-        # data_test(model_config, bVisu = True, index_particles, prev_nparticles, new_nparticles, prev_index_particles)
+        # data_test(model_config, bVisu = True, bPrint=True, index_particles, prev_nparticles, new_nparticles, prev_index_particles)
 
         # data_train_generate(model_config, 'geomloss', f'./graphs_data/graphs_particles_230902_43/')
         # data_train_generate(model_config, 'backward', f'./graphs_data/graphs_particles_230902_43/')
