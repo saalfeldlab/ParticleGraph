@@ -2798,7 +2798,7 @@ if __name__ == '__main__':
         # x, rmserr_list = data_test(model_config, bVisu=False, bPrint=True)
 
         prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, index_particles)
-        x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles, prev_nparticles, new_nparticles, prev_index_particles)
+        x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
 
         # data_train_generate(model_config, 'geomloss', f'./graphs_data/graphs_particles_230902_43/')
         # data_train_generate(model_config, 'backward', f'./graphs_data/graphs_particles_230902_43/')
