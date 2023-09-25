@@ -516,12 +516,9 @@ class MixInteractionParticles(pyg.nn.MessagePassing):
                 embedding0 = self.a[x_i[:, 6].detach().cpu().numpy(), :]
                 embedding1 = self.a[x_j[:, 6].detach().cpu().numpy(), :]
                 in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding0,embedding1),dim=-1)
-
                 # embedding = torch.abs(self.a[x_i[:, 6].detach().cpu().numpy(), :] - self.a[x_j[:, 6].detach().cpu().numpy(), :])
                 # in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding), dim=-1)
-
-
-                if self.embedding_type=='repeat':
+            if self.embedding_type=='repeat':
                 x_i_type_0 = self.a[x_i[:, 6].detach().cpu().numpy(), 4]
                 x_i_type_1 = self.a[x_j[:, 6].detach().cpu().numpy(), 5]
                 in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, x_i_type_0[:, None].repeat(1, 4), x_i_type_1[:, None].repeat(1, 4), x_j_type_0[:, None].repeat(1, 4), x_j_type_1[:, None].repeat(1, 4)),dim=-1)
@@ -529,9 +526,7 @@ class MixInteractionParticles(pyg.nn.MessagePassing):
                 embedding=self.embedding_freq(self.a[x_i[:, 6].detach().cpu().numpy(), 0:2])
                 embedding=embedding[:,0:8]
                 in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding),dim=-1)
-
         else :
-
             in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, x_i_type, x_j_type),dim=-1)
 
         return self.lin_edge(in_features)
