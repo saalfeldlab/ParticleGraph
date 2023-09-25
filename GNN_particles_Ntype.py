@@ -2308,7 +2308,7 @@ if __name__ == '__main__':
     print('')
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -2712,7 +2712,7 @@ if __name__ == '__main__':
     sigma = model_config['sigma']
     aggr_type = model_config['aggr_type']
 
-    for gtest in range(3,5):
+    for gtest in range(3):
 
         ntry = 48+gtest
         model_config['ntry'] = ntry
