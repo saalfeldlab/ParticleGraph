@@ -1331,7 +1331,7 @@ def data_train(model_config,gtest):
     embedding_list=[]
     D_nm = torch.zeros((60,nparticle_types, nparticle_types))
 
-    for epoch in range(50):
+    for epoch in range(51):
 
         # if epoch == 30:
         #     optimizer = torch.optim.Adam(model.parameters(), lr=1E-4) # weight_decay=weight_decay)
@@ -1497,7 +1497,7 @@ def data_train(model_config,gtest):
 
         if (epoch%10==0) & (epoch>0):
 
-            xx, rmserr_list = data_test(model_config, bVisu=False, bPrint=False)
+            xx, rmserr_list = data_test(model_config, bVisu=True, bPrint=False)
 
             model.train()
 
