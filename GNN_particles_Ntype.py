@@ -2304,7 +2304,7 @@ def print_model_config (model_config):
 if __name__ == '__main__':
 
     print('')
-    print('version 1.2 230923')
+    print('version 1.21 230923')
     print('')
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -2712,7 +2712,7 @@ if __name__ == '__main__':
     sigma = model_config['sigma']
     aggr_type = model_config['aggr_type']
 
-    for gtest in range(1,3):
+    for gtest in range(3):
 
         ntry = 48+gtest
         model_config['ntry'] = ntry
