@@ -2719,7 +2719,7 @@ if __name__ == '__main__':
         # # model_config['ntry'] = ntry
         # # model_config['hidden_size'] = gtest_list[gtest]
         # # dataset_name = model_config['dataset']
-        dataset_name = '230902_38'
+        dataset_name = '230902_39'
         model_config['dataset'] = dataset_name
 
         print_model_config(model_config)
