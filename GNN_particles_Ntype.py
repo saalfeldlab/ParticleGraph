@@ -2462,6 +2462,7 @@ if __name__ == '__main__':
                     'particle_embedding': True,
                     'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                     'data_augmentation' : True,
+                    'batch_size': 8,
                     'embedding_type': 'none',
                     'embedding': 3,
                     'model': 'InteractionParticles',
