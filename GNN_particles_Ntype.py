@@ -1867,9 +1867,9 @@ def data_test_generate(model_config):
     X1 = torch.rand(nparticles, 2, device=device)
 
     # scenario A
-    # X1[:, 0] = X1[:, 0] / nparticle_types
-    # for n in range(nparticle_types):
-    #     X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / nparticle_types
+    X1[:, 0] = X1[:, 0] / nparticle_types
+    for n in range(nparticle_types):
+        X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / nparticle_types
 
     # scenario B
     # X1[index_particles[0], :] = X1[index_particles[0], :]/2 + 1/4
@@ -2795,10 +2795,10 @@ if __name__ == '__main__':
         print_model_config(model_config)
         # data_generate(model_config)
         # data_train(model_config,gtest)
-        x, rmserr_list = data_test(model_config, bVisu=False, bPrint=True)
+        # x, rmserr_list = data_test(model_config, bVisu=False, bPrint=True)
 
-        # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, index_particles)
-        # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles, prev_nparticles, new_nparticles, prev_index_particles)
+        prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, index_particles)
+        x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles, prev_nparticles, new_nparticles, prev_index_particles)
 
         # data_train_generate(model_config, 'geomloss', f'./graphs_data/graphs_particles_230902_43/')
         # data_train_generate(model_config, 'backward', f'./graphs_data/graphs_particles_230902_43/')
