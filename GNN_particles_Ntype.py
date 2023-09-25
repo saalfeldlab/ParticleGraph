@@ -1419,15 +1419,17 @@ def data_train(model_config,gtest):
 
         torch.save(D_nm, f"./tmp_training/D_nm_{ntry}.pt")
 
-        if (total_loss  < best_loss):
-            best_loss = total_loss
+        S_geomD = torch.sum(D_nm[epoch]).item()
+
+        if (total_loss / S_geomD < best_loss):
+            best_loss = total_loss / S_geomD
             torch.save({'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict()},
                        os.path.join(log_dir, 'models', f'best_model_with_{NGraphs-1}_graphs.pt'))
-            print("Epoch {}. Loss: {:.6f} geomloss {:.2f} saving model  ".format(epoch,total_loss / N / nparticles / batch_size ,torch.sum(D_nm[epoch]).item()))
+            print("Epoch {}. Loss: {:.6f} geomloss {:.2f} saving model  ".format(epoch,total_loss / N / nparticles / batch_size , S_geomD))
         else:
             print(
-                "Epoch {}. Loss: {:.6f} geomloss {:.2f} ".format(epoch, total_loss / N / nparticles / batch_size,torch.sum(D_nm[epoch]).item()))
+                "Epoch {}. Loss: {:.6f} geomloss {:.2f} ".format(epoch, total_loss / N / nparticles / batch_size, S_geomD))
 
         if epoch == 29:
             if data_augmentation:
@@ -1614,10 +1616,12 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
     x = x.to(device)
     x00 = x00.to(device)
     y = y.to(device)
-    print('')
-    print(f'x: {x.shape}')
-    print(f'index_particles: {index_particles[0].shape}')
-    print('')
+
+    if bPrint:
+        print('')
+        print(f'x: {x.shape}')
+        print(f'index_particles: {index_particles[0].shape}')
+        print('')
 
     rmserr_list = []
     discrepency_list = []
@@ -1763,9 +1767,9 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
     if bPrint:
         print('')
         print(f'ntry: {ntry}')
-    print(f'Final RMSE: {rmserr.item()}')
+    print(f'RMSE: {rmserr.item()}')
     if bPrint:
-        print(f'Final MMD: {discrepency}')
+        print(f'MMD: {discrepency}')
     # print(f'Final Sxy: {Sxy.item()}')
 
     return x.detach().cpu().numpy(), rmserr_list
