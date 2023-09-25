@@ -1310,7 +1310,7 @@ def data_train(model_config,gtest):
 
     time.sleep(0.5)
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=5E-2) #, weight_decay=weight_decay)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1E-3) #, weight_decay=weight_decay)
 
     model.train()
     best_loss = np.inf
@@ -1332,7 +1332,7 @@ def data_train(model_config,gtest):
     for epoch in range(40):
 
         if epoch == 30:
-            optimizer = torch.optim.Adam(model.parameters(), lr=5E-3) # weight_decay=weight_decay)
+            optimizer = torch.optim.Adam(model.parameters(), lr=1E-4) # weight_decay=weight_decay)
 
         total_loss = 0
 
