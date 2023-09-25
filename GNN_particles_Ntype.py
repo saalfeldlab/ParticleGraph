@@ -333,7 +333,7 @@ class InteractionParticles(pyg.nn.MessagePassing):
         self.sin_phi = sin_phi
 
         x, edge_index = data.x, data.edge_index
-        model.a.data = torch.sigmoid(model.a.data)
+        # self.a.data = torch.sigmoid(self.a.data)
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
         acc = self.propagate(edge_index, x=(x, x))
