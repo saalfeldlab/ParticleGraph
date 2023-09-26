@@ -1519,6 +1519,11 @@ def data_train(model_config,gtest):
 
         if (epoch%10==0) & (epoch>0):
 
+            best_loss = total_loss / N / nparticles / batch_size
+            torch.save({'model_state_dict': model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict()},
+                       os.path.join(log_dir, 'models', f'best_model_with_{NGraphs-1}_graphs.pt'))
+
             xx, rmserr_list = data_test(model_config, bVisu=True, bPrint=False)
 
             model.train()
