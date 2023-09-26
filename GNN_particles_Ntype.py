@@ -1339,7 +1339,7 @@ def data_train(model_config,gtest):
     list_loss = []
     list_gap = []
     embedding_list=[]
-    D_nm = torch.zeros((60,nparticle_types, nparticle_types))
+    D_nm = torch.zeros((81,nparticle_types, nparticle_types))
 
     for epoch in range(81):
 
