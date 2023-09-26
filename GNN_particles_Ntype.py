@@ -1321,7 +1321,8 @@ def data_train(model_config,gtest):
     lr = 1E-3
     optimizer = torch.optim.Adam(model.parameters(), lr=lr) #, weight_decay=weight_decay)
     print(f'Learning rate: {lr}')
-
+    Nepochs=80
+    print(f'N epochs: {Nepochs}')
     model.train()
     best_loss = np.inf
 
@@ -1331,15 +1332,15 @@ def data_train(model_config,gtest):
     else:
         data_augmentation_loop = 1
         print('no data augmentation ...')
-    print('')
-    time.sleep(0.5)
 
     list_loss = []
     list_gap = []
     embedding_list=[]
-    D_nm = torch.zeros((81,nparticle_types, nparticle_types))
+    D_nm = torch.zeros((Nepochs+1,nparticle_types, nparticle_types))
 
-    for epoch in range(81):
+    print('')
+    time.sleep(0.5)
+    for epoch in range(Nepochs+1):
 
         if epoch == 30:
             lr = 2E-4
@@ -1349,7 +1350,7 @@ def data_train(model_config,gtest):
                 data_augmentation_loop = 200
                 print(f'data_augmentation_loop: {data_augmentation_loop}')
 
-        if epoch == 75:
+        if epoch == Nepochs-5:
             print('training MLP only ...')
             model.a.requires_grad = False
             # new_a = kmeans.cluster_centers_[kmeans.labels_, :]
@@ -1442,7 +1443,7 @@ def data_train(model_config,gtest):
         S_geomD = torch.sum(D_nm[epoch]).item()
         # print(f'total_loss / S_geomD: {total_loss / S_geomD}  best_loss {best_loss}')
 
-        if (total_loss / N / nparticles / batch_size / N < best_loss) | (epoch==80):
+        if (total_loss / N / nparticles / batch_size / N < best_loss):
             best_loss = total_loss / N / nparticles / batch_size
             torch.save({'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict()},
@@ -1504,14 +1505,10 @@ def data_train(model_config,gtest):
         ax2.set_ylabel('Geomloss', fontsize=10)
 
         if (epoch%10==0) & (epoch>0):
-
             best_loss = total_loss / N / nparticles / batch_size
             torch.save({'model_state_dict': model.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict()},
-                       os.path.join(log_dir, 'models', f'best_model_with_{NGraphs-1}_graphs.pt'))
-
+                        'optimizer_state_dict': optimizer.state_dict()},os.path.join(log_dir, 'models', f'best_model_with_{NGraphs-1}_graphs.pt'))
             xx, rmserr_list = data_test(model_config, bVisu=True, bPrint=False)
-
             model.train()
 
         if (epoch>9):
