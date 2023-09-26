@@ -405,6 +405,131 @@ class InteractionParticles(pyg.nn.MessagePassing):
     def update(self, aggr_out):
 
         return aggr_out  # self.lin_node(aggr_out)
+class InteractionParticlesLoop(pyg.nn.MessagePassing):
+    """Interaction Network as proposed in this paper:
+    https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
+
+    def __init__(self, model_config, device):
+
+        super(InteractionParticlesLoop, self).__init__(aggr=aggr_type)  # "Add" aggregation.
+
+        self.device = device
+        self.input_size = model_config['input_size']
+        self.output_size = model_config['output_size']
+        self.hidden_size = model_config['hidden_size']
+        self.nlayers = model_config['n_mp_layers']
+        self.nparticles = model_config['nparticles']
+        self.radius = model_config['radius']
+        self.particle_embedding = model_config['particle_embedding']
+        self.data_augmentation = model_config['data_augmentation']
+        self.noise_level = model_config['noise_level']
+        self.noise_type = model_config['noise_type']
+        self.embedding_type = model_config['embedding_type']
+        self.embedding = model_config['embedding']
+        num_t_freq = 2
+        self.embedding_freq = Embedding_freq(2, num_t_freq)
+        self.upgrade_type = model_config['upgrade_type']
+
+        self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
+                            hidden_size=self.hidden_size, device=self.device)
+        # self.lin_acc = MLP(input_size=4+self.embedding, output_size=self.output_size, nlayers=3,
+        #                     hidden_size=self.hidden_size, device=self.device)
+
+        if self.embedding_type == 'none':
+            self.a = nn.Parameter(torch.tensor(np.ones((int(self.nparticles), self.embedding)), device=self.device, requires_grad=True, dtype=torch.float32))
+        else:
+            self.a = nn.Parameter(torch.tensor(np.ones((int(self.nparticles), 2)), device=self.device, requires_grad=True, dtype=torch.float32))
+
+        # self.p0 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
+        # self.p1 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
+        # self.a_bf_kmean = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device='cuda:0', requires_grad=False))
+
+
+    def forward(self, data, step, nloop, vnorm, ynorm, cos_phi, sin_phi):
+
+        self.vnorm = vnorm
+        self.ynorm = vnorm
+        self.step = step
+        self.cos_phi = cos_phi
+        self.sin_phi = sin_phi
+
+        x, edge_index = data.x, data.edge_index
+        edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+        acc = self.propagate(edge_index, x=(x, x))
+
+        for loop in range(nloop):
+            distance = torch.sum(bc_diff(x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
+            t = torch.Tensor([self.radius ** 2])  # threshold
+            adj_t = (distance < self.radius ** 2).float() * 1
+            edge_index = adj_t.nonzero().t().contiguous()
+            edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+
+            acc = self.propagate(edge_index, x=(x, x))
+            if (self.data_augmentation):
+                new_acc = cos_phi * acc[:, 0] - sin_phi * acc[:, 1]
+                new_acc = sin_phi * acc[:, 0] + cos_phi * acc[:, 1]
+                acc[:, 0] = new_acc
+                acc[:, 1] = new_acc
+            acc_norm = torch.sqrt(acc[:,0]**2+acc[:,1]**2)
+            t = torch.min(acc_norm,ynorm[4]*3)/acc_norm
+            t = torch.permute(t.repeat(2, 1),(1,0))
+            acc = acc*t
+
+            x[:, 2:4] = x[:, 2:4] + acc
+            x[:, 0:2] = bc_pos(x[:, 0:2] + x[:, 2:4])
+
+        return x[:, 0:4]
+
+    def message(self, x_i, x_j):
+
+        r = torch.sqrt(torch.sum(bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) ** 2, axis=1)) / self.radius  # squared distance
+        r = r[:, None]
+
+        delta_pos = bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) / self.radius
+        x_i_vx = x_i[:, 2:3] / self.vnorm[4]
+        x_i_vy = x_i[:, 3:4] / self.vnorm[5]
+        x_i_type = x_i[:, 4:6]
+        x_j_vx = x_j[:, 2:3] / self.vnorm[4]
+        x_j_vy = x_j[:, 3:4] / self.vnorm[5]
+
+        if (self.data_augmentation) & (self.step==1):
+
+            new_x = self.cos_phi * delta_pos[:,0] + self.sin_phi * delta_pos[:,1]
+            new_y = -self.sin_phi * delta_pos[:,0] + self.cos_phi * delta_pos[:,1]
+            delta_pos[:,0] = new_x
+            delta_pos[:,1] = new_y
+            new_vx = self.cos_phi * x_i_vx + self.sin_phi * x_i_vy
+            new_vy = -self.sin_phi * x_i_vx + self.cos_phi * x_i_vy
+            x_i_vx = new_vx
+            x_i_vy = new_vy
+            new_vx = self.cos_phi * x_j_vx + self.sin_phi * x_j_vy
+            new_vy = -self.sin_phi * x_j_vx + self.cos_phi * x_j_vy
+            x_j_vx = new_vx
+            x_j_vy = new_vy
+
+        if self.particle_embedding > 0:
+            if self.embedding_type=='none':
+                embedding = torch.clamp(self.a[x_i[:, 6].detach().cpu().numpy(), :],min=-4,max=4)
+                in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding),dim=-1)
+            if self.embedding_type=='repeat':
+                x_i_type_0 = x_i[:, 4]
+                x_i_type_1 = x_i[:, 5]
+                in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, x_i_type_0[:, None].repeat(1, 4), x_i_type_1[:, None].repeat(1, 4)),dim=-1)
+            if self.embedding_type=='frequency':
+                embedding=self.embedding_freq(x_i[:, 4:6])
+                embedding=embedding[:,0:8]
+                in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding),dim=-1)
+
+        else :
+            in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, x_i_type),dim=-1)
+
+
+        return self.lin_edge(in_features)
+
+
+    def update(self, aggr_out):
+
+        return aggr_out  # self.lin_node(aggr_out)
 class MixInteractionParticles(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -529,6 +654,7 @@ class MixInteractionParticles(pyg.nn.MessagePassing):
     def update(self, aggr_out):
 
         return aggr_out  # self.lin_node(aggr_out)
+
 class InteractionParticles3D(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -619,88 +745,6 @@ class InteractionParticles3D(pyg.nn.MessagePassing):
             embedding0 = self.a[x_i[:, 8].detach().cpu().numpy(), :]
             embedding1 = self.a[x_j[:, 8].detach().cpu().numpy(), :]
             in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding0, embedding1), dim=-1)
-
-        return self.lin_edge(in_features)
-
-    def update(self, aggr_out):
-
-        return aggr_out  # self.lin_node(aggr_out)
-class InteractionParticlesLoop(pyg.nn.MessagePassing):
-    """Interaction Network as proposed in this paper:
-    https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
-
-    def __init__(self, model_config, device):
-
-        super(InteractionParticlesLoop, self).__init__(aggr=aggr_type)  # "Add" aggregation.
-
-        self.device = device
-        self.input_size = model_config['input_size']
-        self.output_size = model_config['output_size']
-        self.hidden_size = model_config['hidden_size']
-        self.nlayers = model_config['n_mp_layers']
-
-        self.noise_level = model_config['noise_level']
-
-        self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
-                            hidden_size=self.hidden_size, device=self.device)
-
-        # self.particle_emb = MLP(input_size=2, hidden_size=8, output_size=8, nlayers=3, device=self.device)
-
-        self.a = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device=self.device, requires_grad=True))
-
-        self.p0 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
-        self.p1 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
-
-    def forward(self, data, nframes):
-
-        x, edge_index = data.x, data.edge_index
-        x[:, 4:6] = self.a[x[:, 6].detach().cpu().numpy(), 0:2]
-        edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-
-
-        for loop in range(nframes):
-
-            distance = torch.sum((x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
-            t = torch.Tensor([radius ** 2])  # threshold
-            adj_t = (distance < radius ** 2).float() * 1
-            edge_index = adj_t.nonzero().t().contiguous()
-            edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-
-            acc = self.propagate(edge_index, x=(x, x))
-
-            acc[:, 0] = acc[:, 0] * ynorm[4]
-            acc[:, 1] = acc[:, 1] * ynorm[5]
-
-            x[:, 2:4] = x[:, 2:4] + acc
-            x[:, 0:2] = x[:, 0:2] + x[:, 2:4]
-
-        return x[:,0:4]
-
-        plt.ion()
-        for n in range(nparticle_types):
-            plt.scatter(x[index_particles[n], 0].detach().cpu(), x[index_particles[n], 1].detach().cpu(), s=3)
-
-    def message(self, x_i, x_j):
-
-        r = torch.sqrt(torch.sum(bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) ** 2, axis=1)) / radius  # squared distance
-        r = r[:, None]
-
-        delta_pos = bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) / radius
-        x_i_vx = x_i[:, 2:3] / vnorm[4]
-        x_i_vy = x_i[:, 3:4] / vnorm[5]
-        x_i_type = x_i[:, 4:6]
-        x_j_vx = x_j[:, 2:3] / vnorm[4]
-        x_j_vy = x_j[:, 3:4] / vnorm[5]
-
-        if particle_embedding:
-
-            x_i_type_0 = x_i[:, 4]
-            x_i_type_1 = x_i[:, 5]
-            in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, x_i_type_0[:, None].repeat(1, 4), x_i_type_1[:, None].repeat(1, 4)),dim=-1)
-
-        else :
-
-            in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, x_i_type),dim=-1)
 
         return self.lin_edge(in_features)
 
@@ -1275,8 +1319,12 @@ def data_train(model_config,gtest):
     torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
 
     if model_config['model'] == 'InteractionParticles':
-        model = InteractionParticles(model_config, device)
-        print(f'Training InteractionParticles')
+        if training_mode == 'regressive_loop':
+            model = InteractionParticlesLoop(model_config, device)
+            print(f'Training InteractionParticles regressive loop')
+        else:
+            model = InteractionParticles(model_config, device)
+            print(f'Training InteractionParticles')
     if model_config['model'] == 'MixInteractionParticles':
         model = MixInteractionParticles(model_config, device)
         print(f'Training MixInteractionParticles')
@@ -1334,7 +1382,6 @@ def data_train(model_config,gtest):
     # optimizer = torch.optim.Adam([model.a], lr=0.01)
     # optimizer.add_param_group({'params': model.lin_edge.layers[0].weight, 'lr': lr})
     # optimizer.add_param_group({'params': model.lin_edge.layers[0].bias, 'lr': lr})
-
 
     if data_augmentation:
         data_augmentation_loop = 20
@@ -1436,14 +1483,19 @@ def data_train(model_config,gtest):
                 loss.backward()
                 optimizer.step()
                 total_loss += loss.item()
+
         elif training_mode == 'regressive':
 
-            for nloop in range(data_augmentation_loop):
+            regressive_step = 5
 
+            for N in range(1, nframes * data_augmentation_loop // regressive_step ):
+
+                k = np.random.randint(nframes - 1-  regressive_step)
                 run = 1 + np.random.randint(NGraphs - 1)
-                x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{0}.pt').to(device)
+                x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{k}.pt')
+                x = x.to(device)
 
-                for N in range(1, nframes):
+                for regressive_loop in range(regressive_step):
 
                     phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
                     cos_phi = torch.cos(phi)
@@ -1455,26 +1507,66 @@ def data_train(model_config,gtest):
                     edges = adj_t.nonzero().t().contiguous()
                     dataset = data.Data(x=x[:, :], edge_index=edges)
 
-                    y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{k}.pt')
+                    y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{k+regressive_loop}.pt')
                     y = y.to(device)
                     y[:, 0] = y[:, 0] / ynorm[4]
                     y[:, 1] = y[:, 1] / ynorm[5]
 
                     if data_augmentation:
-                        new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
-                        new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
-                        y[:, 0] = new_x
-                        y[:, 1] = new_y
+                        new_yx = cos_phi * y[:, 0] + sin_phi * y[:, 1]
+                        new_yy = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
+                        y[:, 0] = new_yx
+                        y[:, 1] = new_yy
 
-                    loss = (pred - y_batch).norm(2)
+                    optimizer.zero_grad()
+                    pred = model(dataset, step = 1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
+
+                    loss = (pred - y).norm(2)
                     loss.backward()
                     optimizer.step()
+
                     total_loss += loss.item()
 
                     y[:, 0] = y[:, 0] * ynorm[4]
                     y[:, 1] = y[:, 1] * ynorm[5]
                     x[:, 2:4] = x[:, 2:4] + y  # speed update
                     x[:, 0:2] = bc_pos(x[:, 0:2] + x[:, 2:4])  # position update
+
+        elif training_mode == 'regressive_loop':
+
+            regressive_step = 5
+            for N in range(1, nframes // regressive_step * data_augmentation_loop):
+
+                phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
+                cos_phi = torch.cos(phi)
+                sin_phi = torch.sin(phi)
+
+                k = np.random.randint(nframes - 1-  regressive_step)
+                run = 1 + np.random.randint(NGraphs - 1)
+                x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{k}.pt')
+                x = x.to(device)
+
+                distance = torch.sum(bc_diff(x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
+                adj_t = (distance < radius ** 2).float() * 1
+                t = torch.Tensor([radius ** 2])
+                edges = adj_t.nonzero().t().contiguous()
+                dataset = data.Data(x=x[:, :], edge_index=edges)
+
+                optimizer.zero_grad()
+                pred = model(dataset, step = 1, nloop=regressive_step, vnorm=vnorm, ynorm=ynorm, cos_phi=cos_phi, sin_phi=sin_phi)
+
+                y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{k+regressive_step}.pt')
+                y = y.to(device)
+
+                # loss = bc_diff(pred[:,0:2] - y[:,0:2]).norm(2)
+
+                loss = 1E5 * S_e(pred[:,0:2],y[:,0:2])
+
+                loss.backward()
+                optimizer.step()
+
+                total_loss += loss.item()
+
         else:
             print('Pb training mode')
 
@@ -1485,16 +1577,19 @@ def data_train(model_config,gtest):
         embedding_particle = []
         for n in range(nparticle_types):
             embedding_particle.append(embedding[index_particles[n], :])
-        kmeans = KMeans(init="random", n_clusters=nparticle_types, n_init=10, max_iter=300, random_state=42)
-        kmeans.fit(embedding)
-        gap = kmeans.inertia_
+
+
+        # kmeans = KMeans(init="random", n_clusters=nparticle_types, n_init=10, max_iter=300, random_state=42)
+        # kmeans.fit(embedding)
+        # gap = kmeans.inertia_
         kmeans_kwargs = {"init": "random", "n_init": 10, "max_iter": 300, "random_state": 42}
         sse = []
-        for k in range(1, 11):
-            kmeans_ = KMeans(n_clusters=k, **kmeans_kwargs)
-            kmeans_.fit(embedding)
-            sse.append(kmeans_.inertia_)
-        kl = KneeLocator(range(1, 11), sse, curve="convex", direction="decreasing")
+        # for k in range(1, 11):
+        #     kmeans_ = KMeans(n_clusters=k, **kmeans_kwargs)
+        #     kmeans_.fit(embedding)
+        #     sse.append(kmeans_.inertia_)
+        # kl = KneeLocator(range(1, 11), sse, curve="convex", direction="decreasing")
+        # list_gap.append(gap)
 
         for n in range(nparticle_types-1):
             for m in range(n+1,nparticle_types):
@@ -1515,7 +1610,6 @@ def data_train(model_config,gtest):
             print("Epoch {}. Loss: {:.6f} geomloss {:.2f} ".format(epoch, total_loss / N / nparticles / batch_size, S_geomD))
 
         list_loss.append(total_loss / N / nparticles / batch_size)
-        list_gap.append(gap)
 
         fig = plt.figure(figsize=(13, 8))
         # plt.ion()
@@ -2780,6 +2874,60 @@ def load_model_config (id=48):
     if model_config_test['ntry']==id:
         return model_config_test
 
+    #63 regular 2 particles data idem 62 for regressive training
+    model_config_test = {'ntry': 63,
+                    'input_size': 9,
+                    'output_size': 2,
+                    'hidden_size': 64,
+                    'n_mp_layers': 5,
+                    'noise_level': 1E-1,
+                    'noise_type': 0,
+                    'radius': 0.075,
+                    'dataset': '230902_62',
+                    'nparticles': 2000,
+                    'nparticle_types': 2,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'batch_size' :1,
+                    'embedding_type': 'none',
+                    'embedding': 2,
+                    'model': 'InteractionParticles',
+                    'upgrade_type':0}
+    if model_config_test['ntry']==id:
+        return model_config_test
+
+    #64 regular 2 particles data idem 62 for regressive loop training
+    model_config_test = {'ntry': 64,
+                    'input_size': 9,
+                    'output_size': 2,
+                    'hidden_size': 64,
+                    'n_mp_layers': 5,
+                    'noise_level': 1E-1,
+                    'noise_type': 0,
+                    'radius': 0.075,
+                    'dataset': '230902_62',
+                    'nparticles': 2000,
+                    'nparticle_types': 2,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'batch_size' :1,
+                    'embedding_type': 'none',
+                    'embedding': 2,
+                    'model': 'InteractionParticles',
+                    'upgrade_type':0}
+    if model_config_test['ntry']==id:
+        return model_config_test
+
     #67
     model_config_test = {'ntry': 67,
                     'input_size': 10,
@@ -2889,7 +3037,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -2899,7 +3047,8 @@ if __name__ == '__main__':
 
     sigma = model_config['sigma']
     aggr_type = model_config['aggr_type']
-    training_mode='t+1'   # 't+1' 'regressive'
+    print('')
+    training_mode='regressive'   # 't+1' 'regressive' 'regressive_loop'
     print(f'training_mode: {training_mode}')
 
     if model_config['boundary'] == 'no':  # change this for usual BC
@@ -2913,7 +3062,7 @@ if __name__ == '__main__':
         def bc_diff(D):
             return torch.remainder(D - .5, 1.0) - .5
 
-    for gtest in range(57,62):
+    for gtest in range(63,64):
         model_config = load_model_config(id=gtest)
 
         # ntry = 49+gtest
