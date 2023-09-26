@@ -1,6 +1,4 @@
 
-# use of https://github.com/gpeyre/numerical-tours/blob/master/python/ml_10_particle_system.ipynb
-
 import os
 import matplotlib.pyplot as plt
 import numpy as np
@@ -831,7 +829,6 @@ def data_generate(model_config):
         data_generate_3D(model_config)
     else:
         data_generate_2D(model_config)
-
 def data_generate_2D(model_config):
 
     print('')
@@ -1036,7 +1033,6 @@ def data_generate_2D(model_config):
 
                 plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
                 plt.close()
-
 def data_generate_3D(model_config):
 
     print('')
@@ -1213,7 +1209,6 @@ def data_generate_3D(model_config):
 
                 plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
                 plt.close()
-
 def data_train(model_config,gtest):
 
 
@@ -1536,7 +1531,6 @@ def data_train(model_config,gtest):
         plt.tight_layout()
         plt.savefig(f"./tmp_training/Fig_{ntry}_{epoch}.tif")
         plt.close()
-
 def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0, prev_index_particles=0):
     # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_recons/*")
     # for f in files:
@@ -1789,7 +1783,6 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
     # print(f'Final Sxy: {Sxy.item()}')
 
     return x.detach().cpu().numpy(), rmserr_list
-
 def data_test_generate(model_config):
 
     print('')
@@ -1985,7 +1978,6 @@ def data_test_generate(model_config):
             plt.close()
 
     return prev_nparticles, new_nparticles, prev_index_particles, index_particles
-
 def data_train_generate(model_config, prev_folder):
 
     print('')
@@ -2154,54 +2146,6 @@ def data_train_generate(model_config, prev_folder):
 
                 plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
                 plt.close()
-
-def print_model_config (model_config):
-
-    print('')
-    ntry = model_config['ntry']
-    print(f'ntry: {ntry}')
-    dataset_name = model_config['dataset']
-    print(f'dataset_name: {dataset_name}')
-    nparticles = model_config['nparticles']  # number of particles
-    print(f'nparticles: {nparticles}')
-    nparticle_types = model_config['nparticle_types']  # number of particles
-    print(f'nparticle_types: {nparticle_types}')
-    nframes = model_config['nframes']
-    print(f'nframes: {nframes}')
-    radius = model_config['radius']
-    print(f'radius: {radius}')
-    sigma = model_config['sigma']
-    print(f'sigma: {sigma}')
-    tau = model_config['tau']
-    print(f'tau: {tau}')
-    aggr_type = model_config['aggr_type']
-    print(f'aggr_type: {aggr_type}')
-
-    boundary = model_config['boundary']
-    print(f'boundary: {boundary}')
-    input_size = model_config['input_size']
-    print(f'input_size: {input_size}')
-    hidden_size = model_config['hidden_size']
-    print(f'hidden_size: {hidden_size}')
-    output_size = model_config['output_size']
-    print(f'output_size: {output_size}')
-    noise_level = model_config['noise_level']
-    print(f'noise_level: {noise_level}')
-    noise_type = model_config['noise_type']
-    print(f'noise_type: {noise_type}')
-    particle_embedding = model_config['particle_embedding']
-    print(f'particle_embedding: {particle_embedding}')
-    embedding_type = model_config['embedding_type']
-    print(f'embedding_type: {embedding_type}')
-    embedding = model_config['embedding']
-    print(f'embedding: {embedding}')
-    if model_config['upgrade_type']==0:
-        print ('acc = aggr(message)')
-    if model_config['upgrade_type']==1:
-        print ('acc = MLP(aggr(message),velocity,embedding')
-    batch_size = model_config['batch_size']
-    print(f'batch_size = {batch_size}')
-
 def load_model_config (id=48):
 
 
@@ -2813,12 +2757,60 @@ def load_model_config (id=48):
 
 
     return model_config_test
+def print_model_config (model_config):
+
+    print('')
+    ntry = model_config['ntry']
+    print(f'ntry: {ntry}')
+    dataset_name = model_config['dataset']
+    print(f'dataset_name: {dataset_name}')
+    nparticles = model_config['nparticles']  # number of particles
+    print(f'nparticles: {nparticles}')
+    nparticle_types = model_config['nparticle_types']  # number of particles
+    print(f'nparticle_types: {nparticle_types}')
+    nframes = model_config['nframes']
+    print(f'nframes: {nframes}')
+    radius = model_config['radius']
+    print(f'radius: {radius}')
+    sigma = model_config['sigma']
+    print(f'sigma: {sigma}')
+    tau = model_config['tau']
+    print(f'tau: {tau}')
+    aggr_type = model_config['aggr_type']
+    print(f'aggr_type: {aggr_type}')
+
+    boundary = model_config['boundary']
+    print(f'boundary: {boundary}')
+    input_size = model_config['input_size']
+    print(f'input_size: {input_size}')
+    hidden_size = model_config['hidden_size']
+    print(f'hidden_size: {hidden_size}')
+    output_size = model_config['output_size']
+    print(f'output_size: {output_size}')
+    noise_level = model_config['noise_level']
+    print(f'noise_level: {noise_level}')
+    noise_type = model_config['noise_type']
+    print(f'noise_type: {noise_type}')
+    particle_embedding = model_config['particle_embedding']
+    print(f'particle_embedding: {particle_embedding}')
+    embedding_type = model_config['embedding_type']
+    print(f'embedding_type: {embedding_type}')
+    embedding = model_config['embedding']
+    print(f'embedding: {embedding}')
+    if model_config['upgrade_type']==0:
+        print ('acc = aggr(message)')
+    if model_config['upgrade_type']==1:
+        print ('acc = MLP(aggr(message),velocity,embedding')
+    batch_size = model_config['batch_size']
+    print(f'batch_size = {batch_size}')
+
 
 
 if __name__ == '__main__':
 
     print('')
     print('version 1.21 230923')
+    print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
     device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
