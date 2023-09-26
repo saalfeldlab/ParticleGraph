@@ -854,7 +854,7 @@ def data_train(model_config, index_particles):
             print("Epoch {}. Loss: {:.6f} geomloss {:.2f} saving model  ".format(epoch,total_loss / N / nparticles, torch.sum(D_nm[epoch]).item()))
         else:
             print(
-                "Epoch {}. Loss: {:.6f} geomloss {:.2f} ".format(epoch, total_loss / N / nparticles,torch.sum(D_nm).item()))
+                "Epoch {}. Loss: {:.6f} geomloss {:.2f} ".format(epoch, total_loss / N / nparticles,torch.sum(D_nm[epoch]).item()))
 
         if epoch == 29:
             if data_augmentation:
@@ -1368,7 +1368,7 @@ if __name__ == '__main__':
     print(f'device {device}')
 
 
-    model_config = {'ntry': 54,
+    model_config = {'ntry': 63,
                     'input_size': 9,
                     'output_size': 2,
                     'hidden_size': 64,
@@ -1376,9 +1376,9 @@ if __name__ == '__main__':
                     'noise_level': 0,
                     'noise_type': 0,
                     'radius': 0.075,
-                    'datum': '230902_39',
-                    'nparticles': 3000,
-                    'nparticle_types': 3,
+                    'datum': '230902_62',
+                    'nparticles': 2000,
+                    'nparticle_types': 2,
                     'nframes': 200,
                     'sigma': .005,
                     'tau': 0.1,
