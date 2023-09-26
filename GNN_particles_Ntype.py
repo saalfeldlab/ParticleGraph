@@ -2832,8 +2832,6 @@ def load_model_config (id=48):
     return model_config_test
 
 
-
-
 if __name__ == '__main__':
 
     print('')
@@ -2841,7 +2839,7 @@ if __name__ == '__main__':
     print('')
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -2866,7 +2864,7 @@ if __name__ == '__main__':
     sigma = model_config['sigma']
     aggr_type = model_config['aggr_type']
 
-    for gtest in range(57,62):
+    for gtest in range(53,67):
         model_config = load_model_config(id=gtest)
 
         # ntry = 49+gtest
