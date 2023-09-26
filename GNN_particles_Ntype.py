@@ -51,7 +51,6 @@ def normalize99(Y, lower=1, upper=99):
     x99 = np.percentile(X, upper)
     X = (X - x01) / (x99 - x01)
     return x01, x99
-
 def norm_velocity(xx, device):
     mvx = torch.mean(xx[:, 2])
     mvy = torch.mean(xx[:, 3])
@@ -532,7 +531,6 @@ class MixInteractionParticles(pyg.nn.MessagePassing):
     def update(self, aggr_out):
 
         return aggr_out  # self.lin_node(aggr_out)
-
 class InteractionParticles3D(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -1343,10 +1341,20 @@ def data_train(model_config,gtest):
 
     for epoch in range(81):
 
-        if epoch == 29:
+        if epoch == 30:
             lr = 2E-4
             optimizer = torch.optim.Adam(model.parameters(), lr=lr)  # , weight_decay=weight_decay)
             print(f'Learning rate: {lr}')
+            if data_augmentation:
+                data_augmentation_loop = 200
+                print(f'data_augmentation_loop: {data_augmentation_loop}')
+
+        if epoch == 75:
+            print('training MLP only ...')
+            model.a.requires_grad = False
+            # new_a = kmeans.cluster_centers_[kmeans.labels_, :]
+            # if gap < 100:
+            #     model.a.data = torch.tensor(new_a, device=device)
 
         total_loss = 0
 
@@ -1443,28 +1451,6 @@ def data_train(model_config,gtest):
         else:
             print(
                 "Epoch {}. Loss: {:.6f} geomloss {:.2f} ".format(epoch, total_loss / N / nparticles / batch_size, S_geomD))
-
-        if epoch == 29:
-            if data_augmentation:
-                data_augmentation_loop = 200
-                print(f'data_augmentation_loop: {data_augmentation_loop}')
-
-        if epoch == 69:
-            print('training MLP only ...')
-            model.a.requires_grad = False
-            new_a = kmeans.cluster_centers_[kmeans.labels_, :]
-
-            # if gap < 100:
-            #     model.a.data = torch.tensor(new_a, device=device)
-
-            embedding = model.a.detach().cpu().numpy()
-            embedding = scaler.fit_transform(embedding)
-            embedding_list.append(torch.tensor(embedding,device=device))
-            torch.save(embedding_list,f"./tmp_training/Embedding_{ntry}.pt")
-            embedding_particle = []
-            for n in range(nparticle_types):
-                embedding_particle.append(embedding[index_particles[n], :])
-            best_loss = np.inf
 
         list_loss.append(total_loss / N / nparticles / batch_size)
         list_gap.append(gap)
@@ -2837,7 +2823,6 @@ if __name__ == '__main__':
     print('')
     print('version 1.21 230923')
     print('')
-    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
@@ -2847,22 +2832,18 @@ if __name__ == '__main__':
 
     model_config = load_model_config(id=54)
 
+    sigma = model_config['sigma']
+    aggr_type = model_config['aggr_type']
     if model_config['boundary'] == 'no':  # change this for usual BC
         def bc_pos(X):
             return X
-
-
         def bc_diff(D):
             return D
     else:
         def bc_pos(X):
             return torch.remainder(X, 1.0)
-
-
         def bc_diff(D):
             return torch.remainder(D - .5, 1.0) - .5
-    sigma = model_config['sigma']
-    aggr_type = model_config['aggr_type']
 
     for gtest in range(53,67):
         model_config = load_model_config(id=gtest)
