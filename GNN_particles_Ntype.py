@@ -1939,11 +1939,13 @@ def data_test_generate(model_config):
     print('Generating test data ...')
 
     nframes = 200
+    ntry = model_config['ntry']
     radius = model_config['radius']
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
     dataset_name = model_config['dataset']
     nframes = model_config['nframes']
+    tau = model_config['tau']
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -2452,7 +2454,7 @@ def load_model_config (id=48):
 
     #43 3 particle mixt interaction ##################################
     model_config_test = {'ntry': 43,
-                    'input_size': 13,
+                    'input_size': 8,
                     'output_size': 2,
                     'hidden_size': 128,
                     'n_mp_layers': 5,
@@ -2469,9 +2471,10 @@ def load_model_config (id=48):
                     'particle_embedding': True,
                     'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                     'data_augmentation' : True,
+                    'batch_size' :4,
                     'embedding_type': 'none',
-                    'embedding': 3,
-                    'model': 'MixInteractionParticles',
+                    'embedding': 1,
+                    'model': 'InteractionParticles',
                     'upgrade_type':0}
 
     if model_config_test['ntry']==id:
@@ -3033,7 +3036,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3058,7 +3061,7 @@ if __name__ == '__main__':
         def bc_diff(D):
             return torch.remainder(D - .5, 1.0) - .5
 
-    for gtest in range(57,64):
+    for gtest in range(53,54):
         model_config = load_model_config(id=gtest)
 
         if gtest==63:
@@ -3080,11 +3083,11 @@ if __name__ == '__main__':
 
         print_model_config(model_config)
         # data_generate(model_config)
-        data_train(model_config,gtest)
+        # data_train(model_config,gtest)
         # x, rmserr_list = data_test(model_config, bVisu=False, bPrint=True)
 
-        # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, index_particles)
-        # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
+        prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
+        x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
 
         # data_train_generate(model_config, f'./graphs_data/graphs_particles_230902_57/')
 
