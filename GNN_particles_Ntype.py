@@ -968,8 +968,7 @@ def data_generate_2D(model_config):
         # p[2, 2] = torch.tensor([1.0833,1.2819,1.6062,1.0675])
 
         for n in range(nparticle_types):
-            for m in range(n, nparticle_types):
-                p[m, n] = p[n, m]
+            for m in range(nparticle_types):
                 psi_output.append(psi(rr, torch.squeeze(p[n, m])))
                 print(f'p{n, m}: {np.round(torch.squeeze(p[n, m]).detach().cpu().numpy(), 4)}')
                 torch.save(torch.squeeze(p[n, m]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}_{m}.pt')
@@ -1055,8 +1054,8 @@ def data_generate_2D(model_config):
                 if model_config['model'] == 'MixInteractionParticles':
                     N=0
                     for n in range(nparticle_types):
-                        for m in range(n, nparticle_types):
-                            plt.text(-0.25, 1.25 - N * 0.05, f'p{n}: {np.round(p[n,m].detach().cpu().numpy(), 4)}',color='k')
+                        for m in range(nparticle_types):
+                            plt.text(-0.25, 1.25 - N * 0.05, f'p{n}{m}: {np.round(p[n,m].detach().cpu().numpy(), 4)}',color='k')
                             N+=1
                 else:
                     for n in range(nparticle_types):
@@ -1068,7 +1067,7 @@ def data_generate_2D(model_config):
                 if model_config['model'] == 'MixInteractionParticles':
                     N = 0
                     for n in range(nparticle_types):
-                        for m in range(n, nparticle_types):
+                        for m in range(nparticle_types):
                             plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[N].cpu()), linewidth=1)
                             plt.plot(rr.detach().cpu().numpy(), psi_output[0].detach().cpu().numpy() * 0,
                                      color=[0, 0, 0], linewidth=0.5)
@@ -2454,7 +2453,7 @@ def load_model_config (id=48):
 
     #43 3 particle mixt interaction ##################################
     model_config_test = {'ntry': 43,
-                    'input_size': 8,
+                    'input_size': 9,
                     'output_size': 2,
                     'hidden_size': 128,
                     'n_mp_layers': 5,
@@ -2474,7 +2473,7 @@ def load_model_config (id=48):
                     'batch_size' :4,
                     'embedding_type': 'none',
                     'embedding': 1,
-                    'model': 'InteractionParticles',
+                    'model': 'MixInteractionParticles',
                     'upgrade_type':0}
 
     if model_config_test['ntry']==id:
@@ -3082,12 +3081,12 @@ if __name__ == '__main__':
         # model_config['dataset'] = dataset_name
 
         print_model_config(model_config)
-        # data_generate(model_config)
-        # data_train(model_config,gtest)
-        # x, rmserr_list = data_test(model_config, bVisu=False, bPrint=True)
+        data_generate(model_config)
+        data_train(model_config,gtest)
+        x, rmserr_list = data_test(model_config, bVisu=False, bPrint=True)
 
-        prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
-        x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
+        # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
+        # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
 
         # data_train_generate(model_config, f'./graphs_data/graphs_particles_230902_57/')
 
