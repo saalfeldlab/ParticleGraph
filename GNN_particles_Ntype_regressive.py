@@ -39,7 +39,7 @@ def MMD(X, Y):
     a = torch.sum(kernel(X, X)) / n ** 2 + \
         torch.sum(kernel(Y, Y)) / m ** 2 - \
         2 * torch.sum(kernel(X, Y)) / (n * m)
-    return a.item()
+    return a
 def psi(r, p):
     return -p[2] * torch.exp(-r ** p[0] / (2 * sigma ** 2)) + p[3] * torch.exp(-r ** p[1] / (2 * sigma ** 2))
 def normalize99(Y, lower=1, upper=99):
@@ -1322,6 +1322,7 @@ def data_train(model_config,gtest):
         if training_mode == 'regressive_loop':
             model = InteractionParticlesLoop(model_config, device)
             print(f'Training InteractionParticles regressive loop')
+            # model.a.requires_grad=False
         else:
             model = InteractionParticles(model_config, device)
             print(f'Training InteractionParticles')
@@ -1338,8 +1339,8 @@ def data_train(model_config,gtest):
     # state_dict = torch.load(net)
     # model.load_state_dict(state_dict['model_state_dict'])
 
-    lra=1E-2
-    lr=1E-3
+    lra=1E-5
+    lr=1E-4
 
     table = PrettyTable(["Modules", "Parameters"])
     total_params = 0
@@ -1403,8 +1404,8 @@ def data_train(model_config,gtest):
             batch_size = model_config['batch_size']
             print(f'batch_size: {batch_size}')
         if epoch == 20:
-            lra = 1E-3
-            lr = 2E-4
+            lra = 1E-5
+            lr = 1E-5
             table = PrettyTable(["Modules", "Parameters"])
             it = 0
             for name, parameter in model.named_parameters():
@@ -1534,7 +1535,7 @@ def data_train(model_config,gtest):
 
         elif training_mode == 'regressive_loop':
 
-            regressive_step = 5
+            regressive_step = 10
             for N in range(1, nframes // regressive_step * data_augmentation_loop):
 
                 phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
@@ -1555,12 +1556,15 @@ def data_train(model_config,gtest):
                 optimizer.zero_grad()
                 pred = model(dataset, step = 1, nloop=regressive_step, vnorm=vnorm, ynorm=ynorm, cos_phi=cos_phi, sin_phi=sin_phi)
 
-                y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{k+regressive_step}.pt')
-                y = y.to(device)
-
                 # loss = bc_diff(pred[:,0:2] - y[:,0:2]).norm(2)
 
-                loss = 1E5 * S_e(pred[:,0:2],y[:,0:2])
+                y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{k+regressive_step}.pt')
+                y = x.to(device)
+
+                noise_0 = torch.randn((nparticles, 2), device=device) * 1E-3 * radius
+                noise_1 = torch.randn((nparticles, 2), device=device) * 1E-3 * radius
+
+                loss = 1E8 * MMD(pred[:,0:2] + 0*noise_0, y[:,0:2] + 0*noise_1)
 
                 loss.backward()
                 optimizer.step()
@@ -1593,11 +1597,11 @@ def data_train(model_config,gtest):
 
         for n in range(nparticle_types-1):
             for m in range(n+1,nparticle_types):
-                D_nm[epoch,n,m] = S_e(torch.tensor(embedding_particle[n]), torch.tensor(embedding_particle[m]))
+                D_nm[epoch,n,m] = 0 # S_e(torch.tensor(embedding_particle[n]), torch.tensor(embedding_particle[m]))
 
         torch.save(D_nm, f"./tmp_training/D_nm_{ntry}.pt")
 
-        S_geomD = torch.sum(D_nm[epoch]).item()
+        S_geomD = 0 #torch.sum(D_nm[epoch]).item()
         # print(f'total_loss / S_geomD: {total_loss / S_geomD}  best_loss {best_loss}')
 
         if (total_loss / nparticles / batch_size / N < best_loss):
@@ -1649,7 +1653,7 @@ def data_train(model_config,gtest):
         plt.ylim([0, 5])
         plt.xlim([0, 100])
 
-        if (epoch%10==0) & (epoch>0):
+        if (epoch%2==0) & (epoch>0):
             best_loss = total_loss / N / nparticles / batch_size
             torch.save({'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict()},os.path.join(log_dir, 'models', f'best_model_with_{NGraphs-1}_graphs.pt'))
@@ -1804,7 +1808,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         rmserr_list.append(rmserr.item())
 
         discrepency = MMD(x[:, 0:2], x0[:, 0:2])
-        discrepency_list.append(discrepency)
+        discrepency_list.append(discrepency.item())
 
         # Sxy = S_e(x[:, 0:2], x0[:, 0:2])
         # Sxy_list.append(Sxy.item())
@@ -2903,7 +2907,7 @@ def load_model_config (id=48):
 
     #64 regular 2 particles data idem 62 for regressive loop training
     model_config_test = {'ntry': 64,
-                    'input_size': 9,
+                    'input_size': 8,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
@@ -2922,7 +2926,7 @@ def load_model_config (id=48):
                     'data_augmentation' : True,
                     'batch_size' :1,
                     'embedding_type': 'none',
-                    'embedding': 2,
+                    'embedding': 1,
                     'model': 'InteractionParticles',
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
@@ -3041,7 +3045,7 @@ if __name__ == '__main__':
     print(f'device {device}')
 
     scaler = StandardScaler()
-    S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
+    S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.025)
 
     model_config = load_model_config(id=54)
 

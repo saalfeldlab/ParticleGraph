@@ -1374,7 +1374,7 @@ def data_train(model_config,gtest):
 
     time.sleep(0.5)
     # optimizer = torch.optim.Adam(model.parameters(), lr=lr) #, weight_decay=weight_decay)
-    Nepochs=80
+    Nepochs=60
     print(f'N epochs: {Nepochs}')
     model.train()
     best_loss = np.inf
@@ -2373,7 +2373,7 @@ def load_model_config (id=48):
     if model_config_test['ntry']==id:
         return model_config_test
 
-    #39
+    #39 3 particles small difference 0.975 ###########################
     model_config_test = {'ntry': 39,
                     'input_size': 9,
                     'output_size': 2,
@@ -2450,7 +2450,7 @@ def load_model_config (id=48):
     if model_config_test['ntry']==id:
         return model_config_test
 
-    #43
+    #43 3 particle mixt interaction ##################################
     model_config_test = {'ntry': 43,
                     'input_size': 13,
                     'output_size': 2,
@@ -2608,7 +2608,8 @@ def load_model_config (id=48):
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
-    #53
+
+    #53 data39 3 particles embedding 1
     model_config_test = {'ntry': 53,
                     'input_size': 8,
                     'output_size': 2,
@@ -2634,7 +2635,7 @@ def load_model_config (id=48):
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
-    #54
+    #54 data39 3 particles embedding 2
     model_config_test = {'ntry': 54,
                     'input_size': 9,
                     'output_size': 2,
@@ -2660,7 +2661,7 @@ def load_model_config (id=48):
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
-    #55
+    #55 data39 3 particles embedding 2 batchsize 4
     model_config_test = {'ntry': 55,
                     'input_size': 9,
                     'output_size': 2,
@@ -2686,7 +2687,7 @@ def load_model_config (id=48):
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
-    #56
+    #56 data39 3 particles embedding 3
     model_config_test = {'ntry': 56,
                     'input_size': 10,
                     'output_size': 2,
@@ -2712,9 +2713,10 @@ def load_model_config (id=48):
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
-    #57
+
+    #57 3 particles noise 0
     model_config_test = {'ntry': 57,
-                    'input_size': 9,
+                    'input_size': 8,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
@@ -2733,15 +2735,14 @@ def load_model_config (id=48):
                     'data_augmentation' : True,
                     'batch_size' :4,
                     'embedding_type': 'none',
-                    'embedding': 2,
+                    'embedding': 1,
                     'model': 'InteractionParticles',
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
-
-    #58
+    #58 3 particles noise 1%
     model_config_test = {'ntry': 58,
-                    'input_size': 9,
+                    'input_size': 8,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
@@ -2760,15 +2761,14 @@ def load_model_config (id=48):
                     'data_augmentation' : True,
                     'batch_size' :4,
                     'embedding_type': 'none',
-                    'embedding': 2,
+                    'embedding': 1,
                     'model': 'InteractionParticles',
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
-
-    #59
+    #59 3 particles noise 2%
     model_config_test = {'ntry': 59,
-                    'input_size': 9,
+                    'input_size': 8,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
@@ -2787,15 +2787,14 @@ def load_model_config (id=48):
                     'data_augmentation' : True,
                     'batch_size' :4,
                     'embedding_type': 'none',
-                    'embedding': 2,
+                    'embedding': 1,
                     'model': 'InteractionParticles',
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
-
-    # 60
+    # 60 3 particles noise 5%
     model_config_test = {'ntry': 60,
-                    'input_size': 9,
+                    'input_size': 8,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
@@ -2814,15 +2813,14 @@ def load_model_config (id=48):
                     'data_augmentation' : True,
                     'batch_size' :4,
                     'embedding_type': 'none',
-                    'embedding': 2,
+                    'embedding': 1,
                     'model': 'InteractionParticles',
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
-
-    #61
+    #61 3 particles noise 10%
     model_config_test = {'ntry': 61,
-                    'input_size': 9,
+                    'input_size': 8,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
@@ -2841,13 +2839,13 @@ def load_model_config (id=48):
                     'data_augmentation' : True,
                     'batch_size' :4,
                     'embedding_type': 'none',
-                    'embedding': 2,
+                    'embedding': 1,
                     'model': 'InteractionParticles',
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
 
-    #62 regular 2 particles data
+    #62 2 particles data
     model_config_test = {'ntry': 62,
                     'input_size': 9,
                     'output_size': 2,
@@ -2873,8 +2871,7 @@ def load_model_config (id=48):
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
-
-    #63 regular 2 particles data idem 62 for regressive training
+    #63 2 particles data idem 62 for regressive training
     model_config_test = {'ntry': 63,
                     'input_size': 9,
                     'output_size': 2,
@@ -2900,8 +2897,7 @@ def load_model_config (id=48):
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
-
-    #64 regular 2 particles data idem 62 for regressive loop training
+    #64 2 particles data idem 62 for regressive loop training
     model_config_test = {'ntry': 64,
                     'input_size': 9,
                     'output_size': 2,
@@ -3037,7 +3033,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3048,7 +3044,7 @@ if __name__ == '__main__':
     sigma = model_config['sigma']
     aggr_type = model_config['aggr_type']
     print('')
-    training_mode='regressive'   # 't+1' 'regressive' 'regressive_loop'
+    training_mode='t+1'   # 't+1' 'regressive' 'regressive_loop'
     print(f'training_mode: {training_mode}')
 
     if model_config['boundary'] == 'no':  # change this for usual BC
@@ -3062,8 +3058,12 @@ if __name__ == '__main__':
         def bc_diff(D):
             return torch.remainder(D - .5, 1.0) - .5
 
-    for gtest in range(63,64):
+    for gtest in range(57,64):
         model_config = load_model_config(id=gtest)
+
+        if gtest==63:
+            training_mode = 'regressive'  # 't+1' 'regressive' 'regressive_loop'
+            print(f'training_mode: {training_mode}')
 
         # ntry = 49+gtest
         # model_config['ntry'] = ntry
