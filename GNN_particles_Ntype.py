@@ -3081,9 +3081,9 @@ if __name__ == '__main__':
         # model_config['dataset'] = dataset_name
 
         print_model_config(model_config)
-        data_generate(model_config)
+        # data_generate(model_config)
         data_train(model_config,gtest)
-        x, rmserr_list = data_test(model_config, bVisu=False, bPrint=True)
+        # x, rmserr_list = data_test(model_config, bVisu=False, bPrint=True)
 
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
