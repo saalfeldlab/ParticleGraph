@@ -3061,7 +3061,7 @@ if __name__ == '__main__':
         def bc_diff(D):
             return torch.remainder(D - .5, 1.0) - .5
 
-    for gtest in range(53,54):
+    for gtest in range(43,44):
         model_config = load_model_config(id=gtest)
 
         if gtest==63:
