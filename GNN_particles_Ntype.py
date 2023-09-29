@@ -358,46 +358,52 @@ class InteractionParticles(pyg.nn.MessagePassing):
 
     def message(self, x_i, x_j):
 
-        r = torch.sqrt(torch.sum(bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) ** 2, axis=1)) / self.radius  # squared distance
+        r = torch.sqrt(torch.sum(bc_diff(x_j[:, 0:2] - x_i[:, 0:2]) ** 2, axis=1)) / self.radius  # squared distance
         r = r[:, None]
 
         delta_pos = bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) / self.radius
-        x_i_vx = x_i[:, 2:3] / self.vnorm[4]
-        x_i_vy = x_i[:, 3:4] / self.vnorm[5]
         x_i_type = x_i[:, 4:6]
-        x_j_vx = x_j[:, 2:3] / self.vnorm[4]
-        x_j_vy = x_j[:, 3:4] / self.vnorm[5]
+        vx_p = (x_j[:, 2:3] - x_i[:, 2:3]) / self.vnorm[4]
+        vy_p =(x_j[:, 3:4] - x_i[:, 3:4]) / self.vnorm[5]
 
-        if (self.data_augmentation) & (self.step==1):
+        if (self.step==1):
 
             new_x = self.cos_phi * delta_pos[:,0] + self.sin_phi * delta_pos[:,1]
             new_y = -self.sin_phi * delta_pos[:,0] + self.cos_phi * delta_pos[:,1]
             delta_pos[:,0] = new_x
             delta_pos[:,1] = new_y
-            new_vx = self.cos_phi * x_i_vx + self.sin_phi * x_i_vy
-            new_vy = -self.sin_phi * x_i_vx + self.cos_phi * x_i_vy
-            x_i_vx = new_vx
-            x_i_vy = new_vy
-            new_vx = self.cos_phi * x_j_vx + self.sin_phi * x_j_vy
-            new_vy = -self.sin_phi * x_j_vx + self.cos_phi * x_j_vy
-            x_j_vx = new_vx
-            x_j_vy = new_vy
+
+            new_vx = self.cos_phi * vx_p + self.sin_phi * vy_p
+            new_vy = -self.sin_phi * vx_p + self.cos_phi * vy_p
+            vx_p = new_vx
+            vy_p = new_vy
 
         if self.particle_embedding > 0:
-            if self.embedding_type=='none':
-                embedding = self.a[x_i[:, 6].detach().cpu().numpy(), :]
-                in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding),dim=-1)
-            if self.embedding_type=='repeat':
-                x_i_type_0 = x_i[:, 4]
-                x_i_type_1 = x_i[:, 5]
-                in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, x_i_type_0[:, None].repeat(1, 4), x_i_type_1[:, None].repeat(1, 4)),dim=-1)
-            if self.embedding_type=='frequency':
-                embedding=self.embedding_freq(x_i[:, 4:6])
-                embedding=embedding[:,0:8]
-                in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding),dim=-1)
-
+            embedding = self.a[x_i[:, 6].detach().cpu().numpy(), :]
+            in_features = torch.cat((delta_pos, r, vx_p, vy_p, embedding),dim=-1)
         else :
-            in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, x_i_type),dim=-1)
+            in_features = torch.cat((delta_pos, r, vx_p, vy_p, x_i_type),dim=-1)
+
+        # X = (np.arange(0, 1, 0.01) - 0.5) / 0.5 * 0.15
+        # VX = (np.arange(0, 1, 0.01) - 0.5) / 0.5 * 2
+        # X, VX = np.meshgrid(X, VX)
+        # X_ = X.reshape( 10000,1)
+        # VX_ = VX.reshape( 10000,1)
+        # X_ = torch.tensor(X_,device=self.device)
+        # VX_ = torch.tensor(VX_,device=self.device)
+        # embedding = -2 * torch.ones((10000,1), device=self.device)
+        # in_features = torch.cat((X_ , 0*X_, X_ , 0*VX_, 0*VX_, VX_, 0*VX_, embedding),dim=1)   # VX, 0*VX, 3.96*
+        # acc_mess = self.lin_edge(in_features.float())
+        # acc_mess = acc_mess.detach().cpu().numpy()
+        # acc_messx = acc_mess[:, 0:1].reshape(100, 100)
+        # acc_messy = acc_mess[:, 1:2].reshape(100, 100)
+        # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+        # plt.ion()
+        # surf = ax.plot_surface(X, VX, acc_messx, cmap=cm.coolwarm,linewidth=0, antialiased=True)
+        #
+
+
+
 
 
         return self.lin_edge(in_features)
@@ -1285,8 +1291,10 @@ def data_train(model_config,gtest):
     noise_type = model_config['noise_type']
     embedding_type = model_config['embedding_type']
     embedding = model_config['embedding']
-    # batch_size = model_config['batch_size']
+    batch_size = model_config['batch_size']
     batch_size = 1
+
+
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -1304,7 +1312,7 @@ def data_train(model_config,gtest):
     copyfile(os.path.realpath(__file__), os.path.join(log_dir, 'training_code.py'))
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_*")
-    NGraphs = int(len(graph_files) / nframes)
+    NGraphs = 2 #int(len(graph_files) / nframes)
     print('Graph files N: ', NGraphs-1)
     time.sleep(0.5)
 
@@ -1454,11 +1462,6 @@ def data_train(model_config,gtest):
 
                     k = np.random.randint(nframes - 1)
                     x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{k}.pt').to(device)
-                    if (noise_type > 0):
-                        noise = torch.randn((x.shape[0], 4), device=device) * noise_level
-                        if (noise_type == 1) | (noise_type == 3):
-                            x[:, 0:2] = x[:, 0:2] + noise[:, 0:2] * radius
-                            x[:, 2:4] = x[:, 2:4] + noise[:, 2:4] * torch.std(x[:, 2:4])
                     distance = torch.sum(bc_diff(x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
                     adj_t = (distance < radius ** 2).float() * 1
                     t = torch.Tensor([radius ** 2])
@@ -1472,9 +1475,6 @@ def data_train(model_config,gtest):
                     y[:, 1] = y[:, 1] / ynorm[5]
                     if model_config['model'] == 'InteractionParticles3D':
                         y[:, 2] = y[:, 2] / ynorm[6]
-                    if (noise_type > 1):
-                        noise = torch.randn((y.shape[0], 2), device=device) * noise_level
-                        y[:, 0:2] = y[:, 0:2] + noise[:, 0:2] * torch.std(y[:, 0:2])
                     if data_augmentation:
                         new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
                         new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
@@ -2375,7 +2375,7 @@ def load_model_config (id=48):
 
     #37
     model_config_test = {'ntry': 37,
-                    'input_size': 9,
+                    'input_size': 7,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
@@ -2400,7 +2400,7 @@ def load_model_config (id=48):
 
     #39 3 particles small difference 0.975 ###########################
     model_config_test = {'ntry': 39,
-                    'input_size': 9,
+                    'input_size': 7,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
@@ -2426,7 +2426,7 @@ def load_model_config (id=48):
 
     #40
     model_config_test = {'ntry': 40,
-                    'input_size': 9,
+                    'input_size': 7,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
@@ -2477,7 +2477,7 @@ def load_model_config (id=48):
 
     #42 for plot purpose ##################################
     model_config_test = {'ntry': 42,
-                    'input_size': 9,
+                    'input_size': 7,
                     'output_size': 2,
                     'hidden_size': 128,
                     'n_mp_layers': 5,
@@ -2504,7 +2504,7 @@ def load_model_config (id=48):
 
     #43 3 particle mixt interaction ##################################
     model_config_test = {'ntry': 43,
-                    'input_size': 9,
+                    'input_size': 7,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
@@ -2610,7 +2610,7 @@ def load_model_config (id=48):
 
     #48
     model_config_test = {'ntry': 48,
-                    'input_size': 10,
+                    'input_size': 9,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
@@ -2664,7 +2664,7 @@ def load_model_config (id=48):
 
     #53 data39 3 particles embedding 1
     model_config_test = {'ntry': 53,
-                    'input_size': 8,
+                    'input_size': 6,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
@@ -2690,7 +2690,7 @@ def load_model_config (id=48):
         return model_config_test
     #54 data39 3 particles embedding 2
     model_config_test = {'ntry': 54,
-                    'input_size': 9,
+                    'input_size': 7,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
@@ -2716,7 +2716,7 @@ def load_model_config (id=48):
         return model_config_test
     #55 data39 3 particles embedding 2 batchsize 4
     model_config_test = {'ntry': 55,
-                    'input_size': 9,
+                    'input_size': 7,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
@@ -2742,7 +2742,7 @@ def load_model_config (id=48):
         return model_config_test
     #56 data39 3 particles embedding 3
     model_config_test = {'ntry': 56,
-                    'input_size': 10,
+                    'input_size': 9,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
@@ -2769,7 +2769,7 @@ def load_model_config (id=48):
 
     #57 3 particles noise 0
     model_config_test = {'ntry': 57,
-                    'input_size': 8,
+                    'input_size': 6,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
@@ -2795,7 +2795,7 @@ def load_model_config (id=48):
         return model_config_test
     #58 3 particles noise 1%
     model_config_test = {'ntry': 58,
-                    'input_size': 8,
+                    'input_size': 6,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
@@ -2821,7 +2821,7 @@ def load_model_config (id=48):
         return model_config_test
     #59 3 particles noise 2%
     model_config_test = {'ntry': 59,
-                    'input_size': 8,
+                    'input_size': 6,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
@@ -2847,7 +2847,7 @@ def load_model_config (id=48):
         return model_config_test
     # 60 3 particles noise 5%
     model_config_test = {'ntry': 60,
-                    'input_size': 8,
+                    'input_size': 6,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
@@ -2873,7 +2873,7 @@ def load_model_config (id=48):
         return model_config_test
     #61 3 particles noise 10%
     model_config_test = {'ntry': 61,
-                    'input_size': 8,
+                    'input_size': 6,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
@@ -2900,7 +2900,7 @@ def load_model_config (id=48):
 
     #62 2 particles data
     model_config_test = {'ntry': 62,
-                    'input_size': 9,
+                    'input_size': 7,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
@@ -2926,7 +2926,7 @@ def load_model_config (id=48):
         return model_config_test
     #63 2 particles data idem 62 for regressive training
     model_config_test = {'ntry': 63,
-                    'input_size': 9,
+                    'input_size': 7,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
@@ -2952,7 +2952,7 @@ def load_model_config (id=48):
         return model_config_test
     #64 2 particles data idem 62 for regressive loop training
     model_config_test = {'ntry': 64,
-                    'input_size': 9,
+                    'input_size': 7,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
@@ -2979,7 +2979,7 @@ def load_model_config (id=48):
 
     #67
     model_config_test = {'ntry': 67,
-                    'input_size': 10,
+                    'input_size': 9,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
@@ -3004,55 +3004,36 @@ def load_model_config (id=48):
     if model_config_test['ntry']==id:
         return model_config_test
 
+    #68 data39 3 particles embedding 1
+    model_config_test = {'ntry': 68,
+                    'input_size': 6,
+                    'output_size': 2,
+                    'hidden_size': 64,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'noise_type': 0,
+                    'radius': 0.075,
+                    'dataset': '230902_39',
+                    'nparticles': 3000,
+                    'nparticle_types': 3,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.1,
+                    'aggr_type' : 'mean',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'batch_size': 4,
+                    'embedding_type': 'none',
+                    'embedding': 1,
+                    'model': 'InteractionParticles',
+                    'upgrade_type':0}
+    if model_config_test['ntry']==id:
+        return model_config_test
+
 
     print('watch out model_config not find')
     return model_config_test
-def print_model_config (model_config):
-
-    print('')
-    ntry = model_config['ntry']
-    print(f'ntry: {ntry}')
-    dataset_name = model_config['dataset']
-    print(f'dataset_name: {dataset_name}')
-    nparticles = model_config['nparticles']  # number of particles
-    print(f'nparticles: {nparticles}')
-    nparticle_types = model_config['nparticle_types']  # number of particles
-    print(f'nparticle_types: {nparticle_types}')
-    nframes = model_config['nframes']
-    print(f'nframes: {nframes}')
-    radius = model_config['radius']
-    print(f'radius: {radius}')
-    sigma = model_config['sigma']
-    print(f'sigma: {sigma}')
-    tau = model_config['tau']
-    print(f'tau: {tau}')
-    aggr_type = model_config['aggr_type']
-    print(f'aggr_type: {aggr_type}')
-
-    boundary = model_config['boundary']
-    print(f'boundary: {boundary}')
-    input_size = model_config['input_size']
-    print(f'input_size: {input_size}')
-    hidden_size = model_config['hidden_size']
-    print(f'hidden_size: {hidden_size}')
-    output_size = model_config['output_size']
-    print(f'output_size: {output_size}')
-    noise_level = model_config['noise_level']
-    print(f'noise_level: {noise_level}')
-    noise_type = model_config['noise_type']
-    print(f'noise_type: {noise_type}')
-    particle_embedding = model_config['particle_embedding']
-    print(f'particle_embedding: {particle_embedding}')
-    embedding_type = model_config['embedding_type']
-    print(f'embedding_type: {embedding_type}')
-    embedding = model_config['embedding']
-    print(f'embedding: {embedding}')
-    if model_config['upgrade_type']==0:
-        print ('acc = aggr(message)')
-    if model_config['upgrade_type']==1:
-        print ('acc = MLP(aggr(message),velocity,embedding')
-    batch_size = model_config['batch_size']
-    print(f'batch_size: {batch_size}')
 
 if __name__ == '__main__':
 
@@ -3061,7 +3042,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3075,7 +3056,7 @@ if __name__ == '__main__':
     training_mode='t+1'   # 't+1' 'regressive' 'regressive_loop'
     print(f'training_mode: {training_mode}')
 
-    for gtest in range(43,44):
+    for gtest in range(68,69):
         model_config = load_model_config(id=gtest)
 
         if model_config['boundary'] == 'no':  # change this for usual BC
@@ -3110,8 +3091,9 @@ if __name__ == '__main__':
         # dataset_name = '230902_49'
         # model_config['dataset'] = dataset_name
 
-        print_model_config(model_config)
-        data_generate(model_config)
+        for key, value in model_config.items():
+            print(key, ":", value)
+        # data_generate(model_config)
         data_train(model_config,gtest)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
