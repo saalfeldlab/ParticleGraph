@@ -950,9 +950,9 @@ def data_generate_2D(model_config):
         #     print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
         # p[2]=p[1]*0.975
 
-        # p[0] = torch.tensor([1.0413, 1.5615, 1.6233, 1.6012])
-        # p[1] = torch.tensor([1.8308, 1.9055, 1.7667, 1.0855])
-        # p[2] = torch.tensor([1.785, 1.8579,1.7226, 1.0584])
+        p[0] = torch.tensor([1.0413, 1.5615, 1.6233, 1.6012])
+        p[1] = torch.tensor([1.8308, 1.9055, 1.7667, 1.0855])
+        p[2] = torch.tensor([1.785, 1.8579,1.7226, 1.0584])
 
         # p[0] = torch.tensor([1.8194, 1.1017, 1.059, 1.0362])
         # p[1] = torch.tensor([1.7327, 1.2579, 1.6714, 1.9119])
@@ -1311,7 +1311,6 @@ def data_train(model_config,gtest):
     embedding_type = model_config['embedding_type']
     embedding = model_config['embedding']
     batch_size = model_config['batch_size']
-    batch_size = 1
 
 
 
@@ -3024,7 +3023,7 @@ def load_model_config (id=48):
                     'noise_level': 0,
                     'noise_type': 0,
                     'radius': 0.075,
-                    'dataset': '230902_39',
+                    'dataset': '230902_68',
                     'nparticles': 3000,
                     'nparticle_types': 3,
                     'nframes': 200,
@@ -3032,7 +3031,7 @@ def load_model_config (id=48):
                     'tau': 0.1,
                     'aggr_type' : 'mean',
                     'particle_embedding': True,
-                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'boundary': 'no',  # periodic   'no'  # no boundary condition
                     'data_augmentation' : True,
                     'batch_size': 4,
                     'embedding_type': 'none',
@@ -3067,7 +3066,7 @@ if __name__ == '__main__':
     training_mode='t+1'   # 't+1' 'regressive' 'regressive_loop'
     print(f'training_mode: {training_mode}')
 
-    for gtest in range(53,69):
+    for gtest in range(68,69):
         model_config = load_model_config(id=gtest)
 
         if model_config['boundary'] == 'no':  # change this for usual BC
@@ -3104,12 +3103,12 @@ if __name__ == '__main__':
 
         for key, value in model_config.items():
             print(key, ":", value)
-        # data_generate(model_config)
-        # data_train(model_config,gtest)
-        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
+        data_generate(model_config)
+        data_train(model_config,gtest)
+        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
-        # data_train_generate(model_config, f'./graphs_data/graphs_particles_230902_57/')
+        # data_train_generate(model_config, f'./graphs_data/graphs_particles_230902_39/')
 
 
 
