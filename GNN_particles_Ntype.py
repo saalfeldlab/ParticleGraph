@@ -28,6 +28,7 @@ import csv
 import json
 from geomloss import SamplesLoss
 from tifffile import imread
+from matplotlib import cm
 
 def distmat_square(X, Y):
     return torch.sum(bc_diff(X[:, None, :] - Y[None, :, :]) ** 2, axis=2)
@@ -399,25 +400,32 @@ class InteractionParticles(pyg.nn.MessagePassing):
         else :
             in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, x_i_type),dim=-1)
 
-
         return self.lin_edge(in_features)
 
-        # X = (np.arange(0, 1, 0.01) - 0.5) / 0.5 * 0.15
-        # VX = (np.arange(0, 1, 0.01) - 0.5) / 0.5 * 2
-        # X, VX = np.meshgrid(X, VX)
-        # X_ = X.reshape( 10000,1)
-        # VX_ = VX.reshape( 10000,1)
-        # X_ = torch.tensor(X_,device=self.device)
-        # VX_ = torch.tensor(VX_,device=self.device)
-        # embedding = -2 * torch.ones((10000,1), device=self.device)
-        # in_features = torch.cat((X_ , 0*X_, X_ , 0*VX_, 0*VX_, VX_, 0*VX_, embedding),dim=1)   # VX, 0*VX, 3.96*
-        # acc_mess = self.lin_edge(in_features.float())
-        # acc_mess = acc_mess.detach().cpu().numpy()
-        # acc_messx = acc_mess[:, 0:1].reshape(100, 100)
-        # acc_messy = acc_mess[:, 1:2].reshape(100, 100)
-        # fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
-        # plt.ion()
-        # surf = ax.plot_surface(X, VX, acc_messx, cmap=cm.coolwarm,linewidth=0, antialiased=True)
+        t = self.a.detach().cpu().numpy()
+
+        t = [-1.7, 0.67, 1.22, 3.96 ]
+        X = np.arange(0, 1, 0.01) * 0.075
+        VX = (np.arange(0, 1, 0.01) - 0.5) / 0.5 * 2
+        X, VX = np.meshgrid(X, VX)
+        X_ = X.reshape(10000, 1)
+        VX_ = VX.reshape(10000, 1)
+        X_ = torch.tensor(X_, device=self.device)
+        VX_ = torch.tensor(VX_, device=self.device)
+
+        for emb in t:
+
+            embedding = torch.tensor(emb, device=self.device) * torch.ones((10000,1), device=self.device)
+            in_features = torch.cat((0*X_ , X_, X_ , 0*VX_, 0*VX_, 0*VX_, VX_, embedding),dim=1)   # VX, 0*VX, 3.96*
+            acc_mess = self.lin_edge(in_features.float())
+            acc_mess = acc_mess.detach().cpu().numpy()
+            acc_messx = acc_mess[:, 1:2].reshape(100, 100)
+
+            fig = plt.figure(figsize=(8, 8))
+            # plt.ion()
+            ax = fig.add_subplot(1, 1, 1, projection='3d')
+            surf = ax.plot_surface(X, VX, acc_messx,cmap=cm.coolwarm, linewidth=0, antialiased=True)
+
 
 
     def update(self, aggr_out):
@@ -3059,7 +3067,7 @@ if __name__ == '__main__':
     training_mode='t+1'   # 't+1' 'regressive' 'regressive_loop'
     print(f'training_mode: {training_mode}')
 
-    for gtest in range(68,69):
+    for gtest in range(53,69):
         model_config = load_model_config(id=gtest)
 
         if model_config['boundary'] == 'no':  # change this for usual BC
@@ -3097,8 +3105,8 @@ if __name__ == '__main__':
         for key, value in model_config.items():
             print(key, ":", value)
         # data_generate(model_config)
-        data_train(model_config,gtest)
-        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
+        # data_train(model_config,gtest)
+        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
         # data_train_generate(model_config, f'./graphs_data/graphs_particles_230902_57/')
