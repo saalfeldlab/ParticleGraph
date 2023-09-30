@@ -793,17 +793,19 @@ class EdgeNetwork(pyg.nn.MessagePassing):
     def __init__(self):
         super().__init__(aggr=aggr_type)  # "mean" aggregation.
 
-    def forward(self, x, edge_index):
+    def forward(self, x, edge_index, radius):
+
+        self.radius = radius
         aggr = self.propagate(edge_index, x=(x, x))
 
         return self.new_edges
 
     def message(self, x_i, x_j):
 
-        r = torch.sqrt(torch.sum((x_i[:, 0:2] - x_j[:, 0:2]) ** 2, axis=1)) / radius  # squared distance
+        r = torch.sqrt(torch.sum((x_i[:, 0:2] - x_j[:, 0:2]) ** 2, axis=1)) / self.radius  # squared distance
         r = r[:, None]
 
-        delta_pos = (x_i[:, 0:2] - x_j[:, 0:2]) / radius
+        delta_pos = (x_i[:, 0:2] - x_j[:, 0:2]) / self.radius
         x_i_vx = x_i[:, 2:3] / vnorm[4]
         x_i_vy = x_i[:, 3:4] / vnorm[5]
         x_i_type = x_i[:, 4]
@@ -861,6 +863,7 @@ class ResNetGNN(torch.nn.Module):
         self.noise_level = model_config['noise_level']
         self.nparticles = model_config['nparticles']
         self.edge_init = EdgeNetwork()
+        self.radius = model_config['radius']
 
         # self.layer = torch.nn.ModuleList(
         #     [InteractionNetworkEmb(nlayers=3, embedding=self.embedding, device=self.device) for _ in
@@ -889,7 +892,7 @@ class ResNetGNN(torch.nn.Module):
         noise = torch.randn((node_feature.shape[0], node_feature.shape[1]), requires_grad=False,
                             device=self.device) * self.noise_level
         node_feature = node_feature + noise
-        edge_feature = self.edge_init(node_feature, edge_index)
+        edge_feature = self.edge_init(node_feature, edge_index, self.radius)
 
         node_feature = self.embedding_node(node_feature)
         edge_feature = self.embedding_edges(edge_feature)
