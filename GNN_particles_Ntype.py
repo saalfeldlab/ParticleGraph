@@ -879,7 +879,7 @@ class ResNetGNN(torch.nn.Module):
         self.a = nn.Parameter(torch.tensor(np.ones((self.nparticles, self.embedding)), device=self.device, requires_grad=True))
 
 
-    def forward(self, data):
+    def forward(self, data, step):
 
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
