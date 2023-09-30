@@ -2597,7 +2597,7 @@ def load_model_config (id=48):
                     'batch_size' :4,
                     'embedding_type': 'none',
                     'embedding': 1,
-                    'model': 'ResnetGNN',
+                    'model': 'ResNetGNN',
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
