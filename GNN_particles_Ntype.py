@@ -423,7 +423,7 @@ class GravityParticles(pyg.nn.MessagePassing):
 
     def __init__(self, model_config, device):
 
-        super(InteractionParticles, self).__init__(aggr=aggr_type)  # "Add" aggregation.
+        super(InteractionParticles, self).__init__(aggr='add')  # "Add" aggregation.
 
         self.device = device
         self.input_size = model_config['input_size']
