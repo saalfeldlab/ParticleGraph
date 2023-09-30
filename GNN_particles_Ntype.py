@@ -365,7 +365,6 @@ class InteractionParticles(pyg.nn.MessagePassing):
         delta_pos = bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) / self.radius
         x_i_vx = x_i[:, 2:3] / self.vnorm[4]
         x_i_vy = x_i[:, 3:4] / self.vnorm[5]
-        x_i_type = x_i[:, 4:6]
         x_j_vx = x_j[:, 2:3] / self.vnorm[4]
         x_j_vy = x_j[:, 3:4] / self.vnorm[5]
 
@@ -398,6 +397,7 @@ class InteractionParticles(pyg.nn.MessagePassing):
                 in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding),dim=-1)
 
         else :
+            x_i_type = x_i[:, 4:6]
             in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, x_i_type),dim=-1)
 
         return self.lin_edge(in_features)
@@ -412,20 +412,29 @@ class InteractionParticles(pyg.nn.MessagePassing):
         VX_ = VX.reshape(10000, 1)
         X_ = torch.tensor(X_, device=self.device)
         VX_ = torch.tensor(VX_, device=self.device)
-
-        for emb in t:
-
+        fig = plt.figure(figsize=(16, 8))
+        for k,emb in enumerate (t):
             embedding = torch.tensor(emb, device=self.device) * torch.ones((10000,1), device=self.device)
-            in_features = torch.cat((0*X_ , X_, X_ , 0*VX_, 0*VX_, 0*VX_, VX_, embedding),dim=1)   # VX, 0*VX, 3.96*
+            in_features = torch.cat((X_ , 0*X_, X_ , 0*VX_, 0*VX_, VX_, 0*VX_, embedding),dim=1)   # VX, 0*VX, 3.96*
+            acc_mess = self.lin_edge(in_features.float())
+            acc_mess = acc_mess.detach().cpu().numpy()
+            acc_messx = acc_mess[:, 0:1].reshape(100, 100)
+            ax = fig.add_subplot(2, 4, k+1, projection='3d')
+            surf = ax.plot_surface(X, VX, acc_messx, cmap=cm.coolwarm, linewidth=0, antialiased=True, vmin=-5,vmax=5)
+            ax.set_xlabel('Distance',fontsize=14)
+            ax.set_ylabel('Velocity',fontsize=14)
+            ax.set_zlabel('Acceleration',fontsize=14)
+            ax.set_zlim(-10, 10)
+            in_features = torch.cat((X_, 0*X_, X_ , 0*VX_, 0*VX_, 0*VX_, VX_, embedding),dim=1)   # VX, 0*VX, 3.96*
             acc_mess = self.lin_edge(in_features.float())
             acc_mess = acc_mess.detach().cpu().numpy()
             acc_messx = acc_mess[:, 1:2].reshape(100, 100)
-
-            fig = plt.figure(figsize=(8, 8))
-            # plt.ion()
-            ax = fig.add_subplot(1, 1, 1, projection='3d')
-            surf = ax.plot_surface(X, VX, acc_messx,cmap=cm.coolwarm, linewidth=0, antialiased=True)
-
+            ax = fig.add_subplot(2, 4, 4 + k + 1, projection='3d')
+            surf = ax.plot_surface(X, VX, acc_messx,cmap=cm.coolwarm, linewidth=0, antialiased=True, vmin=-5,vmax=5)
+            ax.set_xlabel('Distance',fontsize=14)
+            ax.set_ylabel('Velocity',fontsize=14)
+            ax.set_zlabel('Acceleration',fontsize=14)
+            ax.set_zlim(-2, 2)
 
 
     def update(self, aggr_out):
@@ -893,6 +902,60 @@ class ResNetGNN(torch.nn.Module):
 
         return pred
 
+class MixResNetGNN(torch.nn.Module):
+    """Graph Network-based Simulators(GNS)"""
+
+    def __init__(self, model_config, device):
+        super().__init__()
+
+        self.hidden_size = model_config['hidden_size']
+        self.embedding = model_config['embedding']
+        self.nlayers = model_config['n_mp_layers']
+        self.device = device
+        self.noise_level = model_config['noise_level']
+
+        self.edge_init = EdgeNetwork()
+
+        # self.layer = torch.nn.ModuleList(
+        #     [InteractionNetworkEmb(nlayers=3, embedding=self.embedding, device=self.device) for _ in
+        #      range(self.nlayers)])
+
+        self.layer = InteractionNetworkEmb(nlayers=3, embedding=self.embedding, device=self.device)
+
+        self.node_out = MLP(input_size=self.embedding, hidden_size=self.hidden_size, output_size=2, nlayers=3,
+                            device=self.device)
+
+        self.embedding_node = MLP(input_size=12, hidden_size=self.embedding, output_size=self.embedding, nlayers=3,
+                                  device=self.device)
+        self.embedding_edges = MLP(input_size=11, hidden_size=self.embedding, output_size=self.embedding, nlayers=3,
+                                   device=self.device)
+
+        self.a = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device=self.device, requires_grad=True))
+
+
+    def forward(self, data):
+
+        x, edge_index = data.x, data.edge_index
+        x[:, 4:6] = self.a[x[:, 6].detach().cpu().numpy(), 0:2]
+        edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+
+        node_feature = torch.cat((x[:, 0:4], x[:, 4:5].repeat(1, 4),x[:, 5:6].repeat(1, 4)), dim=-1)
+
+        noise = torch.randn((node_feature.shape[0], node_feature.shape[1]), requires_grad=False,
+                            device=self.device) * self.noise_level
+        node_feature = node_feature + noise
+        edge_feature = self.edge_init(node_feature, edge_index)
+
+        node_feature = self.embedding_node(node_feature)
+        edge_feature = self.embedding_edges(edge_feature)
+
+        for i in range(self.nlayers):
+            node_feature, edge_feature = self.layer(node_feature, edge_index, edge_feature=edge_feature)
+
+        pred = self.node_out(node_feature)
+
+        return pred
+
 def data_generate(model_config):
 
     if model_config['model']=='InteractionParticles3D' :
@@ -950,9 +1013,9 @@ def data_generate_2D(model_config):
         #     print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
         # p[2]=p[1]*0.975
 
-        p[0] = torch.tensor([1.0413, 1.5615, 1.6233, 1.6012])
-        p[1] = torch.tensor([1.8308, 1.9055, 1.7667, 1.0855])
-        p[2] = torch.tensor([1.785, 1.8579,1.7226, 1.0584])
+        # p[0] = torch.tensor([1.0413, 1.5615, 1.6233, 1.6012])
+        # p[1] = torch.tensor([1.8308, 1.9055, 1.7667, 1.0855])
+        # p[2] = torch.tensor([1.785, 1.8579,1.7226, 1.0584])
 
         # p[0] = torch.tensor([1.8194, 1.1017, 1.059, 1.0362])
         # p[1] = torch.tensor([1.7327, 1.2579, 1.6714, 1.9119])
@@ -1311,8 +1374,7 @@ def data_train(model_config,gtest):
     embedding_type = model_config['embedding_type']
     embedding = model_config['embedding']
     batch_size = model_config['batch_size']
-
-
+    batch_size = 1
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -1369,6 +1431,9 @@ def data_train(model_config,gtest):
     if model_config['model'] == 'ResNetGNN':
         model = ResNetGNN(model_config, device)
         print(f'Training ResNetGNN')
+    if model_config['model'] == 'MixResNetGNN':
+        model = MixResNetGNN(model_config, device)
+        print(f'Training MixResnet')
     if model_config['model'] == 'InteractionParticles3D':
         model = InteractionParticles3D(model_config, device)
         print(f'Training InteractionParticles3d')
@@ -2333,7 +2398,6 @@ def data_train_generate(model_config, prev_folder):
                 plt.close()
 def load_model_config (id=48):
 
-
     model_config_test = {'ntry': 700,
                     'input_size': 15,
                     'output_size': 2,
@@ -2534,7 +2598,7 @@ def load_model_config (id=48):
                     'batch_size' :4,
                     'embedding_type': 'none',
                     'embedding': 1,
-                    'model': 'MixInteractionParticles',
+                    'model': 'ResnetGNN',
                     'upgrade_type':0}
 
     if model_config_test['ntry']==id:
@@ -3052,7 +3116,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3066,7 +3130,7 @@ if __name__ == '__main__':
     training_mode='t+1'   # 't+1' 'regressive' 'regressive_loop'
     print(f'training_mode: {training_mode}')
 
-    for gtest in range(68,69):
+    for gtest in range(43,44):
         model_config = load_model_config(id=gtest)
 
         if model_config['boundary'] == 'no':  # change this for usual BC
@@ -3103,7 +3167,7 @@ if __name__ == '__main__':
 
         for key, value in model_config.items():
             print(key, ":", value)
-        data_generate(model_config)
+        # data_generate(model_config)
         data_train(model_config,gtest)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
