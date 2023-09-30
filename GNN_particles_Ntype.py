@@ -871,7 +871,7 @@ class ResNetGNN(torch.nn.Module):
         self.node_out = MLP(input_size=self.embedding, hidden_size=self.hidden_size, output_size=2, nlayers=3,
                             device=self.device)
 
-        self.embedding_node = MLP(input_size=12, hidden_size=self.embedding, output_size=self.embedding, nlayers=3,
+        self.embedding_node = MLP(input_size=6, hidden_size=self.embedding, output_size=self.embedding, nlayers=3,
                                   device=self.device)
         self.embedding_edges = MLP(input_size=11, hidden_size=self.embedding, output_size=self.embedding, nlayers=3,
                                    device=self.device)
@@ -882,10 +882,9 @@ class ResNetGNN(torch.nn.Module):
     def forward(self, data):
 
         x, edge_index = data.x, data.edge_index
-        x[:, 4:6] = self.a[x[:, 6].detach().cpu().numpy(), 0:2]
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
-        node_feature = torch.cat((x[:, 0:4], x[:, 4:5].repeat(1, 4),x[:, 5:6].repeat(1, 4)), dim=-1)
+        node_feature = torch.cat((x[:, 0:4], self.a[x[:, 6].detach().cpu().numpy(), 0:2]), dim=-1)
 
         noise = torch.randn((node_feature.shape[0], node_feature.shape[1]), requires_grad=False,
                             device=self.device) * self.noise_level
@@ -2600,21 +2599,20 @@ def load_model_config (id=48):
                     'embedding': 1,
                     'model': 'ResnetGNN',
                     'upgrade_type':0}
-
     if model_config_test['ntry']==id:
         return model_config_test
 
-    #44
+    #44 3 particle mixt interaction ##################################
     model_config_test = {'ntry': 44,
-                    'input_size': 13,
+                    'input_size': 9,
                     'output_size': 2,
                     'hidden_size': 64,
                     'n_mp_layers': 5,
                     'noise_level': 0,
                     'noise_type': 0,
                     'radius': 0.075,
-                    'dataset': '230902_41',
-                    'nparticles': 3000,
+                    'dataset': '230902_44',
+                    'nparticles': 4800,
                     'nparticle_types': 3,
                     'nframes': 200,
                     'sigma': .005,
@@ -2623,9 +2621,10 @@ def load_model_config (id=48):
                     'particle_embedding': True,
                     'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                     'data_augmentation' : True,
+                    'batch_size' :4,
                     'embedding_type': 'none',
-                    'embedding': 3,
-                    'model': 'MixInteractionParticles',
+                    'embedding': 1,
+                    'model': 'InteractionParticles',
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
@@ -3130,7 +3129,7 @@ if __name__ == '__main__':
     training_mode='t+1'   # 't+1' 'regressive' 'regressive_loop'
     print(f'training_mode: {training_mode}')
 
-    for gtest in range(43,44):
+    for gtest in range(43,45):
         model_config = load_model_config(id=gtest)
 
         if model_config['boundary'] == 'no':  # change this for usual BC
