@@ -793,9 +793,10 @@ class EdgeNetwork(pyg.nn.MessagePassing):
     def __init__(self):
         super().__init__(aggr=aggr_type)  # "mean" aggregation.
 
-    def forward(self, x, edge_index, radius):
+    def forward(self, x, edge_index, radius, vnorm):
 
         self.radius = radius
+        self.vnorm = vnorm
         aggr = self.propagate(edge_index, x=(x, x))
 
         return self.new_edges
@@ -806,11 +807,11 @@ class EdgeNetwork(pyg.nn.MessagePassing):
         r = r[:, None]
 
         delta_pos = (x_i[:, 0:2] - x_j[:, 0:2]) / self.radius
-        x_i_vx = x_i[:, 2:3] / vnorm[4]
-        x_i_vy = x_i[:, 3:4] / vnorm[5]
+        x_i_vx = x_i[:, 2:3] / self.vnorm[4]
+        x_i_vy = x_i[:, 3:4] / self.vnorm[5]
         x_i_type = x_i[:, 4]
-        x_j_vx = x_j[:, 2:3] / vnorm[4]
-        x_j_vy = x_j[:, 3:4] / vnorm[5]
+        x_j_vx = x_j[:, 2:3] / self.vnorm[4]
+        x_j_vy = x_j[:, 3:4] / self.vnorm[5]
 
         d = r
 
@@ -882,17 +883,19 @@ class ResNetGNN(torch.nn.Module):
         self.a = nn.Parameter(torch.tensor(np.ones((self.nparticles, self.embedding)), device=self.device, requires_grad=True))
 
 
-    def forward(self, data):
+    def forward(self, data, vnorm):
 
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+
+        x[:, 2:4] = x[:, 2:4] / vnorm[4]
 
         node_feature = torch.cat((x[:, 0:4], self.a[x[:, 6].detach().cpu().numpy(), 0:2]), dim=-1)
 
         noise = torch.randn((node_feature.shape[0], node_feature.shape[1]), requires_grad=False,
                             device=self.device) * self.noise_level
         node_feature = node_feature + noise
-        edge_feature = self.edge_init(node_feature, edge_index, self.radius)
+        edge_feature = self.edge_init(node_feature, edge_index, self.radius, vnorm)
 
         node_feature = self.embedding_node(node_feature)
         edge_feature = self.embedding_edges(edge_feature)
@@ -1575,7 +1578,7 @@ def data_train(model_config,gtest):
 
                 for batch in batch_loader:
                     if model_config['model'] == 'ResNetGNN':
-                        pred = model(batch)
+                        pred = model(batch, vnorm=vnorm)
                     else:
                         pred = model(batch, step = 1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
 
@@ -1884,7 +1887,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
 
         with torch.no_grad():
             if model_config['model'] == 'ResNetGNN':
-                y = model(dataset)
+                y = model(dataset, vnorm=v)
             else:
                 y = model(dataset, step=2, vnorm=v, cos_phi=0, sin_phi=0)  # acceleration estimation
 
