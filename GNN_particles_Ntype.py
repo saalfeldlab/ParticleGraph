@@ -1324,7 +1324,7 @@ def data_generate_2D_gravity(model_config):
 
                 for n in range(nparticle_types):
                     g = p[T1[index_particles[n], 0].detach().cpu().numpy().astype(int)].detach().cpu().numpy()
-                    plt.scatter(X1t[index_particles[n], 0, it], X1t[index_particles[n], 1, it], s=g*10)
+                    plt.scatter(X1t[index_particles[n], 0, it], X1t[index_particles[n], 1, it], s=g*5)
                 ax = plt.gca()
                 ax.axes.xaxis.set_ticklabels([])
                 ax.axes.yaxis.set_ticklabels([])
@@ -1361,7 +1361,6 @@ def data_generate_2D_gravity(model_config):
                 plt.close()
 def data_train(model_config,gtest):
 
-
     print('')
     print('Training loop ...')
 
@@ -1377,7 +1376,6 @@ def data_train(model_config,gtest):
     embedding_type = model_config['embedding_type']
     embedding = model_config['embedding']
     batch_size = model_config['batch_size']
-    batch_size = 1
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -1800,6 +1798,8 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
 
     if model_config['model'] == 'InteractionParticles':
         model = InteractionParticles(model_config, device)
+    if model_config['model'] == 'GravityParticles':
+        model = GravityParticles(model_config, device)
     if model_config['model'] == 'MixInteractionParticles':
         model = MixInteractionParticles(model_config, device)
     if model_config['model'] == 'ResNetGNN':
