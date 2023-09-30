@@ -859,7 +859,7 @@ class ResNetGNN(torch.nn.Module):
         self.nlayers = model_config['n_mp_layers']
         self.device = device
         self.noise_level = model_config['noise_level']
-
+        self.nparticles = model_config['nparticles']
         self.edge_init = EdgeNetwork()
 
         # self.layer = torch.nn.ModuleList(
@@ -871,12 +871,12 @@ class ResNetGNN(torch.nn.Module):
         self.node_out = MLP(input_size=self.embedding, hidden_size=self.hidden_size, output_size=2, nlayers=3,
                             device=self.device)
 
-        self.embedding_node = MLP(input_size=6, hidden_size=self.embedding, output_size=self.embedding, nlayers=3,
+        self.embedding_node = MLP(input_size=4+self.embedding, hidden_size=self.embedding, output_size=self.embedding, nlayers=3,
                                   device=self.device)
         self.embedding_edges = MLP(input_size=11, hidden_size=self.embedding, output_size=self.embedding, nlayers=3,
                                    device=self.device)
 
-        self.a = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device=self.device, requires_grad=True))
+        self.a = nn.Parameter(torch.tensor(np.ones((self.nparticles, self.embedding)), device=self.device, requires_grad=True))
 
 
     def forward(self, data):
@@ -2596,7 +2596,7 @@ def load_model_config (id=48):
                     'data_augmentation' : True,
                     'batch_size' :4,
                     'embedding_type': 'none',
-                    'embedding': 1,
+                    'embedding': 2,
                     'model': 'ResNetGNN',
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
@@ -2623,7 +2623,7 @@ def load_model_config (id=48):
                     'data_augmentation' : True,
                     'batch_size' :4,
                     'embedding_type': 'none',
-                    'embedding': 1,
+                    'embedding': 2,
                     'model': 'InteractionParticles',
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
