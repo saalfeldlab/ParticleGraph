@@ -879,7 +879,7 @@ class ResNetGNN(torch.nn.Module):
         self.a = nn.Parameter(torch.tensor(np.ones((self.nparticles, self.embedding)), device=self.device, requires_grad=True))
 
 
-    def forward(self, data, step):
+    def forward(self, data):
 
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
@@ -1571,7 +1571,10 @@ def data_train(model_config,gtest):
                 optimizer.zero_grad()
 
                 for batch in batch_loader:
-                    pred = model(batch, step = 1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
+                    if model_config['model'] == 'ResNetGNN':
+                        pred = model(batch)
+                    else:
+                        pred = model(batch, step = 1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
 
                 loss = (pred - y_batch).norm(2)
                 loss.backward()
@@ -1877,7 +1880,10 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         dataset = data.Data(x=x, edge_index=edge_index)
 
         with torch.no_grad():
-            y = model(dataset, step=2, vnorm=v, cos_phi=0, sin_phi=0)  # acceleration estimation
+            if model_config['model'] == 'ResNetGNN':
+                y = model(dataset)
+            else:
+                y = model(dataset, step=2, vnorm=v, cos_phi=0, sin_phi=0)  # acceleration estimation
 
         y[:, 0] = y[:, 0] * ynorm[4]
         y[:, 1] = y[:, 1] * ynorm[5]
