@@ -888,9 +888,9 @@ class ResNetGNN(torch.nn.Module):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
-        x[:, 2:4] = x[:, 2:4] / vnorm[4]
+        x[:, 2:4] = x[:, 2:4] / vnorm[4].float()
 
-        node_feature = torch.cat((x[:, 0:4], self.a[x[:, 6].detach().cpu().numpy(), 0:2]), dim=-1)
+        node_feature = torch.cat((x[:, 0:4], self.a[x[:, 6].detach().cpu().numpy(), 0:2].float()), dim=-1)
 
         noise = torch.randn((node_feature.shape[0], node_feature.shape[1]), requires_grad=False,
                             device=self.device) * self.noise_level
