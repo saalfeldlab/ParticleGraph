@@ -212,7 +212,7 @@ class InteractionParticles_2(pyg.nn.MessagePassing):
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
     def __init__(self, aggr_type=[], p=[], tau=[]):
-        super(InteractionParticles_2, self).__init__(aggr=aggr_type)  # "mean" aggregation.
+        super(InteractionParticles_2, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.p = p
         self.tau = tau
@@ -1276,7 +1276,7 @@ def data_generate_2D_gravity(model_config):
         X1 = torch.rand(nparticles, 2, device=device)
         X1t = torch.zeros((nparticles, 2, nframes))  # to store all the intermediate time
 
-        V1 = 1E-4 *  0 * torch.rand((nparticles, 2), device=device)
+        V1 = 1E-4 * torch.rand((nparticles, 2), device=device)
         T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
         for n in range(1, nparticle_types):
             T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
@@ -3192,13 +3192,13 @@ def load_model_config (id=48):
                     'n_mp_layers': 5,
                     'noise_level': 0,
                     'noise_type': 0,
-                    'radius': 0.075,
+                    'radius': 0.75,
                     'dataset': '230902_68',
                     'nparticles': 3000,
                     'nparticle_types': 3,
                     'nframes': 200,
                     'sigma': .005,
-                    'tau': 1E-8,
+                    'tau': 1E-10,
                     'aggr_type' : 'add',
                     'particle_embedding': True,
                     'boundary': 'periodic',  # periodic   'no'  # no boundary condition
