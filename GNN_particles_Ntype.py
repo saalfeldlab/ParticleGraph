@@ -225,6 +225,7 @@ class InteractionParticles_2(pyg.nn.MessagePassing):
 
     def message(self, x_i, x_j):
         r = torch.sqrt(torch.sum(bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) ** 2, axis=1))
+        r = torch.clamp(r,min=0.005)
         r = torch.concatenate((r[:,None],r[:,None]),-1)
 
 
@@ -1032,6 +1033,7 @@ def data_generate_2D(model_config):
     nparticles = model_config['nparticles']
     dataset_name = model_config['dataset']
     nframes = model_config['nframes']
+    v_init = model_config['v_init']
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -1080,9 +1082,9 @@ def data_generate_2D(model_config):
         psi_output = []
         rr = torch.tensor(np.linspace(0, radius * 1.2, 100))
         rr = rr.to(device)
-        p[0] = torch.tensor([1])
+        p[0] = torch.tensor([20])
         p[1] = torch.tensor([5])
-        p[2] = torch.tensor([2])
+        p[2] = torch.tensor([1])
         print(p)
         for n in range(nparticle_types):
             torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
@@ -1143,7 +1145,8 @@ def data_generate_2D(model_config):
         X1 = torch.rand(nparticles, 2, device=device)
         X1t = torch.zeros((nparticles, 2, nframes))  # to store all the intermediate time
 
-        V1 = torch.zeros((nparticles, 2), device=device)
+        V1 = v_init * torch.randn((nparticles, 2), device=device)
+
         T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
         for n in range(1, nparticle_types):
             T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
@@ -1188,9 +1191,13 @@ def data_generate_2D(model_config):
                 fig = plt.figure(figsize=(14, 7 * 0.95))
                 # plt.ion()
                 ax = fig.add_subplot(1, 2, 1)
-
-                for n in range(nparticle_types):
-                    plt.scatter(X1t[index_particles[n], 0, it], X1t[index_particles[n], 1, it], s=3)
+                if model_config['model'] == 'GravityParticles':
+                    for n in range(nparticle_types):
+                        g=p[T1[index_particles[n],0].detach().cpu().numpy()].detach().cpu().numpy()*5
+                        plt.scatter(X1t[index_particles[n], 0, it], X1t[index_particles[n], 1, it], s=g) #, facecolors='none', edgecolors='k')
+                else:
+                    for n in range(nparticle_types):
+                        plt.scatter(X1t[index_particles[n], 0, it], X1t[index_particles[n], 1, it], s=3)
                 ax = plt.gca()
                 ax.axes.xaxis.set_ticklabels([])
                 ax.axes.yaxis.set_ticklabels([])
@@ -1211,15 +1218,15 @@ def data_generate_2D(model_config):
 
                 ax = fig.add_subplot(1, 2, 2)
                 for n in range(nparticle_types):
-                    plt.scatter(X1t[:, 0, it], X1t[:, 1, it], s=3, color='k')
+                    plt.scatter(X1t[:, 0, it], X1t[:, 1, it], s=1, color='k')
                 ax = plt.gca()
                 ax.axes.xaxis.set_ticklabels([])
                 ax.axes.yaxis.set_ticklabels([])
                 plt.xlim([-0.3, 1.3])
                 plt.ylim([-0.3, 1.3])
 
-                ax = fig.add_subplot(5, 5, 21)
-
+                if model_config['model'] != 'GravityParticles':
+                    ax = fig.add_subplot(5, 5, 21)
                 if model_config['model'] == 'MixInteractionParticles':
                     N = 0
                     for n in range(nparticle_types):
@@ -2402,7 +2409,6 @@ def load_model_config (id=48):
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
-
     #37
     model_config_test = {'ntry': 37,
                     'input_size': 9,
@@ -2427,7 +2433,6 @@ def load_model_config (id=48):
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
-
     #39 3 particles small difference 0.975 ###########################
     model_config_test = {'ntry': 39,
                     'input_size': 9,
@@ -2453,7 +2458,6 @@ def load_model_config (id=48):
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
-
     #40
     model_config_test = {'ntry': 40,
                     'input_size': 9,
@@ -2478,7 +2482,6 @@ def load_model_config (id=48):
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
-
     #41
     model_config_test = {'ntry': 41,
                     'input_size': 13,
@@ -2504,7 +2507,6 @@ def load_model_config (id=48):
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
-
     #42 for plot purpose ##################################
     model_config_test = {'ntry': 42,
                     'input_size': 9,
@@ -2531,7 +2533,6 @@ def load_model_config (id=48):
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
-
     #43 3 particle mixt interaction ##################################
     model_config_test = {'ntry': 43,
                     'input_size': 9,
@@ -2558,7 +2559,6 @@ def load_model_config (id=48):
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
-
     #44 3 particle mixt interaction ##################################
     model_config_test = {'ntry': 44,
                     'input_size': 9,
@@ -2585,7 +2585,6 @@ def load_model_config (id=48):
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
-
     #45
     model_config_test = {'ntry': 45,
                     'input_size': 23,
@@ -2611,7 +2610,6 @@ def load_model_config (id=48):
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
-
     #46
     model_config_test = {'ntry': 46,
                     'input_size': 23,
@@ -2637,7 +2635,6 @@ def load_model_config (id=48):
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
-
     #48
     model_config_test = {'ntry': 48,
                     'input_size': 9,
@@ -2664,7 +2661,6 @@ def load_model_config (id=48):
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
-
     #49
     model_config_test = {'ntry': 49,
                     'input_size': 10,
@@ -2691,7 +2687,6 @@ def load_model_config (id=48):
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
-
     #53 data39 3 particles embedding 1
     model_config_test = {'ntry': 53,
                     'input_size': 8,
@@ -2796,7 +2791,6 @@ def load_model_config (id=48):
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
-
     #57 3 particles noise 0
     model_config_test = {'ntry': 57,
                     'input_size': 8,
@@ -2927,7 +2921,6 @@ def load_model_config (id=48):
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
-
     #62 2 particles data
     model_config_test = {'ntry': 62,
                     'input_size': 9,
@@ -3006,7 +2999,6 @@ def load_model_config (id=48):
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
-
     #67
     model_config_test = {'ntry': 67,
                     'input_size': 9,
@@ -3033,7 +3025,6 @@ def load_model_config (id=48):
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
-
     #68 data39 3 particles embedding 1
     model_config_test = {'ntry': 68,
                     'input_size': 8,
@@ -3069,13 +3060,14 @@ def load_model_config (id=48):
                     'n_mp_layers': 5,
                     'noise_level': 0,
                     'noise_type': 0,
-                    'radius': 0.075,
+                    'radius': 0.15,
                     'dataset': '230902_68',
-                    'nparticles': 3000,
+                    'nparticles': 960,
                     'nparticle_types': 3,
-                    'nframes': 200,
+                    'nframes': 1000,
                     'sigma': .005,
-                    'tau': 1E-10,
+                    'tau': 1E-8,
+                    'v_init': 1E-4,
                     'aggr_type' : 'add',
                     'particle_embedding': True,
                     'boundary': 'periodic',  # periodic   'no'  # no boundary condition
