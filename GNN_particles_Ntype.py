@@ -1389,9 +1389,6 @@ def data_train(model_config,gtest):
     time.sleep(0.5)
     for epoch in range(Nepochs+1):
 
-        if epoch == 10:
-            batch_size = model_config['batch_size']
-            print(f'batch_size: {batch_size}')
         if epoch == 20:
             lra = 1E-3
             lr = 2E-4
