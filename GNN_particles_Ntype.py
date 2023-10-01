@@ -233,7 +233,7 @@ class InteractionParticles_2(pyg.nn.MessagePassing):
         p = p.squeeze()
         p = torch.concatenate((p[:, None], p[:, None]), -1)
 
-        acc = 1 * bc_diff(x_j[:, 0:2] - x_i[:, 0:2]) / r**3
+        acc = p * bc_diff(x_j[:, 0:2] - x_i[:, 0:2]) / r**3
 
         return acc
 
@@ -1082,9 +1082,9 @@ def data_generate_2D(model_config):
         psi_output = []
         rr = torch.tensor(np.linspace(0, radius * 1.2, 100))
         rr = rr.to(device)
-        p[0] = torch.tensor([20])
-        p[1] = torch.tensor([5])
-        p[2] = torch.tensor([1])
+        p[0] = torch.tensor([5])
+        p[1] = torch.tensor([1])
+        p[2] = torch.tensor([0.2])
         print(p)
         for n in range(nparticle_types):
             torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
@@ -1193,7 +1193,7 @@ def data_generate_2D(model_config):
                 ax = fig.add_subplot(1, 2, 1)
                 if model_config['model'] == 'GravityParticles':
                     for n in range(nparticle_types):
-                        g=p[T1[index_particles[n],0].detach().cpu().numpy()].detach().cpu().numpy()*5
+                        g=p[T1[index_particles[n],0].detach().cpu().numpy()].detach().cpu().numpy()*10
                         plt.scatter(X1t[index_particles[n], 0, it], X1t[index_particles[n], 1, it], s=g) #, facecolors='none', edgecolors='k')
                 else:
                     for n in range(nparticle_types):
@@ -3063,7 +3063,7 @@ def load_model_config (id=48):
                     'nparticle_types': 3,
                     'nframes': 1000,
                     'sigma': .005,
-                    'tau': 1E-8,
+                    'tau': 5E-9,
                     'v_init': 1E-4,
                     'aggr_type' : 'add',
                     'particle_embedding': True,
