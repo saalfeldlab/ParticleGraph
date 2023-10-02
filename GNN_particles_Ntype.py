@@ -571,7 +571,7 @@ class GravityParticles(pyg.nn.MessagePassing):
         r_=r_[:,None]
 
         fig = plt.figure(figsize=(6, 6))
-        plt.ion()
+        # plt.ion()
         for k,emb in enumerate (t):
             embedding = torch.tensor(emb, device=self.device) * torch.ones((200,1), device=self.device)
             in_features = torch.cat((r_, 0 * r_, r_, 0 * r_, 0 * r_, 0 * r_, 0 * r_, embedding), dim=1)
@@ -1673,6 +1673,13 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         for n in range(model_config['nparticle_types']):
             index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
+
+
+    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_*")
+    NGraphs = int(len(graph_files) / nframes)
+    if bPrint:
+        print('Graph files N: ', NGraphs-1)
+
     if model_config['model'] == 'InteractionParticles':
         model = InteractionParticles(model_config, device)
     if model_config['model'] == 'GravityParticles':
@@ -1681,11 +1688,6 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         model = MixInteractionParticles(model_config, device)
     if model_config['model'] == 'ResNetGNN':
         model = ResNetGNN(model_config, device)
-
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_*")
-    NGraphs = int(len(graph_files) / nframes)
-    if bPrint:
-        print('Graph files N: ', NGraphs-1)
 
     net = f"./log/try_{ntry}/models/best_model_with_1_graphs.pt"
     if bPrint:
@@ -1715,6 +1717,16 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         model.a.data = new_embedding
         nparticles = new_nparticles
         model_config['nparticles'] = new_nparticles
+
+    if model_config['model'] == 'GravityParticles':
+        p = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
+        p[0] = torch.tensor([5])
+        p[1] = torch.tensor([1])
+        p[2] = torch.tensor([0.2])
+        T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
+        for n in range(1, nparticle_types):
+            T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
+
 
     if False:
         arr = np.arange(0, NGraphs - 1, 2)
@@ -1861,8 +1873,13 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             fig = plt.figure(figsize=(25, 16))
             # plt.ion()
             ax = fig.add_subplot(2, 3, 1)
-            for n in range(nparticle_types):
-                plt.scatter(x00[index_particles[n], 0].detach().cpu(), x00[index_particles[n], 1].detach().cpu(), s=3)
+            if model_config['model'] == 'GravityParticles':
+                for n in range(nparticle_types):
+                    g = p[T1[index_particles[n]].detach().cpu().numpy()].detach().cpu().numpy() * 10
+                    plt.scatter(x00[index_particles[n], 0].detach().cpu(), x00[index_particles[n], 1].detach().cpu(),s=g)
+            else:
+                for n in range(nparticle_types):
+                    plt.scatter(x00[index_particles[n], 0].detach().cpu(), x00[index_particles[n], 1].detach().cpu(), s=3)
 
             plt.xlim([-0.3, 1.3])
             plt.ylim([-0.3, 1.3])
@@ -1872,8 +1889,15 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             plt.text(-0.25, 1.38, f't0 {nparticles} particles', fontsize=10)
 
             ax = fig.add_subplot(2, 3, 2)
-            for n in range(nparticle_types):
-                plt.scatter(x0[index_particles[n], 0].detach().cpu(), x0[index_particles[n], 1].detach().cpu(), s=3)
+
+            if model_config['model'] == 'GravityParticles':
+                for n in range(nparticle_types):
+                    g = p[T1[index_particles[n]].detach().cpu().numpy()].detach().cpu().numpy() * 10
+                    plt.scatter(x0[index_particles[n], 0].detach().cpu(), x0[index_particles[n], 1].detach().cpu(),s=g)  # , facecolors='none', edgecolors='k')
+            else:
+                for n in range(nparticle_types):
+                    plt.scatter(x0[index_particles[n], 0].detach().cpu(), x0[index_particles[n], 1].detach().cpu(), s=3)
+
             ax = plt.gca()
             plt.xlim([-0.3, 1.3])
             plt.ylim([-0.3, 1.3])
@@ -1908,8 +1932,13 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             plt.text(-0.25, 1.33, f'Graph: {x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
 
             ax = fig.add_subplot(2, 3, 5)
-            for n in range(nparticle_types):
-                plt.scatter(x[index_particles[n], 0].detach().cpu(), x[index_particles[n], 1].detach().cpu(), s=3)
+            if model_config['model'] == 'GravityParticles':
+                for n in range(nparticle_types):
+                    g = p[T1[index_particles[n]].detach().cpu().numpy()].detach().cpu().numpy() * 10
+                    plt.scatter(x[index_particles[n], 0].detach().cpu(), x[index_particles[n], 1].detach().cpu(),s=g)
+            else:
+                for n in range(nparticle_types):
+                    plt.scatter(x[index_particles[n], 0].detach().cpu(), x[index_particles[n], 1].detach().cpu(), s=3)
             ax = plt.gca()
             ax.axes.xaxis.set_ticklabels([])
             ax.axes.yaxis.set_ticklabels([])
@@ -1928,10 +1957,10 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             temp4 = torch.t(temp4)
 
             distance3 = torch.sqrt(torch.sum((x[:, 0:2] - x0[:, 0:2]) ** 2, 1))
-            p = torch.argwhere(distance3 < 0.3)
+            pp = torch.argwhere(distance3 < 0.3)
 
             pos = dict(enumerate(np.array((temp1[:, 0:2]).detach().cpu()), 0))
-            dataset = data.Data(x=temp1[:, 0:2], edge_index=torch.squeeze(temp4[:, p]))
+            dataset = data.Data(x=temp1[:, 0:2], edge_index=torch.squeeze(temp4[:, pp]))
             vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
             nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False)
             plt.xlim([-0.3, 1.3])
@@ -1960,7 +1989,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             else:
                 for n in range(nparticle_types):
                     embedding_particle.append(embedding[index_particles[n], :])
-                    plt.hist(embedding_particle[n][:, 0], 50, alpha=0.5)
+                    plt.hist(embedding_particle[n][:, 0], 50, alpha=0.75)
                     plt.xlabel('Embedding', fontsize=14)
 
             plt.savefig(f"./tmp_recons/Fig_{ntry}_{it}.tif")
@@ -1994,6 +2023,19 @@ def data_test_generate(model_config):
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
     for n in range(model_config['nparticle_types']):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
+
+    ratio = 3
+    prev_nparticles = nparticles
+    prev_index_particles = index_particles
+
+    new_nparticles = prev_nparticles * ratio
+    nparticles = new_nparticles
+
+    index_particles = []
+    for n in range(nparticle_types):
+        index_particles.append(np.arange(int(nparticles / nparticle_types) * n,
+                                         int(nparticles / nparticle_types) * (n + 1)))
+
     if model_config['model'] == 'MixInteractionParticles':
         print(f'Generate MixInteractionParticles')
         p = torch.ones(nparticle_types, nparticle_types, 4, device=device) + torch.rand(nparticle_types,nparticle_types, 4, device=device)
@@ -2043,26 +2085,12 @@ def data_test_generate(model_config):
     else:
         print('Pb with model')
 
-    print(p)
-
-    ratio = 3
-    prev_nparticles = nparticles
-    prev_index_particles = index_particles
-
-    new_nparticles = prev_nparticles * ratio
-    nparticles = new_nparticles
-
-    index_particles = []
-    for n in range(nparticle_types):
-        index_particles.append(np.arange(int(nparticles / nparticle_types) * n,
-                                         int(nparticles / nparticle_types) * (n + 1)))
-
     X1 = torch.rand(nparticles, 2, device=device)
 
     # scenario A
-    # X1[:, 0] = X1[:, 0] / nparticle_types
-    # for n in range(nparticle_types):
-    #     X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / nparticle_types
+    X1[:, 0] = X1[:, 0] / nparticle_types
+    for n in range(nparticle_types):
+        X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / nparticle_types
 
     # scenario B
     # X1[index_particles[0], :] = X1[index_particles[0], :]/2 + 1/4
@@ -2422,6 +2450,33 @@ def load_model_config (id=48):
                     'upgrade_type':0}
     if model_config_test['ntry']==id:
         return model_config_test
+    #100
+    model_config_test = {'ntry': 100,
+                    'input_size': 8,
+                    'output_size': 2,
+                    'hidden_size': 64,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'noise_type': 0,
+                    'radius': 0.075,
+                    'dataset': '230902_100',
+                    'nparticles': 5000,
+                    'nparticle_types': 5,
+                    'nframes': 200,
+                    'sigma': .005,
+                    'tau': 0.01,
+                    'v_init': 0,
+                    'aggr_type' : 'mean',
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'batch_size' :4,
+                    'particle_embedding': True,
+                    'embedding_type': 'none',
+                    'embedding': 1,
+                    'model': 'InteractionParticles',
+                    'upgrade_type':0}
+    if model_config_test['ntry']==id:
+        return model_config_test
 
     print('watch out model_config not find')
     return model_config_test
@@ -2447,7 +2502,7 @@ if __name__ == '__main__':
     training_mode='t+1'   # 't+1' 'regressive' 'regressive_loop'
     print(f'training_mode: {training_mode}')
 
-    for gtest in range(68,69):
+    for gtest in range(100,101):
 
         model_config = load_model_config(id=68)
 
@@ -2476,9 +2531,9 @@ if __name__ == '__main__':
 
         for key, value in model_config.items():
             print(key, ":", value)
-        # data_generate(model_config)
-        # data_train(model_config,gtest)
-        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
+        data_generate(model_config)
+        data_train(model_config,gtest)
+        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
         # data_train_generate(model_config, f'./graphs_data/graphs_particles_{dataset_name}/')
