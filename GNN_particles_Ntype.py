@@ -2024,7 +2024,7 @@ def data_test_generate(model_config):
     for n in range(model_config['nparticle_types']):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
-    ratio = 3
+    ratio = 1
     prev_nparticles = nparticles
     prev_index_particles = index_particles
 
@@ -2088,9 +2088,9 @@ def data_test_generate(model_config):
     X1 = torch.rand(nparticles, 2, device=device)
 
     # scenario A
-    X1[:, 0] = X1[:, 0] / nparticle_types
-    for n in range(nparticle_types):
-        X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / nparticle_types
+    # X1[:, 0] = X1[:, 0] / nparticle_types
+    # for n in range(nparticle_types):
+    #     X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / nparticle_types
 
     # scenario B
     # X1[index_particles[0], :] = X1[index_particles[0], :]/2 + 1/4
@@ -2502,7 +2502,7 @@ if __name__ == '__main__':
     training_mode='t+1'   # 't+1' 'regressive' 'regressive_loop'
     print(f'training_mode: {training_mode}')
 
-    for gtest in range(100,101):
+    for gtest in range(68,69):
 
         model_config = load_model_config(id=gtest)
 
@@ -2531,11 +2531,11 @@ if __name__ == '__main__':
 
         for key, value in model_config.items():
             print(key, ":", value)
-        data_generate(model_config)
-        data_train(model_config,gtest)
+        # data_generate(model_config)
+        # data_train(model_config,gtest)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
-        # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
-        # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
+        prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
+        x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
         # data_train_generate(model_config, f'./graphs_data/graphs_particles_{dataset_name}/')
 
 
