@@ -2504,7 +2504,7 @@ if __name__ == '__main__':
 
     for gtest in range(100,101):
 
-        model_config = load_model_config(id=68)
+        model_config = load_model_config(id=gtest)
 
         if model_config['boundary'] == 'no':  # change this for usual BC
             def bc_pos(X):
