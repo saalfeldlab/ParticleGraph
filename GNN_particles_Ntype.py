@@ -2528,8 +2528,6 @@ if __name__ == '__main__':
         # model_config['ntry'] = ntry
         # dataset_name = '231001_'+str(ntry)
         # model_config['dataset'] = dataset_name
-
-
         # model_config['model']= 'MixInteractionParticles'
 
         for key, value in model_config.items():
@@ -2540,8 +2538,4 @@ if __name__ == '__main__':
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
         # data_train_generate(model_config, f'./graphs_data/graphs_particles_230902_72/')
-
-
-
-
 
