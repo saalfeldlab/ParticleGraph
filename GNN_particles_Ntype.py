@@ -2433,7 +2433,7 @@ def load_model_config (id=48):
 
     model_config_test = []
 
-    if id==53:
+    if id==75:
         model_config_test = {'ntry': 75,
                              'input_size': 8,
                              'output_size': 2,
