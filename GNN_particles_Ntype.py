@@ -1381,7 +1381,6 @@ def data_train(model_config,gtest):
         if epoch == 10:
             batch_size = model_config['batch_size']
             print(f'batch_size: {batch_size}')
-
         if epoch == 20:
             lra = 1E-3
             lr = 2E-4
@@ -1544,7 +1543,6 @@ def data_train(model_config,gtest):
 
         else:
             print('Pb training mode')
-
 
         model.a.data = torch.clamp(model.a.data, min=-4, max=4)
         embedding = model.a.detach().cpu().numpy()
@@ -2083,7 +2081,7 @@ def data_plot(model_config):
     if model_config['model'] == 'GravityParticles':
 
         mass = [5,1,0.2]
-
+        ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt')
         fig = plt.figure(figsize=(20, 6))
         plt.ion()
         ax = fig.add_subplot(1, 3, 1)
@@ -2104,15 +2102,14 @@ def data_plot(model_config):
         plt.xlabel('Mass [a.u]', fontsize="14")
         plt.ylabel('Embedding [a.u]', fontsize="14")
 
-        t = [ 0.774, 0.249, -0.203]
         r = np.arange(0, 2, 0.01) * 0.075
         r_ = torch.tensor(r, device=device)
         r_=r_[:,None]
 
         ax = fig.add_subplot(1, 3, 3)
-        for k,emb in enumerate (t):
+        for k,emb in enumerate (tmean):
             plt.plot(r, 2.2/(r**2+1E-6)*mass[k]*ynorm[4].detach().cpu().numpy(),color=[0.75,0.75,0.75])
-        for k,emb in enumerate (t):
+        for k,emb in enumerate (tmean):
             embedding = torch.tensor(emb, device=device) * torch.ones((200,1), device=device)
             in_features = torch.cat((r_, 0 * r_, r_, 0 * r_, 0 * r_, 0 * r_, 0 * r_, embedding), dim=1)
             acc = model.lin_edge(in_features.float())
@@ -2122,10 +2119,6 @@ def data_plot(model_config):
         plt.xlim([0, 0.075*2])
         plt.xlabel('Distance [a.u]', fontsize="14")
         plt.ylabel('Acceleration [a.u]', fontsize="14")
-
-
-
-
 
         # t = [-1.7, 0.67, 1.22, 3.96 ]
         # X = np.arange(-1, 1, 0.02) * 0.075
@@ -2769,6 +2762,7 @@ if __name__ == '__main__':
         for key, value in model_config.items():
             print(key, ":", value)
         # data_generate(model_config)
+
         # data_train(model_config,gtest)
 
         data_plot(model_config)
