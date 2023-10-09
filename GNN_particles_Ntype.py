@@ -1868,7 +1868,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             if model_config['model'] == 'GravityParticles':
                 for n in range(nparticle_types):
                     g=p_mass[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 10
-                    plt.scatter(x[index_particles[n], 0].detach().cpu(), x[index_particles[n], 1].detach().cpu(),s=g)  # , facecolors='none', edgecolors='k')
+                    plt.scatter(x00[index_particles[n], 0].detach().cpu(), x00[index_particles[n], 1].detach().cpu(),s=g)  # , facecolors='none', edgecolors='k')
             else:
                 for n in range(nparticle_types):
                     plt.scatter(x00[index_particles[n], 0].detach().cpu(), x00[index_particles[n], 1].detach().cpu(), s=3)
@@ -1884,7 +1884,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             if model_config['model'] == 'GravityParticles':
                 for n in range(nparticle_types):
                     g=p_mass[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 10
-                    plt.scatter(x[index_particles[n], 0].detach().cpu(), x[index_particles[n], 1].detach().cpu(),s=g)  # , facecolors='none', edgecolors='k')
+                    plt.scatter(x0[index_particles[n], 0].detach().cpu(), x0[index_particles[n], 1].detach().cpu(),s=g)  # , facecolors='none', edgecolors='k')
             else:
                 for n in range(nparticle_types):
                     plt.scatter(x0[index_particles[n], 0].detach().cpu(), x0[index_particles[n], 1].detach().cpu(), s=3)
@@ -2971,7 +2971,7 @@ if __name__ == '__main__':
             print(key, ":", value)
         # data_generate(model_config)
         # data_train(model_config,gtest)
-        data_plot(model_config)
+        # data_plot(model_config)
 
         x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
 
