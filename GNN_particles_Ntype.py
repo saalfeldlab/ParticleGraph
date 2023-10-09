@@ -487,42 +487,6 @@ class InteractionParticles(pyg.nn.MessagePassing):
 
         return self.lin_edge(in_features)
 
-        t = self.a.detach().cpu().numpy()
-
-        t = [-1.7, 0.67, 1.22, 3.96 ]
-        X = np.arange(-1, 1, 0.02) * 0.075
-        VX = (np.arange(-1, 1, 0.02) - 0.5) / 0.5 * 2
-        X, VX = np.meshgrid(X, VX)
-        X_ = X.reshape(10000, 1)
-        VX_ = VX.reshape(10000, 1)
-        X_ = torch.tensor(X_, device=self.device)
-        VX_ = torch.tensor(VX_, device=self.device)
-        fig = plt.figure(figsize=(16, 8))
-        plt.ion()
-        for k,emb in enumerate (t):
-            embedding = torch.tensor(emb, device=self.device) * torch.ones((10000,1), device=self.device)
-            in_features = torch.cat((X_ , 0*X_, X_ , 0*VX_, 0*VX_, VX_, 0*VX_, embedding),dim=1)   # VX, 0*VX, 3.96*
-            acc_mess = self.lin_edge(in_features.float())
-            acc_mess = acc_mess.detach().cpu().numpy()
-            acc_messx = acc_mess[:, 0:1].reshape(100, 100)
-            ax = fig.add_subplot(2, 4, k+1, projection='3d')
-            surf = ax.plot_surface(X, VX, acc_messx, cmap=cm.coolwarm, linewidth=0, antialiased=True, vmin=-5,vmax=5)
-            ax.set_xlabel('Distance',fontsize=14)
-            ax.set_ylabel('Velocity',fontsize=14)
-            ax.set_zlabel('Acceleration',fontsize=14)
-            ax.set_zlim(-10, 10)
-            in_features = torch.cat((X_, 0*X_, X_ , 0*VX_, 0*VX_, 0*VX_, VX_, embedding),dim=1)   # VX, 0*VX, 3.96*
-            acc_mess = self.lin_edge(in_features.float())
-            acc_mess = acc_mess.detach().cpu().numpy()
-            acc_messx = acc_mess[:, 1:2].reshape(100, 100)
-            ax = fig.add_subplot(2, 4, 4 + k + 1, projection='3d')
-            surf = ax.plot_surface(X, VX, acc_messx,cmap=cm.coolwarm, linewidth=0, antialiased=True, vmin=-5,vmax=5)
-            ax.set_xlabel('Distance',fontsize=14)
-            ax.set_ylabel('Velocity',fontsize=14)
-            ax.set_zlabel('Acceleration',fontsize=14)
-            ax.set_zlim(-2, 2)
-
-
     def update(self, aggr_out):
 
         return aggr_out  # self.lin_node(aggr_out)
@@ -1252,7 +1216,7 @@ def data_generate(model_config):
 
     time.sleep(0.5)
 
-    for run in range(10):
+    for run in range(2):
 
         X1 = torch.rand(nparticles, 2, device=device)
         X1t = torch.zeros((nparticles, 2, nframes))  # to store all the intermediate time
@@ -2694,6 +2658,8 @@ def data_plot(model_config):
 
     types = [1,2,3]
 
+    rr = torch.tensor(np.linspace(0, radius*2, 100))
+    rr = rr.to(device)
 
     fig = plt.figure(figsize=(24, 6))
     plt.ion()
@@ -2728,9 +2694,9 @@ def data_plot(model_config):
     ax = fig.add_subplot(1, 4, 4)
     for k in range(3):
         embedding = torch.tensor(tmean[k], device=device) * torch.ones((100), device=device)
-        in_features = torch.cat((rr[:,None], 0 * rr[:,None], rr[:,None], 0 * rr[:,None], 0 * rr[:,None], 0 * rr[:,None], 0 * rr[:,None], embedding[:,None]), dim=1)
+        in_features = torch.cat((-rr[:,None]/model_config['radius'], 0*rr[:,None], rr[:,None]/model_config['radius'], 0 * rr[:,None], 0 * rr[:,None], 0 * rr[:,None], 0 * rr[:,None], embedding[:,None]), dim=1)
         acc = model.lin_edge(in_features.float())
-        acc = acc[:,0]
+        acc = -acc[:,0]
         plt.plot(rr.detach().cpu().numpy(), acc.detach().cpu().numpy()*ynorm/model_config['tau'])
     plt.plot(rr.detach().cpu().numpy(), 0*acc.detach().cpu().numpy() * ynorm / model_config['tau'],c='k')
     # plt.xlim([0, 0.075*2])
@@ -2769,7 +2735,6 @@ def data_plot(model_config):
     #     ax.set_ylabel('Velocity',fontsize=14)
     #     ax.set_zlabel('Acceleration',fontsize=14)
     #     ax.set_zlim(-2, 2)
-
     plt.tight_layout()
     plt.show()
 def load_model_config (id=48):
@@ -3085,8 +3050,6 @@ if __name__ == '__main__':
         # data_plot(model_config)
 
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
-
-
 
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
