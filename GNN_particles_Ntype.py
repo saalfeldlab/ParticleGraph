@@ -242,7 +242,7 @@ class InteractionParticles_D(pyg.nn.MessagePassing):
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
     def __init__(self, aggr_type=[], p=[], tau=[]):
-        super(InteractionParticles_2, self).__init__(aggr='add')  # "mean" aggregation.
+        super(InteractionParticles_D, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.p = p
         self.tau = tau
@@ -1673,6 +1673,14 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         model = InteractionParticles(model_config, device)
     if model_config['model'] == 'GravityParticles':
         model = GravityParticles(model_config, device)
+        p_mass = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
+        for n in range(nparticle_types):
+            p_mass[n]=torch.load(f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
+        print(p_mass)
+        T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
+        for n in range(1, nparticle_types):
+            T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
+        T1 = torch.concatenate((T1[:, None], T1[:, None]), 1)
     if model_config['model'] == 'MixInteractionParticles':
         model = MixInteractionParticles(model_config, device)
     if model_config['model'] == 'ResNetGNN':
@@ -1856,8 +1864,14 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             fig = plt.figure(figsize=(25, 16))
             # plt.ion()
             ax = fig.add_subplot(2, 3, 1)
-            for n in range(nparticle_types):
-                plt.scatter(x00[index_particles[n], 0].detach().cpu(), x00[index_particles[n], 1].detach().cpu(), s=3)
+
+            if model_config['model'] == 'GravityParticles':
+                for n in range(nparticle_types):
+                    g=p_mass[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 10
+                    plt.scatter(x[index_particles[n], 0].detach().cpu(), x[index_particles[n], 1].detach().cpu(),s=g)  # , facecolors='none', edgecolors='k')
+            else:
+                for n in range(nparticle_types):
+                    plt.scatter(x00[index_particles[n], 0].detach().cpu(), x00[index_particles[n], 1].detach().cpu(), s=3)
 
             plt.xlim([-0.3, 1.3])
             plt.ylim([-0.3, 1.3])
@@ -1867,8 +1881,13 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             plt.text(-0.25, 1.38, f't0 {nparticles} particles', fontsize=10)
 
             ax = fig.add_subplot(2, 3, 2)
-            for n in range(nparticle_types):
-                plt.scatter(x0[index_particles[n], 0].detach().cpu(), x0[index_particles[n], 1].detach().cpu(), s=3)
+            if model_config['model'] == 'GravityParticles':
+                for n in range(nparticle_types):
+                    g=p_mass[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 10
+                    plt.scatter(x[index_particles[n], 0].detach().cpu(), x[index_particles[n], 1].detach().cpu(),s=g)  # , facecolors='none', edgecolors='k')
+            else:
+                for n in range(nparticle_types):
+                    plt.scatter(x0[index_particles[n], 0].detach().cpu(), x0[index_particles[n], 1].detach().cpu(), s=3)
             ax = plt.gca()
             plt.xlim([-0.3, 1.3])
             plt.ylim([-0.3, 1.3])
@@ -1903,8 +1922,13 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             plt.text(-0.25, 1.33, f'Graph: {x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
 
             ax = fig.add_subplot(2, 3, 5)
-            for n in range(nparticle_types):
-                plt.scatter(x[index_particles[n], 0].detach().cpu(), x[index_particles[n], 1].detach().cpu(), s=3)
+            if model_config['model'] == 'GravityParticles':
+                for n in range(nparticle_types):
+                    g=p_mass[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 10
+                    plt.scatter(x[index_particles[n], 0].detach().cpu(), x[index_particles[n], 1].detach().cpu(),s=g)  # , facecolors='none', edgecolors='k')
+            else:
+                for n in range(nparticle_types):
+                    plt.scatter(x[index_particles[n], 0].detach().cpu(), x[index_particles[n], 1].detach().cpu(), s=3)
             ax = plt.gca()
             ax.axes.xaxis.set_ticklabels([])
             ax.axes.yaxis.set_ticklabels([])
@@ -2918,7 +2942,7 @@ if __name__ == '__main__':
     training_mode='t+1'   # 't+1' 'regressive' 'regressive_loop'
     print(f'training_mode: {training_mode}')
 
-    for gtest in range(72,73):
+    for gtest in range(68,69):
 
 
         model_config = load_model_config(id=gtest)
@@ -2947,8 +2971,7 @@ if __name__ == '__main__':
             print(key, ":", value)
         # data_generate(model_config)
         # data_train(model_config,gtest)
-
-        # data_plot(model_config)
+        data_plot(model_config)
 
         x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
 
