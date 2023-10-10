@@ -360,6 +360,34 @@ class InteractionParticles_G(pyg.nn.MessagePassing):
         psi = - pp[:,2] * torch.exp(-r ** (2*pp[:,0]) / (2 * sigma ** 2)) + pp[:,3] * torch.exp(-r ** (2*pp[:,1]) / (2 * sigma ** 2))
 
         return psi[:, None] * bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) / r[:, None]
+class InteractionParticles_H(pyg.nn.MessagePassing):
+    """Interaction Network as proposed in this paper:
+    https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
+
+    def __init__(self, aggr_type=[], p=[], tau=[]):
+        super(InteractionParticles_H, self).__init__(aggr=aggr_type)  # "mean" aggregation.
+
+        self.p = p
+        self.tau = tau
+
+    def forward(self, data):
+        x, edge_index = data.x, data.edge_index
+        edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+        newv = self.tau * self.propagate(edge_index, x=(x, x))
+        oldv = x[:, 2:4]
+        acc = newv - oldv
+        return acc
+
+    def message(self, x_i, x_j):
+        r = torch.sqrt(torch.sum(bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) ** 2, axis=1))  # distance
+        r = torch.clamp(r, min=0.00005)
+
+        # psi = -self.p[2] * torch.exp(-r ** self.p[0] / (2 * sigma ** 2)) + self.p[3] * torch.exp(-r ** self.p[1] / (2 * sigma ** 2))
+
+        pp = torch.squeeze(self.p[x_i[:, 5].detach().cpu().numpy(),x_j[:, 5].detach().cpu().numpy(),:])
+        psi = - pp[:,2] * torch.exp(-r ** (2*pp[:,0]) / (2 * sigma ** 2)) + pp[:,3] * torch.exp(-r ** (2*pp[:,1]) / (2 * sigma ** 2))
+
+        return psi[:, None] * bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) / r[:, None]
 
 class MLP(nn.Module):
 
@@ -746,13 +774,13 @@ class InteractionParticlesLoop(pyg.nn.MessagePassing):
     def update(self, aggr_out):
 
         return aggr_out  # self.lin_node(aggr_out)
-class MixInteractionParticles_G(pyg.nn.MessagePassing):
+class MixInteractionParticles(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
     def __init__(self, model_config, device):
 
-        super(MixInteractionParticles_G, self).__init__(aggr=aggr_type)  # "Add" aggregation.
+        super(MixInteractionParticles, self).__init__(aggr=aggr_type)  # "Add" aggregation.
 
         self.device = device
         self.input_size = model_config['input_size']
@@ -870,7 +898,7 @@ class MixInteractionParticles_G(pyg.nn.MessagePassing):
     def update(self, aggr_out):
 
         return aggr_out  # self.lin_node(aggr_out)
-
+    
 class EdgeNetwork(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -1090,9 +1118,10 @@ def data_generate(model_config):
         rr = torch.tensor(np.linspace(0, radius*2, 100))
         rr = rr.to(device)
         # p[0] = torch.tensor([1.0413, 1.5615, 1.6233, 1.6012])
-        # p[0] = torch.tensor([1.8308, 1.9055, 1.7667, 1.0855])
         # p[1] = torch.tensor([1.8308, 1.9055, 1.7667, 1.0855])
+        # p[2] = torch.tensor([1.9548, 1.0472, 1.994, 1.2743])
         # p[2] = torch.tensor([1.785, 1.8579, 1.7226, 1.0584])
+
         for n in range(nparticle_types):
             psi_output.append(psi_A(rr, torch.squeeze(p[n])))
             print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
@@ -1118,8 +1147,9 @@ def data_generate(model_config):
             torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
         model = InteractionParticles_B(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'])
         torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model.pt')
+        
     elif model_config['model'] == 'MixInteractionParticles_G':
-        print(f'Generate MixInteractionParticles_G')
+        print(f'Generate MixInteractionParticles')
 
         p = torch.ones(nparticle_types, nparticle_types, 4, device=device) + torch.rand(nparticle_types,nparticle_types, 4, device=device)
 
@@ -1150,6 +1180,40 @@ def data_generate(model_config):
                 torch.save(torch.squeeze(p[n, m]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}_{m}.pt')
 
         model = InteractionParticles_G(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'])
+        torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model.pt')
+        
+    elif model_config['model'] == 'MixInteractionParticles_H':
+        print(f'Generate MixInteractionParticles_H')
+
+        p = torch.ones(nparticle_types, nparticle_types, 4, device=device) + torch.rand(nparticle_types,nparticle_types, 4, device=device)
+
+        model = []
+        psi_output = []
+        rr = torch.tensor(np.linspace(0, 0.075, 100))
+        rr = rr.to(device)
+
+        # read previous data
+        # for n in range(nparticle_types):
+        #     p[n] = torch.load(f'graphs_data/graphs_particles_230902_30/p_{n}.pt')
+        #     print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
+        # p[2]=p[1]*0.975
+        #
+
+        p[0 , 0] = torch.tensor([1.0696,1.8843,1.322,1.252])
+        p[0, 1] = torch.tensor([1.7112,1.7178,1.108,1.471])
+        p[0, 2] = torch.tensor([1.8224,1.4711,1.7202,1.2569])
+        p[1, 1] = torch.tensor([1.078,1.3741,1.053,1.0633])
+        p[1, 2] = torch.tensor([1.0395,1.8933,1.5266,1.5097])
+        p[2, 2] = torch.tensor([1.0833,1.2819,1.6062,1.0675])
+
+        for n in range(nparticle_types):
+            for m in range(nparticle_types):
+                # p[m,n] = p[n,m]
+                psi_output.append(psi_G(rr, torch.squeeze(p[n, m])))
+                print(f'p{n, m}: {np.round(torch.squeeze(p[n, m]).detach().cpu().numpy(), 4)}')
+                torch.save(torch.squeeze(p[n, m]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}_{m}.pt')
+
+        model = InteractionParticles_H(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'])
         torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model.pt')
 
     elif model_config['model'] == 'GravityParticles':
@@ -1227,7 +1291,7 @@ def data_generate(model_config):
 
     time.sleep(0.5)
 
-    for run in range(10):
+    for run in range(2):
 
         X1 = torch.rand(nparticles, 2, device=device)
         X1t = torch.zeros((nparticles, 2, nframes))  # to store all the intermediate time
@@ -1299,7 +1363,7 @@ def data_generate(model_config):
                 plt.ylim([-0.3, 1.3])
                 plt.text(-0.25, 1.38, f'frame: {it}')
                 plt.text(-0.25, 1.33, f'Graph    {x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
-                if model_config['model'] == 'MixInteractionParticles_G':
+                if (model_config['model'] == 'MixInteractionParticles_G') | (model_config['model'] == 'MixInteractionParticles_H') :
                     N=0
                     for n in range(nparticle_types):
                         for m in range(nparticle_types):
@@ -1319,7 +1383,7 @@ def data_generate(model_config):
                 plt.xlim([-0.3, 1.3])
                 plt.ylim([-0.3, 1.3])
 
-                if model_config['model'] == 'MixInteractionParticles_G':
+                if (model_config['model'] == 'MixInteractionParticles_G') | (model_config['model'] == 'MixInteractionParticles_H') :
                     ax = fig.add_subplot(5, 5, 21)
                     N = 0
                     for n in range(nparticle_types):
@@ -1404,9 +1468,9 @@ def data_train(model_config,gtest):
         else:
             model = InteractionParticles(model_config, device)
             print(f'Training InteractionParticles')
-    if (model_config['model'] == 'MixInteractionParticles_G') | (model_config['model'] == 'ElecParticles'):
-        model = MixInteractionParticles_G(model_config, device)
-        print(f'Training MixInteractionParticles_G')
+    if (model_config['model'] == 'MixInteractionParticles_G') | (model_config['model'] == 'MixInteractionParticles_H') | (model_config['model'] == 'ElecParticles'):
+        model = MixInteractionParticles(model_config, device)
+        print(f'Training MixInteractionParticles')
     if model_config['model'] == 'ResNetGNN':
         model = ResNetGNN(model_config, device)
         print(f'Training ResNetGNN')
@@ -1454,7 +1518,7 @@ def data_train(model_config,gtest):
 
     time.sleep(0.5)
     # optimizer = torch.optim.Adam(model.parameters(), lr=lr) #, weight_decay=weight_decay)
-    Nepochs=30
+    Nepochs=60
     print(f'N epochs: {Nepochs}')
     model.train()
     best_loss = np.inf
@@ -1782,10 +1846,10 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         for n in range(1, nparticle_types):
             T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
         T1 = torch.concatenate((T1[:, None], T1[:, None]), 1)
-    if model_config['model'] == 'MixInteractionParticles_G':
-        model = MixInteractionParticles_G(model_config, device)
+    if model_config['model'] == 'MixInteractionParticles':
+        model = MixInteractionParticles(model_config, device)
     if model_config['model'] == 'ElecParticles':
-        model = MixInteractionParticles_G(model_config, device)
+        model = MixInteractionParticles(model_config, device)
         p_elec = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         for n in range(nparticle_types):
             p_elec[n]=torch.load(f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
@@ -2194,8 +2258,8 @@ def data_test_generate(model_config):
             torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
         model = InteractionParticles_2(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'])
         torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model.pt')
-    elif model_config['model'] == 'MixInteractionParticles_G':
-        print(f'Generate MixInteractionParticles_G')
+    elif model_config['model'] == 'MixInteractionParticles':
+        print(f'Generate MixInteractionParticles')
 
         p = torch.ones(nparticle_types, nparticle_types, 4, device=device) + torch.rand(nparticle_types,nparticle_types, 4, device=device)
 
@@ -2349,7 +2413,7 @@ def data_test_generate(model_config):
             plt.ylim([-0.3, 1.3])
             plt.text(-0.25, 1.38, f'frame: {it}')
             plt.text(-0.25, 1.33, f'sigma:{sigma} N:{nparticles} nframes:{nframes}')
-            if model_config['model'] == 'MixInteractionParticles_G':
+            if model_config['model'] == 'MixInteractionParticles':
                 N = 0
                 for n in range(nparticle_types):
                     for m in range(n, nparticle_types):
@@ -2362,7 +2426,7 @@ def data_test_generate(model_config):
 
             ax = fig.add_subplot(5, 5, 21)
 
-            if model_config['model'] == 'MixInteractionParticles_G':
+            if model_config['model'] == 'MixInteractionParticles':
                 N = 0
                 for n in range(nparticle_types):
                     for m in range(n, nparticle_types):
@@ -2593,12 +2657,12 @@ def data_plot(model_config):
         model = InteractionParticles(model_config, device)
     if model_config['model'] == 'GravityParticles':
         model = GravityParticles(model_config, device)
-    if model_config['model'] == 'MixInteractionParticles_G':
-        model = MixInteractionParticles_G(model_config, device)
+    if model_config['model'] == 'MixInteractionParticles':
+        model = MixInteractionParticles(model_config, device)
     if model_config['model'] == 'ResNetGNN':
         model = ResNetGNN(model_config, device)
     if model_config['model'] == 'ElecParticles':
-        model = MixInteractionParticles_G(model_config, device)
+        model = MixInteractionParticles(model_config, device)
 
 
     print(f'network: {net}')
@@ -2745,7 +2809,7 @@ def data_plot(model_config):
         plt.title('Model',fontsize="22")
         plt.tight_layout()
 
-    elif model_config['model'] == 'MixInteractionParticles_G':
+    elif model_config['model'] == 'MixInteractionParticles':
 
         p = torch.ones(nparticle_types, nparticle_types, 4, device=device) + torch.rand(nparticle_types,nparticle_types, 4, device=device)
         psi_output = []
@@ -2963,19 +3027,19 @@ def load_model_config (id=48):
                              'radius': 0.075,
                              'dataset': f'231001_{id}',
                              'nparticles': 4800,
-                             'nparticle_types': 1,
+                             'nparticle_types': 3,
                              'nframes': 200,
                              'sigma': .005,
-                             'tau': 0.1,
+                             'tau': 0.01,
                              'v_init': 0,
                              'aggr_type': 'mean',
-                             'boundary': 'no',  # periodic   'no'  # no boundary condition
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                              'data_augmentation': True,
                              'batch_size': 4,
                              'particle_embedding': True,
                              'embedding_type': 'none',
                              'embedding': 1,
-                             'model': 'InteractionParticles_A',
+                             'model': 'MixInteractionParticles_H',
                              'upgrade_type': 0}
 
 # gravity
@@ -3154,7 +3218,7 @@ def load_model_config (id=48):
                              'particle_embedding': True,
                              'embedding_type': 'none',
                              'embedding': 1,
-                             'model': 'MixInteractionParticles_G',
+                             'model': 'MixInteractionParticles',
                              'upgrade_type': 0}
     if id==78:
         model_config_test = {'ntry': id,
@@ -3184,9 +3248,9 @@ def load_model_config (id=48):
 
     if id==79:
         model_config_test = {'ntry': id,
-                             'input_size': 9,
+                             'input_size': 8,
                              'output_size': 2,
-                             'hidden_size': 16,
+                             'hidden_size': 64,
                              'n_mp_layers': 5,
                              'noise_level': 0,
                              'noise_type': 0,
@@ -3196,7 +3260,7 @@ def load_model_config (id=48):
                              'nparticle_types': 10,
                              'nframes': 200,
                              'sigma': .005,
-                             'tau': 0.01,
+                             'tau': 0.1,
                              'v_init': 0,
                              'aggr_type': 'mean',
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
@@ -3231,7 +3295,7 @@ def load_model_config (id=48):
                              'particle_embedding': True,
                              'embedding_type': 'none',
                              'embedding': 1,
-                             'model': 'MixInteractionParticles_G',
+                             'model': 'MixInteractionParticles',
                              'upgrade_type': 0}
 
 # elctrostatic
@@ -3309,7 +3373,7 @@ if __name__ == '__main__':
     training_mode='t+1'   # 't+1' 'regressive' 'regressive_loop'
     print(f'training_mode: {training_mode}')
 
-    for gtest in range(79,80):
+    for gtest in range(65,66):
 
         model_config = load_model_config(id=gtest)
 
@@ -3330,13 +3394,13 @@ if __name__ == '__main__':
         # model_config['ntry'] = ntry
         # dataset_name = '231001_'+str(ntry)
         # model_config['dataset'] = dataset_name
-        # model_config['model']= 'MixInteractionParticles_G'
+        # model_config['model']= 'MixInteractionParticles'
 
         for key, value in model_config.items():
             print(key, ":", value)
 
         data_generate(model_config)
-        data_train(model_config,gtest)
+        # data_train(model_config,gtest)
         # data_plot(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
