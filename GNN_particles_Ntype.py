@@ -608,8 +608,6 @@ class GravityParticles(pyg.nn.MessagePassing):
 
         return self.lin_edge(in_features)
 
-        t = self.a.detach().cpu().numpy()
-
 
     def update(self, aggr_out):
 
@@ -1443,7 +1441,7 @@ def data_train(model_config,gtest):
 
     time.sleep(0.5)
     # optimizer = torch.optim.Adam(model.parameters(), lr=lr) #, weight_decay=weight_decay)
-    Nepochs=60
+    Nepochs=30
     print(f'N epochs: {Nepochs}')
     model.train()
     best_loss = np.inf
@@ -2657,86 +2655,104 @@ def data_plot(model_config):
         print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
 
     types = [1,2,3]
+    mass = [5,1,0.2]
 
-    rr = torch.tensor(np.linspace(0, radius*2, 100))
-    rr = rr.to(device)
+    if model_config['model']=='GravityParticles':
 
-    fig = plt.figure(figsize=(24, 6))
-    plt.ion()
-    ax = fig.add_subplot(1, 4, 1)
-    t = model.a.detach().cpu().numpy()
-    tmean = np.ones(3)
-    tstd = np.ones(3)
-    for n in range(model_config['nparticle_types']):
-        plt.hist(t[index_particles[n]])
-        tmean[n]=np.round(np.mean(t[index_particles[n]])*1000)/1000
-        tstd[n]=np.round(np.std(t[index_particles[n]])*1000)/1000
-        plt.text(tmean[n], 80, f'{tmean[n]}')
-        plt.text(tmean[n], 75, f'+/- {tstd[n]}')
-    plt.xlabel('Embedding [a.u]', fontsize="14")
-    plt.ylabel('Counts [a.u]', fontsize="14")
+        fig = plt.figure(figsize=(24, 6))
+        plt.ion()
+        ax = fig.add_subplot(1, 4, 1)
+        t = model.a.detach().cpu().numpy()
+        tmean = np.ones(3)
+        tstd = np.ones(3)
+        for n in range(model_config['nparticle_types']):
+            plt.hist(t[index_particles[n]])
+            tmean[n] = np.round(np.mean(t[index_particles[n]]) * 1000) / 1000
+            tstd[n] = np.round(np.std(t[index_particles[n]]) * 1000) / 1000
+            plt.text(tmean[n], 80, f'{tmean[n]}')
+            plt.text(tmean[n], 75, f'+/- {tstd[n]}')
+        plt.xlabel('Embedding [a.u]', fontsize="14")
+        plt.ylabel('Counts [a.u]', fontsize="14")
 
-    ax = fig.add_subplot(1, 4, 2)
-    plt.scatter(types,tmean,s=30,color='k')
-    plt.xlabel('Types [a.u]', fontsize="14")
-    plt.ylabel('Embedding [a.u]', fontsize="14")
+        ax = fig.add_subplot(1, 4, 2)
+        plt.scatter(mass, tmean, s=30, color='k')
+        plt.xlabel('Mass [a.u]', fontsize="14")
+        plt.ylabel('Embedding [a.u]', fontsize="14")
 
-    ax = fig.add_subplot(1, 4, 3)
-    for n in range(nparticle_types):
-        plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), linewidth=1)
-        plt.plot(rr.detach().cpu().numpy(), psi_output[0].detach().cpu().numpy() * 0, color=[0, 0, 0],
-                 linewidth=0.5)
+        ax = fig.add_subplot(1, 4, 3)
+        for n in range(nparticle_types):
+            grav = mass[n]*1/rr.detach().cpu().numpy()/rr.detach().cpu().numpy()
+            plt.plot(rr.detach().cpu().numpy(), grav, linewidth=1)
+        plt.xlim([0, 0.05])
+        plt.ylim([0, 150000])
 
-    tau = model_config['tau']
-    ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt')
-    ynorm = ynorm[4].detach().cpu().numpy()
+        tau = model_config['tau']
+        ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt')
+        ynorm = ynorm[4].detach().cpu().numpy()
 
-    ax = fig.add_subplot(1, 4, 4)
-    for k in range(3):
-        embedding = torch.tensor(tmean[k], device=device) * torch.ones((100), device=device)
-        in_features = torch.cat((-rr[:,None]/model_config['radius'], 0*rr[:,None], rr[:,None]/model_config['radius'], 0 * rr[:,None], 0 * rr[:,None], 0 * rr[:,None], 0 * rr[:,None], embedding[:,None]), dim=1)
-        acc = model.lin_edge(in_features.float())
-        acc = -acc[:,0]
-        plt.plot(rr.detach().cpu().numpy(), acc.detach().cpu().numpy()*ynorm/model_config['tau'])
-    plt.plot(rr.detach().cpu().numpy(), 0*acc.detach().cpu().numpy() * ynorm / model_config['tau'],c='k')
-    # plt.xlim([0, 0.075*2])
-    plt.xlabel('Distance [a.u]', fontsize="14")
-    plt.ylabel('Acceleration [a.u]', fontsize="14")
+        ax = fig.add_subplot(1, 4, 4)
+        for k in range(3):
+            embedding = torch.tensor(tmean[k], device=device) * torch.ones((100), device=device)
+            in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                     rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
+                                     0 * rr[:, None], 0 * rr[:, None], embedding[:, None]), dim=1)
+            acc = model.lin_edge(in_features.float())
+            acc = acc[:, 0]
+            plt.plot(rr.detach().cpu().numpy(), acc.detach().cpu().numpy() * ynorm / model_config['tau'])
+        plt.xlim([0, 0.05])
+        plt.ylim([0, 150000])
+        plt.xlabel('Distance [a.u]', fontsize="14")
+        plt.ylabel('Acceleration [a.u]', fontsize="14")
 
-    # t = [-1.7, 0.67, 1.22, 3.96 ]
-    # X = np.arange(-1, 1, 0.02) * 0.075
-    # VX = (np.arange(-1, 1, 0.02) - 0.5) / 0.5 * 2
-    # X, VX = np.meshgrid(X, VX)
-    # X_ = X.reshape(10000, 1)
-    # VX_ = VX.reshape(10000, 1)
-    # X_ = torch.tensor(X_, device=device)
-    # VX_ = torch.tensor(VX_, device=device)
-    # fig = plt.figure(figsize=(16, 8))
-    # plt.ion()
-    # for k,emb in enumerate (t):
-    #     embedding = torch.tensor(emb, device=device) * torch.ones((10000,1), device=device)
-    #     in_features = torch.cat((X_ , 0*X_, X_ , 0*VX_, 0*VX_, VX_, 0*VX_, embedding),dim=1)   # VX, 0*VX, 3.96*
-    #     acc_mess = model.lin_edge(in_features.float())
-    #     acc_mess = acc_mess.detach().cpu().numpy()
-    #     acc_messx = acc_mess[:, 0:1].reshape(100, 100)
-    #     ax = fig.add_subplot(2, 4, k+1, projection='3d')
-    #     surf = ax.plot_surface(X, VX, acc_messx, cmap=cm.coolwarm, linewidth=0, antialiased=True, vmin=-5,vmax=5)
-    #     ax.set_xlabel('Distance',fontsize=14)
-    #     ax.set_ylabel('Velocity',fontsize=14)
-    #     ax.set_zlabel('Acceleration',fontsize=14)
-    #     ax.set_zlim(-10, 10)
-    #     in_features = torch.cat((X_, 0*X_, X_ , 0*VX_, 0*VX_, 0*VX_, VX_, embedding),dim=1)   # VX, 0*VX, 3.96*
-    #     acc_mess = model.lin_edge(in_features.float())
-    #     acc_mess = acc_mess.detach().cpu().numpy()
-    #     acc_messx = acc_mess[:, 1:2].reshape(100, 100)
-    #     ax = fig.add_subplot(2, 4, 4 + k + 1, projection='3d')
-    #     surf = ax.plot_surface(X, VX, acc_messx,cmap=cm.coolwarm, linewidth=0, antialiased=True, vmin=-5,vmax=5)
-    #     ax.set_xlabel('Distance',fontsize=14)
-    #     ax.set_ylabel('Velocity',fontsize=14)
-    #     ax.set_zlabel('Acceleration',fontsize=14)
-    #     ax.set_zlim(-2, 2)
-    plt.tight_layout()
-    plt.show()
+    else:
+
+        fig = plt.figure(figsize=(24, 6))
+        plt.ion()
+        ax = fig.add_subplot(1, 4, 1)
+        t = model.a.detach().cpu().numpy()
+        tmean = np.ones(3)
+        tstd = np.ones(3)
+        for n in range(model_config['nparticle_types']):
+            plt.hist(t[index_particles[n]])
+            tmean[n]=np.round(np.mean(t[index_particles[n]])*1000)/1000
+            tstd[n]=np.round(np.std(t[index_particles[n]])*1000)/1000
+            # plt.text(tmean[n], 400-50*n, f'{tmean[n]}')
+            # plt.text(tmean[n], 370-50*n, f'+/- {tstd[n]}')
+        plt.xlabel('Embedding [a.u]', fontsize="14")
+        plt.ylabel('Counts [a.u]', fontsize="14")
+
+        ax = fig.add_subplot(1, 4, 2)
+        plt.scatter(types,tmean,s=30,color='k')
+        plt.xlabel('Types [a.u]', fontsize="14")
+        plt.ylabel('Embedding [a.u]', fontsize="14")
+
+        ax = fig.add_subplot(1, 4, 3)
+        for n in range(nparticle_types):
+            plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), linewidth=1)
+            plt.plot(rr.detach().cpu().numpy(), psi_output[0].detach().cpu().numpy() * 0, color=[0, 0, 0],
+                     linewidth=0.5)
+        plt.xlabel('Distance [a.u]', fontsize="14")
+        plt.ylabel('Acceleration [a.u]', fontsize="14")
+        plt.title('True',fontsize="22")
+
+        tau = model_config['tau']
+        ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt')
+        ynorm = ynorm[4].detach().cpu().numpy()
+        ax = fig.add_subplot(1, 4, 4)
+        for k in range(3):
+            embedding = torch.tensor(tmean[k], device=device) * torch.ones((100), device=device)
+            in_features = torch.cat((-rr[:,None]/model_config['radius'], 0*rr[:,None], rr[:,None]/model_config['radius'], 0 * rr[:,None], 0 * rr[:,None], 0 * rr[:,None], 0 * rr[:,None], embedding[:,None]), dim=1)
+            acc = model.lin_edge(in_features.float())
+            acc = -acc[:,0]
+            plt.plot(rr.detach().cpu().numpy(), acc.detach().cpu().numpy()*ynorm/model_config['tau'])
+        plt.plot(rr.detach().cpu().numpy(), 0*acc.detach().cpu().numpy() * ynorm / model_config['tau'],c='k')
+        plt.xlim([0, 0.075*2])
+        plt.xlabel('Distance [a.u]', fontsize="14")
+        plt.ylabel('Acceleration [a.u]', fontsize="14")
+        plt.title('Model',fontsize="22")
+        plt.tight_layout()
+        plt.show()
+
 def load_model_config (id=48):
 
     model_config_test = []
@@ -2896,7 +2912,7 @@ def load_model_config (id=48):
                              'upgrade_type': 0}
     if id==77:
         model_config_test = {'ntry': id,
-                             'input_size': 8,
+                             'input_size': 9,
                              'output_size': 2,
                              'hidden_size': 64,
                              'n_mp_layers': 5,
@@ -3020,7 +3036,7 @@ if __name__ == '__main__':
     training_mode='t+1'   # 't+1' 'regressive' 'regressive_loop'
     print(f'training_mode: {training_mode}')
 
-    for gtest in range(78,76,-1):
+    for gtest in range(77,78):
 
         model_config = load_model_config(id=gtest)
 
