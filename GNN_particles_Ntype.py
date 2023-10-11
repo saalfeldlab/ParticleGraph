@@ -1199,12 +1199,19 @@ def data_generate(model_config):
         # p[2]=p[1]*0.975
         #
 
-        p[0 , 0] = torch.tensor([1.0696,1.8843,1.322,1.252])
-        p[0, 1] = torch.tensor([1.7112,1.7178,1.108,1.471])
-        p[0, 2] = torch.tensor([1.8224,1.4711,1.7202,1.2569])
-        p[1, 1] = torch.tensor([1.078,1.3741,1.053,1.0633])
-        p[1, 2] = torch.tensor([1.0395,1.8933,1.5266,1.5097])
-        p[2, 2] = torch.tensor([1.0833,1.2819,1.6062,1.0675])
+        # p[0 , 0] = torch.tensor([1.0696,1.8843,1.322,1.252])
+        # p[0, 1] = torch.tensor([1.7112,1.7178,1.108,1.471])
+        # p[0, 2] = torch.tensor([1.8224,1.4711,1.7202,1.2569])
+        # p[1, 1] = torch.tensor([1.078,1.3741,1.053,1.0633])
+        # p[1, 2] = torch.tensor([1.0395,1.8933,1.5266,1.5097])
+        # p[2, 2] = torch.tensor([1.0833,1.2819,1.6062,1.0675])
+
+        p[0 , 0] = torch.tensor([1.2327,1.3735,1.0677,1.8663])
+        p[0, 1] = torch.tensor([1.2403,1.8631,1.5942,1.7771])
+        p[0, 2] = torch.tensor([1.2334,1.8035,1.4916,1.9202])
+        p[1, 1] = torch.tensor([1.2403,1.8631,1.5942,1.7771])
+        p[1, 2] = torch.tensor([1.9443,1.7136,1.1208,1.2068])
+        p[2, 2] = torch.tensor([1.4536,1.58,1.7071,1.353])
 
         for n in range(nparticle_types):
             for m in range(nparticle_types):
@@ -1291,7 +1298,7 @@ def data_generate(model_config):
 
     time.sleep(0.5)
 
-    for run in range(10):
+    for run in range(2):
 
         X1 = torch.rand(nparticles, 2, device=device)
         X1t = torch.zeros((nparticles, 2, nframes))  # to store all the intermediate time
@@ -3402,9 +3409,9 @@ if __name__ == '__main__':
         for key, value in model_config.items():
             print(key, ":", value)
 
-        # data_generate(model_config)
+        data_generate(model_config)
         # data_train(model_config,gtest)
-        data_plot(model_config)
+        # data_plot(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
