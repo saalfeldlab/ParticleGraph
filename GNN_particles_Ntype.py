@@ -1298,7 +1298,7 @@ def data_generate(model_config):
 
     time.sleep(0.5)
 
-    for run in range(2):
+    for run in range(10):
 
         X1 = torch.rand(nparticles, 2, device=device)
         X1t = torch.zeros((nparticles, 2, nframes))  # to store all the intermediate time
@@ -3359,6 +3359,31 @@ def load_model_config (id=48):
                     'embedding': 2,
                     'model': 'ElecParticles',
                     'upgrade_type':0}
+    if id==82:
+        model_config_test = {'ntry': id,
+                    'input_size': 11,
+                    'output_size': 2,
+                    'hidden_size': 64,
+                    'n_mp_layers': 5,
+                    'noise_level': 0,
+                    'noise_type': 0,
+                    'radius': 0.15,
+                    'dataset': '230902_81',
+                    'nparticles': 960,
+                    'nparticle_types': 3,
+                    'nframes': 1000,
+                    'sigma': .005,
+                    'tau': -5E-9,
+                    'v_init': 1E-4,
+                    'aggr_type' : 'add',
+                    'particle_embedding': True,
+                    'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                    'data_augmentation' : True,
+                    'batch_size': 4,
+                    'embedding_type': 'none',
+                    'embedding': 2,
+                    'model': 'ElecParticles',
+                    'upgrade_type':0}
 
     return model_config_test
 
@@ -3383,7 +3408,7 @@ if __name__ == '__main__':
     training_mode='t+1'   # 't+1' 'regressive' 'regressive_loop'
     print(f'training_mode: {training_mode}')
 
-    for gtest in range(65,66):
+    for gtest in range(82,83):
 
         model_config = load_model_config(id=gtest)
 
@@ -3409,9 +3434,9 @@ if __name__ == '__main__':
         for key, value in model_config.items():
             print(key, ":", value)
 
-        data_generate(model_config)
+        # data_generate(model_config)
         # data_train(model_config,gtest)
-        # data_plot(model_config)
+        data_plot(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
