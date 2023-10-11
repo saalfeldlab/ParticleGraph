@@ -3114,7 +3114,7 @@ def load_model_config (id=48):
                         'noise_level': 0,
                         'noise_type': 0,
                         'radius': 0.075,
-                        'dataset': '231001_72',
+                        'dataset': f'230902_{id}',
                         'nparticles': 4800,
                         'nparticle_types': 3,
                         'nframes': 200,
@@ -3255,7 +3255,6 @@ def load_model_config (id=48):
                              'embedding': 1,
                              'model': 'InteractionParticles_F',
                              'upgrade_type': 0}
-
     if id==79:
         model_config_test = {'ntry': id,
                              'input_size': 8,
@@ -3282,32 +3281,6 @@ def load_model_config (id=48):
                              'model': 'InteractionParticles_A',
                              'upgrade_type': 0}
 
-    if id==82:
-        model_config_test = {'ntry': id,
-                             'input_size': 8,
-                             'output_size': 2,
-                             'hidden_size': 64,
-                             'n_mp_layers': 5,
-                             'noise_level': 0,
-                             'noise_type': 0,
-                             'radius': 0.075,
-                             'dataset': f'231001_{id}',
-                             'nparticles': 4800,
-                             'nparticle_types': 3,
-                             'nframes': 400,
-                             'sigma': .005,
-                             'tau': 0.1,
-                             'v_init': 0,
-                             'aggr_type': 'mean',
-                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-                             'data_augmentation': True,
-                             'batch_size': 4,
-                             'particle_embedding': True,
-                             'embedding_type': 'none',
-                             'embedding': 1,
-                             'model': 'MixInteractionParticles',
-                             'upgrade_type': 0}
-
 # elctrostatic
     if id==80:
         model_config_test = {'ntry': id,
@@ -3318,7 +3291,7 @@ def load_model_config (id=48):
                     'noise_level': 0,
                     'noise_type': 0,
                     'radius': 0.15,
-                    'dataset': '230902_80',
+                    'dataset': f'230902_{id}',
                     'nparticles': 960,
                     'nparticle_types': 3,
                     'nframes': 1000,
@@ -3343,7 +3316,7 @@ def load_model_config (id=48):
                     'noise_level': 0,
                     'noise_type': 0,
                     'radius': 0.15,
-                    'dataset': '230902_81',
+                    'dataset': f'230902_{id}',
                     'nparticles': 960,
                     'nparticle_types': 3,
                     'nframes': 1000,
@@ -3368,7 +3341,7 @@ def load_model_config (id=48):
                     'noise_level': 0,
                     'noise_type': 0,
                     'radius': 0.15,
-                    'dataset': '230902_81',
+                    'dataset': f'230902_{id}',
                     'nparticles': 960,
                     'nparticle_types': 3,
                     'nframes': 1000,
