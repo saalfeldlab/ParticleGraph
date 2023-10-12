@@ -3280,6 +3280,31 @@ def load_model_config (id=48):
                              'embedding': 1,
                              'model': 'InteractionParticles_A',
                              'upgrade_type': 0}
+    if id==71:
+        model_config_test = {'ntry': id,
+                             'input_size': 8,
+                             'output_size': 2,
+                             'hidden_size': 64,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'noise_type': 0,
+                             'radius': 0.15,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 2400,
+                             'nparticle_types': 10,
+                             'nframes': 200,
+                             'sigma': .005,
+                             'tau': 0.1,
+                             'v_init': 0,
+                             'aggr_type': 'mean',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 4,
+                             'particle_embedding': True,
+                             'embedding_type': 'none',
+                             'embedding': 1,
+                             'model': 'InteractionParticles_A',
+                             'upgrade_type': 0}
 
 # elctrostatic
     if id==80:
@@ -3381,7 +3406,7 @@ if __name__ == '__main__':
     training_mode='t+1'   # 't+1' 'regressive' 'regressive_loop'
     print(f'training_mode: {training_mode}')
 
-    for gtest in range(82,83):
+    for gtest in range(71,72):
 
         model_config = load_model_config(id=gtest)
 
@@ -3408,8 +3433,8 @@ if __name__ == '__main__':
             print(key, ":", value)
 
         # data_generate(model_config)
-        # data_train(model_config,gtest)
-        data_plot(model_config)
+        data_train(model_config,gtest)
+        # data_plot(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
