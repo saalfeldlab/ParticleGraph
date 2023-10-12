@@ -2850,7 +2850,7 @@ def data_plot(model_config):
         rr = rr.to(device)
 
         fig = plt.figure(figsize=(24, 6))
-        plt.ion()
+        # plt.ion()
         ax = fig.add_subplot(1, 4, 1)
         t = model.a.detach().cpu().numpy()
         tmean = np.ones(3)
@@ -2900,6 +2900,7 @@ def data_plot(model_config):
         plt.ylabel('Acceleration [a.u]', fontsize="14")
         plt.title('Model', fontsize="22")
         plt.tight_layout()
+        plt.show()
 
     elif model_config['model'] == 'MixInteractionParticles':
 
@@ -2929,7 +2930,7 @@ def data_plot(model_config):
                 psi_output.append(psi_G(rr, torch.squeeze(p[n, m])))
 
         fig = plt.figure(figsize=(24, 6))
-        plt.ion()
+        # plt.ion()
         ax = fig.add_subplot(1, 4, 1)
         t = model.a.detach().cpu().numpy()
         tmean = np.ones(3)
@@ -2981,6 +2982,7 @@ def data_plot(model_config):
         plt.ylim([-2, 2])
         plt.title('Model', fontsize="22")
         plt.tight_layout()
+        plt.show()
 
 
     elif model_config['model'] == 'ElecParticles':
@@ -2995,7 +2997,7 @@ def data_plot(model_config):
         print(p)
 
         fig = plt.figure(figsize=(24, 6))
-        plt.ion()
+        # plt.ion()
         ax = fig.add_subplot(1, 4, 1)
         t = model.a.detach().cpu().numpy()
         tmean = np.ones((3, 2))
@@ -3045,6 +3047,7 @@ def data_plot(model_config):
         plt.ylabel('Acceleration [a.u]', fontsize="14")
         plt.title('Model', fontsize="22")
         plt.tight_layout()
+        plt.show()
 
 
     elif model_config['model'] == 'InteractionParticles_A':
@@ -3492,7 +3495,7 @@ if __name__ == '__main__':
     training_mode = 't+1'  # 't+1' 'regressive' 'regressive_loop'
     print(f'training_mode: {training_mode}')
 
-    for gtest in range(82, 83):
+    for gtest in range(83, 84):
 
         model_config = load_model_config(id=gtest)
 
@@ -3520,9 +3523,9 @@ if __name__ == '__main__':
         for key, value in model_config.items():
             print(key, ":", value)
 
-        data_generate(model_config)
-        data_train(model_config,gtest)
-        # data_plot(model_config)
+        # data_generate(model_config)
+        # data_train(model_config,gtest)
+        data_plot(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
