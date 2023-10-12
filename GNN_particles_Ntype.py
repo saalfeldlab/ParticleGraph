@@ -1627,9 +1627,9 @@ def data_train(model_config, gtest):
         model = MixResNetGNN(model_config, device)
         print(f'Training MixResnet')
 
-    net = f"./log/try_{ntry}/models/best_model_with_9_graphs.pt"
-    state_dict = torch.load(net)
-    model.load_state_dict(state_dict['model_state_dict'])
+    # net = f"./log/try_{ntry}/models/best_model_with_9_graphs.pt"
+    # state_dict = torch.load(net)
+    # model.load_state_dict(state_dict['model_state_dict'])
 
     lra = 1E-2
     lr = 1E-3
@@ -1965,8 +1965,7 @@ def data_train(model_config, gtest):
         plt.tight_layout()
         plt.savefig(f"./tmp_training/Fig_{ntry}_{epoch}.tif")
         plt.close()
-def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0,
-              prev_index_particles=0):
+def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0,prev_index_particles=0):
     # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_recons/*")
     # for f in files:
     #     os.remove(f)
@@ -3443,6 +3442,32 @@ def load_model_config(id=48):
                              'embedding': 2,
                              'model': 'ElecParticles',
                              'upgrade_type': 0}
+    if id == 83:
+        model_config_test = {'ntry': id,
+                             'input_size': 11,
+                             'output_size': 2,
+                             'hidden_size': 64,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'noise_type': 0,
+                             'radius': 0.15,
+                             'dataset': f'230902_{id}',
+                             'nparticles': 960,
+                             'nparticle_types': 3,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 5E-9,
+                             'v_init': 1E-4,
+                             'aggr_type': 'add',
+                             'particle_embedding': True,
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 4,
+                             'embedding_type': 'none',
+                             'embedding': 2,
+                             'model': 'ElecParticles',
+                             'upgrade_type': 0}
+
 
     return model_config_test
 
@@ -3495,9 +3520,9 @@ if __name__ == '__main__':
         for key, value in model_config.items():
             print(key, ":", value)
 
-        # data_generate(model_config)
-        # data_train(model_config,gtest)
-        data_plot(model_config)
+        data_generate(model_config)
+        data_train(model_config,gtest)
+        # data_plot(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
