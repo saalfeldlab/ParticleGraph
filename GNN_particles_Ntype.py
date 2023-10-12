@@ -1627,9 +1627,9 @@ def data_train(model_config, gtest):
         model = MixResNetGNN(model_config, device)
         print(f'Training MixResnet')
 
-    # net = f"./log/try_{ntry}/models/best_model_with_9_graphs.pt"
-    # state_dict = torch.load(net)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    net = f"./log/try_{ntry}/models/best_model_with_9_graphs.pt"
+    state_dict = torch.load(net)
+    model.load_state_dict(state_dict['model_state_dict'])
 
     lra = 1E-2
     lr = 1E-3
@@ -2004,7 +2004,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
     if model_config['model'] == 'MixInteractionParticles':
         model = MixInteractionParticles(model_config, device)
     if model_config['model'] == 'ElecParticles':
-        model = MixInteractionParticles(model_config, device)
+        model = ElecParticles(model_config, device)
         p_elec = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         for n in range(nparticle_types):
             p_elec[n] = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
@@ -2840,7 +2840,7 @@ def data_plot(model_config):
     if model_config['model'] == 'ResNetGNN':
         model = ResNetGNN(model_config, device)
     if model_config['model'] == 'ElecParticles':
-        model = MixInteractionParticles(model_config, device)
+        model = ElecParticles(model_config, device)
 
     print(f'network: {net}')
     state_dict = torch.load(net)
@@ -3111,10 +3111,7 @@ def data_plot(model_config):
             for m in range(nparticle_types):
                 embedding0 = torch.tensor(tmean[n], device=device) * torch.ones((1000, 2), device=device)
                 embedding1 = torch.tensor(tmean[m], device=device) * torch.ones((1000, 2), device=device)
-                in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
-                                         rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
-                                         0 * rr[:, None], 0 * rr[:, None], embedding0[:, None], embedding1[:, None]),
-                                        dim=1)
+                in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None], rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None], 0 * rr[:, None], 0 * rr[:, None], embedding0[:], embedding1[:]),dim=1)
                 acc = model.lin_edge(in_features.float())
                 acc = acc[:, 0]
                 plt.plot(rr.detach().cpu().numpy(), acc.detach().cpu().numpy() * ynorm / model_config['tau'])
@@ -3573,7 +3570,7 @@ if __name__ == '__main__':
         for key, value in model_config.items():
             print(key, ":", value)
 
-        data_generate(model_config)
+        # data_generate(model_config)
         data_train(model_config,gtest)
         # data_plot(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
