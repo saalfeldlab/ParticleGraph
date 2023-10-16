@@ -2203,6 +2203,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
 
             ax = fig.add_subplot(8, 10, 54)
             embedding = model.a.detach().cpu().numpy()
+            embedding = np.reshape(embedding, [embedding.shape[0] * embedding.shape[1], 1])
             embedding = scaler.fit_transform(embedding)
             embedding_particle = []
 
