@@ -2040,7 +2040,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             if model_config['model'] == 'ResNetGNN':
                 y = model(dataset, vnorm=v)
             else:
-                y = model(dataset, step=2, vnorm=v, cos_phi=0, sin_phi=0)  # acceleration estimation
+                y = model(dataset, data_id=0, step=2, vnorm=v, cos_phi=0, sin_phi=0)  # acceleration estimation
 
         y[:, 0] = y[:, 0] * ynorm[4]
         y[:, 1] = y[:, 1] * ynorm[5]
@@ -3423,7 +3423,6 @@ def print_model_config(model_config):
     if model_config['model'] == 'InteractionParticles_G':
         print('InteractionParticles_G is a second derivative simulation, acceleration is function of gravity law mj/r2 interaction is type dependent')
     print('')
-
 
 if __name__ == '__main__':
 
