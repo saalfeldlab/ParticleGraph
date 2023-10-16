@@ -3477,7 +3477,7 @@ def load_model_config(id=48):
 if __name__ == '__main__':
 
     print('')
-    print('version 1.4 231008')
+    print('version 1.45 231016')
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
