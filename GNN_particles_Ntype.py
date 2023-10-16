@@ -42,21 +42,6 @@ def MMD(X, Y):
         torch.sum(kernel(Y, Y)) / m ** 2 - \
         2 * torch.sum(kernel(X, Y)) / (n * m)
     return a.item()
-def psi_A(r, p):
-    return r * (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(
-        -r ** (2 * p[1]) / (2 * sigma ** 2)))
-def psi_B(r, p):
-    return (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(
-        -r ** (2 * p[1]) / (2 * sigma ** 2)))
-def psi_E(r, p1, p2):
-    r = torch.clamp(r, min=0.005)
-    acc = - p1 * p2 / r ** 2
-    return acc  # Elec particles
-def psi_G(r, p):
-    r = torch.clamp(r, min=0.00005)
-    psi = - p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(
-        -r ** (2 * p[1]) / (2 * sigma ** 2))
-    return psi[:, None]
 def normalize99(Y, lower=1, upper=99):
     """ normalize image so 0.0 is 1st percentile and 1.0 is 99th percentile """
     X = Y.copy()
@@ -190,6 +175,10 @@ class InteractionParticles_A(pyg.nn.MessagePassing):
             -r ** pp[:, 1] / (2 * sigma ** 2))
 
         return psi[:, None] * bc_diff(x_i[:, 0:2] - x_j[:, 0:2])
+
+    def psi(self, r, p):
+        return r * (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(
+            -r ** (2 * p[1]) / (2 * sigma ** 2)))
 class InteractionParticles_B(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -218,6 +207,10 @@ class InteractionParticles_B(pyg.nn.MessagePassing):
             -r ** (2 * pp[:, 1]) / (2 * sigma ** 2))
 
         return psi[:, None] * bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) / r[:, None]
+
+    def psi(self,r, p):
+        return (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(
+            -r ** (2 * p[1]) / (2 * sigma ** 2)))
 class InteractionParticles_C(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -252,7 +245,7 @@ class InteractionParticles_D(pyg.nn.MessagePassing):
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
     def __init__(self, aggr_type=[], p=[], tau=[]):
-        super(InteractionParticles_D, self).__init__(aggr='add')  # "mean" aggregation.
+        super(InteractionParticles_D, self).__init__(aggr=aggr_type)  # "mean" aggregation.
 
         self.p = p
         self.tau = tau
@@ -264,17 +257,19 @@ class InteractionParticles_D(pyg.nn.MessagePassing):
         return acc
 
     def message(self, x_i, x_j):
-        r = torch.sqrt(torch.sum(bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) ** 2, axis=1))
-        r = torch.clamp(r, min=0.005)
-        r = torch.concatenate((r[:, None], r[:, None]), -1)
+        r = torch.sqrt(torch.sum(bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) ** 2, axis=1))  # distance
+        r = torch.clamp(r, min=0.00005)
+        pp = torch.squeeze(self.p[x_i[:, 5].detach().cpu().numpy(), x_j[:, 5].detach().cpu().numpy(), :])
+        psi = - pp[:, 2] * torch.exp(-r ** (2 * pp[:, 0]) / (2 * sigma ** 2)) + pp[:, 3] * torch.exp(
+            -r ** (2 * pp[:, 1]) / (2 * sigma ** 2))
 
-        p = self.p[x_j[:, 4].detach().cpu().numpy()]
-        p = p.squeeze()
-        p = torch.concatenate((p[:, None], p[:, None]), -1)
+        return psi[:, None] * bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) / r[:, None]
 
-        acc = p * bc_diff(x_j[:, 0:2] - x_i[:, 0:2]) / r ** 3
-
-        return acc
+    def psi(self,r, p):
+        r = torch.clamp(r, min=0.00005)
+        psi = - p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(
+            -r ** (2 * p[1]) / (2 * sigma ** 2))
+        return psi[:, None]
 class InteractionParticles_E(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -307,6 +302,11 @@ class InteractionParticles_E(pyg.nn.MessagePassing):
         acc = p1 * p2 * bc_diff(x_j[:, 0:2] - x_i[:, 0:2]) / r ** 3
 
         return acc
+
+    def psi(self, r, p1, p2):
+        r = torch.clamp(r, min=0.005)
+        acc = - p1 * p2 / r ** 2
+        return acc  # Elec particles
 class InteractionParticles_F(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -326,20 +326,21 @@ class InteractionParticles_F(pyg.nn.MessagePassing):
     def message(self, x_i, x_j):
         r = torch.sum(bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) ** 2, axis=1)  # squared distance
         r = torch.sqrt(r)
-
-        # psi = -self.p[2] * torch.exp(-r ** self.p[0] / (2 * sigma ** 2)) + self.p[3] * torch.exp(-r ** self.p[1] / (2 * sigma ** 2))
         pp = self.p[x_i[:, 5].detach().cpu().numpy(), :]
-        # pp = self.p[None,:]
         psi = - pp[:, 2] * torch.exp(-r ** (2 * pp[:, 0]) / (2 * sigma ** 2)) + pp[:, 3] * torch.exp(
             -r ** (2 * pp[:, 1]) / (2 * sigma ** 2))
 
         return psi[:, None] * bc_diff(x_i[:, 0:2] - x_j[:, 0:2])
+    
+    def psi(self, r, p):
+        return r * (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(
+            -r ** (2 * p[1]) / (2 * sigma ** 2)))
 class InteractionParticles_G(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
     def __init__(self, aggr_type=[], p=[], tau=[]):
-        super(InteractionParticles_G, self).__init__(aggr=aggr_type)  # "mean" aggregation.
+        super(InteractionParticles_G, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.p = p
         self.tau = tau
@@ -351,45 +352,24 @@ class InteractionParticles_G(pyg.nn.MessagePassing):
         return acc
 
     def message(self, x_i, x_j):
-        r = torch.sqrt(torch.sum(bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) ** 2, axis=1))  # distance
-        r = torch.clamp(r, min=0.00005)
+        r = torch.sqrt(torch.sum(bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) ** 2, axis=1))
+        r = torch.clamp(r, min=0.005)
+        r = torch.concatenate((r[:, None], r[:, None]), -1)
 
-        # psi = -self.p[2] * torch.exp(-r ** self.p[0] / (2 * sigma ** 2)) + self.p[3] * torch.exp(-r ** self.p[1] / (2 * sigma ** 2))
+        p = self.p[x_j[:, 4].detach().cpu().numpy()]
+        p = p.squeeze()
+        p = torch.concatenate((p[:, None], p[:, None]), -1)
 
-        pp = torch.squeeze(self.p[x_i[:, 5].detach().cpu().numpy(), x_j[:, 5].detach().cpu().numpy(), :])
-        psi = - pp[:, 2] * torch.exp(-r ** (2 * pp[:, 0]) / (2 * sigma ** 2)) + pp[:, 3] * torch.exp(
-            -r ** (2 * pp[:, 1]) / (2 * sigma ** 2))
+        acc = p * bc_diff(x_j[:, 0:2] - x_i[:, 0:2]) / r ** 3
 
-        return psi[:, None] * bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) / r[:, None]
-class InteractionParticles_H(pyg.nn.MessagePassing):
-    """Interaction Network as proposed in this paper:
-    https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
-
-    def __init__(self, aggr_type=[], p=[], tau=[]):
-        super(InteractionParticles_H, self).__init__(aggr=aggr_type)  # "mean" aggregation.
-
-        self.p = p
-        self.tau = tau
-
-    def forward(self, data):
-        x, edge_index = data.x, data.edge_index
-        edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        newv = self.tau * self.propagate(edge_index, x=(x, x))
-        oldv = x[:, 2:4]
-        acc = newv - oldv
         return acc
 
-    def message(self, x_i, x_j):
-        r = torch.sqrt(torch.sum(bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) ** 2, axis=1))  # distance
-        r = torch.clamp(r, min=0.00005)
+    def psi(self,r,p):
 
-        # psi = -self.p[2] * torch.exp(-r ** self.p[0] / (2 * sigma ** 2)) + self.p[3] * torch.exp(-r ** self.p[1] / (2 * sigma ** 2))
+        r_ = torch.clamp(r, min=0.005)
+        psi = p * r / r_ ** 3
 
-        pp = torch.squeeze(self.p[x_i[:, 5].detach().cpu().numpy(), x_j[:, 5].detach().cpu().numpy(), :])
-        psi = - pp[:, 2] * torch.exp(-r ** (2 * pp[:, 0]) / (2 * sigma ** 2)) + pp[:, 3] * torch.exp(
-            -r ** (2 * pp[:, 1]) / (2 * sigma ** 2))
-
-        return psi[:, None] * bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) / r[:, None]
+        return psi[:, None]
 
 class MLP(nn.Module):
 
@@ -555,32 +535,30 @@ class GravityParticles(pyg.nn.MessagePassing):
         num_t_freq = 2
         self.embedding_freq = Embedding_freq(2, num_t_freq)
         self.upgrade_type = model_config['upgrade_type']
+        self.ndataset = model_config['nrun']-1
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
         # self.lin_acc = MLP(input_size=4+self.embedding, output_size=self.output_size, nlayers=3,
         #                     hidden_size=self.hidden_size, device=self.device)
 
-        if self.embedding_type == 'none':
-            self.a = nn.Parameter(
-                torch.tensor(np.ones((int(self.nparticles), self.embedding)), device=self.device, requires_grad=True,
-                             dtype=torch.float32))
-        else:
-            self.a = nn.Parameter(
-                torch.tensor(np.ones((int(self.nparticles), 2)), device=self.device, requires_grad=True,
-                             dtype=torch.float32))
+
+        self.a = nn.Parameter(torch.tensor(np.ones((self.ndataset,int(self.nparticles), self.embedding)), device=self.device, requires_grad=True, dtype=torch.float32))
+
 
         # self.p0 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
         # self.p1 = nn.Parameter(torch.tensor(np.ones(4), device=self.device, requires_grad=False))
         # self.a_bf_kmean = nn.Parameter(torch.tensor(np.ones((int(nparticles), 2)), device='cuda:0', requires_grad=False))
 
-    def forward(self, data, step, vnorm, cos_phi, sin_phi):
+    def forward(self, data, data_id, step, vnorm, cos_phi, sin_phi):
 
+        self.data_id = data_id
         self.vnorm = vnorm
         self.step = step
         self.cos_phi = cos_phi
         self.sin_phi = sin_phi
         x, edge_index = data.x, data.edge_index
+
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
         acc = self.propagate(edge_index, x=(x, x))
@@ -634,7 +612,7 @@ class GravityParticles(pyg.nn.MessagePassing):
 
         if self.particle_embedding > 0:
             if self.embedding_type == 'none':
-                embedding = self.a[x_j[:, 6].detach().cpu().numpy(), :]  # depends on other
+                embedding = self.a[self.data_id, x_j[:, 6].detach().cpu().numpy(), :]  # depends on other
                 in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding), dim=-1)
             if self.embedding_type == 'repeat':
                 x_i_type_0 = x_i[:, 4]
@@ -1233,6 +1211,8 @@ def data_generate(model_config):
     dataset_name = model_config['dataset']
     nframes = model_config['nframes']
     v_init = model_config['v_init']
+    rr = torch.tensor(np.linspace(0, radius * 2, 100))
+    rr = rr.to(device)
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -1242,21 +1222,19 @@ def data_generate(model_config):
     if model_config['model'] == 'InteractionParticles_A':
         print(f'Generate InteractionParticles_A')
         p = torch.ones(nparticle_types, 4, device=device) + torch.rand(nparticle_types, 4, device=device)
-        model = []
         psi_output = []
-        rr = torch.tensor(np.linspace(0, radius * 2, 100))
-        rr = rr.to(device)
-
-        for n in range(nparticle_types):
-            if len(model_config['p']) > 0:
-                p[n] = torch.tensor(model_config['p'][n])
-            psi_output.append(psi_A(rr, torch.squeeze(p[n])))
-            print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
-            torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
         if nparticle_types == 1:
             model = InteractionParticles_A(aggr_type=aggr_type, p=p, tau=model_config['tau'])
         else:
             model = InteractionParticles_A(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'])
+
+        for n in range(nparticle_types):
+            if len(model_config['p']) > 0:
+                p[n] = torch.tensor(model_config['p'][n])
+            psi_output.append(model.psi(rr, torch.squeeze(p[n])))
+            print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
+            torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
+
         torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model.pt')
     elif model_config['model'] == 'InteractionParticles_B':
         print(f'Generate InteractionParticles_B')
@@ -1269,12 +1247,12 @@ def data_generate(model_config):
         p[1] = torch.tensor([1.8308, 1.9055, 1.7667, 1.0855])
         p[2] = torch.tensor([1.785, 1.8579, 1.7226, 1.0584])
         for n in range(nparticle_types):
-            psi_output.append(psi_B(rr, torch.squeeze(p[n])))
+            psi_output.append(model_psi(rr, torch.squeeze(p[n])))
             print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
             torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
         model = InteractionParticles_B(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'])
         torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model.pt')
-    elif model_config['model'] == 'MixInteractionParticles_G':
+    elif model_config['model'] == 'MixInteractionParticles_D':
         print(f'Generate MixInteractionParticles')
 
         p = torch.ones(nparticle_types, nparticle_types, 4, device=device) + torch.rand(nparticle_types,
@@ -1307,10 +1285,10 @@ def data_generate(model_config):
                 print(f'p{n, m}: {np.round(torch.squeeze(p[n, m]).detach().cpu().numpy(), 4)}')
                 torch.save(torch.squeeze(p[n, m]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}_{m}.pt')
 
-        model = InteractionParticles_G(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'])
+        model = InteractionParticles_D(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'])
         torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model.pt')
-    elif model_config['model'] == 'MixInteractionParticles_H':
-        print(f'Generate MixInteractionParticles_H')
+    elif model_config['model'] == 'MixInteractionParticles_C':
+        print(f'Generate MixInteractionParticles_C')
 
         p = torch.ones(nparticle_types, nparticle_types, 4, device=device) + torch.rand(nparticle_types,
                                                                                         nparticle_types, 4,
@@ -1349,21 +1327,21 @@ def data_generate(model_config):
                 print(f'p{n, m}: {np.round(torch.squeeze(p[n, m]).detach().cpu().numpy(), 4)}')
                 torch.save(torch.squeeze(p[n, m]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}_{m}.pt')
 
-        model = InteractionParticles_H(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'])
+        model = InteractionParticles_C(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'])
         torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model.pt')
     elif model_config['model'] == 'GravityParticles':
         p = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         model = []
         psi_output = []
-        rr = torch.tensor(np.linspace(0, radius * 1.2, 100))
-        rr = rr.to(device)
-        p[0] = torch.tensor([5])
-        p[1] = torch.tensor([1])
-        p[2] = torch.tensor([0.2])
+        model = InteractionParticles_G(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'])
         print(p)
         for n in range(nparticle_types):
+            if len(model_config['p']) > 0:
+                p[n] = torch.tensor(model_config['p'][n])
+            psi_output.append(model.psi(rr, torch.squeeze(p[n])))
+            print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
             torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
-        model = InteractionParticles_D(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'])
+
         torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model.pt')
     elif model_config['model'] == 'ElecParticles':
         p = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
@@ -1389,39 +1367,13 @@ def data_generate(model_config):
         p[1] = torch.tensor([1.8308, 1.9055, 1.7667, 1.0855])
         p[2] = torch.tensor([1.785, 1.8579, 1.7226, 1.0584])
         for n in range(nparticle_types):
-            psi_output.append(psi_A(rr, torch.squeeze(p[n])))
+            psi_output.append(model.psi(rr, torch.squeeze(p[n])))
             print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
             torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
         model = InteractionParticles_F(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'])
         torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model.pt')
     else:
         print('Pb model unknown')
-
-    if False:
-
-        print(f'Generate InteractionParticles')
-
-        p = torch.ones(nparticle_types, 4, device=device) + torch.rand(nparticle_types, 4, device=device)
-        model = []
-        psi_output = []
-        rr = torch.tensor(np.linspace(0, radius * 2, 100))
-        rr = rr.to(device)
-
-        p[0] = torch.tensor([1.0413, 1.5615, 1.6233, 1.6012])
-        p[1] = torch.tensor([1.8308, 1.9055, 1.7667, 1.0855])
-        p[2] = torch.tensor([1.9548, 1.0472, 1.994, 1.2743])
-        for n in range(nparticle_types):
-            # model.append(InteractionParticles_0(aggr_type=aggr_type, p=torch.squeeze(p[n]), tau=tau))
-            # torch.save({'model_state_dict': model[n].state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model_{n}.pt')
-            psi_output.append(psi_A(rr, torch.squeeze(p[n])))
-            print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
-            # torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
-        plt.ion()
-        for n in range(nparticle_types):
-            # plt.plot(rr.detach().cpu().numpy(), rr.detach().cpu().numpy() *  np.array(psi_output[n].cpu()), linewidth=1)
-            plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), linewidth=1)
-            plt.plot(rr.detach().cpu().numpy(), psi_output[0].detach().cpu().numpy() * 0, color=[0, 0, 0],
-                     linewidth=0.5)
 
     time.sleep(0.5)
 
@@ -1500,8 +1452,8 @@ def data_generate(model_config):
                 plt.ylim([-0.3, 1.3])
                 plt.text(-0.25, 1.38, f'frame: {it}')
                 plt.text(-0.25, 1.33, f'Graph    {x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
-                if (model_config['model'] == 'MixInteractionParticles_G') | (
-                        model_config['model'] == 'MixInteractionParticles_H'):
+                if (model_config['model'] == 'MixInteractionParticles_D') | (
+                        model_config['model'] == 'MixInteractionParticles_C'):
                     N = 0
                     for n in range(nparticle_types):
                         for m in range(nparticle_types):
@@ -1522,8 +1474,8 @@ def data_generate(model_config):
                 plt.xlim([-0.3, 1.3])
                 plt.ylim([-0.3, 1.3])
 
-                if (model_config['model'] == 'MixInteractionParticles_G') | (
-                        model_config['model'] == 'MixInteractionParticles_H'):
+                if (model_config['model'] == 'MixInteractionParticles_D') | (
+                        model_config['model'] == 'MixInteractionParticles_C'):
                     ax = fig.add_subplot(5, 5, 21)
                     N = 0
                     for n in range(nparticle_types):
@@ -1534,7 +1486,8 @@ def data_generate(model_config):
                             N += 1
                 if (model_config['model'] == 'InteractionParticles_A') | (
                         model_config['model'] == 'InteractionParticles_B') | (
-                        model_config['model'] == 'InteractionParticles_F'):
+                        model_config['model'] == 'InteractionParticles_F') | (
+                        model_config['model'] == 'InteractionParticles_G') :
                     ax = fig.add_subplot(5, 5, 21)
                     for n in range(nparticle_types):
                         plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), linewidth=1)
@@ -1612,7 +1565,7 @@ def data_train(model_config, gtest):
         else:
             model = InteractionParticles(model_config, device)
             print(f'Training InteractionParticles')
-    if (model_config['model'] == 'MixInteractionParticles_G') | (model_config['model'] == 'MixInteractionParticles_H'):
+    if (model_config['model'] == 'MixInteractionParticles_D') | (model_config['model'] == 'MixInteractionParticles_C'):
         model = MixInteractionParticles(model_config, device)
         print(f'Training MixInteractionParticles')
     if model_config['model'] == 'ResNetGNN':
@@ -1753,21 +1706,12 @@ def data_train(model_config, gtest):
                     if model_config['model'] == 'ResNetGNN':
                         pred = model(batch, vnorm=vnorm)
                     else:
-                        pred = model(batch, step=1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
+                        pred = model(batch, data_id=run-1, step=1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
 
                 loss = (pred - y_batch).norm(2)
                 loss.backward()
                 optimizer.step()
                 total_loss += loss.item()
-
-                # p = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
-                # rr = torch.tensor(np.linspace(0, radius * 1.2, 100))
-                # rr = rr.to(device)
-                # p[0] = torch.tensor([-1])
-                # p[1] = torch.tensor([1])
-                # p[2] = torch.tensor([2])
-                # print(p)
-                # model_GT = InteractionParticles_E(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'])
 
         elif training_mode == 'regressive':
 
@@ -1857,6 +1801,7 @@ def data_train(model_config, gtest):
 
         model.a.data = torch.clamp(model.a.data, min=-4, max=4)
         embedding = model.a.detach().cpu().numpy()
+        embedding = np.reshape(embedding, [embedding.shape[0] * embedding.shape[1], 1])
         embedding = scaler.fit_transform(embedding)
         embedding_particle = []
         for n in range(nparticle_types):
@@ -2320,7 +2265,7 @@ def data_test_generate(model_config):
         p[1] = torch.tensor([1.8308, 1.9055, 1.7667, 1.0855])
         p[2] = torch.tensor([1.785, 1.8579, 1.7226, 1.0584])
         for n in range(nparticle_types):
-            psi_output.append(psi_A(rr, torch.squeeze(p[n])))
+            psi_output.append(model.psi(rr, torch.squeeze(p[n])))
             print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
             torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
         model = InteractionParticles_A(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'])
@@ -2336,7 +2281,7 @@ def data_test_generate(model_config):
         p[1] = torch.tensor([1.8308, 1.9055, 1.7667, 1.0855])
         p[2] = torch.tensor([1.785, 1.8579, 1.7226, 1.0584])
         for n in range(nparticle_types):
-            psi_output.append(psi_B(rr, torch.squeeze(p[n])))
+            psi_output.append(model_psi(rr, torch.squeeze(p[n])))
             print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
             torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
         model = InteractionParticles_B(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'])
@@ -2400,7 +2345,7 @@ def data_test_generate(model_config):
         p[1] = torch.tensor([1.8308, 1.9055, 1.7667, 1.0855])
         p[2] = torch.tensor([1.785, 1.8579, 1.7226, 1.0584])
         for n in range(nparticle_types):
-            psi_output.append(psi_A(rr, torch.squeeze(p[n])))
+            psi_output.append(model.psi(rr, torch.squeeze(p[n])))
             print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
         model = InteractionParticles_F(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'])
     else:
@@ -2592,7 +2537,7 @@ def data_train_generate(model_config, prev_folder):
     if model_config['model'] == 'InteractionParticles_A':
         print(f'Generate InteractionParticles_A')
         for n in range(nparticle_types):
-            psi_output.append(psi_A(rr, torch.squeeze(p[n])))
+            psi_output.append(model_psi(rr, torch.squeeze(p[n])))
             print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
             torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
         model = InteractionParticles_A(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'])
@@ -2600,7 +2545,7 @@ def data_train_generate(model_config, prev_folder):
     elif model_config['model'] == 'InteractionParticles_B':
         print(f'Generate InteractionParticles_B')
         for n in range(nparticle_types):
-            psi_output.append(psi_B(rr, torch.squeeze(p[n])))
+            psi_output.append(model_psi(rr, torch.squeeze(p[n])))
             print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
             torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
         model = InteractionParticles_B(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'])
@@ -3053,7 +2998,7 @@ def data_plot(model_config):
         rr = rr.to(device)
         for n in range(nparticle_types):
             p[n] = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
-            psi_output.append(psi_A(rr, torch.squeeze(p[n])))
+            psi_output.append(model_psi(rr, torch.squeeze(p[n])))
             print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
 
         fig = plt.figure(figsize=(24, 6))
@@ -3133,7 +3078,7 @@ def load_model_config(id=48):
                              'particle_embedding': True,
                              'embedding_type': 'none',
                              'embedding': 1,
-                             'model': 'MixInteractionParticles_H',
+                             'model': 'MixInteractionParticles_C',
                              'upgrade_type': 0}
 
     # gravity
@@ -3162,6 +3107,60 @@ def load_model_config(id=48):
                              'embedding': 1,
                              'model': 'GravityParticles',
                              'upgrade_type': 0}
+    if id == 69:
+        model_config_test = {'ntry': id,
+                             'input_size': 8,
+                             'output_size': 2,
+                             'hidden_size': 64,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'noise_type': 0,
+                             'radius': 0.15,
+                             'dataset': f'230902_{id}',
+                             'nparticles': 960,
+                             'nparticle_types': 3,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 5E-9,
+                             'v_init': 1E-4,
+                             'aggr_type': 'add',
+                             'particle_embedding': True,
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 4,
+                             'embedding_type': 'none',
+                             'embedding': 1,
+                             'model': 'GravityParticles',
+                             'upgrade_type': 0,
+                             'p': [[5],[1],[0.2]],
+                             'nrun':2}
+    if id == 70:
+        model_config_test = {'ntry': id,
+                             'input_size': 8,
+                             'output_size': 2,
+                             'hidden_size': 64,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'noise_type': 0,
+                             'radius': 0.15,
+                             'dataset': f'230902_{id}',
+                             'nparticles': 960,
+                             'nparticle_types': 3,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 5E-9,
+                             'v_init': 1E-4,
+                             'aggr_type': 'add',
+                             'particle_embedding': True,
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 4,
+                             'embedding_type': 'none',
+                             'embedding': 1,
+                             'model': 'GravityParticles',
+                             'upgrade_type': 0,
+                             'p': [[5],[1],[0.2]],
+                             'nrun':10}
 
     # particles
     if id == 75:
@@ -3359,7 +3358,7 @@ def load_model_config(id=48):
                              'noise_type': 0,
                              'radius': 0.15,
                              'dataset': f'230902_{id}',
-                             'nparticles': 960,
+                             'nparticles': 680,
                              'nparticle_types': 3,
                              'nframes': 1000,
                              'sigma': .005,
@@ -3385,7 +3384,7 @@ def load_model_config(id=48):
                              'noise_type': 0,
                              'radius': 0.15,
                              'dataset': f'230902_{id}',
-                             'nparticles': 960,
+                             'nparticles': 680,
                              'nparticle_types': 3,
                              'nframes': 1000,
                              'sigma': .005,
@@ -3405,6 +3404,27 @@ def load_model_config(id=48):
 
     return model_config_test
 
+def print_model_config(model_config):
+    for key, value in model_config.items():
+        print(key, ":", value)
+    print('')
+    if model_config['model'] == 'InteractionParticles_A':
+        print('InteractionParticles_A is a first derivative simulation, velocity is function of r.exp-r^2 interaction is type dependent')
+    if model_config['model'] == 'InteractionParticles_B':
+        print('InteractionParticles_B is a first derivative simulation, velocity is function of exp-r^2 interaction is type dependent')
+    if model_config['model'] == 'InteractionParticles_C':
+        print('InteractionParticles_C is a first derivative simulation, velocity is function of r.exp-r^2 interaction is type type dependent')
+    if model_config['model'] == 'InteractionParticles_D':
+        print('InteractionParticles_D is a first derivative simulation, velocity is function of r.exp-r^2 interaction is type type dependent')
+    if model_config['model'] == 'InteractionParticles_E':
+        print('InteractionParticles_E is a second derivative simulation, acceleration is function of electrostatic law qiqj/r2 interaction is type dependent')
+    if model_config['model'] == 'InteractionParticles_F':
+        print('InteractionParticles_F is a second derivative simulation, acceleration is function of exp-r^2 interaction is type type dependent')
+    if model_config['model'] == 'InteractionParticles_G':
+        print('InteractionParticles_G is a second derivative simulation, acceleration is function of gravity law mj/r2 interaction is type dependent')
+    print('')
+
+
 if __name__ == '__main__':
 
     print('')
@@ -3418,7 +3438,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    for gtest in range(75,76):
+    for gtest in range(69,71):
 
         model_config = load_model_config(id=gtest)
 
@@ -3449,18 +3469,12 @@ if __name__ == '__main__':
         # model_config['dataset'] = dataset_name
         # model_config['model']= 'MixInteractionParticles'
 
+        print_model_config(model_config)
 
-        for key, value in model_config.items():
-            print(key, ":", value)
-        print('')
-        if model_config['model']=='InteractionParticles_A':
-            print('InteractionParticles_A is a first derivative model, velocity is function of r.exp-r^2')
-        print('')
-
-        # data_generate(model_config)
-        # data_train(model_config,gtest)
+        data_generate(model_config)
+        data_train(model_config,gtest)
         # data_plot(model_config)
-        x, rmserr_list = data_test(model_config, bVisu=False, bPrint=True)
+        # x, rmserr_list = data_test(model_config, bVisu=False, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
         # data_train_generate(model_config, f'./graphs_data/graphs_particles_230902_72/')
