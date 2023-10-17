@@ -371,6 +371,7 @@ class InteractionParticles_G(pyg.nn.MessagePassing):
 
         r_ = torch.clamp(r, min=self.clamp)
         psi = p * r / r_ ** 3
+        psi = torch.clamp(psi, max=self.acc_limit)
 
         return psi[:, None]
 
@@ -1491,8 +1492,7 @@ def data_generate(model_config):
                 plt.xlim([-0.3, 1.3])
                 plt.ylim([-0.3, 1.3])
 
-                if (model_config['model'] == 'MixInteractionParticles_D') | (
-                        model_config['model'] == 'MixInteractionParticles_C'):
+                if (model_config['model'] == 'MixInteractionParticles_D') | (model_config['model'] == 'MixInteractionParticles_C'):
                     ax = fig.add_subplot(5, 5, 21)
                     N = 0
                     for n in range(nparticle_types):
@@ -1504,7 +1504,7 @@ def data_generate(model_config):
                 if (model_config['model'] == 'InteractionParticles_A') | (
                         model_config['model'] == 'InteractionParticles_B') | (
                         model_config['model'] == 'InteractionParticles_F') | (
-                        model_config['model'] == 'InteractionParticles_G') :
+                        model_config['model'] == 'model_config['model']') :
                     ax = fig.add_subplot(5, 5, 21)
                     for n in range(nparticle_types):
                         plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), linewidth=1)
