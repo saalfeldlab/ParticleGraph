@@ -309,7 +309,7 @@ class InteractionParticles_E(pyg.nn.MessagePassing):
 
     def psi(self, r, p1, p2):
         r_ = torch.clamp(r, min=self.clamp)
-        acc = - p1 * p2 * r / r_ ** 2
+        acc = p1 * p2 * r / r_ ** 2
         acc = torch.clamp(acc, max=self.acc_limit)
         return acc  # Elec particles
 class InteractionParticles_F(pyg.nn.MessagePassing):
@@ -769,7 +769,7 @@ class ElecParticles(pyg.nn.MessagePassing):
 
     def psi(self, r, p1, p2):
         r_ = torch.clamp(r, min=self.clamp)
-        acc = - p1 * p2 * r/ r_ ** 3
+        acc = p1 * p2 * r/ r_ ** 3
         acc = torch.clamp(acc, max=self.acc_limit)
         return acc  # Elec particles
 
@@ -2803,7 +2803,7 @@ def data_plot(model_config):
     elec = [-1, 1, 2]
 
     t = model.a.detach().cpu().numpy()
-    t = np.reshape(t, [t.shape[0] * t.shape[1], 1])
+    t = np.reshape(t, [t.shape[0] * t.shape[1], t.shape[2]])
     rr = torch.tensor(np.linspace(0, radius * 2, 1000))
     rr = rr.to(device)
 
@@ -2857,7 +2857,7 @@ def data_plot(model_config):
                                      0 * rr[:, None], 0 * rr[:, None], embedding[:, None]), dim=1)
             acc = model.lin_edge(in_features.float())
             acc = acc[:, 0]
-            plt.plot(rr.detach().cpu().numpy(), acc.detach().cpu().numpy() * ynorm / model_config['tau'],linewidth=8)
+            plt.plot(rr.detach().cpu().numpy(), acc.detach().cpu().numpy() * ynorm / model_config['tau'],linewidth=1)
         for n in range(nparticle_types):
             plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), linewidth=1, c='k')
 
@@ -3252,7 +3252,7 @@ def load_model_config(id=48):
                              'upgrade_type': 0,
                              'p': [[5],[1],[0.2]],
                              'nrun':2,
-                             'clamp':0.004,
+                             'clamp':0.003,
                              'acc_limit':1E9}
     if id == 73:
         model_config_test = {'ntry': id,
@@ -3628,7 +3628,7 @@ if __name__ == '__main__':
         print_model_config(model_config)
 
         # data_generate(model_config)
-        data_train(model_config,gtest)
+        # data_train(model_config,gtest)
         data_plot(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=False, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
