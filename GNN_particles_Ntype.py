@@ -1504,7 +1504,7 @@ def data_generate(model_config):
                 if (model_config['model'] == 'InteractionParticles_A') | (
                         model_config['model'] == 'InteractionParticles_B') | (
                         model_config['model'] == 'InteractionParticles_F') | (
-                        model_config['model'] == 'GravityParticles]') :
+                        model_config['model'] == 'GravityParticles') :
                     ax = fig.add_subplot(5, 5, 21)
                     for n in range(nparticle_types):
                         plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), linewidth=1)
