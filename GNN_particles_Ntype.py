@@ -279,6 +279,7 @@ class InteractionParticles_E(pyg.nn.MessagePassing):
 
         self.p = p
         self.tau = tau
+        self.clamp = clamp
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
@@ -304,7 +305,7 @@ class InteractionParticles_E(pyg.nn.MessagePassing):
         return acc
 
     def psi(self, r, p1, p2):
-        r = torch.clamp(r, min=0.005)
+        r = torch.clamp(r, min=self.clamp)
         acc = - p1 * p2 / r ** 2
         return acc  # Elec particles
 class InteractionParticles_F(pyg.nn.MessagePassing):
@@ -396,6 +397,7 @@ class MLP(nn.Module):
             x = F.relu(x)
         x = self.layers[-1](x)
         return x
+
 class InteractionParticles(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -642,8 +644,6 @@ class GravityParticles(pyg.nn.MessagePassing):
         psi = p * r / r_ ** 3
 
         return psi[:, None]
-
-
 class ElecParticles(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -668,11 +668,10 @@ class ElecParticles(pyg.nn.MessagePassing):
         num_t_freq = 2
         self.embedding_freq = Embedding_freq(2, num_t_freq)
         self.upgrade_type = model_config['upgrade_type']
+        self.clamp = model_config['clamp']
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
-        # self.lin_acc = MLP(input_size=4+self.embedding, output_size=self.output_size, nlayers=3,
-        #                     hidden_size=self.hidden_size, device=self.device)
 
         if self.embedding_type == 'none':
             self.a = nn.Parameter(
@@ -717,7 +716,6 @@ class ElecParticles(pyg.nn.MessagePassing):
             return deg * acc
 
         else:
-
             return acc
 
     def message(self, x_i, x_j):
@@ -769,6 +767,12 @@ class ElecParticles(pyg.nn.MessagePassing):
     def update(self, aggr_out):
 
         return aggr_out  # self.lin_node(aggr_out)
+
+    def psi(self, r, p1, p2):
+        r = torch.clamp(r, min=self.clamp)
+        acc = - p1 * p2 / r ** 2
+        return acc  # Elec particles
+
 class InteractionParticlesLoop(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -2813,7 +2817,6 @@ def data_plot(model_config):
         # plt.ion()
         ax = fig.add_subplot(1, 4, 1)
 
-
         tmean = np.ones(3)
         tstd = np.ones(3)
         for n in range(model_config['nparticle_types']):
@@ -2946,13 +2949,15 @@ def data_plot(model_config):
 
     elif model_config['model'] == 'ElecParticles':
 
-        p = torch.ones(model_config['nparticle_types'], 1, device=device) + torch.rand(model_config['nparticle_types'],
-                                                                                       1, device=device)
+        p = torch.ones(nparticle_types, 1, device=device)
+        psi_output = []
+        for n in range(nparticle_types):
+            p[n] = torch.squeeze(torch.load(f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt'))
+            print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
 
-        p[0] = torch.tensor([-1])
-        p[1] = torch.tensor([1])
-        p[2] = torch.tensor([2])
-        print(p)
+        for n in range(nparticle_types):
+            for m in range(nparticle_types):
+                psi_output.append(model.psi(rr, p[n],p[m]))
 
         fig = plt.figure(figsize=(24, 6))
         # plt.ion()
@@ -2960,7 +2965,6 @@ def data_plot(model_config):
         tmean = np.ones((3, 2))
 
         c_elec = ['r', 'b', 'b']
-
         for n in range(model_config['nparticle_types']):
             plt.hist(t[index_particles[n], 0])
             tmean[n, :] = np.round(np.mean(t[index_particles[n]], axis=0) * 1000) / 1000
@@ -3207,7 +3211,6 @@ def load_model_config(id=48):
                              'p': [[5],[1],[0.2]],
                              'nrun':10,
                              'clamp':0}
-
     if id == 72:
         model_config_test = {'ntry': id,
                              'input_size': 8,
@@ -3236,7 +3239,6 @@ def load_model_config(id=48):
                              'p': [[5],[1],[0.2]],
                              'nrun':10,
                              'clamp':0.005}
-
     if id == 73:
         model_config_test = {'ntry': id,
                              'input_size': 8,
@@ -3425,7 +3427,8 @@ def load_model_config(id=48):
                              'embedding': 2,
                              'model': 'ElecParticles',
                              'upgrade_type': 0,
-                             'nrun':2}
+                             'nrun':2
+                             'clamp':0.005}
     if id == 81:
         model_config_test = {'ntry': id,
                              'input_size': 11,
@@ -3451,7 +3454,8 @@ def load_model_config(id=48):
                              'embedding': 2,
                              'model': 'ElecParticles',
                              'upgrade_type': 0,
-                             'nrun':10}
+                             'nrun':10
+                             'clamp':0.005}
     if id == 82:
         model_config_test = {'ntry': id,
                              'input_size': 11,
@@ -3477,7 +3481,8 @@ def load_model_config(id=48):
                              'embedding': 2,
                              'model': 'ElecParticles',
                              'upgrade_type': 0,
-                             'nrun':10}
+                             'nrun':10
+                             'clamp':0.005}
     if id == 83:
         model_config_test = {'ntry': id,
                              'input_size': 11,
@@ -3503,7 +3508,8 @@ def load_model_config(id=48):
                              'embedding': 2,
                              'model': 'ElecParticles',
                              'upgrade_type': 0,
-                             'nrun':10}
+                             'nrun':10
+                             'clamp':0.005}
 
 
     return model_config_test
