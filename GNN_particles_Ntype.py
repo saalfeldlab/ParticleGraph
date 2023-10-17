@@ -340,12 +340,13 @@ class InteractionParticles_G(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, aggr_type=[], p=[], tau=[], clamp=[]):
+    def __init__(self, aggr_type=[], p=[], tau=[], clamp=[], acc_limit=[]):
         super(InteractionParticles_G, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.p = p
         self.tau = tau
         self.clamp = clamp
+        self.acc_limit = acc_limit
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
@@ -364,7 +365,7 @@ class InteractionParticles_G(pyg.nn.MessagePassing):
 
         acc = p * bc_diff(x_j[:, 0:2] - x_i[:, 0:2]) / r ** 3
 
-        return acc
+        return torch.clamp(acc,max=self.acc_limit)
 
     def psi(self,r,p):
 
@@ -540,6 +541,7 @@ class GravityParticles(pyg.nn.MessagePassing):
         self.upgrade_type = model_config['upgrade_type']
         self.ndataset = model_config['nrun']-1
         self.clamp = model_config['clamp']
+        self.acc_limit = model_config['acc_limit']
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
@@ -642,6 +644,7 @@ class GravityParticles(pyg.nn.MessagePassing):
 
         r_ = torch.clamp(r, min=self.clamp)
         psi = p * r / r_ ** 3
+        psi = torch.clamp(psi, max=self.acc_limit)
 
         return psi[:, None]
 class ElecParticles(pyg.nn.MessagePassing):
@@ -1347,7 +1350,7 @@ def data_generate(model_config):
     elif model_config['model'] == 'GravityParticles':
         p = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         psi_output = []
-        model = InteractionParticles_G(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'], clamp=model_config['clamp'])
+        model = InteractionParticles_G(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'], clamp=model_config['clamp'], acc_limit=model_config['acc_limit'])
         print(p)
         for n in range(nparticle_types):
             if len(model_config['p']) > 0:
@@ -3210,7 +3213,8 @@ def load_model_config(id=48):
                              'upgrade_type': 0,
                              'p': [[5],[1],[0.2]],
                              'nrun':10,
-                             'clamp':0}
+                             'clamp':0,
+                             'acc_limit':0}
     if id == 72:
         model_config_test = {'ntry': id,
                              'input_size': 8,
@@ -3225,7 +3229,7 @@ def load_model_config(id=48):
                              'nparticle_types': 3,
                              'nframes': 1000,
                              'sigma': .005,
-                             'tau': 5E-8,
+                             'tau': 5E-9,
                              'v_init': 1E-4,
                              'aggr_type': 'add',
                              'particle_embedding': True,
@@ -3238,7 +3242,8 @@ def load_model_config(id=48):
                              'upgrade_type': 0,
                              'p': [[5],[1],[0.2]],
                              'nrun':10,
-                             'clamp':0.005}
+                             'clamp':0,
+                             'acc_limit':200000}
     if id == 73:
         model_config_test = {'ntry': id,
                              'input_size': 8,
@@ -3266,7 +3271,37 @@ def load_model_config(id=48):
                              'upgrade_type': 0,
                              'p': [[5],[1],[0.2]],
                              'nrun':10,
-                             'clamp':0}
+                             'clamp':0.005,
+                             'acc_limit':0}
+    if id == 74:
+        model_config_test = {'ntry': id,
+                             'input_size': 8,
+                             'output_size': 2,
+                             'hidden_size': 64,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'noise_type': 0,
+                             'radius': 0.15,
+                             'dataset': f'230902_{id}',
+                             'nparticles': 678,
+                             'nparticle_types': 3,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 5E-8,
+                             'v_init': 1E-4,
+                             'aggr_type': 'add',
+                             'particle_embedding': True,
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 4,
+                             'embedding_type': 'none',
+                             'embedding': 1,
+                             'model': 'GravityParticles',
+                             'upgrade_type': 0,
+                             'p': [[5],[1],[0.2]],
+                             'nrun':10,
+                             'clamp':0,
+                             'acc_limit':200000}
 
     # particles
     if id == 75:
@@ -3427,7 +3462,7 @@ def load_model_config(id=48):
                              'embedding': 2,
                              'model': 'ElecParticles',
                              'upgrade_type': 0,
-                             'nrun':2
+                             'nrun':2,
                              'clamp':0.005}
     if id == 81:
         model_config_test = {'ntry': id,
@@ -3454,7 +3489,7 @@ def load_model_config(id=48):
                              'embedding': 2,
                              'model': 'ElecParticles',
                              'upgrade_type': 0,
-                             'nrun':10
+                             'nrun':10,
                              'clamp':0.005}
     if id == 82:
         model_config_test = {'ntry': id,
@@ -3481,7 +3516,7 @@ def load_model_config(id=48):
                              'embedding': 2,
                              'model': 'ElecParticles',
                              'upgrade_type': 0,
-                             'nrun':10
+                             'nrun':10,
                              'clamp':0.005}
     if id == 83:
         model_config_test = {'ntry': id,
@@ -3508,7 +3543,7 @@ def load_model_config(id=48):
                              'embedding': 2,
                              'model': 'ElecParticles',
                              'upgrade_type': 0,
-                             'nrun':10
+                             'nrun':10,
                              'clamp':0.005}
 
 
@@ -3547,7 +3582,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    for gtest in range(70,72):
+    for gtest in range(72,75):
 
         model_config = load_model_config(id=gtest)
 
@@ -3580,9 +3615,9 @@ if __name__ == '__main__':
 
         print_model_config(model_config)
 
-        # data_generate(model_config)
-        # data_train(model_config,gtest)
-        data_plot(model_config)
+        data_generate(model_config)
+        data_train(model_config,gtest)
+        # data_plot(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=False, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
