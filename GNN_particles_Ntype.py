@@ -339,11 +339,12 @@ class InteractionParticles_G(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, aggr_type=[], p=[], tau=[]):
+    def __init__(self, aggr_type=[], p=[], tau=[], clamp=[]):
         super(InteractionParticles_G, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.p = p
         self.tau = tau
+        self.clamp = clamp
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
@@ -353,7 +354,7 @@ class InteractionParticles_G(pyg.nn.MessagePassing):
 
     def message(self, x_i, x_j):
         r = torch.sqrt(torch.sum(bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) ** 2, axis=1))
-        r = torch.clamp(r, min=0.005)
+        r = torch.clamp(r, min=self.clamp)
         r = torch.concatenate((r[:, None], r[:, None]), -1)
 
         p = self.p[x_j[:, 4].detach().cpu().numpy()]
@@ -366,7 +367,7 @@ class InteractionParticles_G(pyg.nn.MessagePassing):
 
     def psi(self,r,p):
 
-        r_ = torch.clamp(r, min=0.005)
+        r_ = torch.clamp(r, min=self.clamp)
         psi = p * r / r_ ** 3
 
         return psi[:, None]
@@ -536,6 +537,7 @@ class GravityParticles(pyg.nn.MessagePassing):
         self.embedding_freq = Embedding_freq(2, num_t_freq)
         self.upgrade_type = model_config['upgrade_type']
         self.ndataset = model_config['nrun']-1
+        self.clamp = model_config['clamp']
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
@@ -633,6 +635,15 @@ class GravityParticles(pyg.nn.MessagePassing):
     def update(self, aggr_out):
 
         return aggr_out  # self.lin_node(aggr_out)
+
+    def psi(self,r,p):
+
+        r_ = torch.clamp(r, min=self.clamp)
+        psi = p * r / r_ ** 3
+
+        return psi[:, None]
+
+
 class ElecParticles(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -1331,9 +1342,8 @@ def data_generate(model_config):
         torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model.pt')
     elif model_config['model'] == 'GravityParticles':
         p = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
-        model = []
         psi_output = []
-        model = InteractionParticles_G(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'])
+        model = InteractionParticles_G(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'], clamp=model_config['clamp'])
         print(p)
         for n in range(nparticle_types):
             if len(model_config['p']) > 0:
@@ -2785,15 +2795,25 @@ def data_plot(model_config):
     mass = [5, 1, 0.2]
     elec = [-1, 1, 2]
 
+    t = model.a.detach().cpu().numpy()
+    t = np.reshape(t, [t.shape[0] * t.shape[1], 1])
+    rr = torch.tensor(np.linspace(0, radius * 2, 1000))
+    rr = rr.to(device)
+
     if model_config['model'] == 'GravityParticles':
 
-        rr = torch.tensor(np.linspace(0, radius * 2, 1000))
-        rr = rr.to(device)
+        p = torch.ones(nparticle_types, 1, device=device)
+        psi_output=[]
+        for n in range(nparticle_types):
+            p[n]=torch.squeeze(torch.load(f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt'))
+            psi_output.append(model.psi(rr, torch.squeeze(p[n])))
+            print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
 
         fig = plt.figure(figsize=(24, 6))
         # plt.ion()
         ax = fig.add_subplot(1, 4, 1)
-        t = model.a.detach().cpu().numpy()
+
+
         tmean = np.ones(3)
         tstd = np.ones(3)
         for n in range(model_config['nparticle_types']):
@@ -2812,12 +2832,9 @@ def data_plot(model_config):
 
         ax = fig.add_subplot(1, 4, 3)
         for n in range(nparticle_types):
-            grav = mass[n] * 1 / rr.detach().cpu().numpy() / rr.detach().cpu().numpy()
-            grav[0:18] = grav[18] / rr[18].detach().cpu().numpy()
-            grav[0:18] = grav[0:18] * rr[0:18].detach().cpu().numpy()
-            plt.plot(rr.detach().cpu().numpy(), grav, linewidth=1)
+            plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), linewidth=1)
         plt.xlim([0, 0.05])
-        plt.ylim([0, 100000])
+        plt.ylim([0, 200000])
         plt.xlabel('Distance [a.u]', fontsize="14")
         plt.ylabel('Acceleration [a.u]', fontsize="14")
         plt.title('True', fontsize="22")
@@ -2827,16 +2844,20 @@ def data_plot(model_config):
         ynorm = ynorm[4].detach().cpu().numpy()
 
         ax = fig.add_subplot(1, 4, 4)
-        for k in range(3):
-            embedding = torch.tensor(tmean[k], device=device) * torch.ones((1000), device=device)
+        for n in range(nparticle_types):
+            embedding = torch.tensor(tmean[n], device=device) * torch.ones((1000), device=device)
             in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
                                      rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
                                      0 * rr[:, None], 0 * rr[:, None], embedding[:, None]), dim=1)
             acc = model.lin_edge(in_features.float())
             acc = acc[:, 0]
-            plt.plot(rr.detach().cpu().numpy(), acc.detach().cpu().numpy() * ynorm / model_config['tau'])
+            plt.plot(rr.detach().cpu().numpy(), acc.detach().cpu().numpy() * ynorm / model_config['tau'],linewidth=8)
+        for n in range(nparticle_types):
+            plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), linewidth=1, c='k')
+
+
         plt.xlim([0, 0.05])
-        plt.ylim([0, 100000])
+        plt.ylim([0, 200000])
         plt.xlabel('Distance [a.u]', fontsize="14")
         plt.ylabel('Acceleration [a.u]', fontsize="14")
         plt.title('Model', fontsize="22")
@@ -2849,8 +2870,6 @@ def data_plot(model_config):
                                                                                         nparticle_types, 4,
                                                                                         device=device)
         psi_output = []
-        rr = torch.tensor(np.linspace(0, radius * 2, 1000))
-        rr = rr.to(device)
 
         # read previous data
         # for n in range(nparticle_types):
@@ -2873,7 +2892,6 @@ def data_plot(model_config):
         fig = plt.figure(figsize=(24, 6))
         # plt.ion()
         ax = fig.add_subplot(1, 4, 1)
-        t = model.a.detach().cpu().numpy()
         tmean = np.ones(3)
         tstd = np.ones(3)
         for n in range(model_config['nparticle_types']):
@@ -2930,8 +2948,7 @@ def data_plot(model_config):
 
         p = torch.ones(model_config['nparticle_types'], 1, device=device) + torch.rand(model_config['nparticle_types'],
                                                                                        1, device=device)
-        rr = torch.tensor(np.linspace(0, radius * 1.2, 1000))
-        rr = rr.to(device)
+
         p[0] = torch.tensor([-1])
         p[1] = torch.tensor([1])
         p[2] = torch.tensor([2])
@@ -2940,7 +2957,6 @@ def data_plot(model_config):
         fig = plt.figure(figsize=(24, 6))
         # plt.ion()
         ax = fig.add_subplot(1, 4, 1)
-        t = model.a.detach().cpu().numpy()
         tmean = np.ones((3, 2))
 
         c_elec = ['r', 'b', 'b']
@@ -2995,8 +3011,6 @@ def data_plot(model_config):
 
         p = torch.ones(nparticle_types, 4, device=device) + torch.rand(nparticle_types, 4, device=device)
         psi_output = []
-        rr = torch.tensor(np.linspace(0, radius * 2, 1000))
-        rr = rr.to(device)
         for n in range(nparticle_types):
             p[n] = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
             psi_output.append(model_psi(rr, torch.squeeze(p[n])))
@@ -3005,7 +3019,6 @@ def data_plot(model_config):
         fig = plt.figure(figsize=(24, 6))
         plt.ion()
         ax = fig.add_subplot(1, 4, 1)
-        t = model.a.detach().cpu().numpy()
         tmean = np.ones(model_config['nparticle_types'])
         tstd = np.ones(model_config['nparticle_types'])
         for n in range(model_config['nparticle_types']):
@@ -3107,7 +3120,8 @@ def load_model_config(id=48):
                              'embedding_type': 'none',
                              'embedding': 1,
                              'model': 'GravityParticles',
-                             'upgrade_type': 0}
+                             'upgrade_type': 0,
+                             'clamp':0.005}
     if id == 69:
         model_config_test = {'ntry': id,
                              'input_size': 8,
@@ -3134,7 +3148,8 @@ def load_model_config(id=48):
                              'model': 'GravityParticles',
                              'upgrade_type': 0,
                              'p': [[5],[1],[0.2]],
-                             'nrun':2}
+                             'nrun':2,
+                             'clamp':0.005}
     if id == 70:
         model_config_test = {'ntry': id,
                              'input_size': 8,
@@ -3161,7 +3176,95 @@ def load_model_config(id=48):
                              'model': 'GravityParticles',
                              'upgrade_type': 0,
                              'p': [[5],[1],[0.2]],
-                             'nrun':10}
+                             'nrun':10,
+                             'clamp':0.005}
+
+    if id == 71:
+        model_config_test = {'ntry': id,
+                             'input_size': 8,
+                             'output_size': 2,
+                             'hidden_size': 64,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'noise_type': 0,
+                             'radius': 0.15,
+                             'dataset': f'230902_{id}',
+                             'nparticles': 678,
+                             'nparticle_types': 3,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 5E-9,
+                             'v_init': 1E-4,
+                             'aggr_type': 'add',
+                             'particle_embedding': True,
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 4,
+                             'embedding_type': 'none',
+                             'embedding': 1,
+                             'model': 'GravityParticles',
+                             'upgrade_type': 0,
+                             'p': [[5],[1],[0.2]],
+                             'nrun':10,
+                             'clamp':0}
+
+    if id == 72:
+        model_config_test = {'ntry': id,
+                             'input_size': 8,
+                             'output_size': 2,
+                             'hidden_size': 64,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'noise_type': 0,
+                             'radius': 0.15,
+                             'dataset': f'230902_{id}',
+                             'nparticles': 678,
+                             'nparticle_types': 3,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 5E-8,
+                             'v_init': 1E-4,
+                             'aggr_type': 'add',
+                             'particle_embedding': True,
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 4,
+                             'embedding_type': 'none',
+                             'embedding': 1,
+                             'model': 'GravityParticles',
+                             'upgrade_type': 0,
+                             'p': [[5],[1],[0.2]],
+                             'nrun':10,
+                             'clamp':0.005}
+
+    if id == 73:
+        model_config_test = {'ntry': id,
+                             'input_size': 8,
+                             'output_size': 2,
+                             'hidden_size': 64,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'noise_type': 0,
+                             'radius': 0.15,
+                             'dataset': f'230902_{id}',
+                             'nparticles': 678,
+                             'nparticle_types': 3,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 5E-8,
+                             'v_init': 1E-4,
+                             'aggr_type': 'add',
+                             'particle_embedding': True,
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 4,
+                             'embedding_type': 'none',
+                             'embedding': 1,
+                             'model': 'GravityParticles',
+                             'upgrade_type': 0,
+                             'p': [[5],[1],[0.2]],
+                             'nrun':10,
+                             'clamp':0}
 
     # particles
     if id == 75:
@@ -3438,7 +3541,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    for gtest in range(69,71):
+    for gtest in range(70,72):
 
         model_config = load_model_config(id=gtest)
 
@@ -3471,9 +3574,9 @@ if __name__ == '__main__':
 
         print_model_config(model_config)
 
-        data_generate(model_config)
-        data_train(model_config,gtest)
-        # data_plot(model_config)
+        # data_generate(model_config)
+        # data_train(model_config,gtest)
+        data_plot(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=False, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
