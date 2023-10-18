@@ -2773,7 +2773,7 @@ def data_plot(model_config):
     plt.xlabel('Frame [a.u]', fontsize="14")
     plt.ylabel('Acceleration [a.u]', fontsize="14")
     plt.tight_layout()
-    plt.show()
+    plt.close()
 
     types = np.arange(1, model_config['nparticle_types'] + 1)
     mass = [5, 1, 0.2]
@@ -3045,9 +3045,13 @@ def data_plot(model_config):
         ax = fig.add_subplot(1, 4, 4)
         for k in range(model_config['nparticle_types']):
             embedding = torch.tensor(tmean[k], device=device) * torch.ones((1000), device=device)
-            in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
-                                     rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
-                                     0 * rr[:, None], 0 * rr[:, None], embedding[:, None]), dim=1)
+            if model_config['prediction'] == 'acceleration':
+                in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                         rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
+                                         0 * rr[:, None], 0 * rr[:, None], embedding[:, None]), dim=1)
+            else:
+                in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                         rr[:, None] / model_config['radius'], embedding[:, None]), dim=1)
             acc = model.lin_edge(in_features.float())
             acc = -acc[:, 0]
             plt.plot(rr.detach().cpu().numpy(), acc.detach().cpu().numpy() * ynorm / model_config['tau'])
@@ -3499,6 +3503,34 @@ def load_model_config(id=48):
                              'upgrade_type': 0,
                              'p': [[1.0413, 1.5615, 1.6233, 1.6012],[1.8308, 1.9055, 1.7667, 1.0855],[1.785, 1.8579, 1.7226, 1.0584]],
                              'nrun':10}
+    if id == 92:
+        model_config_test = {'ntry': id,
+                             'input_size': 4,
+                             'output_size': 2,
+                             'hidden_size': 64,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'noise_type': 0,
+                             'radius': 0.15,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 4800,
+                             'nparticle_types': 3,
+                             'nframes': 200,
+                             'sigma': .005,
+                             'tau': 0.1,
+                             'v_init': 0,
+                             'aggr_type': 'mean',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'particle_embedding': True,
+                             'embedding_type': 'none',
+                             'embedding': 1,
+                             'model': 'InteractionParticles_A',
+                             'prediction': 'velocity',
+                             'upgrade_type': 0,
+                             'p': [[1.0413, 1.5615, 1.6233, 1.6012],[1.8308, 1.9055, 1.7667, 1.0855],[1.785, 1.8579, 1.7226, 1.0584]],
+                             'nrun':10}
 
     # elctrostatic
     if id == 80:
@@ -3682,7 +3714,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtest_list = [68,84,90,91]
+    gtest_list = [68,84,90,91,92]
 
     for gtest in gtest_list:
 
@@ -3708,12 +3740,6 @@ if __name__ == '__main__':
 
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
-
-        # ntry = gtest
-        # model_config['ntry'] = ntry
-        # dataset_name = '231001_'+str(ntry)
-        # model_config['dataset'] = dataset_name
-        # model_config['model']= 'MixInteractionParticles'
 
         print_model_config(model_config)
 
