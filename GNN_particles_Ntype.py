@@ -1594,7 +1594,7 @@ def data_train(model_config, gtest):
     print('')
     net = f"./log/try_{ntry}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     print(f'network: {net}')
-    Nepochs = 60
+    Nepochs = 40
     print(f'N epochs: {Nepochs}')
     print('')
 
