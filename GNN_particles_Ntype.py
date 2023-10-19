@@ -1392,7 +1392,7 @@ def data_generate(model_config):
 
             distance = torch.sum(bc_diff(X1[:, None, 0:2] - X1[None, :, 0:2]) ** 2, axis=2)
             t = torch.Tensor([radius ** 2])  # threshold
-            adj_t = (distance < radius ** 2).float() * 1
+            adj_t = (distance < radius ** 2).float() * (distance > radius_min ** 2).float() * 1
             edge_index = adj_t.nonzero().t().contiguous()
 
             x = torch.concatenate(
@@ -1494,6 +1494,7 @@ def data_train(model_config, gtest):
     model = []
     ntry = model_config['ntry']
     radius = model_config['radius']
+    radius_min = model_config['radius_min']
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
     dataset_name = model_config['dataset']
@@ -1667,7 +1668,7 @@ def data_train(model_config, gtest):
                     k = np.random.randint(nframes - 1)
                     x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{k}.pt').to(device)
                     distance = torch.sum(bc_diff(x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
-                    adj_t = (distance < radius ** 2).float() * 1
+                    adj_t = (distance < radius ** 2).float() * (distance > radius_min ** 2).float() * 1
                     t = torch.Tensor([radius ** 2])
                     edges = adj_t.nonzero().t().contiguous()
                     dataset = data.Data(x=x[:, :], edge_index=edges)
@@ -2776,7 +2777,7 @@ def data_plot(model_config):
     plt.xlabel('Frame [a.u]', fontsize="14")
     plt.ylabel('Acceleration [a.u]', fontsize="14")
     plt.tight_layout()
-    plt.close()
+    plt.show()
 
     types = np.arange(1, model_config['nparticle_types'] + 1)
     mass = [5, 1, 0.2]
@@ -2794,7 +2795,8 @@ def data_plot(model_config):
         kmeans_.fit(t)
         sse.append(kmeans_.inertia_)
     kl = KneeLocator(range(1, 11), sse, curve="convex", direction="decreasing")
-    kl_peaks=kl.elbow
+    # kl_peaks=kl.elbow
+    kl_peaks = model_config['nparticle_types']
 
     print(f'Analysing {kl_peaks} peaks')
 
@@ -3111,6 +3113,73 @@ def load_model_config(id=48):
 
 
     # gravity
+
+
+    if id == 50:
+        model_config_test = {'ntry': id,
+                             'input_size': 8,
+                             'output_size': 2,
+                             'hidden_size': 64,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'noise_type': 0,
+                             'radius': 0.15,
+                             'radius_min': 0,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 678,
+                             'nparticle_types': 3,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 5E-9,
+                             'v_init': 1E-4,
+                             'aggr_type': 'add',
+                             'particle_embedding': True,
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding_type': 'none',
+                             'embedding': 1,
+                             'model': 'GravityParticles',
+                             'prediction': 'acceleration',
+                             'upgrade_type': 0,
+                             'p':  np.linspace(0.2,5,3).tolist(),
+                             'nrun':2,
+                             'clamp':0.002,
+                             'pred_limit':1E9}
+
+        if id == 51:
+            model_config_test = {'ntry': id,
+                                 'input_size': 8,
+                                 'output_size': 2,
+                                 'hidden_size': 64,
+                                 'n_mp_layers': 5,
+                                 'noise_level': 0,
+                                 'noise_type': 0,
+                                 'radius': 0.15,
+                                 'radius_min': 0,
+                                 'dataset': f'231001_{id}',
+                                 'nparticles': 680,
+                                 'nparticle_types': 4,
+                                 'nframes': 1000,
+                                 'sigma': .005,
+                                 'tau': 5E-9,
+                                 'v_init': 1E-4,
+                                 'aggr_type': 'add',
+                                 'particle_embedding': True,
+                                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                                 'data_augmentation': True,
+                                 'batch_size': 8,
+                                 'embedding_type': 'none',
+                                 'embedding': 1,
+                                 'model': 'GravityParticles',
+                                 'prediction': 'acceleration',
+                                 'upgrade_type': 0,
+                                 'p': np.linspace(0.2, 5, 4).tolist(),
+                                 'nrun':2,
+                                 'clamp': 0.002,
+                                 'pred_limit': 1E9}
+
+
     if id == 68:
         model_config_test = {'ntry': id,
                              'input_size': 8,
@@ -3150,6 +3219,7 @@ def load_model_config(id=48):
                              'n_mp_layers': 5,
                              'noise_level': 0,
                              'noise_type': 0,
+                             'radius': 0.15,
                              'radius_min': 0,
                              'dataset': f'231001_{id}',
                              'nparticles': 678,
@@ -3199,10 +3269,10 @@ def load_model_config(id=48):
                              'model': 'GravityParticles',
                              'prediction': 'acceleration',
                              'upgrade_type': 0,
-                             'p': [[5],[1],[0.2]],
+                             'p': np.linspace(0.2,5,3).tolist(),
                              'nrun':2,
-                             'clamp':0.002,
-                             'pred_limit':1E9}
+                             'clamp':0,
+                             'pred_limit':1E6}
     if id == 71:
         model_config_test = {'ntry': id,
                              'input_size': 8,
@@ -3230,10 +3300,10 @@ def load_model_config(id=48):
                              'model': 'GravityParticles',
                              'prediction': 'acceleration',
                              'upgrade_type': 0,
-                             'p': [[5],[1],[0.2]],
+                             'p':  np.linspace(0.2,5,3).tolist(),
                              'nrun':2,
-                             'clamp':0.002,
-                             'pred_limit':1E9}
+                             'clamp':0,
+                             'pred_limit':1E6}
 
 
     # particles
@@ -3396,7 +3466,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtest_list = [70,71] #[68, 69, 84,90,91]
+    gtest_list = [69,71] #[68, 69, 84,90,91]
 
     for gtest in gtest_list:
 
@@ -3425,9 +3495,9 @@ if __name__ == '__main__':
 
         print_model_config(model_config)
 
-        data_generate(model_config)
-        data_train(model_config,gtest)
-        # data_plot(model_config)
+        # data_generate(model_config)
+        # data_train(model_config,gtest)
+        data_plot(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
