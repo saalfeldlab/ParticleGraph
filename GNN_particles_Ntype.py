@@ -3482,7 +3482,7 @@ def load_model_config(id=48):
                              'n_mp_layers': 5,
                              'noise_level': 0,
                              'noise_type': 0,
-                             'radius': 0.15,
+                             'radius': 0.075,
                              'dataset': f'231001_{id}',
                              'nparticles': 4800,
                              'nparticle_types': 3,
