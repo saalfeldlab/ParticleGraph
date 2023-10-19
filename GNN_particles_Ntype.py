@@ -378,14 +378,14 @@ class InteractionParticles_G(pyg.nn.MessagePassing):
         p = p.squeeze()
         p = torch.concatenate((p[:, None], p[:, None]), -1)
 
-        acc = p * bc_diff(x_j[:, 0:2] - x_i[:, 0:2]) / r ** 3
+        acc = 1/p * bc_diff(x_j[:, 0:2] - x_i[:, 0:2]) / r ** 3
 
         return torch.clamp(acc,max=self.pred_limit)
 
     def psi(self,r,p):
 
         r_ = torch.clamp(r, min=self.clamp)
-        psi = p * r / r_ ** 3
+        psi = 1/p * r / r_ ** 3
         psi = torch.clamp(psi, max=self.pred_limit)
 
         return psi[:, None]
@@ -1954,7 +1954,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
     net = f"./log/try_{ntry}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     if bPrint:
         print(f'network: {net}')
-    state_dict = torch.load(net)
+    state_dict = torch.load(net,map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
     model.eval()
 
@@ -1981,8 +1981,8 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         nparticles = new_nparticles
         model_config['nparticles'] = new_nparticles
 
-    ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt')
-    vnorm = torch.load(f'./log/try_{ntry}/vnorm.pt')
+    ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt',map_location=device)
+    vnorm = torch.load(f'./log/try_{ntry}/vnorm.pt',map_location=device)
     ynorm = ynorm.to(device)
     v = vnorm.to(device)
 
@@ -2017,7 +2017,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
 
     for it in tqdm(range(nframes - 1)):
 
-        x0 = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_{min(it + 1, nframes - 2)}.pt')
+        x0 = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_{min(it + 1, nframes - 2)}.pt',map_location=device)
         x0 = x0.to(device)
 
         distance = torch.sum(bc_diff(x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
@@ -2702,7 +2702,7 @@ def data_plot(model_config):
         model = ElecParticles(model_config, device)
 
     print(f'network: {net}')
-    state_dict = torch.load(net)
+    state_dict = torch.load(net,map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
     model.eval()
 
@@ -2823,7 +2823,7 @@ def data_plot(model_config):
         plt.title('True', fontsize="22")
 
         tau = model_config['tau']
-        ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt')
+        ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt',map_location=device)
         ynorm = ynorm[4].detach().cpu().numpy()
 
         ax = fig.add_subplot(1, 4, 4)
@@ -2972,7 +2972,7 @@ def data_plot(model_config):
         plt.title('True', fontsize="22")
 
         tau = model_config['tau']
-        ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt')
+        ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt', map_location=device)
         ynorm = ynorm[4].detach().cpu().numpy()
 
         ax = fig.add_subplot(1, 4, 4)
@@ -3708,13 +3708,13 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtest_list = [68,84,90,91,92]
+    gtest_list = [84] #,84,90,91,92]
 
     for gtest in gtest_list:
 
@@ -3743,9 +3743,9 @@ if __name__ == '__main__':
 
         print_model_config(model_config)
 
-        data_generate(model_config)
-        data_train(model_config,gtest)
-        # data_plot(model_config)
+        # data_generate(model_config)
+        # data_train(model_config,gtest)
+        data_plot(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
