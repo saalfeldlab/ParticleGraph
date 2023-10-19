@@ -2679,6 +2679,8 @@ def data_plot(model_config):
     dataset_name = model_config['dataset']
     nframes = model_config['nframes']
 
+    criteria = nn.MSELoss()
+
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
     for n in range(model_config['nparticle_types']):
@@ -2835,6 +2837,9 @@ def data_plot(model_config):
             acc = model.lin_edge(in_features.float())
             acc = acc[:, 0]
             plt.plot(rr.detach().cpu().numpy(), acc.detach().cpu().numpy() * ynorm / model_config['tau'],linewidth=8)
+            tmp= acc * torch.tensor(ynorm, device=device) / torch.tensor(model_config['tau'], device=device)
+            rmse= torch.sqrt(criteria(psi_output[n][0:500],tmp[0:500,None]))
+            print (f'function {n} rmse: {np.round(rmse.detach().cpu().numpy(),3)}')
         for n in range(nparticle_types):
             plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), linewidth=1, c='k')
 
@@ -2976,6 +2981,7 @@ def data_plot(model_config):
         ynorm = ynorm[4].detach().cpu().numpy()
 
         ax = fig.add_subplot(1, 4, 4)
+        N=0
         for n in range(nparticle_types):
             for m in range(nparticle_types):
                 # embedding0 = torch.tensor(tmean[n], device=device) * torch.ones((1000, 2), device=device)
@@ -2988,6 +2994,10 @@ def data_plot(model_config):
                 acc = model.lin_edge(in_features.float())
                 acc = acc[:, 0]
                 plt.plot(rr.detach().cpu().numpy(), acc.detach().cpu().numpy() * ynorm / model_config['tau'], linewidth=8)
+                tmp = acc * torch.tensor(ynorm, device=device) / torch.tensor(model_config['tau'], device=device)
+                rmse = torch.sqrt(criteria(psi_output[N][0:500], tmp[0:500]))
+                print(f'function {N} rmse: {np.round(rmse.detach().cpu().numpy(),3)}')
+                N=N+1
         N=0
         for n in range(nparticle_types):
             for m in range(nparticle_types):
@@ -3036,15 +3046,18 @@ def data_plot(model_config):
             plt.plot(rr.detach().cpu().numpy(), psi_output[0].detach().cpu().numpy() * 0, color=[0, 0, 0],
                      linewidth=0.5)
         plt.xlabel('Distance [a.u]', fontsize="14")
-        plt.ylabel('Speed [a.u]', fontsize="14")
+        if model_config['prediction'] == 'acceleration':
+            plt.ylabel('Acceleration [a.u]', fontsize="14")
+        else:
+            plt.ylabel('Velocity [a.u]', fontsize="14")
         plt.title('True', fontsize="22")
 
         tau = model_config['tau']
         ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt',map_location=device)
         ynorm = ynorm[4].detach().cpu().numpy()
         ax = fig.add_subplot(1, 4, 4)
-        for k in range(model_config['nparticle_types']):
-            embedding = torch.tensor(tmean[k], device=device) * torch.ones((1000), device=device)
+        for n in range(model_config['nparticle_types']):
+            embedding = torch.tensor(tmean[n], device=device) * torch.ones((1000), device=device)
             if model_config['prediction'] == 'acceleration':
                 in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
                                          rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
@@ -3055,10 +3068,17 @@ def data_plot(model_config):
             acc = model.lin_edge(in_features.float())
             acc = -acc[:, 0]
             plt.plot(rr.detach().cpu().numpy(), acc.detach().cpu().numpy() * ynorm / model_config['tau'])
+            tmp= acc * torch.tensor(ynorm, device=device) / torch.tensor(model_config['tau'], device=device)
+            rmse= torch.sqrt(criteria(psi_output[n][0:500],tmp[0:500,None]))
+            print (f'function {n} rmse: {np.round(rmse.detach().cpu().numpy(),3)}')
+
         plt.plot(rr.detach().cpu().numpy(), 0 * acc.detach().cpu().numpy() * ynorm / model_config['tau'], c='k')
         plt.xlim([0, 0.075 * 2])
         plt.xlabel('Distance [a.u]', fontsize="14")
-        plt.ylabel('Acceleration [a.u]', fontsize="14")
+        if model_config['prediction'] == 'acceleration':
+            plt.ylabel('Predicted acceleration [a.u]', fontsize="14")
+        else:
+            plt.ylabel('Predicted velocity [a.u]', fontsize="14")
         plt.title('Model', fontsize="22")
         plt.tight_layout()
         plt.show()
@@ -3685,7 +3705,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtest_list = [91] #,68, 84,90,91,92]
+    gtest_list = [84] #,68, 84,90,91,92]
 
     for gtest in gtest_list:
 
@@ -3714,9 +3734,9 @@ if __name__ == '__main__':
 
         print_model_config(model_config)
 
-        data_generate(model_config)
-        data_train(model_config,gtest)
-        # data_plot(model_config)
+        # data_generate(model_config)
+        # data_train(model_config,gtest)
+        data_plot(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
