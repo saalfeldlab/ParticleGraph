@@ -378,14 +378,14 @@ class InteractionParticles_G(pyg.nn.MessagePassing):
         p = p.squeeze()
         p = torch.concatenate((p[:, None], p[:, None]), -1)
 
-        acc = 1/p * bc_diff(x_j[:, 0:2] - x_i[:, 0:2]) / r ** 3
+        acc = p * bc_diff(x_j[:, 0:2] - x_i[:, 0:2]) / r ** 3
 
         return torch.clamp(acc,max=self.pred_limit)
 
     def psi(self,r,p):
 
         r_ = torch.clamp(r, min=self.clamp)
-        psi = 1/p * r / r_ ** 3
+        psi = p * r / r_ ** 3
         psi = torch.clamp(psi, max=self.pred_limit)
 
         return psi[:, None]
@@ -3175,7 +3175,7 @@ def load_model_config(id=48):
                                  'upgrade_type': 0,
                                  'p': np.linspace(0.2, 5, 4).tolist(),
                                  'nrun':2,
-                                 'clamp': 0.005,
+                                 'clamp': 0.002,
                                  'pred_limit': 1E9}
 
     if id == 52:
@@ -3207,7 +3207,7 @@ def load_model_config(id=48):
                                  'upgrade_type': 0,
                                  'p': np.linspace(0.2, 5, 5).tolist(),
                                  'nrun':2,
-                                 'clamp': 0.005,
+                                 'clamp': 0.002,
                                  'pred_limit': 1E9}
 
     if id == 53:
@@ -3239,7 +3239,7 @@ def load_model_config(id=48):
                                  'upgrade_type': 0,
                                  'p': np.linspace(0.2, 5, 8).tolist(),
                                  'nrun':2,
-                                 'clamp': 0.005,
+                                 'clamp': 0.002,
                                  'pred_limit': 1E9}
 
     if id == 54:
@@ -3271,7 +3271,7 @@ def load_model_config(id=48):
                              'upgrade_type': 0,
                              'p': np.linspace(0.2, 5, 10).tolist(),
                              'nrun': 2,
-                             'clamp': 0.005,
+                             'clamp': 0.002,
                              'pred_limit': 1E9}
 
     if id == 55:
@@ -3303,7 +3303,7 @@ def load_model_config(id=48):
                              'upgrade_type': 0,
                              'p': np.linspace(0.2, 5, 20).tolist(),
                              'nrun': 2,
-                             'clamp': 0.005,
+                             'clamp': 0.002,
                              'pred_limit': 1E9}
 
     if id == 56:
@@ -3335,7 +3335,7 @@ def load_model_config(id=48):
                              'upgrade_type': 0,
                              'p': np.linspace(0.2, 5, 100).tolist(),
                              'nrun': 2,
-                             'clamp': 0.005,
+                             'clamp': 0.002,
                              'pred_limit': 1E9}
 
     if id == 68:
