@@ -2693,8 +2693,7 @@ def data_plot(model_config):
     print('Graph files N: ', NGraphs - 1)
     net = f"./log/try_{ntry}/models/best_model_with_{NGraphs - 1}_graphs.pt"
 
-    if (model_config['model'] == 'InteractionParticles_A') | (model_config['model'] == 'InteractionParticles_B') | (
-            model_config['model'] == 'InteractionParticles_F'):
+    if (model_config['model'] == 'InteractionParticles_A') | (model_config['model'] == 'InteractionParticles_B') | (model_config['model'] == 'InteractionParticles_F'):
         model = InteractionParticles(model_config, device)
     if model_config['model'] == 'GravityParticles':
         model = GravityParticles(model_config, device)
@@ -2800,10 +2799,15 @@ def data_plot(model_config):
 
     print(f'Analysing {kl_peaks} peaks')
 
-    kmeans_ = KMeans(n_clusters=kl_peaks, **kmeans_kwargs)
-    kmeans_.fit(t)
-
-
+    flag=0
+    while(flag<10):
+        kmeans_kwargs = {"init": "random", "n_init": 10, "max_iter": 3000, "random_state": 42+flag}
+        kmeans_ = KMeans(n_clusters=kl_peaks, **kmeans_kwargs)
+        kmeans_.fit(t)
+        print(np.argsort(kmeans_.cluster_centers_.flatten()))
+        if np.sum(np.argsort(kmeans_.cluster_centers_.flatten()) == np.arange(kl_peaks)) == kl_peaks:
+            flag = 10
+        flag +=1
 
 
 
@@ -2836,7 +2840,7 @@ def data_plot(model_config):
 
         ax = fig.add_subplot(1, 4, 2)
         for n in range(nparticle_types):
-            plt.errorbar(p[n], np.mean(t[index_particles[n]]), yerr=np.std(t[index_particles[n]]), fmt="o")
+            plt.errorbar(p[n], np.mean(t[new_index_particles[n]]), yerr=np.std(t[index_particles[n]]), fmt="o")
         plt.xlabel('Mass [a.u]', fontsize="14")
         plt.ylabel('Embedding [a.u]', fontsize="14")
 
@@ -2861,10 +2865,10 @@ def data_plot(model_config):
                                      0 * rr[:, None], 0 * rr[:, None], embedding[:, None]), dim=1)
             acc = model.lin_edge(in_features.float())
             acc = acc[:, 0]
-            plt.plot(rr.detach().cpu().numpy(), acc.detach().cpu().numpy() * ynorm / model_config['tau'],linewidth=8)
-            # tmp= acc * torch.tensor(ynorm, device=device) / torch.tensor(model_config['tau'], device=device)
-            # rmse= torch.sqrt(criteria(psi_output[n][0:500],tmp[0:500,None]))
-            # print (f'function {n} rmse: {np.round(rmse.detach().cpu().numpy(),3)}')
+            plt.plot(rr.detach().cpu().numpy(), acc.detach().cpu().numpy() * ynorm / model_config['tau'],linewidth=5)
+            tmp= acc * torch.tensor(ynorm, device=device) / torch.tensor(model_config['tau'], device=device)
+            rmse= torch.sqrt(criteria(psi_output[n][7:500],tmp[7:500,None]))
+            print (f'function {n} rmse: {np.round(rmse.detach().cpu().numpy(),3)}')
         for n in range(nparticle_types):
             plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), linewidth=1, c='k')
 
@@ -3626,7 +3630,7 @@ if __name__ == '__main__':
 
     gtest_list = [68,71] #[68, 69, 84,90,91]
 
-    for gtest in range(51,57):
+    for gtest in range(51,52):
 
         model_config = load_model_config(id=gtest)
 
@@ -3653,9 +3657,10 @@ if __name__ == '__main__':
 
         print_model_config(model_config)
 
-        data_generate(model_config)
-        data_train(model_config,gtest)
-        # data_plot(model_config)
+
+        #data_generate(model_config)
+        #data_train(model_config,gtest)
+        data_plot(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
