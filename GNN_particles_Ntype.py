@@ -27,6 +27,8 @@ from geomloss import SamplesLoss
 from tifffile import imread
 from matplotlib import cm
 import torch_geometric.transforms as T
+import pandas
+import trackpy
 
 def distmat_square(X, Y):
     return torch.sum(bc_diff(X[:, None, :] - Y[None, :, :]) ** 2, axis=2)
@@ -2464,6 +2466,246 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
     # print(f'Final Sxy: {Sxy.item()}')
 
     return x.detach().cpu().numpy(), rmserr_list
+def data_test_tracking(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0,prev_index_particles=0):
+    # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_recons/*")
+    # for f in files:
+    #     os.remove(f)
+    if bPrint:
+        print('')
+        print('Plot validation test ... ')
+
+    model = []
+    ntry = model_config['ntry']
+    radius = model_config['radius']
+    nparticle_types = model_config['nparticle_types']
+    nparticles = model_config['nparticles']
+    dataset_name = model_config['dataset']
+    nframes = model_config['nframes']
+
+    if index_particles == 0:
+        index_particles = []
+        np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
+        for n in range(model_config['nparticle_types']):
+            index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
+
+    if (model_config['model'] == 'InteractionParticles_A') | (model_config['model'] == 'InteractionParticles_B') | (
+            model_config['model'] == 'InteractionParticles_F'):
+        model = InteractionParticles(model_config, device)
+    if model_config['model'] == 'GravityParticles':
+        model = GravityParticles(model_config, device)
+        p_mass = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
+        for n in range(nparticle_types):
+            p_mass[n] = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
+        T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
+        for n in range(1, nparticle_types):
+            T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
+        T1 = torch.concatenate((T1[:, None], T1[:, None]), 1)
+    if model_config['model'] == 'MixInteractionParticles':
+        model = MixInteractionParticles(model_config, device)
+    if model_config['model'] == 'ElecParticles':
+        model = ElecParticles(model_config, device)
+        p_elec = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
+        for n in range(nparticle_types):
+            p_elec[n] = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
+        print(p_elec)
+        T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
+        for n in range(1, nparticle_types):
+            T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
+        T1 = torch.concatenate((T1[:, None], T1[:, None]), 1)
+    if model_config['model'] == 'ResNetGNN':
+        model = ResNetGNN(model_config, device)
+
+    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_*")
+    NGraphs = int(len(graph_files) / nframes)
+    if bPrint:
+        print('Graph files N: ', NGraphs - 1)
+
+    net = f"./log/try_{ntry}/models/best_model_with_{NGraphs - 1}_graphs.pt"
+    if bPrint:
+        print(f'network: {net}')
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
+    model.eval()
+
+    if new_nparticles > 0:  # nparticles larger than initially
+
+        ratio_particles = int(new_nparticles / prev_nparticles)
+        print('')
+        print(f'New_number of particles: {new_nparticles}  ratio:{ratio_particles}')
+        print('')
+
+        embedding = model.a.data
+        new_embedding = []
+
+        for n in range(nparticle_types):
+            for m in range(ratio_particles):
+                if (n == 0) & (m == 0):
+                    new_embedding = embedding[prev_index_particles[n]]
+                else:
+                    new_embedding = torch.cat((new_embedding, embedding[prev_index_particles[n]]), axis=0)
+
+        model.a = nn.Parameter(
+            torch.tensor(np.ones((int(prev_nparticles) * ratio_particles, 2)), device=device, requires_grad=False))
+        model.a.data = new_embedding
+        nparticles = new_nparticles
+        model_config['nparticles'] = new_nparticles
+
+    ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt',map_location=device)
+    vnorm = torch.load(f'./log/try_{ntry}/vnorm.pt',map_location=device)
+    ynorm = ynorm.to(device)
+    v = vnorm.to(device)
+
+    table = PrettyTable(["Modules", "Parameters"])
+    total_params = 0
+    for name, parameter in model.named_parameters():
+        if not parameter.requires_grad:
+            continue
+        param = parameter.numel()
+        table.add_row([name, param])
+        total_params += param
+    if bPrint:
+        print(table)
+        print(f"Total Trainable Params: {total_params}")
+
+    x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_0.pt')
+    x00 = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_0.pt')
+    y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_0_0.pt')
+    x = x.to(device)
+    x00 = x00.to(device)
+    y = y.to(device)
+
+    if bPrint:
+        print('')
+        print(f'x: {x.shape}')
+        print(f'index_particles: {index_particles[0].shape}')
+        print('')
+
+    rmserr_list = []
+    discrepency_list = []
+    Sxy_list = []
+    tracking_match=[]
+    tracking_unmatch=[]
+
+    for it in tqdm(range(nframes - 1)):
+
+        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_{min(it , nframes - 2)}.pt',map_location=device)
+        x = x.to(device)
+
+        x00 = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_{min(it , nframes - 2)}.pt',map_location=device)
+        x00 = x00.to(device)
+
+        x0 = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_{min(it + 1, nframes - 2)}.pt',map_location=device)
+        x0 = x0.to(device)
+
+        distance = torch.sum(bc_diff(x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
+        t = torch.Tensor([radius ** 2])  # threshold
+        adj_t = (distance < radius ** 2).float() * 1
+        edge_index = adj_t.nonzero().t().contiguous()
+
+        dataset = data.Data(x=x, edge_index=edge_index)
+
+        with torch.no_grad():
+            if model_config['model'] == 'ResNetGNN':
+                y = model(dataset, vnorm=v)
+            else:
+                y = model(dataset, data_id=0, step=2, vnorm=v, cos_phi=0, sin_phi=0)  # acceleration estimation
+
+        y[:, 0] = y[:, 0] * ynorm[4]
+        y[:, 1] = y[:, 1] * ynorm[4]
+
+        if model_config['prediction'] == 'acceleration':
+            x[:, 2:4] = x[:, 2:4] + y  # speed update
+        else:
+            x[:, 2:4] = y
+        x[:, 0:2] = bc_pos(x[:, 0:2] + x[:, 2:4])  # position update
+
+        rmserr = torch.sqrt(torch.mean(torch.sum(bc_diff(x[:, 0:2] - x0[:, 0:2]) ** 2, axis=1)))
+        rmserr_list.append(rmserr.item())
+
+        discrepency = MMD(x[:, 0:2], x0[:, 0:2])
+        discrepency_list.append(discrepency)
+
+        # Sxy = S_e(x[:, 0:2], x0[:, 0:2])
+        # Sxy_list.append(Sxy.item())
+
+        if bVisu:
+
+            fig = plt.figure(figsize=(25, 16))
+            # plt.ion()
+
+
+            fx0 = pandas.DataFrame(dict(x=x0[:,0].detach().cpu().numpy().flatten(), y=x0[:,1].detach().cpu().numpy().flatten(), frame=np.zeros(nparticles)) )
+            g=np.random.permutation(np.arange(nparticles)).astype(int)
+            fx = pandas.DataFrame(dict(x=x[g, 0].detach().cpu().numpy().flatten(), y=x[g, 1].detach().cpu().numpy().flatten(),frame=np.ones(nparticles)))
+            tr = pandas.concat(trackpy.link_df_iter((fx0, fx), 50*rmserr.detach().cpu().numpy()))
+            error = np.sum((tr.particle.to_numpy()[nparticles:2 * nparticles] - g) != 0)
+            if error>0:
+                print(f'it {it} error: {error}')
+
+
+            ax = fig.add_subplot(2, 3, 4)
+
+
+
+            ax = fig.add_subplot(2, 3, 5)
+            plt.plot(tracking_match)
+            plt.xlabel('Frame [a.u]', fontsize="14")
+            ax.set_ylabel('tracking_match [a.u]', fontsize="14", color='k')
+            ax = fig.add_subplot(2, 3, 6)
+            plt.plot(tracking_unmatch)
+            plt.xlabel('Frame [a.u]', fontsize="14")
+            ax.set_ylabel('tracking_unmatch [a.u]', fontsize="14", color='k')
+
+
+            ax = fig.add_subplot(2, 3, 1)
+            plt.scatter(x00[:, 0].detach().cpu(), x00[:, 1].detach().cpu(),s=3,c='g')
+            plt.scatter(x0[:, 0].detach().cpu(), x0[:, 1].detach().cpu(),s=3,c='b')
+            plt.scatter(x[:, 0].detach().cpu(), x[:, 1].detach().cpu(),s=3,c='r')
+
+            ax = fig.add_subplot(2, 3, 3)
+            plt.plot(np.arange(len(rmserr_list)), rmserr_list, label='RMSE', c='k')
+            plt.xlim([0, nframes])
+            plt.tick_params(axis='both', which='major', labelsize=10)
+            plt.xlabel('Frame [a.u]', fontsize="14")
+            ax.set_ylabel('RMSE [a.u]', fontsize="14", color='k')
+
+
+            ax = fig.add_subplot(2, 3, 2)
+            temp1 = torch.cat((x, x0), 0)
+            temp2 = torch.tensor(np.arange(nparticles), device=device)
+            temp3 = torch.tensor(np.arange(nparticles) + nparticles, device=device)
+            temp4 = torch.concatenate((temp2[:, None], temp3[:, None]), 1)
+            temp4 = torch.t(temp4)
+
+            distance3 = torch.sqrt(torch.sum((x[:, 0:2] - x0[:, 0:2]) ** 2, 1))
+            p = torch.argwhere(distance3 < 0.3)
+
+            pos = dict(enumerate(np.array((temp1[:, 0:2]).detach().cpu()), 0))
+            dataset = data.Data(x=temp1[:, 0:2], edge_index=torch.squeeze(temp4[:, p]))
+            vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
+            nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False)
+            plt.xlim([-0.3, 1.3])
+            plt.ylim([-0.3, 1.3])
+            ax.axes.get_xaxis().set_visible(False)
+            ax.axes.get_yaxis().set_visible(False)
+            plt.axis('off')
+            plt.text(-0.25, 1.18, f'Frame: {it}')
+            plt.text(-0.25, 1.13, 'Prediction RMSE: {:.8f}'.format(rmserr.detach()), fontsize=10)
+
+
+            plt.savefig(f"./tmp_recons/Fig_{ntry}_{it}.tif")
+
+            plt.close()
+
+    if bPrint:
+        print('')
+        print(f'ntry: {ntry}')
+    print(f'RMSE: {np.round(rmserr.item(), 4)}')
+    if bPrint:
+        print(f'MMD: {np.round(discrepency, 4)}')
+    # print(f'Final Sxy: {Sxy.item()}')
+
+    return x.detach().cpu().numpy(), rmserr_list
 
 def data_test_generate(model_config):
     print('')
@@ -3889,9 +4131,10 @@ if __name__ == '__main__':
 
         # data_generate(model_config)
         #data_train(model_config,gtest)
-        data_plot_generated(model_config,3)
+        # data_plot_generated(model_config,3)
         # data_plot(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
+        x, rmserr_list = data_test_tracking(model_config, bVisu=True, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
         # data_train_generate(model_config, f'./graphs_data/graphs_particles_230902_72/')
