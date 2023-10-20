@@ -2585,6 +2585,9 @@ def data_test_tracking(model_config, bVisu=False, bPrint=True, index_particles=0
     Sxy_list = []
     tracking_match=[]
     tracking_unmatch=[]
+    error_tracking=0
+
+    track=np.arange(nparticles).astype(int)
 
     for it in tqdm(range(nframes - 1)):
 
@@ -2630,69 +2633,38 @@ def data_test_tracking(model_config, bVisu=False, bPrint=True, index_particles=0
 
         if bVisu:
 
-            fig = plt.figure(figsize=(25, 16))
+            fig = plt.figure(figsize=(14, 7 * 0.95))
             # plt.ion()
 
-
+            ax = fig.add_subplot(1, 2, 1)
             fx0 = pandas.DataFrame(dict(x=x0[:,0].detach().cpu().numpy().flatten(), y=x0[:,1].detach().cpu().numpy().flatten(), frame=np.zeros(nparticles)) )
-            g=np.random.permutation(np.arange(nparticles)).astype(int)
+            # g = np.random.permutation(np.arange(nparticles)).astype(int)
+            g = np.arange(nparticles).astype(int)
             fx = pandas.DataFrame(dict(x=x[g, 0].detach().cpu().numpy().flatten(), y=x[g, 1].detach().cpu().numpy().flatten(),frame=np.ones(nparticles)))
-            tr = pandas.concat(trackpy.link_df_iter((fx0, fx), 50*rmserr.detach().cpu().numpy()))
-            error = np.sum((tr.particle.to_numpy()[nparticles:2 * nparticles] - g) != 0)
-            if error>0:
-                print(f'it {it} error: {error}')
+            tr = pandas.concat(trackpy.link_df_iter((fx0, fx), 100*rmserr.detach().cpu().numpy()))
+            error_tracking += np.sum((tr.particle.to_numpy()[nparticles:2 * nparticles] - g) != 0)
 
+            tmp=tr.particle.to_numpy()[nparticles:2 * nparticles].astype(int)
+            pos = np.argwhere(tmp>=nparticles)
+            if len(pos)>0:
+                tmp[pos]=0
+            track=track[tmp]
 
-            ax = fig.add_subplot(2, 3, 4)
-
-
-
-            ax = fig.add_subplot(2, 3, 5)
-            plt.plot(tracking_match)
-            plt.xlabel('Frame [a.u]', fontsize="14")
-            ax.set_ylabel('tracking_match [a.u]', fontsize="14", color='k')
-            ax = fig.add_subplot(2, 3, 6)
-            plt.plot(tracking_unmatch)
-            plt.xlabel('Frame [a.u]', fontsize="14")
-            ax.set_ylabel('tracking_unmatch [a.u]', fontsize="14", color='k')
-
-
-            ax = fig.add_subplot(2, 3, 1)
-            plt.scatter(x00[:, 0].detach().cpu(), x00[:, 1].detach().cpu(),s=3,c='g')
-            plt.scatter(x0[:, 0].detach().cpu(), x0[:, 1].detach().cpu(),s=3,c='b')
-            plt.scatter(x[:, 0].detach().cpu(), x[:, 1].detach().cpu(),s=3,c='r')
-
-            ax = fig.add_subplot(2, 3, 3)
-            plt.plot(np.arange(len(rmserr_list)), rmserr_list, label='RMSE', c='k')
-            plt.xlim([0, nframes])
-            plt.tick_params(axis='both', which='major', labelsize=10)
-            plt.xlabel('Frame [a.u]', fontsize="14")
-            ax.set_ylabel('RMSE [a.u]', fontsize="14", color='k')
-
-
-            ax = fig.add_subplot(2, 3, 2)
-            temp1 = torch.cat((x, x0), 0)
-            temp2 = torch.tensor(np.arange(nparticles), device=device)
-            temp3 = torch.tensor(np.arange(nparticles) + nparticles, device=device)
-            temp4 = torch.concatenate((temp2[:, None], temp3[:, None]), 1)
-            temp4 = torch.t(temp4)
-
-            distance3 = torch.sqrt(torch.sum((x[:, 0:2] - x0[:, 0:2]) ** 2, 1))
-            p = torch.argwhere(distance3 < 0.3)
-
-            pos = dict(enumerate(np.array((temp1[:, 0:2]).detach().cpu()), 0))
-            dataset = data.Data(x=temp1[:, 0:2], edge_index=torch.squeeze(temp4[:, p]))
-            vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-            nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False)
+            plt.scatter(x[index_particles[4], 0].detach().cpu(), x[index_particles[4], 1].detach().cpu(), s=5,
+                        c=track[index_particles[4]],cmap='prism')
             plt.xlim([-0.3, 1.3])
             plt.ylim([-0.3, 1.3])
             ax.axes.get_xaxis().set_visible(False)
             ax.axes.get_yaxis().set_visible(False)
-            plt.axis('off')
-            plt.text(-0.25, 1.18, f'Frame: {it}')
-            plt.text(-0.25, 1.13, 'Prediction RMSE: {:.8f}'.format(rmserr.detach()), fontsize=10)
+            plt.text(-0.25, 1.38, f'frame: {it}')
+            plt.text(-0.25, 1.33, f'Graph    {x.shape[0]} nodes ', fontsize=10)
 
-
+            ax = fig.add_subplot(1, 2, 2)
+            plt.scatter(x[index_particles[4], 0].detach().cpu(), x[index_particles[4], 1].detach().cpu(), s=5,c='k')
+            plt.xlim([-0.3, 1.3])
+            plt.ylim([-0.3, 1.3])
+            ax.axes.get_xaxis().set_visible(False)
+            ax.axes.get_yaxis().set_visible(False)
             plt.savefig(f"./tmp_recons/Fig_{ntry}_{it}.tif")
 
             plt.close()
@@ -2701,6 +2673,7 @@ def data_test_tracking(model_config, bVisu=False, bPrint=True, index_particles=0
         print('')
         print(f'ntry: {ntry}')
     print(f'RMSE: {np.round(rmserr.item(), 4)}')
+    print(f'Tracking error: {error_tracking}')
     if bPrint:
         print(f'MMD: {np.round(discrepency, 4)}')
     # print(f'Final Sxy: {Sxy.item()}')
