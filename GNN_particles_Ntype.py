@@ -2,7 +2,6 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-
 import networkx as nx
 from torch_geometric.utils.convert import to_networkx
 from tqdm import tqdm
@@ -17,7 +16,6 @@ from torch.nn import functional as F
 import time
 from shutil import copyfile
 from prettytable import PrettyTable
-
 from kneed import KneeLocator
 from sklearn.datasets import make_blobs
 from sklearn.cluster import KMeans
@@ -29,7 +27,6 @@ from geomloss import SamplesLoss
 from tifffile import imread
 from matplotlib import cm
 import torch_geometric.transforms as T
-
 
 def distmat_square(X, Y):
     return torch.sum(bc_diff(X[:, None, :] - Y[None, :, :]) ** 2, axis=2)
@@ -1928,7 +1925,6 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         p_mass = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         for n in range(nparticle_types):
             p_mass[n] = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
-        print(p_mass)
         T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
         for n in range(1, nparticle_types):
             T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
@@ -2232,6 +2228,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
     # print(f'Final Sxy: {Sxy.item()}')
 
     return x.detach().cpu().numpy(), rmserr_list
+
 def data_test_generate(model_config):
     print('')
     print('Generating test data ...')
@@ -2820,7 +2817,7 @@ def data_plot(model_config):
             psi_output.append(model.psi(rr, torch.squeeze(p[n])))
             print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
 
-        fig = plt.figure(figsize=(24, 6))
+        fig = plt.figure(figsize=(15, 5))
         # plt.ion()
         ax = fig.add_subplot(1, 4, 1)
 
@@ -2847,10 +2844,11 @@ def data_plot(model_config):
         ax = fig.add_subplot(1, 4, 3)
         for n in range(nparticle_types):
             plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), linewidth=1)
-        plt.xlim([0, 0.05])
-        plt.ylim([0, 200000])
+
         plt.xlabel('Distance [a.u]', fontsize="14")
         plt.ylabel('Acceleration [a.u]', fontsize="14")
+        plt.xlim([0, 0.05])
+        plt.ylim([0, 200000])
         plt.title('True', fontsize="22")
 
         tau = model_config['tau']
@@ -2873,10 +2871,11 @@ def data_plot(model_config):
             plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), linewidth=1, c='k')
 
 
-        plt.xlim([0, 0.05])
-        plt.ylim([0, 200000])
         plt.xlabel('Distance [a.u]', fontsize="14")
         plt.ylabel('Acceleration [a.u]', fontsize="14")
+        plt.xlim([0, 0.05])
+        plt.ylim([0, 200000])
+
         plt.title('Model', fontsize="22")
         plt.tight_layout()
         plt.show()
@@ -3656,7 +3655,6 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
         print_model_config(model_config)
-
 
         #data_generate(model_config)
         #data_train(model_config,gtest)
