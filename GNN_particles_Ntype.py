@@ -1367,16 +1367,16 @@ def data_plot_generated(model_config, particle_type=[0]):
                     g = np.repeat(p[T1[index_particles[n][0]].detach().cpu().numpy().astype(int)],len(index_particles[n]))*20
                     if n == particle_type:
                         if n == 0:
-                            plt.scatter(x[index_particles[n], 0].detach().cpu().numpy(), x[index_particles[n], 1].detach().cpu().numpy(), 1, it], s=g,
+                            plt.scatter(x[index_particles[n], 0].detach().cpu().numpy(), x[index_particles[n], 1].detach().cpu().numpy(), s=g,
                                         c='r')  # , facecolors='none', edgecolors='k')
                         else:
-                            plt.scatter(x[index_particles[n], 0].detach().cpu().numpy(), x[index_particles[n], 1].detach().cpu().numpy(), 1, it], s=g,
+                            plt.scatter(x[index_particles[n], 0].detach().cpu().numpy(), x[index_particles[n], 1].detach().cpu().numpy(), s=g,
                                         c='b')  # , facecolors='none', edgecolors='k')
             else:
 
                 for n in range(nparticle_types):
                     if n == particle_type:
-                        plt.scatter(x[index_particles[n], 0].detach().cpu().numpy(), x[index_particles[n], 1].detach().cpu().numpy(), 1, it], s=3)
+                        plt.scatter(x[index_particles[n], 0].detach().cpu().numpy(), x[index_particles[n], 1].detach().cpu().numpy(), s=3)
             ax = plt.gca()
             ax.axes.xaxis.set_ticklabels([])
             ax.axes.yaxis.set_ticklabels([])
@@ -3889,7 +3889,7 @@ if __name__ == '__main__':
 
         # data_generate(model_config)
         #data_train(model_config,gtest)
-        data_plot_generated(model_config,4)
+        data_plot_generated(model_config,3)
         # data_plot(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
