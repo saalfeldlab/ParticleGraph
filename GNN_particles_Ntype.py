@@ -2836,7 +2836,7 @@ def data_plot(model_config):
 
         ax = fig.add_subplot(1, 4, 2)
         for n in range(nparticle_types):
-            plt.errorbar(mass[n], np.mean(t[index_particles[n]]), yerr=np.std(t[index_particles[n]]), fmt="o")
+            plt.errorbar(p[n], np.mean(t[index_particles[n]]), yerr=np.std(t[index_particles[n]]), fmt="o")
         plt.xlabel('Mass [a.u]', fontsize="14")
         plt.ylabel('Embedding [a.u]', fontsize="14")
 
@@ -3175,7 +3175,7 @@ def load_model_config(id=48):
                                  'upgrade_type': 0,
                                  'p': np.linspace(0.2, 5, 4).tolist(),
                                  'nrun':2,
-                                 'clamp': 0.002,
+                                 'clamp': 0.005,
                                  'pred_limit': 1E9}
 
     if id == 52:
@@ -3207,7 +3207,7 @@ def load_model_config(id=48):
                                  'upgrade_type': 0,
                                  'p': np.linspace(0.2, 5, 5).tolist(),
                                  'nrun':2,
-                                 'clamp': 0.002,
+                                 'clamp': 0.005,
                                  'pred_limit': 1E9}
 
     if id == 53:
@@ -3239,7 +3239,7 @@ def load_model_config(id=48):
                                  'upgrade_type': 0,
                                  'p': np.linspace(0.2, 5, 8).tolist(),
                                  'nrun':2,
-                                 'clamp': 0.002,
+                                 'clamp': 0.005,
                                  'pred_limit': 1E9}
 
     if id == 54:
@@ -3271,7 +3271,7 @@ def load_model_config(id=48):
                              'upgrade_type': 0,
                              'p': np.linspace(0.2, 5, 10).tolist(),
                              'nrun': 2,
-                             'clamp': 0.002,
+                             'clamp': 0.005,
                              'pred_limit': 1E9}
 
     if id == 55:
@@ -3303,7 +3303,7 @@ def load_model_config(id=48):
                              'upgrade_type': 0,
                              'p': np.linspace(0.2, 5, 20).tolist(),
                              'nrun': 2,
-                             'clamp': 0.002,
+                             'clamp': 0.005,
                              'pred_limit': 1E9}
 
     if id == 56:
@@ -3335,7 +3335,7 @@ def load_model_config(id=48):
                              'upgrade_type': 0,
                              'p': np.linspace(0.2, 5, 100).tolist(),
                              'nrun': 2,
-                             'clamp': 0.002,
+                             'clamp': 0.005,
                              'pred_limit': 1E9}
 
     if id == 68:
@@ -3624,7 +3624,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtest_list = [51,71] #[68, 69, 84,90,91]
+    gtest_list = [68,71] #[68, 69, 84,90,91]
 
     for gtest in range(51,57):
 
