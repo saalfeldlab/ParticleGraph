@@ -2064,12 +2064,12 @@ def data_train(model_config, gtest):
             torch.save({'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict()},
                        os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs.pt'))
-            print("Epoch {}. Loss: {:.6f} geomloss {:.2f} sparsity_index{:.1f}  saving model  ".format(epoch,
+            print("Epoch {}. Loss: {:.6f} geomloss {:.2f} sparsity_index {:.3f}  saving model  ".format(epoch,
                                                                                  total_loss / N / nparticles / batch_size,
-                                                                                 S_geomD, sparsity_index.item()*sparsity_factor))
+                                                                                 S_geomD, sparsity_index.item()/sparsity_factor))
         else:
-            print("Epoch {}. Loss: {:.6f} geomloss {:.2f} sparsity_index {:.1f} ".format(epoch, total_loss / N / nparticles / batch_size,
-                                                                   S_geomD,sparsity_index.item()*sparsity_factor))
+            print("Epoch {}. Loss: {:.6f} geomloss {:.2f} sparsity_index {:.3f} ".format(epoch, total_loss / N / nparticles / batch_size,
+                                                                   S_geomD,sparsity_index.item()/sparsity_factor))
 
         list_loss.append(total_loss / N / nparticles / batch_size)
 
