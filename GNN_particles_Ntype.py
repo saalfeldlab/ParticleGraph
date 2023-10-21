@@ -4389,7 +4389,7 @@ if __name__ == '__main__':
 
     gtest_list = [68,71] #[68, 69, 84,90,91]
 
-    for gtest in range(92,102):
+    for gtest in range(94,102):
 
         model_config = load_model_config(id=gtest)
 
