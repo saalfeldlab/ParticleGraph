@@ -1926,7 +1926,7 @@ def data_train(model_config, gtest):
                         pred = model(batch, data_id=run-1, step=1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
 
                 if epoch == 0:
-                    sparsity_index = torch.sum((histogram(model.a, 50, -4, 4) > nparticles / 100))*1E-2
+                    sparsity_index = torch.sum((histogram(model.a, 50, -4, 4) > nparticles / 100))*1E-1
                     loss = (pred - y_batch).norm(2)
                     loss_regul = loss + sparsity_index
                     loss_regul.backward()
