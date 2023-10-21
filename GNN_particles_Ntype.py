@@ -1819,7 +1819,7 @@ def data_train(model_config, gtest):
     print('')
     net = f"./log/try_{ntry}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     print(f'network: {net}')
-    Nepochs = 3 ######################## 40
+    Nepochs = 40 ######################## 40
     print(f'N epochs: {Nepochs}')
     print('')
 
@@ -4387,17 +4387,13 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtest_list = [0.01, 0.05, 0.1, 0.5, 1, 5] #[68, 69, 84,90,91]
+    for gtest in range(92,102):
 
-    for gtest in range(95,102):
-
-        sparsity_factor = gtest_list[gtest-95]
+        sparsity_factor = 0.5
 
         print(f'sparsity_factor: {sparsity_factor}')
 
         model_config = load_model_config(id=gtest)
-
-        model_config['p'] = [[1.0413, 1.5615, 1.6233, 1.6012],[1.8308, 1.9055, 1.7667, 1.0855],[1.785, 1.8579, 1.7226, 1.0584]]
 
         sigma = model_config['sigma']
         aggr_type = model_config['aggr_type']
@@ -4423,7 +4419,7 @@ if __name__ == '__main__':
         print_model_config(model_config)
 
         data_generate(model_config)
-        data_train(model_config,gtest)
+        # data_train(model_config,gtest)
         # data_plot_generated(model_config,3)
         # data_plot(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
