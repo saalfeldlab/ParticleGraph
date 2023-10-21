@@ -4383,7 +4383,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    for gtest in range(96,102):
+    for gtest in range(93,102):
 
         model_config = load_model_config(id=gtest)
 
