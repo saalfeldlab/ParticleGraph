@@ -1926,7 +1926,7 @@ def data_train(model_config, gtest):
                         pred = model(batch, data_id=run-1, step=1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
 
                 if epoch == 0:
-                    sparsity_index = torch.sum((histogram(model.a, 50, -4, 4) > nparticles / 100))*1E-1
+                    sparsity_index = torch.sum((histogram(model.a, 50, -4, 4) > nparticles / 100)) * sparsity_factor
                     loss = (pred - y_batch).norm(2)
                     loss_regul = loss + sparsity_index
                     loss_regul.backward()
@@ -2057,7 +2057,7 @@ def data_train(model_config, gtest):
         S_geomD = torch.sum(D_nm[epoch]).item()
         # print(f'total_loss / S_geomD: {total_loss / S_geomD}  best_loss {best_loss}')
 
-        sparsity_index = torch.sum((histogram(model.a, 50, -4, 4) > nparticles / 100)) * 1E-2
+        sparsity_index = torch.sum((histogram(model.a, 50, -4, 4) > nparticles / 100)) * sparsity_factor
 
         if (total_loss / nparticles / batch_size / N < best_loss):
             best_loss = total_loss / N / nparticles / batch_size
@@ -2066,10 +2066,10 @@ def data_train(model_config, gtest):
                        os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs.pt'))
             print("Epoch {}. Loss: {:.6f} geomloss {:.2f} sparsity_index{:.1f}  saving model  ".format(epoch,
                                                                                  total_loss / N / nparticles / batch_size,
-                                                                                 S_geomD, sparsity_index.item()*1E2))
+                                                                                 S_geomD, sparsity_index.item()*sparsity_factor))
         else:
             print("Epoch {}. Loss: {:.6f} geomloss {:.2f} sparsity_index {:.1f} ".format(epoch, total_loss / N / nparticles / batch_size,
-                                                                   S_geomD,sparsity_index.item()*1E2))
+                                                                   S_geomD,sparsity_index.item()*sparsity_factor))
 
         list_loss.append(total_loss / N / nparticles / batch_size)
 
@@ -4387,11 +4387,17 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtest_list = [68,71] #[68, 69, 84,90,91]
+    gtest_list = [0.01, 0.05, 0.1, 0.5, 1, 5] #[68, 69, 84,90,91]
 
-    for gtest in range(94,102):
+    for gtest in range(95,102):
+
+        sparsity_factor = gtest_list[gtest-95]
+
+        print(f'sparsity_factor: {sparsity_factor}')
 
         model_config = load_model_config(id=gtest)
+
+        model_config['p'] = [[1.0413, 1.5615, 1.6233, 1.6012],[1.8308, 1.9055, 1.7667, 1.0855],[1.785, 1.8579, 1.7226, 1.0584]]
 
         sigma = model_config['sigma']
         aggr_type = model_config['aggr_type']
