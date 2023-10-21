@@ -3247,12 +3247,8 @@ def data_plot(model_config):
 
     print(f'KMeans: {kl_peaks} peaks')
 
-
     sparsity_index = torch.sum((histogram(model.a,50,-4,4)>nparticles/100))
     print(f'sparsity_index: {sparsity_index.detach().cpu().numpy()}')
-
-
-
 
     if model_config['model'] == 'GravityParticles':
 
@@ -3543,7 +3539,7 @@ def data_plot(model_config):
             acc = -acc[:, 0]
             plt.plot(rr.detach().cpu().numpy(), acc.detach().cpu().numpy() * ynorm / model_config['tau'])
             tmp= acc * torch.tensor(ynorm, device=device) / torch.tensor(model_config['tau'], device=device)
-            rmse= torch.sqrt(criteria(psi_output[n][0:500],tmp[0:500,None]))
+            rmse= torch.sqrt(criteria(psi_output[n][0:500],tmp[0:500]))
             print (f'function {n} rmse: {np.round(rmse.detach().cpu().numpy(),3)}')
 
         plt.plot(rr.detach().cpu().numpy(), 0 * acc.detach().cpu().numpy() * ynorm / model_config['tau'], c='k')
@@ -4381,17 +4377,13 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    for gtest in range(92,102):
-
-        sparsity_factor = 0.5
-
-        print(f'sparsity_factor: {sparsity_factor}')
+    for gtest in range(96,102):
 
         model_config = load_model_config(id=gtest)
 
@@ -4417,6 +4409,8 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
         print_model_config(model_config)
+        sparsity_factor = 0.5
+        print(f'sparsity_factor: {sparsity_factor}')
 
         data_generate(model_config)
         data_train(model_config,gtest)
