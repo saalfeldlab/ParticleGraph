@@ -1792,9 +1792,12 @@ def data_train(model_config, gtest):
         model = MixResNetGNN(model_config, device)
         print(f'Training MixResnet')
 
-    # net = f"./log/try_{ntry}/models/best_model_with_9_graphs.pt"
-    # state_dict = torch.load(net)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    net = f"./log/try_51/models/best_model_with_1_graphs.pt"
+    state_dict = torch.load(net,map_location=device)
+    model.a = nn.Parameter(torch.tensor(np.ones((model.ndataset, 680, model.embedding)), device=model.device, requires_grad=True,dtype=torch.float32))
+
+    model.load_state_dict(state_dict['model_state_dict'])
+    model.a = nn.Parameter(torch.tensor(np.ones((model.ndataset, 800, model.embedding)), device=model.device, requires_grad=True,dtype=torch.float32))
 
     lra = 1E-2
     lr = 1E-3
@@ -1807,8 +1810,8 @@ def data_train(model_config, gtest):
             continue
         if it == 0:
             optimizer = torch.optim.Adam([model.a], lr=lra)
-        else:
-            optimizer.add_param_group({'params': parameter, 'lr': lr})
+        # else:
+        #     optimizer.add_param_group({'params': parameter, 'lr': lr})
         it += 1
         param = parameter.numel()
         table.add_row([name, param])
@@ -3777,6 +3780,38 @@ def load_model_config(id=48):
                              'clamp': 0.002,
                              'pred_limit': 1E9}
 
+    if id == 57:
+        model_config_test = {'ntry': id,
+                                 'input_size': 8,
+                                 'output_size': 2,
+                                 'hidden_size': 64,
+                                 'n_mp_layers': 5,
+                                 'noise_level': 0,
+                                 'noise_type': 0,
+                                 'radius': 0.15,
+                                 'radius_min': 0,
+                                 'dataset': f'231001_53',
+                                 'nparticles': 800,
+                                 'nparticle_types': 8,
+                                 'nframes': 1000,
+                                 'sigma': .005,
+                                 'tau': 5E-9,
+                                 'v_init': 1E-4,
+                                 'aggr_type': 'add',
+                                 'particle_embedding': True,
+                                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                                 'data_augmentation': True,
+                                 'batch_size': 8,
+                                 'embedding_type': 'none',
+                                 'embedding': 1,
+                                 'model': 'GravityParticles',
+                                 'prediction': 'acceleration',
+                                 'upgrade_type': 0,
+                                 'p': np.linspace(0.2, 5, 8).tolist(),
+                                 'nrun':2,
+                                 'clamp': 0.002,
+                                 'pred_limit': 1E9}
+
     if id == 68:
         model_config_test = {'ntry': id,
                              'input_size': 8,
@@ -4383,7 +4418,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    for gtest in range(97,102):
+    for gtest in range(57,58):
 
         model_config = load_model_config(id=gtest)
 
@@ -4412,7 +4447,7 @@ if __name__ == '__main__':
         sparsity_factor = 0.5
         print(f'sparsity_factor: {sparsity_factor}')
 
-        data_generate(model_config)
+        # data_generate(model_config)
         data_train(model_config,gtest)
         # data_plot_generated(model_config,3)
         # data_plot(model_config)
