@@ -4447,8 +4447,7 @@ if __name__ == '__main__':
         sparsity_factor = 0.5
         print(f'sparsity_factor: {sparsity_factor}')
 
-        if gtest==54:
-            data_generate(model_config)
+        data_generate(model_config)
         data_train(model_config,gtest)
         # data_plot_generated(model_config,3)
         # data_plot(model_config)
