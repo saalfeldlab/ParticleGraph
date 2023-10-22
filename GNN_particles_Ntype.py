@@ -1819,7 +1819,7 @@ def data_train(model_config, gtest):
     print('')
     net = f"./log/try_{ntry}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     print(f'network: {net}')
-    Nepochs = 40 ######################## 40
+    Nepochs = 25 ######################## 40
     print(f'N epochs: {Nepochs}')
     print('')
 
@@ -4383,7 +4383,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    for gtest in range(93,102):
+    for gtest in range(94,102):
 
         model_config = load_model_config(id=gtest)
 
