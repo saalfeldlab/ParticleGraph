@@ -1792,12 +1792,11 @@ def data_train(model_config, gtest):
         model = MixResNetGNN(model_config, device)
         print(f'Training MixResnet')
 
-    net = f"./log/try_51/models/best_model_with_1_graphs.pt"
-    state_dict = torch.load(net,map_location=device)
-    model.a = nn.Parameter(torch.tensor(np.ones((model.ndataset, 680, model.embedding)), device=model.device, requires_grad=True,dtype=torch.float32))
-
-    model.load_state_dict(state_dict['model_state_dict'])
-    model.a = nn.Parameter(torch.tensor(np.ones((model.ndataset, 800, model.embedding)), device=model.device, requires_grad=True,dtype=torch.float32))
+    # net = f"./log/try_51/models/best_model_with_1_graphs.pt"
+    # state_dict = torch.load(net,map_location=device)
+    # model.a = nn.Parameter(torch.tensor(np.ones((model.ndataset, 680, model.embedding)), device=model.device, requires_grad=True,dtype=torch.float32))
+    # model.load_state_dict(state_dict['model_state_dict'])
+    # model.a = nn.Parameter(torch.tensor(np.ones((model.ndataset, 800, model.embedding)), device=model.device, requires_grad=True,dtype=torch.float32))
 
     lra = 1E-2
     lr = 1E-3
@@ -1810,8 +1809,8 @@ def data_train(model_config, gtest):
             continue
         if it == 0:
             optimizer = torch.optim.Adam([model.a], lr=lra)
-        # else:
-        #     optimizer.add_param_group({'params': parameter, 'lr': lr})
+        else:
+            optimizer.add_param_group({'params': parameter, 'lr': lr})
         it += 1
         param = parameter.numel()
         table.add_row([name, param])
@@ -1822,7 +1821,7 @@ def data_train(model_config, gtest):
     print('')
     net = f"./log/try_{ntry}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     print(f'network: {net}')
-    Nepochs = 25 ######################## 40
+    Nepochs = 40 ######################## 40
     print(f'N epochs: {Nepochs}')
     print('')
 
@@ -3555,7 +3554,6 @@ def data_plot(model_config):
         plt.title('Model', fontsize="22")
         plt.tight_layout()
         plt.show()
-
 def load_model_config(id=48):
     model_config_test = []
 
@@ -3690,7 +3688,7 @@ def load_model_config(id=48):
         model_config_test = {'ntry': id,
                              'input_size': 8,
                              'output_size': 2,
-                             'hidden_size': 64,
+                             'hidden_size': 128,
                              'n_mp_layers': 5,
                              'noise_level': 0,
                              'noise_type': 0,
@@ -3713,7 +3711,7 @@ def load_model_config(id=48):
                              'model': 'GravityParticles',
                              'prediction': 'acceleration',
                              'upgrade_type': 0,
-                             'p': np.linspace(0.2, 5, 10).tolist(),
+                             'p': np.linspace(0.2, 5, 8).tolist(),
                              'nrun': 2,
                              'clamp': 0.002,
                              'pred_limit': 1E9}
@@ -3779,7 +3777,7 @@ def load_model_config(id=48):
                              'nrun': 2,
                              'clamp': 0.002,
                              'pred_limit': 1E9}
-
+    # gravity MLPs from 51 (4 masses 680 particles) learn embedding from 53 (8 masses 800 particles)
     if id == 57:
         model_config_test = {'ntry': id,
                                  'input_size': 8,
@@ -4418,7 +4416,9 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    for gtest in range(57,58):
+    # gtest_list=[54, 57]
+
+    for gtest in range(54,55):
 
         model_config = load_model_config(id=gtest)
 
@@ -4447,7 +4447,8 @@ if __name__ == '__main__':
         sparsity_factor = 0.5
         print(f'sparsity_factor: {sparsity_factor}')
 
-        # data_generate(model_config)
+        if gtest==54:
+            data_generate(model_config)
         data_train(model_config,gtest)
         # data_plot_generated(model_config,3)
         # data_plot(model_config)
