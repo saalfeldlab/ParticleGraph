@@ -3564,14 +3564,14 @@ def load_model_config(id=48):
         model_config_test = {'ntry': id,
                              'input_size': 8,
                              'output_size': 2,
-                             'hidden_size': 64,
+                             'hidden_size': 128,
                              'n_mp_layers': 5,
                              'noise_level': 0,
                              'noise_type': 0,
                              'radius': 0.15,
                              'radius_min': 0,
                              'dataset': f'231001_{id}',
-                             'nparticles': 678,
+                             'nparticles': 960,
                              'nparticle_types': 3,
                              'nframes': 1000,
                              'sigma': .005,
@@ -3695,7 +3695,7 @@ def load_model_config(id=48):
                              'radius': 0.15,
                              'radius_min': 0,
                              'dataset': f'231001_{id}',
-                             'nparticles': 800,
+                             'nparticles': 960,
                              'nparticle_types': 8,
                              'nframes': 1000,
                              'sigma': .005,
@@ -4416,9 +4416,9 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    # gtest_list=[54, 57]
+    gtest_list=[50,54]
 
-    for gtest in range(54,55):
+    for gtest in gtest_list:
 
         model_config = load_model_config(id=gtest)
 
