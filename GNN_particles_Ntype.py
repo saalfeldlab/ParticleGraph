@@ -4153,7 +4153,7 @@ def load_model_config(id=48):
                              'nparticle_types': 3,
                              'nframes': 200,
                              'sigma': .005,
-                             'tau': 0.1,
+                             'tau': 0.5
                              'v_init': 0,
                              'aggr_type': 'mean',
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
@@ -4182,7 +4182,7 @@ def load_model_config(id=48):
                              'nparticle_types': 3,
                              'nframes': 200,
                              'sigma': .005,
-                             'tau': 0.1,
+                             'tau': 0.5
                              'v_init': 0,
                              'aggr_type': 'mean',
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
@@ -4211,7 +4211,7 @@ def load_model_config(id=48):
                              'nparticle_types': 3,
                              'nframes': 200,
                              'sigma': .005,
-                             'tau': 0.1,
+                             'tau': 0.5
                              'v_init': 0,
                              'aggr_type': 'mean',
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
@@ -4240,7 +4240,7 @@ def load_model_config(id=48):
                              'nparticle_types': 3,
                              'nframes': 200,
                              'sigma': .005,
-                             'tau': 0.1,
+                             'tau': 0.5
                              'v_init': 0,
                              'aggr_type': 'mean',
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
@@ -4269,7 +4269,7 @@ def load_model_config(id=48):
                              'nparticle_types': 3,
                              'nframes': 200,
                              'sigma': .005,
-                             'tau': 0.1,
+                             'tau': 0.5
                              'v_init': 0,
                              'aggr_type': 'mean',
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
@@ -4298,7 +4298,7 @@ def load_model_config(id=48):
                              'nparticle_types': 3,
                              'nframes': 200,
                              'sigma': .005,
-                             'tau': 0.1,
+                             'tau': 0.5
                              'v_init': 0,
                              'aggr_type': 'mean',
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
@@ -4383,7 +4383,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    for gtest in range(96,102):
+    for gtest in range(97,102):
 
         model_config = load_model_config(id=gtest)
 
