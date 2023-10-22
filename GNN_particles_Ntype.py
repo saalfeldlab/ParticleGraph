@@ -4129,7 +4129,7 @@ def load_model_config(id=48):
                              'aggr_type': 'mean',
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                              'data_augmentation': True,
-                             'batch_size': 8,
+                             'batch_size': 4,
                              'particle_embedding': True,
                              'embedding_type': 'none',
                              'embedding': 1,
@@ -4158,7 +4158,7 @@ def load_model_config(id=48):
                              'aggr_type': 'mean',
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                              'data_augmentation': True,
-                             'batch_size': 8,
+                             'batch_size': 4,
                              'particle_embedding': True,
                              'embedding_type': 'none',
                              'embedding': 1,
@@ -4187,7 +4187,7 @@ def load_model_config(id=48):
                              'aggr_type': 'mean',
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                              'data_augmentation': True,
-                             'batch_size': 8,
+                             'batch_size': 4,
                              'particle_embedding': True,
                              'embedding_type': 'none',
                              'embedding': 1,
@@ -4216,7 +4216,7 @@ def load_model_config(id=48):
                              'aggr_type': 'mean',
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                              'data_augmentation': True,
-                             'batch_size': 8,
+                             'batch_size': 4,
                              'particle_embedding': True,
                              'embedding_type': 'none',
                              'embedding': 1,
@@ -4245,7 +4245,7 @@ def load_model_config(id=48):
                              'aggr_type': 'mean',
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                              'data_augmentation': True,
-                             'batch_size': 8,
+                             'batch_size': 4,
                              'particle_embedding': True,
                              'embedding_type': 'none',
                              'embedding': 1,
@@ -4274,7 +4274,7 @@ def load_model_config(id=48):
                              'aggr_type': 'mean',
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                              'data_augmentation': True,
-                             'batch_size': 8,
+                             'batch_size': 4,
                              'particle_embedding': True,
                              'embedding_type': 'none',
                              'embedding': 1,
@@ -4303,7 +4303,7 @@ def load_model_config(id=48):
                              'aggr_type': 'mean',
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                              'data_augmentation': True,
-                             'batch_size': 8,
+                             'batch_size': 4,
                              'particle_embedding': True,
                              'embedding_type': 'none',
                              'embedding': 1,
@@ -4383,7 +4383,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    for gtest in range(94,102):
+    for gtest in range(96,102):
 
         model_config = load_model_config(id=gtest)
 
