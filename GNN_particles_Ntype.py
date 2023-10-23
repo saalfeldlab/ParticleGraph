@@ -1202,7 +1202,6 @@ class MixResNetGNN(torch.nn.Module):
 
         return pred
 
-
 def data_plot_generated(model_config, particle_type=[0]):
 
     print('')
@@ -1635,11 +1634,6 @@ def data_generate(model_config):
 
             if (run == 0) & (it % 5 == 0):
 
-                # distance2 = torch.sum((x[:, None, 0:2] - x[None, :, 0:2]) ** 2, axis=2)
-                # adj_t2 = ((distance < radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
-                # edge_index2 = adj_t2.nonzero().t().contiguous()
-                # dataset2 = data.Data(x=x, edge_index=edge_index2)
-
                 fig = plt.figure(figsize=(14, 7 * 0.95))
                 # plt.ion()
                 ax = fig.add_subplot(1, 2, 1)
@@ -1672,12 +1666,12 @@ def data_generate(model_config):
                     N = 0
                     for n in range(nparticle_types):
                         for m in range(nparticle_types):
-                            plt.text(-0.25, 1.25 - N * 0.05, f'p{n}{m}: {np.round(p[n, m].detach().cpu().numpy(), 4)}',
+                            plt.text(-0.75, 1.25 - N * 0.05, f'p{n}{m}: {np.round(p[n, m].detach().cpu().numpy(), 4)}',
                                      color='k')
                             N += 1
                 else:
                     for n in range(nparticle_types):
-                        plt.text(-0.25, 1.25 - n * 0.05, f'p{n}: {np.round(p[n].detach().cpu().numpy(), 4)}',
+                        plt.text(-0.75, 1.25 - n * 0.05, f'p{n}: {np.round(p[n].detach().cpu().numpy(), 4)}',
                                  color='k')
 
                 ax = fig.add_subplot(1, 2, 2)
@@ -1792,11 +1786,10 @@ def data_train(model_config, gtest):
         model = MixResNetGNN(model_config, device)
         print(f'Training MixResnet')
 
-    # net = f"./log/try_51/models/best_model_with_1_graphs.pt"
-    # state_dict = torch.load(net,map_location=device)
-    # model.a = nn.Parameter(torch.tensor(np.ones((model.ndataset, 680, model.embedding)), device=model.device, requires_grad=True,dtype=torch.float32))
-    # model.load_state_dict(state_dict['model_state_dict'])
-    # model.a = nn.Parameter(torch.tensor(np.ones((model.ndataset, 800, model.embedding)), device=model.device, requires_grad=True,dtype=torch.float32))
+    net = f"./log/try_50/models/best_model_with_1_graphs.pt"
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
+
 
     lra = 1E-2
     lr = 1E-3
@@ -1809,8 +1802,8 @@ def data_train(model_config, gtest):
             continue
         if it == 0:
             optimizer = torch.optim.Adam([model.a], lr=lra)
-        else:
-            optimizer.add_param_group({'params': parameter, 'lr': lr})
+        # else:
+        #     optimizer.add_param_group({'params': parameter, 'lr': lr})
         it += 1
         param = parameter.numel()
         table.add_row([name, param])
@@ -1829,10 +1822,6 @@ def data_train(model_config, gtest):
     # optimizer = torch.optim.Adam(model.parameters(), lr=lr) #, weight_decay=weight_decay)
     model.train()
     best_loss = np.inf
-
-    # optimizer = torch.optim.Adam([model.a], lr=0.01)
-    # optimizer.add_param_group({'params': model.lin_edge.layers[0].weight, 'lr': lr})
-    # optimizer.add_param_group({'params': model.lin_edge.layers[0].bias, 'lr': lr})
 
     if data_augmentation:
         data_augmentation_loop = 20
@@ -2591,7 +2580,7 @@ def data_test_tracking(model_config, bVisu=False, bPrint=True, index_particles=0
 
     track=np.arange(nparticles).astype(int)
 
-    for it in tqdm(range(nframes - 1)):
+    for it in tqdm(range(nframes - 2)):
 
         x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_{min(it , nframes - 2)}.pt',map_location=device)
         x = x.to(device)
@@ -2652,8 +2641,8 @@ def data_test_tracking(model_config, bVisu=False, bPrint=True, index_particles=0
                 tmp[pos]=0
             track=track[tmp]
 
-            plt.scatter(x[index_particles[4], 0].detach().cpu(), x[index_particles[4], 1].detach().cpu(), s=5,
-                        c=track[index_particles[4]],cmap='prism')
+            plt.scatter(x[:, 0].detach().cpu(), x[:, 1].detach().cpu(), s=5,
+                        c=track[:],cmap='prism')
             plt.xlim([-0.3, 1.3])
             plt.ylim([-0.3, 1.3])
             ax.axes.get_xaxis().set_visible(False)
@@ -2662,7 +2651,7 @@ def data_test_tracking(model_config, bVisu=False, bPrint=True, index_particles=0
             plt.text(-0.25, 1.33, f'Graph    {x.shape[0]} nodes ', fontsize=10)
 
             ax = fig.add_subplot(1, 2, 2)
-            plt.scatter(x[index_particles[4], 0].detach().cpu(), x[index_particles[4], 1].detach().cpu(), s=5,c='k')
+            plt.scatter(x[:, 0].detach().cpu(), x[:, 1].detach().cpu(), s=5,c='k')
             plt.xlim([-0.3, 1.3])
             plt.ylim([-0.3, 1.3])
             ax.axes.get_xaxis().set_visible(False)
@@ -2681,7 +2670,6 @@ def data_test_tracking(model_config, bVisu=False, bPrint=True, index_particles=0
     # print(f'Final Sxy: {Sxy.item()}')
 
     return x.detach().cpu().numpy(), rmserr_list
-
 def data_test_generate(model_config):
     print('')
     print('Generating test data ...')
@@ -3274,8 +3262,8 @@ def data_plot(model_config):
             plt.hist(t[index_particles[n]].squeeze(),25)
             tmean[n] = np.round(np.mean(t[index_particles[n]]) * 1000) / 1000
             tstd[n] = np.round(np.std(t[index_particles[n]]) * 1000) / 1000
-            plt.text(tmean[n], 80, f'{tmean[n]}')
-            plt.text(tmean[n], 75, f'+/- {tstd[n]}')
+            # plt.text(tmean[n], 80, f'{tmean[n]}')
+            # plt.text(tmean[n], 75, f'+/- {tstd[n]}')
         plt.xlabel('Embedding [a.u]', fontsize="14")
         plt.ylabel('Counts [a.u]', fontsize="14")
 
@@ -3559,7 +3547,7 @@ def load_model_config(id=48):
 
     # gravity
 
-
+    # 3 types N=960
     if id == 50:
         model_config_test = {'ntry': id,
                              'input_size': 8,
@@ -3576,7 +3564,7 @@ def load_model_config(id=48):
                              'nframes': 1000,
                              'sigma': .005,
                              'tau': 5E-9,
-                             'v_init': 1E-4,
+                             'v_init': 1E-3,
                              'aggr_type': 'add',
                              'particle_embedding': True,
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
@@ -3684,6 +3672,7 @@ def load_model_config(id=48):
                                  'nrun':2,
                                  'clamp': 0.002,
                                  'pred_limit': 1E9}
+    # 8 types N=960
     if id == 54:
         model_config_test = {'ntry': id,
                              'input_size': 8,
@@ -3715,19 +3704,20 @@ def load_model_config(id=48):
                              'nrun': 2,
                              'clamp': 0.002,
                              'pred_limit': 1E9}
+    # 12 types N=960
     if id == 55:
         model_config_test = {'ntry': id,
                              'input_size': 8,
                              'output_size': 2,
-                             'hidden_size': 64,
+                             'hidden_size': 128,
                              'n_mp_layers': 5,
                              'noise_level': 0,
                              'noise_type': 0,
                              'radius': 0.15,
                              'radius_min': 0,
                              'dataset': f'231001_{id}',
-                             'nparticles': 800,
-                             'nparticle_types': 8,
+                             'nparticles': 960,
+                             'nparticle_types': 12,
                              'nframes': 1000,
                              'sigma': .005,
                              'tau': 5E-9,
@@ -3746,19 +3736,20 @@ def load_model_config(id=48):
                              'nrun': 2,
                              'clamp': 0.002,
                              'pred_limit': 1E9}
+    # 16 types N=960
     if id == 56:
         model_config_test = {'ntry': id,
                              'input_size': 8,
                              'output_size': 2,
-                             'hidden_size': 64,
+                             'hidden_size': 128,
                              'n_mp_layers': 5,
                              'noise_level': 0,
                              'noise_type': 0,
                              'radius': 0.15,
                              'radius_min': 0,
                              'dataset': f'231001_{id}',
-                             'nparticles': 800,
-                             'nparticle_types': 100,
+                             'nparticles': 960,
+                             'nparticle_types': 16,
                              'nframes': 1000,
                              'sigma': .005,
                              'tau': 5E-9,
@@ -3777,19 +3768,83 @@ def load_model_config(id=48):
                              'nrun': 2,
                              'clamp': 0.002,
                              'pred_limit': 1E9}
-    # gravity MLPs from 51 (4 masses 680 particles) learn embedding from 53 (8 masses 800 particles)
+    # gravity MLPs from 50 (3 masses 960 particles) learn embedding from 54 (8 masses 960 particles)
     if id == 57:
         model_config_test = {'ntry': id,
                                  'input_size': 8,
                                  'output_size': 2,
-                                 'hidden_size': 64,
+                                 'hidden_size': 128,
                                  'n_mp_layers': 5,
                                  'noise_level': 0,
                                  'noise_type': 0,
                                  'radius': 0.15,
                                  'radius_min': 0,
-                                 'dataset': f'231001_53',
-                                 'nparticles': 800,
+                                 'dataset': f'231001_54',
+                                 'nparticles': 960,
+                                 'nparticle_types': 8,
+                                 'nframes': 1000,
+                                 'sigma': .005,
+                                 'tau': 5E-9,
+                                 'v_init': 1E-4,
+                                 'aggr_type': 'add',
+                                 'particle_embedding': True,
+                                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                                 'data_augmentation': True,
+                                 'batch_size': 8,
+                                 'embedding_type': 'none',
+                                 'embedding': 1,
+                                 'model': 'GravityParticles',
+                                 'prediction': 'acceleration',
+                                 'upgrade_type': 0,
+                                 'p': np.linspace(0.2, 5, 8).tolist(),
+                                 'nrun':2,
+                                 'clamp': 0.002,
+                                 'pred_limit': 1E9}
+    # gravity MLPs from 50 (3 masses 960 particles) learn embedding from 55 (20 masses 960 particles)
+    if id == 58:
+        model_config_test = {'ntry': id,
+                                 'input_size': 8,
+                                 'output_size': 2,
+                                 'hidden_size': 128,
+                                 'n_mp_layers': 5,
+                                 'noise_level': 0,
+                                 'noise_type': 0,
+                                 'radius': 0.15,
+                                 'radius_min': 0,
+                                 'dataset': f'231001_55',
+                                 'nparticles': 960,
+                                 'nparticle_types': 8,
+                                 'nframes': 1000,
+                                 'sigma': .005,
+                                 'tau': 5E-9,
+                                 'v_init': 1E-4,
+                                 'aggr_type': 'add',
+                                 'particle_embedding': True,
+                                 'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                                 'data_augmentation': True,
+                                 'batch_size': 8,
+                                 'embedding_type': 'none',
+                                 'embedding': 1,
+                                 'model': 'GravityParticles',
+                                 'prediction': 'acceleration',
+                                 'upgrade_type': 0,
+                                 'p': np.linspace(0.2, 5, 8).tolist(),
+                                 'nrun':2,
+                                 'clamp': 0.002,
+                                 'pred_limit': 1E9}
+    # gravity MLPs from 50 (3 masses 960 particles) learn embedding from 56 (30 masses 960 particles)
+    if id == 59:
+        model_config_test = {'ntry': id,
+                                 'input_size': 8,
+                                 'output_size': 2,
+                                 'hidden_size': 128,
+                                 'n_mp_layers': 5,
+                                 'noise_level': 0,
+                                 'noise_type': 0,
+                                 'radius': 0.15,
+                                 'radius_min': 0,
+                                 'dataset': f'231001_55',
+                                 'nparticles': 960,
                                  'nparticle_types': 8,
                                  'nframes': 1000,
                                  'sigma': .005,
@@ -4382,7 +4437,6 @@ def load_model_config(id=48):
 
 
     return model_config_test
-
 def print_model_config(model_config):
     for key, value in model_config.items():
         print(key, ":", value)
@@ -4416,9 +4470,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtest_list=[50,54]
-
-    for gtest in gtest_list:
+    for gtest in range(57,60): #(57,60):
 
         model_config = load_model_config(id=gtest)
 
@@ -4447,11 +4499,11 @@ if __name__ == '__main__':
         sparsity_factor = 0.5
         print(f'sparsity_factor: {sparsity_factor}')
 
-        data_generate(model_config)
+        #data_generate(model_config)
         data_train(model_config,gtest)
-        # data_plot_generated(model_config,3)
         # data_plot(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
+        # data_plot_generated(model_config,3)
         # x, rmserr_list = data_test_tracking(model_config, bVisu=True, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
