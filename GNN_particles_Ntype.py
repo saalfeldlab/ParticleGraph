@@ -1604,7 +1604,7 @@ def data_generate(model_config):
 
         time.sleep(0.5)
 
-        for it in tqdm(range(-int(nframes*0.2),nframes)):
+        for it in tqdm(range(-int(nframes*0.3),nframes)):
 
             X1t[:, :, it] = X1.clone().detach()  # for later display
 
@@ -1630,7 +1630,7 @@ def data_generate(model_config):
                 torch.save(y, f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{it}.pt')
 
             if model_config['prediction']=='acceleration':
-                V1 += y
+                V1 = (V1 + y)
             else:
                 V1 = y
 
@@ -1918,8 +1918,22 @@ def data_train(model_config, gtest):
                     else:
                         pred = model(batch, data_id=run-1, step=1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
 
-                if epoch <5 :
-                    sparsity_index = torch.sum((histogram(model.a, 100, -4, 4) > nparticles / 100)) * sparsity_factor
+                if False: # ((N-1)%100==0) & (epoch==0):
+                    embedding = model.a.detach().cpu().numpy()
+                    embedding = np.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
+                    embedding_particle = []
+                    for n in range(nparticle_types):
+                        embedding_particle.append(embedding[index_particles[n], :])
+                    fig = plt.figure(figsize=(8, 8))
+                    plt.ion()
+                    for n in range(nparticle_types):
+                        plt.hist(embedding_particle[n][:, 0], 100, range=[-4,4], alpha=0.5)
+                    plt.xlim([-4, 4])
+                    plt.savefig(f"./tmp/Fig_{ntry}_{N-1}.tif")
+                    plt.close()
+
+                if (epoch >0) & (epoch<5) :
+                    sparsity_index = torch.sum((histogram(model.a, 100, -4, 4) < nparticles / 100)) * sparsity_factor
                     loss = (pred - y_batch).norm(2)
                     loss_regul = loss + sparsity_index
                     loss_regul.backward()
@@ -2077,7 +2091,7 @@ def data_train(model_config, gtest):
                 plt.ylim([-5.1, 5.1])
             else:
                 for n in range(nparticle_types):
-                    plt.hist(embedding_particle[n][:, 0], 100, alpha=0.5)
+                    plt.hist(embedding_particle[n][:, 0], 100, range=[-4,4], alpha=0.5)
                 plt.xlim([-5.1, 5.1])
 
         ax = fig.add_subplot(2, 2, 2)
@@ -3268,7 +3282,7 @@ def data_plot(model_config):
         plt.xlabel('Mass [a.u]', fontsize="14")
         plt.ylabel('Embedding [a.u]', fontsize="14")
         plt.xlim([0,6])
-        plt.ylim([-2,2])
+        plt.ylim([-0.5,1.5])
 
         ax = fig.add_subplot(1, 5, 3)
         for n in range(nparticle_types):
@@ -3306,7 +3320,7 @@ def data_plot(model_config):
 
         distance_list=[0.005,0.01,0.02,0.03,0.04,0.05]
         for d in distance_list:
-            embedding = torch.tensor(np.linspace(-2, 2, 100), device=device)
+            embedding = torch.tensor(np.linspace(-0.5, 1.5, 100), device=device)
             rr = torch.tensor(d, device=device) * torch.ones((100), device=device)
             in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
                                      rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
@@ -3317,8 +3331,6 @@ def data_plot(model_config):
                      linewidth=1)
         plt.xlabel('Embedding [a.u]', fontsize="14")
         plt.ylabel('Acceleration (embedding, r) * r^2 [a.u]', fontsize="14")
-
-
 
         plt.tight_layout()
         plt.show()
@@ -3574,7 +3586,7 @@ def load_model_config(id=48):
                                  'nparticle_types': 4,
                                  'nframes': 1000,
                                  'sigma': .005,
-                                 'tau': 1E-9,
+                                 'tau': 1E-10,
                                  'v_init': 1E-3,
                                  'aggr_type': 'add',
                                  'particle_embedding': True,
@@ -4427,7 +4439,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    for gtest in range(50,52): #(57,60):
+    for gtest in range(50,51): #(57,60):
 
         model_config = load_model_config(id=gtest)
 
@@ -4456,9 +4468,9 @@ if __name__ == '__main__':
         sparsity_factor = 0.5
         print(f'sparsity_factor: {sparsity_factor}')
 
-        data_generate(model_config)
-        data_train(model_config,gtest)
-        # data_plot(model_config)
+        #data_generate(model_config)
+        # data_train(model_config,gtest)
+        data_plot(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
         # data_plot_generated(model_config,3)
         # x, rmserr_list = data_test_tracking(model_config, bVisu=False, bPrint=True)
