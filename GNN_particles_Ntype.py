@@ -1607,14 +1607,12 @@ def data_generate(model_config):
 
         time.sleep(0.5)
 
-<<<<<<< HEAD
         noise_current = 0 * torch.randn((nparticles, 2), device=device)
         noise_prev_prev = 0 * torch.randn((nparticles, 2), device=device)
 
-        for it in tqdm(range(-int(nframes*0.3),nframes)):
-=======
+        ## for it in tqdm(range(-int(nframes*0.3),nframes)):
         for it in tqdm(range(-int(nframes*1),nframes)):
->>>>>>> 3959b703cdc8dee5ae1b1ca16668f409e5962ade
+
 
             noise_prev_prev = noise_prev_prev
             noise_prev = noise_current
@@ -3449,9 +3447,6 @@ def load_model_config(id=48):
 
     # gravity
 
-<<<<<<< HEAD
-    # 4 types N=960 dim 64
-=======
     # 4 types N=960 dim 128
     if id == 40:
         model_config_test = {'ntry': id,
@@ -4385,11 +4380,8 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-<<<<<<< HEAD
-    for gtest in range(50,54): #(57,60):
-=======
+
     for gtest in range(40,41): #(57,60):
->>>>>>> 3959b703cdc8dee5ae1b1ca16668f409e5962ade
 
         model_config = load_model_config(id=gtest)
 
@@ -4420,13 +4412,9 @@ if __name__ == '__main__':
 
         data_generate(model_config)
         data_train(model_config,gtest)
-<<<<<<< HEAD
+
         # data_plot(model_config, epoch=-1, bPrint=True)
         # x, rmserr_list = data_test(model_config, bVisu=True)
-=======
-        # data_plot(model_config)
-        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
->>>>>>> 3959b703cdc8dee5ae1b1ca16668f409e5962ade
         # data_plot_generated(model_config,3)
         # x, rmserr_list = data_test_tracking(model_config, bVisu=False, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
