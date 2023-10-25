@@ -4380,7 +4380,7 @@ if __name__ == '__main__':
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
 
-    for gtest in range(40,41): #(57,60):
+    for gtest in range(41,42): #(57,60):
 
         model_config = load_model_config(id=gtest)
 
