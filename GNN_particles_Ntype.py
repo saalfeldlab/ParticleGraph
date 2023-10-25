@@ -3481,7 +3481,6 @@ def load_model_config(id=48):
                                  'pred_limit': 1E9}
 
     # 4 types N=960 dim 128
->>>>>>> 3959b703cdc8dee5ae1b1ca16668f409e5962ade
     if id == 50:
         model_config_test = {'ntry': id,
                                  'input_size': 8,
