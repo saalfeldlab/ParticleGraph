@@ -1798,9 +1798,10 @@ def data_generate(model_config):
                 H1 += y[:,2:3]
 
             if model_config['model'] == 'HeatMesh':
-                with torch.no_grad():
-                    h = model_mesh(dataset_mesh)
-                H1 += h
+                if it>=0:
+                    with torch.no_grad():
+                        h = model_mesh(dataset_mesh)
+                    H1 += h
 
             if (run == 0) & (it % 5 == 0) & (it>=0):
 
@@ -5236,7 +5237,7 @@ def load_model_config(id=48):
                              'radius': 0.3,
                              'radius_min': 0,
                              'dataset': f'231001_{id}',
-                             'nparticles': 960,
+                             'nparticles': 3840,
                              'nparticle_types': 8,
                              'nframes': 1000,
                              'sigma': .005,
@@ -5254,11 +5255,11 @@ def load_model_config(id=48):
                              'upgrade_type': 0,
                              'p': np.linspace(0.2, 5, 8).tolist(),
                              'c': np.linspace(1, 3, 8).tolist(),
-                             'conductivity':1E-3,
+                             'conductivity':1E-4,
                              'nrun': 2,
                              'clamp': 0.002,
                              'pred_limit': 1E9,
-                              'start_frame':0}
+                              'start_frame':0.3}
 
 
     return model_config_test

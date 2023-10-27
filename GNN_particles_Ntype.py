@@ -5221,15 +5221,15 @@ if __name__ == '__main__':
 
     gtest_list=[1E-4, 5E-3, 1E-3, 1E-3, 5E-2]
 
-    for gtest in range(44,45):
+    for gtest in range(20):
 
-        # if (gtest>=0) and (gtest<10):
-        #     model_config = load_model_config(id=44)
-        # if (gtest>=10) and (gtest<20):
-        #     model_config = load_model_config(id=46)
-        # model_config['ntry']=gtest
+        if (gtest>=0) and (gtest<10):
+            model_config = load_model_config(id=44)
+        if (gtest>=10) and (gtest<20):
+            model_config = load_model_config(id=46)
+        model_config['ntry']=gtest
 
-        model_config = load_model_config(id=gtest)
+        # model_config = load_model_config(id=gtest)
 
         weight_decay = gtest_list[gtest%5]
 
@@ -5257,8 +5257,8 @@ if __name__ == '__main__':
         sparsity_factor = 1
         print(f'sparsity_factor: {sparsity_factor}')
 
-        data_generate(model_config)
-        #data_train2(model_config,gtest)
+        #data_generate(model_config)
+        data_train2(model_config,gtest)
         # data_plot_generated(model_config,3)
         # data_plot(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
