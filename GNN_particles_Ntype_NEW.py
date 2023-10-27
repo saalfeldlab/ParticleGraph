@@ -431,7 +431,7 @@ class Laplacian_A(pyg.nn.MessagePassing):
             sum_weight = edge_attr[pos] * h[ee[1,pos],5]
 
         heat_flow = self.conductivity * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
-        heat_flow = torch.clamp(heat_flow,min=-0.05,max=0.05)
+        heat_flow = torch.clamp(heat_flow,min=-0.01,max=0.01)
         return heat_flow
 
     def message(self, x_i, x_j, edge_attr):
@@ -1806,7 +1806,7 @@ def data_generate(model_config):
             if (run == 0) & (it % 5 == 0) & (it>=0):
 
                 fig = plt.figure(figsize=(12, 12))
-                # plt.ion()
+                plt.ion()
                 ax = fig.add_subplot(2, 2, 1)
                 if model_config['model'] == 'GravityParticles':
                     for n in range(nparticle_types):
@@ -1875,13 +1875,17 @@ def data_generate(model_config):
 
                 if (model_config['model'] == 'HeatParticles') | (model_config['model'] == 'HeatMesh'):
                     ax = fig.add_subplot(2, 2, 3)
-                    plt.plot(H1.detach().cpu().numpy(),'.')
-                    plt.ylim([-1, 2])
+                    for n in range(nparticle_types):
+                        plt.scatter(N1[index_particles[n]].detach().cpu().numpy(),H1[index_particles[n]].detach().cpu().numpy(),s=5,alpha=0.5)
+                    plt.ylim([-0.5, 1.5])
+                    plt.ylabel('Temperature [a.u]', fontsize="14")
                     ax = fig.add_subplot(2, 2, 4)
-                    plt.plot(h.detach().cpu().numpy(),'.')
-                    plt.ylim([-0.05, 0.05])
-
-
+                    for n in range(nparticle_types):
+                        plt.scatter(N1[index_particles[n]].detach().cpu().numpy(),
+                                    h[index_particles[n]].detach().cpu().numpy(), s=5, alpha=0.5)
+                    plt.ylim([-0.01, 0.01])
+                    plt.ylabel('Delta temperature [a.u]', fontsize="14")
+                plt.tight_layout()
 
                 if False:
                     if (model_config['model'] == 'MixInteractionParticles_D') | (model_config['model'] == 'MixInteractionParticles_C') | (model_config['model'] == 'ElecParticles') :
