@@ -1805,8 +1805,8 @@ def data_generate(model_config):
 
             if (run == 0) & (it % 5 == 0) & (it>=0):
 
-                fig = plt.figure(figsize=(12, 12))
-                plt.ion()
+                fig = plt.figure(figsize=(15, 12))
+                # plt.ion()
                 ax = fig.add_subplot(2, 2, 1)
                 if model_config['model'] == 'GravityParticles':
                     for n in range(nparticle_types):
@@ -1814,7 +1814,7 @@ def data_generate(model_config):
                         plt.scatter(x[index_particles[n],0].detach().cpu().numpy(), x[index_particles[n],1].detach().cpu().numpy(),s=g, alpha=0.75)  # , facecolors='none', edgecolors='k')
                 if (model_config['model'] == 'HeatParticles') | (model_config['model'] == 'HeatMesh'):
                     for n in range(nparticle_types):
-                        plt.scatter(x[index_particles[n],0].detach().cpu().numpy(), x[index_particles[n],1].detach().cpu().numpy(),s=5, alpha=0.75, c=x[index_particles[n],5].detach().cpu().numpy(),cmap='inferno',vmin=0,vmax=2)
+                        plt.scatter(x[index_particles[n],0].detach().cpu().numpy(), x[index_particles[n],1].detach().cpu().numpy(),s=10, alpha=0.75, c=x[index_particles[n],5].detach().cpu().numpy(),cmap='inferno',vmin=0,vmax=2)
                 elif model_config['model'] == 'ElecParticles':
                     for n in range(nparticle_types):
                         g = np.abs(p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20)
@@ -1877,7 +1877,7 @@ def data_generate(model_config):
                     ax = fig.add_subplot(2, 2, 3)
                     for n in range(nparticle_types):
                         plt.scatter(N1[index_particles[n]].detach().cpu().numpy(),H1[index_particles[n]].detach().cpu().numpy(),s=5,alpha=0.5)
-                    plt.ylim([-0.5, 1.5])
+                    plt.ylim([-0.5, 2.5])
                     plt.ylabel('Temperature [a.u]', fontsize="14")
                     ax = fig.add_subplot(2, 2, 4)
                     for n in range(nparticle_types):
