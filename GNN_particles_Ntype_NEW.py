@@ -1805,7 +1805,7 @@ def data_generate(model_config):
 
             if (run == 0) & (it % 5 == 0) & (it>=0):
 
-                fig = plt.figure(figsize=(15, 12))
+                fig = plt.figure(figsize=(13, 12))
                 # plt.ion()
                 ax = fig.add_subplot(2, 2, 1)
                 if model_config['model'] == 'GravityParticles':
