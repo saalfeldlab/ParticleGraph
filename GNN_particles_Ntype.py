@@ -409,7 +409,59 @@ class InteractionParticles_G(pyg.nn.MessagePassing):
         psi = torch.clamp(psi, max=self.pred_limit)
 
         return psi[:, None]
+class InteractionParticles_H(pyg.nn.MessagePassing):
+    """Interaction Network as proposed in this paper:
+    https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
+    def __init__(self, aggr_type=[], p=[], tau=[], conductivity=[], clamp=[], pred_limit=[], prediction=[]):
+        super(InteractionParticles_H, self).__init__(aggr='add')  # "mean" aggregation.
+
+        self.p = p
+        self.tau = tau
+        self.conductivity = conductivity
+        self.clamp = clamp
+        self.pred_limit = pred_limit
+        self.prediction = prediction
+
+    def forward(self, data):
+        x, edge_index = data.x, data.edge_index
+        edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+        out = self.propagate(edge_index, x=(x, x))
+
+        acc = self.tau * out[:,0:2]
+        heat = - self.conductivity * out[:,2]
+
+        return torch.cat((acc,heat[:,None]),axis=1)
+
+    def message(self, x_i, x_j):
+        r = torch.sqrt(torch.sum(bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) ** 2, axis=1))
+        r = torch.clamp(r, min=self.clamp)
+        r = torch.concatenate((r[:, None], r[:, None]), -1)
+
+        p = self.p[x_j[:, 4].detach().cpu().numpy()]
+        p = p.squeeze()
+        p = torch.concatenate((p[:, None], p[:, None]), -1)
+
+        acc = p * bc_diff(x_j[:, 0:2] - x_i[:, 0:2]) / r ** 3
+
+        p = self.p[x_i[:, 4].detach().cpu().numpy()]
+        p = p.squeeze()
+
+        heat = p * x_i[:, 5] - x_j[:, 5]
+        heat = heat[:,None] / r[:,0:1]
+        heat=torch.nan_to_num(heat, nan=1, posinf=1, neginf=1)
+
+        acc = torch.clamp(acc, max=self.pred_limit)
+
+        return torch.cat((acc,heat),axis=1)
+
+    def psi(self,r,p):
+
+        r_ = torch.clamp(r, min=self.clamp)
+        psi = p * r / r_ ** 3
+        psi = torch.clamp(psi, max=self.pred_limit)
+
+        return psi[:, None]
 class MLP(nn.Module):
 
     def __init__(self, input_size, output_size, nlayers, hidden_size, device):
@@ -1507,30 +1559,6 @@ def data_generate(model_config):
             psi_output.append(model_psi(rr, torch.squeeze(p[n])))
             print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
             torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
-    elif model_config['model'] == 'MixInteractionParticles_D':
-        print(f'Generate MixInteractionParticles')
-        p = torch.ones(nparticle_types, nparticle_types, 4, device=device) + torch.rand(nparticle_types,nparticle_types, 4,device=device)
-        psi_output = []
-        # read previous data
-        # for n in range(nparticle_types):
-        #     p[n] = torch.load(f'graphs_data/graphs_particles_230902_30/p_{n}.pt')
-        #     print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
-        # p[2]=p[1]*0.975
-        #
-        p[0, 0] = torch.tensor([1.0696, 1.8843, 1.322, 1.252])
-        p[0, 1] = torch.tensor([1.7112, 1.7178, 1.108, 1.471])
-        p[0, 2] = torch.tensor([1.8224, 1.4711, 1.7202, 1.2569])
-        p[1, 1] = torch.tensor([1.078, 1.3741, 1.053, 1.0633])
-        p[1, 2] = torch.tensor([1.0395, 1.8933, 1.5266, 1.5097])
-        p[2, 2] = torch.tensor([1.0833, 1.2819, 1.6062, 1.0675])
-        for n in range(nparticle_types):
-            for m in range(nparticle_types):
-                p[m, n] = p[n, m]
-                psi_output.append(psi_G(rr, torch.squeeze(p[n, m])))
-                print(f'p{n, m}: {np.round(torch.squeeze(p[n, m]).detach().cpu().numpy(), 4)}')
-                torch.save(torch.squeeze(p[n, m]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}_{m}.pt')
-
-        model = InteractionParticles_D(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'], prediction=model_config['prediction'])
     elif model_config['model'] == 'MixInteractionParticles_C':
         print(f'Generate MixInteractionParticles_C')
         p = torch.ones(nparticle_types, nparticle_types, 4, device=device) + torch.rand(nparticle_types,nparticle_types, 4,device=device)
@@ -1561,12 +1589,48 @@ def data_generate(model_config):
                 print(f'p{n, m}: {np.round(torch.squeeze(p[n, m]).detach().cpu().numpy(), 4)}')
                 torch.save(torch.squeeze(p[n, m]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}_{m}.pt')
         model = InteractionParticles_C(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'], prediction=model_config['prediction'])
+    elif model_config['model'] == 'MixInteractionParticles_D':
+        print(f'Generate MixInteractionParticles')
+        p = torch.ones(nparticle_types, nparticle_types, 4, device=device) + torch.rand(nparticle_types,nparticle_types, 4,device=device)
+        psi_output = []
+        # read previous data
+        # for n in range(nparticle_types):
+        #     p[n] = torch.load(f'graphs_data/graphs_particles_230902_30/p_{n}.pt')
+        #     print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
+        # p[2]=p[1]*0.975
+        #
+        p[0, 0] = torch.tensor([1.0696, 1.8843, 1.322, 1.252])
+        p[0, 1] = torch.tensor([1.7112, 1.7178, 1.108, 1.471])
+        p[0, 2] = torch.tensor([1.8224, 1.4711, 1.7202, 1.2569])
+        p[1, 1] = torch.tensor([1.078, 1.3741, 1.053, 1.0633])
+        p[1, 2] = torch.tensor([1.0395, 1.8933, 1.5266, 1.5097])
+        p[2, 2] = torch.tensor([1.0833, 1.2819, 1.6062, 1.0675])
+        for n in range(nparticle_types):
+            for m in range(nparticle_types):
+                p[m, n] = p[n, m]
+                psi_output.append(psi_G(rr, torch.squeeze(p[n, m])))
+                print(f'p{n, m}: {np.round(torch.squeeze(p[n, m]).detach().cpu().numpy(), 4)}')
+                torch.save(torch.squeeze(p[n, m]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}_{m}.pt')
+
+        model = InteractionParticles_D(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'], prediction=model_config['prediction'])
     elif model_config['model'] == 'GravityParticles':
         p = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         if len(model_config['p']) > 0:
             for n in range(nparticle_types):
                 p[n] = torch.tensor(model_config['p'][n])
         model = InteractionParticles_G(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'],
+                                       clamp=model_config['clamp'], pred_limit=model_config['pred_limit'],prediction=model_config['prediction'])
+        psi_output = []
+        for n in range(nparticle_types):
+            psi_output.append(model.psi(rr, torch.squeeze(p[n])))
+            print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
+            torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
+    elif model_config['model'] == 'HeatParticles':
+        p = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
+        if len(model_config['p']) > 0:
+            for n in range(nparticle_types):
+                p[n] = torch.tensor(model_config['p'][n])
+        model = InteractionParticles_H(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'], conductivity=model_config['conductivity'],
                                        clamp=model_config['clamp'], pred_limit=model_config['pred_limit'],prediction=model_config['prediction'])
         psi_output = []
         for n in range(nparticle_types):
@@ -1616,7 +1680,8 @@ def data_generate(model_config):
         T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
         for n in range(1, nparticle_types):
             T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
-        T1 = torch.concatenate((T1[:, None], T1[:, None]), 1)
+        T1=T1[:,None]
+        H1 = torch.ones((nparticles,1), device=device) + torch.randn((nparticles,1), device=device)
         N1 = torch.arange(nparticles, device=device)
         N1 = N1[:, None]
 
@@ -1625,9 +1690,8 @@ def data_generate(model_config):
         noise_current = 0 * torch.randn((nparticles, 2), device=device)
         noise_prev_prev = 0 * torch.randn((nparticles, 2), device=device)
 
-        ## for it in tqdm(range(-int(nframes*0.3),nframes)):
-        for it in tqdm(range(-int(nframes*1),nframes)):
-
+        for it in tqdm(range(-int(nframes*model_config['start_frame']),nframes)):
+        # for it in tqdm(range(-int(nframes*1),nframes)):
 
             noise_prev_prev = noise_prev_prev
             noise_prev = noise_current
@@ -1642,8 +1706,7 @@ def data_generate(model_config):
             adj_t = (distance < radius ** 2).float() * (distance > radius_min ** 2).float() * 1
             edge_index = adj_t.nonzero().t().contiguous()
 
-            x = torch.concatenate(
-                (X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), N1.clone().detach()), 1)
+            x = torch.concatenate((X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), N1.clone().detach()), 1)
 
             if (it>=0) & (noise_level==0):
                 torch.save(x, f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{it}.pt')
@@ -1662,13 +1725,16 @@ def data_generate(model_config):
             if (it>=0) & (noise_level==0):
                 torch.save(y, f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{it}.pt')
             if (it>=0) & (noise_level>0):
-                y_noise = y + noise_current - 2 * noise_prev + noise_prev_prev
+                y_noise = y[:,0:2] + noise_current - 2 * noise_prev + noise_prev_prev
                 torch.save(y_noise, f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{it}.pt')
 
             if model_config['prediction']=='acceleration':
-                V1 += y
+                V1 += y[:,0:2]
             else:
-                V1 = y
+                V1 = y[:,0:2]
+
+            if model_config['model'] == 'HeatParticles':
+                H1 += y[:,2:3]
 
             if (run == 0) & (it % 5 == 0) & (it>=0):
 
@@ -1684,6 +1750,9 @@ def data_generate(model_config):
                     for n in range(nparticle_types):
                         g = p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 7.5
                         plt.scatter(X1t[index_particles[n], 0, it], X1t[index_particles[n], 1, it],s=g, alpha=0.75)  # , facecolors='none', edgecolors='k')
+                if model_config['model'] == 'HeatParticles':
+                    for n in range(nparticle_types):
+                        plt.scatter(x[index_particles[n],0].detach().cpu().numpy(), x[index_particles[n],1].detach().cpu().numpy(),s=5, alpha=0.75, c=x[index_particles[n],5].detach().cpu().numpy(),cmap='inferno')
                 elif model_config['model'] == 'ElecParticles':
                     for n in range(nparticle_types):
                         g = np.abs(p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20)
@@ -1693,7 +1762,7 @@ def data_generate(model_config):
                             plt.scatter(X1t[index_particles[n], 0, it], X1t[index_particles[n], 1, it], s=g, c='b', alpha=0.5)
                 else:
                     for n in range(nparticle_types):
-                        plt.scatter(X1t[index_particles[n], 0, it], X1t[index_particles[n], 1, it], s=3, alpha=0.5)
+                        plt.scatter(x[index_particles[n],0].detach().cpu().numpy(), x[index_particles[n],1].detach().cpu().numpy(), s=3, alpha=0.5)
                 ax = plt.gca()
                 # ax.axes.xaxis.set_ticklabels([])
                 # ax.axes.yaxis.set_ticklabels([])
@@ -1754,7 +1823,7 @@ def data_generate(model_config):
                         for n in range(nparticle_types):
                             plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), linewidth=1)
                         plt.xlim([0,0.075])
-
+                time.sleep(0.5)
                 plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
                 plt.close()
 def data_train2(model_config, gtest):
@@ -3964,7 +4033,8 @@ def load_model_config(id=48):
                                  'p': np.linspace(0.2, 5, 4).tolist(),
                                  'nrun':2,
                                  'clamp': 0.002,
-                                 'pred_limit': 1E9}
+                                 'pred_limit': 1E9,
+                                 'start_frame':1  }
     # 4 types N=960 dim 32 no boundary
     if id == 41:
         model_config_test = {'ntry': id,
@@ -3996,7 +4066,8 @@ def load_model_config(id=48):
                                  'p': np.linspace(0.2, 5, 4).tolist(),
                                  'nrun':2,
                                  'clamp': 0.002,
-                                 'pred_limit': 1E9}
+                                 'pred_limit': 1E9,
+                                 'start_frame':1  }
     # 4 types N=960 dim 64 no boundary
     if id == 42:
         model_config_test = {'ntry': id,
@@ -4028,7 +4099,8 @@ def load_model_config(id=48):
                                  'p': np.linspace(0.2, 5, 4).tolist(),
                                  'nrun':2,
                                  'clamp': 0.002,
-                                 'pred_limit': 1E9}
+                                 'pred_limit': 1E9,
+                                 'start_frame':1  }
     # 4 types N=960 dim 128 no boundary
     if id == 43:
         model_config_test = {'ntry': id,
@@ -4060,7 +4132,8 @@ def load_model_config(id=48):
                                  'p': np.linspace(0.2, 5, 4).tolist(),
                                  'nrun':2,
                                  'clamp': 0.002,
-                                 'pred_limit': 1E9}
+                                 'pred_limit': 1E9,
+                                 'start_frame':1  }
 
     # 8 types N=960 dim 128 no boundary
     if id == 44:
@@ -4093,7 +4166,8 @@ def load_model_config(id=48):
                                  'p': np.linspace(0.2, 5, 8).tolist(),
                                  'nrun':2,
                                  'clamp': 0.002,
-                                 'pred_limit': 1E9}
+                                 'pred_limit': 1E9,
+                                 'start_frame':1  }
 
     # 8 types N=960 dim 128 no boundary
     if id == 45:
@@ -4126,7 +4200,8 @@ def load_model_config(id=48):
                                  'p': np.linspace(0.2, 5, 8).tolist(),
                                  'nrun':2,
                                  'clamp': 0.002,
-                                 'pred_limit': 1E9}
+                                 'pred_limit': 1E9,
+                                 'start_frame':1  }
 
     if id == 46:
         model_config_test = {'ntry': id,
@@ -4158,7 +4233,8 @@ def load_model_config(id=48):
                                  'p': np.linspace(0.2, 5, 16).tolist(),
                                  'nrun':2,
                                  'clamp': 0.002,
-                                 'pred_limit': 1E9}
+                                 'pred_limit': 1E9,
+                                 'start_frame':1  }
 
     # 4 types N=960 dim 64
     if id == 50:
@@ -4191,7 +4267,8 @@ def load_model_config(id=48):
                                  'p': np.linspace(0.2, 5, 4).tolist(),
                                  'nrun':2,
                                  'clamp': 0.002,
-                                 'pred_limit': 1E9}
+                                 'pred_limit': 1E9,
+                                 'start_frame':1  }
 
     # 4 types N=960 dim 128
     if id == 51:
@@ -4224,7 +4301,8 @@ def load_model_config(id=48):
                                  'p': np.linspace(0.2, 5, 4).tolist(),
                                  'nrun':2,
                                  'clamp': 0.002,
-                                 'pred_limit': 1E9}
+                                 'pred_limit': 1E9,
+                                 'start_frame':1  }
 
     # 4 types N=960 dim 64
     if id == 52:
@@ -4257,7 +4335,8 @@ def load_model_config(id=48):
                                  'p': np.linspace(0.2, 5, 4).tolist(),
                                  'nrun':2,
                                  'clamp': 0.002,
-                                 'pred_limit': 1E9}
+                                 'pred_limit': 1E9,
+                                 'start_frame':1  }
 
     # 4 types N=960 dim 64 noselevel 1E-4
     if id == 53:
@@ -4290,7 +4369,8 @@ def load_model_config(id=48):
                                  'p': np.linspace(0.2, 5, 4).tolist(),
                                  'nrun':2,
                                  'clamp': 0.002,
-                                 'pred_limit': 1E9}
+                                 'pred_limit': 1E9,
+                                 'start_frame':1  }
 
     # 16 types larger masses N=960
     if id == 56:
@@ -4389,7 +4469,8 @@ def load_model_config(id=48):
                                  'p': np.linspace(0.2, 5, 8).tolist(),
                                  'nrun':2,
                                  'clamp': 0.002,
-                                 'pred_limit': 1E9}
+                                 'pred_limit': 1E9,
+                                 'start_frame':1  }
 
     # gravity MLPs from 51 (3 masses 680 particles) learn embedding from 55 (8 larger masses 960 particles)
     if id == 59:
@@ -4422,7 +4503,8 @@ def load_model_config(id=48):
                                  'p': np.linspace(0.2, 5, 8).tolist(),
                                  'nrun':2,
                                  'clamp': 0.002,
-                                 'pred_limit': 1E9}
+                                 'pred_limit': 1E9,
+                                 'start_frame':1  }
 
     # gravity MLPs from 51 (3 masses 680 particles) learn embedding from 56 (16 larger masses 960 particles)
     if id == 59:
@@ -4455,7 +4537,8 @@ def load_model_config(id=48):
                                  'p': np.linspace(0.2, 5, 8).tolist(),
                                  'nrun':2,
                                  'clamp': 0.002,
-                                 'pred_limit': 1E9}
+                                 'pred_limit': 1E9,
+                                 'start_frame':1  }
 
     if id == 68:
         model_config_test = {'ntry': id,
@@ -4487,7 +4570,8 @@ def load_model_config(id=48):
                              'p': [[5],[1],[0.2]],
                              'nrun':2,
                              'clamp':0.005,
-                             'pred_limit':1E9}
+                                 'pred_limit': 1E9,
+                                 'start_frame':1  }
     if id == 69:
         model_config_test = {'ntry': id,
                              'input_size': 8,
@@ -4518,7 +4602,8 @@ def load_model_config(id=48):
                              'p': [[5],[1],[0.2]],
                              'nrun':2,
                              'clamp':0.002,
-                             'pred_limit':1E9}
+                                 'pred_limit': 1E9,
+                                 'start_frame':1  }
     if id == 70:
         model_config_test = {'ntry': id,
                              'input_size': 8,
@@ -4549,7 +4634,8 @@ def load_model_config(id=48):
                              'p': np.linspace(0.2,5,3).tolist(),
                              'nrun':2,
                              'clamp':0,
-                             'pred_limit':1E6}
+                             'pred_limit': 1E6,
+                             'start_frame':1  }
     if id == 71:
         model_config_test = {'ntry': id,
                              'input_size': 8,
@@ -4580,7 +4666,8 @@ def load_model_config(id=48):
                              'p':  np.linspace(0.2,5,3).tolist(),
                              'nrun':2,
                              'clamp':0,
-                             'pred_limit':1E6}
+                             'pred_limit': 1E6,
+                              'start_frame':1  }
 
     # particles
     if id == 75:
@@ -5026,8 +5113,46 @@ def load_model_config(id=48):
                              'clamp':0.005,
                              'pred_limit':1E10}
 
+    # heat
+
+    # 8 types boundary periodic N=960
+    if id == 120:
+        model_config_test = {'ntry': id,
+                             'input_size': 8,
+                             'output_size': 2,
+                             'hidden_size': 128,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'noise_type': 0,
+                             'radius': 0.15,
+                             'radius_min': 0,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 3840,
+                             'nparticle_types': 4,
+                             'nframes': 2000,
+                             'sigma': .005,
+                             'tau': 1E-10,
+                             'conductivity': 1E-5,
+                             'v_init': 1E-4,
+                             'aggr_type': 'add',
+                             'particle_embedding': True,
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding_type': 'none',
+                             'embedding': 1,
+                             'model': 'HeatParticles',
+                             'prediction': 'acceleration',
+                             'upgrade_type': 0,
+                             'p': np.linspace(0.2, 5, 8).tolist(),
+                             'nrun': 2,
+                             'clamp': 0.002,
+                             'pred_limit': 1E9,
+                              'start_frame':0.25}
+
 
     return model_config_test
+
 def print_model_config(model_config):
     for key, value in model_config.items():
         print(key, ":", value)
@@ -5096,15 +5221,17 @@ if __name__ == '__main__':
     #     # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
     #     # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
 
-    for gtest in range(0,30):
+    for gtest in range(120,121):
 
-        if (gtest>=0) and (gtest<10):
-            model_config = load_model_config(id=44)
-        if (gtest>=10) and (gtest<20):
-            model_config = load_model_config(id=45)
-        if (gtest>=20) and (gtest<30):
-            model_config = load_model_config(id=46)
-        model_config['ntry']=gtest
+        model_config = load_model_config(id=gtest)
+
+        # if (gtest>=0) and (gtest<10):
+        #     model_config = load_model_config(id=44)
+        # if (gtest>=10) and (gtest<20):
+        #     model_config = load_model_config(id=45)
+        # if (gtest>=20) and (gtest<30):
+        #     model_config = load_model_config(id=46)
+        # model_config['ntry']=gtest
 
         sigma = model_config['sigma']
         aggr_type = model_config['aggr_type']
@@ -5128,7 +5255,13 @@ if __name__ == '__main__':
         sparsity_factor = 1
         print(f'sparsity_factor: {sparsity_factor}')
 
-        data_train2(model_config,gtest)
+        data_generate(model_config)
+        # data_train(model_config,gtest)
+        # data_plot_generated(model_config,3)
+        # data_plot(model_config)
+        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
+        # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
+        # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
 
 
 
