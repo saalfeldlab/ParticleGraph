@@ -413,10 +413,10 @@ class Laplacian_A(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, aggr_type=[], p=[], conductivity=[]):
+    def __init__(self, aggr_type=[], c=[], conductivity=[]):
         super(Laplacian_A, self).__init__(aggr='add')  # "mean" aggregation.
 
-        self.p = p
+        self.c = c
         self.conductivity = conductivity
 
     def forward(self, data):
@@ -430,15 +430,15 @@ class Laplacian_A(pyg.nn.MessagePassing):
             h=x.detach()
             sum_weight = edge_attr[pos] * h[ee[1,pos],5]
 
-        heat_flow = 1E-3 * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
+        heat_flow = self.conductivity * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
         heat_flow = torch.clamp(heat_flow,min=-0.05,max=0.05)
         return heat_flow
 
     def message(self, x_i, x_j, edge_attr):
 
-        p = self.p[x_i[:, 4].detach().cpu().numpy()]
-        p = p.squeeze()
-        heat = edge_attr * x_j[:,5]
+        c = self.c[x_i[:, 4].detach().cpu().numpy()]
+        c = c.squeeze()
+        heat = c * edge_attr * x_j[:,5]
 
         return heat[:,None]
 
@@ -1684,7 +1684,10 @@ def data_generate(model_config):
                 p[n] = torch.tensor(model_config['p'][n])
         model = InteractionParticles_G(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'],
                                        clamp=model_config['clamp'], pred_limit=model_config['pred_limit'],prediction=model_config['prediction'])
-        model_mesh = Laplacian_A(aggr_type=aggr_type, p=torch.squeeze(p), conductivity=model_config['conductivity'])
+        c = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
+        for n in range(nparticle_types):
+                c[n] = torch.tensor(model_config['c'][n])
+        model_mesh = Laplacian_A(aggr_type=aggr_type, c=torch.squeeze(c), conductivity=model_config['conductivity'])
         psi_output = []
         for n in range(nparticle_types):
             psi_output.append(model.psi(rr, torch.squeeze(p[n])))
@@ -1778,7 +1781,7 @@ def data_generate(model_config):
 
             y = 0
             with torch.no_grad():
-                y = model(dataset)*0
+                y = model(dataset)
 
             if (it>=0) & (noise_level==0):
                 torch.save(y, f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{it}.pt')
@@ -5224,33 +5227,34 @@ def load_model_config(id=48):
     # 8 types boundary periodic N=960 mesh
     if id == 121:
         model_config_test = {'ntry': id,
-                             'input_size': 8,
+                             'input_size': 9,
                              'output_size': 2,
                              'hidden_size': 128,
                              'n_mp_layers': 5,
                              'noise_level': 0,
                              'noise_type': 0,
-                             'radius': 0.15,
+                             'radius': 0.3,
                              'radius_min': 0,
                              'dataset': f'231001_{id}',
-                             'nparticles': 3840,
-                             'nparticle_types': 4,
-                             'nframes': 2000,
+                             'nparticles': 960,
+                             'nparticle_types': 8,
+                             'nframes': 1000,
                              'sigma': .005,
                              'tau': 1E-10,
-                             'conductivity': 1E-3,
-                             'v_init': 0,
+                             'v_init': 5E-5,
                              'aggr_type': 'add',
                              'particle_embedding': True,
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                              'data_augmentation': True,
                              'batch_size': 8,
                              'embedding_type': 'none',
-                             'embedding': 1,
+                             'embedding': 2,
                              'model': 'HeatMesh',
                              'prediction': 'acceleration',
                              'upgrade_type': 0,
                              'p': np.linspace(0.2, 5, 8).tolist(),
+                             'c': np.linspace(1, 3, 8).tolist(),
+                             'conductivity':1E-3,
                              'nrun': 2,
                              'clamp': 0.002,
                              'pred_limit': 1E9,
