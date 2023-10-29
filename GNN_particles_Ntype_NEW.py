@@ -1660,10 +1660,10 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         y[:, 1] = y[:, 1] * ynorm[4]
 
         if model_config['prediction'] == 'acceleration':
-            x[:, 3:4] = x[:, 3:4] + y # speed update
+            x[:, 3:5] = x[:, 3:5] + y # speed update
         else:
-            x[:, 3:4] = y
-        x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:4])  # position update
+            x[:, 3:5] = y
+        x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5])  # position update
 
         rmserr = torch.sqrt(torch.mean(torch.sum(bc_diff(x[:, 1:3] - x0[:, 1:3]) ** 2, axis=1)))
         rmserr_list.append(rmserr.item())
