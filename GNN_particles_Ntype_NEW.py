@@ -1491,7 +1491,7 @@ def data_train(model_config, gtest):
         ax = fig.add_subplot(2, 2, 2)
         plt.plot(list_loss, color='k')
         plt.xlim([0, 100])
-        plt.ylim([0, 0.02])
+        plt.ylim([0, 0.003])
         plt.ylabel('Loss', fontsize=10)
         plt.xlabel('Epochs', fontsize=10)
         if (epoch % 10 == 0) & (epoch > 0):
@@ -2506,7 +2506,6 @@ def data_plot(model_config,epoch,bPrint):
         plt.ylabel('Embedding [a.u]', fontsize="14")
         plt.xlim([0,6])
 
-
         ax = fig.add_subplot(1, 5, 3)
         for n in range(nparticle_types):
             plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), linewidth=1)
@@ -2989,8 +2988,7 @@ if __name__ == '__main__':
 
         data_generate(model_config)
         data_train(model_config,gtest)
-        # data_plot_generated(model_config,3)
-        # data_plot(model_config)
+        # data_plot(model_config, epoch=-1, bPrint=True)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
