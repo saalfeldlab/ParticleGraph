@@ -2978,7 +2978,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist=[76,75,46,47,48]
+    gtestlist=[75,46,47,48]
 
     for gtest in gtestlist:
 
@@ -3011,7 +3011,7 @@ if __name__ == '__main__':
         sparsity_factor = 1
         print(f'sparsity_factor: {sparsity_factor}')
 
-        data_generate(model_config)
+        # data_generate(model_config)
         data_train(model_config,gtest)
         # data_plot(model_config, epoch=-1, bPrint=True)
         x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
