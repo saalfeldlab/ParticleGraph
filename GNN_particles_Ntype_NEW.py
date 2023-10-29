@@ -1969,7 +1969,7 @@ def data_test_tracking(model_config, bVisu=False, bPrint=True, index_particles=0
     for it in tqdm(range(nframes - 2)):
 
         x = x_list[0][min(it , nframes - 2),:]
-        x0 = x_list[0][min(it=1 , nframes - 2),:]
+        x0 = x_list[0][min(it+1, nframes - 2),:]
 
         distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
         t = torch.Tensor([radius ** 2])  # threshold
