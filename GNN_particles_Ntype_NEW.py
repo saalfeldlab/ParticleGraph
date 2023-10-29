@@ -2835,7 +2835,8 @@ def load_model_config(id=48):
                              'prediction': 'acceleration',
                              'upgrade_type': 0,
                              'p': [[1.0413, 1.5615, 1.6233, 1.6012],[1.8308, 1.9055, 1.7667, 1.0855],[1.785, 1.8579, 1.7226, 1.0584]],
-                             'nrun':2}
+                             'nrun':2,
+                             'start_frame':0.1}
 
     # elctrostatic
     if id == 84:
