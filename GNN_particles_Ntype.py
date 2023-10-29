@@ -5163,7 +5163,7 @@ if __name__ == '__main__':
         print(f'sparsity_factor: {sparsity_factor}')
 
         data_generate(model_config)
-        data_train(model_config,gtest)
+        #data_train(model_config,gtest)
         # data_plot_generated(model_config,3)
         # data_plot(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
