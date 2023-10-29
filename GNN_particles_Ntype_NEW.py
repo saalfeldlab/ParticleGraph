@@ -238,8 +238,6 @@ class Particles_A(pyg.nn.MessagePassing):
     def psi(self, r, p):
         return r * (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(
             -r ** (2 * p[1]) / (2 * sigma ** 2)))
-
-
 class Particles_E(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -282,8 +280,6 @@ class Particles_E(pyg.nn.MessagePassing):
         acc = p1 * p2 * r / r_ ** 2
         acc = torch.clamp(acc, max=self.pred_limit)
         return acc  # Elec particles
-
-
 class Particles_G(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -322,8 +318,6 @@ class Particles_G(pyg.nn.MessagePassing):
         psi = torch.clamp(psi, max=self.pred_limit)
 
         return psi[:, None]
-
-
 class Particles_H(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -376,8 +370,6 @@ class Particles_H(pyg.nn.MessagePassing):
         psi = torch.clamp(psi, max=self.pred_limit)
 
         return psi[:, None]
-
-
 class InteractionParticles(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -455,10 +447,9 @@ class InteractionParticles(pyg.nn.MessagePassing):
 
         embedding = self.a[self.data_id, x_i[:, 0].detach().cpu().numpy(), :]
 
-        if self.prediction == 'acceleration':
-            in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding), dim=-1)
-        else:
-            in_features = torch.cat((delta_pos, r, embedding), dim=-1)
+
+        in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding), dim=-1)
+
 
         return self.lin_edge(in_features)
 
@@ -470,8 +461,6 @@ class InteractionParticles(pyg.nn.MessagePassing):
 
         return r * (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(
             -r ** (2 * p[1]) / (2 * sigma ** 2)))
-
-
 class GravityParticles(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -563,8 +552,6 @@ class GravityParticles(pyg.nn.MessagePassing):
         psi = torch.clamp(psi, max=self.pred_limit)
 
         return psi[:, None]
-
-
 class ElecParticles(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -656,7 +643,6 @@ class ElecParticles(pyg.nn.MessagePassing):
         acc = p1 * p2 * r / r_ ** 3
         acc = torch.clamp(acc, max=self.pred_limit)
         return acc  # Elec particles
-
 
 def data_generate(model_config):
     print('')
@@ -857,7 +843,7 @@ def data_generate(model_config):
                         h = model_mesh(dataset_mesh)
                     H1 += h
 
-            if (run == 0) & (it % 5 == 0) & (it >= 1E9):
+            if (run == 0) & (it % 5 == 0) & (it >= 0):
 
                 fig = plt.figure(figsize=(13.5, 12))
                 # plt.ion()
@@ -945,8 +931,6 @@ def data_generate(model_config):
         torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_{run}.pt')
         torch.save(y_list, f'graphs_data/graphs_particles_{dataset_name}/y_{run}.pt')
         print('Done ...')
-
-
 def data_train2(model_config, gtest):
     print('')
 
@@ -1278,8 +1262,6 @@ def data_train2(model_config, gtest):
         plt.tight_layout()
         plt.savefig(f"./tmp_training/Fig_{ntry}_{epoch}.tif")
         plt.close()
-
-
 def data_train(model_config, gtest):
     print('')
 
@@ -1589,10 +1571,7 @@ def data_train(model_config, gtest):
         plt.tight_layout()
         plt.savefig(f"./tmp_training/Fig_{ntry}_{epoch}.tif")
         plt.close()
-
-
-def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0,
-              prev_index_particles=0):
+def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0,prev_index_particles=0):
     # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_recons/*")
     # for f in files:
     #     os.remove(f)
@@ -1915,10 +1894,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         print(f'MMD: {np.round(discrepency, 4)}')
 
     return x.detach().cpu().numpy(), rmserr_list
-
-
-def data_test_tracking(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0,
-                       prev_index_particles=0):
+def data_test_tracking(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0,prev_index_particles=0):
     # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_recons/*")
     # for f in files:
     #     os.remove(f)
@@ -2122,8 +2098,6 @@ def data_test_tracking(model_config, bVisu=False, bPrint=True, index_particles=0
         print(f'MMD: {np.round(discrepency, 4)}')
 
     return x.detach().cpu().numpy(), rmserr_list
-
-
 def data_test_generate(model_config):
     print('')
     print('Generating test data ...')
@@ -2400,8 +2374,6 @@ def data_test_generate(model_config):
             plt.close()
 
     return prev_nparticles, new_nparticles, prev_index_particles, index_particles
-
-
 def data_plot(model_config, epoch, bPrint):
     model = []
     ntry = model_config['ntry']
@@ -2810,7 +2782,6 @@ def data_plot(model_config, epoch, bPrint):
         plt.tight_layout()
         plt.show()
 
-
 def load_model_config(id=48):
     model_config_test = []
 
@@ -2925,7 +2896,7 @@ def load_model_config(id=48):
                              'batch_size': 8,
                              'embedding': 1,
                              'model': 'Particles_A',
-                             'prediction': 'accleration',
+                             'prediction': 'acceleration',
                              'upgrade_type': 0,
                              'p': [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855],
                                    [1.785, 1.8579, 1.7226, 1.0584]],
