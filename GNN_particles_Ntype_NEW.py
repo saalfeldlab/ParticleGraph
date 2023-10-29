@@ -812,7 +812,7 @@ def data_generate(model_config):
                         h = model_mesh(dataset_mesh)
                     H1 += h
 
-            if (run == 0) & (it % 5 == 0) & (it>=1E9):
+            if (run == 0) & (it % 5 == 0) & (it>=0):
 
                 fig = plt.figure(figsize=(13.5, 12))
                 # plt.ion()
@@ -891,7 +891,6 @@ def data_generate(model_config):
         torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_{run}.pt')
         torch.save(y_list, f'graphs_data/graphs_particles_{dataset_name}/y_{run}.pt')
         print('Done ...')
-
 def data_train2(model_config, gtest):
     print('')
 
