@@ -777,6 +777,9 @@ def data_generate(model_config):
 
     for run in range(model_config['nrun']):
 
+        x_list = []
+        y_list = []
+
         if model_config['boundary'] == 'no':
             X1 = torch.randn(nparticles, 2, device=device) * 0.5
         else:
@@ -806,12 +809,12 @@ def data_generate(model_config):
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                                    H1.clone().detach()), 1)
             if (it >= 0) & (noise_level == 0):
-                torch.save(x, f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{it}.pt')
+                x_list.append(x)
             if (it >= 0) & (noise_level > 0):
                 x_noise = x
                 x_noise[:, 1:3] = x[:, 1:3] + noise_current
                 x_noise[:, 3:5] = x[:, 3:5] + noise_current - noise_prev
-                torch.save(x_noise, f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{it}.pt')
+                x_list.append(x_noise)
 
             if model_config['model'] == 'HeatMesh':
                 dataset = data.Data(x=x, pos=x[:, 1:3])
@@ -833,10 +836,10 @@ def data_generate(model_config):
                 y = model(dataset)
 
             if (it >= 0) & (noise_level == 0):
-                torch.save(y, f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{it}.pt')
+                y_list.append(y)
             if (it >= 0) & (noise_level > 0):
                 y_noise = y[:, 0:2] + noise_current - 2 * noise_prev + noise_prev_prev
-                torch.save(y_noise, f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{it}.pt')
+                y_list.append(y_noise)
 
             if model_config['prediction'] == 'acceleration':
                 V1 += y[:, 0:2]
@@ -854,7 +857,7 @@ def data_generate(model_config):
                         h = model_mesh(dataset_mesh)
                     H1 += h
 
-            if (run == 0) & (it % 5 == 0) & (it >= 0):
+            if (run == 0) & (it % 5 == 0) & (it >= 1E9):
 
                 fig = plt.figure(figsize=(13.5, 12))
                 # plt.ion()
@@ -938,6 +941,11 @@ def data_generate(model_config):
                 plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
                 plt.close()
 
+        print(f'Save graphs_particles_{dataset_name}/_{run}.pt ...')
+        torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_{run}.pt')
+        torch.save(y_list, f'graphs_data/graphs_particles_{dataset_name}/y_{run}.pt')
+        print('Done ...')
+
 
 def data_train2(model_config, gtest):
     print('')
@@ -973,25 +981,16 @@ def data_train2(model_config, gtest):
     copyfile(os.path.realpath(__file__), os.path.join(log_dir, 'training_code.py'))
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_*")
-    NGraphs = int(len(graph_files) / nframes)
+    NGraphs = int(len(graph_files))
     print('Graph files N: ', NGraphs - 1)
     time.sleep(0.5)
 
-    arr = np.arange(0, NGraphs - 1, 2)
-    for run in arr:
-        kr = np.arange(0, nframes - 1, 4)
-        for k in kr:
-            x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{k}.pt')
-            y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{k}.pt')
-            if (run == 0) & (k == 0):
-                xx = x
-                yy = y
-            else:
-                xx = torch.concatenate((x, xx))
-                yy = torch.concatenate((y, yy))
+    for run in np.arange(0, NGraphs):
+        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}.pt')
+        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_{run}.pt')
 
-    vnorm = norm_velocity(xx, device)
-    ynorm = norm_acceleration(yy, device)
+    vnorm = norm_velocity(torch.stack(x), device)
+    ynorm = norm_acceleration(torch.stack(y), device)
 
     torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
     torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
@@ -1055,6 +1054,14 @@ def data_train2(model_config, gtest):
     D_nm = torch.zeros((Nepochs + 1, nparticle_types, nparticle_types))
     sparsity_index = 0
 
+    x_list = []
+    y_list = []
+    for run in range(NGraphs - 1):
+        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}.pt')
+        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_{run}.pt')
+        x_list.append(torch.stack(x).to(device))
+        y_list.append(torch.stack(y).to(device))
+
     print('')
     time.sleep(0.5)
     for epoch in range(Nepochs + 1):
@@ -1094,23 +1101,19 @@ def data_train2(model_config, gtest):
             cos_phi = torch.cos(phi)
             sin_phi = torch.sin(phi)
 
-            run = 1 + np.random.randint(NGraphs - 1)
+            run = np.random.randint(NGraphs - 1)
 
             dataset_batch = []
             for batch in range(batch_size):
-
                 k = np.random.randint(nframes - 1)
-                x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{k}.pt').to(device)
+                x = x_list[run][k, :]
                 distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
                 adj_t = (distance < radius ** 2).float() * 1
                 t = torch.Tensor([radius ** 2])
                 edges = adj_t.nonzero().t().contiguous()
                 dataset = data.Data(x=x[:, :], edge_index=edges)
                 dataset_batch.append(dataset)
-
-                y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{k}.pt')
-                y = y.to(device)
-
+                y = y_list[run][k, :]
                 y[:, 0] = y[:, 0] / ynorm[4]
                 y[:, 1] = y[:, 1] / ynorm[4]
 
@@ -1311,25 +1314,16 @@ def data_train(model_config, gtest):
     copyfile(os.path.realpath(__file__), os.path.join(log_dir, 'training_code.py'))
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_*")
-    NGraphs = int(len(graph_files) / nframes)
+    NGraphs = int(len(graph_files))
     print('Graph files N: ', NGraphs - 1)
     time.sleep(0.5)
 
-    arr = np.arange(0, NGraphs - 1, 2)
-    for run in arr:
-        kr = np.arange(0, nframes - 1, 4)
-        for k in kr:
-            x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{k}.pt')
-            y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{k}.pt')
-            if (run == 0) & (k == 0):
-                xx = x
-                yy = y
-            else:
-                xx = torch.concatenate((x, xx))
-                yy = torch.concatenate((y, yy))
+    for run in np.arange(0, NGraphs):
+        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}.pt')
+        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_{run}.pt')
 
-    vnorm = norm_velocity(xx, device)
-    ynorm = norm_acceleration(yy, device)
+    vnorm = norm_velocity(torch.stack(x), device)
+    ynorm = norm_acceleration(torch.stack(y), device)
 
     torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
     torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
@@ -1393,6 +1387,14 @@ def data_train(model_config, gtest):
     D_nm = torch.zeros((Nepochs + 1, nparticle_types, nparticle_types))
     sparsity_index = 0
 
+    x_list = []
+    y_list = []
+    for run in range(1, NGraphs):
+        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}.pt')
+        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_{run}.pt')
+        x_list.append(torch.stack(x).to(device))
+        y_list.append(torch.stack(y).to(device))
+
     print('')
     time.sleep(0.5)
     for epoch in range(Nepochs + 1):
@@ -1432,23 +1434,19 @@ def data_train(model_config, gtest):
             cos_phi = torch.cos(phi)
             sin_phi = torch.sin(phi)
 
-            run = 1 + np.random.randint(NGraphs - 1)
+            run = np.random.randint(NGraphs - 1)
 
             dataset_batch = []
             for batch in range(batch_size):
-
                 k = np.random.randint(nframes - 1)
-                x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{k}.pt').to(device)
+                x = x_list[run][k, :]
                 distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
                 adj_t = (distance < radius ** 2).float() * 1
                 t = torch.Tensor([radius ** 2])
                 edges = adj_t.nonzero().t().contiguous()
                 dataset = data.Data(x=x[:, :], edge_index=edges)
                 dataset_batch.append(dataset)
-
-                y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{k}.pt')
-                y = y.to(device)
-
+                y = y_list[run][k, :]
                 y[:, 0] = y[:, 0] / ynorm[4]
                 y[:, 1] = y[:, 1] / ynorm[4]
 
@@ -1485,6 +1483,8 @@ def data_train(model_config, gtest):
 
         torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
                    os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs.pt'))
+
+        # data_plot(model_config, epoch, bPrint=False)
 
         embedding = model.a.detach().cpu().numpy()
         embedding = np.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
@@ -1637,12 +1637,11 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         T1 = torch.concatenate((T1[:, None], T1[:, None]), 1)
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_*")
-    NGraphs = int(len(graph_files) / nframes)
+    NGraphs = int(len(graph_files))
+    net = f"./log/try_{ntry}/models/best_model_with_{NGraphs - 1}_graphs.pt"
+
     if bPrint:
         print('Graph files N: ', NGraphs - 1)
-
-    net = f"./log/try_{ntry}/models/best_model_with_{NGraphs - 1}_graphs.pt"
-    if bPrint:
         print(f'network: {net}')
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
@@ -1688,12 +1687,16 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         print(table)
         print(f"Total Trainable Params: {total_params}")
 
-    x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_0.pt')
-    x00 = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_0.pt')
-    y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_0_0.pt')
-    x = x.to(device)
-    x00 = x00.to(device)
-    y = y.to(device)
+    x_list = []
+    y_list = []
+    for run in range(NGraphs - 1):
+        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}.pt')
+        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_{run}.pt')
+        x_list.append(torch.stack(x).to(device))
+        y_list.append(torch.stack(y).to(device))
+
+    x = x_list[0][0, :]
+    x00 = x_list[0][0, :]
 
     if bPrint:
         print('')
@@ -1707,10 +1710,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
 
     for it in tqdm(range(nframes - 1)):
 
-        x0 = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_{min(it + 1, nframes - 2)}.pt',
-                        map_location=device)
-        x0 = x0.to(device)
-
+        x0 = x_list[0][min(it + 1, nframes - 2), :]
         distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
         t = torch.Tensor([radius ** 2])  # threshold
         adj_t = (distance < radius ** 2).float() * 1
@@ -1963,7 +1963,7 @@ def data_test_tracking(model_config, bVisu=False, bPrint=True, index_particles=0
         T1 = torch.concatenate((T1[:, None], T1[:, None]), 1)
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_*")
-    NGraphs = int(len(graph_files) / nframes)
+    NGraphs = int(len(graph_files))
     net = f"./log/try_{ntry}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     if bPrint:
         print('Graph files N: ', NGraphs - 1)
@@ -2012,12 +2012,16 @@ def data_test_tracking(model_config, bVisu=False, bPrint=True, index_particles=0
         print(table)
         print(f"Total Trainable Params: {total_params}")
 
-    x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_0.pt')
-    x00 = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_0.pt')
-    y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_0_0.pt')
-    x = x.to(device)
-    x00 = x00.to(device)
-    y = y.to(device)
+    x_list = []
+    y_list = []
+    for run in range(NGraphs - 1):
+        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}.pt')
+        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_{run}.pt')
+        x_list.append(torch.stack(x).to(device))
+        y_list.append(torch.stack(y).to(device))
+
+    x = x_list[0][0, :]
+    x0 = x_list[0][0, :]
 
     if bPrint:
         print('')
@@ -2036,17 +2040,8 @@ def data_test_tracking(model_config, bVisu=False, bPrint=True, index_particles=0
 
     for it in tqdm(range(nframes - 2)):
 
-        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_{min(it, nframes - 2)}.pt',
-                       map_location=device)
-        x = x.to(device)
-
-        x00 = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_{min(it, nframes - 2)}.pt',
-                         map_location=device)
-        x00 = x00.to(device)
-
-        x0 = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_{min(it + 1, nframes - 2)}.pt',
-                        map_location=device)
-        x0 = x0.to(device)
+        x = x_list[0][min(it, nframes - 2), :]
+        x0 = x_list[0][min(it + 1, nframes - 2), :]
 
         distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
         t = torch.Tensor([radius ** 2])  # threshold
@@ -2424,7 +2419,7 @@ def data_plot(model_config, epoch, bPrint):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_*")
-    NGraphs = int(len(graph_files) / nframes)
+    NGraphs = int(len(graph_files))
     if bPrint:
         print('Graph files N: ', NGraphs - 1)
     net = f"./log/try_{ntry}/models/best_model_with_{NGraphs - 1}_graphs.pt"
@@ -2930,7 +2925,7 @@ def load_model_config(id=48):
                              'batch_size': 8,
                              'embedding': 1,
                              'model': 'Particles_A',
-                             'prediction': 'acceleration',
+                             'prediction': 'accleration',
                              'upgrade_type': 0,
                              'p': [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855],
                                    [1.785, 1.8579, 1.7226, 1.0584]],
@@ -3045,7 +3040,6 @@ def load_model_config(id=48):
 
     return model_config_test
 
-
 if __name__ == '__main__':
 
     print('')
@@ -3098,7 +3092,7 @@ if __name__ == '__main__':
         data_generate(model_config)
         data_train(model_config, gtest)
         # data_plot(model_config, epoch=-1, bPrint=True)
-        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
+        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
 
