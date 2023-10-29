@@ -30,12 +30,8 @@ from torch_geometric.utils import degree
 
 def distmat_square(X, Y):
     return torch.sum(bc_diff(X[:, None, :] - Y[None, :, :]) ** 2, axis=2)
-
-
 def kernel(X, Y):
     return -torch.sqrt(distmat_square(X, Y))
-
-
 def MMD(X, Y):
     n = X.shape[0]
     m = Y.shape[0]
@@ -43,8 +39,6 @@ def MMD(X, Y):
         torch.sum(kernel(Y, Y)) / m ** 2 - \
         2 * torch.sum(kernel(X, Y)) / (n * m)
     return a.item()
-
-
 def normalize99(Y, lower=1, upper=99):
     """ normalize image so 0.0 is 1st percentile and 1.0 is 99th percentile """
     X = Y.copy()
@@ -52,8 +46,6 @@ def normalize99(Y, lower=1, upper=99):
     x99 = np.percentile(X, upper)
     X = (X - x01) / (x99 - x01)
     return x01, x99
-
-
 def norm_velocity(xx, device):
     mvx = torch.mean(xx[:, 3])
     mvy = torch.mean(xx[:, 4])
@@ -65,8 +57,6 @@ def norm_velocity(xx, device):
     vy01, vy99 = normalize99(nvy)
 
     return torch.tensor([vx01, vx99, vy01, vy99, vx, vy], device=device)
-
-
 def norm_acceleration(yy, device):
     max = torch.mean(yy[:, 0])
     may = torch.mean(yy[:, 1])
@@ -78,16 +68,12 @@ def norm_acceleration(yy, device):
     ay01, ay99 = normalize99(nay)
 
     return torch.tensor([ax01, ax99, ay01, ay99, ax, ay], device=device)
-
-
 def histogram(xs, bins, min, max):
     # Like torch.histogram, but works with cuda
     # min, max = xs.min(), xs.max()
     counts = torch.histc(xs, bins, min=min, max=max)
     boundaries = torch.linspace(min, max, bins + 1)
     return counts
-
-
 class FeedForwardNN(nn.Module):
     def __init__(self, input_dim, hidden, out, device):
         super(FeedForwardNN, self).__init__()
@@ -101,8 +87,6 @@ class FeedForwardNN(nn.Module):
         x = self.relu(self.layer2(x))
         x = self.relu(self.layer3(x))
         return x
-
-
 class Embedding_freq(nn.Module):
     def __init__(self, in_channels, N_freqs, logscale=True):
         """
@@ -136,8 +120,6 @@ class Embedding_freq(nn.Module):
                 out += [func(freq * x)]
 
         return torch.cat(out, -1)
-
-
 class Laplacian_A(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -176,8 +158,6 @@ class Laplacian_A(pyg.nn.MessagePassing):
         psi = torch.clamp(psi, max=self.pred_limit)
 
         return psi[:, None]
-
-
 class MLP(nn.Module):
 
     def __init__(self, input_size, output_size, nlayers, hidden_size, device):
@@ -203,7 +183,6 @@ class MLP(nn.Module):
         x = self.layers[-1](x)
         return x
 
-
 class Particles_A(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -220,12 +199,8 @@ class Particles_A(pyg.nn.MessagePassing):
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         newv = self.tau * self.propagate(edge_index, x=(x, x))
         oldv = x[:, 3:5]
-
-        if self.prediction == 'acceleration':
-            acc = newv - oldv
-            return acc
-        else:
-            return newv
+        acc = newv - oldv
+        return acc
 
     def message(self, x_i, x_j):
         r = torch.sum(bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) ** 2, axis=1)  # squared distance
@@ -238,8 +213,6 @@ class Particles_A(pyg.nn.MessagePassing):
     def psi(self, r, p):
         return r * (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(
             -r ** (2 * p[1]) / (2 * sigma ** 2)))
-
-
 class Particles_E(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -282,8 +255,6 @@ class Particles_E(pyg.nn.MessagePassing):
         acc = p1 * p2 * r / r_ ** 2
         acc = torch.clamp(acc, max=self.pred_limit)
         return acc  # Elec particles
-
-
 class Particles_G(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -322,8 +293,6 @@ class Particles_G(pyg.nn.MessagePassing):
         psi = torch.clamp(psi, max=self.pred_limit)
 
         return psi[:, None]
-
-
 class Particles_H(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -376,7 +345,6 @@ class Particles_H(pyg.nn.MessagePassing):
         psi = torch.clamp(psi, max=self.pred_limit)
 
         return psi[:, None]
-
 
 class InteractionParticles(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
@@ -470,8 +438,6 @@ class InteractionParticles(pyg.nn.MessagePassing):
 
         return r * (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(
             -r ** (2 * p[1]) / (2 * sigma ** 2)))
-
-
 class GravityParticles(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -563,8 +529,6 @@ class GravityParticles(pyg.nn.MessagePassing):
         psi = torch.clamp(psi, max=self.pred_limit)
 
         return psi[:, None]
-
-
 class ElecParticles(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -656,7 +620,6 @@ class ElecParticles(pyg.nn.MessagePassing):
         acc = p1 * p2 * r / r_ ** 3
         acc = torch.clamp(acc, max=self.pred_limit)
         return acc  # Elec particles
-
 
 def data_generate(model_config):
     print('')
@@ -937,8 +900,6 @@ def data_generate(model_config):
                 plt.tight_layout()
                 plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
                 plt.close()
-
-
 def data_train2(model_config, gtest):
     print('')
 
@@ -1275,8 +1236,6 @@ def data_train2(model_config, gtest):
         plt.tight_layout()
         plt.savefig(f"./tmp_training/Fig_{ntry}_{epoch}.tif")
         plt.close()
-
-
 def data_train(model_config, gtest):
     print('')
 
@@ -1589,8 +1548,6 @@ def data_train(model_config, gtest):
         plt.tight_layout()
         plt.savefig(f"./tmp_training/Fig_{ntry}_{epoch}.tif")
         plt.close()
-
-
 def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0,
               prev_index_particles=0):
     # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_recons/*")
@@ -1915,8 +1872,6 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         print(f'MMD: {np.round(discrepency, 4)}')
 
     return x.detach().cpu().numpy(), rmserr_list
-
-
 def data_test_tracking(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0,
                        prev_index_particles=0):
     # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_recons/*")
@@ -2127,8 +2082,6 @@ def data_test_tracking(model_config, bVisu=False, bPrint=True, index_particles=0
         print(f'MMD: {np.round(discrepency, 4)}')
 
     return x.detach().cpu().numpy(), rmserr_list
-
-
 def data_test_generate(model_config):
     print('')
     print('Generating test data ...')
@@ -2405,8 +2358,6 @@ def data_test_generate(model_config):
             plt.close()
 
     return prev_nparticles, new_nparticles, prev_index_particles, index_particles
-
-
 def data_plot(model_config, epoch, bPrint):
     model = []
     ntry = model_config['ntry']
@@ -2815,7 +2766,6 @@ def data_plot(model_config, epoch, bPrint):
         plt.tight_layout()
         plt.show()
 
-
 def load_model_config(id=48):
     model_config_test = []
 
@@ -3044,7 +2994,6 @@ def load_model_config(id=48):
     print('')
 
     return model_config_test
-
 
 if __name__ == '__main__':
 
