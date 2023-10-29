@@ -1878,6 +1878,9 @@ def data_train2(model_config, gtest):
     vnorm = norm_velocity(xx, device)
     ynorm = norm_acceleration(yy, device)
 
+    print(vnorm)
+    print(ynorm)
+
     torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
     torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
 
@@ -5162,8 +5165,8 @@ if __name__ == '__main__':
         sparsity_factor = 1
         print(f'sparsity_factor: {sparsity_factor}')
 
-        data_generate(model_config)
-        #data_train(model_config,gtest)
+        #data_generate(model_config)
+        data_train2(model_config,gtest)
         # data_plot_generated(model_config,3)
         # data_plot(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
