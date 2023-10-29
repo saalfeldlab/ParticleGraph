@@ -1485,7 +1485,6 @@ def data_train(model_config, gtest):
 
         torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
                    os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs.pt'))
-        data_plot(model_config, epoch, bPrint=False)
 
         embedding = model.a.detach().cpu().numpy()
         embedding = np.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
