@@ -426,6 +426,8 @@ class InteractionParticles(pyg.nn.MessagePassing):
 
         embedding = self.a[self.data_id,x_i[:, 0].detach().cpu().numpy(), :]
 
+
+        #### TO BE CHANGED #######
         if self.prediction == 'acceleration':
             in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding), dim=-1)
         else:
@@ -2837,7 +2839,7 @@ def load_model_config(id=48):
                              'start_frame':0.1}
     if id == 76:
         model_config_test = {'ntry': id,
-                             'input_size': 8,
+                             'input_size': 4,
                              'output_size': 2,
                              'hidden_size': 64,
                              'n_mp_layers': 5,
