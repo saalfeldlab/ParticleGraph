@@ -196,7 +196,7 @@ class InteractionParticles_A(pyg.nn.MessagePassing):
 
     def message(self, x_i, x_j):
         r = torch.sum(bc_diff(x_i[:, 0:2] - x_j[:, 0:2]) ** 2, axis=1)  # squared distance
-        pp = self.p[x_i[:, 5].detach().cpu().numpy(), :]
+        pp = self.p[x_i[:, 4].detach().cpu().numpy(), :]
         psi = - pp[:, 2] * torch.exp(-r ** pp[:, 0] / (2 * sigma ** 2)) + pp[:, 3] * torch.exp(
             -r ** pp[:, 1] / (2 * sigma ** 2))
 
@@ -4604,6 +4604,36 @@ def load_model_config(id=48):
                              'upgrade_type': 0,
                              'p': [[1.0413, 1.5615, 1.6233, 1.6012],[1.8308, 1.9055, 1.7667, 1.0855],[1.785, 1.8579, 1.7226, 1.0584]],
                              'nrun':2}
+    if id == 76:
+        model_config_test = {'ntry': id,
+                             'input_size': 8,
+                             'output_size': 2,
+                             'hidden_size': 64,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'noise_type': 0,
+                             'radius': 0.075,
+                             'radius_min': 0,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 4800,
+                             'nparticle_types': 3,
+                             'nframes': 200,
+                             'sigma': .005,
+                             'tau': 0.1,
+                             'v_init': 0,
+                             'aggr_type': 'mean',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'particle_embedding': True,
+                             'embedding_type': 'none',
+                             'embedding': 1,
+                             'model': 'InteractionParticles_A',
+                             'prediction': 'velocity',
+                             'upgrade_type': 0,
+                             'p': [[1.0413, 1.5615, 1.6233, 1.6012],[1.8308, 1.9055, 1.7667, 1.0855],[1.785, 1.8579, 1.7226, 1.0584]],
+                             'nrun':2,
+                             'start_frame':0}
 
     if id == 90:
         model_config_test = {'ntry': id,
@@ -5127,7 +5157,7 @@ if __name__ == '__main__':
     #     # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
 
     gtest_list=[1E-4, 5E-3, 1E-3, 1E-3, 5E-2]
-    gtest_list=[43,46]
+    gtest_list=[76,75]
 
     for gtest in gtest_list:
 
@@ -5165,8 +5195,8 @@ if __name__ == '__main__':
         sparsity_factor = 1
         print(f'sparsity_factor: {sparsity_factor}')
 
-        #data_generate(model_config)
-        data_train2(model_config,gtest)
+        data_generate(model_config)
+        #data_train2(model_config,gtest)
         # data_plot_generated(model_config,3)
         # data_plot(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
