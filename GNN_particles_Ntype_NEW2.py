@@ -740,12 +740,16 @@ def data_generate(model_config):
 
     for run in range(model_config['nrun']):
 
+        x_list=[]
+        y_list=[]
+
         if model_config['boundary'] == 'no':
             X1 = torch.randn(nparticles, 2, device=device) * 0.5
         else:
             X1 = torch.rand(nparticles, 2, device=device)
-
         V1 = v_init * torch.randn((nparticles, 2), device=device)
+
+
         T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
         for n in range(1, nparticle_types):
             T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
@@ -769,11 +773,13 @@ def data_generate(model_config):
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                                    H1.clone().detach()), 1)
             if (it >= 0) & (noise_level == 0):
+                x_list.append(x)
                 torch.save(x, f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{it}.pt')
             if (it >= 0) & (noise_level > 0):
                 x_noise = x
                 x_noise[:, 1:3] = x[:, 1:3] + noise_current
                 x_noise[:, 3:5] = x[:, 3:5] + noise_current - noise_prev
+                x_list.append(x_noise)
                 torch.save(x_noise, f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{it}.pt')
 
             if model_config['model'] == 'HeatMesh':
@@ -796,9 +802,11 @@ def data_generate(model_config):
                 y = model(dataset)
 
             if (it >= 0) & (noise_level == 0):
+                y_list.append(y)
                 torch.save(y, f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{it}.pt')
             if (it >= 0) & (noise_level > 0):
                 y_noise = y[:, 0:2] + noise_current - 2 * noise_prev + noise_prev_prev
+                y_list.append(y_noise)
                 torch.save(y_noise, f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{it}.pt')
 
             if model_config['prediction'] == 'acceleration':
@@ -817,7 +825,7 @@ def data_generate(model_config):
                         h = model_mesh(dataset_mesh)
                     H1 += h
 
-            if (run == 0) & (it % 5 == 0) & (it >= 0):
+            if (run == 0) & (it % 5 == 0) & (it >= 1E10):
 
                 fig = plt.figure(figsize=(13.5, 12))
                 # plt.ion()
@@ -900,6 +908,11 @@ def data_generate(model_config):
                 plt.tight_layout()
                 plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
                 plt.close()
+
+        torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
+        torch.save(y_list, f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
+
+
 def data_train2(model_config, gtest):
     print('')
 
@@ -1269,26 +1282,27 @@ def data_train(model_config, gtest):
 
     copyfile(os.path.realpath(__file__), os.path.join(log_dir, 'training_code.py'))
 
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_*")
-    NGraphs = int(len(graph_files) / nframes)
+    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
+    NGraphs = len(graph_files)
     print('Graph files N: ', NGraphs - 1)
     time.sleep(0.5)
 
-    arr = np.arange(0, NGraphs - 1, 2)
+    arr = np.arange(0, NGraphs)
+    x_list=[]
+    y_list=[]
     for run in arr:
-        kr = np.arange(0, nframes - 1, 4)
-        for k in kr:
-            x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{k}.pt')
-            y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{k}.pt')
-            if (run == 0) & (k == 0):
-                xx = x
-                yy = y
-            else:
-                xx = torch.concatenate((x, xx))
-                yy = torch.concatenate((y, yy))
+        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
+        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
+        x_list.append(torch.stack(x))
+        y_list.append(torch.stack(y))
+    x = torch.stack(x_list)
+    x = torch.reshape(x,(x.shape[0] * x.shape[1] * x.shape[2], x.shape[3]))
+    y = torch.stack(y_list)
+    y = torch.reshape(y,(y.shape[0]*y.shape[1]*y.shape[2],y.shape[3]))
+    vnorm = norm_velocity(x, device)
+    ynorm = norm_acceleration(y, device)
 
-    vnorm = norm_velocity(xx, device)
-    ynorm = norm_acceleration(yy, device)
+    print (vnorm,ynorm)
 
     torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
     torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
@@ -1397,7 +1411,8 @@ def data_train(model_config, gtest):
             for batch in range(batch_size):
 
                 k = np.random.randint(nframes - 1)
-                x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{k}.pt').to(device)
+                # x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{k}.pt').to(device)
+                x = x_list[run][k]
                 distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
                 adj_t = (distance < radius ** 2).float() * 1
                 t = torch.Tensor([radius ** 2])
@@ -1405,8 +1420,8 @@ def data_train(model_config, gtest):
                 dataset = data.Data(x=x[:, :], edge_index=edges)
                 dataset_batch.append(dataset)
 
-                y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{k}.pt')
-                y = y.to(device)
+                # y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{k}.pt').to(device)
+                y = y_list[run][k]
 
                 y[:, 0] = y[:, 0] / ynorm[4]
                 y[:, 1] = y[:, 1] / ynorm[4]
@@ -1517,7 +1532,7 @@ def data_train(model_config, gtest):
         plt.ylim([0, 0.003])
         plt.ylabel('Loss', fontsize=10)
         plt.xlabel('Epochs', fontsize=10)
-        if (epoch % 10 == 0) & (epoch > 0):
+        if False: #(epoch % 10 == 0) & (epoch > 0):
             best_loss = total_loss / N / nparticles / batch_size
             torch.save({'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict()},
@@ -1525,7 +1540,6 @@ def data_train(model_config, gtest):
             xx, rmserr_list = data_test(model_config, bVisu=True, bPrint=False)
             model.train()
         if (epoch > 9):
-
             ax = fig.add_subplot(2, 2, 3)
             for n in range(nparticle_types):
                 plt.scatter(xx[index_particles[n], 1], xx[index_particles[n], 2], s=1)
@@ -3006,7 +3020,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [75, 46, 47, 48]
+    gtestlist = [75] #[75, 46, 47, 48]
 
     for gtest in gtestlist:
 
