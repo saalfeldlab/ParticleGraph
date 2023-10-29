@@ -756,7 +756,6 @@ def data_generate(model_config):
             noise_current = 0 * torch.randn((nparticles, 2), device=device) * noise_level * radius
 
             ### TO BE CHANGED ###
-            X1 = bc_pos(X1 + V1)
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach()),1)
             if (it>=0) & (noise_level==0):
                 torch.save(x, f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{it}.pt')
@@ -796,6 +795,8 @@ def data_generate(model_config):
                 V1 += y[:,0:2]
             else:
                 V1 = y[:,0:2]
+
+            X1 = bc_pos(X1 + V1)
 
             if model_config['model'] == 'HeatParticles':
                 H1 += y[:,2:3]
