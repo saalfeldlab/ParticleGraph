@@ -1434,19 +1434,18 @@ def data_train(model_config, gtest):
         # kmeans = KMeans(init="random", n_clusters=nparticle_types, n_init=10, max_iter=300, random_state=42)
         # kmeans.fit(embedding)
         # gap = kmeans.inertia_
-        kmeans_kwargs = {"init": "random", "n_init": 10, "max_iter": 300, "random_state": 42}
-        sse = []
+        # kmeans_kwargs = {"init": "random", "n_init": 10, "max_iter": 300, "random_state": 42}
+        # sse = []
         # for k in range(1, 11):
         #     kmeans_ = KMeans(n_clusters=k, **kmeans_kwargs)
         #     kmeans_.fit(embedding)
         #     sse.append(kmeans_.inertia_)
         # kl = KneeLocator(range(1, 11), sse, curve="convex", direction="decreasing")
         # list_gap.append(gap)
-
-        for n in range(nparticle_types - 1):
-            for m in range(n + 1, nparticle_types):
-                D_nm[epoch, n, m] = S_e(torch.tensor(embedding_particle[n]), torch.tensor(embedding_particle[m]))
-        S_geomD = torch.sum(D_nm[epoch]).item()
+        # for n in range(nparticle_types - 1):
+        #     for m in range(n + 1, nparticle_types):
+        #         D_nm[epoch, n, m] = S_e(torch.tensor(embedding_particle[n]), torch.tensor(embedding_particle[m]))
+        # S_geomD = torch.sum(D_nm[epoch]).item()
 
         sparsity_index = torch.sum((histogram(model.a, 50, -4, 4) > nparticles / 100))
 
@@ -1456,11 +1455,9 @@ def data_train(model_config, gtest):
                         'optimizer_state_dict': optimizer.state_dict()},
                        os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs.pt'))
             print("Epoch {}. Loss: {:.6f} geomloss {:.2f} sparsity_index {:.3f}  saving model  ".format(epoch,
-                                                                                 total_loss / N / nparticles / batch_size,
-                                                                                 S_geomD, sparsity_index.item()/sparsity_factor))
+                                                                                 total_loss / N / nparticles / batch_size,sparsity_index.item()/sparsity_factor))
         else:
-            print("Epoch {}. Loss: {:.6f} geomloss {:.2f} sparsity_index {:.3f} ".format(epoch, total_loss / N / nparticles / batch_size,
-                                                                   S_geomD,sparsity_index.item()/sparsity_factor))
+            print("Epoch {}. Loss: {:.6f} geomloss {:.2f} sparsity_index {:.3f} ".format(epoch, total_loss / N / nparticles / batch_size,sparsity_index.item()/sparsity_factor))
 
         list_loss.append(total_loss / N / nparticles / batch_size)
 
