@@ -2955,7 +2955,9 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    for gtest in range(46,49):
+    gtestlist=[75,46,47,48]
+
+    for gtest in gtestlist:
 
         model_config = load_model_config(id=gtest)
 
