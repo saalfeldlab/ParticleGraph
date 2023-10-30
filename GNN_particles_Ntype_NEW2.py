@@ -827,7 +827,7 @@ def data_generate(model_config):
                         h = model_mesh(dataset_mesh)
                     H1 += h
 
-            if (run == 0) & (it % 5 == 0) & (it >= 1E10):
+            if (run == 0) & (it % 5 == 0) & (it >= 0):
 
                 fig = plt.figure(figsize=(13.5, 12))
                 # plt.ion()
@@ -3025,7 +3025,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [75] #[75, 46, 47, 48]
+    gtestlist = [75, 46, 47, 48]
 
     for gtest in gtestlist:
 
