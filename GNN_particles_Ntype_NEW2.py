@@ -827,10 +827,10 @@ def data_generate(model_config):
                         h = model_mesh(dataset_mesh)
                     H1 += h
 
-            if (run == 0) & (it % 5 == 0) & (it >= 0):
+            if (run == 0) & (it % 5 == 0) & (it >= 10E5):
 
-                fig = plt.figure(figsize=(13.5, 12))
-                # plt.ion()
+                fig = plt.figure(figsize=(12, 12))
+                plt.ion()
                 ax = fig.add_subplot(2, 2, 1)
                 if model_config['model'] == 'GravityParticles':
                     for n in range(nparticle_types):
@@ -859,7 +859,7 @@ def data_generate(model_config):
                 ax = plt.gca()
                 for n in range(nparticle_types):
                     if model_config['boundary'] == 'no':
-                        plt.text(-2.1, 1.5 - n * 0.1, f'p{n}: {np.round(p[n].detach().cpu().numpy(), 4)}', color='k')
+                        plt.text(-1.9, 1.5 - n * 0.1, f'p{n}: {np.round(p[n].detach().cpu().numpy(), 4)}', color='k')
                     else:
                         plt.text(-0.75, 0.7 - n * 0.05, f'p{n}: {np.round(p[n].detach().cpu().numpy(), 4)}', color='k')
 
@@ -913,8 +913,6 @@ def data_generate(model_config):
 
         torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
         torch.save(y_list, f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
-
-
 def data_train(model_config, gtest):
     print('')
 
@@ -1107,7 +1105,8 @@ def data_train(model_config, gtest):
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
 
-            pred = model(batch, data_id=run - 1, step=1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
+            for batch in batch_loader:
+                pred = model(batch, data_id=run - 1, step=1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
 
             # if (epoch >0) & (epoch<5) :
             #     sparsity_index = torch.sum((histogram(model.a, 100, -4, 4) < nparticles / 100)) * sparsity_factor
@@ -1423,10 +1422,7 @@ def data_train2(model_config, gtest):
             optimizer.zero_grad()
 
             for batch in batch_loader:
-                if model_config['model'] == 'ResNetGNN':
-                    pred = model(batch, vnorm=vnorm)
-                else:
-                    pred = model(batch, data_id=run - 1, step=1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
+                pred = model(batch, data_id=run - 1, step=1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
 
             if ((N - 1) % 1000 == 0) & (epoch < 6):
 
