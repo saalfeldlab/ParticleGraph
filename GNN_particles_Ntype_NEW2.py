@@ -1171,7 +1171,7 @@ def data_train(model_config, gtest):
             acc_list.append(acc)
             plt.plot(rr.detach().cpu().numpy(),
                      acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'], linewidth=1,
-                     c='k')
+                     c='k',alpha=0.25)
         acc_list = torch.stack(acc_list)
         plt.yscale('log')
         plt.xscale('log')
@@ -1186,14 +1186,15 @@ def data_train(model_config, gtest):
         proj_interaction = trans.transform(coeff_norm)
         particle_types = x_list[0][0, :, 5].clone().detach().cpu().numpy()
         ax = fig.add_subplot(2, 3, 5)
-        plt.scatter(proj_interaction[:, 0], proj_interaction[:, 1], c=particle_types, s=5)
+        for n in range(nparticle_types):
+            plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1], s=5)
         plt.xlabel('UMAP 0', fontsize=12)
         plt.ylabel('UMAP 1', fontsize=12)
 
         kmeans = KMeans(init="random", n_clusters=nparticle_types, n_init=10, max_iter=300, random_state=42)
         kmeans.fit(proj_interaction)
         for n in range(nparticle_types):
-            plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', c='k', alpha=0.5)
+            plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', c='k', alpha=0.25)
             pos = np.argwhere(kmeans.labels_ == n).squeeze().astype(int)
 
         if (epoch==15) | (epoch==25):
