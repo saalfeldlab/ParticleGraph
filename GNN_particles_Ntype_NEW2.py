@@ -749,6 +749,8 @@ def data_generate(model_config):
             X1 = torch.rand(nparticles, 2, device=device)
         V1 = v_init * torch.randn((nparticles, 2), device=device)
 
+        # X1=torch.load('X1.pt')
+        # V1=torch.load('V1.pt')
 
         T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
         for n in range(1, nparticle_types):
@@ -911,7 +913,6 @@ def data_generate(model_config):
 
         torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
         torch.save(y_list, f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
-
 
 def data_train2(model_config, gtest):
     print('')
@@ -1412,7 +1413,9 @@ def data_train(model_config, gtest):
 
                 k = np.random.randint(nframes - 1)
                 # x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{k}.pt').to(device)
-                x = x_list[run][k]
+                x = x_list[run][k].clone().detach()
+
+
                 distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
                 adj_t = (distance < radius ** 2).float() * 1
                 t = torch.Tensor([radius ** 2])
@@ -1421,7 +1424,8 @@ def data_train(model_config, gtest):
                 dataset_batch.append(dataset)
 
                 # y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{k}.pt').to(device)
-                y = y_list[run][k]
+                y = y_list[run][k].clone().detach()
+
 
                 y[:, 0] = y[:, 0] / ynorm[4]
                 y[:, 1] = y[:, 1] / ynorm[4]
@@ -1436,7 +1440,7 @@ def data_train(model_config, gtest):
                 else:
                     y_batch = torch.cat((y_batch, y), axis=0)
 
-            batch_loader = DataLoader(dataset_batch, batch_size=8, shuffle=False)
+            batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
 
             for batch in batch_loader:
@@ -1452,6 +1456,7 @@ def data_train(model_config, gtest):
             #     loss_regul.backward()
             # else:
             loss = (pred - y_batch).norm(2)
+
             loss.backward()
 
             optimizer.step()
