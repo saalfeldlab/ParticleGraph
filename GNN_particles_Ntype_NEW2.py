@@ -260,14 +260,13 @@ class Particles_G(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, aggr_type=[], p=[], tau=[], clamp=[], pred_limit=[], prediction=[]):
+    def __init__(self, aggr_type=[], p=[], tau=[], clamp=[], pred_limit=[]):
         super(Particles_G, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.p = p
         self.tau = tau
         self.clamp = clamp
         self.pred_limit = pred_limit
-        self.prediction = prediction
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
@@ -621,6 +620,92 @@ class ElecParticles(pyg.nn.MessagePassing):
         acc = p1 * p2 * r / r_ ** 3
         acc = torch.clamp(acc, max=self.pred_limit)
         return acc  # Elec particles
+class MeshDiffusion(pyg.nn.MessagePassing):
+    """Interaction Network as proposed in this paper:
+    https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
+
+    def __init__(self, model_config, device):
+
+        super(InteractionParticles, self).__init__(aggr=aggr_type)  # "Add" aggregation.
+
+        self.device = device
+        self.input_size = model_config['input_size']
+        self.output_size = model_config['output_size']
+        self.hidden_size = model_config['hidden_size']
+        self.nlayers = model_config['n_mp_layers']
+        self.nparticles = model_config['nparticles']
+        self.radius = model_config['radius']
+        self.data_augmentation = model_config['data_augmentation']
+        self.noise_level = model_config['noise_level']
+        self.embedding = model_config['embedding']
+        self.ndataset = model_config['nrun'] - 1
+        self.upgrade_type = model_config['upgrade_type']
+        self.prediction = model_config['prediction']
+
+        self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
+                            hidden_size=self.hidden_size, device=self.device)
+
+        self.a = nn.Parameter(
+            torch.tensor(np.ones((self.ndataset, int(self.nparticles), self.embedding)), device=self.device,
+                         requires_grad=True, dtype=torch.float32))
+
+    def forward(self, data, data_id, step, vnorm, cos_phi, sin_phi):
+
+        self.data_id = data_id
+        self.step = step
+        self.cos_phi = cos_phi
+        self.sin_phi = sin_phi
+
+        x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
+        # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+        deg = pyg_utils.degree(edge_index[0], data.num_nodes)
+
+        heat = self.propagate(edge_index, x=(x, x),edge_attr=edge_attr)
+
+        return heat
+
+    def message(self, x_i, x_j, edge_attr):
+
+        r = torch.sqrt(torch.sum(bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) ** 2, axis=1)) / self.radius  # squared distance
+        r = r[:, None]
+
+        delta_pos = bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) / self.radius
+        x_i_vx = x_i[:, 3:4] / self.vnorm[4]
+        x_i_vy = x_i[:, 4:5] / self.vnorm[5]
+        x_j_vx = x_j[:, 3:4] / self.vnorm[4]
+        x_j_vy = x_j[:, 4:5] / self.vnorm[5]
+
+        if (self.data_augmentation) & (self.step == 1):
+            new_x = self.cos_phi * delta_pos[:, 0] + self.sin_phi * delta_pos[:, 1]
+            new_y = -self.sin_phi * delta_pos[:, 0] + self.cos_phi * delta_pos[:, 1]
+            delta_pos[:, 0] = new_x
+            delta_pos[:, 1] = new_y
+            new_vx = self.cos_phi * x_i_vx + self.sin_phi * x_i_vy
+            new_vy = -self.sin_phi * x_i_vx + self.cos_phi * x_i_vy
+            x_i_vx = new_vx
+            x_i_vy = new_vy
+            new_vx = self.cos_phi * x_j_vx + self.sin_phi * x_j_vy
+            new_vy = -self.sin_phi * x_j_vx + self.cos_phi * x_j_vy
+            x_j_vx = new_vx
+            x_j_vy = new_vy
+
+        embedding = self.a[self.data_id, x_i[:, 0].detach().cpu().numpy(), :]
+
+        if self.prediction == 'acceleration':
+            in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding), dim=-1)
+        else:
+            in_features = torch.cat((delta_pos, r, embedding), dim=-1)
+
+        return self.lin_edge(in_features)
+
+    def update(self, aggr_out):
+
+        return aggr_out  # self.lin_node(aggr_out)
+
+    def psi(self, r, p):
+
+        return r * (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(
+            -r ** (2 * p[1]) / (2 * sigma ** 2)))
 
 def data_generate(model_config):
     print('')
@@ -683,8 +768,7 @@ def data_generate(model_config):
             for n in range(nparticle_types):
                 p[n] = torch.tensor(model_config['p'][n])
         model = Particles_G(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'],
-                            clamp=model_config['clamp'], pred_limit=model_config['pred_limit'],
-                            prediction=model_config['prediction'])
+                            clamp=model_config['clamp'], pred_limit=model_config['pred_limit'])
         psi_output = []
         for n in range(nparticle_types):
             psi_output.append(model.psi(rr, torch.squeeze(p[n])))
@@ -697,8 +781,7 @@ def data_generate(model_config):
                 p[n] = torch.tensor(model_config['p'][n])
         model = Particles_H(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'],
                             conductivity=model_config['conductivity'],
-                            clamp=model_config['clamp'], pred_limit=model_config['pred_limit'],
-                            prediction=model_config['prediction'])
+                            clamp=model_config['clamp'], pred_limit=model_config['pred_limit'])
         psi_output = []
         for n in range(nparticle_types):
             psi_output.append(model.psi(rr, torch.squeeze(p[n])))
@@ -710,8 +793,7 @@ def data_generate(model_config):
             for n in range(nparticle_types):
                 p[n] = torch.tensor(model_config['p'][n])
         model = Particles_G(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'],
-                            clamp=model_config['clamp'], pred_limit=model_config['pred_limit'],
-                            prediction=model_config['prediction'])
+                            clamp=model_config['clamp'], pred_limit=model_config['pred_limit'])
         c = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         for n in range(nparticle_types):
             c[n] = torch.tensor(model_config['c'][n])
@@ -830,7 +912,7 @@ def data_generate(model_config):
 
             if (run == 0) & (it % 5 == 0) & (it >= 0):
 
-                fig = plt.figure(figsize=(12, 12))
+                fig = plt.figure(figsize=(13.3, 12))
                 # plt.ion()
                 ax = fig.add_subplot(2, 2, 1)
                 if model_config['model'] == 'GravityParticles':
@@ -843,7 +925,7 @@ def data_generate(model_config):
                     for n in range(nparticle_types):
                         plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                     x[index_particles[n], 2].detach().cpu().numpy(), s=10, alpha=0.75,
-                                    c=x[index_particles[n], 5].detach().cpu().numpy(), cmap='inferno', vmin=0, vmax=2)
+                                    c=x[index_particles[n], 6].detach().cpu().numpy(), cmap='inferno', vmin=0, vmax=2)
                 elif model_config['model'] == 'ElecParticles':
                     for n in range(nparticle_types):
                         g = np.abs(p[T1[index_particles[n], 2].detach().cpu().numpy()].detach().cpu().numpy() * 20)
@@ -1149,7 +1231,7 @@ def data_train(model_config, gtest):
                        os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs.pt'))
             print("Epoch {}. Loss: {:.6f} sparsity_index {:.3f}  saving model  ".format(epoch,total_loss / N / nparticles / batch_size,sparsity_index.item() / sparsity_factor))
         else:
-            print("Epoch {}. Loss: {:.6f} sparsity_index {:.3f} ".format(epoch,total_loss / N / nparticles / batch_size,parsity_index.item() / sparsity_factor))
+            print("Epoch {}. Loss: {:.6f} sparsity_index {:.3f} ".format(epoch,total_loss / N / nparticles / batch_size,sparsity_index.item() / sparsity_factor))
 
         list_loss.append(total_loss / N / nparticles / batch_size)
 
@@ -1197,7 +1279,7 @@ def data_train(model_config, gtest):
             plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', c='k', alpha=0.25)
             pos = np.argwhere(kmeans.labels_ == n).squeeze().astype(int)
 
-        if (epoch==15) | (epoch==25):
+        if (epoch==14) | (epoch==24) | (epoch==29):
             for n in range(nparticle_types):
                 pos = np.argwhere(kmeans.labels_ == n).squeeze().astype(int)
                 temp = model.a[0, pos, :]
@@ -1263,9 +1345,6 @@ def data_train(model_config, gtest):
             plt.tick_params(axis='both', which='major', labelsize=10)
             plt.xlabel('Frame [a.u]', fontsize=14)
             ax.set_ylabel('RMSE [a.u]', fontsize=14, color='r')
-            
-            
-
 
         plt.tight_layout()
         plt.savefig(f"./tmp_training/Fig_{ntry}_{epoch}.tif")
@@ -3103,7 +3182,7 @@ if __name__ == '__main__':
         sparsity_factor = 1
         print(f'sparsity_factor: {sparsity_factor}')
 
-        #data_generate(model_config)
+        # data_generate(model_config)
         data_train(model_config, gtest)
         # data_plot(model_config, epoch=-1, bPrint=True)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
