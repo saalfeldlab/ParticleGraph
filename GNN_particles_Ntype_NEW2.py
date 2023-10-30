@@ -26,6 +26,7 @@ import trackpy
 from numpy import vstack
 from sklearn.metrics import confusion_matrix, recall_score, f1_score
 from torch_geometric.utils import degree
+import umap
 
 def distmat_square(X, Y):
     return torch.sum(bc_diff(X[:, None, :] - Y[None, :, :]) ** 2, axis=2)
@@ -1167,15 +1168,15 @@ def data_train(model_config, gtest):
 
         list_loss.append(total_loss / N / nparticles / batch_size)
 
-        fig = plt.figure(figsize=(8, 8))
-        # plt.ion()
+        fig = plt.figure(figsize=(12, 8))
+        plt.ion()
 
         if (embedding.shape[1] > 2):
-            ax = fig.add_subplot(2, 2, 1, projection='3d')
+            ax = fig.add_subplot(2, 3, 1, projection='3d')
             for n in range(nparticle_types):
                 ax.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], embedding_particle[n][:, 2], s=1)
         else:
-            ax = fig.add_subplot(2, 2, 1)
+            ax = fig.add_subplot(2, 3, 1)
             if (embedding.shape[1] > 1):
                 for n in range(nparticle_types):
                     plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
@@ -1190,12 +1191,12 @@ def data_train(model_config, gtest):
                     plt.hist(embedding_particle[n][:, 0], 100, range=[-4, 4], alpha=0.5)
                 plt.xlim([-5.1, 5.1])
 
-        ax = fig.add_subplot(2, 2, 2)
+        ax = fig.add_subplot(2, 3, 2)
         plt.plot(list_loss, color='k')
         plt.xlim([0, 100])
         plt.ylim([0, 0.003])
-        plt.ylabel('Loss', fontsize=10)
-        plt.xlabel('Epochs', fontsize=10)
+        plt.ylabel('Loss', fontsize=12)
+        plt.xlabel('Epochs', fontsize=12)
         if (epoch % 10 == 0) & (epoch > 0):
             best_loss = total_loss / N / nparticles / batch_size
             torch.save({'model_state_dict': model.state_dict(),
@@ -1204,7 +1205,7 @@ def data_train(model_config, gtest):
             xx, rmserr_list = data_test(model_config, bVisu=True, bPrint=False)
             model.train()
         if (epoch > 9):
-            ax = fig.add_subplot(2, 2, 3)
+            ax = fig.add_subplot(2, 2, 4)
             for n in range(nparticle_types):
                 plt.scatter(xx[index_particles[n], 1], xx[index_particles[n], 2], s=1)
             ax = plt.gca()
@@ -1215,17 +1216,42 @@ def data_train(model_config, gtest):
             ax.axes.get_xaxis().set_visible(False)
             ax.axes.get_yaxis().set_visible(False)
             plt.axis('off')
-
-            ax = fig.add_subplot(2, 2, 4)
+            ax = fig.add_subplot(2, 2, 3)
             plt.plot(np.arange(len(rmserr_list)), rmserr_list, label='RMSE', c='r')
             plt.ylim([0, 0.1])
             plt.xlim([0, nframes])
             plt.tick_params(axis='both', which='major', labelsize=10)
-            plt.xlabel('Frame [a.u]', fontsize="14")
-            ax.set_ylabel('RMSE [a.u]', fontsize="14", color='r')
+            plt.xlabel('Frame [a.u]', fontsize=14)
+            ax.set_ylabel('RMSE [a.u]', fontsize=14, color='r')
+            ax = fig.add_subplot(2, 3, 5)
+            acc_list=[]
+            for n in range(nparticles):
+                rr = torch.tensor(np.linspace(0, radius * 1.3, 1000)).to(device)
+                embedding = model.a[0,n,:] * torch.ones((1000, model_config['embedding']),device=device)
+                in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                         rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
+                                         0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
+                acc = model.lin_edge(in_features.float())
+                acc = acc[:, 0]
+                acc_list.append(acc)
+                plt.plot(rr.detach().cpu().numpy(), acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy()  / model_config['tau'], linewidth=1, c='k')
+            acc_list = torch.stack(acc_list)
+            plt.yscale('log')
+            plt.xscale('log')
+            plt.xlim([1E-3, 0.2])
+            plt.ylim([1, 1E7])
+            plt.xlabel('Distance [a.u]', fontsize=12)
+            plt.ylabel('MLP [a.u]', fontsize=12)
 
-        if epoch==25:
-            a=1
+            reducer = umap.UMAP()
+            coeff_norm = acc_list.detach().cpu().numpy()
+            trans = umap.UMAP(n_neighbors=30, n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
+            proj_interaction = trans.transform(coeff_norm)
+            particle_types = x_list[0][0,:,5].clone().detach().cpu().numpy()
+            ax = fig.add_subplot(2, 3, 6)
+            plt.scatter(proj_interaction[:, 0], proj_interaction[:, 1], c= particle_types,s=5)
+            plt.xlabel('UMAP 0', fontsize=12)
+            plt.ylabel('UMAP 1', fontsize=12)
 
         plt.tight_layout()
         plt.savefig(f"./tmp_training/Fig_{ntry}_{epoch}.tif")
@@ -1610,7 +1636,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
         T1 = torch.concatenate((T1[:, None], T1[:, None]), 1)
 
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_*")
+    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
     NGraphs = int(len(graph_files))
     net = f"./log/try_{ntry}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     if bPrint:
