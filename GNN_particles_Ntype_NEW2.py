@@ -828,10 +828,10 @@ def data_generate(model_config):
                         h = model_mesh(dataset_mesh)
                     H1 += h
 
-            if (run == 0) & (it % 5 == 0) & (it >= 10E5):
+            if (run == 0) & (it % 5 == 0) & (it >= 0):
 
                 fig = plt.figure(figsize=(12, 12))
-                plt.ion()
+                # plt.ion()
                 ax = fig.add_subplot(2, 2, 1)
                 if model_config['model'] == 'GravityParticles':
                     for n in range(nparticle_types):
@@ -1132,8 +1132,7 @@ def data_train(model_config, gtest):
         for n in range(nparticle_types):
             embedding_particle.append(embedding[index_particles[n], :])
 
-        # kmeans = KMeans(init="random", n_clusters=nparticle_types, n_init=10, max_iter=300, random_state=42)
-        # kmeans.fit(embedding)
+
         # gap = kmeans.inertia_
         kmeans_kwargs = {"init": "random", "n_init": 10, "max_iter": 300, "random_state": 42}
         sse = []
@@ -1223,35 +1222,46 @@ def data_train(model_config, gtest):
             plt.tick_params(axis='both', which='major', labelsize=10)
             plt.xlabel('Frame [a.u]', fontsize=14)
             ax.set_ylabel('RMSE [a.u]', fontsize=14, color='r')
-            ax = fig.add_subplot(2, 3, 5)
-            acc_list=[]
-            for n in range(nparticles):
-                rr = torch.tensor(np.linspace(0, radius * 1.3, 1000)).to(device)
-                embedding = model.a[0,n,:] * torch.ones((1000, model_config['embedding']),device=device)
-                in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
-                                         rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
-                                         0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
-                acc = model.lin_edge(in_features.float())
-                acc = acc[:, 0]
-                acc_list.append(acc)
-                plt.plot(rr.detach().cpu().numpy(), acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy()  / model_config['tau'], linewidth=1, c='k')
-            acc_list = torch.stack(acc_list)
-            plt.yscale('log')
-            plt.xscale('log')
-            plt.xlim([1E-3, 0.2])
-            plt.ylim([1, 1E7])
-            plt.xlabel('Distance [a.u]', fontsize=12)
-            plt.ylabel('MLP [a.u]', fontsize=12)
+        ax = fig.add_subplot(2, 3, 5)
+        acc_list=[]
+        for n in range(nparticles):
+            rr = torch.tensor(np.linspace(0, radius * 1.3, 1000)).to(device)
+            embedding = model.a[0,n,:] * torch.ones((1000, model_config['embedding']),device=device)
+            in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                     rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
+                                     0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
+            acc = model.lin_edge(in_features.float())
+            acc = acc[:, 0]
+            acc_list.append(acc)
+            plt.plot(rr.detach().cpu().numpy(), acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy()  / model_config['tau'], linewidth=1, c='k')
+        acc_list = torch.stack(acc_list)
+        plt.yscale('log')
+        plt.xscale('log')
+        plt.xlim([1E-3, 0.2])
+        plt.ylim([1, 1E7])
+        plt.xlabel('Distance [a.u]', fontsize=12)
+        plt.ylabel('MLP [a.u]', fontsize=12)
 
-            reducer = umap.UMAP()
-            coeff_norm = acc_list.detach().cpu().numpy()
-            trans = umap.UMAP(n_neighbors=30, n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
-            proj_interaction = trans.transform(coeff_norm)
-            particle_types = x_list[0][0,:,5].clone().detach().cpu().numpy()
-            ax = fig.add_subplot(2, 3, 6)
-            plt.scatter(proj_interaction[:, 0], proj_interaction[:, 1], c= particle_types,s=5)
-            plt.xlabel('UMAP 0', fontsize=12)
-            plt.ylabel('UMAP 1', fontsize=12)
+        reducer = umap.UMAP()
+        coeff_norm = acc_list.detach().cpu().numpy()
+        trans = umap.UMAP(n_neighbors=30, n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
+        proj_interaction = trans.transform(coeff_norm)
+        particle_types = x_list[0][0,:,5].clone().detach().cpu().numpy()
+        ax = fig.add_subplot(2, 3, 6)
+        plt.scatter(proj_interaction[:, 0], proj_interaction[:, 1], c= particle_types,s=5)
+        plt.xlabel('UMAP 0', fontsize=12)
+        plt.ylabel('UMAP 1', fontsize=12)
+
+        kmeans = KMeans(init="random", n_clusters=nparticle_types, n_init=10, max_iter=300, random_state=42)
+        kmeans.fit(proj_interaction)
+        for n in range(nparticle_types):
+            plt.plot(kmeans.cluster_centers_[n,0],kmeans.cluster_centers_[n,1],'+',c='w')
+            pos = np.argwhere(kmeans.labels_==n).squeeze().astype(int)
+
+        if epoch==25:
+            for n in range(nparticle_types):
+                temp = model.a[0, pos, :]
+                model.a.data[0, pos, :] = torch.median(temp, axis=0).values
 
         plt.tight_layout()
         plt.savefig(f"./tmp_training/Fig_{ntry}_{epoch}.tif")
@@ -3089,7 +3099,7 @@ if __name__ == '__main__':
         sparsity_factor = 1
         print(f'sparsity_factor: {sparsity_factor}')
 
-        data_generate(model_config)
+        #data_generate(model_config)
         data_train(model_config, gtest)
         # data_plot(model_config, epoch=-1, bPrint=True)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
