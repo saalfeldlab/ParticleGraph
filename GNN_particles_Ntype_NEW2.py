@@ -16,7 +16,7 @@ import time
 from shutil import copyfile
 from prettytable import PrettyTable
 from kneed import KneeLocator
-from sklearn.cluster import KMeans,HDBSCAN
+from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
 import json
 from geomloss import SamplesLoss
@@ -1035,11 +1035,9 @@ def data_train(model_config, gtest):
         model = MeshDiffusion(model_config, device)
         print(f'Training MeshDiffusion')
 
-    # net = f"./log/try_51/models/best_model_with_1_graphs.pt"
-    # state_dict = torch.load(net,map_location=device)
-    # model.a = nn.Parameter(torch.tensor(np.ones((model.ndataset, 680, model.embedding)), device=model.device, requires_grad=True,dtype=torch.float32))
-    # model.load_state_dict(state_dict['model_state_dict'])
-    # model.a = nn.Parameter(torch.tensor(np.ones((model.ndataset, 960, model.embedding)), device=model.device, requires_grad=True,dtype=torch.float32))
+    net = f"./log/try_{ntry}/models/best_model_with_1_graphs.pt"
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
 
     lra = 1E-3
     lr = 1E-3
@@ -1081,10 +1079,7 @@ def data_train(model_config, gtest):
         print('no data augmentation ...')
 
     list_loss = []
-    list_gap = []
-    embedding_list = []
     D_nm = torch.zeros((Nepochs + 1, nparticle_types, nparticle_types))
-    sparsity_index = 0
 
     print('')
     time.sleep(0.5)
@@ -1230,6 +1225,7 @@ def data_train(model_config, gtest):
 
         list_loss.append(total_loss / N / nparticles / batch_size)
 
+        cmap = plt.cm.get_cmap('Spectral')
         fig = plt.figure(figsize=(16, 8))
         plt.ion()
 
@@ -1248,15 +1244,15 @@ def data_train(model_config, gtest):
         for n in range(nparticle_types):
             embedding_particle.append(embedding[index_particles[n], :])
 
+        ax = fig.add_subplot(2, 4, 2)
         if (embedding.shape[1] > 2):
             ax = fig.add_subplot(2, 4, 2, projection='3d')
             for n in range(nparticle_types):
-                ax.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], embedding_particle[n][:, 2], s=1)
+                ax.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], embedding_particle[n][:, 2], color=cmap(n/nparticle_types), s=1)
         else:
-            ax = fig.add_subplot(2, 4, 2)
             if (embedding.shape[1] > 1):
                 for n in range(nparticle_types):
-                    plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
+                    plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], color=cmap(n/nparticle_types), s=3)
                     plt.xlabel('Embedding 0', fontsize=12)
                     plt.ylabel('Embedding 1', fontsize=12)
             else:
@@ -1264,7 +1260,6 @@ def data_train(model_config, gtest):
                     plt.hist(embedding_particle[n][:, 0], 100, alpha=0.5)
 
         ax = fig.add_subplot(2, 4, 3)
-
         if model_config['model'] == 'ElecParticles':
             acc_list = []
             for n in range(nparticles):
@@ -1279,7 +1274,7 @@ def data_train(model_config, gtest):
                 acc_list.append(acc)
                 plt.plot(rr.detach().cpu().numpy(),
                          acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'], linewidth=1,
-                         c='k',alpha=0.25)
+                         color=cmap(x[n,5].detach().cpu().numpy()/nparticle_types),alpha=0.25)
             acc_list = torch.stack(acc_list)
             plt.xlim([0, 0.05])
             plt.xlabel('Distance [a.u]', fontsize=12)
@@ -1291,15 +1286,14 @@ def data_train(model_config, gtest):
             particle_types = x_list[0][0, :, 5].clone().detach().cpu().numpy()
             ax = fig.add_subplot(2, 4, 4)
             for n in range(nparticle_types):
-                plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1], s=5)
+                plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1], color=cmap(n/nparticle_types), s=5)
             plt.xlabel('UMAP 0', fontsize=12)
             plt.ylabel('UMAP 1', fontsize=12)
             kmeans = KMeans(init="random", n_clusters=nparticle_types, n_init=1000, max_iter=10000, random_state=13)
             kmeans.fit(proj_interaction)
             for n in range(nparticle_types):
-                plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', c='k', markersize=12)
+                plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
                 pos = np.argwhere(kmeans.labels_ == n).squeeze().astype(int)
-
         elif model_config['model'] == 'HeatMesh':
 
             h_list = []
@@ -1313,7 +1307,7 @@ def data_train(model_config, gtest):
                 h_list.append(h)
                 plt.plot(r1.detach().cpu().numpy(),
                          h.detach().cpu().numpy() * hnorm.detach().cpu().numpy(), linewidth=1,
-                         c='k',alpha=0.05)
+                         color='k',alpha=0.05)
             h_list = torch.stack(h_list)
 
             reducer = umap.UMAP()
@@ -1330,9 +1324,9 @@ def data_train(model_config, gtest):
             kmeans = KMeans(init="random", n_clusters=nparticle_types, n_init=1000, max_iter=10000, random_state=13)
             kmeans.fit(proj_interaction)
             for n in range(nparticle_types):
-                plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', c='k', markersize=12)
+                plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
                 pos = np.argwhere(kmeans.labels_ == n).squeeze().astype(int)
-        else:
+        elif model_config['model'] == 'GravityParticles':
             acc_list = []
             for n in range(nparticles):
                 rr = torch.tensor(np.linspace(0, radius * 1.3, 1000)).to(device)
@@ -1343,9 +1337,7 @@ def data_train(model_config, gtest):
                 acc = model.lin_edge(in_features.float())
                 acc = acc[:, 0]
                 acc_list.append(acc)
-                plt.plot(rr.detach().cpu().numpy(),
-                         acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'], linewidth=1,
-                         c='k',alpha=0.25)
+                plt.plot(rr.detach().cpu().numpy(),acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],color=cmap(x[n,5].detach().cpu().numpy()/nparticle_types), linewidth=1,alpha=0.25)
             acc_list = torch.stack(acc_list)
             plt.yscale('log')
             plt.xscale('log')
@@ -1360,13 +1352,13 @@ def data_train(model_config, gtest):
             particle_types = x_list[0][0, :, 5].clone().detach().cpu().numpy()
             ax = fig.add_subplot(2, 4, 4)
             for n in range(nparticle_types):
-                plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1], s=5)
+                plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1], color=cmap(n/nparticle_types), s=5)
             plt.xlabel('UMAP 0', fontsize=12)
             plt.ylabel('UMAP 1', fontsize=12)
             kmeans = KMeans(init="random", n_clusters=nparticle_types, n_init=1000, max_iter=10000, random_state=13)
             kmeans.fit(proj_interaction)
             for n in range(nparticle_types):
-                plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', c='k', markersize=12)
+                plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
                 pos = np.argwhere(kmeans.labels_ == n).squeeze().astype(int)
             # hdb = HDBSCAN(min_cluster_size=20)
             # labels = HDBSCAN(min_samples=20,max_cluster_size=8,min_cluster_size=8).fit_predict(proj_interaction)
@@ -1378,7 +1370,6 @@ def data_train(model_config, gtest):
                     pos = np.argwhere(kmeans.labels_ == n).squeeze().astype(int)
                     temp = model.a[0, pos, :]
                     model.a.data[0, pos, :] = torch.median(temp, axis=0).values
-
 
         if (epoch % 10 == 0) & (epoch > 0):
             best_loss = total_loss / N / nparticles / batch_size
@@ -1400,7 +1391,7 @@ def data_train(model_config, gtest):
             ax.axes.get_yaxis().set_visible(False)
             plt.axis('off')
             ax = fig.add_subplot(2, 4, 6)
-            plt.plot(np.arange(len(rmserr_list)), rmserr_list, label='RMSE', c='r')
+            plt.plot(np.arange(len(rmserr_list)), rmserr_list, label='RMSE', color='r')
             plt.ylim([0, 0.1])
             plt.xlim([0, nframes])
             plt.tick_params(axis='both', which='major', labelsize=10)
@@ -2900,7 +2891,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [84, 121] #[46, 47, 48, 121, 75]
+    gtestlist = [84] #[46, 47, 48, 121, 75, 84]
 
     for gtest in gtestlist:
 
