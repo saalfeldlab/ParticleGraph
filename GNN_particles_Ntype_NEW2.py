@@ -16,7 +16,7 @@ import time
 from shutil import copyfile
 from prettytable import PrettyTable
 from kneed import KneeLocator
-from sklearn.cluster import KMeans
+from sklearn.cluster import KMeans,HDBSCAN
 from sklearn.preprocessing import StandardScaler
 import json
 from geomloss import SamplesLoss
@@ -894,8 +894,8 @@ def data_generate(model_config):
                                     c=x[:, 6].detach().cpu().numpy(), cmap='inferno', vmin=0, vmax=2)
                 elif model_config['model'] == 'ElecParticles':
                     for n in range(nparticle_types):
-                        g = np.abs(p[T1[index_particles[n], 2].detach().cpu().numpy()].detach().cpu().numpy() * 20)
-                        if n == 0:
+                        g = np.abs(p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20)
+                        if n == 2:
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                         x[index_particles[n], 2].detach().cpu().numpy(), s=g, c='r', alpha=0.5)
                         else:
@@ -1170,6 +1170,11 @@ def data_train(model_config, gtest):
                     edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face)
                     dataset = data.Data(x=x, edge_index=edge_index, edge_attr=edge_weight, device=device)
                     dataset_batch.append(dataset)
+                    y = h_list[run][k].clone().detach()/hnorm
+                    if batch == 0:
+                        y_batch = y
+                    else:
+                        y_batch = torch.cat((y_batch, y), axis=0)
                 else:
                     distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
                     adj_t = (distance < radius ** 2).float() * 1
@@ -1177,14 +1182,6 @@ def data_train(model_config, gtest):
                     edges = adj_t.nonzero().t().contiguous()
                     dataset = data.Data(x=x[:, :], edge_index=edges)
                     dataset_batch.append(dataset)
-
-                if model_config['model'] == 'HeatMesh':
-                    y = h_list[run][k].clone().detach()/hnorm
-                    if batch == 0:
-                        y_batch = y
-                    else:
-                        y_batch = torch.cat((y_batch, y), axis=0)
-                else:
                     # y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{k}.pt').to(device)
                     y = y_list[run][k].clone().detach()
                     y[:, 0] = y[:, 0] / ynorm[4]
@@ -1208,12 +1205,6 @@ def data_train(model_config, gtest):
                     else:
                         pred = model(batch, data_id=run - 1, step=1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
 
-            # if (epoch >0) & (epoch<5) :
-            #     sparsity_index = torch.sum((histogram(model.a, 100, -4, 4) < nparticles / 100)) * sparsity_factor
-            #     loss = (pred - y_batch).norm(2)
-            #     loss_regul = loss + sparsity_index
-            #     loss_regul.backward()
-            # else:
             loss = (pred - y_batch).norm(2)
 
             loss.backward()
@@ -1221,15 +1212,6 @@ def data_train(model_config, gtest):
             optimizer.step()
             total_loss += loss.item()
 
-        # gap = kmeans.inertia_
-        kmeans_kwargs = {"init": "random", "n_init": 10, "max_iter": 300, "random_state": 42}
-        sse = []
-        # for k in range(1, 11):
-        #     kmeans_ = KMeans(n_clusters=k, **kmeans_kwargs)
-        #     kmeans_.fit(embedding)
-        #     sse.append(kmeans_.inertia_)
-        # kl = KneeLocator(range(1, 11), sse, curve="convex", direction="decreasing")
-        # list_gap.append(gap)
 
         # for n in range(nparticle_types - 1):
         #     for m in range(n + 1, nparticle_types):
@@ -1237,6 +1219,9 @@ def data_train(model_config, gtest):
         # S_geomD = torch.sum(D_nm[epoch]).item()
 
         sparsity_index = torch.sum((histogram(model.a, 50, -4, 4) > nparticles / 100))
+        torch.save({'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict()},
+                   os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs_{epoch}.pt'))
 
         if (total_loss / nparticles / batch_size / N < best_loss):
             best_loss = total_loss / N / nparticles / batch_size
@@ -1249,13 +1234,20 @@ def data_train(model_config, gtest):
 
         list_loss.append(total_loss / N / nparticles / batch_size)
 
-        fig = plt.figure(figsize=(12, 8))
-        plt.ion()
+        fig = plt.figure(figsize=(16, 8))
+        # plt.ion()
+
+        ax = fig.add_subplot(2, 4, 1)
+        plt.plot(list_loss, color='k')
+        plt.ylim([0, 0.003])
+        plt.xlim([0, 50])
+        plt.ylabel('Loss', fontsize=12)
+        plt.xlabel('Epochs', fontsize=12)
 
         #### TO BE CHANGED WITH MULTI-DATASET
 
         if model_config['model'] != 'HeatMesh':
-            ax = fig.add_subplot(2, 3, 3)
+            ax = fig.add_subplot(2, 4, 3)
             acc_list = []
             for n in range(nparticles):
                 rr = torch.tensor(np.linspace(0, radius * 1.3, 1000)).to(device)
@@ -1282,18 +1274,22 @@ def data_train(model_config, gtest):
             trans = umap.UMAP(n_neighbors=30, n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
             proj_interaction = trans.transform(coeff_norm)
             particle_types = x_list[0][0, :, 5].clone().detach().cpu().numpy()
-            ax = fig.add_subplot(2, 3, 5)
+            ax = fig.add_subplot(2, 4, 4)
             for n in range(nparticle_types):
                 plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1], s=5)
             plt.xlabel('UMAP 0', fontsize=12)
             plt.ylabel('UMAP 1', fontsize=12)
 
-            kmeans = KMeans(init="random", n_clusters=nparticle_types, n_init=10, max_iter=300, random_state=42)
+            kmeans = KMeans(init="random", n_clusters=nparticle_types, n_init=1000, max_iter=10000, random_state=13)
             kmeans.fit(proj_interaction)
             for n in range(nparticle_types):
-                plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', c='k', alpha=0.25)
+                plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', c='k', markersize=12)
                 pos = np.argwhere(kmeans.labels_ == n).squeeze().astype(int)
 
+            # hdb = HDBSCAN(min_cluster_size=20)
+            # labels = HDBSCAN(min_samples=20,max_cluster_size=8,min_cluster_size=8).fit_predict(proj_interaction)
+
+            # Constrain embedding with UMAP of plots clustering
             if (epoch==14) | (epoch==24) | (epoch==29):
                 for n in range(nparticle_types):
                     pos = np.argwhere(kmeans.labels_ == n).squeeze().astype(int)
@@ -1308,11 +1304,11 @@ def data_train(model_config, gtest):
             embedding_particle.append(embedding[index_particles[n], :])
 
         if (embedding.shape[1] > 2):
-            ax = fig.add_subplot(2, 3, 2, projection='3d')
+            ax = fig.add_subplot(2, 4, 2, projection='3d')
             for n in range(nparticle_types):
                 ax.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], embedding_particle[n][:, 2], s=1)
         else:
-            ax = fig.add_subplot(2, 3, 2)
+            ax = fig.add_subplot(2, 4, 2)
             if (embedding.shape[1] > 1):
                 for n in range(nparticle_types):
                     plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=3)
@@ -1327,49 +1323,36 @@ def data_train(model_config, gtest):
                     plt.hist(embedding_particle[n][:, 0], 100, range=[-4, 4], alpha=0.5)
                 plt.xlim([-5.1, 5.1])
 
-        ax = fig.add_subplot(2, 3, 1)
-        plt.plot(list_loss, color='k')
-        if model_config['model'] == 'HeatMesh':
-            plt.ylim([0, 100])
-        else:
-            plt.ylim([0, 0.003])
-        plt.xlim([0, 50])
-
-        plt.ylabel('Loss', fontsize=12)
-        plt.xlabel('Epochs', fontsize=12)
-
-        if model_config['model'] != 'HeatMesh':
-            if (epoch % 10 == 0) & (epoch > 0):
-                best_loss = total_loss / N / nparticles / batch_size
-                torch.save({'model_state_dict': model.state_dict(),
-                            'optimizer_state_dict': optimizer.state_dict()},
-                           os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs.pt'))
-                xx, rmserr_list = data_test(model_config, bVisu=True, bPrint=False)
-                model.train()
-            if (epoch > 9):
-                ax = fig.add_subplot(2, 3, 4)
-                for n in range(nparticle_types):
-                    plt.scatter(xx[index_particles[n], 1], xx[index_particles[n], 2], s=1)
-                ax = plt.gca()
-                ax.axes.xaxis.set_ticklabels([])
-                ax.axes.yaxis.set_ticklabels([])
-                plt.xlim([-0.3, 1.3])
-                plt.ylim([-0.3, 1.3])
-                ax.axes.get_xaxis().set_visible(False)
-                ax.axes.get_yaxis().set_visible(False)
-                plt.axis('off')
-                ax = fig.add_subplot(2, 3, 6)
-                plt.plot(np.arange(len(rmserr_list)), rmserr_list, label='RMSE', c='r')
-                plt.ylim([0, 0.1])
-                plt.xlim([0, nframes])
-                plt.tick_params(axis='both', which='major', labelsize=10)
-                plt.xlabel('Frame [a.u]', fontsize=14)
-                ax.set_ylabel('RMSE [a.u]', fontsize=14, color='r')
+        if (epoch % 10 == 0) & (epoch > 0):
+            best_loss = total_loss / N / nparticles / batch_size
+            torch.save({'model_state_dict': model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict()},
+                       os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs.pt'))
+            xx, rmserr_list = data_test(model_config, bVisu=True, bPrint=False)
+            model.train()
+        if (epoch > 9):
+            ax = fig.add_subplot(2, 4, 5)
+            for n in range(nparticle_types):
+                plt.scatter(xx[index_particles[n], 1], xx[index_particles[n], 2], s=1)
+            ax = plt.gca()
+            ax.axes.xaxis.set_ticklabels([])
+            ax.axes.yaxis.set_ticklabels([])
+            plt.xlim([-0.3, 1.3])
+            plt.ylim([-0.3, 1.3])
+            ax.axes.get_xaxis().set_visible(False)
+            ax.axes.get_yaxis().set_visible(False)
+            plt.axis('off')
+            ax = fig.add_subplot(2, 4, 6)
+            plt.plot(np.arange(len(rmserr_list)), rmserr_list, label='RMSE', c='r')
+            plt.ylim([0, 0.1])
+            plt.xlim([0, nframes])
+            plt.tick_params(axis='both', which='major', labelsize=10)
+            plt.xlabel('Frame [a.u]', fontsize=14)
+            ax.set_ylabel('RMSE [a.u]', fontsize=14, color='r')
 
         plt.tight_layout()
         plt.savefig(f"./tmp_training/Fig_{ntry}_{epoch}.tif")
         plt.close()
-
 def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0,prev_index_particles=0):
     # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_recons/*")
     # for f in files:
@@ -2621,7 +2604,7 @@ def load_model_config(id=48):
     model_config_test = []
 
     # gravity
-    # 4 types N=3840 dim 128 no boundary
+    # 4 types N=960 dim 128 no boundary   GOOD
     if id == 46:
         model_config_test = {'ntry': id,
                              'input_size': 9,
@@ -2650,7 +2633,7 @@ def load_model_config(id=48):
                              'clamp': 0.002,
                              'pred_limit': 1E9,
                              'start_frame': 1}
-    # 8 types N=3840 dim 128 no boundary
+    # 8 types N=960 dim 128 no boundary
     if id == 47:
         model_config_test = {'ntry': id,
                              'input_size': 9,
@@ -2679,7 +2662,7 @@ def load_model_config(id=48):
                              'clamp': 0.002,
                              'pred_limit': 1E9,
                              'start_frame': 1}
-    # 16 types N=3840 dim 128 no boundary
+    # 8 types N=960 dim 128 no boundary
     if id == 48:
         model_config_test = {'ntry': id,
                              'input_size': 9,
@@ -2690,7 +2673,7 @@ def load_model_config(id=48):
                              'radius': 0.3,
                              'dataset': f'231001_{id}',
                              'nparticles': 960,
-                             'nparticle_types': 16,
+                             'nparticle_types': 8,
                              'nframes': 1000,
                              'sigma': .005,
                              'tau': 1E-9,
@@ -2703,7 +2686,7 @@ def load_model_config(id=48):
                              'model': 'GravityParticles',
                              'prediction': 'acceleration',
                              'upgrade_type': 0,
-                             'p': np.linspace(0.2, 5, 16).tolist(),
+                             'p': np.linspace(0.2, 5, 8).tolist(),
                              'nrun': 2,
                              'clamp': 0.002,
                              'pred_limit': 1E9,
@@ -2746,16 +2729,16 @@ def load_model_config(id=48):
                              'hidden_size': 64,
                              'n_mp_layers': 5,
                              'noise_level': 0,
-                             'radius': 0.15,
+                             'radius': 0.3,
                              'dataset': f'231001_{id}',
-                             'nparticles': 678,
+                             'nparticles': 960,
                              'nparticle_types': 3,
                              'nframes': 1000,
                              'sigma': .005,
                              'tau': 1E-9,
                              'v_init': 1E-4,
                              'aggr_type': 'add',
-                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'boundary': 'no',  # periodic   'no'  # no boundary condition
                              'data_augmentation': True,
                              'batch_size': 8,
                              'embedding': 1,
@@ -2765,7 +2748,8 @@ def load_model_config(id=48):
                              'upgrade_type': 0,
                              'nrun': 10,
                              'clamp': 0.005,
-                             'pred_limit': 1E10}
+                             'pred_limit': 1E10,
+                             'start_frame': 1}
 
     # heat
     # 8 types boundary periodic N=960
@@ -2859,7 +2843,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [46, 47, 48, 121, 75]
+    gtestlist = [48] #[46, 47, 48, 121, 75]
 
     for gtest in gtestlist:
 
@@ -2895,7 +2879,7 @@ if __name__ == '__main__':
         sparsity_factor = 1
         print(f'sparsity_factor: {sparsity_factor}')
 
-        # data_generate(model_config)
+        #data_generate(model_config)
         data_train(model_config, gtest)
         # data_plot(model_config, epoch=-1, bPrint=True)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
