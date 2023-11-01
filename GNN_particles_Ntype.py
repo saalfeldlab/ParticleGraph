@@ -896,7 +896,7 @@ def data_generate(model_config):
                 elif model_config['model'] == 'ElecParticles':
                     for n in range(nparticle_types):
                         g = np.abs(p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20)
-                        if n >= 2:
+                        if model_config['p'][n] <= 0:
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                         x[index_particles[n], 2].detach().cpu().numpy(), s=g, c='r', alpha=0.5)
                         else:
@@ -918,12 +918,12 @@ def data_generate(model_config):
                     plt.xlim([-0.3, 1.3])
                     plt.ylim([-0.3, 1.3])
 
+                ax = fig.add_subplot(2, 2, 2)
+                plt.scatter(x[:, 1].detach().cpu().numpy(), x[:, 2].detach().cpu().numpy(), s=1, color='k',alpha=0.75)
+                ax = plt.gca()
+                ax.axes.xaxis.set_ticklabels([])
+                ax.axes.yaxis.set_ticklabels([])
                 if model_config['radius']<0.01:
-                    ax = fig.add_subplot(2, 2, 2)
-                    plt.scatter(x[:, 1].detach().cpu().numpy(), x[:, 2].detach().cpu().numpy(), s=1, color='k')
-                    ax = plt.gca()
-                    ax.axes.xaxis.set_ticklabels([])
-                    ax.axes.yaxis.set_ticklabels([])
                     pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
                     if model_config['model'] == 'HeatMesh':
                         vis = to_networkx(dataset_mesh, remove_self_loops=True, to_undirected=True)
@@ -931,12 +931,12 @@ def data_generate(model_config):
                         vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
                     nx.draw_networkx(vis, pos=pos, node_size=10, linewidths=0, with_labels=False)
 
-                    if model_config['boundary'] == 'no':
-                        plt.xlim([-1.3, 1.3])
-                        plt.ylim([-1.3, 1.3])
-                    else:
-                        plt.xlim([-0.3, 1.3])
-                        plt.ylim([-0.3, 1.3])
+                if model_config['boundary'] == 'no':
+                    plt.xlim([-1.3, 1.3])
+                    plt.ylim([-1.3, 1.3])
+                else:
+                    plt.xlim([-0.3, 1.3])
+                    plt.ylim([-0.3, 1.3])
 
                 if (model_config['model'] == 'HeatParticles') | (model_config['model'] == 'HeatMesh'):
                     ax = fig.add_subplot(2, 2, 3)
@@ -958,6 +958,7 @@ def data_generate(model_config):
         torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
         torch.save(y_list, f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
         torch.save(h_list, f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt')
+
 def data_train(model_config, gtest):
     print('')
 
@@ -1141,7 +1142,7 @@ def data_train(model_config, gtest):
                     for n in range(nparticle_types):
                         embedding_particle.append(embedding[index_particles[n], :])
                     for n in range(nparticle_types):
-                        plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=10, alpha=0.75)
+                        plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=10, alpha=0.75, color=cmap(n/nparticle_types))
 
                 plt.savefig(f"./tmp/Fig_{ntry}_{epoch * 20000 + N - 1}.tif")
                 plt.close()
@@ -1386,7 +1387,7 @@ def data_train(model_config, gtest):
         if (epoch > 9):
             ax = fig.add_subplot(2, 4, 5)
             for n in range(nparticle_types):
-                plt.scatter(xx[index_particles[n], 1], xx[index_particles[n], 2], s=1)
+                plt.scatter(xx[index_particles[n], 1], xx[index_particles[n], 2], s=1,color='k')
             ax = plt.gca()
             ax.axes.xaxis.set_ticklabels([])
             ax.axes.yaxis.set_ticklabels([])
@@ -1600,7 +1601,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             elif model_config['model'] == 'ElecParticles':
                 for n in range(nparticle_types):
                     g = np.abs(p_elec[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20)
-                    if n > 2:
+                    if model_config['p'][n] <= 0:
                         plt.scatter(x00[index_particles[n], 1].detach().cpu().numpy(),
                                     x00[index_particles[n], 2].detach().cpu().numpy(), s=g,
                                     c='r')  # , facecolors='none', edgecolors='k')
@@ -1633,7 +1634,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             elif model_config['model'] == 'ElecParticles':
                 for n in range(nparticle_types):
                     g = np.abs(p_elec[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20)
-                    if n == 0:
+                    if model_config['p'][n] <= 0:
                         plt.scatter(x0[index_particles[n], 1].detach().cpu().numpy(),
                                     x0[index_particles[n], 2].detach().cpu().numpy(), s=g,
                                     c='r')  # , facecolors='none', edgecolors='k')
@@ -1696,7 +1697,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             elif model_config['model'] == 'ElecParticles':
                 for n in range(nparticle_types):
                     g = np.abs(p_elec[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20)
-                    if n == 0:
+                    if model_config['p'][n] <= 0:
                         plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                     x[index_particles[n], 2].detach().cpu().numpy(), s=g,
                                     c='r')  # , facecolors='none', edgecolors='k')
@@ -3181,7 +3182,7 @@ if __name__ == '__main__':
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
     cmap = plt.colormaps['tab20c']
 
-    gtestlist = [49] #[46, 47, 48, 121, 75, 84]
+    gtestlist = [84] #[46, 47, 48, 121, 75, 84]
 
     for gtest in gtestlist:
 
