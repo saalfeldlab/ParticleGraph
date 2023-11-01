@@ -896,7 +896,7 @@ def data_generate(model_config):
                 elif model_config['model'] == 'ElecParticles':
                     for n in range(nparticle_types):
                         g = np.abs(p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20)
-                        if model_config['p'][n] <= 0:
+                        if model_config['p'][n][0]>=0:
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                         x[index_particles[n], 2].detach().cpu().numpy(), s=g, c='r', alpha=0.5)
                         else:
@@ -1601,7 +1601,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             elif model_config['model'] == 'ElecParticles':
                 for n in range(nparticle_types):
                     g = np.abs(p_elec[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20)
-                    if model_config['p'][n] <= 0:
+                    if model_config['p'][n][0]>=0:
                         plt.scatter(x00[index_particles[n], 1].detach().cpu().numpy(),
                                     x00[index_particles[n], 2].detach().cpu().numpy(), s=g,
                                     c='r')  # , facecolors='none', edgecolors='k')
@@ -1634,7 +1634,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             elif model_config['model'] == 'ElecParticles':
                 for n in range(nparticle_types):
                     g = np.abs(p_elec[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20)
-                    if model_config['p'][n] <= 0:
+                    if model_config['p'][n][0]>=0:
                         plt.scatter(x0[index_particles[n], 1].detach().cpu().numpy(),
                                     x0[index_particles[n], 2].detach().cpu().numpy(), s=g,
                                     c='r')  # , facecolors='none', edgecolors='k')
@@ -1697,7 +1697,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             elif model_config['model'] == 'ElecParticles':
                 for n in range(nparticle_types):
                     g = np.abs(p_elec[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20)
-                    if model_config['p'][n] <= 0:
+                    if model_config['p'][n][0]>=0:
                         plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                     x[index_particles[n], 2].detach().cpu().numpy(), s=g,
                                     c='r')  # , facecolors='none', edgecolors='k')
