@@ -879,7 +879,7 @@ def data_generate(model_config,bVisu=True,bSave=True):
                     H1 += h
                     h_list.append(h)
 
-            if (run == 0) & (it % 1 == 0) & (it >= 0) & bVisu:
+            if (run == 0) & (it % 5 == 0) & (it >= 0) & bVisu:
 
                 fig = plt.figure(figsize=(11.4, 12))
                 # plt.ion()
@@ -1212,9 +1212,15 @@ def data_train(model_config, gtest):
                     dataset_batch.append(dataset)
                     y = h_list[run][k].clone().detach()/hnorm
                     if batch == 0:
-                        y_batch = y
+                        try:
+                            y_batch = y
+                        except:
+                            a=1
                     else:
-                        y_batch = torch.cat((y_batch, y), axis=0)
+                        try:
+                            y_batch = torch.cat((y_batch, y), axis=0)
+                        except:
+                            a=1
                 else:
                     distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
                     adj_t = (distance < radius ** 2).float() * 1
@@ -1235,6 +1241,7 @@ def data_train(model_config, gtest):
                         y_batch = y
                     else:
                         y_batch = torch.cat((y_batch, y), axis=0)
+
 
                 batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
                 optimizer.zero_grad()
@@ -1275,7 +1282,7 @@ def data_train(model_config, gtest):
         list_loss.append(total_loss / N / nparticles / batch_size)
 
         fig = plt.figure(figsize=(16, 8))
-        plt.ion()
+        # plt.ion()
 
         ax = fig.add_subplot(2, 4, 1)
         plt.plot(list_loss, color='k')
@@ -1340,7 +1347,7 @@ def data_train(model_config, gtest):
             proj_interaction = trans.transform(coeff_norm)
         elif model_config['model'] == 'HeatMesh':
 
-            h_list = []
+            f_list = []
             for n in range(nparticles):
                 r0 = torch.tensor(np.ones(1000)).to(device)
                 r1 = torch.tensor(np.linspace(0, 2, 1000)).to(device)
@@ -1348,12 +1355,12 @@ def data_train(model_config, gtest):
                 in_features = torch.cat((r0[:, None], r1[:, None], embedding), dim=1)
                 h = model.lin_edge(in_features.float())
                 h = h[:, 0]
-                h_list.append(h)
+                f_list.append(h)
                 plt.plot(r1.detach().cpu().numpy(),
                          h.detach().cpu().numpy() * hnorm.detach().cpu().numpy(), linewidth=1,
                          color='k',alpha=0.05)
-            h_list = torch.stack(h_list)
-            coeff_norm = h_list.detach().cpu().numpy()
+            f_list = torch.stack(f_list)
+            coeff_norm = f_list.detach().cpu().numpy()
             trans = umap.UMAP(n_neighbors=30, n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
             proj_interaction = trans.transform(coeff_norm)
             particle_types = x_list[0][0, :, 5].clone().detach().cpu().numpy()
@@ -1504,7 +1511,6 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         p_elec = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         for n in range(nparticle_types):
             p_elec[n] = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
-        print(p_elec)
         T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
         for n in range(1, nparticle_types):
             T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
@@ -1599,7 +1605,6 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
 
     # for it in tqdm(range(-int(nframes * model_config['start_frame']), nframes - 1)):
     for it in tqdm(range(nframes - 1)):
-
 
         # x0 = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_{min(it + 1, nframes - 2)}.pt',map_location=device).to(device)
         x0 = x_list[0][min(it + 1, nframes - 2)].clone().detach()
@@ -2435,7 +2440,7 @@ def data_plot(model_config, epoch, bPrint):
     time.sleep(0.5)
 
     fig = plt.figure(figsize=(16, 8))
-    plt.ion()
+    # plt.ion()
 
     embedding = []
     for n in range(model.a.shape[0]):
@@ -3398,7 +3403,7 @@ if __name__ == '__main__':
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
 
-    gtestlist = [85] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
+    gtestlist = [121] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
 
     for gtest in gtestlist:
 
@@ -3435,9 +3440,9 @@ if __name__ == '__main__':
         sparsity_factor = 1
         print(f'sparsity_factor: {sparsity_factor}')
 
-        # data_generate(model_config, bVisu=True, bSave=False)
-        # data_train(model_config, gtest)
-        data_plot(model_config, epoch=-1, bPrint=True)
+        # data_generate(model_config, bVisu=False, bSave=True)
+        data_train(model_config, gtest)
+        #data_plot(model_config, epoch=-1, bPrint=True)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
