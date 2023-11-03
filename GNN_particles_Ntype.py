@@ -620,7 +620,6 @@ class ElecParticles(pyg.nn.MessagePassing):
         acc = p1 * p2 * r / r_ ** 3
         acc = torch.clamp(acc, max=self.pred_limit)
         return acc  # Elec particles
-
 class MeshDiffusion(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -679,13 +678,13 @@ class MeshDiffusion(pyg.nn.MessagePassing):
             -r ** (2 * p[1]) / (2 * sigma ** 2)))
 
 
-def data_generate(model_config,bVisu):
+def data_generate(model_config,bVisu=True,bSave=True):
     print('')
     print('Generating data ...')
 
-    files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_data/*")
-    for f in files:
-        os.remove(f)
+    # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_data/*")
+    # for f in files:
+    #     os.remove(f)
 
     dataset_name = model_config['dataset']
     folder = f'./graphs_data/graphs_particles_{dataset_name}/'
@@ -880,9 +879,9 @@ def data_generate(model_config,bVisu):
                     H1 += h
                     h_list.append(h)
 
-            if (run == 0) & (it % 5 == 0) & (it >= 0) & bVisu:
+            if (run == 0) & (it % 1 == 0) & (it >= 0) & bVisu:
 
-                fig = plt.figure(figsize=(11.2, 12))
+                fig = plt.figure(figsize=(11.4, 12))
                 # plt.ion()
                 ax = fig.add_subplot(2, 2, 1)
                 if model_config['model'] == 'GravityParticles':
@@ -928,7 +927,6 @@ def data_generate(model_config,bVisu):
                     else:
                         vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
                     nx.draw_networkx(vis, pos=pos, node_size=10, linewidths=0, with_labels=False)
-
                 if model_config['boundary'] == 'no':
                     plt.xlim([-1.3, 1.3])
                     plt.ylim([-1.3, 1.3])
@@ -936,59 +934,52 @@ def data_generate(model_config,bVisu):
                     plt.xlim([0,1])
                     plt.ylim([0,1])
 
+                ax = fig.add_subplot(2, 2, 3)
+                if model_config['model'] == 'GravityParticles':
+                    for n in range(nparticle_types):
+                        g = p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 7.5 * 4
+                        plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
+                                    x[index_particles[n], 2].detach().cpu().numpy(), s=g,
+                                    alpha=0.75,
+                                    color=cmap(n / nparticle_types))  # , facecolors='none', edgecolors='k')
+                elif (model_config['model'] == 'HeatParticles') | (model_config['model'] == 'HeatMesh'):
+                    plt.scatter(x[:, 1].detach().cpu().numpy(), x[:, 2].detach().cpu().numpy(), s=10, alpha=0.75,
+                                c=x[:, 6].detach().cpu().numpy(), cmap='inferno', vmin=0, vmax=2)
+                elif model_config['model'] == 'ElecParticles':
+                    for n in range(nparticle_types):
+                        g = np.abs(p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20) * 4
+                        if model_config['p'][n][0] <= 0:
+                            plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
+                                        x[index_particles[n], 2].detach().cpu().numpy(), s=g, c='r', alpha=0.5)
+                        else:
+                            plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
+                                        x[index_particles[n], 2].detach().cpu().numpy(), s=g, c='b', alpha=0.5)
+                elif model_config['model'] == 'Particles_A':
+                    for n in range(nparticle_types):
+                        plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
+                                    x[index_particles[n], 2].detach().cpu().numpy(), s=50, alpha=0.75,
+                                    color=cmap(n / nparticle_types))
+
+                if model_config['boundary'] == 'no':
+                    plt.xlim([-0.25, 0.25])
+                    plt.ylim([-0.25, 0.25])
+                else:
+                    plt.xlim([0.3, 0.7])
+                    plt.ylim([0.3, 0.7])
+
+                for k in range(nparticles):
+                    plt.arrow(x=x[k, 1].detach().cpu().item(),y=x[k, 2].detach().cpu().item(),
+                              dx=x[k, 3].detach().cpu().item()*model_config['arrow_length'], dy=x[k, 4].detach().cpu().item()*model_config['arrow_length'],color='k')
+
+                ax = fig.add_subplot(2, 2, 4)
                 if (model_config['model'] == 'HeatParticles') | (model_config['model'] == 'HeatMesh'):
-                    ax = fig.add_subplot(2, 2, 3)
                     for n in range(nparticle_types):
                         plt.scatter(N1[index_particles[n]].detach().cpu().numpy(),
-                                    H1[index_particles[n]].detach().cpu().numpy(), s=5, alpha=0.5)
+                                    H1[index_particles[n]].detach().cpu().numpy(), color=cmap(n / nparticle_types), s=5,
+                                    alpha=0.5)
                     plt.ylim([-0.5, 2.5])
                     plt.ylabel('Temperature [a.u]', fontsize="14")
-                    ax = fig.add_subplot(2, 2, 4)
-                    for n in range(nparticle_types):
-                        plt.scatter(N1[index_particles[n]].detach().cpu().numpy(),
-                                    h[index_particles[n]].detach().cpu().numpy(), s=5, alpha=0.5)
-                    plt.ylim([-0.01, 0.01])
-                    plt.ylabel('Delta temperature [a.u]', fontsize="14")
                 else:
-                    ax = fig.add_subplot(2, 2, 3)
-                    if model_config['model'] == 'GravityParticles':
-                        for n in range(nparticle_types):
-                            g = p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 7.5 * 4
-                            plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                        x[index_particles[n], 2].detach().cpu().numpy(), s=g,
-                                        alpha=0.75,
-                                        color=cmap(n / nparticle_types))  # , facecolors='none', edgecolors='k')
-                    elif (model_config['model'] == 'HeatParticles') | (model_config['model'] == 'HeatMesh'):
-                        plt.scatter(x[:, 1].detach().cpu().numpy(), x[:, 2].detach().cpu().numpy(), s=10, alpha=0.75,
-                                    c=x[:, 6].detach().cpu().numpy(), cmap='inferno', vmin=0, vmax=2)
-                    elif model_config['model'] == 'ElecParticles':
-                        for n in range(nparticle_types):
-                            g = np.abs(p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20) * 4
-                            if model_config['p'][n][0] <= 0:
-                                plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                            x[index_particles[n], 2].detach().cpu().numpy(), s=g, c='r', alpha=0.5)
-                            else:
-                                plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                            x[index_particles[n], 2].detach().cpu().numpy(), s=g, c='b', alpha=0.5)
-                    elif model_config['model'] == 'Particles_A':
-                        for n in range(nparticle_types):
-                            plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                        x[index_particles[n], 2].detach().cpu().numpy(), s=50, alpha=0.75,
-                                        color=cmap(n / nparticle_types))
-
-                    if model_config['boundary'] == 'no':
-                        plt.xlim([-0.25, 0.25])
-                        plt.ylim([-0.25, 0.25])
-                    else:
-                        plt.xlim([0.3, 0.7])
-                        plt.ylim([0.3, 0.7])
-
-                    for k in range(nparticles):
-                        plt.arrow(x=x[k, 1].detach().cpu().item(),y=x[k, 2].detach().cpu().item(),
-                                  dx=x[k, 3].detach().cpu().item()*model_config['arrow_length'], dy=x[k, 4].detach().cpu().item()*model_config['arrow_length'],color='k')
-
-                    ax = fig.add_subplot(2, 2, 4)
-
                     if len(x_list)>30:
                         x_all =torch.stack(x_list)
                         for k in range(nparticles):
@@ -1001,7 +992,6 @@ def data_generate(model_config,bVisu):
                             xc = x_all[:, k, 1].detach().cpu().numpy().squeeze()
                             yc = x_all[:, k, 2].detach().cpu().numpy().squeeze()
                             plt.scatter(xc,yc,s=0.05, color='k',alpha=0.75)
-
                     if model_config['boundary'] == 'no':
                         plt.xlim([-1.3, 1.3])
                         plt.ylim([-1.3, 1.3])
@@ -1013,9 +1003,10 @@ def data_generate(model_config,bVisu):
                 plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
                 plt.close()
 
-        torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
-        torch.save(y_list, f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
-        torch.save(h_list, f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt')
+        if bSave:
+            torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
+            torch.save(y_list, f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
+            torch.save(h_list, f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt')
 def data_train(model_config, gtest):
     print('')
 
@@ -1210,8 +1201,6 @@ def data_train(model_config, gtest):
                 k = np.random.randint(nframes - 1)
                 # x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{k}.pt').to(device)
                 x = x_list[run][k].clone().detach()
-
-                k=100
 
                 if model_config['model'] == 'HeatMesh':
                     dataset = data.Data(x=x, pos=x[:, 1:3])
@@ -1439,7 +1428,6 @@ def data_train(model_config, gtest):
             model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
             for k in range(model_config['ninteractions']):
                 pos = np.argwhere(kmeans.labels_ == k).squeeze().astype(int)
-                print(len(pos))
                 temp = model_a_[pos, :].clone().detach()
                 print(torch.median(temp, axis=0).values)
                 model_a_[pos, :] = torch.median(temp, axis=0).values
@@ -2355,6 +2343,24 @@ def data_plot(model_config, epoch, bPrint):
     print('Graph files N: ', NGraphs - 1)
     time.sleep(0.5)
 
+    # arr = np.arange(0, NGraphs)
+    # x_list=[]
+    # y_list=[]
+    # for run in arr:
+    #     x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
+    #     y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
+    #     x_list.append(torch.stack(x))
+    #     y_list.append(torch.stack(y))
+    # x = torch.stack(x_list)
+    # x = torch.reshape(x,(x.shape[0] * x.shape[1] * x.shape[2], x.shape[3]))
+    # y = torch.stack(y_list)
+    # y = torch.reshape(y,(y.shape[0]*y.shape[1]*y.shape[2],y.shape[3]))
+    # vnorm = norm_velocity(x, device)
+    # ynorm = norm_acceleration(y, device)
+    # torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
+    # torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
+    # print (vnorm,ynorm)
+
     arr = np.arange(0, NGraphs)
     x_list=[]
     y_list=[]
@@ -2369,9 +2375,8 @@ def data_plot(model_config, epoch, bPrint):
     y = torch.reshape(y,(y.shape[0]*y.shape[1]*y.shape[2],y.shape[3]))
     vnorm = norm_velocity(x, device)
     ynorm = norm_acceleration(y, device)
-    torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
-    torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
-    print (vnorm,ynorm)
+    print(vnorm, ynorm)
+
     if model_config['model'] == 'HeatMesh':
         h_list=[]
         for run in arr:
@@ -2393,7 +2398,7 @@ def data_plot(model_config, epoch, bPrint):
         model = MeshDiffusion(model_config, device)
         print(f'Training MeshDiffusion')
 
-    net = f"./log/try_{ntry}/models/best_model_with_1_graphs.pt"
+    net = f"./log/try_{ntry}/models/best_model_with_{NGraphs-1}_graphs.pt"
     state_dict = torch.load(net,map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
 
@@ -2420,83 +2425,74 @@ def data_plot(model_config, epoch, bPrint):
     print('')
     net = f"./log/try_{ntry}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     print(f'network: {net}')
-    Nepochs = 40  ######################## 40
-    print(f'N epochs: {Nepochs}')
-    print('')
 
     time.sleep(0.5)
     # optimizer = torch.optim.Adam(model.parameters(), lr=lr) #, weight_decay=weight_decay)
     model.train()
     best_loss = np.inf
 
-    list_loss = []
-    D_nm = torch.zeros((Nepochs + 1, nparticle_types, nparticle_types))
-
     print('')
     time.sleep(0.5)
 
-    cmap = plt.cm.get_cmap('Spectral')
     fig = plt.figure(figsize=(16, 8))
-    # plt.ion()
+    plt.ion()
 
-    #### TO BE CHANGED WITH MULTI-DATASET
-
-    embedding = model.a.detach().cpu().numpy()
+    embedding = []
+    for n in range(model.a.shape[0]):
+        embedding.append(model.a[n])
+    embedding = torch.stack(embedding).detach().cpu().numpy()
     embedding = np.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
     embedding_particle = []
-    for n in range(nparticle_types):
-        embedding_particle.append(embedding[index_particles[n], :])
+    for m in range(model.a.shape[0]):
+        for n in range(nparticle_types):
+            embedding_particle.append(embedding[index_particles[n] + m * nparticles, :])
 
     ax = fig.add_subplot(2, 4, 2)
     if (embedding.shape[1] > 2):
         ax = fig.add_subplot(2, 4, 2, projection='3d')
         for n in range(nparticle_types):
-            ax.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], embedding_particle[n][:, 2], color=cmap(n/nparticle_types), s=1)
+            ax.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], embedding_particle[n][:, 2],
+                       color=cmap(n / nparticle_types), s=1)
     else:
         if (embedding.shape[1] > 1):
-            for n in range(nparticle_types):
-                plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], color=cmap(n/nparticle_types), s=3)
-                plt.xlabel('Embedding 0', fontsize=12)
-                plt.ylabel('Embedding 1', fontsize=12)
+            for m in range(model.a.shape[0]):
+                for n in range(nparticle_types):
+                    plt.scatter(embedding_particle[n + m * nparticle_types][:, 0],
+                                embedding_particle[n + m * nparticle_types][:, 1], color=cmap(n / nparticle_types), s=3)
+            plt.xlabel('Embedding 0', fontsize=12)
+            plt.ylabel('Embedding 1', fontsize=12)
         else:
             for n in range(nparticle_types):
-                plt.hist(embedding_particle[n][:, 0], 100, alpha=0.5)
+                plt.hist(embedding_particle[n][:, 0], 100, alpha=0.5, color=cmap(n / nparticle_types))
 
     ax = fig.add_subplot(2, 4, 3)
     if model_config['model'] == 'ElecParticles':
         acc_list = []
-        for n in range(nparticles):
-            rr = torch.tensor(np.linspace(0, radius * 1.3, 1000)).to(device)
-            embedding0 = model.a[0, n, 0] * torch.ones((1000, model_config['embedding']), device=device)
-            embedding1 = model.a[0, n, 1] * torch.ones((1000, model_config['embedding']), device=device)
-            in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
-                                     rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
-                                     0 * rr[:, None], 0 * rr[:, None], embedding0, embedding1), dim=1)
-            acc = model.lin_edge(in_features.float())
-            acc = acc[:, 0]
-            acc_list.append(acc)
-            plt.plot(rr.detach().cpu().numpy(),
-                     acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'], linewidth=1,
-                     color=cmap(x[n,5].detach().cpu().numpy()/nparticle_types),alpha=0.25)
+        for m in range(model.a.shape[0]):
+            for k in range(nparticle_types):
+                for n in index_particles[k]:
+                    rr = torch.tensor(np.linspace(0, radius * 1.3, 1000)).to(device)
+                    embedding0 = model.a[m, n, :] * torch.ones((1000, model_config['embedding']), device=device)
+                    embedding1 = model.a[m, n, :] * torch.ones((1000, model_config['embedding']), device=device)
+                    in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                             rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
+                                             0 * rr[:, None], 0 * rr[:, None], embedding0, embedding1), dim=1)
+                    acc = model.lin_edge(in_features.float())
+                    acc = acc[:, 0]
+                    acc_list.append(acc)
+                    if n % 5 == 0:
+                        plt.plot(rr.detach().cpu().numpy(),
+                                 acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],
+                                 linewidth=1,
+                                 color=cmap(k / nparticle_types), alpha=0.25)
+
         acc_list = torch.stack(acc_list)
         plt.xlim([0, 0.05])
         plt.xlabel('Distance [a.u]', fontsize=12)
         plt.ylabel('MLP [a.u]', fontsize=12)
-        reducer = umap.UMAP()
         coeff_norm = acc_list.detach().cpu().numpy()
         trans = umap.UMAP(n_neighbors=30, n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
         proj_interaction = trans.transform(coeff_norm)
-        particle_types = x_list[0][0, :, 5].clone().detach().cpu().numpy()
-        ax = fig.add_subplot(2, 4, 4)
-        for n in range(nparticle_types):
-            plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1], color=cmap(n/nparticle_types), s=5)
-        plt.xlabel('UMAP 0', fontsize=12)
-        plt.ylabel('UMAP 1', fontsize=12)
-        kmeans = KMeans(init="random", n_clusters=nparticle_types, n_init=1000, max_iter=10000, random_state=13)
-        kmeans.fit(proj_interaction)
-        for n in range(nparticle_types):
-            plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
-            pos = np.argwhere(kmeans.labels_ == n).squeeze().astype(int)
     elif model_config['model'] == 'HeatMesh':
 
         h_list = []
@@ -2510,10 +2506,8 @@ def data_plot(model_config, epoch, bPrint):
             h_list.append(h)
             plt.plot(r1.detach().cpu().numpy(),
                      h.detach().cpu().numpy() * hnorm.detach().cpu().numpy(), linewidth=1,
-                     color='k',alpha=0.05)
+                     color='k', alpha=0.05)
         h_list = torch.stack(h_list)
-
-        reducer = umap.UMAP()
         coeff_norm = h_list.detach().cpu().numpy()
         trans = umap.UMAP(n_neighbors=30, n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
         proj_interaction = trans.transform(coeff_norm)
@@ -2540,7 +2534,9 @@ def data_plot(model_config, epoch, bPrint):
             acc = model.lin_edge(in_features.float())
             acc = acc[:, 0]
             acc_list.append(acc)
-            plt.plot(rr.detach().cpu().numpy(),acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],color=cmap(x[n,5].detach().cpu().numpy()/nparticle_types), linewidth=1,alpha=0.25)
+            plt.plot(rr.detach().cpu().numpy(),
+                     acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],
+                     color=cmap(x[n, 5].detach().cpu().numpy() / nparticle_types), linewidth=1, alpha=0.25)
         acc_list = torch.stack(acc_list)
         plt.yscale('log')
         plt.xscale('log')
@@ -2548,23 +2544,93 @@ def data_plot(model_config, epoch, bPrint):
         plt.ylim([1, 1E7])
         plt.xlabel('Distance [a.u]', fontsize=12)
         plt.ylabel('MLP [a.u]', fontsize=12)
-        reducer = umap.UMAP()
         coeff_norm = acc_list.detach().cpu().numpy()
         trans = umap.UMAP(n_neighbors=30, n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
         proj_interaction = trans.transform(coeff_norm)
-        particle_types = x_list[0][0, :, 5].clone().detach().cpu().numpy()
-        ax = fig.add_subplot(2, 4, 4)
-        for n in range(nparticle_types):
-            plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1], color=cmap(n/nparticle_types), s=5)
-        plt.xlabel('UMAP 0', fontsize=12)
-        plt.ylabel('UMAP 1', fontsize=12)
-        kmeans = KMeans(init="random", n_clusters=nparticle_types, n_init=1000, max_iter=10000, random_state=13)
-        kmeans.fit(proj_interaction)
-        for n in range(nparticle_types):
-            plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
-            pos = np.argwhere(kmeans.labels_ == n).squeeze().astype(int)
-        # hdb = HDBSCAN(min_cluster_size=20)
-        # labels = HDBSCAN(min_samples=20,max_cluster_size=8,min_cluster_size=8).fit_predict(proj_interaction)
+    elif model_config['model'] == 'Particles_A':
+        acc_list = []
+        for n in range(nparticles):
+            rr = torch.tensor(np.linspace(0, radius * 1.3, 1000)).to(device)
+            embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
+            # TO BE CHECKED ############
+            in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                     rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
+                                     0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
+            acc = model.lin_edge(in_features.float())
+            acc = acc[:, 0]
+            acc_list.append(acc)
+            if n % 5 == 0:
+                plt.plot(rr.detach().cpu().numpy(),
+                         acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],
+                         color=cmap(x[n, 5].detach().cpu().numpy() / nparticle_types), linewidth=1, alpha=0.25)
+        acc_list = torch.stack(acc_list)
+
+    # Constrain embedding with UMAP of plots clustering
+    ax = fig.add_subplot(2, 4, 4)
+
+    for n in range(nparticle_types):
+        plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1],
+                    color=cmap(n / nparticle_types), s=5)
+    plt.xlabel('UMAP 0', fontsize=12)
+    plt.ylabel('UMAP 1', fontsize=12)
+    kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=1000, max_iter=10000,
+                    random_state=13)
+    kmeans.fit(proj_interaction)
+    for n in range(model_config['ninteractions']):
+        plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
+
+    model_a_ = model.a.clone().detach()
+    model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
+    t=[]
+    for k in range(model_config['ninteractions']):
+        pos = np.argwhere(kmeans.labels_ == k).squeeze().astype(int)
+        temp = model_a_[pos, :].clone().detach()
+        # print(torch.median(temp, axis=0).values)
+        model_a_[pos, :] = torch.median(temp, axis=0).values
+        t.append(torch.median(temp, axis=0).values)
+    model_a_ = torch.reshape(model_a_, (model.a.shape[0], model.a.shape[1], model.a.shape[2]))
+    with torch.no_grad():
+        for n in range(model.a.shape[0]):
+            model.a[n] = model_a_[n]
+
+    ax = fig.add_subplot(2, 4, 6)
+    if (embedding.shape[1] > 2):
+        ax = fig.add_subplot(2, 4, 6, projection='3d')
+        for m in range(model.a.shape[0]):
+            for n in range(nparticle_types):
+                ax.scatter(model.a[m][index_particles[n], 0].detach().cpu().numpy(), model.a[m][index_particles[n], 1].detach().cpu().numpy(), model.a[m][index_particles[n], 1].detach().cpu().numpy(),
+                           color=cmap(n / nparticle_types), s=1)
+    else:
+        if (embedding.shape[1] > 1):
+            for m in range(model.a.shape[0]):
+                for n in range(nparticle_types):
+                    plt.scatter(model.a[m][index_particles[n], 0].detach().cpu().numpy(),model.a[m][index_particles[n], 1].detach().cpu().numpy(),
+                                color=cmap(n / nparticle_types), s=3)
+            plt.xlabel('Embedding 0', fontsize=12)
+            plt.ylabel('Embedding 1', fontsize=12)
+        else:
+            for m in range(model.a.shape[0]):
+                for n in range(nparticle_types):
+                    plt.hist(model.a[m][index_particles[n], 0].detach().cpu().numpy(), 100, alpha=0.5, color=cmap(n / nparticle_types))
+
+    ax = fig.add_subplot(2, 4, 7)
+    N = 0
+    for n in range(nparticle_types):
+        for m in range(nparticle_types):
+            embedding0 = t[n] * torch.ones((1000, 1), device=device)
+            embedding1 = t[m] * torch.ones((1000, 1), device=device)
+            in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                     rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
+                                     0 * rr[:, None], 0 * rr[:, None], embedding0[:], embedding1[:]), dim=1)
+
+            acc = model.lin_edge(in_features.float())
+            acc = acc[:, 0]
+            plt.plot(rr.detach().cpu().numpy(), acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],
+                     linewidth=1)
+    plt.xlim([0, 0.05])
+    plt.xlabel('Distance [a.u]', fontsize=12)
+    plt.ylabel('MLP [a.u]', fontsize=12)
+
 
     plt.tight_layout()
     plt.show()
@@ -3010,7 +3076,8 @@ def load_model_config(id=48):
                              'clamp': 0.002,
                              'pred_limit': 1E9,
                              'start_frame': 1,
-                             'arrow_length':40}
+                             'arrow_length':10,
+                             'cmap':'tab20c'}
     # 8 types N=960 dim 128 no boundary
     if id == 47:
         model_config_test = {'ntry': id,
@@ -3041,7 +3108,8 @@ def load_model_config(id=48):
                              'clamp': 0.002,
                              'pred_limit': 1E9,
                              'start_frame': 1,
-                             'arrow_length':40}
+                             'arrow_length':20,
+                             'cmap':'tab20c'}
     # 16 types N=960 dim 128 no boundary
     if id == 48:
         model_config_test = {'ntry': id,
@@ -3072,7 +3140,8 @@ def load_model_config(id=48):
                              'clamp': 0.002,
                              'pred_limit': 1E9,
                              'start_frame': 1,
-                             'arrow_length':40}
+                             'arrow_length':20,
+                             'cmap':'tab20c'}
     # 24 types N=960 dim 128 no boundary
     if id == 49:
         model_config_test = {'ntry': id,
@@ -3103,7 +3172,8 @@ def load_model_config(id=48):
                              'clamp': 0.002,
                              'pred_limit': 1E9,
                              'start_frame': 1,
-                             'arrow_length':40}
+                             'arrow_length':20,
+                             'cmap':'tab20c'}
 
     # particles
     if id == 75:
@@ -3134,7 +3204,8 @@ def load_model_config(id=48):
                                    [1.785, 1.8579, 1.7226, 1.0584]],
                              'nrun': 2,
                              'start_frame': 0.1,
-                             'arrow_length':40}
+                             'arrow_length':20,
+                             'cmap':'tab20b'}
     # particles
     if id == 76:
         model_config_test = {'ntry': id,
@@ -3164,7 +3235,8 @@ def load_model_config(id=48):
                                    [1.785, 1.8579, 1.7226, 1.0584]],
                              'nrun': 2,
                              'start_frame': 0.1,
-                             'arrow_length':40}
+                             'arrow_length':20,
+                             'cmap':'tab20b'}
 
     # elctrostatic
     if id == 84:
@@ -3196,7 +3268,8 @@ def load_model_config(id=48):
                              'clamp': 0.002,
                              'pred_limit': 1E10,
                              'start_frame': 0,
-                             'arrow_length':40}
+                             'arrow_length':40,
+                             'cmap':'tab20c'}
     if id == 85:
         model_config_test = {'ntry': id,
                              'input_size': 11,
@@ -3226,7 +3299,8 @@ def load_model_config(id=48):
                              'clamp': 0.002,
                              'pred_limit': 1E10,
                              'start_frame': 0,
-                             'arrow_length':10}
+                             'arrow_length':10,
+                             'cmap':'tab20b'}
 
     # heat
     # 8 types boundary periodic N=960
@@ -3258,7 +3332,9 @@ def load_model_config(id=48):
                              'nrun': 2,
                              'clamp': 0.002,
                              'pred_limit': 1E9,
-                             'start_frame': 0.25}
+                             'start_frame': 0.25,
+                             'cmap':'tab20b'
+        }
     # 8 types boundary periodic N=960 mesh
     if id == 121:
         model_config_test = {'ntry': id,
@@ -3289,7 +3365,8 @@ def load_model_config(id=48):
                              'nrun': 2,
                              'clamp': 0.002,
                              'pred_limit': 1E9,
-                             'start_frame': 0.3}
+                             'start_frame': 0.3,
+                             'cmap':'tab20b'}
 
     for key, value in model_config_test.items():
         print(key, ":", value)
@@ -3319,9 +3396,9 @@ if __name__ == '__main__':
 
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
-    cmap = plt.colormaps['tab20b']
 
-    gtestlist = [121] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
+
+    gtestlist = [85] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
 
     for gtest in gtestlist:
 
@@ -3335,6 +3412,7 @@ if __name__ == '__main__':
         #     model_config = load_model_config(id=46)
         # model_config['ntry']=gtest
 
+        cmap = plt.colormaps[ model_config['cmap'] ]
         sigma = model_config['sigma']
         aggr_type = model_config['aggr_type']
         print('')
@@ -3357,9 +3435,9 @@ if __name__ == '__main__':
         sparsity_factor = 1
         print(f'sparsity_factor: {sparsity_factor}')
 
-        # data_generate(model_config, bVisu=True)
-        data_train(model_config, gtest)
-        # data_plot(model_config, epoch=-1, bPrint=True)
+        # data_generate(model_config, bVisu=True, bSave=False)
+        # data_train(model_config, gtest)
+        data_plot(model_config, epoch=-1, bPrint=True)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
