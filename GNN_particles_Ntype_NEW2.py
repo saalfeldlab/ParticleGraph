@@ -682,9 +682,9 @@ def data_generate(model_config):
     print('')
     print('Generating data ...')
 
-    files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_data/*")
-    for f in files:
-        os.remove(f)
+    # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_data/*")
+    # for f in files:
+    #     os.remove(f)
 
     dataset_name = model_config['dataset']
     folder = f'./graphs_data/graphs_particles_{dataset_name}/'
@@ -2891,7 +2891,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [84] #[46, 47, 48, 121, 75, 84]
+    gtestlist = [85, 75, 121, 84, 46] #[46, 47, 48, 121, 75, 84]
 
     for gtest in gtestlist:
 
@@ -2927,8 +2927,9 @@ if __name__ == '__main__':
         sparsity_factor = 1
         print(f'sparsity_factor: {sparsity_factor}')
 
-        # data_generate(model_config)
-        data_train(model_config, gtest)
+        data_generate(model_config)
+        if gtest !=85:
+            data_train(model_config, gtest)
         # data_plot(model_config, epoch=-1, bPrint=True)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
