@@ -1322,7 +1322,7 @@ def data_train(model_config, gtest):
             for m in range(model.a.shape[0]):
                 for k in range(nparticle_types):
                     for n in index_particles[k]:
-                        rr = torch.tensor(np.linspace(0, radius * 1.3, 1000)).to(device)
+                        rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
                         embedding0 = model.a[m, n, :] * torch.ones((1000, model_config['embedding']), device=device)
                         embedding1 = model.a[m, n, :] * torch.ones((1000, model_config['embedding']), device=device)
                         in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
@@ -1397,7 +1397,7 @@ def data_train(model_config, gtest):
         elif model_config['model'] == 'Particles_A':
             acc_list = []
             for n in range(nparticles):
-                rr = torch.tensor(np.linspace(0, radius * 1.3, 1000)).to(device)
+                rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
                 embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
                 # TO BE CHECKED ############
                 in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
