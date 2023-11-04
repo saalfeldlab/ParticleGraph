@@ -1335,7 +1335,6 @@ def data_train(model_config, gtest):
                             plt.plot(rr.detach().cpu().numpy(),
                                      acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'], linewidth=1,
                                      color=cmap(k/nparticle_types),alpha=0.25)
-
             acc_list = torch.stack(acc_list)
             plt.xlim([0, 0.05])
             plt.xlabel('Distance [a.u]', fontsize=12)
@@ -1409,7 +1408,12 @@ def data_train(model_config, gtest):
                 acc_list.append(acc)
                 if n%5==0:
                     plt.plot(rr.detach().cpu().numpy(),acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],color=cmap(x[n,5].detach().cpu().numpy()/nparticle_types), linewidth=1,alpha=0.25)
+            plt.xlabel('Distance [a.u]', fontsize=12)
+            plt.ylabel('MLP [a.u]', fontsize=12)
             acc_list = torch.stack(acc_list)
+            coeff_norm = acc_list.detach().cpu().numpy()
+            trans = umap.UMAP(n_neighbors=30, n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
+            proj_interaction = trans.transform(coeff_norm)
 
         # Constrain embedding with UMAP of plots clustering
         ax = fig.add_subplot(2, 4, 4)
@@ -3438,7 +3442,8 @@ if __name__ == '__main__':
         sparsity_factor = 1
         print(f'sparsity_factor: {sparsity_factor}')
 
-        data_generate(model_config, bVisu=True)
+        if gtest != 75:
+            data_generate(model_config, bVisu=True)
         if gtest != 85:
             data_train(model_config, gtest)
         #data_plot(model_config, epoch=-1, bPrint=True)
