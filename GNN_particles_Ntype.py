@@ -942,8 +942,8 @@ def data_generate(model_config,bVisu=True):
                                     alpha=0.75,
                                     color=cmap(n / nparticle_types))  # , facecolors='none', edgecolors='k')
                 elif (model_config['model'] == 'HeatParticles') | (model_config['model'] == 'HeatMesh'):
-                    plt.scatter(x[:, 1].detach().cpu().numpy(), x[:, 2].detach().cpu().numpy(), s=10, alpha=0.75,
-                                c=x[:, 6].detach().cpu().numpy(), s=30, alpha=0.75, cmap='inferno', vmin=0, vmax=2)
+                    plt.scatter(x[:, 1].detach().cpu().numpy(), x[:, 2].detach().cpu().numpy(), s=40, alpha=0.75,
+                                c=x[:, 6].detach().cpu().numpy(), cmap='inferno', vmin=0, vmax=2)
                 elif model_config['model'] == 'ElecParticles':
                     for n in range(nparticle_types):
                         g = np.abs(p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20) * 4
