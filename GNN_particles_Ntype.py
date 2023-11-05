@@ -966,7 +966,7 @@ def data_generate(model_config,bVisu=True):
                     plt.xlim([0.3, 0.7])
                     plt.ylim([0.3, 0.7])
 
-                if (model_config['model'] != 'HeatParticles') | (model_config['model'] != 'HeatMesh'):
+                if (model_config['model'] != 'HeatParticles') & (model_config['model'] != 'HeatMesh'):
                     for k in range(nparticles):
                         plt.arrow(x=x[k, 1].detach().cpu().item(),y=x[k, 2].detach().cpu().item(),
                                   dx=x[k, 3].detach().cpu().item()*model_config['arrow_length'], dy=x[k, 4].detach().cpu().item()*model_config['arrow_length'],color='k')
