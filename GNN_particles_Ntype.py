@@ -1444,7 +1444,6 @@ def data_train(model_config, gtest):
             with torch.no_grad():
                 for n in range(model.a.shape[0]):
                     model.a[n]=model_a_[n]
-
         if (epoch % 10 == 0) & (epoch > 0):
             best_loss = total_loss / N / nparticles / batch_size
             torch.save({'model_state_dict': model.state_dict(),
@@ -3084,7 +3083,8 @@ def load_model_config(id=48):
                              'pred_limit': 1E9,
                              'start_frame': 1,
                              'arrow_length':10,
-                             'cmap':'tab20c'}
+                             'cmap':'tab20c',
+                             'arrow_length':10}
     # 8 types N=960 dim 128 no boundary
     if id == 47:
         model_config_test = {'ntry': id,
@@ -3116,7 +3116,8 @@ def load_model_config(id=48):
                              'pred_limit': 1E9,
                              'start_frame': 1,
                              'arrow_length':20,
-                             'cmap':'tab20c'}
+                             'cmap':'tab20c',
+                             'arrow_length':10}
     # 16 types N=960 dim 128 no boundary
     if id == 48:
         model_config_test = {'ntry': id,
@@ -3148,7 +3149,8 @@ def load_model_config(id=48):
                              'pred_limit': 1E9,
                              'start_frame': 1,
                              'arrow_length':20,
-                             'cmap':'tab20c'}
+                             'cmap':'tab20c',
+                             'arrow_length':10}
     # 24 types N=960 dim 128 no boundary
     if id == 49:
         model_config_test = {'ntry': id,
@@ -3180,7 +3182,8 @@ def load_model_config(id=48):
                              'pred_limit': 1E9,
                              'start_frame': 1,
                              'arrow_length':20,
-                             'cmap':'tab20c'}
+                             'cmap':'tab20c',
+                             'arrow_length':10}
 
     # particles
     if id == 75:
@@ -3243,7 +3246,8 @@ def load_model_config(id=48):
                              'nrun': 2,
                              'start_frame': 0.1,
                              'arrow_length':20,
-                             'cmap':'tab20b'}
+                             'cmap':'tab20b',
+                             'arrow_length':20}
 
     # elctrostatic
     if id == 84:
@@ -3276,7 +3280,8 @@ def load_model_config(id=48):
                              'pred_limit': 1E10,
                              'start_frame': 0,
                              'arrow_length':40,
-                             'cmap':'tab20c'}
+                             'cmap':'tab20c',
+                             'arrow_length':10}
     if id == 85:
         model_config_test = {'ntry': id,
                              'input_size': 11,
@@ -3340,7 +3345,8 @@ def load_model_config(id=48):
                              'clamp': 0.002,
                              'pred_limit': 1E9,
                              'start_frame': 0.25,
-                             'cmap':'tab20b'
+                             'cmap':'tab20b',
+                             'arrow_length':10
         }
     # 8 types boundary periodic N=960 mesh
     if id == 121:
@@ -3373,7 +3379,9 @@ def load_model_config(id=48):
                              'clamp': 0.002,
                              'pred_limit': 1E9,
                              'start_frame': 0.3,
-                             'cmap':'tab20b'}
+                             'cmap':'tab20b',
+                             'arrow_length':10
+                             }
 
     for key, value in model_config_test.items():
         print(key, ":", value)
@@ -3405,7 +3413,7 @@ if __name__ == '__main__':
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
 
-    gtestlist = [75, 121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
+    gtestlist = [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
 
     for gtest in gtestlist:
 
