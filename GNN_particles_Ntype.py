@@ -943,7 +943,7 @@ def data_generate(model_config,bVisu=True):
                                     color=cmap(n / nparticle_types))  # , facecolors='none', edgecolors='k')
                 elif (model_config['model'] == 'HeatParticles') | (model_config['model'] == 'HeatMesh'):
                     plt.scatter(x[:, 1].detach().cpu().numpy(), x[:, 2].detach().cpu().numpy(), s=10, alpha=0.75,
-                                c=x[:, 6].detach().cpu().numpy(), cmap='inferno', vmin=0, vmax=2)
+                                c=x[:, 6].detach().cpu().numpy(), s=30, alpha=0.75, cmap='inferno', vmin=0, vmax=2)
                 elif model_config['model'] == 'ElecParticles':
                     for n in range(nparticle_types):
                         g = np.abs(p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20) * 4
@@ -966,9 +966,10 @@ def data_generate(model_config,bVisu=True):
                     plt.xlim([0.3, 0.7])
                     plt.ylim([0.3, 0.7])
 
-                for k in range(nparticles):
-                    plt.arrow(x=x[k, 1].detach().cpu().item(),y=x[k, 2].detach().cpu().item(),
-                              dx=x[k, 3].detach().cpu().item()*model_config['arrow_length'], dy=x[k, 4].detach().cpu().item()*model_config['arrow_length'],color='k')
+                if (model_config['model'] != 'HeatParticles') | (model_config['model'] != 'HeatMesh'):
+                    for k in range(nparticles):
+                        plt.arrow(x=x[k, 1].detach().cpu().item(),y=x[k, 2].detach().cpu().item(),
+                                  dx=x[k, 3].detach().cpu().item()*model_config['arrow_length'], dy=x[k, 4].detach().cpu().item()*model_config['arrow_length'],color='k')
 
                 ax = fig.add_subplot(2, 2, 4)
                 if (model_config['model'] == 'HeatParticles') | (model_config['model'] == 'HeatMesh'):
