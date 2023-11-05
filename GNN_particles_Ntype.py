@@ -1071,7 +1071,6 @@ def data_train(model_config, gtest):
         hnorm = torch.std(h)
         torch.save(hnorm, os.path.join(log_dir, 'hnorm.pt'))
         print(hnorm)
-
     if model_config['model'] == 'GravityParticles':
         model = GravityParticles(model_config, device)
     if model_config['model'] == 'ElecParticles':
@@ -1445,32 +1444,33 @@ def data_train(model_config, gtest):
             with torch.no_grad():
                 for n in range(model.a.shape[0]):
                     model.a[n]=model_a_[n]
-        if (epoch % 10 == 0) & (epoch > 0):
-            best_loss = total_loss / N / nparticles / batch_size
-            torch.save({'model_state_dict': model.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict()},
-                       os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs.pt'))
-            xx, rmserr_list = data_test(model_config, bVisu=True, bPrint=False)
-            model.train()
-        if (epoch > 9):
-            ax = fig.add_subplot(2, 4, 5)
-            for n in range(nparticle_types):
-                plt.scatter(xx[index_particles[n], 1], xx[index_particles[n], 2], s=1,color='k')
-            ax = plt.gca()
-            ax.axes.xaxis.set_ticklabels([])
-            ax.axes.yaxis.set_ticklabels([])
-            plt.xlim([0,1])
-            plt.ylim([0,1])
-            ax.axes.get_xaxis().set_visible(False)
-            ax.axes.get_yaxis().set_visible(False)
-            plt.axis('off')
-            ax = fig.add_subplot(2, 4, 6)
-            plt.plot(np.arange(len(rmserr_list)), rmserr_list, label='RMSE', color='r')
-            plt.ylim([0, 0.1])
-            plt.xlim([0, nframes])
-            plt.tick_params(axis='both', which='major', labelsize=10)
-            plt.xlabel('Frame [a.u]', fontsize=14)
-            ax.set_ylabel('RMSE [a.u]', fontsize=14, color='r')
+        if model_config['model'] != 'HeatMesh':
+            if (epoch % 10 == 0) & (epoch > 0):
+                best_loss = total_loss / N / nparticles / batch_size
+                torch.save({'model_state_dict': model.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict()},
+                           os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs.pt'))
+                xx, rmserr_list = data_test(model_config, bVisu=True, bPrint=False)
+                model.train()
+            if (epoch > 9):
+                ax = fig.add_subplot(2, 4, 5)
+                for n in range(nparticle_types):
+                    plt.scatter(xx[index_particles[n], 1], xx[index_particles[n], 2], s=1,color='k')
+                ax = plt.gca()
+                ax.axes.xaxis.set_ticklabels([])
+                ax.axes.yaxis.set_ticklabels([])
+                plt.xlim([0,1])
+                plt.ylim([0,1])
+                ax.axes.get_xaxis().set_visible(False)
+                ax.axes.get_yaxis().set_visible(False)
+                plt.axis('off')
+                ax = fig.add_subplot(2, 4, 6)
+                plt.plot(np.arange(len(rmserr_list)), rmserr_list, label='RMSE', color='r')
+                plt.ylim([0, 0.1])
+                plt.xlim([0, nframes])
+                plt.tick_params(axis='both', which='major', labelsize=10)
+                plt.xlabel('Frame [a.u]', fontsize=14)
+                ax.set_ylabel('RMSE [a.u]', fontsize=14, color='r')
 
         plt.tight_layout()
         plt.savefig(f"./tmp_training/Fig_{ntry}_{epoch}.tif")
@@ -3451,8 +3451,7 @@ if __name__ == '__main__':
         sparsity_factor = 1
         print(f'sparsity_factor: {sparsity_factor}')
 
-        if gtest != 75:
-            data_generate(model_config, bVisu=True)
+        # data_generate(model_config, bVisu=True)
         if gtest != 85:
             data_train(model_config, gtest)
         #data_plot(model_config, epoch=-1, bPrint=True)
