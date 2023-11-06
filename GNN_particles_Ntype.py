@@ -199,9 +199,14 @@ class Particles_A(pyg.nn.MessagePassing):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         newv = self.tau * self.propagate(edge_index, x=(x, x))
-        oldv = x[:, 3:5]
-        acc = newv - oldv
-        return acc
+
+
+        if self.prediction == '2nd_derivative':
+            oldv = x[:, 3:5]
+            acc = newv - oldv
+            return acc
+        else:
+            return newv
 
     def message(self, x_i, x_j):
         r = torch.sum(bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) ** 2, axis=1)  # squared distance
@@ -421,7 +426,7 @@ class InteractionParticles(pyg.nn.MessagePassing):
 
         embedding = self.a[self.data_id, x_i[:, 0].detach().cpu().numpy(), :]
 
-        if self.prediction == 'acceleration':
+        if self.prediction == '2nd_derivative':
             in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding), dim=-1)
         else:
             in_features = torch.cat((delta_pos, r, embedding), dim=-1)
@@ -864,7 +869,7 @@ def data_generate(model_config,bVisu=True):
                 y_list.append(y_noise)
                 # torch.save(y_noise, f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{it}.pt')
 
-            if model_config['prediction'] == 'acceleration':
+            if model_config['prediction'] == '2nd_derivative':
                 V1 += y[:, 0:2]
             else:
                 V1 = y[:, 0:2]
@@ -1124,16 +1129,9 @@ def data_train(model_config, gtest):
     # optimizer = torch.optim.Adam(model.parameters(), lr=lr) #, weight_decay=weight_decay)
     model.train()
     best_loss = np.inf
-
-    if data_augmentation:
-        data_augmentation_loop = 20
-        print(f'data_augmentation_loop: {data_augmentation_loop}')
-    else:
-        data_augmentation_loop = 1
-        print('no data augmentation ...')
-
     list_loss = []
-    D_nm = torch.zeros((Nepochs + 1, nparticle_types, nparticle_types))
+    data_augmentation_loop = 20
+    print(f'data_augmentation_loop: {data_augmentation_loop}')
 
     print('')
     time.sleep(0.5)
@@ -1236,8 +1234,10 @@ def data_train(model_config, gtest):
                     dataset_batch.append(dataset)
                     # y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{k}.pt').to(device)
                     y = y_list[run][k].clone().detach()
-                    y[:, 0] = y[:, 0] / ynorm[4]
-                    y[:, 1] = y[:, 1] / ynorm[4]
+                    if model_config['prediction'] == '2nd_derivative':
+                        y = y / ynorm[4]
+                    else:
+                        y = y / vnorm[4]
                     if data_augmentation:
                         new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
                         new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
@@ -1247,7 +1247,6 @@ def data_train(model_config, gtest):
                         y_batch = y
                     else:
                         y_batch = torch.cat((y_batch, y), axis=0)
-
 
                 batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
                 optimizer.zero_grad()
@@ -1264,12 +1263,6 @@ def data_train(model_config, gtest):
 
             optimizer.step()
             total_loss += loss.item()
-
-
-        # for n in range(nparticle_types - 1):
-        #     for m in range(n + 1, nparticle_types):
-        #         D_nm[epoch, n, m] = S_e(torch.tensor(embedding_particle[n]), torch.tensor(embedding_particle[m]))
-        # S_geomD = torch.sum(D_nm[epoch]).item()
 
         sparsity_index = torch.sum((histogram(model.a, 50, -4, 4) > nparticles / 100))
         torch.save({'model_state_dict': model.state_dict(),
@@ -1570,13 +1563,11 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         nparticles = new_nparticles
         model_config['nparticles'] = new_nparticles
 
-    ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt', map_location=device)
-    vnorm = torch.load(f'./log/try_{ntry}/vnorm.pt', map_location=device)
-    ynorm = ynorm.to(device)
-    v = vnorm.to(device)
+    ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt', map_location=device).to(device)
+    vnorm = torch.load(f'./log/try_{ntry}/vnorm.pt', map_location=device).to(device)
+    v = vnorm
     if model_config['model'] == 'DiffMesh':
         hnorm = torch.load(f'./log/try_{ntry}/hnorm.pt', map_location=device).to(device)
-
 
     table = PrettyTable(["Modules", "Parameters"])
     total_params = 0
@@ -1633,7 +1624,6 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
 
             rmserr = torch.sqrt(torch.mean(torch.sum((x[:,6:7]-x0_next[:,6:7]) ** 2, axis=1)))
             rmserr_list.append(rmserr.item())
-
         else:
             distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
             t = torch.Tensor([radius ** 2])  # threshold
@@ -1644,14 +1634,13 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
     
             with torch.no_grad():
                 y = model(dataset, data_id=0, step=2, vnorm=v, cos_phi=0, sin_phi=0)  # acceleration estimation
-    
-            y[:, 0] = y[:, 0] * ynorm[4]
-            y[:, 1] = y[:, 1] * ynorm[4]
-    
-            if model_config['prediction'] == 'acceleration':
+            if model_config['prediction'] == '2nd_derivative':
+                y = y * ynorm[4]
                 x[:, 3:5] = x[:, 3:5] + y  # speed update
             else:
+                y = y * vnorm[4]
                 x[:, 3:5] = y
+
             x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5])  # position update
 
             rmserr = torch.sqrt(torch.mean(torch.sum(bc_diff(x[:, 1:3] - x0[:, 1:3]) ** 2, axis=1)))
@@ -1959,7 +1948,7 @@ def data_test_tracking(model_config, bVisu=False, bPrint=True, index_particles=0
         y[:, 0] = y[:, 0] * ynorm[4]
         y[:, 1] = y[:, 1] * ynorm[4]
 
-        if model_config['prediction'] == 'acceleration':
+        if model_config['prediction'] == '2nd_derivative':
             x[:, 3:4] = x[:, 3:4] + y  # speed update
         else:
             x[:, 3:4] = y
@@ -2200,7 +2189,7 @@ def data_test_generate(model_config):
             y_noise = y[:, 0:2] + noise_current - 2 * noise_prev + noise_prev_prev
             torch.save(y_noise, f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{it}.pt')
 
-        if model_config['prediction'] == 'acceleration':
+        if model_config['prediction'] == '2nd_derivative':
             V1 += y[:, 0:2]
         else:
             V1 = y[:, 0:2]
@@ -2998,7 +2987,7 @@ def data_plot_old(model_config, epoch, bPrint):
             plt.plot(rr.detach().cpu().numpy(), psi_output[0].detach().cpu().numpy() * 0, color=[0, 0, 0],
                      linewidth=0.5)
         plt.xlabel('Distance [a.u]', fontsize="14")
-        if model_config['prediction'] == 'acceleration':
+        if model_config['prediction'] == '2nd_derivative':
             plt.ylabel('Acceleration [a.u]', fontsize="14")
         else:
             plt.ylabel('Velocity [a.u]', fontsize="14")
@@ -3010,7 +2999,7 @@ def data_plot_old(model_config, epoch, bPrint):
         ax = fig.add_subplot(1, 4, 4)
         for n in range(model_config['nparticle_types']):
             embedding = torch.tensor(tmean[n], device=device) * torch.ones((1000), device=device)
-            if model_config['prediction'] == 'acceleration':
+            if model_config['prediction'] == '2nd_derivative':
                 in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
                                          rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
                                          0 * rr[:, None], 0 * rr[:, None], embedding[:, None]), dim=1)
@@ -3027,7 +3016,7 @@ def data_plot_old(model_config, epoch, bPrint):
         plt.plot(rr.detach().cpu().numpy(), 0 * acc.detach().cpu().numpy() * ynorm / model_config['tau'], c='k')
         plt.xlim([0, 0.075 * 2])
         plt.xlabel('Distance [a.u]', fontsize="14")
-        if model_config['prediction'] == 'acceleration':
+        if model_config['prediction'] == '2nd_derivative':
             plt.ylabel('Predicted acceleration [a.u]', fontsize="14")
         else:
             plt.ylabel('Predicted velocity [a.u]', fontsize="14")
@@ -3062,7 +3051,7 @@ def load_model_config(id=48):
                              'batch_size': 8,
                              'embedding': 2,
                              'model': 'GravityParticles',
-                             'prediction': 'acceleration',
+                             'prediction': '2nd_derivative',
                              'upgrade_type': 0,
                              'p': np.linspace(0.2, 5, 4).tolist(),
                              'nrun': 2,
@@ -3095,7 +3084,7 @@ def load_model_config(id=48):
                              'batch_size': 8,
                              'embedding': 2,
                              'model': 'GravityParticles',
-                             'prediction': 'acceleration',
+                             'prediction': '2nd_derivative',
                              'upgrade_type': 0,
                              'p': np.linspace(0.2, 5, 4).tolist(),
                              'nrun': 2,
@@ -3128,7 +3117,7 @@ def load_model_config(id=48):
                              'batch_size': 8,
                              'embedding': 2,
                              'model': 'GravityParticles',
-                             'prediction': 'acceleration',
+                             'prediction': '2nd_derivative',
                              'upgrade_type': 0,
                              'p': np.linspace(0.2, 5, 4).tolist(),
                              'nrun': 2,
@@ -3161,7 +3150,7 @@ def load_model_config(id=48):
                              'batch_size': 8,
                              'embedding': 2,
                              'model': 'GravityParticles',
-                             'prediction': 'acceleration',
+                             'prediction': '2nd_derivative',
                              'upgrade_type': 0,
                              'p': np.linspace(0.2, 5, 8).tolist(),
                              'nrun': 2,
@@ -3194,7 +3183,7 @@ def load_model_config(id=48):
                              'batch_size': 8,
                              'embedding': 2,
                              'model': 'GravityParticles',
-                             'prediction': 'acceleration',
+                             'prediction': '2nd_derivative',
                              'upgrade_type': 0,
                              'p': np.linspace(0.2, 5, 16).tolist(),
                              'nrun': 2,
@@ -3227,7 +3216,7 @@ def load_model_config(id=48):
                              'batch_size': 8,
                              'embedding': 2,
                              'model': 'GravityParticles',
-                             'prediction': 'acceleration',
+                             'prediction': '2nd_derivative',
                              'upgrade_type': 0,
                              'p': np.linspace(0.2, 5, 24).tolist(),
                              'nrun': 2,
@@ -3261,7 +3250,7 @@ def load_model_config(id=48):
                              'batch_size': 8,
                              'embedding': 1,
                              'model': 'Particles_A',
-                             'prediction': 'acceleration',
+                             'prediction': '2nd_derivative',
                              'upgrade_type': 0,
                              'p': [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855],
                                    [1.785, 1.8579, 1.7226, 1.0584]],
@@ -3292,7 +3281,7 @@ def load_model_config(id=48):
                              'batch_size': 8,
                              'embedding': 1,
                              'model': 'Particles_A',
-                             'prediction': 'acceleration',
+                             'prediction': '2nd_derivative',
                              'upgrade_type': 0,
                              'p': [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855],
                                    [1.785, 1.8579, 1.7226, 1.0584]],
@@ -3325,7 +3314,7 @@ def load_model_config(id=48):
                              'batch_size': 8,
                              'embedding': 2,
                              'model': 'ElecParticles',
-                             'prediction': 'acceleration',
+                             'prediction': '2nd_derivative',
                              'p': [[2], [1], [-1]],
                              'upgrade_type': 0,
                              'nrun': 10,
@@ -3357,7 +3346,7 @@ def load_model_config(id=48):
                              'batch_size': 8,
                              'embedding': 2,
                              'model': 'ElecParticles',
-                             'prediction': 'acceleration',
+                             'prediction': '2nd_derivative',
                              'p': [[2], [1], [-1]],
                              'upgrade_type': 0,
                              'nrun': 10,
@@ -3392,7 +3381,7 @@ def load_model_config(id=48):
                              'batch_size': 8,
                              'embedding': 1,
                              'model': 'HeatParticles',
-                             'prediction': 'acceleration',
+                             'prediction': '2nd_derivative',
                              'upgrade_type': 0,
                              'p': np.linspace(0.2, 5, 8).tolist(),
                              'nrun': 2,
@@ -3425,7 +3414,7 @@ def load_model_config(id=48):
                              'batch_size': 8,
                              'embedding': 2,
                              'model': 'DiffMesh',
-                             'prediction': 'acceleration',
+                             'prediction': '2nd_derivative',
                              'upgrade_type': 0,
                              'p': np.linspace(0.2, 5, 4).tolist(),
                              'c': np.linspace(1, 12, 4).tolist(),
@@ -3460,7 +3449,7 @@ def load_model_config(id=48):
                              'batch_size': 8,
                              'embedding': 2,
                              'model': 'WaveMesh',
-                             'prediction': 'acceleration',
+                             'prediction': '2nd_derivative',
                              'upgrade_type': 0,
                              'p': np.linspace(1, 1, 2).tolist(),
                              'c': np.linspace(0.5, 1, 2).tolist(),
