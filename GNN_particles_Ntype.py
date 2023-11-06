@@ -969,11 +969,11 @@ def data_generate(model_config,bVisu=True):
                                     color=cmap(n / nparticle_types))
 
                 if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
-                    plt.xlim([0,1])
-                    plt.ylim([0,1])
+                    plt.xlim([0.3, 0.7])
+                    plt.ylim([0.3, 0.7])
                 else:
-                    plt.xlim([-1.3, 1.3])
-                    plt.ylim([-1.3, 1.3])
+                    plt.xlim([-0.25, 0.25])
+                    plt.ylim([-0.25, 0.25])
 
                 if (model_config['model'] != 'HeatParticles') & (model_config['model'] != 'DiffMesh') & (model_config['model'] != 'WaveMesh'):
                     for k in range(nparticles):
