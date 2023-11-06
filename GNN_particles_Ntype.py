@@ -1001,12 +1001,13 @@ def data_generate(model_config,bVisu=True):
                             xc = x_all[:, k, 1].detach().cpu().numpy().squeeze()
                             yc = x_all[:, k, 2].detach().cpu().numpy().squeeze()
                             plt.scatter(xc,yc,s=0.05, color='k',alpha=0.75)
-                    if model_config['boundary'] == 'no':
-                        plt.xlim([-1.3, 1.3])
-                        plt.ylim([-1.3, 1.3])
-                    else:
+                    if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
                         plt.xlim([0,1])
                         plt.ylim([0,1])
+                    else:
+                        plt.xlim([-1.3, 1.3])
+                        plt.ylim([-1.3, 1.3])
+
 
                 plt.tight_layout()
                 plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
