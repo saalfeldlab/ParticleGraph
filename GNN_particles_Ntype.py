@@ -388,16 +388,16 @@ class InteractionParticles(pyg.nn.MessagePassing):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
-        acc = self.propagate(edge_index, x=(x, x))
+        pred = self.propagate(edge_index, x=(x, x))
         ## TO BE CHANGED ##
         deg = pyg_utils.degree(edge_index[0], data.num_nodes)
         deg = (deg > 0)
         deg = (deg > 0).type(torch.float32)
         if step == 2:
             deg = torch.concatenate((deg[:, None], deg[:, None]), axis=1)  # test, if degree = 0 acc =0
-            return deg * acc
+            return deg * pred
         else:
-            return acc
+            return pred
 
     def message(self, x_i, x_j):
 
@@ -792,7 +792,6 @@ def data_generate(model_config,bVisu=True):
                 psi_output.append(model.psi(rr, torch.squeeze(p[n]), torch.squeeze(p[m])))
 
     torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model.pt')
-    time.sleep(0.5)
 
     for run in range(model_config['nrun']):
 
@@ -804,12 +803,7 @@ def data_generate(model_config,bVisu=True):
             X1 = torch.rand(nparticles, 2, device=device)
         else:
             X1 = torch.randn(nparticles, 2, device=device) * 0.5
-
         V1 = v_init * torch.randn((nparticles, 2), device=device)
-
-        # X1=torch.load('X1.pt')
-        # V1=torch.load('V1.pt')
-
         T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
         for n in range(1, nparticle_types):
             T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
