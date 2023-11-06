@@ -912,11 +912,14 @@ def data_generate(model_config,bVisu=True):
                     for n in range(nparticle_types):
                         plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                     x[index_particles[n], 2].detach().cpu().numpy(), s=3, alpha=0.75,color=cmap(n/nparticle_types))
-
                 if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
+                    plt.text(0, 1.08, f'frame: {it}')
+                    plt.text(0, 1.03, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
                     plt.xlim([0,1])
                     plt.ylim([0,1])
                 else:
+                    plt.text(-1.25, 1.5, f'frame: {it}')
+                    plt.text(-1.25, 1.4, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
                     plt.xlim([-1.3, 1.3])
                     plt.ylim([-1.3, 1.3])
 
@@ -930,13 +933,9 @@ def data_generate(model_config,bVisu=True):
                         vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
                     nx.draw_networkx(vis, pos=pos, node_size=10, linewidths=0, with_labels=False)
                 if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
-                    plt.text(0, 1.08, f'frame: {it}')
-                    plt.text(0, 1.03, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
                     plt.xlim([0,1])
                     plt.ylim([0,1])
                 else:
-                    plt.text(-1.25, 1.5, f'frame: {it}')
-                    plt.text(-1.25, 1.4, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
                     plt.xlim([-1.3, 1.3])
                     plt.ylim([-1.3, 1.3])
 
@@ -973,10 +972,10 @@ def data_generate(model_config,bVisu=True):
                     plt.xlim([-0.25, 0.25])
                     plt.ylim([-0.25, 0.25])
 
-                # if (model_config['model'] != 'HeatParticles') & (model_config['model'] != 'DiffMesh') & (model_config['model'] != 'WaveMesh'):
-                #     for k in range(nparticles):
-                #         plt.arrow(x=x[k, 1].detach().cpu().item(),y=x[k, 2].detach().cpu().item(),
-                #                   dx=x[k, 3].detach().cpu().item()*model_config['arrow_length'], dy=x[k, 4].detach().cpu().item()*model_config['arrow_length'],color='k')
+                if (model_config['model'] != 'HeatParticles') & (model_config['model'] != 'DiffMesh') & (model_config['model'] != 'WaveMesh'):
+                    for k in range(nparticles):
+                        plt.arrow(x=x[k, 1].detach().cpu().item(),y=x[k, 2].detach().cpu().item(),
+                                  dx=x[k, 3].detach().cpu().item()*model_config['arrow_length'], dy=x[k, 4].detach().cpu().item()*model_config['arrow_length'],color='k')
 
                 ax = fig.add_subplot(2, 2, 4)
                 if (model_config['model'] == 'HeatParticles') | (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
@@ -1014,7 +1013,6 @@ def data_generate(model_config,bVisu=True):
         torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
         torch.save(y_list, f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
         torch.save(h_list, f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt')
-        
 def data_train(model_config, gtest):
     print('')
 
@@ -1118,7 +1116,7 @@ def data_train(model_config, gtest):
     print('')
     net = f"./log/try_{ntry}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     print(f'network: {net}')
-    Nepochs = 20  ######################## 40
+    Nepochs = 25  ######################## 40
     print(f'N epochs: {Nepochs}')
     print('')
 
@@ -1144,7 +1142,7 @@ def data_train(model_config, gtest):
         if epoch == 1:
             batch_size = model_config['batch_size']
             print(f'batch_size: {batch_size}')
-        if epoch == 2:
+        if epoch == 5:
             if data_augmentation:
                 data_augmentation_loop = 200
                 print(f'data_augmentation_loop: {data_augmentation_loop}')
@@ -1162,7 +1160,7 @@ def data_train(model_config, gtest):
                     optimizer.add_param_group({'params': parameter, 'lr': lr})
                 it += 1
             print(f'Learning rates: {lr}, {lra}')
-        if epoch == 15:
+        if epoch == 20:
             print('training MLP only ...')
             model.a.requires_grad = False
             # new_a = kmeans.cluster_centers_[kmeans.labels_, :]
@@ -1427,7 +1425,7 @@ def data_train(model_config, gtest):
 
         # Constrain embedding with UMAP of plots clustering
         ax = fig.add_subplot(2, 4, 4)
-        if (nparticles<2000) | (epoch==9) | (epoch==14):
+        if (nparticles<2000) | (epoch==14) | (epoch==19):
             for n in range(nparticle_types):
                 plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1],
                             color=cmap(n / nparticle_types), s=5)
@@ -1438,8 +1436,8 @@ def data_train(model_config, gtest):
             for n in range(model_config['ninteractions']):
                 plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
 
-        if (epoch==9) | (epoch==14):
-            if (epoch == 14):
+        if (epoch==14) | (epoch==19):
+            if (epoch == 19):
                 kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=1000, max_iter=50000, random_state=13)
                 kmeans.fit(proj_interaction)
 
@@ -3075,6 +3073,39 @@ def load_model_config(id=48):
                              'cmap':'tab20c',
                              'arrow_length':10}
     # 4 types N=960 dim 128 no boundary   GOOD
+    if id == 44:
+        model_config_test = {'ntry': id,
+                             'input_size': 9,
+                             'output_size': 2,
+                             'hidden_size': 128,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.3,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 960,
+                             'nparticle_types': 4,
+                             'ninteractions': 4,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-9,
+                             'v_init': 5E-5,
+                             'aggr_type': 'add',
+                             'boundary': 'no',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'GravityParticles',
+                             'prediction': 'acceleration',
+                             'upgrade_type': 0,
+                             'p': np.linspace(0.2, 5, 4).tolist(),
+                             'nrun': 2,
+                             'clamp': 0.002,
+                             'pred_limit': 1E9,
+                             'start_frame': 1,
+                             'arrow_length':10,
+                             'cmap':'tab20c',
+                             'arrow_length':10}
+    # 4 types N=960 dim 128 no boundary   GOOD
     if id == 46:
         model_config_test = {'ntry': id,
                              'input_size': 9,
@@ -3444,7 +3475,6 @@ def load_model_config(id=48):
 
     for key, value in model_config_test.items():
         print(key, ":", value)
-    print('')
     if model_config_test['model'] == 'Particles_A':
         print(
             'Particles_A is a first derivative simulation, velocity is function of r.exp-r^2 interaction is type dependent')
@@ -3454,7 +3484,6 @@ def load_model_config(id=48):
     if model_config_test['model'] == 'Particles_G':
         print(
             'Particles_G is a second derivative simulation, acceleration is function of gravity law mj/r2 interaction is type dependent')
-    print('')
 
     return model_config_test
 
@@ -3472,7 +3501,7 @@ if __name__ == '__main__':
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
 
-    gtestlist = [43] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
+    gtestlist = [44] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
 
     for gtest in gtestlist:
 
@@ -3489,7 +3518,6 @@ if __name__ == '__main__':
         cmap = plt.cm.get_cmap(model_config['cmap'])
         sigma = model_config['sigma']
         aggr_type = model_config['aggr_type']
-        print('')
 
         if model_config['boundary'] == 'no':  # change this for usual BC
             def bc_pos(X):
@@ -3509,7 +3537,7 @@ if __name__ == '__main__':
         sparsity_factor = 1
         print(f'sparsity_factor: {sparsity_factor}')
 
-        data_generate(model_config, bVisu=False)
+        data_generate(model_config, bVisu=True)
         data_train(model_config, gtest)
         # data_plot(model_config, epoch=-1, bPrint=True)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
