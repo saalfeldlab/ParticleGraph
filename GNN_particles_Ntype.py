@@ -981,7 +981,7 @@ def data_generate(model_config,bVisu=True):
                                   dx=x[k, 3].detach().cpu().item()*model_config['arrow_length'], dy=x[k, 4].detach().cpu().item()*model_config['arrow_length'],color='k')
 
                 ax = fig.add_subplot(2, 2, 4)
-                if (model_config['model'] == 'HeatParticles') | (model_config['model'] == 'DiffMesh') | (model_config['model'] != 'WaveMesh'):
+                if (model_config['model'] == 'HeatParticles') | (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
                     for n in range(nparticle_types):
                         plt.scatter(N1[index_particles[n]].detach().cpu().numpy(),
                                     H1[index_particles[n]].detach().cpu().numpy(), color=cmap(n / nparticle_types), s=5,
@@ -3290,7 +3290,7 @@ def load_model_config(id=48):
                              'radius': 0.15,
                              'dataset': f'231001_{id}',
                              'nparticles': 960,
-                             'nparticle_types': 4,
+                             'nparticle_types': 3,
                              'ninteractions': 3,
                              'nframes': 2000,
                              'sigma': .005,
@@ -3303,7 +3303,7 @@ def load_model_config(id=48):
                              'embedding': 2,
                              'model': 'ElecParticles',
                              'prediction': 'acceleration',
-                             'p': [[2], [1], [-1], [-1]],
+                             'p': [[2], [1], [-1]],
                              'upgrade_type': 0,
                              'nrun': 10,
                              'clamp': 0.002,
@@ -3480,7 +3480,7 @@ if __name__ == '__main__':
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
 
-    gtestlist = [84] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
+    gtestlist = [85] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
 
     for gtest in gtestlist:
 
@@ -3518,7 +3518,7 @@ if __name__ == '__main__':
         print(f'sparsity_factor: {sparsity_factor}')
 
         data_generate(model_config, bVisu=True)
-        data_train(model_config, gtest)
+        # data_train(model_config, gtest)
         # data_plot(model_config, epoch=-1, bPrint=True)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
