@@ -854,7 +854,6 @@ def data_generate(model_config,bVisu=True):
             edge_index = adj_t.nonzero().t().contiguous()
             dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
 
-
             with torch.no_grad():
                 y = model(dataset)
             if model_config['model'] == 'WaveMesh':
@@ -916,16 +915,12 @@ def data_generate(model_config,bVisu=True):
                         plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                     x[index_particles[n], 2].detach().cpu().numpy(), s=3, alpha=0.75,color=cmap(n/nparticle_types))
 
-                if model_config['boundary'] == 'no':
-                    plt.text(-1.25, 1.5, f'frame: {it}')
-                    plt.text(-1.25, 1.4, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
-                    plt.xlim([-1.3, 1.3])
-                    plt.ylim([-1.3, 1.3])
-                else:
-                    plt.text(0, 1.08, f'frame: {it}')
-                    plt.text(0, 1.03, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
+                if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
                     plt.xlim([0,1])
                     plt.ylim([0,1])
+                else:
+                    plt.xlim([-1.3, 1.3])
+                    plt.ylim([-1.3, 1.3])
 
                 ax = fig.add_subplot(2, 2, 2)
                 plt.scatter(x[:, 1].detach().cpu().numpy(), x[:, 2].detach().cpu().numpy(), s=1, color='k',alpha=0.75)
@@ -936,12 +931,16 @@ def data_generate(model_config,bVisu=True):
                     else:
                         vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
                     nx.draw_networkx(vis, pos=pos, node_size=10, linewidths=0, with_labels=False)
-                if model_config['boundary'] == 'no':
-                    plt.xlim([-1.3, 1.3])
-                    plt.ylim([-1.3, 1.3])
-                else:
+                if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
+                    plt.text(0, 1.08, f'frame: {it}')
+                    plt.text(0, 1.03, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
                     plt.xlim([0,1])
                     plt.ylim([0,1])
+                else:
+                    plt.text(-1.25, 1.5, f'frame: {it}')
+                    plt.text(-1.25, 1.4, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
+                    plt.xlim([-1.3, 1.3])
+                    plt.ylim([-1.3, 1.3])
 
                 ax = fig.add_subplot(2, 2, 3)
                 if model_config['model'] == 'GravityParticles':
@@ -969,12 +968,12 @@ def data_generate(model_config,bVisu=True):
                                     x[index_particles[n], 2].detach().cpu().numpy(), s=50, alpha=0.75,
                                     color=cmap(n / nparticle_types))
 
-                if model_config['boundary'] == 'no':
-                    plt.xlim([-0.25, 0.25])
-                    plt.ylim([-0.25, 0.25])
+                if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
+                    plt.xlim([0,1])
+                    plt.ylim([0,1])
                 else:
-                    plt.xlim([0.3, 0.7])
-                    plt.ylim([0.3, 0.7])
+                    plt.xlim([-1.3, 1.3])
+                    plt.ylim([-1.3, 1.3])
 
                 if (model_config['model'] != 'HeatParticles') & (model_config['model'] != 'DiffMesh') & (model_config['model'] != 'WaveMesh'):
                     for k in range(nparticles):
