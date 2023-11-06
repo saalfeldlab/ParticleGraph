@@ -1609,10 +1609,11 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
     for it in tqdm(range(nframes - 1)):
 
         # x0 = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_{min(it + 1, nframes - 2)}.pt',map_location=device).to(device)
-        x0 = x_list[0][min(it + 1, nframes - 2)].clone().detach()
+        x0 = x_list[0][min(it, nframes - 2)].clone().detach()
+        x0_next = x_list[0][min(it+1, nframes - 2)].clone().detach()
 
         if model_config['model'] == 'HeatMesh':
-            x[:,1:5]=x0[:,1:5]
+            x[:,1:5]=x0[:,1:5].clone().detach()
             dataset = data.Data(x=x, pos=x[:, 1:3])
             transform_0 = T.Compose([T.Delaunay()])
             dataset_face = transform_0(dataset).face
@@ -1621,7 +1622,11 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             dataset_mesh = data.Data(x=x, edge_index=edge_index, edge_attr=edge_weight, device=device)
             with torch.no_grad():
                 h = model(dataset_mesh, data_id=0,)
-            x[:,6] += h
+            x[:,6:7] += h * hnorm
+
+            rmserr = torch.sqrt(torch.mean(torch.sum((x[:,6:7]-x0_next[:,6:7]) ** 2, axis=1)))
+            rmserr_list.append(rmserr.item())
+
         else:
             distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
             t = torch.Tensor([radius ** 2])  # threshold
@@ -1642,8 +1647,8 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                 x[:, 3:5] = y
             x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5])  # position update
 
-        rmserr = torch.sqrt(torch.mean(torch.sum(bc_diff(x[:, 1:3] - x0[:, 1:3]) ** 2, axis=1)))
-        rmserr_list.append(rmserr.item())
+            rmserr = torch.sqrt(torch.mean(torch.sum(bc_diff(x[:, 1:3] - x0[:, 1:3]) ** 2, axis=1)))
+            rmserr_list.append(rmserr.item())
 
         discrepency = MMD(x[:, 1:3], x0[:, 1:3])
         discrepency_list.append(discrepency)
@@ -1651,12 +1656,15 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         # Sxy = S_e(x[:, 0:2], x0[:, 0:2])
         # Sxy_list.append(Sxy.item())
 
-        if (it % 5 == 0) & (it >= 0) &  bVisu:
+        if (it % 5 == 0) & (it >0) &  bVisu:
 
-            distance2 = torch.sum((x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
-            adj_t2 = ((distance2 < radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
-            edge_index2 = adj_t2.nonzero().t().contiguous()
-            dataset2 = data.Data(x=x, edge_index=edge_index2)
+            if model_config['model'] == 'HeatMesh':
+                dataset2 = dataset_mesh
+            else:
+                distance2 = torch.sum((x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+                adj_t2 = ((distance2 < radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
+                edge_index2 = adj_t2.nonzero().t().contiguous()
+                dataset2 = data.Data(x=x, edge_index=edge_index2)
 
             fig = plt.figure(figsize=(25, 16))
             # plt.ion()
@@ -1678,20 +1686,29 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                                     x00[index_particles[n], 2].detach().cpu().numpy(), s=g,
                                     c='b')  # , facecolors='none', edgecolors='k')
             elif model_config['model'] == 'HeatMesh':
-                plt.scatter(x00[:, 1].detach().cpu(), x00[:, 2].detach().cpu(),s=10, alpha=0.75, c=x00[:, 6].detach().cpu().numpy(), cmap='inferno', vmin=0, vmax=2)
+                plt.scatter(x0_next[:, 6].detach().cpu().numpy(),x[:, 6].detach().cpu().numpy(),s=1, alpha=0.75, cmap='inferno', vmin=0, vmax=2, c='k')
+                plt.xlim([0,2])
+                plt.ylim([0,2])
+                plt.xlabel('True temperature [a.u.]', fontsize="14")
+                plt.ylabel('Model temperature [a.u]', fontsize="14")
             else:
                 for n in range(nparticle_types):
                     plt.scatter(x00[index_particles[n], 1].detach().cpu(), x00[index_particles[n], 2].detach().cpu(),s=3,color=cmap(n/nparticle_types))
-            if model_config['boundary'] == 'no':
-                plt.xlim([-1.3, 1.3])
-                plt.ylim([-1.3, 1.3])
-            else:
-                plt.xlim([0,1])
-                plt.ylim([0,1])
-            ax.axes.get_xaxis().set_visible(False)
-            ax.axes.get_yaxis().set_visible(False)
-            plt.axis('off')
-            plt.text(-0.25, 1.38, f't0 {nparticles} particles', fontsize=10)
+            if model_config['model'] != 'HeatMesh':
+                if model_config['boundary'] == 'no':
+                    plt.xlim([-1.3, 1.3])
+                    plt.ylim([-1.3, 1.3])
+                    plt.text(-1.3, 1.38, f'Frame: {it}')
+                    plt.text(-1.3, 1.33, f'Graph: {x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
+                else:
+                    plt.xlim([0,1])
+                    plt.ylim([0,1])
+                    plt.text(0, 1.13, f'Frame: {it}')
+                    plt.text(0, 1.08, f'Graph: {x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
+                ax.axes.get_xaxis().set_visible(False)
+                ax.axes.get_yaxis().set_visible(False)
+                plt.axis('off')
+                plt.text(-0.25, 1.38, f't0 {nparticles} particles', fontsize=10)
 
             ax = fig.add_subplot(2, 3, 2)
             if model_config['model'] == 'GravityParticles':
@@ -1710,7 +1727,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                                     x0[index_particles[n], 2].detach().cpu().numpy(), s=g,
                                     c='b')  # , facecolors='none', edgecolors='k')
             elif model_config['model'] == 'HeatMesh':
-                plt.scatter(x0[:, 1].detach().cpu(), x0[:, 2].detach().cpu(),s=10, alpha=0.75, c=x0[:, 6].detach().cpu().numpy(), cmap='inferno', vmin=0, vmax=2)
+                plt.scatter(x0[:, 1].detach().cpu(), x0[:, 2].detach().cpu(),s=10, alpha=0.75, c=x0_next[:, 6].detach().cpu().numpy(), cmap='inferno', vmin=0.5, vmax=1.5)
             else:
                 for n in range(nparticle_types):
                     plt.scatter(x0[index_particles[n], 1].detach().cpu(), x0[index_particles[n], 2].detach().cpu(), s=3,color=cmap(n/nparticle_types))
@@ -1727,22 +1744,24 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             plt.text(-0.25, 1.38, 'True', fontsize=30)
 
             ax = fig.add_subplot(2, 3, 3)
-            plt.plot(np.arange(len(rmserr_list)), rmserr_list, label='RMSE', c='r')
+            plt.plot(np.arange(len(rmserr_list)), rmserr_list, label='RMSE', c='k')
             plt.ylim([0, 0.1])
             plt.xlim([0, nframes])
             plt.tick_params(axis='both', which='major', labelsize=10)
             plt.xlabel('Frame [a.u]', fontsize="14")
-            ax.set_ylabel('RMSE [a.u]', fontsize="14", color='r')
-            ax2 = ax.twinx()
-            plt.plot(np.arange(len(discrepency_list)), discrepency_list,
-                     label='Maximum Mean Discrepencies', c='b')
-            ax2.set_ylabel('MMD [a.u]', fontsize="14", color='b')
-            ax2.set_ylim([0, 2E-3])
+            ax.set_ylabel('RMSE [a.u]', fontsize="14", color='k')
+            if model_config['model'] != 'HeatMesh':
+                ax2 = ax.twinx()
+                plt.plot(np.arange(len(discrepency_list)), discrepency_list,
+                         label='Maximum Mean Discrepencies', c='b')
+                ax2.set_ylabel('MMD [a.u]', fontsize="14", color='b')
+                ax2.set_ylim([0, 2E-3])
+
 
             ax = fig.add_subplot(2, 3, 4)
             pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
             vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
-            nx.draw_networkx(vis, pos=pos, node_size=10, linewidths=0, with_labels=False)
+            nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False)
             if model_config['boundary'] == 'no':
                 plt.xlim([-1.3, 1.3])
                 plt.ylim([-1.3, 1.3])
@@ -1752,8 +1771,6 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             ax.axes.get_xaxis().set_visible(False)
             ax.axes.get_yaxis().set_visible(False)
             plt.axis('off')
-            plt.text(-0.25, 1.38, f'Frame: {it}')
-            plt.text(-0.25, 1.33, f'Graph: {x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
 
             ax = fig.add_subplot(2, 3, 5)
             if model_config['model'] == 'GravityParticles':
@@ -1773,7 +1790,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                                     x[index_particles[n], 2].detach().cpu().numpy(), s=g,
                                     c='b')  # , facecolors='none', edgecolors='k')
             elif model_config['model'] == 'HeatMesh':
-                plt.scatter(x[:, 1].detach().cpu(), x[:, 2].detach().cpu(),s=10, c=x[:, 6].detach().cpu().numpy(), cmap='inferno', vmin=0, vmax=2,  alpha=0.75)
+                plt.scatter(x[:, 1].detach().cpu(), x[:, 2].detach().cpu(),s=10, c=x[:, 6].detach().cpu().numpy(), cmap='inferno', vmin=0.5, vmax=1.5,  alpha=0.75)
             else:
                 for n in range(nparticle_types):
                     plt.scatter(x[index_particles[n], 1].detach().cpu(), x[index_particles[n], 2].detach().cpu(), s=3,color=cmap(n/nparticle_types))
@@ -1789,33 +1806,36 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             ax.axes.get_xaxis().set_visible(False)
             ax.axes.get_yaxis().set_visible(False)
             plt.axis('off')
-            plt.text(-0.25, 1.38, 'Model', fontsize=30)
 
-            ax = fig.add_subplot(2, 3, 6)
-            temp1 = torch.cat((x, x0), 0)
-            temp2 = torch.tensor(np.arange(nparticles), device=device)
-            temp3 = torch.tensor(np.arange(nparticles) + nparticles, device=device)
-            temp4 = torch.concatenate((temp2[:, None], temp3[:, None]), 1)
-            temp4 = torch.t(temp4)
-
-            distance3 = torch.sqrt(torch.sum((x[:, 1:3] - x0[:, 1:3]) ** 2, 1))
-            p = torch.argwhere(distance3 < 0.3)
-
-            pos = dict(enumerate(np.array((temp1[:, 1:3]).detach().cpu()), 0))
-            dataset = data.Data(x=temp1[:, 1:3], edge_index=torch.squeeze(temp4[:, p]))
-            vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-            nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False)
-            if model_config['boundary'] == 'no':
-                plt.xlim([-1.3, 1.3])
-                plt.ylim([-1.3, 1.3])
+            if model_config['model'] == 'HeatMesh':
+                ax = fig.add_subplot(2, 3, 6)
+                plt.scatter(x0[:, 1].detach().cpu(), x0[:, 2].detach().cpu(), s=10, alpha=0.75,
+                            c=np.abs(x0_next[:, 6].detach().cpu().numpy()-x[:, 6].detach().cpu().numpy()), cmap='inferno', vmin=0, vmax=0.1)
             else:
-                plt.xlim([0,1])
-                plt.ylim([0,1])
-            ax.axes.get_xaxis().set_visible(False)
-            ax.axes.get_yaxis().set_visible(False)
-            plt.axis('off')
-            plt.text(-0.25, 1.18, f'Frame: {it}')
-            plt.text(-0.25, 1.13, 'Prediction RMSE: {:.4f}'.format(rmserr.detach()), fontsize=10)
+
+                ax = fig.add_subplot(2, 3, 6)
+                temp1 = torch.cat((x, x0), 0)
+                temp2 = torch.tensor(np.arange(nparticles), device=device)
+                temp3 = torch.tensor(np.arange(nparticles) + nparticles, device=device)
+                temp4 = torch.concatenate((temp2[:, None], temp3[:, None]), 1)
+                temp4 = torch.t(temp4)
+                distance3 = torch.sqrt(torch.sum((x[:, 1:3] - x0[:, 1:3]) ** 2, 1))
+                p = torch.argwhere(distance3 < 0.3)
+                pos = dict(enumerate(np.array((temp1[:, 1:3]).detach().cpu()), 0))
+                dataset = data.Data(x=temp1[:, 1:3], edge_index=torch.squeeze(temp4[:, p]))
+                vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
+                nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False)
+                if model_config['boundary'] == 'no':
+                    plt.xlim([-1.3, 1.3])
+                    plt.ylim([-1.3, 1.3])
+                else:
+                    plt.xlim([0,1])
+                    plt.ylim([0,1])
+                ax.axes.get_xaxis().set_visible(False)
+                ax.axes.get_yaxis().set_visible(False)
+                plt.axis('off')
+                plt.text(-0.25, 1.18, f'Frame: {it}')
+                plt.text(-0.25, 1.13, 'Prediction RMSE: {:.4f}'.format(rmserr.detach()), fontsize=10)
 
             plt.savefig(f"./tmp_recons/Fig_{ntry}_{it}.tif")
 
@@ -3430,7 +3450,7 @@ if __name__ == '__main__':
         #     model_config = load_model_config(id=46)
         # model_config['ntry']=gtest
 
-        cmap = plt.colormaps[ model_config['cmap'] ]
+        cmap = plt.cm.get_cmap(model_config['cmap'])
         sigma = model_config['sigma']
         aggr_type = model_config['aggr_type']
         print('')
@@ -3453,11 +3473,10 @@ if __name__ == '__main__':
         sparsity_factor = 1
         print(f'sparsity_factor: {sparsity_factor}')
 
-        # data_generate(model_config, bVisu=True)
-        if gtest != 85:
-            data_train(model_config, gtest)
-        #data_plot(model_config, epoch=-1, bPrint=True)
-        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
+        # data_generate(model_config, bVisu=False)
+        # data_train(model_config, gtest)
+        # data_plot(model_config, epoch=-1, bPrint=True)
+        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles)
 
