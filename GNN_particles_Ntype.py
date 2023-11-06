@@ -880,7 +880,7 @@ def data_generate(model_config,bVisu=True):
 
             if (run == 0) & (it % 5 == 0) & (it >= 0) & bVisu:
 
-                fig = plt.figure(figsize=(11.4, 12))
+                fig = plt.figure(figsize=(11.8, 12))
                 # plt.ion()
                 ax = fig.add_subplot(2, 2, 1)
                 if model_config['model'] == 'GravityParticles':
@@ -1656,7 +1656,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         # Sxy = S_e(x[:, 0:2], x0[:, 0:2])
         # Sxy_list.append(Sxy.item())
 
-        if (it % 5 == 0) & (it >0) &  bVisu:
+        if (it % 5 == 0) & (it>=0) &  bVisu:
 
             if model_config['model'] == 'HeatMesh':
                 dataset2 = dataset_mesh
@@ -1686,7 +1686,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                                     x00[index_particles[n], 2].detach().cpu().numpy(), s=g,
                                     c='b')  # , facecolors='none', edgecolors='k')
             elif model_config['model'] == 'HeatMesh':
-                plt.scatter(x0_next[:, 6].detach().cpu().numpy(),x[:, 6].detach().cpu().numpy(),s=1, alpha=0.75, cmap='inferno', vmin=0, vmax=2, c='k')
+                plt.scatter(x0_next[:, 6].detach().cpu().numpy(),x[:, 6].detach().cpu().numpy(),s=1, alpha=0.5, cmap='inferno', vmin=0, vmax=2, c='k')
                 plt.xlim([0,2])
                 plt.ylim([0,2])
                 plt.xlabel('True temperature [a.u.]', fontsize="14")
@@ -1756,7 +1756,6 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                          label='Maximum Mean Discrepencies', c='b')
                 ax2.set_ylabel('MMD [a.u]', fontsize="14", color='b')
                 ax2.set_ylim([0, 2E-3])
-
 
             ax = fig.add_subplot(2, 3, 4)
             pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
