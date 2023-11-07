@@ -3224,9 +3224,9 @@ def load_model_config(id=48):
     # particles
     if id == 74:
         model_config_test = {'ntry': id,
-                             'input_size': 8,
+                             'input_size': 4,
                              'output_size': 2,
-                             'hidden_size': 64,
+                             'hidden_size': 128,
                              'n_mp_layers': 5,
                              'noise_level': 0,
                              'radius': 0.075,
@@ -3550,7 +3550,7 @@ if __name__ == '__main__':
         sparsity_factor = 1
         print(f'sparsity_factor: {sparsity_factor}')
 
-        data_generate(model_config, bVisu=True)
+        # data_generate(model_config, bVisu=False)
         data_train(model_config, gtest)
         # data_plot(model_config, epoch=-1, bPrint=True)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True)
