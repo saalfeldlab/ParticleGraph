@@ -1395,9 +1395,14 @@ def data_train(model_config, gtest):
                 rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
                 embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
                 # TO BE CHECKED ############
-                in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
-                                         rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
-                                         0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
+                if self.prediction == '2nd_derivative':
+                    in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                             rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
+                                             0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
+                else:
+                    in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                             rr[:, None] / model_config['radius'], embedding), dim=1)
+
                 acc = model.lin_edge(in_features.float())
                 acc = acc[:, 0]
                 acc_list.append(acc)
