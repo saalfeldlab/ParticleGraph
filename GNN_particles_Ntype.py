@@ -1395,7 +1395,7 @@ def data_train(model_config, gtest):
                 rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
                 embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
                 # TO BE CHECKED ############
-                if self.prediction == '2nd_derivative':
+                if model_config['prediction'] == '2nd_derivative':
                     in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
                                              rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
                                              0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
