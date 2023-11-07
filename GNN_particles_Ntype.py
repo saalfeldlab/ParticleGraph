@@ -3231,7 +3231,7 @@ def load_model_config(id=48):
         model_config_test = {'ntry': id,
                              'input_size': 4,
                              'output_size': 2,
-                             'hidden_size': 128,
+                             'hidden_size': 64,
                              'n_mp_layers': 5,
                              'noise_level': 0,
                              'radius': 0.075,
