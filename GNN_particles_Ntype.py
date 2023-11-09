@@ -87,7 +87,7 @@ class cc:
             self.nmap = model_config['nparticle_types']
 
     def color(self,index):
-        if 'ElecParticles':
+        if self.model=='ElecParticles':
             if index == 0:
                 index = (0, 0, 1)
             elif index== 1:
@@ -942,8 +942,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
                                         x[index_particles[n], 2].detach().cpu().numpy(), s=g, c='b', alpha=0.5)
                 else:
                     for n in range(nparticle_types):
-                        plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                    x[index_particles[n], 2].detach().cpu().numpy(), s=3, color=cmap.color(n))
+                        plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(), x[index_particles[n], 2].detach().cpu().numpy(), s=3, color=cmap.color(n))
                 if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
                     plt.text(0, 1.08, f'frame: {it}')
                     plt.text(0, 1.03, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
@@ -3450,7 +3449,7 @@ if __name__ == '__main__':
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
 
-    gtestlist = [87] # [75,84,85] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
+    gtestlist = [77] # [75,84,85] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
 
     for gtest in gtestlist:
 
@@ -3487,9 +3486,10 @@ if __name__ == '__main__':
         sparsity_factor = 1
         print(f'sparsity_factor: {sparsity_factor}')
 
-        # data_generate(model_config, bVisu=True, bDetails=False, bSave=True, step=5)
-        # data_train(model_config, gtest)
-        data_plot(model_config, epoch=-1, bPrint=True, best_model=0)
+        data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=190)
+        data_train(model_config, gtest)
+        # data_plot(model_config, epoch=-1, bPrint=True, best_model=1)
+        # data_plot(model_config, epoch=-1, bPrint=True, best_model=22)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=14, step=20)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=False)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=14, step=20)
