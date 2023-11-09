@@ -27,7 +27,7 @@ from numpy import vstack
 from sklearn.metrics import confusion_matrix, recall_score, f1_score
 from torch_geometric.utils import degree
 import umap
-from tifffile import imread
+from tifffile import imwrite, imread
 
 def distmat_square(X, Y):
     return torch.sum(bc_diff(X[:, None, :] - Y[None, :, :]) ** 2, axis=2)
@@ -75,6 +75,31 @@ def histogram(xs, bins, min, max):
     counts = torch.histc(xs, bins, min=min, max=max)
     boundaries = torch.linspace(min, max, bins + 1)
     return counts
+
+class cc:
+
+    def __init__(self, model_config):
+        self.model_config = model_config
+        self.model = model_config['model']
+        if model_config['cmap'] == 'tab10':
+            self.nmap = 8
+        else:
+            self.nmap = model_config['nparticle_types']
+
+    def color(self,index):
+        if 'ElecParticles':
+            if index == 0:
+                index = (0, 0, 1)
+            elif index== 1:
+                index = (0, 0.5, 0.75)
+            elif index == 2:
+                index = (1, 0, 0)
+            return (index)
+        else:
+            color_map = plt.cm.get_cmap(self.model_config['cmap'])
+            index = color_map(index/self.nmap)
+
+        return index
 
 class FeedForwardNN(nn.Module):
     def __init__(self, input_dim, hidden, out, device):
@@ -685,7 +710,7 @@ class MeshDiffusion(pyg.nn.MessagePassing):
         return r * (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(
             -r ** (2 * p[1]) / (2 * sigma ** 2)))
 
-def data_generate(model_config,bVisu=True, bDetails=False, bSave=True):
+def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
     print('')
     print('Generating data ...')
 
@@ -720,10 +745,6 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True):
     v_init = model_config['v_init']
     rr = torch.tensor(np.linspace(0, radius * 2, 1000))
     rr = rr.to(device)
-    if model_config['model'] == 'Particles_A':
-        nmap=8
-    else:
-        nmap=nparticle_types
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -896,7 +917,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True):
                     H1 += h
                     h_list.append(pred)
 
-            if (run == 0) & (it % 5 == 0) & (it >= 0) & bVisu:
+            if (run == 0) & (it % step == 0) & (it >= 0) & bVisu:
 
                 fig = plt.figure(figsize=(11.8, 12))
                 # plt.ion()
@@ -906,7 +927,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True):
                         g = p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 7.5
                         plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                     x[index_particles[n], 2].detach().cpu().numpy(), s=g,
-                                    alpha=0.75,color=cmap(n/nmap))  # , facecolors='none', edgecolors='k')
+                                    alpha=0.75,color=cc(n))  # , facecolors='none', edgecolors='k')
                 elif (model_config['model'] == 'HeatParticles') | (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
                     plt.scatter(x[:, 1].detach().cpu().numpy(),x[:, 2].detach().cpu().numpy(), s=10, alpha=0.75,
                                     c=x[:, 6].detach().cpu().numpy(), cmap='inferno', vmin=0, vmax=2)
@@ -922,7 +943,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True):
                 else:
                     for n in range(nparticle_types):
                         plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                    x[index_particles[n], 2].detach().cpu().numpy(), s=3, color=cmap(n/nmap))
+                                    x[index_particles[n], 2].detach().cpu().numpy(), s=3, color=cmap.color(n))
                 if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
                     plt.text(0, 1.08, f'frame: {it}')
                     plt.text(0, 1.03, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
@@ -936,13 +957,17 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True):
 
                 ax = fig.add_subplot(2, 2, 2)
                 plt.scatter(x[:, 1].detach().cpu().numpy(), x[:, 2].detach().cpu().numpy(), s=1, color='k',alpha=0.75)
-                if model_config['radius']<0.01:
+                if True: # model_config['radius']<0.01:
                     pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
                     if model_config['model'] == 'DiffMesh':
                         vis = to_networkx(dataset_mesh, remove_self_loops=True, to_undirected=True)
                     else:
-                        vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-                    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=0.01)
+                        distance2 = torch.sum((x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+                        adj_t2 = ((distance2 < radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
+                        edge_index2 = adj_t2.nonzero().t().contiguous()
+                        dataset2 = data.Data(x=x, edge_index=edge_index2)
+                        vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
+                    nx.draw_networkx(vis, pos=pos, node_size=10, linewidths=0, with_labels=False,alpha=0.05)
                 if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
                     plt.xlim([0,1])
                     plt.ylim([0,1])
@@ -959,7 +984,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True):
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                         x[index_particles[n], 2].detach().cpu().numpy(), s=g,
                                         alpha=0.75,
-                                        color=cmap(n /nmap))  # , facecolors='none', edgecolors='k')
+                                        color=cmap.color(n))  # , facecolors='none', edgecolors='k')
                     elif (model_config['model'] == 'HeatParticles') | (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
                         plt.scatter(x[:, 1].detach().cpu().numpy(), x[:, 2].detach().cpu().numpy(), s=60, alpha=0.75,
                                     c=x[:, 6].detach().cpu().numpy(), cmap='inferno', vmin=0, vmax=2)
@@ -976,7 +1001,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True):
                         for n in range(nparticle_types):
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                         x[index_particles[n], 2].detach().cpu().numpy(), s=50, alpha=0.75,
-                                        color=cmap(n /nmap))
+                                        color=cmap.color(n))
 
                     if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
                         plt.xlim([0.3, 0.7])
@@ -994,7 +1019,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True):
                     if (model_config['model'] == 'HeatParticles') | (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
                         for n in range(nparticle_types):
                             plt.scatter(N1[index_particles[n]].detach().cpu().numpy(),
-                                        H1[index_particles[n]].detach().cpu().numpy(), color=cmap(n /nmap), s=5,
+                                        H1[index_particles[n]].detach().cpu().numpy(), color=cmap.color(n), s=5,
                                         alpha=0.5)
                         plt.ylim([-0.5, 2.5])
                         plt.ylabel('Temperature [a.u]', fontsize="14")
@@ -1017,6 +1042,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True):
                         else:
                             plt.xlim([-1.3, 1.3])
                             plt.ylim([-1.3, 1.3])
+
 
                 plt.tight_layout()
                 plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
@@ -1043,10 +1069,6 @@ def data_train(model_config, gtest):
     embedding = model_config['embedding']
     batch_size = model_config['batch_size']
     batch_size = 1
-    if model_config['model'] == 'Particles_A':
-        nmap=8
-    else:
-        nmap=nparticle_types
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -1206,7 +1228,7 @@ def data_train(model_config, gtest):
             #         for n in range(nparticle_types):
             #             embedding_particle.append(embedding[index_particles[n], :])
             #         for n in range(nparticle_types):
-            #             plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=10, alpha=0.75, color=cmap(n/nmap))
+            #             plt.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], s=10, alpha=0.75, color=cmap.color(n))
             #
             #     plt.savefig(f"./tmp/Fig_{ntry}_{epoch * 20000 + N - 1}.tif")
             #     plt.close()
@@ -1317,17 +1339,17 @@ def data_train(model_config, gtest):
         if (embedding.shape[1] > 2):
             ax = fig.add_subplot(2, 4, 2, projection='3d')
             for n in range(nparticle_types):
-                ax.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], embedding_particle[n][:, 2], color=cmap(n/nmap), s=1)
+                ax.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], embedding_particle[n][:, 2], color=cmap.color(n), s=1)
         else:
             if (embedding.shape[1] > 1):
                 for m in range(model.a.shape[0]):
                     for n in range(nparticle_types):
-                        plt.scatter(embedding_particle[n+m*nparticle_types][:, 0], embedding_particle[n+m*nparticle_types][:, 1], color=cmap(n/nmap), s=3)
+                        plt.scatter(embedding_particle[n+m*nparticle_types][:, 0], embedding_particle[n+m*nparticle_types][:, 1], color=cmap.color(n), s=3)
                 plt.xlabel('Embedding 0', fontsize=12)
                 plt.ylabel('Embedding 1', fontsize=12)
             else:
                 for n in range(nparticle_types):
-                    plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5,color=cmap(n/nmap))
+                    plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5,color=cmap.color(n))
 
         ax = fig.add_subplot(2, 4, 3)
         if model_config['model'] == 'ElecParticles':
@@ -1347,7 +1369,7 @@ def data_train(model_config, gtest):
                         if n % 5 == 0:
                             plt.plot(rr.detach().cpu().numpy(),
                                      acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'], linewidth=1,
-                                     color=cmap(k/nmap),alpha=0.25)
+                                     color=cmap.color(k),alpha=0.25)
             acc_list = torch.stack(acc_list)
             plt.xlim([0, 0.05])
             plt.xlabel('Distance [a.u]', fontsize=12)
@@ -1398,7 +1420,7 @@ def data_train(model_config, gtest):
                 acc = model.lin_edge(in_features.float())
                 acc = acc[:, 0]
                 acc_list.append(acc)
-                plt.plot(rr.detach().cpu().numpy(),acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],color=cmap(x[n,5].detach().cpu().numpy()/nmap), linewidth=1,alpha=0.25)
+                plt.plot(rr.detach().cpu().numpy(),acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],color=cmap.color(x[n,5].detach().cpu().numpy()), linewidth=1,alpha=0.25)
             acc_list = torch.stack(acc_list)
             plt.yscale('log')
             plt.xscale('log')
@@ -1427,7 +1449,7 @@ def data_train(model_config, gtest):
                 acc = acc[:, 0]
                 acc_list.append(acc)
                 if n%5==0:
-                    plt.plot(rr.detach().cpu().numpy(),acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],color=cmap(x[n,5].detach().cpu().numpy()/nmap), linewidth=1,alpha=0.25)
+                    plt.plot(rr.detach().cpu().numpy(),acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],color=cmap.color(x[n,5].detach().cpu().numpy()), linewidth=1,alpha=0.25)
             plt.xlabel('Distance [a.u]', fontsize=12)
             plt.ylabel('MLP [a.u]', fontsize=12)
             acc_list = torch.stack(acc_list)
@@ -1441,7 +1463,7 @@ def data_train(model_config, gtest):
         if (nparticles<2000) | (epoch==14) | (epoch==19):
             for n in range(nparticle_types):
                 plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1],
-                            color=cmap(n /nmap), s=5)
+                            color=cmap.color(n), s=5)
             plt.xlabel('UMAP 0', fontsize=12)
             plt.ylabel('UMAP 1', fontsize=12)
             kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=1000, max_iter=10000,random_state=13)
@@ -1514,10 +1536,6 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
     nparticles = model_config['nparticles']
     dataset_name = model_config['dataset']
     nframes = model_config['nframes']
-    if model_config['model'] == 'Particles_A':
-        nmap=8
-    else:
-        nmap=nparticle_types
 
     if index_particles == 0:
         index_particles = []
@@ -1559,7 +1577,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
     NGraphs = int(len(graph_files))
-    if best_model == 0:
+    if best_model == -1:
         net = f"./log/try_{ntry}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     else:
         net = f"./log/try_{ntry}/models/best_model_with_{NGraphs - 1}_graphs_{best_model}.pt"
@@ -1684,7 +1702,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         # Sxy = S_e(x[:, 0:2], x0[:, 0:2])
         # Sxy_list.append(Sxy.item())
 
-        if (it % step == 0) & (it>=0) & bVisu:
+        if (it % step == 0) & (it>=0) &  bVisu:
 
             if model_config['model'] == 'DiffMesh':
                 dataset2 = dataset_mesh
@@ -1695,7 +1713,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                 dataset2 = data.Data(x=x, edge_index=edge_index2)
 
             fig = plt.figure(figsize=(25, 12))
-            # plt.ion()
+            #plt.ion()
 
             for k in range(5):
                 if k==0:
@@ -1726,7 +1744,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                 elif model_config['model'] == 'GravityParticles':
                     for n in range(nparticle_types):
                         g = p_mass[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 10 * sc
-                        plt.scatter(x_[index_particles[n], 1].detach().cpu(), x_[index_particles[n], 2].detach().cpu(), s=g, alpha=0.75,color=cmap(n/nmap))  # , facecolors='none', edgecolors='k')
+                        plt.scatter(x_[index_particles[n], 1].detach().cpu(), x_[index_particles[n], 2].detach().cpu(), s=g, alpha=0.75,color=cmap.color(n))  # , facecolors='none', edgecolors='k')
                 elif model_config['model'] == 'ElecParticles':
                     for n in range(nparticle_types):
                         g = np.abs(p_elec[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20)*sc
@@ -1744,7 +1762,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                 else:
                     for n in range(nparticle_types):
 
-                        plt.scatter(x_[index_particles[n], 1].detach().cpu(), x_[index_particles[n], 2].detach().cpu(),s=sc,color=cmap(n/nmap))
+                        plt.scatter(x_[index_particles[n], 1].detach().cpu(), x_[index_particles[n], 2].detach().cpu(),s=sc,color=cmap.color(n))
 
                 if (k > 2) & (model_config['model'] != 'HeatParticles') & (model_config['model'] != 'DiffMesh') & (model_config['model'] != 'WaveMesh'):
                     for n in range(nparticles):
@@ -1786,14 +1804,13 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             ax = fig.add_subplot(2, 4, 5)
             pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
             vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
-            nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=0.01)
+            nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False)
             if model_config['boundary'] == 'no':
                 plt.xlim([-1.3, 1.3])
                 plt.ylim([-1.3, 1.3])
             else:
                 plt.xlim([0,1])
                 plt.ylim([0,1])
-                plt.text(0, 1.025, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
             ax.axes.get_xaxis().set_visible(False)
             ax.axes.get_yaxis().set_visible(False)
             plt.axis('off')
@@ -1813,7 +1830,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                 pos = dict(enumerate(np.array((temp1[:, 1:3]).detach().cpu()), 0))
                 dataset = data.Data(x=temp1[:, 1:3], edge_index=torch.squeeze(temp4[:, p]))
                 vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-                nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=0.01)
+                nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False)
                 if model_config['boundary'] == 'no':
                     plt.xlim([-1.3, 1.3])
                     plt.ylim([-1.3, 1.3])
@@ -2055,10 +2072,6 @@ def data_test_generate(model_config, bVisu=True, bDetails=False):
     tau = model_config['tau']
     noise_level = model_config['noise_level']
     v_init = model_config['v_init']
-    if model_config['model'] == 'Particles_A':
-        nmap=8
-    else:
-        nmap=nparticle_types
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -2114,7 +2127,7 @@ def data_test_generate(model_config, bVisu=True, bDetails=False):
                             clamp=model_config['clamp'], pred_limit=model_config['pred_limit'],
                             prediction=model_config['prediction'])
 
-    ratio = 4
+    ratio = 3
     prev_nparticles = nparticles
     prev_index_particles = index_particles
 
@@ -2165,19 +2178,19 @@ def data_test_generate(model_config, bVisu=True, bDetails=False):
     # X1[index_particles[1],:] = torch.tensor(pos[l[index_particles[0]],:]/255,dtype=torch.float32,device=device)
 
     # scenario D
-    i0 = imread('graphs_data/pattern_2.tif')
+    i0 = imread('graphs_data/pattern_3.tif')
     pos = np.argwhere(i0 == 255)
     l = np.arange(pos.shape[0])
     l = np.random.permutation(l)
-    X1[index_particles[0],:] = torch.tensor(pos[l[0:nparticles//nparticle_types],:]/255,dtype=torch.float32,device=device)
+    X1[index_particles[0],:] = torch.tensor(pos[l[0:1600*3],:]/255,dtype=torch.float32,device=device)
     pos = np.argwhere(i0 == 128)
     l = np.arange(pos.shape[0])
     l = np.random.permutation(l)
-    X1[index_particles[1],:] = torch.tensor(pos[l[0:nparticles//nparticle_types],:]/255,dtype=torch.float32,device=device)
+    X1[index_particles[1],:] = torch.tensor(pos[l[0:1600*3],:]/255,dtype=torch.float32,device=device)
     pos = np.argwhere(i0 == 0)
     l = np.arange(pos.shape[0])
     l = np.random.permutation(l)
-    X1[index_particles[2],:] = torch.tensor(pos[l[0:nparticles//nparticle_types],:]/255,dtype=torch.float32,device=device)
+    X1[index_particles[2],:] = torch.tensor(pos[l[0:1600*3],:]/255,dtype=torch.float32,device=device)
 
     for run in range(1):
 
@@ -2269,7 +2282,7 @@ def data_test_generate(model_config, bVisu=True, bDetails=False):
                         g = p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 7.5
                         plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                     x[index_particles[n], 2].detach().cpu().numpy(), s=g,
-                                    alpha=0.75,color=cmap(n/nmap))  # , facecolors='none', edgecolors='k')
+                                    alpha=0.75,color=cmap.color(n))  # , facecolors='none', edgecolors='k')
                 elif (model_config['model'] == 'HeatParticles') | (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
                     plt.scatter(x[:, 1].detach().cpu().numpy(),x[:, 2].detach().cpu().numpy(), s=10, alpha=0.75,
                                     c=x[:, 6].detach().cpu().numpy(), cmap='inferno', vmin=0, vmax=2)
@@ -2285,7 +2298,7 @@ def data_test_generate(model_config, bVisu=True, bDetails=False):
                 else:
                     for n in range(nparticle_types):
                         plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                    x[index_particles[n], 2].detach().cpu().numpy(), s=3, alpha=0.75,color=cmap(n/nmap))
+                                    x[index_particles[n], 2].detach().cpu().numpy(), s=3, alpha=0.75,color=cmap.color(n))
                 if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
                     plt.text(0, 1.08, f'frame: {it}')
                     plt.text(0, 1.03, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
@@ -2305,7 +2318,7 @@ def data_test_generate(model_config, bVisu=True, bDetails=False):
                         vis = to_networkx(dataset_mesh, remove_self_loops=True, to_undirected=True)
                     else:
                         vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-                    nx.draw_networkx(vis, pos=pos, node_size=10, linewidths=0, with_labels=False,alpha=0.01)
+                    nx.draw_networkx(vis, pos=pos, node_size=10, linewidths=0, with_labels=False)
                 if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
                     plt.xlim([0,1])
                     plt.ylim([0,1])
@@ -2322,7 +2335,7 @@ def data_test_generate(model_config, bVisu=True, bDetails=False):
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                         x[index_particles[n], 2].detach().cpu().numpy(), s=g,
                                         alpha=0.75,
-                                        color=cmap(n /nmap))  # , facecolors='none', edgecolors='k')
+                                        color=cmap.color(n))  # , facecolors='none', edgecolors='k')
                     elif (model_config['model'] == 'HeatParticles') | (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
                         plt.scatter(x[:, 1].detach().cpu().numpy(), x[:, 2].detach().cpu().numpy(), s=60, alpha=0.75,
                                     c=x[:, 6].detach().cpu().numpy(), cmap='inferno', vmin=0, vmax=2)
@@ -2339,7 +2352,7 @@ def data_test_generate(model_config, bVisu=True, bDetails=False):
                         for n in range(nparticle_types):
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                         x[index_particles[n], 2].detach().cpu().numpy(), s=50, alpha=0.75,
-                                        color=cmap(n /nmap))
+                                        color=cmap.color(n))
 
                     if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
                         plt.xlim([0.3, 0.7])
@@ -2357,7 +2370,7 @@ def data_test_generate(model_config, bVisu=True, bDetails=False):
                     if (model_config['model'] == 'HeatParticles') | (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
                         for n in range(nparticle_types):
                             plt.scatter(N1[index_particles[n]].detach().cpu().numpy(),
-                                        H1[index_particles[n]].detach().cpu().numpy(), color=cmap(n /nmap), s=5,
+                                        H1[index_particles[n]].detach().cpu().numpy(), color=cmap.color(n), s=5,
                                         alpha=0.5)
                         plt.ylim([-0.5, 2.5])
                         plt.ylabel('Temperature [a.u]', fontsize="14")
@@ -2403,10 +2416,6 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
     dataset_name = model_config['dataset']
-    if model_config['model'] == 'Particles_A':
-        nmap=8
-    else:
-        nmap=nparticle_types
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -2420,8 +2429,6 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'models'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'data', 'val_outputs'), exist_ok=True)
-
-    copyfile(os.path.realpath(__file__), os.path.join(log_dir, 'training_code.py'))
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
     NGraphs = len(graph_files)
@@ -2449,7 +2456,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
     arr = np.arange(0, NGraphs)
     x_list=[]
     y_list=[]
-    for run in arr:
+    for run in tqdm(arr):
         x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
         y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
         x_list.append(torch.stack(x))
@@ -2483,7 +2490,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
         model = MeshDiffusion(model_config, device)
         print(f'Training MeshDiffusion')
 
-    if best_model==0:
+    if best_model==-1:
         net = f"./log/try_{ntry}/models/best_model_with_{NGraphs-1}_graphs.pt"
     else:
         net = f"./log/try_{ntry}/models/best_model_with_{NGraphs - 1}_graphs_{best_model}.pt"
@@ -2523,7 +2530,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
     print('Plotting ...')
 
     fig = plt.figure(figsize=(16, 8))
-    plt.ion()
+    # plt.ion()
 
     embedding = []
     for n in range(model.a.shape[0]):
@@ -2540,18 +2547,18 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
         ax = fig.add_subplot(2, 4, 2, projection='3d')
         for n in range(nparticle_types):
             ax.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], embedding_particle[n][:, 2],
-                       color=cmap(n / nmap), s=1)
+                       color=cmap.color(n), s=1)   #
     else:
         if (embedding.shape[1] > 1):
             for m in range(model.a.shape[0]):
                 for n in range(nparticle_types):
-                    plt.scatter(embedding_particle[n + m * nparticle_types][:, 0],
-                                embedding_particle[n + m * nparticle_types][:, 1], color=cmap(n / nmap), s=3)
+                    plt.scatter(embedding_particle[n + m * nparticle_types][:, 0],embedding_particle[n + m * nparticle_types][:, 1], color=cmap.color(n), s=3)
             plt.xlabel('Embedding 0', fontsize=12)
             plt.ylabel('Embedding 1', fontsize=12)
         else:
             for n in range(nparticle_types):
-                plt.hist(embedding_particle[n][:, 0], 100, alpha=0.5, color=cmap(n / nmap))
+                plt.hist(embedding_particle[n][:, 0], 100, alpha=0.5, color=cmap.color(n))
+
 
     rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
     ax = fig.add_subplot(2, 4, 3)
@@ -2571,7 +2578,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
                         plt.plot(rr.detach().cpu().numpy(),
                                  acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],
                                  linewidth=1,
-                                 color=cmap(k /nmap), alpha=0.25)
+                                 color=cmap.color(k ), alpha=0.25)
         acc_list = torch.stack(acc_list)
         plt.xlim([0, 0.05])
         plt.xlabel('Distance [a.u]', fontsize=12)
@@ -2623,7 +2630,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
             acc_list.append(acc)
             plt.plot(rr.detach().cpu().numpy(),
                      acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],
-                     color=cmap(x[n, 5].detach().cpu().numpy() /nmap), linewidth=1, alpha=0.25)
+                     color=cmap.color(x[n, 5].detach().cpu().numpy() ), linewidth=1, alpha=0.25)
         acc_list = torch.stack(acc_list)
         plt.yscale('log')
         plt.xscale('log')
@@ -2653,7 +2660,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
             if n % 5 == 0:
                 plt.plot(rr.detach().cpu().numpy(),
                          acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],
-                         color=cmap(x[n, 5].detach().cpu().numpy() / nmap), linewidth=1, alpha=0.25)
+                         color=cmap.color(x[n, 5].detach().cpu().numpy() ), linewidth=1, alpha=0.25)
         acc_list = torch.stack(acc_list)
         coeff_norm = acc_list.detach().cpu().numpy()
         trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int), n_components=2,
@@ -2673,10 +2680,10 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
 
     for n in range(nparticle_types):
         if proj_interaction.ndim == 1:
-            plt.hist(proj_interaction[index_particles[n]], width=0.01, alpha=0.5, color=cmap(n /nmap))
+            plt.hist(proj_interaction[index_particles[n]], width=0.01, alpha=0.5, color=cmap.color(n))
         if proj_interaction.ndim==2:
             plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1],
-                        color=cmap(n /nmap), s=5)
+                        color=cmap.color(n), s=5)
             plt.xlabel('UMAP 0', fontsize=12)
             plt.ylabel('UMAP 1', fontsize=12)
 
@@ -2712,40 +2719,37 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
         for m in range(model.a.shape[0]):
             for n in range(nparticle_types):
                 ax.scatter(model.a[m][index_particles[n], 0].detach().cpu().numpy(), model.a[m][index_particles[n], 1].detach().cpu().numpy(), model.a[m][index_particles[n], 1].detach().cpu().numpy(),
-                           color=cmap(n /nmap), s=20)
+                           color=cmap.color(n), s=20)
     else:
         if (embedding.shape[1] > 1):
             for m in range(model.a.shape[0]):
-                for n in range(nparticle_types):
+                for n in range(nparticle_types-1,-1,-1):
                     plt.scatter(model.a[m][index_particles[n], 0].detach().cpu().numpy(),model.a[m][index_particles[n], 1].detach().cpu().numpy(),
-                                color=cmap(n /nmap), s=20)
+                                color=cmap.color(n), s=20)
             plt.xlabel('Embedding 0', fontsize=12)
             plt.ylabel('Embedding 1', fontsize=12)
         else:
             for m in range(model.a.shape[0]):
-                for n in range(nparticle_types):
-                    plt.hist(model.a[m][index_particles[n], 0].detach().cpu().numpy(), width=0.01, alpha=0.5, color=cmap(n /nmap))
+                for n in range(nparticle_types-1,-1,-1):
+                    plt.hist(model.a[m][index_particles[n], 0].detach().cpu().numpy(), width=0.01, alpha=0.5, color=cmap.color(n))
 
     ax = fig.add_subplot(2, 4, 7)
     if model_config['model'] == 'ElecParticles':
-        acc_list = []
-        for m in range(model.a.shape[0]):
-            for k in range(nparticle_types):
-                for n in index_particles[k]:
-                    embedding = model.a[m, n, :] * torch.ones((1000, model_config['embedding']), device=device)
-                    in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
-                                             rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
-                                             0 * rr[:, None], 0 * rr[:, None], embedding, embedding), dim=1)
-                    acc = model.lin_edge(in_features.float())
-                    acc = acc[:, 0]
-                    acc_list.append(acc)
-                    if n % 5 == 0:
-                        plt.plot(rr.detach().cpu().numpy(),
-                                 acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],
-                                 linewidth=1,
-                                 color=cmap(k /nmap), alpha=0.25)
-        acc_list = torch.stack(acc_list)
-        plt.xlim([0, 0.05])
+        t = model.a.detach().cpu().numpy()
+        tmean = np.ones((model_config['nparticle_types'],model_config['embedding']))
+        for n in range(model_config['nparticle_types']):
+            tmean[n] = np.mean(t[:,index_particles[n],:],axis=(0,1))
+        for m in range(nparticle_types):
+            for n in range(nparticle_types):
+                embedding0 = torch.tensor(tmean[m],device=device) * torch.ones((1000, model_config['embedding']), device=device)
+                embedding1 = torch.tensor(tmean[n],device=device) * torch.ones((1000, model_config['embedding']), device=device)
+                in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                         rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
+                                         0 * rr[:, None], 0 * rr[:, None], embedding0, embedding1), dim=1)
+                acc = model.lin_edge(in_features.float())
+                acc = acc[:, 0]
+                plt.plot(rr.detach().cpu().numpy(),acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],linewidth=1,color='k')
+        plt.xlim([0,0.02])
         plt.xlabel('Distance [a.u]', fontsize=12)
         plt.ylabel('MLP [a.u]', fontsize=12)
     elif model_config['model'] == 'GravityParticles':
@@ -2760,7 +2764,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
             acc_list.append(acc)
             plt.plot(rr.detach().cpu().numpy(),
                      acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],
-                     color=cmap(x[n, 5].detach().cpu().numpy() /nmap), linewidth=1, alpha=0.25)
+                     color=cmap.color(x[n, 5].detach().cpu().numpy() ), linewidth=1, alpha=0.25)
         acc_list = torch.stack(acc_list)
         plt.yscale('log')
         plt.xscale('log')
@@ -2785,22 +2789,33 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
             if n % 5 == 0:
                 plt.plot(rr.detach().cpu().numpy(),
                          acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],
-                         color=cmap(x[n, 5].detach().cpu().numpy() / nmap), linewidth=1, alpha=0.25)
+                         color=cmap.color(x[n, 5].detach().cpu().numpy() ), linewidth=1, alpha=0.25)
     plt.xlabel('Distance [a.u]', fontsize=12)
     plt.ylabel('MLP [a.u]', fontsize=12)
-    if model_config['model']=='ElecParticles':
-        plt.xlim([0,0.05])
 
     ax = fig.add_subplot(2, 4, 8)
-
     if model_config['model'] == 'Particles_A':
         p = model_config['p']
         p = torch.tensor(p,device=device)
         psi_output = []
         for n in range(nparticle_types):
             psi_output.append(model.psi(rr, p[n]))
-        for n in range(nparticle_types):
+        for n in range(nparticle_types-1,-1,-1):
             plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), linewidth=1)
+        plt.xlabel('Distance [a.u]', fontsize=12)
+        plt.ylabel('MLP [a.u]', fontsize=12)
+    if model_config['model'] == 'GravityParticles':
+        p = model_config['p']
+        p = torch.tensor(p,device=device)
+        psi_output = []
+        for n in range(nparticle_types):
+            psi_output.append(model.psi(rr, p[n]))
+        for n in range(nparticle_types-1,-1,-1):
+            plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), linewidth=1, color=cmap.color(n))
+        plt.yscale('log')
+        plt.xscale('log')
+        plt.xlim([1E-3, 0.2])
+        plt.ylim([1, 1E7])
         plt.xlabel('Distance [a.u]', fontsize=12)
         plt.ylabel('MLP [a.u]', fontsize=12)
     if model_config['model'] == 'ElecParticles':
@@ -2811,8 +2826,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
             for n in range(nparticle_types):
                 temp=model.psi(rr, p[n],p[m])
                 plt.plot(rr.detach().cpu().numpy(), np.array(temp.cpu()), linewidth=1,c='k')
-        plt.xlim([0, 0.05])
-
+        plt.xlim([0, 0.02])
 
     plt.tight_layout()
     plt.show()
@@ -3115,8 +3129,8 @@ def load_model_config(id=48):
                              'nrun': 2,
                              'start_frame': 0.1,
                              'arrow_length':20,
-                             'cmap':'tab10'}
-    # particles
+                             'cmap':'tab10',
+                             'description': 'pred=first derivative Particles_A is a first derivative simulation, interaction is function of r.exp-r^2 interaction is type dependent best_model:14'}
     if id == 76:
         model_config_test = {'ntry': id,
                              'input_size': 8,
@@ -3146,7 +3160,37 @@ def load_model_config(id=48):
                              'nrun': 2,
                              'start_frame': 0.1,
                              'cmap':'tab10',
-                             'arrow_length':20}
+                             'arrow_length':20,
+                             'description': 'pred=second derivative Particles_A is a first derivative simulation, interaction is function of r.exp-r^2 interaction is type dependent best_model:14'}
+    if id == 77:
+        model_config_test = {'ntry': id,
+                             'input_size': 4,
+                             'output_size': 2,
+                             'hidden_size': 64,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.075,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 4800,
+                             'nparticle_types': 8,
+                             'ninteractions': 8,
+                             'nframes': 200,
+                             'sigma': .005,
+                             'tau': 0.1,
+                             'v_init': 0,
+                             'aggr_type': 'mean',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 1,
+                             'model': 'Particles_A',
+                             'prediction': 'first_derivative',
+                             'upgrade_type': 0,
+                             'p': [[1.2425, 1.3355, 1.3397, 1.3929], [1.629, 1.4932, 1.5311, 1.8677],[1.9852, 1.1892, 1.1544, 1.993],[1.6898, 1.1336, 1.4869, 1.7767],[1.8847, 1.5448, 1.8063, 1.3873],[1.496, 1.4064, 1.9045, 1.733],[1.5108, 1.9904, 1.1665, 1.6975],[1.6153, 1.8557, 1.2758, 1.0684]],
+                             'nrun': 2,
+                             'start_frame': 0.1,
+                             'arrow_length':20,
+                             'cmap':'tab10'}
 
     # elctrostatic
     if id == 84:
@@ -3175,7 +3219,7 @@ def load_model_config(id=48):
                              'p': [[2], [1], [-1]],
                              'upgrade_type': 0,
                              'nrun': 10,
-                             'clamp': 0.002,
+                             'clamp': 0.005,
                              'pred_limit': 1E10,
                              'start_frame': 0,
                              'arrow_length':40,
@@ -3207,11 +3251,75 @@ def load_model_config(id=48):
                              'p': [[2], [1], [-1]],
                              'upgrade_type': 0,
                              'nrun': 10,
-                             'clamp': 0.002,
+                             'clamp': 0.005,
                              'pred_limit': 1E10,
                              'start_frame': 0,
                              'arrow_length':10,
                              'cmap':'tab20b'}
+    if id == 86:
+        model_config_test = {'ntry': id,
+                             'input_size': 11,
+                             'output_size': 2,
+                             'hidden_size': 128,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.15,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 960,
+                             'nparticle_types': 3,
+                             'ninteractions': 3,
+                             'nframes': 2000,
+                             'sigma': .005,
+                             'tau': 1E-9,
+                             'v_init': 1E-4,
+                             'aggr_type': 'add',
+                             'boundary': 'no',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'ElecParticles',
+                             'prediction': '2nd_derivative',
+                             'p': [[2], [1], [-1]],
+                             'upgrade_type': 0,
+                             'nrun': 10,
+                             'clamp': 0.002,
+                             'pred_limit': 1E10,
+                             'start_frame': 0,
+                             'arrow_length':40,
+                             'cmap':'tab10',
+                             'arrow_length':10}
+    if id == 87:
+        model_config_test = {'ntry': id,
+                             'input_size': 11,
+                             'output_size': 2,
+                             'hidden_size': 128,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.15,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 960,
+                             'nparticle_types': 3,
+                             'ninteractions': 3,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 5E-9,
+                             'v_init': 1E-4,
+                             'aggr_type': 'add',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'ElecParticles',
+                             'prediction': '2nd_derivative',
+                             'p': [[2], [1], [-1]],
+                             'upgrade_type': 0,
+                             'nrun': 10,
+                             'clamp': 0.002,
+                             'pred_limit': 1E10,
+                             'start_frame': 0,
+                             'arrow_length':10,
+                             'cmap':'tab10',
+                             'description':'Periodic Particles_E is a second derivative simulation, acceleration is function of electrostatic law qiqj/r2 interaction is type-type dependent best_model:22'}
 
     # heat
     # 8 types boundary periodic N=960
@@ -3321,12 +3429,7 @@ def load_model_config(id=48):
 
     for key, value in model_config_test.items():
         print(key, ":", value)
-    if model_config_test['model'] == 'Particles_A':
-        print(
-            'Particles_A is a first derivative simulation, velocity is function of r.exp-r^2 interaction is type dependent')
-    if model_config_test['model'] == 'Particles_E':
-        print(
-            'Particles_E is a second derivative simulation, acceleration is function of electrostatic law qiqj/r2 interaction is type dependent')
+
     if model_config_test['model'] == 'Particles_G':
         print(
             'Particles_G is a second derivative simulation, acceleration is function of gravity law mj/r2 interaction is type dependent')
@@ -3347,7 +3450,7 @@ if __name__ == '__main__':
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
 
-    gtestlist = [74] # [75,84,85] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
+    gtestlist = [87] # [75,84,85] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
 
     for gtest in gtestlist:
 
@@ -3360,8 +3463,9 @@ if __name__ == '__main__':
         # if (gtest>=20) and (gtest<30):
         #     model_config = load_model_config(id=46)
         # model_config['ntry']=gtest
+        cmap = cc(model_config=model_config)
 
-        cmap = plt.cm.get_cmap(model_config['cmap'])
+
         sigma = model_config['sigma']
         aggr_type = model_config['aggr_type']
 
@@ -3383,12 +3487,11 @@ if __name__ == '__main__':
         sparsity_factor = 1
         print(f'sparsity_factor: {sparsity_factor}')
 
-        #data_generate(model_config, bVisu=False, bDetails=False, bSave=True)
-        #data_train(model_config, gtest)
-        # data_plot(model_config, epoch=-1, bPrint=True, best_model=14)
-        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=14, step=190)
-        prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=False)
-        x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=14, step=20)
-
+        # data_generate(model_config, bVisu=True, bDetails=False, bSave=True, step=5)
+        # data_train(model_config, gtest)
+        data_plot(model_config, epoch=-1, bPrint=True, best_model=0)
+        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=14, step=20)
+        # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=False)
+        # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=14, step=20)
 
 
