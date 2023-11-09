@@ -898,7 +898,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True):
             if (run == 0) & (it % 5 == 0) & (it >= 0) & bVisu:
 
                 fig = plt.figure(figsize=(11.8, 12))
-                # plt.ion()
+                plt.ion()
                 ax = fig.add_subplot(2, 2, 1)
                 if model_config['model'] == 'GravityParticles':
                     for n in range(nparticle_types):
@@ -941,7 +941,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True):
                         vis = to_networkx(dataset_mesh, remove_self_loops=True, to_undirected=True)
                     else:
                         vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-                    nx.draw_networkx(vis, pos=pos, node_size=10, linewidths=0, with_labels=False)
+                    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=0.1)
                 if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
                     plt.xlim([0,1])
                     plt.ylim([0,1])
@@ -1786,7 +1786,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             ax = fig.add_subplot(2, 4, 5)
             pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
             vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
-            nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False)
+            nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=0.1)
             if model_config['boundary'] == 'no':
                 plt.xlim([-1.3, 1.3])
                 plt.ylim([-1.3, 1.3])
@@ -1812,7 +1812,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                 pos = dict(enumerate(np.array((temp1[:, 1:3]).detach().cpu()), 0))
                 dataset = data.Data(x=temp1[:, 1:3], edge_index=torch.squeeze(temp4[:, p]))
                 vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-                nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False)
+                nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=0.1)
                 if model_config['boundary'] == 'no':
                     plt.xlim([-1.3, 1.3])
                     plt.ylim([-1.3, 1.3])
@@ -2304,7 +2304,7 @@ def data_test_generate(model_config, bVisu=True, bDetails=False):
                         vis = to_networkx(dataset_mesh, remove_self_loops=True, to_undirected=True)
                     else:
                         vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-                    nx.draw_networkx(vis, pos=pos, node_size=10, linewidths=0, with_labels=False)
+                    nx.draw_networkx(vis, pos=pos, node_size=10, linewidths=0, with_labels=False,alpha=0.1)
                 if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
                     plt.xlim([0,1])
                     plt.ylim([0,1])
@@ -3346,7 +3346,7 @@ if __name__ == '__main__':
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
 
-    gtestlist = [74] # [75,84,85] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
+    gtestlist = [121] # [75,84,85] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
 
     for gtest in gtestlist:
 
