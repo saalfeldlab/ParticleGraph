@@ -27,6 +27,7 @@ from numpy import vstack
 from sklearn.metrics import confusion_matrix, recall_score, f1_score
 from torch_geometric.utils import degree
 import umap
+from tifffile import imread
 
 def distmat_square(X, Y):
     return torch.sum(bc_diff(X[:, None, :] - Y[None, :, :]) ** 2, axis=2)
@@ -898,7 +899,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True):
             if (run == 0) & (it % 5 == 0) & (it >= 0) & bVisu:
 
                 fig = plt.figure(figsize=(11.8, 12))
-                plt.ion()
+                # plt.ion()
                 ax = fig.add_subplot(2, 2, 1)
                 if model_config['model'] == 'GravityParticles':
                     for n in range(nparticle_types):
@@ -941,7 +942,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True):
                         vis = to_networkx(dataset_mesh, remove_self_loops=True, to_undirected=True)
                     else:
                         vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-                    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=0.1)
+                    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=0.01)
                 if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
                     plt.xlim([0,1])
                     plt.ylim([0,1])
@@ -1016,7 +1017,6 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True):
                         else:
                             plt.xlim([-1.3, 1.3])
                             plt.ylim([-1.3, 1.3])
-
 
                 plt.tight_layout()
                 plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
@@ -1684,7 +1684,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         # Sxy = S_e(x[:, 0:2], x0[:, 0:2])
         # Sxy_list.append(Sxy.item())
 
-        if (it % step == 0) & (it>=0) &  bVisu:
+        if (it % step == 0) & (it>=0) & bVisu:
 
             if model_config['model'] == 'DiffMesh':
                 dataset2 = dataset_mesh
@@ -1695,7 +1695,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                 dataset2 = data.Data(x=x, edge_index=edge_index2)
 
             fig = plt.figure(figsize=(25, 12))
-            #plt.ion()
+            # plt.ion()
 
             for k in range(5):
                 if k==0:
@@ -1786,13 +1786,14 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             ax = fig.add_subplot(2, 4, 5)
             pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
             vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
-            nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=0.1)
+            nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=0.01)
             if model_config['boundary'] == 'no':
                 plt.xlim([-1.3, 1.3])
                 plt.ylim([-1.3, 1.3])
             else:
                 plt.xlim([0,1])
                 plt.ylim([0,1])
+                plt.text(0, 1.025, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
             ax.axes.get_xaxis().set_visible(False)
             ax.axes.get_yaxis().set_visible(False)
             plt.axis('off')
@@ -1812,7 +1813,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                 pos = dict(enumerate(np.array((temp1[:, 1:3]).detach().cpu()), 0))
                 dataset = data.Data(x=temp1[:, 1:3], edge_index=torch.squeeze(temp4[:, p]))
                 vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-                nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=0.1)
+                nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=0.01)
                 if model_config['boundary'] == 'no':
                     plt.xlim([-1.3, 1.3])
                     plt.ylim([-1.3, 1.3])
@@ -2168,15 +2169,15 @@ def data_test_generate(model_config, bVisu=True, bDetails=False):
     pos = np.argwhere(i0 == 255)
     l = np.arange(pos.shape[0])
     l = np.random.permutation(l)
-    X1[index_particles[0],:] = torch.tensor(pos[l[0:1000],:]/255,dtype=torch.float32,device=device)
+    X1[index_particles[0],:] = torch.tensor(pos[l[0:nparticles//nparticle_types],:]/255,dtype=torch.float32,device=device)
     pos = np.argwhere(i0 == 128)
     l = np.arange(pos.shape[0])
     l = np.random.permutation(l)
-    X1[index_particles[1],:] = torch.tensor(pos[l[0:1000],:]/255,dtype=torch.float32,device=device)
+    X1[index_particles[1],:] = torch.tensor(pos[l[0:nparticles//nparticle_types],:]/255,dtype=torch.float32,device=device)
     pos = np.argwhere(i0 == 0)
     l = np.arange(pos.shape[0])
     l = np.random.permutation(l)
-    X1[index_particles[2],:] = torch.tensor(pos[l[0:1000],:]/255,dtype=torch.float32,device=device)
+    X1[index_particles[2],:] = torch.tensor(pos[l[0:nparticles//nparticle_types],:]/255,dtype=torch.float32,device=device)
 
     for run in range(1):
 
@@ -2304,7 +2305,7 @@ def data_test_generate(model_config, bVisu=True, bDetails=False):
                         vis = to_networkx(dataset_mesh, remove_self_loops=True, to_undirected=True)
                     else:
                         vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-                    nx.draw_networkx(vis, pos=pos, node_size=10, linewidths=0, with_labels=False,alpha=0.1)
+                    nx.draw_networkx(vis, pos=pos, node_size=10, linewidths=0, with_labels=False,alpha=0.01)
                 if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
                     plt.xlim([0,1])
                     plt.ylim([0,1])
@@ -3346,7 +3347,7 @@ if __name__ == '__main__':
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
 
-    gtestlist = [121] # [75,84,85] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
+    gtestlist = [74] # [75,84,85] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
 
     for gtest in gtestlist:
 
@@ -3382,10 +3383,10 @@ if __name__ == '__main__':
         sparsity_factor = 1
         print(f'sparsity_factor: {sparsity_factor}')
 
-        data_generate(model_config, bVisu=False, bDetails=True, bSave=True)
-        # data_train(model_config, gtest)
-        data_plot(model_config, epoch=-1, bPrint=True, best_model=14)
-        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=14, step=20)
+        #data_generate(model_config, bVisu=False, bDetails=False, bSave=True)
+        #data_train(model_config, gtest)
+        # data_plot(model_config, epoch=-1, bPrint=True, best_model=14)
+        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=14, step=190)
         prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=False)
         x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=14, step=20)
 
