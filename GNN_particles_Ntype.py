@@ -3565,7 +3565,7 @@ if __name__ == '__main__':
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
 
-    gtestlist = [44] # [75,84,85] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
+    gtestlist = [77] # [75,84,85] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
 
     for gtest in gtestlist:
 
@@ -3599,10 +3599,10 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        # data_generate(model_config, bVisu=False, bDetails=True, bSave=True, step=200)
+        data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=20)
         # data_train(model_config, gtest)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
-        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=100)
+        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=100)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
 
