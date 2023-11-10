@@ -96,7 +96,8 @@ class cc:
                 index = (1, 0, 0)
             return (index)
         else:
-            color_map = plt.cm.get_cmap(self.model_config['cmap'])
+            #color_map = plt.cm.get_cmap(self.model_config['cmap'])
+            color_map = plt.colormaps.get_cmap(self.model_config['cmap'])
             index = color_map(index/self.nmap)
 
         return index
@@ -151,11 +152,12 @@ class Laplacian_A(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, aggr_type=[], c=[], beta=[]):
+    def __init__(self, aggr_type=[], c=[], beta=[], clamp=[]):
         super(Laplacian_A, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.c = c
         self.beta = beta
+        self.clamp = clamp
 
     def forward(self, data):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
@@ -169,7 +171,7 @@ class Laplacian_A(pyg.nn.MessagePassing):
         #     sum_weight = edge_attr[pos] * h[ee[1,pos],5]
 
         heat_flow = self.beta * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
-        heat_flow = torch.clamp(heat_flow, min=-0.01, max=0.01)
+        heat_flow = torch.clamp(heat_flow, min=-self.clamp, max=self.clamp)
         return heat_flow
 
     def message(self, x_i, x_j, edge_attr):
@@ -803,7 +805,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
         c = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         for n in range(nparticle_types):
             c[n] = torch.tensor(model_config['c'][n])
-        model_mesh = Laplacian_A(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'])
+        model_mesh = Laplacian_A(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'],clamp=model_config['clamp'])
         psi_output = []
         for n in range(nparticle_types):
             psi_output.append(model.psi(rr, torch.squeeze(p[n])))
@@ -859,7 +861,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
 
             ### TO BE CHANGED ###
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
-                                   H1.clone().detach()), 1)
+                                   H1.clone().detach(), h.clone().detach()), 1)
             if (it >= 0) & (noise_level == 0):
                 x_list.append(x)
                 # torch.save(x, f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{it}.pt')
@@ -956,7 +958,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
 
                 ax = fig.add_subplot(2, 2, 2)
                 plt.scatter(x[:, 1].detach().cpu().numpy(), x[:, 2].detach().cpu().numpy(), s=1, color='k',alpha=0.75)
-                if True: # model_config['radius']<0.01:
+                if bDetails: # model_config['radius']<0.01:
                     pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
                     if model_config['model'] == 'DiffMesh':
                         vis = to_networkx(dataset_mesh, remove_self_loops=True, to_undirected=True)
@@ -966,7 +968,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
                         edge_index2 = adj_t2.nonzero().t().contiguous()
                         dataset2 = data.Data(x=x, edge_index=edge_index2)
                         vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
-                    nx.draw_networkx(vis, pos=pos, node_size=10, linewidths=0, with_labels=False,alpha=0.05)
+                    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=0.3)
                 if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
                     plt.xlim([0,1])
                     plt.ylim([0,1])
@@ -1042,7 +1044,6 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
                             plt.xlim([-1.3, 1.3])
                             plt.ylim([-1.3, 1.3])
 
-
                 plt.tight_layout()
                 plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
                 plt.close()
@@ -1106,7 +1107,7 @@ def data_train(model_config, gtest):
     torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
     torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
     print (vnorm,ynorm)
-    if model_config['model'] == 'DiffMesh':
+    if (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
         h_list=[]
         for run in arr:
             h = torch.load(f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt')
@@ -1123,9 +1124,12 @@ def data_train(model_config, gtest):
     if (model_config['model'] == 'Particles_A'):
         model = InteractionParticles(model_config, device)
         print(f'Training InteractionParticles')
-    if (model_config['model'] == 'DiffMesh'):
+    if (model_config['model'] == 'DiffMesh for diffusion'):
         model = MeshDiffusion(model_config, device)
         print(f'Training MeshDiffusion')
+    if (model_config['model'] == 'WaveMesh'):
+        model = MeshDiffusion(model_config, device)
+        print(f'Training MeshDiffusion for waves')
 
     # net = f"./log/try_{ntry}/models/best_model_with_1_graphs.pt"
     # state_dict = torch.load(net,map_location=device)
@@ -1159,7 +1163,6 @@ def data_train(model_config, gtest):
     print('')
 
     time.sleep(0.5)
-    # optimizer = torch.optim.Adam(model.parameters(), lr=lr) #, weight_decay=weight_decay)
     model.train()
     best_loss = np.inf
     list_loss = []
@@ -1236,10 +1239,9 @@ def data_train(model_config, gtest):
             for batch in range(batch_size):
 
                 k = np.random.randint(nframes - 1)
-                # x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{k}.pt').to(device)
                 x = x_list[run][k].clone().detach()
 
-                if model_config['model'] == 'DiffMesh':
+                if (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
                     dataset = data.Data(x=x, pos=x[:, 1:3])
                     transform_0 = T.Compose([T.Delaunay()])
                     dataset_face = transform_0(dataset).face
@@ -1285,7 +1287,7 @@ def data_train(model_config, gtest):
                 optimizer.zero_grad()
 
                 for batch in batch_loader:
-                    if model_config['model'] == 'DiffMesh':
+                    if (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
                         pred = model(batch, data_id=run - 1)
                     else:
                         pred = model(batch, data_id=run - 1, step=1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
@@ -1299,17 +1301,16 @@ def data_train(model_config, gtest):
 
         sparsity_index = torch.sum((histogram(model.a, 50, -4, 4) > nparticles / 100))
         torch.save({'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict()},
-                   os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs_{epoch}.pt'))
+                    'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs_{epoch}.pt'))
 
         if (total_loss / nparticles / batch_size / N < best_loss):
             best_loss = total_loss / N / nparticles / batch_size
             torch.save({'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict()},
                        os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs.pt'))
-            print("Epoch {}. Loss: {:.6f} sparsity_index {:.3f}  saving model  ".format(epoch,total_loss / N / nparticles / batch_size,sparsity_index.item() / sparsity_factor))
+            print("Epoch {}. Loss: {:.6f} sparsity_index {:.3f}  saving model  ".format(epoch,total_loss / N / nparticles / batch_size,sparsity_index.item()))
         else:
-            print("Epoch {}. Loss: {:.6f} sparsity_index {:.3f} ".format(epoch,total_loss / N / nparticles / batch_size,sparsity_index.item() / sparsity_factor))
+            print("Epoch {}. Loss: {:.6f} sparsity_index {:.3f} ".format(epoch,total_loss / N / nparticles / batch_size,sparsity_index.item()))
 
         list_loss.append(total_loss / N / nparticles / batch_size)
 
@@ -1652,7 +1653,6 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
     discrepency_list = []
     Sxy_list = []
 
-    # for it in tqdm(range(-int(nframes * model_config['start_frame']), nframes - 1)):
     for it in tqdm(range(nframes - 1)):
 
         # x0 = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_{min(it + 1, nframes - 2)}.pt',map_location=device).to(device)
@@ -1670,6 +1670,21 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             with torch.no_grad():
                 h = model(dataset_mesh, data_id=0,)
             x[:,6:7] += h * hnorm
+
+        if model_config['model'] == 'WaveMesh':
+            x[:, 1:5] = x0[:, 1:5].clone().detach()
+            dataset = data.Data(x=x, pos=x[:, 1:3])
+            transform_0 = T.Compose([T.Delaunay()])
+            dataset_face = transform_0(dataset).face
+            mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
+            edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face)
+            dataset_mesh = data.Data(x=x, edge_index=edge_index, edge_attr=edge_weight, device=device)
+            with torch.no_grad():
+                h = model(dataset_mesh, data_id=0, )
+            x[:, 7:8] += h * hnorm
+            x[:, 6:7] += x[:, 7:8]
+
+
 
             rmserr = torch.sqrt(torch.mean(torch.sum((x[:,6:7]-x0_next[:,6:7]) ** 2, axis=1)))
             rmserr_list.append(rmserr.item())
@@ -1712,7 +1727,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                 dataset2 = data.Data(x=x, edge_index=edge_index2)
 
             fig = plt.figure(figsize=(25, 12))
-            #plt.ion()
+            # plt.ion()
 
             for k in range(5):
                 if k==0:
@@ -1730,11 +1745,11 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                 elif k == 3:
                     ax = fig.add_subplot(2, 4, 3)
                     x_ = x0
-                    sc = 15
+                    sc = 5
                 elif k == 4:
                     ax = fig.add_subplot(2, 4, 7)
                     x_ = x
-                    sc = 15
+                    sc = 5
 
                 if (k==0) & ((model_config['model'] == 'DiffMesh')|(model_config['model'] == 'WaveMesh')|(model_config['model'] == 'HeatParticles')):
                     plt.scatter(x0_next[:, 6].detach().cpu().numpy(),x[:, 6].detach().cpu().numpy(),s=1, alpha=0.25, cmap='inferno', vmin=0, vmax=2, c='k')
@@ -1803,16 +1818,13 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             ax = fig.add_subplot(2, 4, 5)
             pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
             vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
-            nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False)
+            nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False, alpha=0.3)
             if model_config['boundary'] == 'no':
                 plt.xlim([-1.3, 1.3])
                 plt.ylim([-1.3, 1.3])
             else:
                 plt.xlim([0,1])
                 plt.ylim([0,1])
-            ax.axes.get_xaxis().set_visible(False)
-            ax.axes.get_yaxis().set_visible(False)
-            plt.axis('off')
 
             ax = fig.add_subplot(2, 4, 8)
             if model_config['model'] == 'DiffMesh':
@@ -2934,8 +2946,6 @@ def load_model_config(id=48):
                              'cmap':'tab20c',
                              'arrow_length':10}
 
-
-
     if id == 46:
         model_config_test = {'ntry': id,
                              'input_size': 9,
@@ -3384,7 +3394,7 @@ def load_model_config(id=48):
                              'c': np.linspace(1, 12, 4).tolist(),
                              'beta': 1E-4,
                              'nrun': 2,
-                             'clamp': 0.002,
+                             'clamp': 0.01,
                              'pred_limit': 1E9,
                              'start_frame': 0.3,
                              'cmap':'tab20b',
@@ -3401,9 +3411,9 @@ def load_model_config(id=48):
                              'radius': 0.3,
                              'dataset': f'231001_{id}',
                              'nparticles': 3840,
-                             'nparticle_types': 2,
+                             'nparticle_types': 4,
                              'ninteractions': 1,
-                             'nframes': 10000,
+                             'nframes': 2000,
                              'sigma': .005,
                              'tau': 1E-10,
                              'v_init': 0,
@@ -3415,15 +3425,16 @@ def load_model_config(id=48):
                              'model': 'WaveMesh',
                              'prediction': '2nd_derivative',
                              'upgrade_type': 0,
-                             'p': np.linspace(1, 1, 2).tolist(),
-                             'c': np.linspace(0.5, 1, 2).tolist(),
-                             'beta': 1E-3,
+                             'p': np.linspace(1, 1, 4).tolist(),
+                             'c': [0.1, 0.2, 0.5, 1],
+                             'beta': 1E-5,
                              'nrun': 2,
-                             'clamp': 5E-4,
+                             'clamp': 1E-3,
                              'pred_limit': 1E9,
                              'start_frame': 0.,
                              'cmap':'tab20b',
-                             'arrow_length':10
+                             'arrow_length':10,
+                             'description':'Wave equation fixed particles 4 beta coefficients'
                              }
 
     for key, value in model_config_test.items():
@@ -3449,7 +3460,7 @@ if __name__ == '__main__':
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
 
-    gtestlist = [77] # [75,84,85] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
+    gtestlist = [122] # [75,84,85] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
 
     for gtest in gtestlist:
 
@@ -3483,14 +3494,12 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        sparsity_factor = 1
-        print(f'sparsity_factor: {sparsity_factor}')
-
-        data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=190)
+        # data_generate(model_config, bVisu=True, bDetails=False, bSave=True, step=50)
         data_train(model_config, gtest)
+        # data_plot(model_config, epoch=-1, bPrint=True, best_model=0)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=1)
-        # data_plot(model_config, epoch=-1, bPrint=True, best_model=22)
-        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=14, step=20)
+        # data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
+        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=20)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=False)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=14, step=20)
 
