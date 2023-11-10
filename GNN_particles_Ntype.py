@@ -888,7 +888,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
 
             with torch.no_grad():
                 y = model(dataset)
-            if model_config['model'] == 'WaveMesh':
+            if (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
                 y = y*0
             if (it >= 0) & (noise_level == 0):
                 y_list.append(y)
@@ -3436,6 +3436,41 @@ def load_model_config(id=48):
                              'arrow_length':10,
                              'description':'Wave equation fixed particles 4 beta coefficients'
                              }
+    if id == 123:
+        model_config_test = {'ntry': id,
+                             'input_size': 4,
+                             'output_size': 1,
+                             'hidden_size': 16,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.3,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 3840,
+                             'nparticle_types': 4,
+                             'ninteractions': 4,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-10,
+                             'v_init': 0,
+                             'aggr_type': 'add',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'DiffMesh',
+                             'prediction': '2nd_derivative',
+                             'upgrade_type': 0,
+                             'p': np.linspace(0.2, 5, 4).tolist(),
+                             'c': np.linspace(1, 12, 4).tolist(),
+                             'beta': 1E-4,
+                             'nrun': 2,
+                             'clamp': 0.01,
+                             'pred_limit': 1E9,
+                             'start_frame': 0.3,
+                             'cmap':'tab20b',
+                             'arrow_length':10,
+                             'description':'Heat equation fixed particles 4 conductivities'
+                             }
 
     for key, value in model_config_test.items():
         print(key, ":", value)
@@ -3453,14 +3488,14 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
 
-    gtestlist = [122] # [75,84,85] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
+    gtestlist = [123] # [75,84,85] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
 
     for gtest in gtestlist:
 
@@ -3494,7 +3529,7 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        # data_generate(model_config, bVisu=True, bDetails=False, bSave=True, step=50)
+        data_generate(model_config, bVisu=True, bDetails=False, bSave=True, step=50)
         data_train(model_config, gtest)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=0)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=1)
