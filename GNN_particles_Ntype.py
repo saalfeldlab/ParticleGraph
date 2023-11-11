@@ -1174,21 +1174,14 @@ def data_train(model_config, bTest=False):
         edge_index_mesh_list=[]
         edge_weight_mesh_list=[]
         for run in tqdm(arr):
-            edge_index_mesh_tmp=[]
-            edge_weight_mesh_tmp=[]
-            for k in range(nframes):
-                x = x_list[run][k].clone().detach()
-                dataset = data.Data(x=x, pos=x[:, 1:3])
-                transform_0 = T.Compose([T.Delaunay()])
-                dataset_face = transform_0(dataset).face
-                mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
-                edge_index_mesh, edge_weight_mesh = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face)
-
-                edge_index_mesh_tmp.append(edge_index_mesh)
-                edge_weight_mesh_tmp.append(edge_weight_mesh)
-
-            edge_index_mesh_list.append(torch.stack(edge_index_mesh_tmp))
-            edge_weight_mesh_list.append(torch.stack(edge_weight_mesh_tmp))
+            x = x_list[run][0].clone().detach()
+            dataset = data.Data(x=x, pos=x[:, 1:3])
+            transform_0 = T.Compose([T.Delaunay()])
+            dataset_face = transform_0(dataset).face
+            mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
+            edge_index_mesh, edge_weight_mesh = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face)
+            edge_index_mesh_list(torch.stack(edge_index_mesh))
+            edge_weight_mesh_list(torch.stack(edge_weight_mesh))
 
     print('Start training ...')
     time.sleep(0.5)
@@ -1263,7 +1256,7 @@ def data_train(model_config, bTest=False):
                 x = x_list[run][k].clone().detach()
 
                 if (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
-                    dataset = data.Data(x=x, edge_index=edge_index_mesh_list[run][k], edge_attr=edge_weight_mesh_list[run][k], device=device)
+                    dataset = data.Data(x=x, edge_index=edge_index_mesh_list[run], edge_attr=edge_weight_mesh_list[run], device=device)
                     dataset_batch.append(dataset)
                     y = h_list[run][k].clone().detach()/hnorm
                     if batch == 0:
