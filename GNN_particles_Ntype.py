@@ -1169,6 +1169,14 @@ def data_train(model_config, bTest=False):
     data_augmentation_loop = 20
     print(f'data_augmentation_loop: {data_augmentation_loop}')
 
+    if (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
+        x = x_list[0][0].clone().detach()
+        dataset = data.Data(x=x, pos=x[:, 1:3])
+        transform_0 = T.Compose([T.Delaunay()])
+        dataset_face = transform_0(dataset).face
+        mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
+        edge_index_mesh, edge_weight_mesh = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face)
+
     print('')
     time.sleep(0.5)
     for epoch in range(Nepochs + 1):
@@ -1242,12 +1250,7 @@ def data_train(model_config, bTest=False):
                 x = x_list[run][k].clone().detach()
 
                 if (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
-                    dataset = data.Data(x=x, pos=x[:, 1:3])
-                    transform_0 = T.Compose([T.Delaunay()])
-                    dataset_face = transform_0(dataset).face
-                    mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
-                    edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face)
-                    dataset = data.Data(x=x, edge_index=edge_index, edge_attr=edge_weight, device=device)
+                    dataset = data.Data(x=x, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
                     dataset_batch.append(dataset)
                     y = h_list[run][k].clone().detach()/hnorm
                     if batch == 0:
