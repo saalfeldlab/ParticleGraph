@@ -96,8 +96,8 @@ class cc:
                 index = (1, 0, 0)
             return (index)
         else:
-            #color_map = plt.cm.get_cmap(self.model_config['cmap'])
-            color_map = plt.colormaps.get_cmap(self.model_config['cmap'])
+            color_map = plt.cm.get_cmap(self.model_config['cmap'])
+            #color_map = plt.colormaps.get_cmap(self.model_config['cmap'])
             index = color_map(index/self.nmap)
 
         return index
@@ -3443,7 +3443,7 @@ def load_model_config(id=48):
                              'noise_level': 0,
                              'radius': 0.3,
                              'dataset': f'231001_{id}',
-                             'nparticles': 3840,
+                             'nparticles': 6000,
                              'nparticle_types': 4,
                              'ninteractions': 1,
                              'nframes': 1000,
@@ -3454,7 +3454,7 @@ def load_model_config(id=48):
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                              'data_augmentation': True,
                              'batch_size': 8,
-                             'embedding': 2,
+                             'embedding': 1,
                              'model': 'WaveMesh',
                              'prediction': '2nd_derivative',
                              'upgrade_type': 0,
@@ -3478,7 +3478,7 @@ def load_model_config(id=48):
                              'noise_level': 0,
                              'radius': 0.3,
                              'dataset': f'231001_{id}',
-                             'nparticles': 3840,
+                             'nparticles': 6000,
                              'nparticle_types': 4,
                              'ninteractions': 4,
                              'nframes': 1000,
@@ -3489,7 +3489,7 @@ def load_model_config(id=48):
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                              'data_augmentation': True,
                              'batch_size': 8,
-                             'embedding': 2,
+                             'embedding': 1,
                              'model': 'DiffMesh',
                              'prediction': '2nd_derivative',
                              'upgrade_type': 0,
@@ -3513,7 +3513,7 @@ def load_model_config(id=48):
                              'noise_level': 0,
                              'radius': 0.3,
                              'dataset': f'231001_{id}',
-                             'nparticles': 3840,
+                             'nparticles': 6000,
                              'nparticle_types': 4,
                              'ninteractions': 1,
                              'nframes': 1000,
@@ -3524,7 +3524,7 @@ def load_model_config(id=48):
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                              'data_augmentation': True,
                              'batch_size': 8,
-                             'embedding': 2,
+                             'embedding': 1,
                              'model': 'WaveMesh',
                              'prediction': '2nd_derivative',
                              'upgrade_type': 0,
@@ -3548,7 +3548,7 @@ def load_model_config(id=48):
                              'noise_level': 0,
                              'radius': 0.3,
                              'dataset': f'231001_{id}',
-                             'nparticles': 3840,
+                             'nparticles': 6000,
                              'nparticle_types': 4,
                              'ninteractions': 4,
                              'nframes': 1000,
@@ -3559,7 +3559,7 @@ def load_model_config(id=48):
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                              'data_augmentation': True,
                              'batch_size': 8,
-                             'embedding': 2,
+                             'embedding': 1,
                              'model': 'DiffMesh',
                              'prediction': '2nd_derivative',
                              'upgrade_type': 0,
@@ -3632,7 +3632,7 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        data_generate(model_config, bVisu=True, bDetails=False, bSave=True, step=200)
+        data_generate(model_config, bVisu=False, bDetails=True, bSave=True, step=20)
         data_train(model_config, gtest)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=100)
