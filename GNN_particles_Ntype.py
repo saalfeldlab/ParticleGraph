@@ -3438,7 +3438,7 @@ def load_model_config(id=48):
         model_config_test = {'ntry': id,
                              'input_size': 4,
                              'output_size': 1,
-                             'hidden_size': 16,
+                             'hidden_size': 64,
                              'n_mp_layers': 5,
                              'noise_level': 0,
                              'radius': 0.3,
@@ -3446,7 +3446,7 @@ def load_model_config(id=48):
                              'nparticles': 3840,
                              'nparticle_types': 4,
                              'ninteractions': 1,
-                             'nframes': 2000,
+                             'nframes': 1000,
                              'sigma': .005,
                              'tau': 1E-10,
                              'v_init': 0,
@@ -3473,7 +3473,7 @@ def load_model_config(id=48):
         model_config_test = {'ntry': id,
                              'input_size': 4,
                              'output_size': 1,
-                             'hidden_size': 16,
+                             'hidden_size': 64,
                              'n_mp_layers': 5,
                              'noise_level': 0,
                              'radius': 0.3,
@@ -3481,7 +3481,7 @@ def load_model_config(id=48):
                              'nparticles': 3840,
                              'nparticle_types': 4,
                              'ninteractions': 4,
-                             'nframes': 2000,
+                             'nframes': 1000,
                              'sigma': .005,
                              'tau': 1E-10,
                              'v_init': 0,
@@ -3508,7 +3508,7 @@ def load_model_config(id=48):
         model_config_test = {'ntry': id,
                              'input_size': 4,
                              'output_size': 1,
-                             'hidden_size': 16,
+                             'hidden_size': 64,
                              'n_mp_layers': 5,
                              'noise_level': 0,
                              'radius': 0.3,
@@ -3543,7 +3543,7 @@ def load_model_config(id=48):
         model_config_test = {'ntry': id,
                              'input_size': 4,
                              'output_size': 1,
-                             'hidden_size': 16,
+                             'hidden_size': 64,
                              'n_mp_layers': 5,
                              'noise_level': 0,
                              'radius': 0.3,
@@ -3632,7 +3632,7 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        #data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=20)
+        data_generate(model_config, bVisu=True, bDetails=False, bSave=True, step=200)
         data_train(model_config, gtest)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=100)
