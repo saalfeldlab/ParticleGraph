@@ -1176,7 +1176,7 @@ def data_train(model_config, bTest=False):
 
         for run in arr:
 
-            x = x_list[arr][0].clone().detach()
+            x = x_list[run][0].clone().detach()
             dataset = data.Data(x=x, pos=x[:, 1:3])
             transform_0 = T.Compose([T.Delaunay()])
             dataset_face = transform_0(dataset).face
