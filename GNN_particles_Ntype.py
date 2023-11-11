@@ -1183,8 +1183,10 @@ def data_train(model_config, bTest=False):
                 dataset_face = transform_0(dataset).face
                 mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
                 edge_index_mesh, edge_weight_mesh = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face)
+
                 edge_index_mesh_tmp.append(edge_index_mesh)
                 edge_weight_mesh_tmp.append(edge_weight_mesh)
+
             edge_index_mesh_list.append(torch.stack(edge_index_mesh_tmp))
             edge_weight_mesh_list.append(torch.stack(edge_weight_mesh_tmp))
 
@@ -3667,7 +3669,7 @@ if __name__ == '__main__':
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
 
-    gtestlist = [78] # [75,84,85] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
+    gtestlist = [122,123] # [75,84,85] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
 
     for gtest in gtestlist:
 
@@ -3696,7 +3698,7 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        # data_generate(model_config, bVisu=False, bDetails=True, bSave=True, step=10)
+        data_generate(model_config, bVisu=False, bDetails=True, bSave=True, step=10)
         data_train(model_config, gtest)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=100)
