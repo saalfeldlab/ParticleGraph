@@ -3470,7 +3470,7 @@ def load_model_config(id=48):
     # 4 types boundary periodic N=960 mesh wave
     if id == 122:
         model_config_test = {'ntry': id,
-                             'input_size': 3,
+                             'input_size': 4,
                              'output_size': 1,
                              'hidden_size': 64,
                              'n_mp_layers': 5,
@@ -3505,7 +3505,7 @@ def load_model_config(id=48):
                              }
     if id == 123:
         model_config_test = {'ntry': id,
-                             'input_size': 3,
+                             'input_size': 4,
                              'output_size': 1,
                              'hidden_size': 64,
                              'n_mp_layers': 5,
@@ -3540,7 +3540,7 @@ def load_model_config(id=48):
                              }
     if id == 124:
         model_config_test = {'ntry': id,
-                             'input_size': 3,
+                             'input_size': 4,
                              'output_size': 1,
                              'hidden_size': 64,
                              'n_mp_layers': 5,
@@ -3575,7 +3575,7 @@ def load_model_config(id=48):
                              }
     if id == 125:
         model_config_test = {'ntry': id,
-                             'input_size': 3,
+                             'input_size': 4,
                              'output_size': 1,
                              'hidden_size': 64,
                              'n_mp_layers': 5,
@@ -3610,7 +3610,7 @@ def load_model_config(id=48):
                              }
     if id == 126:
         model_config_test = {'ntry': id,
-                             'input_size': 3,
+                             'input_size': 4,
                              'output_size': 1,
                              'hidden_size': 64,
                              'n_mp_layers': 5,
