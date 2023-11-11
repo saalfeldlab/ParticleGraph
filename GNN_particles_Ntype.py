@@ -1180,8 +1180,8 @@ def data_train(model_config, bTest=False):
             dataset_face = transform_0(dataset).face
             mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
             edge_index_mesh, edge_weight_mesh = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face)
-            edge_index_mesh_list(torch.stack(edge_index_mesh))
-            edge_weight_mesh_list(torch.stack(edge_weight_mesh))
+            edge_index_mesh_list.append(edge_index_mesh)
+            edge_weight_mesh_list.append(edge_weight_mesh)
 
     print('Start training ...')
     time.sleep(0.5)
