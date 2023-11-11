@@ -3488,7 +3488,7 @@ def load_model_config(id=48):
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                              'data_augmentation': True,
                              'batch_size': 8,
-                             'embedding': 1,
+                             'embedding': 2,
                              'model': 'WaveMesh',
                              'prediction': '2nd_derivative',
                              'upgrade_type': 0,
@@ -3523,7 +3523,7 @@ def load_model_config(id=48):
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                              'data_augmentation': True,
                              'batch_size': 8,
-                             'embedding': 1,
+                             'embedding': 2,
                              'model': 'DiffMesh',
                              'prediction': '2nd_derivative',
                              'upgrade_type': 0,
@@ -3558,7 +3558,7 @@ def load_model_config(id=48):
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                              'data_augmentation': True,
                              'batch_size': 8,
-                             'embedding': 1,
+                             'embedding': 2,
                              'model': 'WaveMesh',
                              'prediction': '2nd_derivative',
                              'upgrade_type': 0,
@@ -3593,7 +3593,7 @@ def load_model_config(id=48):
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                              'data_augmentation': True,
                              'batch_size': 8,
-                             'embedding': 1,
+                             'embedding': 2,
                              'model': 'DiffMesh',
                              'prediction': '2nd_derivative',
                              'upgrade_type': 0,
@@ -3628,7 +3628,7 @@ def load_model_config(id=48):
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                              'data_augmentation': True,
                              'batch_size': 8,
-                             'embedding': 1,
+                             'embedding': 2,
                              'model': 'WaveMesh',
                              'prediction': '2nd_derivative',
                              'upgrade_type': 0,
