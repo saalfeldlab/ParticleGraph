@@ -96,8 +96,8 @@ class cc:
                 index = (1, 0, 0)
             return (index)
         else:
-            #color_map = plt.cm.get_cmap(self.model_config['cmap'])
-            color_map = plt.colormaps.get_cmap(self.model_config['cmap'])
+            color_map = plt.cm.get_cmap(self.model_config['cmap'])
+            #color_map = plt.colormaps.get_cmap(self.model_config['cmap'])
             index = color_map(index/self.nmap)
 
         return index
@@ -1398,9 +1398,10 @@ def data_train(model_config, bTest=False):
                 h = model.lin_edge(in_features.float())
                 h = h[:, 0]
                 f_list.append(h)
-                plt.plot(r1.detach().cpu().numpy(),
-                         h.detach().cpu().numpy() * hnorm.detach().cpu().numpy(), linewidth=1,
-                         color='k',alpha=0.05)
+                if n % 5 == 0:
+                    plt.plot(r1.detach().cpu().numpy(),
+                             h.detach().cpu().numpy() * hnorm.detach().cpu().numpy(), linewidth=1,
+                             color='k',alpha=0.05)
             f_list = torch.stack(f_list)
             coeff_norm = f_list.detach().cpu().numpy()
             trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int),
@@ -1469,13 +1470,15 @@ def data_train(model_config, bTest=False):
 
         # Constrain embedding with UMAP of plots clustering
         ax = fig.add_subplot(2, 4, 4)
-        if (nparticles<2000) | (epoch==14) | (epoch==19):
-            for n in range(nparticle_types):
-                plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1],
-                            color=cmap.color(n), s=5)
-            plt.xlabel('UMAP 0', fontsize=12)
-            plt.ylabel('UMAP 1', fontsize=12)
-            kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=1000, max_iter=10000,random_state=13)
+
+        for n in range(nparticle_types):
+            plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1],
+                        color=cmap.color(n), s=5, alpha=0.75)
+        plt.xlabel('UMAP 0', fontsize=12)
+        plt.ylabel('UMAP 1', fontsize=12)
+
+        if (epoch==14) | (epoch==19):
+            kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=5000, max_iter=10000,random_state=13)
             kmeans.fit(proj_interaction)
             for n in range(nparticle_types):
                 tmp = kmeans.labels_[index_particles[n]]
@@ -1484,11 +1487,6 @@ def data_train(model_config, bTest=False):
                 print(f'Sub-group {n} accuracy: {np.round(accuracy, 3)}')
             for n in range(model_config['ninteractions']):
                 plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
-        if (epoch==14) | (epoch==19):
-            if (epoch == 19):
-                kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=1000, max_iter=50000, random_state=13)
-                kmeans.fit(proj_interaction)
-
             model_a_=model.a.clone().detach()
             model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
             for k in range(model_config['ninteractions']):
@@ -3474,7 +3472,7 @@ def load_model_config(id=48):
                              'dataset': f'231001_{id}',
                              'nparticles': 6000,
                              'nparticle_types': 4,
-                             'ninteractions': 1,
+                             'ninteractions': 4,
                              'nframes': 1000,
                              'sigma': .005,
                              'tau': 1E-10,
@@ -3544,7 +3542,7 @@ def load_model_config(id=48):
                              'dataset': f'231001_{id}',
                              'nparticles': 6000,
                              'nparticle_types': 4,
-                             'ninteractions': 1,
+                             'ninteractions': 4,
                              'nframes': 1000,
                              'sigma': .005,
                              'tau': 1E-10,
@@ -3614,7 +3612,7 @@ def load_model_config(id=48):
                              'dataset': f'231001_{id}',
                              'nparticles': 6000,
                              'nparticle_types': 4,
-                             'ninteractions': 1,
+                             'ninteractions': 4,
                              'nframes': 1000,
                              'sigma': .005,
                              'tau': 1E-10,
