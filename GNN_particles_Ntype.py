@@ -1348,7 +1348,8 @@ def data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step
 
 
                 plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
-                plt.close()
+
+            plt.close()
 
         if bSave:
             torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
@@ -1356,6 +1357,7 @@ def data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step
             torch.save(h_list, f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt')
 
         bDetails = False
+        bVisu = False
 
 def data_train(model_config, bSparse=False):
     print('')
@@ -4087,7 +4089,7 @@ if __name__ == '__main__':
         if gtest>=140:
             data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step=1)
         else:
-            data_generate(model_config, bVisu=False, bDetails=True, bSave=True, step=10)
+            data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=10)
         data_train(model_config, bSparse=False)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=100)
