@@ -1676,8 +1676,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             with torch.no_grad():
                 h = model(dataset_mesh, data_id=0,)
             x[:,6:7] += h * hnorm
-
-        if model_config['model'] == 'WaveMesh':
+        elif model_config['model'] == 'WaveMesh':
             x[:, 1:5] = x0[:, 1:5].clone().detach()
             dataset = data.Data(x=x, pos=x[:, 1:3])
             transform_0 = T.Compose([T.Delaunay()])
@@ -1689,9 +1688,6 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                 h = model(dataset_mesh, data_id=0, )
             x[:, 7:8] += h * hnorm
             x[:, 6:7] += x[:, 7:8]
-
-
-
             rmserr = torch.sqrt(torch.mean(torch.sum((x[:,6:7]-x0_next[:,6:7]) ** 2, axis=1)))
             rmserr_list.append(rmserr.item())
         else:
@@ -3661,7 +3657,7 @@ if __name__ == '__main__':
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
 
-    gtestlist = [122,123] # [75,84,85] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
+    gtestlist = [123] # [75,84,85] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
 
     for gtest in gtestlist:
 
