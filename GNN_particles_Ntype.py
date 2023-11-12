@@ -1193,6 +1193,9 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
             torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
             torch.save(y_list, f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
             torch.save(h_list, f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt')
+
+        bDetails = False
+
 def data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step=1):
 
     # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_data/*")
@@ -1346,6 +1349,13 @@ def data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step
 
                 plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
                 plt.close()
+
+        if bSave:
+            torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
+            torch.save(y_list, f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
+            torch.save(h_list, f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt')
+
+        bDetails = False
 
 def data_train(model_config, bSparse=False):
     print('')
