@@ -604,7 +604,7 @@ class InteractionParticles(pyg.nn.MessagePassing):
         embedding = self.a[self.data_id, x_i[:, 0].detach().cpu().numpy(), :]
 
         ############# TO BE CHANGED ##########################
-        if True: # self.prediction == '2nd_derivative':
+        if True:   #self.prediction == '2nd_derivative':
             in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding), dim=-1)
         else:
             in_features = torch.cat((delta_pos, r, embedding), dim=-1)
@@ -1749,7 +1749,8 @@ def data_train(model_config, bSparse=False):
             for n in range(nparticles):
                 rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
                 embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
-                if model_config['prediction'] == '2nd_derivative':
+                ### TO BE CHANGED ###
+                if True: # model_config['prediction'] == '2nd_derivative':
                     in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
                                              rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
                                              0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
