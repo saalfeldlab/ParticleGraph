@@ -1836,6 +1836,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             if(model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
                 # plt.scatter(x0[:, 1].detach().cpu(), x0[:, 2].detach().cpu(), s=10, alpha=0.75,
                 #             c=np.abs(x0_next[:, 6].detach().cpu().numpy()-x[:, 6].detach().cpu().numpy()), cmap='inferno', vmin=0, vmax=0.1)
+                N1 = torch.arange(nparticles, device=device)
                 for n in range(nparticle_types):
                     plt.scatter(N1[index_particles[n]].detach().cpu().numpy(),
                                 x[index_particles[n],6].detach().cpu().numpy(), color=cmap.color(n), s=5,
