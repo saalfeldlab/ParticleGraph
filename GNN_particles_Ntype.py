@@ -603,11 +603,13 @@ class InteractionParticles(pyg.nn.MessagePassing):
 
         embedding = self.a[self.data_id, x_i[:, 0].detach().cpu().numpy(), :]
 
-        ############# TO BE CHANGED ##########################
-        if True:   #self.prediction == '2nd_derivative':
+        if self.prediction == '2nd_derivative':
             in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding), dim=-1)
         else:
-            in_features = torch.cat((delta_pos, r, embedding), dim=-1)
+            if self.prediction == 'first_derivative_L':
+                in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding), dim=-1)
+            if self.prediction == 'first_derivative_S':
+                in_features = torch.cat((delta_pos, r, embedding), dim=-1)
 
         out = self.lin_edge(in_features)
 
@@ -1068,7 +1070,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
                         g = p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 7.5
                         plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                     x[index_particles[n], 2].detach().cpu().numpy(), s=g,
-                                    alpha=0.75,color=cc(n))  # , facecolors='none', edgecolors='k')
+                                    alpha=0.75,color=cmap.color(n))
                 elif (model_config['model'] == 'HeatParticles') | (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
                     plt.scatter(x[:, 1].detach().cpu().numpy(),x[:, 2].detach().cpu().numpy(), s=10, alpha=0.75,
                                     c=x[:, 6].detach().cpu().numpy(), cmap='inferno', vmin=0, vmax=2)
@@ -1291,7 +1293,10 @@ def data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step
 
             for n,boid in enumerate (flock):
                 boid.toggles = {"separation": True, "alignment": True, "cohesion": True}
-                p = model_config['p'][int(T1[n].detach().cpu().numpy())]
+                if nparticle_types==1:
+                    p = model_config['p']
+                else:
+                    p = model_config['p'][int(T1[n].detach().cpu().numpy())]
                 boid.values = {"separation": p[0] / 100, "alignment": p[1] / 100 , "cohesion": p[2] / 100}
                 boid.radius = scale
                 boid.limits(size, size)
@@ -1750,13 +1755,15 @@ def data_train(model_config, bSparse=False):
                 rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
                 embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
                 ### TO BE CHANGED ###
-                if True: # model_config['prediction'] == '2nd_derivative':
+                if model_config['prediction'] == '2nd_derivative':
                     in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
                                              rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
                                              0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
                 else:
-                    in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
-                                             rr[:, None] / model_config['radius'], embedding), dim=1)
+                    if self.prediction == 'first_derivative_L':
+                        in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
+                    if self.prediction == 'first_derivative_S':
+                        in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None], rr[:, None] / model_config['radius'], embedding), dim=1)
 
                 acc = model.lin_edge(in_features.float())
                 acc = acc[:, 0]
@@ -3431,7 +3438,7 @@ def load_model_config(id=48):
                              'batch_size': 8,
                              'embedding': 1,
                              'model': 'Particles_A',
-                             'prediction': 'first_derivative',
+                             'prediction': 'first_derivative_S',
                              'upgrade_type': 0,
                              'p': [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855],
                                    [1.785, 1.8579, 1.7226, 1.0584]],
@@ -3461,7 +3468,7 @@ def load_model_config(id=48):
                              'batch_size': 8,
                              'embedding': 1,
                              'model': 'Particles_A',
-                             'prediction': 'first_derivative',
+                             'prediction': 'first_derivative_S',
                              'upgrade_type': 0,
                              'p': [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855],
                                    [1.785, 1.8579, 1.7226, 1.0584]],
@@ -3553,7 +3560,7 @@ def load_model_config(id=48):
                              'batch_size': 8,
                              'embedding': 1,
                              'model': 'Particles_A',
-                             'prediction': 'first_derivative',
+                             'prediction': 'first_derivative_S',
                              'upgrade_type': 0,
                              'p': [[1.2425, 1.3355, 1.3397, 1.3929], [1.629, 1.4932, 1.5311, 1.8677],[1.9852, 1.1892, 1.1544, 1.993],[1.6898, 1.1336, 1.4869, 1.7767],[1.8847, 1.5448, 1.8063, 1.3873],[1.496, 1.4064, 1.9045, 1.733],[1.5108, 1.9904, 1.1665, 1.6975],[1.6153, 1.8557, 1.2758, 1.0684]],
                              'nrun': 2,
@@ -3583,7 +3590,7 @@ def load_model_config(id=48):
                              'batch_size': 8,
                              'embedding': 1,
                              'model': 'Particles_A',
-                             'prediction': 'first_derivative',
+                             'prediction': 'first_derivative_S',
                              'upgrade_type': 0,
                              'p': [],
                              'nrun': 2,
@@ -3990,7 +3997,7 @@ def load_model_config(id=48):
                              'batch_size': 8,
                              'embedding': 2,
                              'model': 'Particles_A',
-                             'prediction': 'first_derivative',
+                             'prediction': 'first_derivative_L',
                              'upgrade_type': 0,
                              'p': [50,40,40],
                              'nrun': 10,
@@ -4023,7 +4030,7 @@ def load_model_config(id=48):
                              'batch_size': 8,
                              'embedding': 2,
                              'model': 'Particles_A',
-                             'prediction': 'first_derivative',
+                             'prediction': 'first_derivative_L',
                              'upgrade_type': 0,
                              'p': [50,40,40],
                              'nrun': 10,
@@ -4056,7 +4063,7 @@ def load_model_config(id=48):
                              'batch_size': 8,
                              'embedding': 2,
                              'model': 'Particles_A',
-                             'prediction': 'first_derivative',
+                             'prediction': 'first_derivative_L',
                              'upgrade_type': 0,
                              'p': [[50,10,40],[50,30,40],[50,50,40],[50,80,40]],
                              'nrun': 10,
@@ -4087,7 +4094,7 @@ if __name__ == '__main__':
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
 
-    gtestlist = [140,141] #[123, 140, 141, 73, 123] # [75,84,85] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
+    gtestlist = [77,44,87] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
@@ -4116,11 +4123,11 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        # if gtest>=140:
-        #     data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step=1)
-        # else:
-        #     data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=10)
-        data_train(model_config, bSparse=False)
+        if gtest>=140:
+            data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step=1)
+        else:
+            data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=10)
+        # data_train(model_config, bSparse=False)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=100)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
