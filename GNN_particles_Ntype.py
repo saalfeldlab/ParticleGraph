@@ -986,8 +986,9 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
             T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
         T1 = T1[:, None]
         ####### TO BE CHANGED #############################
-        h = torch.zeros((nparticles, 1), device=device)
-        H1 = torch.ones((nparticles, 1), device=device) + torch.randn((nparticles, 1), device=device) / 2
+        # h = torch.zeros((nparticles, 1), device=device)
+        H1 = torch.zeros((nparticles, 2), device=device)
+        H1[:,0:1] = torch.ones((nparticles, 1), device=device) + torch.randn((nparticles, 1), device=device) / 2
         N1 = torch.arange(nparticles, device=device)
         N1 = N1[:, None]
 
@@ -1002,17 +1003,14 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
             noise_prev = noise_current
             noise_current = 0 * torch.randn((nparticles, 2), device=device) * noise_level * radius
 
-            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
-                                   H1.clone().detach(), h.clone().detach()), 1)
+            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach()), 1)
             if (it >= 0) & (noise_level == 0):
                 x_list.append(x)
-                # torch.save(x, f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{it}.pt')
             if (it >= 0) & (noise_level > 0):
                 x_noise = x
                 x_noise[:, 1:3] = x[:, 1:3] + noise_current
                 x_noise[:, 3:5] = x[:, 3:5] + noise_current - noise_prev
                 x_list.append(x_noise)
-                # torch.save(x_noise, f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{it}.pt')
 
             if (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
                 dataset = data.Data(x=x, pos=x[:, 1:3])
@@ -1048,15 +1046,16 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
             if model_config['model'] == 'DiffMesh':
                 if it >= 0:
                     with torch.no_grad():
-                        h = model_mesh(dataset_mesh)
-                    H1 += h
-                    h_list.append(h)
+                        pred = model_mesh(dataset_mesh)
+                        H1[:,1:2] = pred
+                    H1[:,0:1] += H1[:,1:2]
+                    h_list.append(pred)
             if model_config['model'] == 'WaveMesh':
                 if it >= 0:
                     with torch.no_grad():
                         pred = model_mesh(dataset_mesh)
-                        h += pred
-                    H1 += h
+                        H1[:,1:2] += pred
+                    H1[:,0:1] += H1[:,1:2]
                     h_list.append(pred)
 
             if (run == 0) & (it % step == 0) & (it >= 0) & bVisu:
@@ -1158,11 +1157,8 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
 
                     ax = fig.add_subplot(2, 2, 4)
                     if (model_config['model'] == 'HeatParticles') | (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
-                        N1 = torch.arange(nparticles, device=device)
                         for n in range(nparticle_types):
-                            plt.scatter(N1[index_particles[n]].detach().cpu().numpy(),
-                                        H1[index_particles[n]].detach().cpu().numpy(), color=cmap.color(n), s=5,
-                                        alpha=0.5)
+                            plt.scatter(N1[index_particles[n]].detach().cpu().numpy(), H1[index_particles[n],0].detach().cpu().numpy(), color=cmap.color(n), s=5, alpha=0.5)
                         plt.ylim([-0.5, 2.5])
                         plt.ylabel('Temperature [a.u]', fontsize="14")
                     else:
@@ -1195,7 +1191,6 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
             torch.save(h_list, f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt')
 
         bDetails = False
-
 def data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step=1):
 
     # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_data/*")
@@ -1980,8 +1975,8 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face)
             dataset_mesh = data.Data(x=x, edge_index=edge_index, edge_attr=edge_weight, device=device)
             with torch.no_grad():
-                h = model(dataset_mesh, data_id=0,)
-            x[:,6:7] += h * hnorm
+                pred = model(dataset_mesh, data_id=0,)
+            x[:,6:7] += pred * hnorm
         elif model_config['model'] == 'WaveMesh':
             x[:, 1:5] = x0[:, 1:5].clone().detach()
             dataset = data.Data(x=x, pos=x[:, 1:3])
@@ -1991,8 +1986,8 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face)
             dataset_mesh = data.Data(x=x, edge_index=edge_index, edge_attr=edge_weight, device=device)
             with torch.no_grad():
-                h = model(dataset_mesh, data_id=0, )
-            x[:, 7:8] += h * hnorm
+                pred = model(dataset_mesh, data_id=0, )
+            x[:, 7:8] += pred * hnorm
             x[:, 6:7] += x[:, 7:8]
             rmserr = torch.sqrt(torch.mean(torch.sum((x[:,6:7]-x0_next[:,6:7]) ** 2, axis=1)))
             rmserr_list.append(rmserr.item())
@@ -4057,7 +4052,7 @@ if __name__ == '__main__':
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
 
-    gtestlist = [140, 141, 73, 123] # [75,84,85] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
+    gtestlist = [123, 140, 141, 73, 123] # [75,84,85] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
 
     for gtest in gtestlist:
 
@@ -4090,7 +4085,7 @@ if __name__ == '__main__':
             data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step=1)
         else:
             data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=10)
-        data_train(model_config, bSparse=False)
+        # data_train(model_config, bSparse=False)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=100)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
