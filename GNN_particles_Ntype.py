@@ -3969,7 +3969,7 @@ def load_model_config(id=48):
 
     if id == 140:
         model_config_test = {'ntry': id,
-                             'input_size': 4,
+                             'input_size': 8,
                              'output_size': 1,
                              'hidden_size': 128,
                              'n_mp_layers': 5,
@@ -4008,7 +4008,7 @@ def load_model_config(id=48):
                              'n_mp_layers': 5,
                              'noise_level': 0,
                              'radius': 0.05,
-                             'dataset': f'231001_{id}',
+                             'dataset': f'231001_140',
                              'nparticles': 900,
                              'nparticle_types': 1,
                              'ninteractions': 1,
@@ -4079,14 +4079,14 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
 
-    gtestlist = [142] #[123, 140, 141, 73, 123] # [75,84,85] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
+    gtestlist = [140,141,142] #[123, 140, 141, 73, 123] # [75,84,85] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
 
     for gtest in gtestlist:
 
@@ -4115,10 +4115,10 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        if gtest>=140:
-            data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step=1)
-        else:
-            data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=10)
+        # if gtest>=140:
+        #     data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step=1)
+        # else:
+        #     data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=10)
         data_train(model_config, bSparse=False)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=100)
