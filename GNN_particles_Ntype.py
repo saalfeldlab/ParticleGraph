@@ -23,11 +23,17 @@ from geomloss import SamplesLoss
 import torch_geometric.transforms as T
 import pandas
 import trackpy
-from numpy import vstack
-from sklearn.metrics import confusion_matrix, recall_score, f1_score
-from torch_geometric.utils import degree
+# from numpy import vstack
+# from sklearn.metrics import confusion_matrix, recall_score, f1_score
+# from torch_geometric.utils import degree
 import umap
 from tifffile import imwrite, imread
+import pygame
+from tools import *
+from random import uniform
+import colorsys
+from matrix import *
+from math import pi,sin,cos
 
 def distmat_square(X, Y):
     return torch.sum(bc_diff(X[:, None, :] - Y[None, :, :]) ** 2, axis=2)
@@ -211,6 +217,149 @@ class MLP(nn.Module):
             x = F.relu(x)
         x = self.layers[-1](x)
         return x
+class Boid:
+	def __init__(self, x, y):
+		self.position = Vector(x, y)
+		vec_x = uniform(-1, 1)
+		vec_y = uniform(-1, 1)
+		self.velocity = Vector(vec_x, vec_y)
+		self.velocity.normalize()
+		#set a random magnitude
+		self.velocity = self.velocity * uniform(1.5, 4)
+		self.acceleration = Vector()
+		self.color = (255, 255,255)
+		self.temp = self.color
+		self.secondaryColor = (70, 70, 70)
+		self.max_speed = 5
+		self.max_length = 1
+		self.size = 2
+		self.stroke = 5
+		self.angle = 0
+		self.hue = 0
+		self.toggles = {"separation":True, "alignment":True, "cohesion":True}
+		self.values = {"separation":0.1, "alignment":0.1, "cohesion":0.1}
+		self.radius = 40
+	def limits(self, width , height):
+		if self.position.x > width:
+			self.position.x = 0
+		elif self.position.x < 0:
+			self.position.x = width
+
+		if self.position.y > height:
+			self.position.y = 0
+		elif self.position.y < 0:
+			self.position.y = height
+
+	def behaviour(self, flock):
+		self.acceleration.reset()
+
+		if self.toggles["separation"] == True:
+			avoid = self.separation(flock)
+			avoid = avoid * self.values["separation"]
+			self.acceleration.add(avoid)
+
+		if self.toggles["cohesion"]== True:
+			coh = self.cohesion(flock)
+			coh = coh * self.values["cohesion"]
+			self.acceleration.add(coh)
+
+		if self.toggles["alignment"] == True:
+			align = self.alignment(flock)
+			align = align * self.values["alignment"]
+			self.acceleration.add(align)
+
+
+	def separation(self, flockMates):
+		total = 0
+		steering = Vector()
+
+		for mate in flockMates:
+			dist = getDistance(self.position, mate.position)
+			if mate is not self and dist < self.radius:
+				temp = SubVectors(self.position,mate.position)
+				temp = temp/(dist ** 2 + 1E-9)
+				steering.add(temp)
+				total += 1
+
+		if total > 0:
+			steering = steering / total
+			# steering = steering - self.position
+			steering.normalize()
+			steering = steering * self.max_speed
+			steering = steering - self.velocity
+			steering.limit(self.max_length)
+
+		return steering
+	def alignment(self, flockMates):
+		total = 0
+		steering = Vector()
+		# hue = uniform(0, 0.5)
+		for mate in flockMates:
+			dist = getDistance(self.position, mate.position)
+			if mate is not self and dist < self.radius:
+				vel = mate.velocity.Normalize()
+				steering.add(vel)
+				mate.color = hsv_to_rgb( self.hue ,1, 1)
+
+				total += 1
+
+
+		if total > 0:
+			steering = steering / total
+			steering.normalize()
+			steering = steering * self.max_speed
+			steering = steering - self.velocity.Normalize()
+			steering.limit(self.max_length)
+		return steering
+
+	def cohesion(self, flockMates):
+		total = 0
+		steering = Vector()
+
+		for mate in flockMates:
+			dist = getDistance(self.position, mate.position)
+			if mate is not self and dist < self.radius:
+				steering.add(mate.position)
+				total += 1
+
+		if total > 0:
+			steering = steering / total
+			steering = steering - self.position
+			steering.normalize()
+			steering = steering * self.max_speed
+			steering = steering - self.velocity
+			steering.limit(self.max_length)
+
+		return steering
+
+	def update(self):
+
+		self.position = self.position + self.velocity
+		self.velocity = self.velocity + self.acceleration
+		self.velocity.limit(self.max_speed)
+		self.angle = self.velocity.heading() + pi/2
+
+	def Draw(self, distance, scale):
+		ps = []
+		points = [None for _ in range(3)]
+
+		points[0] = [[0],[-self.size],[0]]
+		points[1] = [[self.size//2],[self.size//2],[0]]
+		points[2] = [[-self.size//2],[self.size//2],[0]]
+
+		for point in points:
+			rotated = matrix_multiplication(rotationZ(self.angle) , point)
+			z = 1/(distance - rotated[2][0])
+
+			projection_matrix = [[z, 0, 0], [0, z, 0]]
+			projected_2d = matrix_multiplication(projection_matrix, rotated)
+
+			x = int(projected_2d[0][0] * scale) + self.position.x
+			y = int(projected_2d[1][0] * scale) + self.position.y
+			ps.append((x, y))
+
+		ps.append(ps[0])
+		return ps
 
 class Particles_A(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
@@ -454,15 +603,13 @@ class InteractionParticles(pyg.nn.MessagePassing):
 
         embedding = self.a[self.data_id, x_i[:, 0].detach().cpu().numpy(), :]
 
-        if self.prediction == '2nd_derivative':
+        ############# TO BE CHANGED ##########################
+        if True: # self.prediction == '2nd_derivative':
             in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding), dim=-1)
         else:
             in_features = torch.cat((delta_pos, r, embedding), dim=-1)
 
-        try:
-            out = self.lin_edge(in_features)
-        except:
-            a=1
+        out = self.lin_edge(in_features)
 
         return out
 
@@ -716,11 +863,6 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
     print('')
     print('Generating data ...')
 
-    # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_data/*")
-    # for f in files:
-    #     os.remove(f)
-
-
     dataset_name = model_config['dataset']
     folder = f'./graphs_data/graphs_particles_{dataset_name}/'
     os.makedirs(folder, exist_ok=True)
@@ -843,6 +985,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
         for n in range(1, nparticle_types):
             T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
         T1 = T1[:, None]
+        ####### TO BE CHANGED #############################
         h = torch.zeros((nparticles, 1), device=device)
         H1 = torch.ones((nparticles, 1), device=device) + torch.randn((nparticles, 1), device=device) / 2
         N1 = torch.arange(nparticles, device=device)
@@ -859,7 +1002,6 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
             noise_prev = noise_current
             noise_current = 0 * torch.randn((nparticles, 2), device=device) * noise_level * radius
 
-            ### TO BE CHANGED ###
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                                    H1.clone().detach(), h.clone().detach()), 1)
             if (it >= 0) & (noise_level == 0):
@@ -892,11 +1034,9 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
                 y = y*0
             if (it >= 0) & (noise_level == 0):
                 y_list.append(y)
-                # torch.save(y, f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{it}.pt')
             if (it >= 0) & (noise_level > 0):
                 y_noise = y[:, 0:2] + noise_current - 2 * noise_prev + noise_prev_prev
                 y_list.append(y_noise)
-                # torch.save(y_noise, f'graphs_data/graphs_particles_{dataset_name}/y_{run}_{it}.pt')
 
             if model_config['prediction'] == '2nd_derivative':
                 V1 += y[:, 0:2]
@@ -1053,7 +1193,161 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
             torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
             torch.save(y_list, f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
             torch.save(h_list, f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt')
-def data_train(model_config, bTest=False):
+def data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step=1):
+
+    # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_data/*")
+    # for f in files:
+    #     os.remove(f)
+
+    print('')
+    print('Generating data ...')
+    print('use of https://github.com/Josephbakulikira/simple-Flocking-simulation-python-pygame')
+    
+    dataset_name = model_config['dataset']
+    folder = f'./graphs_data/graphs_particles_{dataset_name}/'
+    os.makedirs(folder, exist_ok=True)
+
+    if bSave:
+        files = glob.glob(f"{folder}/*")
+        for f in files:
+            os.remove(f)
+    
+    copyfile(os.path.realpath(__file__), os.path.join(folder, 'generation_code.py'))
+    
+    json_ = json.dumps(model_config)
+    f = open(f"{folder}/model_config.json", "w")
+    f.write(json_)
+    f.close()
+    
+    ntry = model_config['ntry']
+    radius = model_config['radius']
+    nparticle_types = model_config['nparticle_types']
+    nparticles = model_config['nparticles']
+    dataset_name = model_config['dataset']
+    nframes = model_config['nframes']
+    noise_level = model_config['noise_level']
+    v_init = model_config['v_init']
+    rr = torch.tensor(np.linspace(0, radius * 2, 1000))
+    rr = rr.to(device)
+    
+    index_particles = []
+    np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
+    for n in range(model_config['nparticle_types']):
+        index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
+    
+    fps = 60
+    scale = 40
+    Distance = 5
+    speed = 0.0005
+    size =1000
+
+    for run in range(model_config['nrun']):
+
+        x_list = []
+        y_list = []
+        h_list = []
+
+        if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
+            X1 = torch.rand(nparticles, 2, device=device)
+        else:
+            X1 = torch.randn(nparticles, 2, device=device) * 0.5
+        V1 = v_init * torch.randn((nparticles, 2), device=device)
+        T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
+        for n in range(1, nparticle_types):
+            T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
+        T1 = T1[:, None]
+        H1 = torch.ones((nparticles, 2), device=device) + torch.randn((nparticles, 1), device=device) / 2
+        N1 = torch.arange(nparticles, device=device)
+        N1 = N1[:, None]
+
+        time.sleep(0.5)
+
+        noise_current = 0 * torch.randn((nparticles, 2), device=device)
+        noise_prev_prev = 0 * torch.randn((nparticles, 2), device=device)
+
+        flock = []
+        for i in range(nparticles):
+            flock.append(Boid(np.random.randint(20, size - 20), np.random.randint(20, size - 20)))
+
+        for it in tqdm(range(nframes)):
+
+            fig = plt.figure(figsize=(11.8, 12))
+            # plt.ion()
+            ax = fig.add_subplot(2, 2, 1)
+            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach()), 1)
+            for n, boid  in enumerate(flock):
+                x[n,1]=torch.tensor(boid.position.x/1000, device=device)
+                x[n,2]=torch.tensor(boid.position.y/1000, device=device)
+                x[n,3]=torch.tensor(boid.velocity.x/1000, device=device)
+                x[n,4]=torch.tensor(boid.velocity.y/1000, device=device)
+
+            if (it >= 0) & (noise_level == 0):
+                x_list.append(x)
+                # torch.save(x, f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{it}.pt')
+            if (it >= 0) & (noise_level > 0):
+                x_noise = x
+                x_noise[:, 1:3] = x[:, 1:3] + noise_current
+                x_noise[:, 3:5] = x[:, 3:5] + noise_current - noise_prev
+                x_list.append(x_noise)
+                # torch.save(x_noise, f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{it}.pt')
+
+            for boid in flock:
+                boid.toggles = {"separation": True, "alignment": True, "cohesion": True}
+                boid.values = {"separation": 50 / 100, "alignment": 40 / 100, "cohesion": 40 / 100}
+                boid.radius = scale
+                boid.limits(size, size)
+                boid.behaviour(flock)
+                boid.update()
+                boid.hue += speed
+                if bVisu:
+                    ps = boid.Draw(Distance, scale)
+                    ps = np.array(ps)
+                    plt.plot(ps[:, 0], ps[:, 1], c='k', alpha=0.5)
+            plt.xlim([0, size])
+            plt.ylim([0, size])
+
+            y = torch.zeros((nparticles,2),device=device)
+            for n, boid  in enumerate(flock):
+                y[n,0]=torch.tensor(boid.acceleration.x/1000, device=device)
+                y[n,1]=torch.tensor(boid.acceleration.y/1000, device=device)
+            if (it >= 0) & (noise_level == 0):
+                y_list.append(y)
+            if (it >= 0) & (noise_level > 0):
+                y_noise = y[:, 0:2] + noise_current - 2 * noise_prev + noise_prev_prev
+                y_list.append(y_noise)
+
+            if bVisu:
+                if bDetails:
+                    ax = fig.add_subplot(2, 2, 2)
+                    plt.scatter(x[:, 1].detach().cpu().numpy(), x[:, 2].detach().cpu().numpy(), s=1, color='k',
+                                alpha=0.75)
+                    pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
+                    distance2 = torch.sum((x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+                    adj_t2 = ((distance2 < radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
+                    edge_index2 = adj_t2.nonzero().t().contiguous()
+                    dataset2 = data.Data(x=x, edge_index=edge_index2)
+                    vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
+                    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False, alpha=0.3)
+                    plt.xlim([0, 1])
+                    plt.ylim([0, 1])
+
+                    ax = fig.add_subplot(2, 2, 3)
+
+                    for n in range(nparticle_types):
+                        plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
+                                    x[index_particles[n], 2].detach().cpu().numpy(), s=50, alpha=0.75,
+                                    color=cmap.color(n))
+                    plt.xlim([0.3, 0.7])
+                    plt.ylim([0.3, 0.7])
+                    for k in range(nparticles):
+                            plt.arrow(x=x[k, 1].detach().cpu().item(),y=x[k, 2].detach().cpu().item(),
+                                      dx=x[k, 3].detach().cpu().item()*model_config['arrow_length'], dy=x[k, 4].detach().cpu().item()*model_config['arrow_length'],color='k')
+
+
+                plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
+                plt.close()
+
+def data_train(model_config, bSparse=False):
     print('')
 
     # for loop in range(25):
@@ -1468,37 +1762,37 @@ def data_train(model_config, bTest=False):
                               n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
             proj_interaction = trans.transform(coeff_norm)
 
-        # Constrain embedding with UMAP of plots clustering
-        ax = fig.add_subplot(2, 4, 4)
 
+        ax = fig.add_subplot(2, 4, 4)
         for n in range(nparticle_types):
             plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1],
                         color=cmap.color(n), s=5, alpha=0.75)
         plt.xlabel('UMAP 0', fontsize=12)
         plt.ylabel('UMAP 1', fontsize=12)
 
-        if (epoch==14) | (epoch==19):
-            kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=5000, max_iter=10000,random_state=13)
-            kmeans.fit(proj_interaction)
-            for n in range(nparticle_types):
-                tmp = kmeans.labels_[index_particles[n]]
-                sub_group = np.round(np.median(tmp))
-                accuracy = len(np.argwhere(tmp == sub_group)) / len(tmp) * 100
-                print(f'Sub-group {n} accuracy: {np.round(accuracy, 3)}')
-            for n in range(model_config['ninteractions']):
-                plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
-            model_a_=model.a.clone().detach()
-            model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
-            for k in range(model_config['ninteractions']):
-                pos = np.argwhere(kmeans.labels_ == k).squeeze().astype(int)
-                temp = model_a_[pos, :].clone().detach()
-                print(torch.median(temp, axis=0).values)
-                model_a_[pos, :] = torch.median(temp, axis=0).values
-            model_a_ = torch.reshape(model_a_, (model.a.shape[0],model.a.shape[1], model.a.shape[2]))
-            with torch.no_grad():
-                for n in range(model.a.shape[0]):
-                    model.a[n]=model_a_[n]
-        if bTest:
+        # Constrain embedding with UMAP of plots clustering
+        if bSparse:
+            if (epoch==14) | (epoch==19):
+                kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=5000, max_iter=10000,random_state=13)
+                kmeans.fit(proj_interaction)
+                for n in range(nparticle_types):
+                    tmp = kmeans.labels_[index_particles[n]]
+                    sub_group = np.round(np.median(tmp))
+                    accuracy = len(np.argwhere(tmp == sub_group)) / len(tmp) * 100
+                    print(f'Sub-group {n} accuracy: {np.round(accuracy, 3)}')
+                for n in range(model_config['ninteractions']):
+                    plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
+                model_a_=model.a.clone().detach()
+                model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
+                for k in range(model_config['ninteractions']):
+                    pos = np.argwhere(kmeans.labels_ == k).squeeze().astype(int)
+                    temp = model_a_[pos, :].clone().detach()
+                    print(torch.median(temp, axis=0).values)
+                    model_a_[pos, :] = torch.median(temp, axis=0).values
+                model_a_ = torch.reshape(model_a_, (model.a.shape[0],model.a.shape[1], model.a.shape[2]))
+                with torch.no_grad():
+                    for n in range(model.a.shape[0]):
+                        model.a[n]=model_a_[n]
             if (epoch % 10 == 0) & (epoch > 0):
                 best_loss = total_loss / N / nparticles / batch_size
                 torch.save({'model_state_dict': model.state_dict(),
@@ -2904,7 +3198,8 @@ def load_model_config(id=48):
                              'start_frame': 1,
                              'arrow_length':10,
                              'cmap':'tab20c',
-                             'arrow_length':10}
+                             'arrow_length':10,
+                             'description':'Particles_G is a second derivative simulation, acceleration is function of gravity law mj/r2 interaction is type dependent'}
     # 4 types N=960 dim 128 no boundary
     if id == 44:
         model_config_test = {'ntry': id,
@@ -3105,6 +3400,36 @@ def load_model_config(id=48):
                              'arrow_length':10}
 
     # particles
+    if id == 73:
+        model_config_test = {'ntry': id,
+                             'input_size': 8,
+                             'output_size': 2,
+                             'hidden_size': 64,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.075,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 4800,
+                             'nparticle_types': 3,
+                             'ninteractions': 3,
+                             'nframes': 200,
+                             'sigma': .005,
+                             'tau': 0.1,
+                             'v_init': 0,
+                             'aggr_type': 'mean',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 1,
+                             'model': 'Particles_A',
+                             'prediction': 'first_derivative',
+                             'upgrade_type': 0,
+                             'p': [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855],
+                                   [1.785, 1.8579, 1.7226, 1.0584]],
+                             'nrun': 2,
+                             'start_frame': 0.1,
+                             'arrow_length':20,
+                             'cmap':'tab10'}
     if id == 74:
         model_config_test = {'ntry': id,
                              'input_size': 4,
@@ -3634,12 +3959,42 @@ def load_model_config(id=48):
                              'description':'Wave equation fixed particles 4 beta coefficients'
                              }
 
+    if id == 140:
+        model_config_test = {'ntry': id,
+                             'input_size': 4,
+                             'output_size': 1,
+                             'hidden_size': 64,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.05,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 900,
+                             'nparticle_types': 1,
+                             'ninteractions': 1,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-10,
+                             'v_init': 0,
+                             'aggr_type': 'add',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'Particles_A',
+                             'prediction': 'first_derivative',
+                             'upgrade_type': 0,
+                             'p': np.linspace(1, 1, 4).tolist(),
+                             'nrun': 10,
+                             'clamp': 1E-3,
+                             'pred_limit': 1E9,
+                             'start_frame': 0.,
+                             'cmap':'tab10',
+                             'arrow_length':5,
+                             'description':'Boids'
+                             }
+
     for key, value in model_config_test.items():
         print(key, ":", value)
-
-    if model_config_test['model'] == 'Particles_G':
-        print(
-            'Particles_G is a second derivative simulation, acceleration is function of gravity law mj/r2 interaction is type dependent')
 
     return model_config_test
 
@@ -3657,7 +4012,7 @@ if __name__ == '__main__':
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
 
-    gtestlist = [122] # [75,84,85] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
+    gtestlist = [140, 73, 123] # [75,84,85] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
 
     for gtest in gtestlist:
 
@@ -3686,8 +4041,11 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        data_generate(model_config, bVisu=False, bDetails=True, bSave=True, step=10)
-        data_train(model_config, gtest)
+        if gtest==140:
+            data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step=1)
+        else:
+            data_generate(model_config, bVisu=False, bDetails=True, bSave=True, step=10)
+        data_train(model_config, bSparse=False)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=100)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
