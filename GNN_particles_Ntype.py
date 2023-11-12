@@ -1289,9 +1289,10 @@ def data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step
                 x_list.append(x_noise)
                 # torch.save(x_noise, f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{it}.pt')
 
-            for boid in flock:
+            for n,boid in enumerate (flock):
                 boid.toggles = {"separation": True, "alignment": True, "cohesion": True}
-                boid.values = {"separation": 50 / 100, "alignment": 40 / 100, "cohesion": 40 / 100}
+                p = model_config['p'][int(T1[n].detach().cpu().numpy())]
+                boid.values = {"separation": p[0] / 100, "alignment": p[1] / 100 , "cohesion": p[2] / 100}
                 boid.radius = scale
                 boid.limits(size, size)
                 boid.behaviour(flock)
@@ -1300,7 +1301,7 @@ def data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step
                 if bVisu:
                     ps = boid.Draw(Distance, scale)
                     ps = np.array(ps)
-                    plt.plot(ps[:, 0], ps[:, 1], c='k', alpha=0.5)
+                    plt.plot(ps[:, 0], ps[:, 1], c=cmap.color(T1[n].detach().cpu().numpy()), alpha=0.5)
             plt.xlim([0, size])
             plt.ylim([0, size])
 
@@ -3990,7 +3991,7 @@ def load_model_config(id=48):
                              'model': 'Particles_A',
                              'prediction': 'first_derivative',
                              'upgrade_type': 0,
-                             'p': np.linspace(1, 1, 4).tolist(),
+                             'p': [50,40,40],
                              'nrun': 10,
                              'clamp': 1E-3,
                              'pred_limit': 1E9,
@@ -4023,7 +4024,40 @@ def load_model_config(id=48):
                              'model': 'Particles_A',
                              'prediction': 'first_derivative',
                              'upgrade_type': 0,
-                             'p': np.linspace(1, 1, 4).tolist(),
+                             'p': [50,40,40],
+                             'nrun': 10,
+                             'clamp': 1E-3,
+                             'pred_limit': 1E9,
+                             'start_frame': 0.,
+                             'cmap':'tab10',
+                             'arrow_length':5,
+                             'description':'Boids'
+                             }
+    if id == 142:
+        model_config_test = {'ntry': id,
+                             'input_size': 4,
+                             'output_size': 1,
+                             'hidden_size': 128,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.05,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 900,
+                             'nparticle_types': 4,
+                             'ninteractions': 4,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-10,
+                             'v_init': 0,
+                             'aggr_type': 'mean',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'Particles_A',
+                             'prediction': 'first_derivative',
+                             'upgrade_type': 0,
+                             'p': [[50,10,40],[50,30,40],[50,50,40],[50,80,40]],
                              'nrun': 10,
                              'clamp': 1E-3,
                              'pred_limit': 1E9,
@@ -4045,14 +4079,14 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
 
-    gtestlist = [123, 140, 141, 73, 123] # [75,84,85] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
+    gtestlist = [142] #[123, 140, 141, 73, 123] # [75,84,85] #[121, 84, 85, 46, 47, 48] # [121, 84, 85, 46] #[85, 75 ,84] #,75,,84] #[46, 47, 48, 121, 75, 84]
 
     for gtest in gtestlist:
 
@@ -4085,7 +4119,7 @@ if __name__ == '__main__':
             data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step=1)
         else:
             data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=10)
-        # data_train(model_config, bSparse=False)
+        data_train(model_config, bSparse=False)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=100)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
