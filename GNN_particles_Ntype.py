@@ -96,8 +96,8 @@ class cc:
                 index = (1, 0, 0)
             return (index)
         else:
-            color_map = plt.cm.get_cmap(self.model_config['cmap'])
-            #color_map = plt.colormaps.get_cmap(self.model_config['cmap'])
+            #color_map = plt.cm.get_cmap(self.model_config['cmap'])
+            color_map = plt.colormaps.get_cmap(self.model_config['cmap'])
             index = color_map(index/self.nmap)
 
         return index
