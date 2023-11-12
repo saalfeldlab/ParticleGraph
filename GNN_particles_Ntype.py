@@ -3969,7 +3969,7 @@ def load_model_config(id=48):
 
     if id == 140:
         model_config_test = {'ntry': id,
-                             'input_size': 8,
+                             'input_size': 9,
                              'output_size': 1,
                              'hidden_size': 128,
                              'n_mp_layers': 5,
@@ -4002,7 +4002,7 @@ def load_model_config(id=48):
                              }
     if id == 141:
         model_config_test = {'ntry': id,
-                             'input_size': 4,
+                             'input_size': 9,
                              'output_size': 1,
                              'hidden_size': 128,
                              'n_mp_layers': 5,
@@ -4035,7 +4035,7 @@ def load_model_config(id=48):
                              }
     if id == 142:
         model_config_test = {'ntry': id,
-                             'input_size': 4,
+                             'input_size': 9,
                              'output_size': 1,
                              'hidden_size': 128,
                              'n_mp_layers': 5,
