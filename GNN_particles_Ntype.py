@@ -4074,6 +4074,73 @@ def load_model_config(id=48):
                              'arrow_length':5,
                              'description':'Boids'
                              }
+    if id == 143:
+        model_config_test = {'ntry': id,
+                             'input_size': 9,
+                             'output_size': 1,
+                             'hidden_size': 128,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.05,
+                             'dataset': f'231001_42',
+                             'nparticles': 900,
+                             'nparticle_types': 4,
+                             'ninteractions': 4,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-10,
+                             'v_init': 0,
+                             'aggr_type': 'add',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'Particles_A',
+                             'prediction': 'first_derivative_L',
+                             'upgrade_type': 0,
+                             'p': [[50,10,40],[50,30,40],[50,50,40],[50,80,40]],
+                             'nrun': 10,
+                             'clamp': 1E-3,
+                             'pred_limit': 1E9,
+                             'start_frame': 0.,
+                             'cmap':'tab10',
+                             'arrow_length':5,
+                             'description':'Boids'
+                             }
+    if id == 144:
+        model_config_test = {'ntry': id,
+                             'input_size': 9,
+                             'output_size': 1,
+                             'hidden_size': 128,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.05,
+                             'dataset': f'231001_42',
+                             'nparticles': 900,
+                             'nparticle_types': 4,
+                             'ninteractions': 4,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-10,
+                             'v_init': 0,
+                             'aggr_type': 'add',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'Particles_A',
+                             'prediction': '2nd_derivative',
+                             'upgrade_type': 0,
+                             'p': [[50,10,40],[50,30,40],[50,50,40],[50,80,40]],
+                             'nrun': 10,
+                             'clamp': 1E-3,
+                             'pred_limit': 1E9,
+                             'start_frame': 0.,
+                             'cmap':'tab10',
+                             'arrow_length':5,
+                             'description':'Boids'
+                             }
+
 
     for key, value in model_config_test.items():
         print(key, ":", value)
@@ -4087,14 +4154,14 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
 
-    gtestlist = [77,44,87] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [144,142,143] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
@@ -4123,11 +4190,11 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        if gtest>=140:
-            data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step=1)
-        else:
-            data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=10)
-        # data_train(model_config, bSparse=False)
+        # if gtest>=140:
+        #     data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step=1)
+        # else:
+        #     data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=10)
+        data_train(model_config, bSparse=False)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=100)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
