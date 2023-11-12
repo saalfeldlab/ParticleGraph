@@ -3986,7 +3986,7 @@ def load_model_config(id=48):
                              'dataset': f'231001_140',
                              'nparticles': 900,
                              'nparticle_types': 1,
-                             'ninteractions': 1,
+                             'ninteractions': 2,
                              'nframes': 1000,
                              'sigma': .005,
                              'tau': 1E-10,
@@ -4019,7 +4019,7 @@ def load_model_config(id=48):
                              'dataset': f'231001_140',
                              'nparticles': 900,
                              'nparticle_types': 1,
-                             'ninteractions': 1,
+                             'ninteractions': 2,
                              'nframes': 1000,
                              'sigma': .005,
                              'tau': 1E-10,
@@ -4052,7 +4052,7 @@ def load_model_config(id=48):
                              'dataset': f'231001_{id}',
                              'nparticles': 900,
                              'nparticle_types': 1,
-                             'ninteractions': 1,
+                             'ninteractions': 2,
                              'nframes': 1000,
                              'sigma': .005,
                              'tau': 1E-10,
@@ -4085,7 +4085,7 @@ def load_model_config(id=48):
                              'dataset': f'231001_140',
                              'nparticles': 900,
                              'nparticle_types': 1,
-                             'ninteractions': 1,
+                             'ninteractions': 2,
                              'nframes': 1000,
                              'sigma': .005,
                              'tau': 1E-10,
@@ -4228,7 +4228,7 @@ if __name__ == '__main__':
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
 
-    gtestlist = [138,139] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [138,139,141] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
