@@ -583,9 +583,9 @@ class InteractionParticles(pyg.nn.MessagePassing):
 
         delta_pos = bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) / self.radius
         x_i_vx = x_i[:, 3:4] / self.vnorm[4]
-        x_i_vy = x_i[:, 4:5] / self.vnorm[5]
+        x_i_vy = x_i[:, 4:5] / self.vnorm[4]
         x_j_vx = x_j[:, 3:4] / self.vnorm[4]
-        x_j_vy = x_j[:, 4:5] / self.vnorm[5]
+        x_j_vy = x_j[:, 4:5] / self.vnorm[4]
 
         if (self.data_augmentation) & (self.step == 1):
             new_x = self.cos_phi * delta_pos[:, 0] + self.sin_phi * delta_pos[:, 1]
@@ -1268,12 +1268,22 @@ def data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step
         flock = []
         for i in range(nparticles):
             flock.append(Boid(np.random.randint(20, size - 20), np.random.randint(20, size - 20)))
+        for n, boid in enumerate(flock):
+            if nparticle_types == 1:
+                p = model_config['p']
+            else:
+                p = model_config['p'][int(T1[n].detach().cpu().numpy())]
+            boid.toggles = {"separation": True, "alignment": True, "cohesion": True}
+            boid.values = {"separation": p[0] / 100, "alignment": p[1] / 100, "cohesion": p[2] / 100}
 
         for it in tqdm(range(nframes)):
 
-            fig = plt.figure(figsize=(11.8, 12))
-            # plt.ion()
-            ax = fig.add_subplot(2, 2, 1)
+            if bVisu & (it % step == 0):
+                fig = plt.figure(figsize=(11.8, 12))
+                # plt.ion()
+                ax = fig.add_subplot(2, 2, 1)
+                plt.xlim([0, size])
+                plt.ylim([0, size])
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach()), 1)
             for n, boid  in enumerate(flock):
                 x[n,1]=torch.tensor(boid.position.x/1000, device=device)
@@ -1292,23 +1302,14 @@ def data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step
                 # torch.save(x_noise, f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{it}.pt')
 
             for n,boid in enumerate (flock):
-                boid.toggles = {"separation": True, "alignment": True, "cohesion": True}
-                if nparticle_types==1:
-                    p = model_config['p']
-                else:
-                    p = model_config['p'][int(T1[n].detach().cpu().numpy())]
-                boid.values = {"separation": p[0] / 100, "alignment": p[1] / 100 , "cohesion": p[2] / 100}
                 boid.radius = scale
                 boid.limits(size, size)
                 boid.behaviour(flock)
                 boid.update()
-                boid.hue += speed
-                if bVisu:
+                if bVisu & (it % step == 0):
                     ps = boid.Draw(Distance, scale)
                     ps = np.array(ps)
                     plt.plot(ps[:, 0], ps[:, 1], c=cmap.color(T1[n].detach().cpu().numpy()), alpha=0.5)
-            plt.xlim([0, size])
-            plt.ylim([0, size])
 
             y = torch.zeros((nparticles,2),device=device)
             for n, boid  in enumerate(flock):
@@ -1320,7 +1321,7 @@ def data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step
                 y_noise = y[:, 0:2] + noise_current - 2 * noise_prev + noise_prev_prev
                 y_list.append(y_noise)
 
-            if bVisu:
+            if bVisu & (it%step==0):
                 if bDetails:
                     ax = fig.add_subplot(2, 2, 2)
                     plt.scatter(x[:, 1].detach().cpu().numpy(), x[:, 2].detach().cpu().numpy(), s=1, color='k',
@@ -1346,11 +1347,8 @@ def data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step
                     for k in range(nparticles):
                             plt.arrow(x=x[k, 1].detach().cpu().item(),y=x[k, 2].detach().cpu().item(),
                                       dx=x[k, 3].detach().cpu().item()*model_config['arrow_length'], dy=x[k, 4].detach().cpu().item()*model_config['arrow_length'],color='k')
-
-
                 plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
-
-            plt.close()
+                plt.close()
 
         if bSave:
             torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
@@ -1839,7 +1837,7 @@ def data_train(model_config, bSparse=False):
         plt.tight_layout()
         plt.savefig(f"./tmp_training/Fig_{ntry}_{epoch}.tif")
         plt.close()
-def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0,prev_index_particles=0,best_model=0,step=5):
+def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0,prev_index_particles=0,best_model=0,step=5, bTest=''):
     # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_recons/*")
     # for f in files:
     #     os.remove(f)
@@ -1932,7 +1930,6 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
 
     ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt', map_location=device).to(device)
     vnorm = torch.load(f'./log/try_{ntry}/vnorm.pt', map_location=device).to(device)
-    v = vnorm
     if (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
         hnorm = torch.load(f'./log/try_{ntry}/hnorm.pt', map_location=device).to(device)
 
@@ -1958,7 +1955,6 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
 
     x = x_list[0][0].clone().detach()
     x00 = x_list[0][0].clone().detach()
-    y = y_list[0][0].clone().detach()
 
     if bPrint:
         print('')
@@ -1972,8 +1968,12 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
 
     for it in tqdm(range(nframes - 1)):
 
-        x0 = x_list[0][min(it, nframes - 2)].clone().detach()
-        x0_next = x_list[0][min(it+1, nframes - 2)].clone().detach()
+        x0 = x_list[0][it].clone().detach()
+        x0_next = x_list[0][it+1].clone().detach()
+        y0 = y_list[0][it].clone().detach()
+
+        if (it%10==0) & (bTest=='prediction'):
+            x[:, 1:5] = x0[:, 1:5].clone().detach()
 
         if model_config['model'] == 'DiffMesh':
             x[:,1:5]=x0[:,1:5].clone().detach()
@@ -2008,19 +2008,28 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
 
             dataset = data.Data(x=x, edge_index=edge_index)
 
-            with torch.no_grad():
-                y = model(dataset, data_id=0, step=2, vnorm=v, cos_phi=0, sin_phi=0)  # acceleration estimation
+        if bTest == 'integration':
             if model_config['prediction'] == '2nd_derivative':
-                y = y * ynorm[4]
-                x[:, 3:5] = x[:, 3:5] + y  # speed update
+                y = y0 / ynorm[4]
             else:
-                y = y * vnorm[4]
-                x[:, 3:5] = y
+                y = y0 / vnorm[4]
 
-            x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5])  # position update
+        else:
+            with torch.no_grad():
+                y = model(dataset, data_id=0, step=2, vnorm=vnorm, cos_phi=0, sin_phi=0)  # acceleration estimation
 
-            rmserr = torch.sqrt(torch.mean(torch.sum(bc_diff(x[:, 1:3] - x0[:, 1:3]) ** 2, axis=1)))
-            rmserr_list.append(rmserr.item())
+
+        if model_config['prediction'] == '2nd_derivative':
+            y = y * ynorm[4]
+            x[:, 3:5] = x[:, 3:5] + y  # speed update
+        else:
+            y = y * vnorm[4]
+            x[:, 3:5] = y
+
+        x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5])  # position update
+
+        rmserr = torch.sqrt(torch.mean(torch.sum(bc_diff(x[:, 1:3] - x0[:, 1:3]) ** 2, axis=1)))
+        rmserr_list.append(rmserr.item())
 
         discrepency = MMD(x[:, 1:3], x0[:, 1:3])
         discrepency_list.append(discrepency)
@@ -2038,28 +2047,28 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                 edge_index2 = adj_t2.nonzero().t().contiguous()
                 dataset2 = data.Data(x=x, edge_index=edge_index2)
 
-            fig = plt.figure(figsize=(25, 12))
+            fig = plt.figure(figsize=(30, 10))
             # plt.ion()
 
             for k in range(5):
                 if k==0:
-                    ax = fig.add_subplot(2, 4, 1)
+                    ax = fig.add_subplot(2, 5, 1)
                     x_ = x00
                     sc = 1
                 elif k == 1:
-                    ax = fig.add_subplot(2, 4, 2)
+                    ax = fig.add_subplot(2, 5, 2)
                     x_ = x0
                     sc = 1
                 elif k == 2:
-                    ax = fig.add_subplot(2, 4, 6)
+                    ax = fig.add_subplot(2, 5, 7)
                     x_ = x
                     sc = 1
                 elif k == 3:
-                    ax = fig.add_subplot(2, 4, 3)
+                    ax = fig.add_subplot(2, 5, 3)
                     x_ = x0
                     sc = 5
                 elif k == 4:
-                    ax = fig.add_subplot(2, 4, 7)
+                    ax = fig.add_subplot(2, 5, 8)
                     x_ = x
                     sc = 5
 
@@ -2113,7 +2122,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                         plt.xlim([-0.25, 0.25])
                         plt.ylim([-0.25, 0.25])
 
-            ax = fig.add_subplot(2, 4, 4)
+            ax = fig.add_subplot(2, 5, 4)
             plt.plot(np.arange(len(rmserr_list)), rmserr_list, label='RMSE', c='k')
             plt.ylim([0, 0.1])
             plt.xlim([0, nframes])
@@ -2127,7 +2136,23 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                 ax2.set_ylabel('MMD [a.u]', fontsize="14", color='b')
                 ax2.set_ylim([0, 2E-3])
 
-            ax = fig.add_subplot(2, 4, 5)
+            ax = fig.add_subplot(2, 5, 5)
+            plt.scatter(y0[:,0].detach().cpu().numpy(),y[:,0].detach().cpu().numpy(),s=1,color='b')
+            plt.scatter(y0[:,1].detach().cpu().numpy(),y[:,1].detach().cpu().numpy(), s=1, color='r')
+            plt.xlabel('Y true [a.u]', fontsize="14")
+            plt.ylabel('Y pred [a.u]', fontsize="14")
+            plt.ylim([-ynorm[4].detach().cpu().numpy(), ynorm[4].detach().cpu().numpy()])
+            plt.xlim([-ynorm[4].detach().cpu().numpy(), ynorm[4].detach().cpu().numpy()])
+            ynorm
+
+            ax = fig.add_subplot(2, 5, 10)
+            plt.hist(y0[:,0].detach().cpu().numpy(),200,alpha=0.75,color='b')
+            plt.hist(y[:,0].detach().cpu().numpy(),200,alpha=0.75,color='r')
+            plt.xlim([-ynorm[4].detach().cpu().numpy(), ynorm[4].detach().cpu().numpy()])
+            plt.ylim([0,nparticles//nparticle_types])
+
+
+            ax = fig.add_subplot(2, 5, 6)
             pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
             vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
             nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False, alpha=0.03)
@@ -2138,7 +2163,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                 plt.xlim([0,1])
                 plt.ylim([0,1])
 
-            ax = fig.add_subplot(2, 4, 8)
+            ax = fig.add_subplot(2, 5, 9)
             if(model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
                 # plt.scatter(x0[:, 1].detach().cpu(), x0[:, 2].detach().cpu(), s=10, alpha=0.75,
                 #             c=np.abs(x0_next[:, 6].detach().cpu().numpy()-x[:, 6].detach().cpu().numpy()), cmap='inferno', vmin=0, vmax=0.1)
@@ -2149,7 +2174,6 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                                 alpha=0.5)
                 plt.ylim([-0.5, 2.5])
                 plt.ylabel('Temperature [a.u]', fontsize="14")
-
 
             else:
                 temp1 = torch.cat((x, x0), 0)
@@ -4007,139 +4031,6 @@ def load_model_config(id=48):
                              'description':'Wave equation fixed particles 4 beta coefficients'
                              }
 
-    if id == 138:
-        model_config_test = {'ntry': id,
-                             'input_size': 9,
-                             'output_size': 1,
-                             'hidden_size': 128,
-                             'n_mp_layers': 5,
-                             'noise_level': 0,
-                             'radius': 0.05,
-                             'dataset': f'231001_140',
-                             'nparticles': 900,
-                             'nparticle_types': 1,
-                             'ninteractions': 2,
-                             'nframes': 1000,
-                             'sigma': .005,
-                             'tau': 1E-10,
-                             'v_init': 0,
-                             'aggr_type': 'add',
-                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-                             'data_augmentation': True,
-                             'batch_size': 8,
-                             'embedding': 2,
-                             'model': 'Particles_A',
-                             'prediction': '2nd_derivative',
-                             'upgrade_type': 0,
-                             'p': [50,40,40],
-                             'nrun': 10,
-                             'clamp': 1E-3,
-                             'pred_limit': 1E9,
-                             'start_frame': 0.,
-                             'cmap':'tab10',
-                             'arrow_length':5,
-                             'description':'Boids'
-                             }
-    if id == 139:
-        model_config_test = {'ntry': id,
-                             'input_size': 9,
-                             'output_size': 1,
-                             'hidden_size': 128,
-                             'n_mp_layers': 5,
-                             'noise_level': 0,
-                             'radius': 0.05,
-                             'dataset': f'231001_140',
-                             'nparticles': 900,
-                             'nparticle_types': 1,
-                             'ninteractions': 2,
-                             'nframes': 1000,
-                             'sigma': .005,
-                             'tau': 1E-10,
-                             'v_init': 0,
-                             'aggr_type': 'mean',
-                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-                             'data_augmentation': True,
-                             'batch_size': 8,
-                             'embedding': 2,
-                             'model': 'Particles_A',
-                             'prediction': '2nd_derivative',
-                             'upgrade_type': 0,
-                             'p': [50,40,40],
-                             'nrun': 10,
-                             'clamp': 1E-3,
-                             'pred_limit': 1E9,
-                             'start_frame': 0.,
-                             'cmap':'tab10',
-                             'arrow_length':5,
-                             'description':'Boids'
-                             }
-    if id == 140:
-        model_config_test = {'ntry': id,
-                             'input_size': 9,
-                             'output_size': 1,
-                             'hidden_size': 128,
-                             'n_mp_layers': 5,
-                             'noise_level': 0,
-                             'radius': 0.05,
-                             'dataset': f'231001_{id}',
-                             'nparticles': 900,
-                             'nparticle_types': 1,
-                             'ninteractions': 2,
-                             'nframes': 1000,
-                             'sigma': .005,
-                             'tau': 1E-10,
-                             'v_init': 0,
-                             'aggr_type': 'mean',
-                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-                             'data_augmentation': True,
-                             'batch_size': 8,
-                             'embedding': 2,
-                             'model': 'Particles_A',
-                             'prediction': 'first_derivative_L',
-                             'upgrade_type': 0,
-                             'p': [50,40,40],
-                             'nrun': 10,
-                             'clamp': 1E-3,
-                             'pred_limit': 1E9,
-                             'start_frame': 0.,
-                             'cmap':'tab10',
-                             'arrow_length':5,
-                             'description':'Boids'
-                             }
-    if id == 141:
-        model_config_test = {'ntry': id,
-                             'input_size': 9,
-                             'output_size': 1,
-                             'hidden_size': 128,
-                             'n_mp_layers': 5,
-                             'noise_level': 0,
-                             'radius': 0.05,
-                             'dataset': f'231001_140',
-                             'nparticles': 900,
-                             'nparticle_types': 1,
-                             'ninteractions': 2,
-                             'nframes': 1000,
-                             'sigma': .005,
-                             'tau': 1E-10,
-                             'v_init': 0,
-                             'aggr_type': 'add',
-                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-                             'data_augmentation': True,
-                             'batch_size': 8,
-                             'embedding': 2,
-                             'model': 'Particles_A',
-                             'prediction': 'first_derivative_L',
-                             'upgrade_type': 0,
-                             'p': [50,40,40],
-                             'nrun': 10,
-                             'clamp': 1E-3,
-                             'pred_limit': 1E9,
-                             'start_frame': 0.,
-                             'cmap':'tab10',
-                             'arrow_length':5,
-                             'description':'Boids'
-                             }
-
     if id == 142:
         model_config_test = {'ntry': id,
                              'input_size': 9,
@@ -4162,76 +4053,10 @@ def load_model_config(id=48):
                              'batch_size': 8,
                              'embedding': 2,
                              'model': 'Particles_A',
-                             'prediction': 'first_derivative_L',
-                             'upgrade_type': 0,
-                             'p': [[50,10,40],[50,30,40],[50,50,40],[50,80,40]],
-                             'nrun': 10,
-                             'clamp': 1E-3,
-                             'pred_limit': 1E9,
-                             'start_frame': 0.,
-                             'cmap':'tab10',
-                             'arrow_length':5,
-                             'description':'Boids'
-                             }
-    if id == 143:
-        model_config_test = {'ntry': id,
-                             'input_size': 9,
-                             'output_size': 1,
-                             'hidden_size': 128,
-                             'n_mp_layers': 5,
-                             'noise_level': 0,
-                             'radius': 0.05,
-                             'dataset': f'231001_142',
-                             'nparticles': 900,
-                             'nparticle_types': 4,
-                             'ninteractions': 4,
-                             'nframes': 1000,
-                             'sigma': .005,
-                             'tau': 1E-10,
-                             'v_init': 0,
-                             'aggr_type': 'add',
-                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-                             'data_augmentation': True,
-                             'batch_size': 8,
-                             'embedding': 2,
-                             'model': 'Particles_A',
-                             'prediction': 'first_derivative_L',
-                             'upgrade_type': 0,
-                             'p': [[50,10,40],[50,30,40],[50,50,40],[50,80,40]],
-                             'nrun': 10,
-                             'clamp': 1E-3,
-                             'pred_limit': 1E9,
-                             'start_frame': 0.,
-                             'cmap':'tab10',
-                             'arrow_length':5,
-                             'description':'Boids'
-                             }
-    if id == 144:
-        model_config_test = {'ntry': id,
-                             'input_size': 9,
-                             'output_size': 1,
-                             'hidden_size': 128,
-                             'n_mp_layers': 5,
-                             'noise_level': 0,
-                             'radius': 0.05,
-                             'dataset': f'231001_142',
-                             'nparticles': 900,
-                             'nparticle_types': 4,
-                             'ninteractions': 4,
-                             'nframes': 1000,
-                             'sigma': .005,
-                             'tau': 1E-10,
-                             'v_init': 0,
-                             'aggr_type': 'add',
-                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-                             'data_augmentation': True,
-                             'batch_size': 8,
-                             'embedding': 2,
-                             'model': 'Particles_A',
                              'prediction': '2nd_derivative',
                              'upgrade_type': 0,
                              'p': [[50,10,40],[50,30,40],[50,50,40],[50,80,40]],
-                             'nrun': 10,
+                             'nrun': 2,
                              'clamp': 1E-3,
                              'pred_limit': 1E9,
                              'start_frame': 0.,
@@ -4239,7 +4064,6 @@ def load_model_config(id=48):
                              'arrow_length':5,
                              'description':'Boids'
                              }
-
 
     for key, value in model_config_test.items():
         print(key, ":", value)
@@ -4249,7 +4073,7 @@ def load_model_config(id=48):
 if __name__ == '__main__':
 
     print('')
-    print('version 1.6 231113')
+    print('version 1.5 231024')
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
@@ -4260,7 +4084,7 @@ if __name__ == '__main__':
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
 
-    gtestlist = [138,139,140,144] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [142] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
@@ -4289,13 +4113,13 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        # if gtest>=140:
-        #     data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step=1)
-        # else:
-        #     data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=5)
-        # data_train(model_config, bSparse=False)
+        if gtest>=140:
+            data_generate_boid(model_config, bVisu=True, bDetails=False, bSave=True, step=10)
+        else:
+            data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=5)
+        data_train(model_config, bSparse=False)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
-        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10)
+        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='integration')
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
 
