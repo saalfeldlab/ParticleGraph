@@ -1760,9 +1760,9 @@ def data_train(model_config, bSparse=False):
                                              rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
                                              0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
                 else:
-                    if self.prediction == 'first_derivative_L':
+                    if model_config['prediction'] == 'first_derivative_L':
                         in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
-                    if self.prediction == 'first_derivative_S':
+                    if model_config['prediction'] == 'first_derivative_S':
                         in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None], rr[:, None] / model_config['radius'], embedding), dim=1)
 
                 acc = model.lin_edge(in_features.float())
@@ -3709,7 +3709,7 @@ def load_model_config(id=48):
                              'ninteractions': 3,
                              'nframes': 1000,
                              'sigma': .005,
-                             'tau': 5E-9,
+                             'tau': 1E-9,
                              'v_init': 1E-4,
                              'aggr_type': 'add',
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
@@ -3724,7 +3724,39 @@ def load_model_config(id=48):
                              'clamp': 0.002,
                              'pred_limit': 1E10,
                              'start_frame': 0,
-                             'arrow_length':10,
+                             'arrow_length':5,
+                             'cmap':'tab10',
+                             'description':'Periodic Particles_E is a second derivative simulation, acceleration is function of electrostatic law qiqj/r2 interaction is type-type dependent best_model:22'}
+    if id == 88:
+        model_config_test = {'ntry': id,
+                             'input_size': 11,
+                             'output_size': 2,
+                             'hidden_size': 128,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.15,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 960,
+                             'nparticle_types': 3,
+                             'ninteractions': 3,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-10,
+                             'v_init': 1E-4,
+                             'aggr_type': 'add',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'ElecParticles',
+                             'prediction': '2nd_derivative',
+                             'p': [[2], [1], [-1]],
+                             'upgrade_type': 0,
+                             'nrun': 10,
+                             'clamp': 0.002,
+                             'pred_limit': 1E10,
+                             'start_frame': 0,
+                             'arrow_length':20,
                              'cmap':'tab10',
                              'description':'Periodic Particles_E is a second derivative simulation, acceleration is function of electrostatic law qiqj/r2 interaction is type-type dependent best_model:22'}
 
@@ -4228,7 +4260,7 @@ if __name__ == '__main__':
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
 
-    gtestlist = [138,139,141] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [88] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
@@ -4257,11 +4289,11 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        # if gtest>=140:
-        #     data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step=1)
-        # else:
-        #     data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=10)
-        data_train(model_config, bSparse=False)
+        if gtest>=140:
+            data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step=1)
+        else:
+            data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=5)
+        # data_train(model_config, bSparse=False)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=100)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
