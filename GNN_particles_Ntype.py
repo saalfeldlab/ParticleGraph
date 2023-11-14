@@ -1007,12 +1007,12 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
 
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach()), 1)
             if (it >= 0) & (noise_level == 0):
-                x_list.append(x)
+                x_list.append(x.clone().detach())
             if (it >= 0) & (noise_level > 0):
                 x_noise = x
                 x_noise[:, 1:3] = x[:, 1:3] + noise_current
                 x_noise[:, 3:5] = x[:, 3:5] + noise_current - noise_prev
-                x_list.append(x_noise)
+                x_list.append(x_noise.clone().detach())
 
             if (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
                 dataset = data.Data(x=x, pos=x[:, 1:3])
@@ -1033,10 +1033,10 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
             if (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
                 y = y*0
             if (it >= 0) & (noise_level == 0):
-                y_list.append(y)
+                y_list.append(y.clone().detach())
             if (it >= 0) & (noise_level > 0):
                 y_noise = y[:, 0:2] + noise_current - 2 * noise_prev + noise_prev_prev
-                y_list.append(y_noise)
+                y_list.append(y_noise.clone().detach())
 
             if model_config['prediction'] == '2nd_derivative':
                 V1 += y[:, 0:2]
@@ -1109,7 +1109,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
                         edge_index2 = adj_t2.nonzero().t().contiguous()
                         dataset2 = data.Data(x=x, edge_index=edge_index2)
                         vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
-                    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=0.3)
+                    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=0.03)
                 if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
                     plt.xlim([0,1])
                     plt.ylim([0,1])
@@ -1371,9 +1371,6 @@ def data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step
 def data_train(model_config, bSparse=False):
     print('')
 
-    # for loop in range(25):
-    #     print(f'Loop: {loop}')
-
     model = []
     ntry = model_config['ntry']
     radius = model_config['radius']
@@ -1394,10 +1391,20 @@ def data_train(model_config, bSparse=False):
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(ntry))
     print('log_dir: {}'.format(log_dir))
-
     os.makedirs(log_dir, exist_ok=True)
-    os.makedirs(os.path.join(log_dir, 'models'), exist_ok=True)
-    os.makedirs(os.path.join(log_dir, 'data', 'val_outputs'), exist_ok=True)
+
+    os.makedirs(os.path.join(log_dir,'tmp_training'), exist_ok=True)
+    os.makedirs(log_dir, exist_ok=True)
+
+    os.makedirs(os.path.join(log_dir, 'tmp_recons'), exist_ok=True)
+    os.makedirs(log_dir, exist_ok=True)
+
+    files = glob.glob(f"{log_dir}/tmp_training/*")
+    for f in files:
+        os.remove(f)
+    files = glob.glob(f"{log_dir}/tmp_recons/*")
+    for f in files:
+        os.remove(f)
 
     copyfile(os.path.realpath(__file__), os.path.join(log_dir, 'training_code.py'))
 
@@ -1822,7 +1829,7 @@ def data_train(model_config, bSparse=False):
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()},
                            os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs.pt'))
-                xx, rmserr_list = data_test(model_config, bVisu=True, bPrint=False, step=int(nframes//20))
+                xx, rmserr_list = data_test(model_config, bVisu=True, bPrint=False, step=int(nframes//20), folder_out=f'{log_dir}/tmp_recons/')
                 model.train()
             if (epoch > 9):
                 ax = fig.add_subplot(2, 4, 5)
@@ -1845,9 +1852,9 @@ def data_train(model_config, bSparse=False):
                 ax.set_ylabel('RMSE [a.u]', fontsize=14, color='r')
 
         plt.tight_layout()
-        plt.savefig(f"./tmp_training/Fig_{ntry}_{epoch}.tif")
+        plt.savefig(f"./{log_dir}/tmp_training/Fig_{ntry}_{epoch}.tif")
         plt.close()
-def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0,prev_index_particles=0,best_model=0,step=5, bTest=''):
+def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0,prev_index_particles=0,best_model=0,step=5, bTest='', folder_out='tmp_recons'):
     # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_recons/*")
     # for f in files:
     #     os.remove(f)
@@ -1910,9 +1917,10 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
     if bPrint:
         print('Graph files N: ', NGraphs - 1)
         print(f'network: {net}')
-    state_dict = torch.load(net, map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
-    model.eval()
+    if bTest=='':
+        state_dict = torch.load(net, map_location=device)
+        model.load_state_dict(state_dict['model_state_dict'])
+        model.eval()
 
     if new_nparticles > 0:  # nparticles larger than initially
 
@@ -2206,7 +2214,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
 
             plt.tight_layout()
 
-            plt.savefig(f"./tmp_recons/Fig_{ntry}_{it}.tif")
+            plt.savefig(f"./{folder_out}/Fig_{ntry}_{it}.tif")
 
             plt.close()
 
@@ -3215,42 +3223,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
 def load_model_config(id=48):
     model_config_test = []
 
-    # gravity
-    # 4 types N=960 dim 128 no boundary   GOOD
-    if id == 43:
-        model_config_test = {'ntry': id,
-                             'input_size': 9,
-                             'output_size': 2,
-                             'hidden_size': 128,
-                             'n_mp_layers': 5,
-                             'noise_level': 0,
-                             'radius': 0.3,
-                             'dataset': f'231001_{id}',
-                             'nparticles': 960,
-                             'nparticle_types': 4,
-                             'ninteractions': 4,
-                             'nframes': 1000,
-                             'sigma': .005,
-                             'tau': 1E-9,
-                             'v_init': 5E-6,
-                             'aggr_type': 'add',
-                             'boundary': 'no',  # periodic   'no'  # no boundary condition
-                             'data_augmentation': True,
-                             'batch_size': 8,
-                             'embedding': 2,
-                             'model': 'GravityParticles',
-                             'prediction': '2nd_derivative',
-                             'upgrade_type': 0,
-                             'p': np.linspace(0.2, 5, 4).tolist(),
-                             'nrun': 2,
-                             'clamp': 1E-6,
-                             'pred_limit': 1E7,
-                             'start_frame': 1,
-                             'arrow_length':10,
-                             'cmap':'tab20c',
-                             'arrow_length':10,
-                             'description':'Particles_G is a second derivative simulation, acceleration is function of gravity law mj/r2 interaction is type dependent'}
-    # 4 types N=960 dim 128 no boundary
+
     if id == 44:
         model_config_test = {'ntry': id,
                              'input_size': 9,
@@ -3282,8 +3255,9 @@ def load_model_config(id=48):
                              'start_frame': 1,
                              'arrow_length':10,
                              'cmap':'tab20c',
-                             'arrow_length':10}
-    # gravity 4 types N=960 dim 128 no boundary   GOOD
+                             'arrow_length':10,
+                             'description':'Gravity'}
+
     if id == 45:
         model_config_test = {'ntry': id,
                              'input_size': 9,
@@ -3296,10 +3270,10 @@ def load_model_config(id=48):
                              'nparticles': 960,
                              'nparticle_types': 4,
                              'ninteractions': 4,
-                             'nframes': 1000,
+                             'nframes': 2000,
                              'sigma': .005,
-                             'tau': 1E-9,
-                             'v_init': 5E-5,
+                             'tau': 1E-9/100,
+                             'v_init': 5E-5/100,
                              'aggr_type': 'add',
                              'boundary': 'no',  # periodic   'no'  # no boundary condition
                              'data_augmentation': True,
@@ -3309,13 +3283,14 @@ def load_model_config(id=48):
                              'prediction': '2nd_derivative',
                              'upgrade_type': 0,
                              'p': np.linspace(0.2, 5, 4).tolist(),
-                             'nrun': 2,
-                             'clamp': 0.001,
+                             'nrun': 10,
+                             'clamp': 0.002,
                              'pred_limit': 1E9,
-                             'start_frame': 1,
+                             'start_frame': 0.5,
                              'arrow_length':10,
                              'cmap':'tab20c',
-                             'arrow_length':10}
+                             'arrow_length':100,
+                             'description':'Gravity'}
 
     if id == 46:
         model_config_test = {'ntry': id,
@@ -3323,16 +3298,16 @@ def load_model_config(id=48):
                              'output_size': 2,
                              'hidden_size': 128,
                              'n_mp_layers': 5,
-                             'noise_level': 0,
+                             'noise_level': 5E-5,
                              'radius': 0.3,
                              'dataset': f'231001_{id}',
                              'nparticles': 960,
                              'nparticle_types': 4,
                              'ninteractions': 4,
-                             'nframes': 1000,
+                             'nframes': 2000,
                              'sigma': .005,
-                             'tau': 1E-9,
-                             'v_init': 5E-5,
+                             'tau': 1E-9/100,
+                             'v_init': 5E-5/100,
                              'aggr_type': 'add',
                              'boundary': 'no',  # periodic   'no'  # no boundary condition
                              'data_augmentation': True,
@@ -3342,30 +3317,31 @@ def load_model_config(id=48):
                              'prediction': '2nd_derivative',
                              'upgrade_type': 0,
                              'p': np.linspace(0.2, 5, 4).tolist(),
-                             'nrun': 2,
+                             'nrun': 10,
                              'clamp': 0.002,
                              'pred_limit': 1E9,
-                             'start_frame': 1,
+                             'start_frame': 0.5,
                              'arrow_length':10,
                              'cmap':'tab20c',
-                             'arrow_length':10}
-    # 8 types N=960 dim 128 no boundary
+                             'arrow_length':100,
+                             'description':'Gravity'}
+
     if id == 47:
         model_config_test = {'ntry': id,
                              'input_size': 9,
                              'output_size': 2,
                              'hidden_size': 128,
                              'n_mp_layers': 5,
-                             'noise_level': 0,
+                             'noise_level': 1E-4,
                              'radius': 0.3,
                              'dataset': f'231001_{id}',
                              'nparticles': 960,
-                             'nparticle_types': 8,
-                             'ninteractions': 8,
-                             'nframes': 1000,
+                             'nparticle_types': 4,
+                             'ninteractions': 4,
+                             'nframes': 2000,
                              'sigma': .005,
-                             'tau': 1E-9,
-                             'v_init': 5E-5,
+                             'tau': 1E-9/100,
+                             'v_init': 5E-5/100,
                              'aggr_type': 'add',
                              'boundary': 'no',  # periodic   'no'  # no boundary condition
                              'data_augmentation': True,
@@ -3374,31 +3350,32 @@ def load_model_config(id=48):
                              'model': 'GravityParticles',
                              'prediction': '2nd_derivative',
                              'upgrade_type': 0,
-                             'p': np.linspace(0.2, 5, 8).tolist(),
-                             'nrun': 2,
+                             'p': np.linspace(0.2, 5, 4).tolist(),
+                             'nrun': 10,
                              'clamp': 0.002,
                              'pred_limit': 1E9,
-                             'start_frame': 1,
-                             'arrow_length':20,
+                             'start_frame': 0.5,
+                             'arrow_length':10,
                              'cmap':'tab20c',
-                             'arrow_length':10}
-    # 16 types N=960 dim 128 no boundary
+                             'arrow_length':100,
+                             'description':'Gravity'}
+
     if id == 48:
         model_config_test = {'ntry': id,
                              'input_size': 9,
                              'output_size': 2,
                              'hidden_size': 128,
                              'n_mp_layers': 5,
-                             'noise_level': 0,
+                             'noise_level': 5E-4,
                              'radius': 0.3,
                              'dataset': f'231001_{id}',
                              'nparticles': 960,
-                             'nparticle_types': 16,
-                             'ninteractions': 16,
-                             'nframes': 1000,
+                             'nparticle_types': 4,
+                             'ninteractions': 4,
+                             'nframes': 2000,
                              'sigma': .005,
-                             'tau': 1E-9,
-                             'v_init': 5E-5,
+                             'tau': 1E-9/100,
+                             'v_init': 5E-5/100,
                              'aggr_type': 'add',
                              'boundary': 'no',  # periodic   'no'  # no boundary condition
                              'data_augmentation': True,
@@ -3407,47 +3384,17 @@ def load_model_config(id=48):
                              'model': 'GravityParticles',
                              'prediction': '2nd_derivative',
                              'upgrade_type': 0,
-                             'p': np.linspace(0.2, 5, 16).tolist(),
-                             'nrun': 2,
+                             'p': np.linspace(0.2, 5, 4).tolist(),
+                             'nrun': 10,
                              'clamp': 0.002,
                              'pred_limit': 1E9,
-                             'start_frame': 1,
-                             'arrow_length':20,
+                             'start_frame': 0.5,
+                             'arrow_length':10,
                              'cmap':'tab20c',
-                             'arrow_length':10}
-    # 24 types N=960 dim 128 no boundary
-    if id == 49:
-        model_config_test = {'ntry': id,
-                             'input_size': 9,
-                             'output_size': 2,
-                             'hidden_size': 128,
-                             'n_mp_layers': 5,
-                             'noise_level': 0,
-                             'radius': 0.3,
-                             'dataset': f'231001_{id}',
-                             'nparticles': 960,
-                             'nparticle_types': 24,
-                             'ninteractions': 24,
-                             'nframes': 1000,
-                             'sigma': .005,
-                             'tau': 1E-9,
-                             'v_init': 5E-5,
-                             'aggr_type': 'add',
-                             'boundary': 'no',  # periodic   'no'  # no boundary condition
-                             'data_augmentation': True,
-                             'batch_size': 8,
-                             'embedding': 2,
-                             'model': 'GravityParticles',
-                             'prediction': '2nd_derivative',
-                             'upgrade_type': 0,
-                             'p': np.linspace(0.2, 5, 24).tolist(),
-                             'nrun': 2,
-                             'clamp': 0.002,
-                             'pred_limit': 1E9,
-                             'start_frame': 1,
-                             'arrow_length':20,
-                             'cmap':'tab20c',
-                             'arrow_length':10}
+                             'arrow_length':100,
+                             'description':'Gravity'}
+
+
 
     # particles
     if id == 73:
@@ -4053,7 +4000,7 @@ def load_model_config(id=48):
                              'nparticles': 900,
                              'nparticle_types': 4,
                              'ninteractions': 4,
-                             'nframes': 100,
+                             'nframes': 1000,
                              'sigma': .005,
                              'tau': 1E-10,
                              'v_init': 0,
@@ -4066,7 +4013,7 @@ def load_model_config(id=48):
                              'prediction': '2nd_derivative',
                              'upgrade_type': 0,
                              'p': [[50,10,40],[50,30,40],[50,50,40],[50,80,40]],
-                             'nrun': 2,
+                             'nrun': 10,
                              'clamp': 1E-3,
                              'pred_limit': 1E9,
                              'start_frame': 0.,
@@ -4087,13 +4034,13 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [142] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [45,46,47,48] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
@@ -4125,10 +4072,11 @@ if __name__ == '__main__':
         # if gtest>=140:
         #     data_generate_boid(model_config, bVisu=False, bDetails=False, bSave=True, step=1)
         # else:
-        #     data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=5)
-        # data_train(model_config, bSparse=False)
-        # data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
-        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=1, bTest='integration')
+        if gtest>45:
+            data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=20)
+        data_train(model_config, bSparse=True)
+        # # data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
+        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=5, bTest='integration')
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
 
