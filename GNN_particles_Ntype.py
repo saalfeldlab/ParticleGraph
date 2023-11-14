@@ -1350,6 +1350,16 @@ def data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step
                 plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
                 plt.close()
 
+        for k in range(1,len(x_list)):
+            prev=x_list[k-1]
+            next=x_list[k]
+            v = bc_diff(next[:,1:3]-prev[:,1:3])
+            acc = v - prev[:,3:5]
+            x_list[k][:,3:5]=v
+            y_list[k-1][:,0:2]=acc
+
+        # x_list[0][:,1:3]+x_list[0][:,3:5]+y_list[0]-x_list[1][:,1:3]
+
         if bSave:
             torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
             torch.save(y_list, f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
@@ -2028,7 +2038,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
 
         x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5])  # position update
 
-        rmserr = torch.sqrt(torch.mean(torch.sum(bc_diff(x[:, 1:3] - x0[:, 1:3]) ** 2, axis=1)))
+        rmserr = torch.sqrt(torch.mean(torch.sum(bc_diff(x[:, 1:3] - x0_next[:, 1:3]) ** 2, axis=1)))
         rmserr_list.append(rmserr.item())
 
         discrepency = MMD(x[:, 1:3], x0[:, 1:3])
@@ -2176,12 +2186,12 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                 plt.ylabel('Temperature [a.u]', fontsize="14")
 
             else:
-                temp1 = torch.cat((x, x0), 0)
+                temp1 = torch.cat((x, x0_next), 0)
                 temp2 = torch.tensor(np.arange(nparticles), device=device)
                 temp3 = torch.tensor(np.arange(nparticles) + nparticles, device=device)
                 temp4 = torch.concatenate((temp2[:, None], temp3[:, None]), 1)
                 temp4 = torch.t(temp4)
-                distance3 = torch.sqrt(torch.sum((x[:, 1:3] - x0[:, 1:3]) ** 2, 1))
+                distance3 = torch.sqrt(torch.sum((x[:, 1:3] - x0_next[:, 1:3]) ** 2, 1))
                 p = torch.argwhere(distance3 < 0.3)
                 pos = dict(enumerate(np.array((temp1[:, 1:3]).detach().cpu()), 0))
                 dataset = data.Data(x=temp1[:, 1:3], edge_index=torch.squeeze(temp4[:, p]))
@@ -4043,7 +4053,7 @@ def load_model_config(id=48):
                              'nparticles': 900,
                              'nparticle_types': 4,
                              'ninteractions': 4,
-                             'nframes': 1000,
+                             'nframes': 100,
                              'sigma': .005,
                              'tau': 1E-10,
                              'v_init': 0,
@@ -4083,7 +4093,6 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-
     gtestlist = [142] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
@@ -4113,13 +4122,13 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        if gtest>=140:
-            data_generate_boid(model_config, bVisu=True, bDetails=False, bSave=True, step=10)
-        else:
-            data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=5)
-        data_train(model_config, bSparse=False)
+        # if gtest>=140:
+        #     data_generate_boid(model_config, bVisu=False, bDetails=False, bSave=True, step=1)
+        # else:
+        #     data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=5)
+        # data_train(model_config, bSparse=False)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
-        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='integration')
+        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=1, bTest='integration')
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
 
