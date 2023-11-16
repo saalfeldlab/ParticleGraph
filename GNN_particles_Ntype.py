@@ -1909,7 +1909,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
     if bPrint:
         print('Graph files N: ', NGraphs - 1)
         print(f'network: {net}')
-    if bTest=='':
+    if bTest!='integration':
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
         model.eval()
@@ -1954,7 +1954,12 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
     if bPrint:
         print(table)
         print(f"Total Trainable Params: {total_params}")
+    l_dir = os.path.join('.', 'log')
+    log_dir = os.path.join(l_dir, 'try_{}'.format(ntry))
+    print('log_dir: {}'.format(log_dir))
 
+    x_recons=[]
+    y_recons=[]
     x_list=[]
     y_list=[]
     for run in range(2):
@@ -2038,7 +2043,6 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                 y = y0 / ynorm[4]
             else:
                 y = y0 / vnorm[4]
-
         else:
             with torch.no_grad():
                 y = model(dataset, data_id=0, step=2, vnorm=vnorm, cos_phi=0, sin_phi=0)  # acceleration estimation
@@ -2059,8 +2063,8 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         discrepency = MMD(x[:, 1:3], x0[:, 1:3])
         discrepency_list.append(discrepency)
 
-        # Sxy = S_e(x[:, 0:2], x0[:, 0:2])
-        # Sxy_list.append(Sxy.item())
+        x_recons.append(x.clone().detach())
+        y_recons.append(y.clone().detach())
 
         if (it % step == 0) & (it>=0) &  bVisu:
 
@@ -2181,10 +2185,20 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             plt.scatter(y0[:,1].detach().cpu().numpy(),y[:,1].detach().cpu().numpy(), s=1, color='r')
             plt.xlabel('Y true [a.u]', fontsize="14")
             plt.ylabel('Y pred [a.u]', fontsize="14")
+            if model_config['prediction']=='2nd_derivative':
+                plt.xlim([-ynorm[4].detach().cpu().numpy(),ynorm[4].detach().cpu().numpy()])
+                plt.ylim([-ynorm[4].detach().cpu().numpy(), ynorm[4].detach().cpu().numpy()])
+            else:
+                plt.xlim([-ynorm[4].detach().cpu().numpy(),ynorm[4].detach().cpu().numpy()])
+                plt.ylim([-ynorm[4].detach().cpu().numpy(), ynorm[4].detach().cpu().numpy()])
 
             ax = fig.add_subplot(2, 5, 10)
             plt.hist(y0[:,0].detach().cpu().numpy(),200,alpha=0.25,color='b')
             plt.hist(y[:,0].detach().cpu().numpy(),200,alpha=0.25,color='r')
+            if model_config['prediction']=='2nd_derivative':
+                plt.xlim([-ynorm[4].detach().cpu().numpy(),ynorm[4].detach().cpu().numpy()])
+            else:
+                plt.xlim([-ynorm[4].detach().cpu().numpy(),ynorm[4].detach().cpu().numpy()])
 
             ax = fig.add_subplot(2, 5, 6)
             pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
@@ -2238,6 +2252,9 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
     if bPrint:
         print(f'ntry: {ntry}')
         print(f'MMD: {np.round(discrepency, 4)}')
+
+    torch.save(x_recons, f'{log_dir}/x_list.pt')
+    torch.save(y_recons, f'{log_dir}/y_list.pt')
 
     return x.detach().cpu().numpy(), rmserr_list
 def data_test_tracking(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0,prev_index_particles=0):
@@ -2859,94 +2876,109 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
     # torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
     # print (vnorm,ynorm)
 
+    for m in range(2):
 
-    x_list=[]
-    y_list=[]
-    x_stat=[]
-    y_stat=[]
-    distance_list = []
-    deg_list = []
-    r_list = []
-
-    for run in tqdm(range(NGraphs)):
-        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
-        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
-        if run==0:
+        x_list = []
+        y_list = []
+        x_stat = []
+        y_stat = []
+        distance_list = []
+        deg_list = []
+        if m==1:        # analyse tmp_recons
+            x = torch.load(f'{log_dir}/x_list.pt')
+            y = torch.load(f'{log_dir}/y_list.pt')
             for k in np.arange(0, len(x) - 1, 4):
-
-                distance = torch.sum(bc_diff(x[k][:, None, 0:2] - x[k][None, :, 0:2]) ** 2, axis=2)
+                distance = torch.sum(bc_diff(x[k][:, None, 1:3] - x[k][None, :, 1:3]) ** 2, axis=2)
                 t = torch.Tensor([radius ** 2])  # threshold
                 adj_t = (distance < radius ** 2).float() * 1
                 edge_index = adj_t.nonzero().t().contiguous()
                 dataset = data.Data(x=x, edge_index=edge_index)
                 distance = np.sqrt(distance[edge_index[0, :], edge_index[1, :]].detach().cpu().numpy())
-                r_list = np.concatenate((r_list, distance))
                 deg = degree(dataset.edge_index[0], dataset.num_nodes)
                 deg_list.append(deg.detach().cpu().numpy())
                 distance_list.append([np.mean(distance), np.std(distance)])
                 x_stat.append(torch.concatenate((torch.mean(x[k][:, 3:5], axis=0), torch.std(x[k][:, 3:5], axis=0)),axis=-1).detach().cpu().numpy())
                 y_stat.append(torch.concatenate((torch.mean(y[k], axis=0), torch.std(y[k], axis=0)), axis=-1).detach().cpu().numpy())
-        x_list.append(torch.stack(x))
-        y_list.append(torch.stack(y))
+            x_list.append(torch.stack(x))
+            y_list.append(torch.stack(y))
 
-    x = torch.stack(x_list)
-    x = torch.reshape(x,(x.shape[0] * x.shape[1] * x.shape[2], x.shape[3]))
-    y = torch.stack(y_list)
-    y = torch.reshape(y,(y.shape[0]*y.shape[1]*y.shape[2],y.shape[3]))
-    vnorm = norm_velocity(x, device)
-    ynorm = norm_acceleration(y, device)
-    print(vnorm, ynorm)
-    print(vnorm[4], ynorm[4])
+        else:
 
-    index = np.random.permutation(np.arange(len(r_list)))
-    x_stat = np.array(x_stat)
-    y_stat = np.array(y_stat)
+            for run in tqdm(range(NGraphs)):
+                x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
+                y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
+                if run==0:
+                    for k in np.arange(0, len(x) - 1, 4):
 
+                        distance = torch.sum(bc_diff(x[k][:, None, 1:3] - x[k][None, :, 1:3]) ** 2, axis=2)
+                        t = torch.Tensor([radius ** 2])  # threshold
+                        adj_t = (distance < radius ** 2).float() * 1
+                        edge_index = adj_t.nonzero().t().contiguous()
+                        dataset = data.Data(x=x, edge_index=edge_index)
+                        distance = np.sqrt(distance[edge_index[0, :], edge_index[1, :]].detach().cpu().numpy())
+                        deg = degree(dataset.edge_index[0], dataset.num_nodes)
+                        deg_list.append(deg.detach().cpu().numpy())
+                        distance_list.append([np.mean(distance), np.std(distance)])
+                        x_stat.append(torch.concatenate((torch.mean(x[k][:, 3:5], axis=0), torch.std(x[k][:, 3:5], axis=0)),axis=-1).detach().cpu().numpy())
+                        y_stat.append(torch.concatenate((torch.mean(y[k], axis=0), torch.std(y[k], axis=0)), axis=-1).detach().cpu().numpy())
+                x_list.append(torch.stack(x))
+                y_list.append(torch.stack(y))
 
-    fig = plt.figure(figsize=(20, 5))
-    plt.ion()
-    ax = fig.add_subplot(1, 5, 1)
-    plt.hist(r_list[index[0:10000]],100)
-    ax = fig.add_subplot(1, 5, 5)
+        x = torch.stack(x_list)
+        x = torch.reshape(x,(x.shape[0] * x.shape[1] * x.shape[2], x.shape[3]))
+        y = torch.stack(y_list)
+        y = torch.reshape(y,(y.shape[0]*y.shape[1]*y.shape[2],y.shape[3]))
+        vnorm = norm_velocity(x, device)
+        ynorm = norm_acceleration(y, device)
+        print(vnorm, ynorm)
+        print(vnorm[4], ynorm[4])
 
-    deg_list = np.array(deg_list)
-    distance_list = np.array(distance_list)
-    plt.plot(np.arange(deg_list.shape[0]) * 4, deg_list[:, 0] + deg_list[:, 1], c='k')
-    plt.plot(np.arange(deg_list.shape[0]) * 4, deg_list[:, 0], c='r')
-    plt.plot(np.arange(deg_list.shape[0]) * 4, deg_list[:, 0] - deg_list[:, 1], c='k')
-    plt.xlim([0, nframes])
-    plt.xlabel('Frame [a.u]', fontsize="14")
-    plt.ylabel('Degree [a.u]', fontsize="14")
-    ax = fig.add_subplot(1, 5, 2)
-    plt.plot(np.arange(distance_list.shape[0]) * 4, distance_list[:, 0] + distance_list[:, 1], c='k')
-    plt.plot(np.arange(distance_list.shape[0]) * 4, distance_list[:, 0], c='r')
-    plt.plot(np.arange(distance_list.shape[0]) * 4, distance_list[:, 0] - distance_list[:, 1], c='k')
-    plt.ylim([0, model_config['radius']])
-    plt.xlim([0, nframes])
-    plt.xlabel('Frame [a.u]', fontsize="14")
-    plt.ylabel('Distance [a.u]', fontsize="14")
-    ax = fig.add_subplot(1, 5, 3)
-    plt.plot(np.arange(x_stat.shape[0]) * 4, x_stat[:, 0] + x_stat[:, 2], c='k')
-    plt.plot(np.arange(x_stat.shape[0]) * 4, x_stat[:, 0], c='r')
-    plt.plot(np.arange(x_stat.shape[0]) * 4, x_stat[:, 0] - x_stat[:, 2], c='k')
-    plt.plot(np.arange(x_stat.shape[0]) * 4, x_stat[:, 1] + x_stat[:, 3], c='k')
-    plt.plot(np.arange(x_stat.shape[0]) * 4, x_stat[:, 1], c='r')
-    plt.plot(np.arange(x_stat.shape[0]) * 4, x_stat[:, 1] - x_stat[:, 3], c='k')
-    plt.xlim([0, nframes])
-    plt.xlabel('Frame [a.u]', fontsize="14")
-    plt.ylabel('Velocity [a.u]', fontsize="14")
-    ax = fig.add_subplot(1, 5, 4)
-    plt.plot(np.arange(y_stat.shape[0]) * 4, y_stat[:, 0] + y_stat[:, 2], c='k')
-    plt.plot(np.arange(y_stat.shape[0]) * 4, y_stat[:, 0], c='r')
-    plt.plot(np.arange(y_stat.shape[0]) * 4, y_stat[:, 0] - y_stat[:, 2], c='k')
-    plt.plot(np.arange(y_stat.shape[0]) * 4, y_stat[:, 1] + y_stat[:, 3], c='k')
-    plt.plot(np.arange(y_stat.shape[0]) * 4, y_stat[:, 1], c='r')
-    plt.plot(np.arange(y_stat.shape[0]) * 4, y_stat[:, 1] - y_stat[:, 3], c='k')
-    plt.xlim([0, nframes])
-    plt.xlabel('Frame [a.u]', fontsize="14")
-    plt.ylabel('Acceleration [a.u]', fontsize="14")
-    plt.tight_layout()
-    plt.close()
+        x_stat = np.array(x_stat)
+        y_stat = np.array(y_stat)
+
+        fig = plt.figure(figsize=(20, 5))
+        # plt.ion()
+        ax = fig.add_subplot(1, 5, 4)
+
+        deg_list = np.array(deg_list)
+        distance_list = np.array(distance_list)
+        plt.plot(np.arange(deg_list.shape[0]) * 4, deg_list[:, 0] + deg_list[:, 1], c='k')
+        plt.plot(np.arange(deg_list.shape[0]) * 4, deg_list[:, 0], c='r')
+        plt.plot(np.arange(deg_list.shape[0]) * 4, deg_list[:, 0] - deg_list[:, 1], c='k')
+        plt.xlim([0, nframes])
+        plt.xlabel('Frame [a.u]', fontsize="14")
+        plt.ylabel('Degree [a.u]', fontsize="14")
+        ax = fig.add_subplot(1, 5, 1)
+        plt.plot(np.arange(distance_list.shape[0]) * 4, distance_list[:, 0] + distance_list[:, 1], c='k')
+        plt.plot(np.arange(distance_list.shape[0]) * 4, distance_list[:, 0], c='r')
+        plt.plot(np.arange(distance_list.shape[0]) * 4, distance_list[:, 0] - distance_list[:, 1], c='k')
+        plt.ylim([0, model_config['radius']])
+        plt.xlim([0, nframes])
+        plt.xlabel('Frame [a.u]', fontsize="14")
+        plt.ylabel('Distance [a.u]', fontsize="14")
+        ax = fig.add_subplot(1, 5, 2)
+        plt.plot(np.arange(x_stat.shape[0]) * 4, x_stat[:, 0] + x_stat[:, 2], c='k')
+        plt.plot(np.arange(x_stat.shape[0]) * 4, x_stat[:, 0], c='r')
+        plt.plot(np.arange(x_stat.shape[0]) * 4, x_stat[:, 0] - x_stat[:, 2], c='k')
+        plt.plot(np.arange(x_stat.shape[0]) * 4, x_stat[:, 1] + x_stat[:, 3], c='k')
+        plt.plot(np.arange(x_stat.shape[0]) * 4, x_stat[:, 1], c='r')
+        plt.plot(np.arange(x_stat.shape[0]) * 4, x_stat[:, 1] - x_stat[:, 3], c='k')
+        plt.xlim([0, nframes])
+        plt.xlabel('Frame [a.u]', fontsize="14")
+        plt.ylabel('Velocity [a.u]', fontsize="14")
+        ax = fig.add_subplot(1, 5, 3)
+        plt.plot(np.arange(y_stat.shape[0]) * 4, y_stat[:, 0] + y_stat[:, 2], c='k')
+        plt.plot(np.arange(y_stat.shape[0]) * 4, y_stat[:, 0], c='r')
+        plt.plot(np.arange(y_stat.shape[0]) * 4, y_stat[:, 0] - y_stat[:, 2], c='k')
+        plt.plot(np.arange(y_stat.shape[0]) * 4, y_stat[:, 1] + y_stat[:, 3], c='k')
+        plt.plot(np.arange(y_stat.shape[0]) * 4, y_stat[:, 1], c='r')
+        plt.plot(np.arange(y_stat.shape[0]) * 4, y_stat[:, 1] - y_stat[:, 3], c='k')
+        plt.xlim([0, nframes])
+        plt.xlabel('Frame [a.u]', fontsize="14")
+        plt.ylabel('Acceleration [a.u]', fontsize="14")
+        plt.tight_layout()
+        plt.show()
+        plt.close()
 
 
 
@@ -4082,7 +4114,7 @@ def load_model_config(id=48):
                              'hidden_size': 128,
                              'n_mp_layers': 5,
                              'noise_level': 0,
-                             'radius': 0.05,
+                             'radius': 0.04,
                              'dataset': f'231001_{id}',
                              'nparticles': 900,
                              'nparticle_types': 4,
@@ -4110,6 +4142,7 @@ def load_model_config(id=48):
                              'arrow_length':5,
                              'description':'Boids acceleration pred 4 different alignement 10 30 50 80'
                              }
+
     if id == 143:
         model_config_test = {'ntry': id,
                              'input_size': 9,
@@ -4117,42 +4150,7 @@ def load_model_config(id=48):
                              'hidden_size': 128,
                              'n_mp_layers': 5,
                              'noise_level': 0,
-                             'radius': 0.05,
-                             'dataset': f'231001_142',
-                             'nparticles': 900,
-                             'nparticle_types': 4,
-                             'ninteractions': 4,
-                             'nframes': 1000,
-                             'sigma': .005,
-                             'tau': 1E-10,
-                             'v_init': 0,
-                             'aggr_type': 'add',
-                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-                             'data_augmentation': True,
-                             'batch_size': 8,
-                             'embedding': 2,
-                             'model': 'Particles_A',
-                             'prediction': 'first_derivative_L',
-                             'upgrade_type': 'linear',
-                             'nlayers_update': 3,
-                             'hidden_size_update': 64,
-                             'p': [[50,10,40],[50,30,40],[50,50,40],[50,80,40]],
-                             'nrun': 10,
-                             'clamp': 1E-3,
-                             'pred_limit': 1E9,
-                             'start_frame': 0.,
-                             'cmap':'tab10',
-                             'arrow_length':5,
-                             'description':'Boids velocity pred 4 different alignement 10 30 50 80'
-                             }
-    if id == 144:
-        model_config_test = {'ntry': id,
-                             'input_size': 9,
-                             'output_size': 2,
-                             'hidden_size': 128,
-                             'n_mp_layers': 5,
-                             'noise_level': 0,
-                             'radius': 0.05,
+                             'radius': 0.04,
                              'dataset': f'231001_{id}',
                              'nparticles': 1800,
                              'nparticle_types': 4,
@@ -4168,17 +4166,17 @@ def load_model_config(id=48):
                              'embedding': 2,
                              'model': 'Particles_A',
                              'prediction': '2nd_derivative',
-                             'upgrade_type': 'none',
+                             'upgrade_type': 'linear',
                              'nlayers_update': 3,
                              'hidden_size_update': 64,
-                             'p': [[50, 10, 40], [50, 30, 40], [50, 50, 40], [50, 80, 40]],
+                             'p': [[50,10,40],[50,30,40],[50,50,40],[50,80,40]],
                              'nrun': 10,
                              'clamp': 1E-3,
                              'pred_limit': 1E9,
                              'start_frame': 0.,
-                             'cmap': 'tab10',
-                             'arrow_length': 5,
-                             'description': 'Boids'
+                             'cmap':'tab10',
+                             'arrow_length':5,
+                             'description':'Boids acceleration pred aggr mean boid speed/4 4 different alignement 10 30 50 80'
                              }
 
     for key, value in model_config_test.items():
@@ -4199,7 +4197,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [142] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [45] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
@@ -4228,14 +4226,14 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        # if (gtest==144) | (gtest==142):
-        #     if gtest>=140:
-        #         data_generate_boid(model_config, bVisu=False, bDetails=False, bSave=True, step=1)
-        #     else:
-        #         data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=20)
+
+        # if gtest>=140:
+        #     data_generate_boid(model_config, bVisu=True, bDetails=False, bSave=True, step=10)
+        # else:
+        #     data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=20)
         # data_train(model_config, bSparse=True)
-        # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
-        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=5, bTest='prediction')
+        # x, rmserr_list = data_test(model_config, bVisu=False, bPrint=True, best_model=-1, step=5, bTest='')
+        data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
 
