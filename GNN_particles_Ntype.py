@@ -174,6 +174,8 @@ class Laplacian_A(pyg.nn.MessagePassing):
 
         heat_flow = self.beta * c * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
 
+        heat_flow = heat_flow - x[:,7:8]*1E-3*0
+
         # if (torch.min(heat_flow)<-0.5):
         #     pos = torch.argwhere(heat_flow<-0.5).detach().cpu().numpy().astype(int)
         #     k=pos[0,0]
@@ -199,12 +201,11 @@ class Laplacian_A(pyg.nn.MessagePassing):
         #     print(coeff)
         #     print(coeff * x[edge_index[1, pos], 6])
 
-
-
         return heat_flow
 
     def message(self, x_i, x_j, edge_attr):
 
+        # edge_attr = torch.clamp(edge_attr,min=-2*torch.std(edge_attr),max=2*torch.std(edge_attr))
         heat = edge_attr * x_j[:, 6]
 
         return heat[:, None]
@@ -894,6 +895,10 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
     folder = f'./graphs_data/graphs_particles_{dataset_name}/'
     os.makedirs(folder, exist_ok=True)
 
+    files = glob.glob(f"./tmp_data/*")
+    for f in files:
+        os.remove(f)
+
     if bSave:
         files = glob.glob(f"{folder}/*")
         for f in files:
@@ -1018,17 +1023,30 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
         H1[:,0:1] = torch.ones((nparticles, 1), device=device) + torch.randn((nparticles, 1), device=device) / 2
 
         if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
-            i0 = imread('graphs_data/pattern_6.tif')
-            values = i0[(X1[:, 0].detach().cpu().numpy() * 256).astype(int), (X1[:, 1].detach().cpu().numpy() * 256).astype(int)]
-            H1[:,0] = torch.tensor(values / 255 * 500, device=device)
-            plt.scatter(X1[:, 0].detach().cpu().numpy(), X1[:, 1].detach().cpu().numpy(), s=1,
-                        c=H1[:, 0].detach().cpu().numpy())
-            i0 = imread('graphs_data/pattern_7.tif')
-            values = i0[(X1[:, 0].detach().cpu().numpy() * 256).astype(int), (X1[:, 1].detach().cpu().numpy()*256).astype(int)]
-            T1[:, 0] = torch.tensor(values, device=device)
-            plt.scatter(X1[:, 0].detach().cpu().numpy(), X1[:, 1].detach().cpu().numpy(), s=10,
-                        c=T1[:, 0].detach().cpu().numpy())
 
+            x_width = int(np.sqrt(nparticles))
+            xs = torch.linspace(0, 1, steps=x_width)
+            ys = torch.linspace(0, 1, steps=x_width)
+            x, y = torch.meshgrid(xs, ys, indexing='xy')
+            x = torch.reshape(x, (x_width**2, 1))
+            y = torch.reshape(y, (x_width**2, 1))
+            x_width = 1/x_width/8
+            X1[0:nparticles,0:1] = x[0:nparticles]
+            X1[0:nparticles,1:2] = y[0:nparticles]
+            X1=X1+torch.randn(nparticles, 2, device=device) * x_width
+            X1=torch.clamp(X1,min=0,max=1)
+
+            i0 = imread('graphs_data/pattern_6.tif')
+            values = i0[(X1[:, 0].detach().cpu().numpy() * 255).astype(int), (X1[:, 1].detach().cpu().numpy() * 255).astype(int)]
+            H1[:,0] = torch.tensor(values / 255 * 5000, device=device)
+            torchsum0 = torch.sum(H1)
+            # plt.scatter(X1[:, 0].detach().cpu().numpy(), X1[:, 1].detach().cpu().numpy(), s=1,
+            #             c=H1[:, 0].detach().cpu().numpy())
+            i0 = imread('graphs_data/pattern_8.tif')
+            values = i0[(X1[:, 0].detach().cpu().numpy() * 255).astype(int), (X1[:, 1].detach().cpu().numpy()*255).astype(int)]
+            T1[:, 0] = torch.tensor(values, device=device)
+            # plt.scatter(X1[:, 0].detach().cpu().numpy(), X1[:, 1].detach().cpu().numpy(), s=10,
+            #             c=T1[:, 0].detach().cpu().numpy())
 
         N1 = torch.arange(nparticles, device=device)
         N1 = N1[:, None]
@@ -1044,9 +1062,10 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
 
             noise_prev_prev = noise_prev_prev
             noise_prev = noise_current
-            noise_current = 0 * torch.randn((nparticles, 2), device=device) * noise_level * radius
+            noise_current = torch.randn((nparticles, 2), device=device) * noise_level
 
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach()), 1)
+
             if (it >= 0) & (noise_level == 0):
                 x_noise = x
                 x_list.append(x.clone().detach())
@@ -1057,19 +1076,19 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
                 x_list.append(x_noise.clone().detach())
 
             if (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
-                dataset = data.Data(x=x, pos=x[:, 1:3])
+                dataset = data.Data(x=x_noise, pos=x_noise[:, 1:3])
                 transform_0 = T.Compose([T.Delaunay()])
                 dataset_face = transform_0(dataset).face
-                mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
+                mesh_pos = torch.cat((x_noise[:, 1:3], torch.ones((x_noise.shape[0], 1), device=device)), dim=1)
                 edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,
                                                                        normalization="None")  # "None", "sym", "rw"
-                dataset_mesh = data.Data(x=x, edge_index=edge_index, edge_attr=edge_weight, device=device)
+                dataset_mesh = data.Data(x=x_noise, edge_index=edge_index, edge_attr=edge_weight, device=device)
 
-            distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+            distance = torch.sum(bc_diff(x_noise[:, None, 1:3] - x_noise[None, :, 1:3]) ** 2, axis=2)
             t = torch.Tensor([radius ** 2])  # threshold
             adj_t = (distance < radius ** 2).float() * 1
             edge_index = adj_t.nonzero().t().contiguous()
-            dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+            dataset = data.Data(x=x_noise, pos=x_noise[:, 1:3], edge_index=edge_index)
 
             with torch.no_grad():
                 y = model(dataset)
@@ -1087,7 +1106,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
             if (model_config['model'] != 'DiffMesh') & (model_config['model'] != 'WaveMesh'):
                 X1 = bc_pos(X1 + V1)
 
-            if (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
+            if model_config['model'] == 'DiffMesh':
                 if it >= 0:
                     mask = torch.argwhere ((X1[:,0]>0.1)&(X1[:,0]<0.9)&(X1[:,1]>0.1)&(X1[:,1]<0.9)).detach().cpu().numpy().astype(int)
                     mask = mask[:, 0:1]
@@ -1095,6 +1114,18 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
                         pred = model_mesh(dataset_mesh)
                         H1[mask,1:2] = pred[mask]
                     H1[mask,0:1] += H1[mask,1:2]
+                    h_list.append(pred)
+
+            if model_config['model'] == 'WaveMesh':
+                if it >= 0:
+                    # mask = torch.argwhere ((X1[:,0]>0.005)&(X1[:,0]<0.995)&(X1[:,1]>0.005)&(X1[:,1]<0.995)).detach().cpu().numpy().astype(int)
+                    # mask = mask[:, 0:1]
+                    # invmask = torch.argwhere ((X1[:,0]<=0.025)|(X1[:,0]>=0.975)|(X1[:,1]<=0.025)|(X1[:,1]>=0.975)).detach().cpu().numpy().astype(int)
+                    # invmask = invmask[:, 0:1]
+                    with torch.no_grad():
+                        pred = model_mesh(dataset_mesh)
+                        H1[:,1:2] += pred[:]
+                    H1[:,0:1] += H1[:,1:2]
                     h_list.append(pred)
 
 
@@ -1110,8 +1141,9 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
                                     x[index_particles[n], 2].detach().cpu().numpy(), s=g,
                                     alpha=0.75,color=cmap.color(n))
                 elif (model_config['model'] == 'HeatParticles') | (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
-                    plt.scatter(x[:, 1].detach().cpu().numpy(),x[:, 2].detach().cpu().numpy(), s=10, alpha=0.75,
-                                    c=x[:, 6].detach().cpu().numpy(), cmap='inferno', vmin=0, vmax=500)
+                    plt.scatter(x_noise[:, 1].detach().cpu().numpy(),x_noise[:, 2].detach().cpu().numpy(), s=10, alpha=0.75,
+                                    c=x[:, 6].detach().cpu().numpy(), cmap='gist_gray',vmin=-5000,vmax=5000)
+                    ax.set_facecolor([0.5,0.5,0.5])
                 elif model_config['model'] == 'ElecParticles':
                     for n in range(nparticle_types):
                         g = np.abs(p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20)
@@ -1136,9 +1168,9 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
                     plt.ylim([-1.3, 1.3])
 
                 ax = fig.add_subplot(2, 2, 2)
-                plt.scatter(x[:, 1].detach().cpu().numpy(), x[:, 2].detach().cpu().numpy(), s=1, color='k',alpha=0.75)
+                plt.scatter(x_noise[:, 1].detach().cpu().numpy(), x_noise[:, 2].detach().cpu().numpy(), s=1, color='k',alpha=0.75)
                 if bDetails: # model_config['radius']<0.01:
-                    pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
+                    pos = dict(enumerate(np.array(x_noise[:, 1:3].detach().cpu()), 0))
                     if (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
                         vis = to_networkx(dataset_mesh, remove_self_loops=True, to_undirected=True)
                     else:
@@ -1156,7 +1188,6 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
                     plt.ylim([-1.3, 1.3])
 
                 if bDetails:
-
                     ax = fig.add_subplot(2, 2, 3)
                     if model_config['model'] == 'GravityParticles':
                         for n in range(nparticle_types):
@@ -1166,8 +1197,9 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
                                         alpha=0.75,
                                         color=cmap.color(n))  # , facecolors='none', edgecolors='k')
                     elif (model_config['model'] == 'HeatParticles') | (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
-                        plt.scatter(x[:, 1].detach().cpu().numpy(), x[:, 2].detach().cpu().numpy(), s=60, alpha=0.75,
-                                    c=x[:, 6].detach().cpu().numpy(), cmap='inferno', vmin=0, vmax=500)
+                        plt.scatter(x_noise[:, 1].detach().cpu().numpy(), x_noise[:, 2].detach().cpu().numpy(), s=60, alpha=0.75,
+                                    c=x[:, 6].detach().cpu().numpy(), cmap='gist_gray',vmin=-5000,vmax=5000)
+                        ax.set_facecolor([0.5,0.5,0.5])
                     elif model_config['model'] == 'ElecParticles':
                         for n in range(nparticle_types):
                             g = np.abs(p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20) * 4
@@ -1197,12 +1229,9 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
 
                     ax = fig.add_subplot(2, 2, 4)
                     if (model_config['model'] == 'HeatParticles') | (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
-                        for n in range(nparticle_types):
-                            pos = torch.argwhere(T1[:]==n).detach().cpu().numpy().astype(int)
-                            pos = pos[:,0:1]
-                            plt.scatter(np.repeat(n,len(pos)), H1[pos,0:1].detach().cpu().numpy().squeeze(), color=cmap.color(np.repeat(n,len(pos))), s=5, alpha=0.5)
-                        plt.ylim([-0.5, 10])
-                        plt.ylabel('Temperature [a.u]', fontsize="14")
+                        plt.hist(H1[:,0:1].detach().cpu().numpy().squeeze(),100)
+                        plt.xlim([0,5000])
+                        plt.xlabel('Temperature [a.u]', fontsize="14")
                     else:
                         if len(x_list)>30:
                             x_all =torch.stack(x_list)
@@ -4039,13 +4068,13 @@ def load_model_config(id=48):
                              'output_size': 1,
                              'hidden_size': 16,
                              'n_mp_layers': 5,
-                             'noise_level': 0,
+                             'noise_level': 5E-4,
                              'radius': 0.3,
                              'dataset': f'231001_{id}',
-                             'nparticles': 3840,
-                             'nparticle_types': 4,
-                             'ninteractions': 4,
-                             'nframes': 100000,
+                             'nparticles': 4225,
+                             'nparticle_types': 5,
+                             'ninteractions': 5,
+                             'nframes': 1000,
                              'sigma': .005,
                              'tau': 1E-10,
                              'v_init': 5E-5,
@@ -4054,20 +4083,19 @@ def load_model_config(id=48):
                              'data_augmentation': True,
                              'batch_size': 8,
                              'embedding': 2,
-                             'model': 'DiffMesh',
+                             'model': 'WaveMesh',
                              'prediction': '2nd_derivative',
                              'upgrade_type': 'none',
-                             'p': np.linspace(0.2, 5, 4).tolist(),
-                             'c': [0,0.2,0.5,1],
-                             'beta': 5E-3,
-                             'nrun': 2,
+                             'p': np.linspace(0.2, 5, 5).tolist(),
+                             'c': [0,0.2,0.9,0.3,1],
+                             'beta': 1E-2,
+                             'nrun': 10,
                              'clamp': 0,
                              'pred_limit': 1E9,
                              'start_frame': 0,
                              'cmap':'tab20b',
                              'arrow_length':10
                              }
-
 
     if id == 142:
         model_config_test = {'ntry': id,
@@ -4226,7 +4254,7 @@ if __name__ == '__main__':
         if gtest>=140:
             data_generate_boid(model_config, bVisu=True, bDetails=False, bSave=True, step=10)
         else:
-            data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=200)
+            data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=5)
         # data_train(model_config, bSparse=True)
         # x, rmserr_list = data_test(model_config, bVisu=False, bPrint=True, best_model=-1, step=5, bTest='')
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
