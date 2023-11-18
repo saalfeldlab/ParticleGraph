@@ -4175,6 +4175,41 @@ def load_model_config(id=48):
                              'arrow_length':5,
                              'description':'Boids acceleration pred aggr mean boid speed/4 4 different alignement 10 30 50 80'
                              }
+    if id == 144:
+        model_config_test = {'ntry': id,
+                             'input_size': 9,
+                             'output_size': 2,
+                             'hidden_size': 128,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.04,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 1800,
+                             'nparticle_types': 4,
+                             'ninteractions': 4,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-10,
+                             'v_init': 0,
+                             'aggr_type': 'mean',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'Particles_A',
+                             'prediction': '2nd_derivative',
+                             'upgrade_type': 'linear',
+                             'nlayers_update': 3,
+                             'hidden_size_update': 64,
+                             'p': [[50,10,0],[10,30,40],[20,50,40],[50,80,40]],        # separation cohesion alignement
+                             'nrun': 10,
+                             'clamp': 1E-3,
+                             'pred_limit': 1E9,
+                             'start_frame': 0.,
+                             'cmap':'tab10',
+                             'arrow_length':5,
+                             'description':'Boids acceleration pred aggr mean boid speed/4 4 different params'
+                             }
 
     for key, value in model_config_test.items():
         print(key, ":", value)
@@ -4194,7 +4229,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [44,45,46] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [144] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
@@ -4224,10 +4259,10 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
 
-        # if gtest>=140:
-        #     data_generate_boid(model_config, bVisu=True, bDetails=False, bSave=True, step=10)
-        # else:
-        #     data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=20)
+        if gtest>=140:
+            data_generate_boid(model_config, bVisu=True, bDetails=False, bSave=True, step=10)
+        else:
+            data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=20)
         data_train(model_config, bSparse=True)
         # x, rmserr_list = data_test(model_config, bVisu=False, bPrint=True, best_model=-1, step=5, bTest='')
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
