@@ -178,12 +178,16 @@ class Laplacian_A(pyg.nn.MessagePassing):
         #     sum_weight = edge_attr[pos] * h[ee[1,pos],5]
 
         heat_flow = self.beta * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
-        heat_flow = torch.clamp(heat_flow, min=-self.clamp, max=self.clamp)
+        if self.clamp>0:
+            heat_flow = torch.clamp(heat_flow, min=-self.clamp, max=self.clamp)
         return heat_flow
 
     def message(self, x_i, x_j, edge_attr):
         c = self.c[x_i[:, 5].detach().cpu().numpy()]
         c = c.squeeze()
+
+        edge_attr = torch.clamp(edge_attr, min=-torch.std(edge_attr)*2, max=torch.std(edge_attr)*2)
+
         heat = c * edge_attr * x_j[:, 6]
 
         return heat[:, None]
@@ -995,6 +999,20 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
         # h = torch.zeros((nparticles, 1), device=device)
         H1 = torch.zeros((nparticles, 2), device=device)
         H1[:,0:1] = torch.ones((nparticles, 1), device=device) + torch.randn((nparticles, 1), device=device) / 2
+
+        if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
+            i0 = imread('graphs_data/pattern_6.tif')
+            values = i0[(X1[:, 0].detach().cpu().numpy() * 256).astype(int), (X1[:, 1].detach().cpu().numpy() * 256).astype(int)]
+            H1[:,0] = torch.tensor(values / 255 * 5, device=device)
+            plt.scatter(X1[:, 0].detach().cpu().numpy(), X1[:, 1].detach().cpu().numpy(), s=1,
+                        c=H1[:, 0].detach().cpu().numpy())
+            i0 = imread('graphs_data/pattern_7.tif')
+            values = i0[(X1[:, 0].detach().cpu().numpy() * 256).astype(int), (X1[:, 1].detach().cpu().numpy()*256).astype(int)]
+            T1[:, 0] = torch.tensor(values, device=device)
+            plt.scatter(X1[:, 0].detach().cpu().numpy(), X1[:, 1].detach().cpu().numpy(), s=10,
+                        c=T1[:, 0].detach().cpu().numpy())
+
+
         N1 = torch.arange(nparticles, device=device)
         N1 = N1[:, None]
 
@@ -1011,6 +1029,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
 
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach()), 1)
             if (it >= 0) & (noise_level == 0):
+                x_noise = x
                 x_list.append(x.clone().detach())
             if (it >= 0) & (noise_level > 0):
                 x_noise = x
@@ -1034,8 +1053,6 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
 
             with torch.no_grad():
                 y = model(dataset)
-            if (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
-                y = y*0
             if (it >= 0) & (noise_level == 0):
                 y_list.append(y.clone().detach())
             if (it >= 0) & (noise_level > 0):
@@ -1047,22 +1064,19 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
             else:
                 V1 = y[:, 0:2]
 
-            X1 = bc_pos(X1 + V1)
+            if (model_config['model'] != 'DiffMesh') & (model_config['model'] != 'WaveMesh'):
+                X1 = bc_pos(X1 + V1)
 
-            if model_config['model'] == 'DiffMesh':
+            if (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
                 if it >= 0:
+                    mask = torch.argwhere ((X1[:,0]>0.1)&(X1[:,0]<0.9)&(X1[:,1]>0.1)&(X1[:,1]<0.9)).detach().cpu().numpy().astype(int)
+                    mask = mask[:, 0:1]
                     with torch.no_grad():
                         pred = model_mesh(dataset_mesh)
-                        H1[:,1:2] = pred
-                    H1[:,0:1] += H1[:,1:2]
+                        H1[mask,1:2] = pred[mask]
+                    H1[mask,0:1] += H1[mask,1:2]
                     h_list.append(pred)
-            if model_config['model'] == 'WaveMesh':
-                if it >= 0:
-                    with torch.no_grad():
-                        pred = model_mesh(dataset_mesh)
-                        H1[:,1:2] += pred
-                    H1[:,0:1] += H1[:,1:2]
-                    h_list.append(pred)
+
 
             if (run == 0) & (it % step == 0) & (it >= 0) & bVisu:
 
@@ -1164,8 +1178,10 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
                     ax = fig.add_subplot(2, 2, 4)
                     if (model_config['model'] == 'HeatParticles') | (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
                         for n in range(nparticle_types):
-                            plt.scatter(N1[index_particles[n]].detach().cpu().numpy(), H1[index_particles[n],0].detach().cpu().numpy(), color=cmap.color(n), s=5, alpha=0.5)
-                        plt.ylim([-0.5, 2.5])
+                            pos = torch.argwhere(T1[:]==n).detach().cpu().numpy().astype(int)
+                            pos = pos[:,0:1]
+                            plt.scatter(np.repeat(n,len(pos)), H1[pos,0:1].detach().cpu().numpy().squeeze(), color=cmap.color(np.repeat(n,len(pos))), s=5, alpha=0.5)
+                        plt.ylim([-0.5, 10])
                         plt.ylabel('Temperature [a.u]', fontsize="14")
                     else:
                         if len(x_list)>30:
@@ -3374,7 +3390,6 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
 def load_model_config(id=48):
     model_config_test = []
 
-
     if id == 44:
         model_config_test = {'ntry': id,
                              'input_size': 9,
@@ -4002,53 +4017,18 @@ def load_model_config(id=48):
         model_config_test = {'ntry': id,
                              'input_size': 4,
                              'output_size': 1,
-                             'hidden_size': 64,
+                             'hidden_size': 16,
                              'n_mp_layers': 5,
                              'noise_level': 0,
                              'radius': 0.3,
                              'dataset': f'231001_{id}',
-                             'nparticles': 6000,
+                             'nparticles': 3840,
                              'nparticle_types': 4,
                              'ninteractions': 4,
                              'nframes': 1000,
                              'sigma': .005,
                              'tau': 1E-10,
-                             'v_init': 0,
-                             'aggr_type': 'add',
-                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-                             'data_augmentation': True,
-                             'batch_size': 8,
-                             'embedding': 2,
-                             'model': 'WaveMesh',
-                             'prediction': '2nd_derivative',
-                             'upgrade_type': 'none',
-                             'p': np.linspace(1, 1, 4).tolist(),
-                             'c': [0.1, 0.2, 0.5, 1],
-                             'beta': 1E-5,
-                             'nrun': 10,
-                             'clamp': 1E-3,
-                             'pred_limit': 1E9,
-                             'start_frame': 0.,
-                             'cmap':'tab20b',
-                             'arrow_length':10,
-                             'description':'Wave equation fixed particles 4 beta coefficients'
-                             }
-    if id == 125:
-        model_config_test = {'ntry': id,
-                             'input_size': 4,
-                             'output_size': 1,
-                             'hidden_size': 64,
-                             'n_mp_layers': 5,
-                             'noise_level': 0,
-                             'radius': 0.3,
-                             'dataset': f'231001_{id}',
-                             'nparticles': 6000,
-                             'nparticle_types': 4,
-                             'ninteractions': 4,
-                             'nframes': 1000,
-                             'sigma': .005,
-                             'tau': 1E-10,
-                             'v_init': 0,
+                             'v_init': 5E-5,
                              'aggr_type': 'add',
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
                              'data_augmentation': True,
@@ -4058,51 +4038,16 @@ def load_model_config(id=48):
                              'prediction': '2nd_derivative',
                              'upgrade_type': 'none',
                              'p': np.linspace(0.2, 5, 4).tolist(),
-                             'c': np.linspace(1, 12, 4).tolist(),
-                             'beta': 1E-4,
-                             'nrun': 10,
-                             'clamp': 0.01,
-                             'pred_limit': 1E9,
-                             'start_frame': 0.3,
-                             'cmap':'tab20b',
-                             'arrow_length':10,
-                             'description':'Heat equation fixed particles 4 conductivities'
-                             }
-    if id == 126:
-        model_config_test = {'ntry': id,
-                             'input_size': 4,
-                             'output_size': 1,
-                             'hidden_size': 64,
-                             'n_mp_layers': 5,
-                             'noise_level': 0,
-                             'radius': 0.3,
-                             'dataset': f'231001_{id}',
-                             'nparticles': 6000,
-                             'nparticle_types': 4,
-                             'ninteractions': 4,
-                             'nframes': 1000,
-                             'sigma': .005,
-                             'tau': 1E-10,
-                             'v_init': 0,
-                             'aggr_type': 'add',
-                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-                             'data_augmentation': True,
-                             'batch_size': 8,
-                             'embedding': 2,
-                             'model': 'WaveMesh',
-                             'prediction': '2nd_derivative',
-                             'upgrade_type': 'none',
-                             'p': np.linspace(1, 1, 4).tolist(),
-                             'c': [2, 2, 2, 2],
-                             'beta': 1E-5,
+                             'c': [0,2,4,8],
+                             'beta': 1E-3,
                              'nrun': 2,
-                             'clamp': 1E-3,
+                             'clamp': 0.1,
                              'pred_limit': 1E9,
-                             'start_frame': 0.,
+                             'start_frame': 0,
                              'cmap':'tab20b',
-                             'arrow_length':10,
-                             'description':'Wave equation fixed particles 4 beta coefficients'
+                             'arrow_length':10
                              }
+
 
     if id == 142:
         model_config_test = {'ntry': id,
@@ -4228,7 +4173,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [144] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [124] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
@@ -4262,7 +4207,7 @@ if __name__ == '__main__':
             data_generate_boid(model_config, bVisu=True, bDetails=False, bSave=True, step=10)
         else:
             data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=20)
-        data_train(model_config, bSparse=True)
+        # data_train(model_config, bSparse=True)
         # x, rmserr_list = data_test(model_config, bVisu=False, bPrint=True, best_model=-1, step=5, bTest='')
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
