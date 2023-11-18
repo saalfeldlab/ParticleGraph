@@ -4130,7 +4130,7 @@ def load_model_config(id=48):
                              'upgrade_type': 'linear',
                              'nlayers_update': 3,
                              'hidden_size_update': 64,
-                             'p': [[50,10,40],[50,30,40],[50,50,40],[50,80,40]],
+                             'p': [[50,10,40],[50,30,40],[50,50,40],[50,80,40]],   # separation alignement cohesion
                              'nrun': 10,
                              'clamp': 1E-3,
                              'pred_limit': 1E9,
@@ -4139,7 +4139,6 @@ def load_model_config(id=48):
                              'arrow_length':5,
                              'description':'Boids acceleration pred 4 different alignement 10 30 50 80'
                              }
-
     if id == 143:
         model_config_test = {'ntry': id,
                              'input_size': 9,
@@ -4166,7 +4165,7 @@ def load_model_config(id=48):
                              'upgrade_type': 'linear',
                              'nlayers_update': 3,
                              'hidden_size_update': 64,
-                             'p': [[50,10,40],[50,30,40],[50,50,40],[50,80,40]],
+                             'p': [[50,10,40],[50,30,40],[50,50,40],[50,80,40]],    # separation alignement cohesion
                              'nrun': 10,
                              'clamp': 1E-3,
                              'pred_limit': 1E9,
@@ -4201,7 +4200,7 @@ def load_model_config(id=48):
                              'upgrade_type': 'linear',
                              'nlayers_update': 3,
                              'hidden_size_update': 64,
-                             'p': [[50,10,0],[10,30,40],[20,50,40],[50,80,40]],        # separation cohesion alignement
+                             'p': [[50,10,0],[10,30,40],[20,50,40],[35,80,40]],        # separation alignement cohesion
                              'nrun': 10,
                              'clamp': 1E-3,
                              'pred_limit': 1E9,
