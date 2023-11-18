@@ -169,26 +169,43 @@ class Laplacian_A(pyg.nn.MessagePassing):
     def forward(self, data):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
 
-        # ee = edge_index.detach().cpu().numpy()
-        # pos = np.argwhere(ee[0, :] == 2243)
-        # pos = pos.squeeze().astype(int)
-        #
-        # with torch.no_grad():
-        #     h=x.detach()
-        #     sum_weight = edge_attr[pos] * h[ee[1,pos],5]
+        c = self.c[x[:, 5].detach().cpu().numpy()]
+        c = c[:,None]
 
-        heat_flow = self.beta * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
-        if self.clamp>0:
-            heat_flow = torch.clamp(heat_flow, min=-self.clamp, max=self.clamp)
+        heat_flow = self.beta * c * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
+
+        # if (torch.min(heat_flow)<-0.5):
+        #     pos = torch.argwhere(heat_flow<-0.5).detach().cpu().numpy().astype(int)
+        #     k=pos[0,0]
+        #     print(x[pos, 1], x[pos, 2], x[pos, 6])
+        #     print(k)
+        #     pos = torch.argwhere(edge_index[0, :] == k).detach().cpu().numpy().astype(int)
+        #     print(edge_index[:,pos])
+        #
+        #     coeff = edge_attr[pos.squeeze()]
+        #     coeff = coeff[:, None]
+        #     print(coeff)
+        #     print(coeff * x[edge_index[1, pos], 6])
+        # if (torch.max(x[:, 6:7] + x[:, 7:8] + heat_flow[:,0:1]) > 5.05):
+        #     pos = torch.argwhere(x[:, 6:7] + x[:, 7:8] + heat_flow[:,0:1]>5.05).detach().cpu().numpy().astype(int)
+        #     k=pos[0,0]
+        #     print(x[pos, 1], x[pos, 2], x[pos, 6])
+        #     print(k)
+        #     pos = torch.argwhere(edge_index[0, :] == k).detach().cpu().numpy().astype(int)
+        #     print(edge_index[:,pos])
+        #
+        #     coeff = edge_attr[pos.squeeze()]
+        #     coeff = coeff[:, None]
+        #     print(coeff)
+        #     print(coeff * x[edge_index[1, pos], 6])
+
+
+
         return heat_flow
 
     def message(self, x_i, x_j, edge_attr):
-        c = self.c[x_i[:, 5].detach().cpu().numpy()]
-        c = c.squeeze()
 
-        edge_attr = torch.clamp(edge_attr, min=-torch.std(edge_attr)*2, max=torch.std(edge_attr)*2)
-
-        heat = c * edge_attr * x_j[:, 6]
+        heat = edge_attr * x_j[:, 6]
 
         return heat[:, None]
 
@@ -1003,7 +1020,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
         if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
             i0 = imread('graphs_data/pattern_6.tif')
             values = i0[(X1[:, 0].detach().cpu().numpy() * 256).astype(int), (X1[:, 1].detach().cpu().numpy() * 256).astype(int)]
-            H1[:,0] = torch.tensor(values / 255 * 5, device=device)
+            H1[:,0] = torch.tensor(values / 255 * 500, device=device)
             plt.scatter(X1[:, 0].detach().cpu().numpy(), X1[:, 1].detach().cpu().numpy(), s=1,
                         c=H1[:, 0].detach().cpu().numpy())
             i0 = imread('graphs_data/pattern_7.tif')
@@ -1020,6 +1037,8 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
 
         noise_current = 0 * torch.randn((nparticles, 2), device=device)
         noise_prev_prev = 0 * torch.randn((nparticles, 2), device=device)
+
+
 
         for it in tqdm(range(-int(nframes * model_config['start_frame']), nframes)):
 
@@ -1042,7 +1061,8 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
                 transform_0 = T.Compose([T.Delaunay()])
                 dataset_face = transform_0(dataset).face
                 mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
-                edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face)
+                edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,
+                                                                       normalization="None")  # "None", "sym", "rw"
                 dataset_mesh = data.Data(x=x, edge_index=edge_index, edge_attr=edge_weight, device=device)
 
             distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
@@ -1091,7 +1111,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
                                     alpha=0.75,color=cmap.color(n))
                 elif (model_config['model'] == 'HeatParticles') | (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
                     plt.scatter(x[:, 1].detach().cpu().numpy(),x[:, 2].detach().cpu().numpy(), s=10, alpha=0.75,
-                                    c=x[:, 6].detach().cpu().numpy(), cmap='inferno', vmin=0, vmax=2)
+                                    c=x[:, 6].detach().cpu().numpy(), cmap='inferno', vmin=0, vmax=500)
                 elif model_config['model'] == 'ElecParticles':
                     for n in range(nparticle_types):
                         g = np.abs(p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20)
@@ -1127,7 +1147,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
                         edge_index2 = adj_t2.nonzero().t().contiguous()
                         dataset2 = data.Data(x=x, edge_index=edge_index2)
                         vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
-                    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=0.03)
+                    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=0.3)
                 if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
                     plt.xlim([0,1])
                     plt.ylim([0,1])
@@ -1147,7 +1167,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
                                         color=cmap.color(n))  # , facecolors='none', edgecolors='k')
                     elif (model_config['model'] == 'HeatParticles') | (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
                         plt.scatter(x[:, 1].detach().cpu().numpy(), x[:, 2].detach().cpu().numpy(), s=60, alpha=0.75,
-                                    c=x[:, 6].detach().cpu().numpy(), cmap='inferno', vmin=0, vmax=2)
+                                    c=x[:, 6].detach().cpu().numpy(), cmap='inferno', vmin=0, vmax=500)
                     elif model_config['model'] == 'ElecParticles':
                         for n in range(nparticle_types):
                             g = np.abs(p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20) * 4
@@ -4025,7 +4045,7 @@ def load_model_config(id=48):
                              'nparticles': 3840,
                              'nparticle_types': 4,
                              'ninteractions': 4,
-                             'nframes': 1000,
+                             'nframes': 100000,
                              'sigma': .005,
                              'tau': 1E-10,
                              'v_init': 5E-5,
@@ -4038,10 +4058,10 @@ def load_model_config(id=48):
                              'prediction': '2nd_derivative',
                              'upgrade_type': 'none',
                              'p': np.linspace(0.2, 5, 4).tolist(),
-                             'c': [0,2,4,8],
-                             'beta': 1E-3,
+                             'c': [0,0.2,0.5,1],
+                             'beta': 5E-3,
                              'nrun': 2,
-                             'clamp': 0.1,
+                             'clamp': 0,
                              'pred_limit': 1E9,
                              'start_frame': 0,
                              'cmap':'tab20b',
@@ -4206,7 +4226,7 @@ if __name__ == '__main__':
         if gtest>=140:
             data_generate_boid(model_config, bVisu=True, bDetails=False, bSave=True, step=10)
         else:
-            data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=20)
+            data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=200)
         # data_train(model_config, bSparse=True)
         # x, rmserr_list = data_test(model_config, bVisu=False, bPrint=True, best_model=-1, step=5, bTest='')
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
