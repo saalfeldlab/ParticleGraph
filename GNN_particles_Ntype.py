@@ -1056,8 +1056,6 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
         noise_current = 0 * torch.randn((nparticles, 2), device=device)
         noise_prev_prev = 0 * torch.randn((nparticles, 2), device=device)
 
-
-
         for it in tqdm(range(-int(nframes * model_config['start_frame']), nframes)):
 
             noise_prev_prev = noise_prev_prev
@@ -1127,7 +1125,6 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
                         H1[:,1:2] += pred[:]
                     H1[:,0:1] += H1[:,1:2]
                     h_list.append(pred)
-
 
             if (run == 0) & (it % step == 0) & (it >= 0) & bVisu:
 
@@ -1228,11 +1225,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
                                       dx=x[k, 3].detach().cpu().item()*model_config['arrow_length'], dy=x[k, 4].detach().cpu().item()*model_config['arrow_length'],color='k')
 
                     ax = fig.add_subplot(2, 2, 4)
-                    if (model_config['model'] == 'HeatParticles') | (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
-                        plt.hist(H1[:,0:1].detach().cpu().numpy().squeeze(),100)
-                        plt.xlim([0,5000])
-                        plt.xlabel('Temperature [a.u]', fontsize="14")
-                    else:
+                    if (model_config['model'] != 'HeatParticles') & (model_config['model'] != 'DiffMesh') & (model_config['model'] != 'WaveMesh'):
                         if len(x_list)>30:
                             x_all =torch.stack(x_list)
                             for k in range(nparticles):
@@ -1245,12 +1238,8 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
                                 xc = x_all[:, k, 1].detach().cpu().numpy().squeeze()
                                 yc = x_all[:, k, 2].detach().cpu().numpy().squeeze()
                                 plt.scatter(xc,yc,s=0.05, color='k',alpha=0.75)
-                        if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
-                            plt.xlim([0,1])
-                            plt.ylim([0,1])
-                        else:
-                            plt.xlim([-1.3, 1.3])
-                            plt.ylim([-1.3, 1.3])
+                        plt.xlim([-1.3, 1.3])
+                        plt.ylim([-1.3, 1.3])
 
                 plt.tight_layout()
                 plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
@@ -4085,7 +4074,7 @@ def load_model_config(id=48):
                              'clamp': 0,
                              'pred_limit': 1E9,
                              'start_frame': 0,
-                             'cmap':'tab20b',
+                             'cmap':'tab10',
                              'arrow_length':10
                              }
 
