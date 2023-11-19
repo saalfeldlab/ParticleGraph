@@ -1495,7 +1495,7 @@ def data_train(model_config, bSparse=False):
             h_list.append(torch.stack(h))
         h = torch.stack(h_list)
         h = torch.reshape(h, (h.shape[0] * h.shape[1] * h.shape[2], h.shape[3]))
-        hnorm = torch.std(h)
+        hnorm = torch.std(torch.abs(h))
         torch.save(hnorm, os.path.join(log_dir, 'hnorm.pt'))
         print(hnorm)
     if model_config['model'] == 'GravityParticles':
