@@ -1068,12 +1068,12 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
 
             if (it >= 0) & (noise_level == 0):
                 x_noise = x
-                x_list.append(x.clone().detach())
             if (it >= 0) & (noise_level > 0):
                 x_noise = x
                 x_noise[:, 1:3] = x[:, 1:3] + noise_current
                 x_noise[:, 3:5] = x[:, 3:5] + noise_current - noise_prev
-                x_list.append(x_noise.clone().detach())
+
+            x_list.append(x_noise.clone().detach())
 
             if (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
                 dataset = data.Data(x=x_noise, pos=x_noise[:, 1:3])
@@ -1561,19 +1561,6 @@ def data_train(model_config, bSparse=False):
     data_augmentation_loop = 20
     print(f'data_augmentation_loop: {data_augmentation_loop}')
 
-    if (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
-        edge_index_mesh_list=[]
-        edge_weight_mesh_list=[]
-        for run in tqdm(arr):
-            x = x_list[run][0].clone().detach()
-            dataset = data.Data(x=x, pos=x[:, 1:3])
-            transform_0 = T.Compose([T.Delaunay()])
-            dataset_face = transform_0(dataset).face
-            mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
-            edge_index_mesh, edge_weight_mesh = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face)
-            edge_index_mesh_list.append(edge_index_mesh)
-            edge_weight_mesh_list.append(edge_weight_mesh)
-
     print('Start training ...')
     time.sleep(0.5)
     for epoch in range(Nepochs + 1):
@@ -1624,6 +1611,12 @@ def data_train(model_config, bSparse=False):
                 x_next = x_list[run][k+1].clone().detach()
 
                 if (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
+                    dataset = data.Data(x=x_noise, pos=x_noise[:, 1:3])
+                    transform_0 = T.Compose([T.Delaunay()])
+                    dataset_face = transform_0(dataset).face
+                    mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
+                    edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,
+                                                                           normalization="None")  # "None", "sym", "rw"
                     dataset = data.Data(x=x, edge_index=edge_index_mesh_list[run], edge_attr=edge_weight_mesh_list[run], device=device)
                     dataset_batch.append(dataset)
                     y = h_list[run][k].clone().detach()/hnorm
@@ -2208,9 +2201,8 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                         ps = boid.Draw(Distance, scale)
                         ps = np.array(ps)
                         plt.plot(ps[:, 0], ps[:, 1], c=cmap.color(T1[n].detach().cpu().numpy()), alpha=0.5)
-
                 elif (k==0) & ((model_config['model'] == 'DiffMesh')|(model_config['model'] == 'WaveMesh')|(model_config['model'] == 'HeatParticles')):
-                    plt.scatter(x0_next[:, 6].detach().cpu().numpy(),x[:, 6].detach().cpu().numpy(),s=1, alpha=0.25, cmap='inferno', vmin=0, vmax=2, c='k')
+                    plt.scatter(x0_next[:, 6].detach().cpu().numpy(),x[:, 6].detach().cpu().numpy(),s=1, alpha=0.25, cmap='gist_gray', vmin=-5000, vmax=5000, c='k')
                     plt.xlabel('True temperature [a.u.]', fontsize="14")
                     plt.ylabel('Model temperature [a.u]', fontsize="14")
                 elif model_config['model'] == 'GravityParticles':
@@ -2245,8 +2237,8 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                         plt.xlim([0,size])
                         plt.ylim([0,size])
                     elif (k == 0) & ((model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh') | (model_config['model'] == 'HeatParticles')):
-                        plt.xlim([0, 2])
-                        plt.ylim([0, 2])
+                        plt.xlim([0, 1])
+                        plt.ylim([0, 1])
                     elif (model_config['boundary'] == 'no'):
                         plt.xlim([-1.3, 1.3])
                         plt.ylim([-1.3, 1.3])
@@ -4087,7 +4079,7 @@ def load_model_config(id=48):
                              'prediction': '2nd_derivative',
                              'upgrade_type': 'none',
                              'p': np.linspace(0.2, 5, 5).tolist(),
-                             'c': [0,0.2,0.9,0.3,1],
+                             'c': [0,0.2,0.9,1,0.3],
                              'beta': 1E-2,
                              'nrun': 10,
                              'clamp': 0,
@@ -4255,7 +4247,7 @@ if __name__ == '__main__':
             data_generate_boid(model_config, bVisu=True, bDetails=False, bSave=True, step=10)
         else:
             data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=5)
-        # data_train(model_config, bSparse=True)
+        data_train(model_config, bSparse=True)
         # x, rmserr_list = data_test(model_config, bVisu=False, bPrint=True, best_model=-1, step=5, bTest='')
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
