@@ -1606,19 +1606,14 @@ def data_train(model_config, bSparse=False):
                     mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
                     edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,
                                                                            normalization="None")  # "None", "sym", "rw"
-                    dataset = data.Data(x=x, edge_index=edge_index_mesh_list[run], edge_attr=edge_weight_mesh_list[run], device=device)
+                    dataset = data.Data(x=x, edge_index=edge_index, edge_attr=edge_weight, device=device)
                     dataset_batch.append(dataset)
                     y = h_list[run][k].clone().detach()/hnorm
                     if batch == 0:
-                        try:
-                            y_batch = y
-                        except:
-                            a=1
+                        y_batch = y
                     else:
-                        try:
-                            y_batch = torch.cat((y_batch, y), axis=0)
-                        except:
-                            a=1
+                        y_batch = torch.cat((y_batch, y), axis=0)
+
                 else:
                     distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
                     adj_t = (distance < radius ** 2).float() * 1
@@ -4267,11 +4262,11 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-
-        if gtest>=140:
-            data_generate_boid(model_config, bVisu=True, bDetails=False, bSave=True, step=10)
-        else:
-            data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=5)
+        if gtest==125:
+            if gtest>=140:
+                data_generate_boid(model_config, bVisu=True, bDetails=False, bSave=True, step=10)
+            else:
+                data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=5)
         data_train(model_config, bSparse=True)
         # x, rmserr_list = data_test(model_config, bVisu=False, bPrint=True, best_model=-1, step=5, bTest='')
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
