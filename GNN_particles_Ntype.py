@@ -1600,7 +1600,7 @@ def data_train(model_config, bSparse=False):
                 x_next = x_list[run][k+1].clone().detach()
 
                 if (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
-                    dataset = data.Data(x=x_noise, pos=x_noise[:, 1:3])
+                    dataset = data.Data(x=x, pos=x[:, 1:3])
                     transform_0 = T.Compose([T.Delaunay()])
                     dataset_face = transform_0(dataset).face
                     mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
@@ -4075,7 +4075,43 @@ def load_model_config(id=48):
                              'pred_limit': 1E9,
                              'start_frame': 0,
                              'cmap':'tab10',
-                             'arrow_length':10
+                             'arrow_length':10,
+                             'description': 'Wave equation brownian particles 5 coefficients'
+                             }
+    if id == 125:
+        model_config_test = {'ntry': id,
+                             'input_size': 4,
+                             'output_size': 1,
+                             'hidden_size': 16,
+                             'n_mp_layers': 5,
+                             'noise_level': 5E-4,
+                             'radius': 0.3,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 4225,
+                             'nparticle_types': 5,
+                             'ninteractions': 5,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-10,
+                             'v_init': 5E-5,
+                             'aggr_type': 'add',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'DiffMesh',
+                             'prediction': '2nd_derivative',
+                             'upgrade_type': 'none',
+                             'p': np.linspace(0.2, 5, 5).tolist(),
+                             'c': [0,0.2,0.9,1,0.3],
+                             'beta': 1E-2,
+                             'nrun': 10,
+                             'clamp': 0,
+                             'pred_limit': 1E9,
+                             'start_frame': 0,
+                             'cmap':'tab10',
+                             'arrow_length':10,
+                             'description': 'Diffusion equation brownian particles 5 coefficients'
                              }
 
     if id == 142:
@@ -4202,7 +4238,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [124] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [124,125] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
