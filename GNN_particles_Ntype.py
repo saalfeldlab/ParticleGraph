@@ -1058,8 +1058,8 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
 
         for it in tqdm(range(-int(nframes * model_config['start_frame']), nframes)):
 
-            noise_prev_prev = noise_prev_prev
-            noise_prev = noise_current
+            noise_prev_prev = noise_prev_prev.clone().detach()
+            noise_prev = noise_current.clone().detach()
             noise_current = torch.randn((nparticles, 2), device=device) * noise_level
 
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach()), 1)
