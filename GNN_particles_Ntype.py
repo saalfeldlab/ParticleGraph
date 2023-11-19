@@ -1715,127 +1715,129 @@ def data_train(model_config, bSparse=False):
                 for n in range(nparticle_types):
                     plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5,color=cmap.color(n))
 
-        ax = fig.add_subplot(2, 4, 3)
-        if model_config['model'] == 'ElecParticles':
-            acc_list = []
-            for m in range(model.a.shape[0]):
-                for k in range(nparticle_types):
-                    for n in index_particles[k]:
-                        rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
-                        embedding0 = model.a[m, n, :] * torch.ones((1000, model_config['embedding']), device=device)
-                        embedding1 = model.a[m, n, :] * torch.ones((1000, model_config['embedding']), device=device)
-                        in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
-                                                 rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
-                                                 0 * rr[:, None], 0 * rr[:, None], embedding0, embedding1), dim=1)
-                        acc = model.lin_edge(in_features.float())
-                        acc = acc[:, 0]
-                        acc_list.append(acc)
-                        if n % 5 == 0:
-                            plt.plot(rr.detach().cpu().numpy(),
-                                     acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'], linewidth=1,
-                                     color=cmap.color(k),alpha=0.25)
-            acc_list = torch.stack(acc_list)
-            plt.xlim([0, 0.05])
-            plt.xlabel('Distance [a.u]', fontsize=12)
-            plt.ylabel('MLP [a.u]', fontsize=12)
-            coeff_norm = acc_list.detach().cpu().numpy()
-            trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int),
-                              n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
-            proj_interaction = trans.transform(coeff_norm)
-        elif (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
+        if bSparse:
 
-            f_list = []
-            for n in range(nparticles):
-                r0 = torch.tensor(np.ones(1000)).to(device)
-                r1 = torch.tensor(np.linspace(0, 2, 1000)).to(device)
-                embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
-                in_features = torch.cat((r0[:, None], r1[:, None], embedding), dim=1)
-                h = model.lin_edge(in_features.float())
-                h = h[:, 0]
-                f_list.append(h)
-                if n % 5 == 0:
-                    plt.plot(r1.detach().cpu().numpy(),
-                             h.detach().cpu().numpy() * hnorm.detach().cpu().numpy(), linewidth=1,
-                             color='k',alpha=0.05)
-            f_list = torch.stack(f_list)
-            coeff_norm = f_list.detach().cpu().numpy()
-            trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int),
-                              n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
-            proj_interaction = trans.transform(coeff_norm)
-            particle_types = x_list[0][0, :, 5].clone().detach().cpu().numpy()
-            ax = fig.add_subplot(2, 4, 4)
-            for n in range(nparticle_types):
-                plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1], s=5)
-            plt.xlabel('UMAP 0', fontsize=12)
-            plt.ylabel('UMAP 1', fontsize=12)
+            ax = fig.add_subplot(2, 4, 3)
+            if model_config['model'] == 'ElecParticles':
+                acc_list = []
+                for m in range(model.a.shape[0]):
+                    for k in range(nparticle_types):
+                        for n in index_particles[k]:
+                            rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
+                            embedding0 = model.a[m, n, :] * torch.ones((1000, model_config['embedding']), device=device)
+                            embedding1 = model.a[m, n, :] * torch.ones((1000, model_config['embedding']), device=device)
+                            in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                                     rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
+                                                     0 * rr[:, None], 0 * rr[:, None], embedding0, embedding1), dim=1)
+                            acc = model.lin_edge(in_features.float())
+                            acc = acc[:, 0]
+                            acc_list.append(acc)
+                            if n % 5 == 0:
+                                plt.plot(rr.detach().cpu().numpy(),
+                                         acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'], linewidth=1,
+                                         color=cmap.color(k),alpha=0.25)
+                acc_list = torch.stack(acc_list)
+                plt.xlim([0, 0.05])
+                plt.xlabel('Distance [a.u]', fontsize=12)
+                plt.ylabel('MLP [a.u]', fontsize=12)
+                coeff_norm = acc_list.detach().cpu().numpy()
+                trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int),
+                                  n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
+                proj_interaction = trans.transform(coeff_norm)
+            elif (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
 
-            kmeans = KMeans(init="random", n_clusters=nparticle_types, n_init=1000, max_iter=10000, random_state=13)
-            kmeans.fit(proj_interaction)
-            for n in range(nparticle_types):
-                plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
-                pos = np.argwhere(kmeans.labels_ == n).squeeze().astype(int)
-        elif model_config['model'] == 'GravityParticles':
-            acc_list = []
-            for n in range(nparticles):
-                rr = torch.tensor(np.linspace(0, radius * 1.3, 1000)).to(device)
-                embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
-                in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
-                                         rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
-                                         0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
-                acc = model.lin_edge(in_features.float())
-                acc = acc[:, 0]
-                acc_list.append(acc)
-                plt.plot(rr.detach().cpu().numpy(),acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],color=cmap.color(x[n,5].detach().cpu().numpy()), linewidth=1,alpha=0.25)
-            acc_list = torch.stack(acc_list)
-            plt.yscale('log')
-            plt.xscale('log')
-            plt.xlim([1E-3, 0.2])
-            plt.ylim([1, 1E7])
-            plt.xlabel('Distance [a.u]', fontsize=12)
-            plt.ylabel('MLP [a.u]', fontsize=12)
-            coeff_norm = acc_list.detach().cpu().numpy()
-            trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int),
-                              n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
-            proj_interaction = trans.transform(coeff_norm)
-        elif model_config['model'] == 'Particles_A':
-            acc_list = []
-            for n in range(nparticles):
-                rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
-                embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
-                ### TO BE CHANGED ###
-                if model_config['prediction'] == '2nd_derivative':
+                f_list = []
+                for n in range(nparticles):
+                    r0 = torch.tensor(np.ones(1000)).to(device)
+                    r1 = torch.tensor(np.linspace(0, 2, 1000)).to(device)
+                    embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
+                    in_features = torch.cat((r0[:, None], r1[:, None], embedding), dim=1)
+                    h = model.lin_edge(in_features.float())
+                    h = h[:, 0]
+                    f_list.append(h)
+                    if n % 5 == 0:
+                        plt.plot(r1.detach().cpu().numpy(),
+                                 h.detach().cpu().numpy() * hnorm.detach().cpu().numpy(), linewidth=1,
+                                 color='k',alpha=0.05)
+                f_list = torch.stack(f_list)
+                coeff_norm = f_list.detach().cpu().numpy()
+                trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int),
+                                  n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
+                proj_interaction = trans.transform(coeff_norm)
+                particle_types = x_list[0][0, :, 5].clone().detach().cpu().numpy()
+                ax = fig.add_subplot(2, 4, 4)
+                for n in range(nparticle_types):
+                    plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1], s=5)
+                plt.xlabel('UMAP 0', fontsize=12)
+                plt.ylabel('UMAP 1', fontsize=12)
+
+                kmeans = KMeans(init="random", n_clusters=nparticle_types, n_init=1000, max_iter=10000, random_state=13)
+                kmeans.fit(proj_interaction)
+                for n in range(nparticle_types):
+                    plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
+                    pos = np.argwhere(kmeans.labels_ == n).squeeze().astype(int)
+            elif model_config['model'] == 'GravityParticles':
+                acc_list = []
+                for n in range(nparticles):
+                    rr = torch.tensor(np.linspace(0, radius * 1.3, 1000)).to(device)
+                    embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
                     in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
                                              rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
                                              0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
-                else:
-                    if model_config['prediction'] == 'first_derivative_L':
-                        in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
-                    if model_config['prediction'] == 'first_derivative_S':
-                        in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None], rr[:, None] / model_config['radius'], embedding), dim=1)
-
-                acc = model.lin_edge(in_features.float())
-                acc = acc[:, 0]
-                acc_list.append(acc)
-                if n%5==0:
+                    acc = model.lin_edge(in_features.float())
+                    acc = acc[:, 0]
+                    acc_list.append(acc)
                     plt.plot(rr.detach().cpu().numpy(),acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],color=cmap.color(x[n,5].detach().cpu().numpy()), linewidth=1,alpha=0.25)
-            plt.xlabel('Distance [a.u]', fontsize=12)
-            plt.ylabel('MLP [a.u]', fontsize=12)
-            acc_list = torch.stack(acc_list)
-            coeff_norm = acc_list.detach().cpu().numpy()
-            trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int),
-                              n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
-            proj_interaction = trans.transform(coeff_norm)
+                acc_list = torch.stack(acc_list)
+                plt.yscale('log')
+                plt.xscale('log')
+                plt.xlim([1E-3, 0.2])
+                plt.ylim([1, 1E7])
+                plt.xlabel('Distance [a.u]', fontsize=12)
+                plt.ylabel('MLP [a.u]', fontsize=12)
+                coeff_norm = acc_list.detach().cpu().numpy()
+                trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int),
+                                  n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
+                proj_interaction = trans.transform(coeff_norm)
+            elif model_config['model'] == 'Particles_A':
+                acc_list = []
+                for n in range(nparticles):
+                    rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
+                    embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
+                    ### TO BE CHANGED ###
+                    if model_config['prediction'] == '2nd_derivative':
+                        in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                                 rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
+                                                 0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
+                    else:
+                        if model_config['prediction'] == 'first_derivative_L':
+                            in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
+                        if model_config['prediction'] == 'first_derivative_S':
+                            in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None], rr[:, None] / model_config['radius'], embedding), dim=1)
+
+                    acc = model.lin_edge(in_features.float())
+                    acc = acc[:, 0]
+                    acc_list.append(acc)
+                    if n%5==0:
+                        plt.plot(rr.detach().cpu().numpy(),acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],color=cmap.color(x[n,5].detach().cpu().numpy()), linewidth=1,alpha=0.25)
+                plt.xlabel('Distance [a.u]', fontsize=12)
+                plt.ylabel('MLP [a.u]', fontsize=12)
+                acc_list = torch.stack(acc_list)
+                coeff_norm = acc_list.detach().cpu().numpy()
+                trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int),
+                                  n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
+                proj_interaction = trans.transform(coeff_norm)
 
 
-        ax = fig.add_subplot(2, 4, 4)
-        for n in range(nparticle_types):
-            plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1],
-                        color=cmap.color(n), s=5, alpha=0.75)
-        plt.xlabel('UMAP 0', fontsize=12)
-        plt.ylabel('UMAP 1', fontsize=12)
+            ax = fig.add_subplot(2, 4, 4)
+            for n in range(nparticle_types):
+                plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1],
+                            color=cmap.color(n), s=5, alpha=0.75)
+            plt.xlabel('UMAP 0', fontsize=12)
+            plt.ylabel('UMAP 1', fontsize=12)
 
         # Constrain embedding with UMAP of plots clustering
-        if bSparse:
+
             if (epoch==14) | (epoch==19):
                 kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=5000, max_iter=10000,random_state=13)
                 kmeans.fit(proj_interaction)
@@ -1884,8 +1886,6 @@ def data_train(model_config, bSparse=False):
                     else:
                         for n in range(nparticle_types):
                             plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5, color=cmap.color(n))
-
-
             if (epoch % 10 == 0) & (epoch > 0):
                 best_loss = total_loss / N / nparticles / batch_size
                 torch.save({'model_state_dict': model.state_dict(),
@@ -4267,7 +4267,7 @@ if __name__ == '__main__':
                 data_generate_boid(model_config, bVisu=True, bDetails=False, bSave=True, step=10)
             else:
                 data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=5)
-        data_train(model_config, bSparse=True)
+        data_train(model_config, bSparse=False)
         # x, rmserr_list = data_test(model_config, bVisu=False, bPrint=True, best_model=-1, step=5, bTest='')
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
