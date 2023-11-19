@@ -1687,7 +1687,7 @@ def data_train(model_config, bSparse=False):
                 f_list = []
                 for n in range(nparticles):
                     r0 = torch.tensor(np.linspace(4, 5, 1000)).to(device)
-                    r1 = torch.tensor(np.linspace(-100, 100, 1000)).to(device)
+                    r1 = torch.tensor(np.linspace(-250, 250, 1000)).to(device)
                     embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
                     in_features = torch.cat((r0[:, None], r1[:, None], embedding), dim=1)
                     h = model.lin_edge(in_features.float())
@@ -2628,7 +2628,6 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
     plt.tight_layout()
     plt.show()
 
-
     if bMesh:
         h_list=[]
         for run in tqdm(range(NGraphs)):
@@ -2805,7 +2804,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
         h_list = []
         for n in range(nparticles):
             r0 = torch.tensor(np.linspace(4, 5, 1000)).to(device)
-            r1 = torch.tensor(np.linspace(-100, 100, 1000)).to(device)
+            r1 = torch.tensor(np.linspace(-250, 250, 1000)).to(device)
             embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
             in_features = torch.cat((r0[:, None], r1[:, None], embedding), dim=1)
             h = model.lin_edge(in_features.float())
