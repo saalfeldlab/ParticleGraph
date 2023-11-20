@@ -2224,7 +2224,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
     print(f'RMSE: {np.round(rmserr.item(), 4)}')
     if bPrint:
         print(f'ntry: {ntry}')
-        print(f'MMD: {np.round(discrepency, 4)}')
+        # print(f'MMD: {np.round(discrepency, 4)}')
 
     torch.save(x_recons, f'{log_dir}/x_list.pt')
     torch.save(y_recons, f'{log_dir}/y_list.pt')
@@ -3546,10 +3546,10 @@ def load_model_config(id=48):
                              'upgrade_type': 'none',
                              'p': np.linspace(0.2, 5, 5).tolist(),
                              'c': [0,0.2,0.9,1,0.3],
-                             'particle_value_map': 'pattern_10.tif',     # 'particle_value_map': 'pattern_6.tif',
+                             'particle_value_map': 'pattern_6.tif',     # 'particle_value_map': 'pattern_6.tif',
                              'particle_type_map': 'pattern_8.tif',
                              'beta': 1E-2,
-                             'nrun': 1,
+                             'nrun': 10,
                              'clamp': 0,
                              'pred_limit': 1E9,
                              'start_frame': 0,
@@ -3620,10 +3620,10 @@ def load_model_config(id=48):
                              'upgrade_type': 'none',
                              'p': np.linspace(0.2, 5, 5).tolist(),
                              'c': [0,0.2,0.9,1,0.3],
-                             'particle_value_map': 'pattern_10.tif',
-                             'particle_type_map': 'pattern_11.tif',
+                             'particle_value_map': 'pattern_6.tif',     # 'particle_value_map': 'pattern_6.tif',
+                             'particle_type_map': 'pattern_8.tif',
                              'beta': 1E-2,
-                             'nrun': 2,
+                             'nrun': 10,
                              'clamp': 0,
                              'pred_limit': 1E9,
                              'start_frame': 0,
@@ -3756,7 +3756,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [124] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [126] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
@@ -3790,8 +3790,8 @@ if __name__ == '__main__':
             data_generate_boid(model_config, bVisu=True, bDetails=False, bSave=True, step=10)
         else:
             data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
-        # data_train(model_config, bSparse=False)
-        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=5, bTest='')
+        data_train(model_config, bSparse=False)
+        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=5, bTest='')
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
