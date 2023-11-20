@@ -1056,7 +1056,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
         noise_current = 0 * torch.randn((nparticles, 2), device=device)
         noise_prev_prev = 0 * torch.randn((nparticles, 2), device=device)
 
-        for it in tqdm(range(-int(nframes * model_config['start_frame']), nframes)):
+        for it in tqdm(range(model_config['start_frame'], nframes)):
 
             noise_prev_prev = noise_prev_prev
             noise_prev = noise_current
@@ -3443,8 +3443,7 @@ def load_model_config(id=48):
                              'nrun': 2,
                              'clamp': 0.002,
                              'pred_limit': 1E9,
-                             'start_frame': 1,
-                             'arrow_length':10,
+                             'start_frame': -1000,
                              'cmap':'tab10',
                              'arrow_length':10,
                              'description':'Gravity'}
@@ -3460,7 +3459,7 @@ def load_model_config(id=48):
                              'nparticles': 960,
                              'nparticle_types': 4,
                              'ninteractions': 4,
-                             'nframes': 2000,
+                             'nframes': 1000,
                              'sigma': .005,
                              'tau': 1E-9/100,
                              'v_init': 5E-5/100,
@@ -3476,8 +3475,7 @@ def load_model_config(id=48):
                              'nrun': 10,
                              'clamp': 0.002,
                              'pred_limit': 1E9,
-                             'start_frame': 0.5,
-                             'arrow_length':10,
+                             'start_frame': -1000,
                              'cmap':'tab10',
                              'arrow_length':100,
                              'description':'Gravity'}
@@ -3487,13 +3485,13 @@ def load_model_config(id=48):
                              'output_size': 2,
                              'hidden_size': 128,
                              'n_mp_layers': 5,
-                             'noise_level': 5E-5,
+                             'noise_level': 0,
                              'radius': 0.3,
                              'dataset': f'231001_{id}',
                              'nparticles': 960,
                              'nparticle_types': 4,
                              'ninteractions': 4,
-                             'nframes': 2000,
+                             'nframes': 400,
                              'sigma': .005,
                              'tau': 1E-9/100,
                              'v_init': 5E-5/100,
@@ -3506,80 +3504,15 @@ def load_model_config(id=48):
                              'prediction': '2nd_derivative',
                              'upgrade_type': 'none',
                              'p': np.linspace(0.2, 5, 4).tolist(),
-                             'nrun': 10,
+                             'nrun': 30,
                              'clamp': 0.002,
                              'pred_limit': 1E9,
-                             'start_frame': 0.5,
+                             'start_frame': -1000,
                              'arrow_length':10,
                              'cmap':'tab10',
                              'arrow_length':100,
-                             'description':'Gravity'}
-    if id == 47:
-        model_config_test = {'ntry': id,
-                             'input_size': 9,
-                             'output_size': 2,
-                             'hidden_size': 128,
-                             'n_mp_layers': 5,
-                             'noise_level': 1E-4,
-                             'radius': 0.3,
-                             'dataset': f'231001_{id}',
-                             'nparticles': 960,
-                             'nparticle_types': 4,
-                             'ninteractions': 4,
-                             'nframes': 2000,
-                             'sigma': .005,
-                             'tau': 1E-9/100,
-                             'v_init': 5E-5/100,
-                             'aggr_type': 'add',
-                             'boundary': 'no',  # periodic   'no'  # no boundary condition
-                             'data_augmentation': True,
-                             'batch_size': 8,
-                             'embedding': 2,
-                             'model': 'GravityParticles',
-                             'prediction': '2nd_derivative',
-                             'upgrade_type': 'none',
-                             'p': np.linspace(0.2, 5, 4).tolist(),
-                             'nrun': 10,
-                             'clamp': 0.002,
-                             'pred_limit': 1E9,
-                             'start_frame': 0.5,
-                             'arrow_length':10,
-                             'cmap':'tab20c',
-                             'arrow_length':100,
-                             'description':'Gravity'}
-    if id == 48:
-        model_config_test = {'ntry': id,
-                             'input_size': 9,
-                             'output_size': 2,
-                             'hidden_size': 128,
-                             'n_mp_layers': 5,
-                             'noise_level': 5E-4,
-                             'radius': 0.3,
-                             'dataset': f'231001_{id}',
-                             'nparticles': 960,
-                             'nparticle_types': 4,
-                             'ninteractions': 4,
-                             'nframes': 2000,
-                             'sigma': .005,
-                             'tau': 1E-9/100,
-                             'v_init': 5E-5/100,
-                             'aggr_type': 'add',
-                             'boundary': 'no',  # periodic   'no'  # no boundary condition
-                             'data_augmentation': True,
-                             'batch_size': 8,
-                             'embedding': 2,
-                             'model': 'GravityParticles',
-                             'prediction': '2nd_derivative',
-                             'upgrade_type': 'none',
-                             'p': np.linspace(0.2, 5, 4).tolist(),
-                             'nrun': 10,
-                             'clamp': 0.002,
-                             'pred_limit': 1E9,
-                             'start_frame': 0.5,
-                             'arrow_length':10,
-                             'cmap':'tab20c',
-                             'arrow_length':100,
-                             'description':'Gravity'}
+                             'description':'Gravity 400 frames 30 datasets'}
+
 
 
     # particles
@@ -3610,7 +3543,7 @@ def load_model_config(id=48):
                              'p': [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855],
                                    [1.785, 1.8579, 1.7226, 1.0584]],
                              'nrun': 2,
-                             'start_frame': 0.1,
+                             'start_frame': -20,
                              'arrow_length':20,
                              'cmap':'tab10'}
     if id == 75:
@@ -3640,7 +3573,7 @@ def load_model_config(id=48):
                              'p': [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855],
                                    [1.785, 1.8579, 1.7226, 1.0584]],
                              'nrun': 2,
-                             'start_frame': 0.1,
+                             'start_frame': -20,
                              'arrow_length':20,
                              'cmap':'tab10',
                              'description': 'pred=first derivative Particles_A is a first derivative simulation, interaction is function of r.exp-r^2 interaction is type dependent best_model:14'}
@@ -3671,7 +3604,7 @@ def load_model_config(id=48):
                              'p': [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855],
                                    [1.785, 1.8579, 1.7226, 1.0584]],
                              'nrun': 2,
-                             'start_frame': 0.1,
+                             'start_frame': -20,
                              'cmap':'tab10',
                              'arrow_length':20,
                              'description': 'pred=second derivative Particles_A is a first derivative simulation, interaction is function of r.exp-r^2 interaction is type dependent best_model:14'}
@@ -3701,7 +3634,7 @@ def load_model_config(id=48):
                              'upgrade_type': 'none',
                              'p': [[1.2425, 1.3355, 1.3397, 1.3929], [1.629, 1.4932, 1.5311, 1.8677],[1.9852, 1.1892, 1.1544, 1.993],[1.6898, 1.1336, 1.4869, 1.7767],[1.8847, 1.5448, 1.8063, 1.3873],[1.496, 1.4064, 1.9045, 1.733],[1.5108, 1.9904, 1.1665, 1.6975],[1.6153, 1.8557, 1.2758, 1.0684]],
                              'nrun': 2,
-                             'start_frame': 0,
+                             'start_frame': -20,
                              'arrow_length':20,
                              'cmap':'tab10',
                              'description': '8 types pred=first derivative Particles_A is a first derivative simulation, interaction is function of r.exp-r^2 interaction is type dependent best_model:14'}
@@ -3897,41 +3830,7 @@ def load_model_config(id=48):
                              'cmap':'tab10',
                              'description':'Periodic Particles_E is a second derivative simulation, acceleration is function of electrostatic law qiqj/r2 interaction is type-type dependent best_model:22'}
 
-    # heat
-    # 8 types boundary periodic N=960
-    if id == 120:
-        model_config_test = {'ntry': id,
-                             'input_size': 8,
-                             'output_size': 2,
-                             'hidden_size': 128,
-                             'n_mp_layers': 5,
-                             'noise_level': 0,
-                             'radius': 0.15,
-                             'dataset': f'231001_{id}',
-                             'nparticles': 3840,
-                             'nparticle_types': 4,
-                             'ninteractions': 4,
-                             'nframes': 2000,
-                             'sigma': .005,
-                             'tau': 1E-10,
-                             'beta': 1E-5,
-                             'v_init': 1E-4,
-                             'aggr_type': 'add',
-                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-                             'data_augmentation': True,
-                             'batch_size': 8,
-                             'embedding': 1,
-                             'model': 'HeatParticles',
-                             'prediction': '2nd_derivative',
-                             'upgrade_type': 'none',
-                             'p': np.linspace(0.2, 5, 8).tolist(),
-                             'nrun': 2,
-                             'clamp': 0.002,
-                             'pred_limit': 1E9,
-                             'start_frame': 0.25,
-                             'cmap':'tab20b',
-                             'arrow_length':10
-        }
+
     # 4 types boundary periodic N=960 mesh diffusion
     if id == 121:
         model_config_test = {'ntry': id,
@@ -3963,7 +3862,7 @@ def load_model_config(id=48):
                              'nrun': 2,
                              'clamp': 0.01,
                              'pred_limit': 1E9,
-                             'start_frame': 0.3,
+                             'start_frame': -300,
                              'cmap':'tab20b',
                              'arrow_length':10
                              }
@@ -4033,7 +3932,7 @@ def load_model_config(id=48):
                              'nrun': 2,
                              'clamp': 0.01,
                              'pred_limit': 1E9,
-                             'start_frame': 0.3,
+                             'start_frame': -300,
                              'cmap':'tab20b',
                              'arrow_length':10,
                              'description':'Heat equation fixed particles 4 conductivities'
@@ -4227,13 +4126,13 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [124,125] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [46] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
