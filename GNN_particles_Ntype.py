@@ -786,7 +786,7 @@ class MeshDiffusion(pyg.nn.MessagePassing):
         return r * (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(
             -r ** (2 * p[1]) / (2 * sigma ** 2)))
 
-def data_generate(model_config,bVisu=True, bDetails=False, bErase=True, step=5):
+def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5):
     print('')
     print('Generating data ...')
 
@@ -937,7 +937,6 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=True, step=5):
             # X1 = torch.clamp(X1, min=0, max=1)
             # plt.ion()
             # plt.scatter(X1[:,0].detach().cpu().numpy(),X1[:,1].detach().cpu().numpy(),s=10)
-
 
             i0 = imread(f'graphs_data/{particle_value_map}')
             values = i0[(X1[:, 0].detach().cpu().numpy() * 255).astype(int), (X1[:, 1].detach().cpu().numpy() * 255).astype(int)]
@@ -1157,7 +1156,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=True, step=5):
         torch.save(h_list, f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt')
 
         bDetails = False
-def data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step=1):
+def data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=1):
 
     # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_data/*")
     # for f in files:
@@ -1171,7 +1170,7 @@ def data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step
     folder = f'./graphs_data/graphs_particles_{dataset_name}/'
     os.makedirs(folder, exist_ok=True)
 
-    if bSave:
+    if bErase:
         files = glob.glob(f"{folder}/*")
         for f in files:
             os.remove(f)
@@ -1322,10 +1321,9 @@ def data_generate_boid(model_config, bVisu=True, bDetails=True, bSave=True, step
 
         # x_list[0][:,1:3]+x_list[0][:,3:5]+y_list[0]-x_list[1][:,1:3]
 
-        if bSave:
-            torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
-            torch.save(y_list, f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
-            torch.save(h_list, f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt')
+        torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
+        torch.save(y_list, f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
+        torch.save(h_list, f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt')
 
         bDetails = False
         bVisu = False
@@ -1824,7 +1822,7 @@ def data_train(model_config, bSparse=False):
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{ntry}_{epoch}.tif")
         plt.close()
-def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0,prev_index_particles=0,best_model=0,step=5, bTest='', folder_out='tmp_recons'):
+def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0,prev_index_particles=0,best_model=0,step=5, bTest='', folder_out='tmp_recons',initial_map=''):
     # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_recons/*")
     # for f in files:
     #     os.remove(f)
@@ -1971,6 +1969,24 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         for n in range(1, nparticle_types):
             T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
         T1 = T1[:, None]
+        model_a_ = model.a[0].clone().detach()
+        t = []
+        for k in range(model_config['ninteractions']):
+            pos = np.argwhere(T1.detach().cpu().numpy() == k).squeeze().astype(int)
+            temp = model_a_[pos[:,0], :].clone().detach()
+            print(torch.median(temp, axis=0).values)
+            model_a_[pos[:,0], :] = torch.median(temp, axis=0).values.repeat((len(pos), 1))
+            t.append(torch.median(temp, axis=0).values)
+        if initial_map !='':
+            i0 = imread(f'graphs_data/{initial_map}')
+            values = i0[(x[:, 1].detach().cpu().numpy() * 255).astype(int), (x[:, 2].detach().cpu().numpy() * 255).astype(int)]
+            T1 = torch.tensor(values, device=device)
+            T1 = T1[:, None]
+        for k in range(model_config['ninteractions']):
+            pos = np.argwhere(T1.detach().cpu().numpy() == k).squeeze().astype(int)
+            with torch.no_grad():
+                model.a[0,pos[:,0], :] = t[k]
+
         fps = 60
         scale = 40
         Distance = 5
@@ -3800,11 +3816,11 @@ if __name__ == '__main__':
 
 
         # if gtest>=140:
-        #     data_generate_boid(model_config, bVisu=True, bDetails=False, bSave=True, step=10)
+        #     data_generate_boid(model_config, bVisu=False, bDetails=False, bErase=False, step=10)
         # else:
         #     data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
         # data_train(model_config, bSparse=False)
-        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=5, bTest='')
+        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=5, bTest='', initial_map='pattern_12.tif')
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
