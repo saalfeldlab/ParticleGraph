@@ -1438,7 +1438,6 @@ def data_train(model_config, bSparse=False):
             index = np.argwhere(x[:, 5] == n)
             index_particles.append(index.squeeze())
 
-
     print('Start training ...')
     time.sleep(0.5)
     for epoch in range(Nepochs + 1):
@@ -2639,7 +2638,6 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
         torch.save(hnorm, os.path.join(log_dir, 'hnorm.pt'))
         print(hnorm)
         model = MeshDiffusion(model_config, device)
-
     if model_config['model'] == 'GravityParticles':
         model = GravityParticles(model_config, device)
     if model_config['model'] == 'ElecParticles':
@@ -2677,8 +2675,6 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
     print(f'Learning rates: {lr}, {lra}')
     print('')
     print(f'network: {net}')
-
-    time.sleep(0.5)
     # optimizer = torch.optim.Adam(model.parameters(), lr=lr) #, weight_decay=weight_decay)
     model.eval()
     best_loss = np.inf
@@ -2696,7 +2692,6 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
         for n in range(model_config['nparticle_types']):
             index=np.argwhere(x[:,5]==n)
             index_particles.append(index.squeeze())
-
     embedding = []
     for n in range(model.a.shape[0]):
         embedding.append(model.a[n])
@@ -2988,6 +2983,10 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
                 temp=model.psi(rr, p[n],p[m])
                 plt.plot(rr.detach().cpu().numpy(), np.array(temp.cpu()), linewidth=1,c='k')
         plt.xlim([0, 0.02])
+    if bMesh:
+
+    for n in range(nparticle_types):
+        plt.scatter(x[index_particles[n],1].detach().cpu().numpy(), x[index_particles[n],2].detach().cpu().numpy(), color=cmap.color(kmeans.labels_[index_particles[n]]), s=10)
 
     plt.tight_layout()
     plt.show()
