@@ -794,9 +794,9 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=True, step=5):
     folder = f'./graphs_data/graphs_particles_{dataset_name}/'
     os.makedirs(folder, exist_ok=True)
 
-    files = glob.glob(f"./tmp_data/*")
-    for f in files:
-        os.remove(f)
+    # files = glob.glob(f"./tmp_data/*")
+    # for f in files:
+    #     os.remove(f)
 
     if bErase:
         files = glob.glob(f"{folder}/*")
@@ -927,6 +927,18 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=True, step=5):
             X1=X1+torch.randn(nparticles, 2, device=device) * x_width
             X1=torch.clamp(X1,min=0,max=1)
 
+            # X1=X1*0
+            # n_width = int(np.sqrt(nparticles))
+            # for k in range(n_width):
+            #     for n in range(n_width):
+            #         X1[k + n * n_width,0]=k/n_width + (n%2) / n_width / 2
+            #         X1[k + n * n_width, 1] = n / n_width
+            # X1 = X1 + torch.randn(nparticles, 2, device=device) * 1/n_width/8
+            # X1 = torch.clamp(X1, min=0, max=1)
+            # plt.ion()
+            # plt.scatter(X1[:,0].detach().cpu().numpy(),X1[:,1].detach().cpu().numpy(),s=10)
+
+
             i0 = imread(f'graphs_data/{particle_value_map}')
             values = i0[(X1[:, 0].detach().cpu().numpy() * 255).astype(int), (X1[:, 1].detach().cpu().numpy() * 255).astype(int)]
             H1[:,0] = torch.tensor(values / 255 * 5000, device=device)
@@ -936,7 +948,8 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=True, step=5):
 
             i0 = imread(f'graphs_data/{particle_type_map}')
             values = i0[(X1[:, 0].detach().cpu().numpy() * 255).astype(int), (X1[:, 1].detach().cpu().numpy()*255).astype(int)]
-            T1[:, 0] = torch.tensor(values, device=device)
+            T1 = torch.tensor(values, device=device)
+            T1 = T1[:, None]
             # plt.scatter(X1[:, 0].detach().cpu().numpy(), X1[:, 1].detach().cpu().numpy(), s=10,
             #             c=T1[:, 0].detach().cpu().numpy())
 
@@ -1071,9 +1084,9 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=True, step=5):
                         dataset2 = data.Data(x=x, edge_index=edge_index2)
                         vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
                     nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=0.3)
-                if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
-                    plt.xlim([0,1])
-                    plt.ylim([0,1])
+                if bMesh:
+                    plt.xlim([-0.1,1.1])
+                    plt.ylim([-0.1,1.1])
                 else:
                     plt.xlim([-1.3, 1.3])
                     plt.ylim([-1.3, 1.3])
@@ -2060,7 +2073,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                 edge_index2 = adj_t2.nonzero().t().contiguous()
                 dataset2 = data.Data(x=x, edge_index=edge_index2)
 
-            fig = plt.figure(figsize=(20, 8))
+            fig = plt.figure(figsize=(21, 8))
             # plt.ion()
 
             for k in range(5):
@@ -2141,7 +2154,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                         plt.xlim([0,1])
                         plt.ylim([0,1])
                 else:
-                    if bMesh:
+                    if bMesh | ('Boids' in model_config['description']):
                         plt.xlim([0.3, 0.7])
                         plt.ylim([0.3, 0.7])
                     else:
@@ -3620,7 +3633,7 @@ def load_model_config(id=48):
                              'upgrade_type': 'none',
                              'p': np.linspace(0.2, 5, 5).tolist(),
                              'c': [0,0.2,0.9,1,0.3],
-                             'particle_value_map': 'pattern_6.tif',     # 'particle_value_map': 'pattern_6.tif',
+                             'particle_value_map': 'pattern_10.tif',     # 'particle_value_map': 'pattern_6.tif',
                              'particle_type_map': 'pattern_8.tif',
                              'beta': 1E-2,
                              'nrun': 10,
@@ -3756,7 +3769,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [126] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [144] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
@@ -3786,12 +3799,12 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
 
-        if gtest>=140:
-            data_generate_boid(model_config, bVisu=True, bDetails=False, bSave=True, step=10)
-        else:
-            data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
-        data_train(model_config, bSparse=False)
-        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=5, bTest='')
+        # if gtest>=140:
+        #     data_generate_boid(model_config, bVisu=True, bDetails=False, bSave=True, step=10)
+        # else:
+        #     data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
+        # data_train(model_config, bSparse=False)
+        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=5, bTest='')
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
