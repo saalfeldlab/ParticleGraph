@@ -817,10 +817,6 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
     bMesh = (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh')
     rr = torch.tensor(np.linspace(0, radius * 2, 1000))
     rr = rr.to(device)
-    if bMesh:
-        particle_value_map = model_config['particle_value_map']
-        particle_type_map = model_config['particle_type_map']
-
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -909,7 +905,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
         H1 = torch.zeros((nparticles, 2), device=device)
         H1[:,0:1] = torch.ones((nparticles, 1), device=device) + torch.randn((nparticles, 1), device=device) / 2
 
-        if bMesh:
+        if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
 
             x_width = int(np.sqrt(nparticles))
             xs = torch.linspace(0, 1, steps=x_width)
@@ -923,14 +919,13 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
             X1=X1+torch.randn(nparticles, 2, device=device) * x_width
             X1=torch.clamp(X1,min=0,max=1)
 
-            i0 = imread(f'graphs_data/{particle_value_map}')
+            i0 = imread('graphs_data/pattern_6.tif')
             values = i0[(X1[:, 0].detach().cpu().numpy() * 255).astype(int), (X1[:, 1].detach().cpu().numpy() * 255).astype(int)]
             H1[:,0] = torch.tensor(values / 255 * 5000, device=device)
             torchsum0 = torch.sum(H1)
             # plt.scatter(X1[:, 0].detach().cpu().numpy(), X1[:, 1].detach().cpu().numpy(), s=1,
             #             c=H1[:, 0].detach().cpu().numpy())
-
-            i0 = imread(f'graphs_data/{particle_type_map}')
+            i0 = imread('graphs_data/pattern_8.tif')
             values = i0[(X1[:, 0].detach().cpu().numpy() * 255).astype(int), (X1[:, 1].detach().cpu().numpy()*255).astype(int)]
             T1[:, 0] = torch.tensor(values, device=device)
             # plt.scatter(X1[:, 0].detach().cpu().numpy(), X1[:, 1].detach().cpu().numpy(), s=10,
@@ -944,20 +939,18 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
         noise_current = 0 * torch.randn((nparticles, 2), device=device)
         noise_prev_prev = 0 * torch.randn((nparticles, 2), device=device)
 
-        for it in tqdm(range(model_config['start_frame'], nframes)):
-
-            if it==0:
-                V1=torch.clamp(V1,min=-torch.std(V1),max=+torch.std(V1))
+        for it in tqdm(range(-int(nframes * model_config['start_frame']), nframes)):
 
             noise_prev_prev = noise_prev_prev.clone().detach()
             noise_prev = noise_current.clone().detach()
             noise_current = torch.randn((nparticles, 2), device=device) * noise_level
 
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach()), 1)
-            x_noise = x.clone().detach()
 
+            if (it >= 0) & (noise_level == 0):
+                x_noise = x
             if (it >= 0) & (noise_level > 0):
-                x_noise = x.clone().detach()
+                x_noise = x
                 x_noise[:, 1:3] = x[:, 1:3] + noise_current
                 x_noise[:, 3:5] = x[:, 3:5] + noise_current - noise_prev
 
@@ -991,7 +984,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bSave=True, step=5):
             else:
                 V1 = y[:, 0:2]
 
-            if not(bMesh):
+            if bMesh:
                 X1 = bc_pos(X1 + V1)
 
             if model_config['model'] == 'DiffMesh':
@@ -1442,7 +1435,7 @@ def data_train(model_config, bSparse=False):
         x = x_list[0][0].clone().detach()
         index_particles = []
         for n in range(model_config['nparticle_types']):
-            index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
+            index = np.argwhere(x[:, 5] == n)
             index_particles.append(index.squeeze())
 
     print('Start training ...')
@@ -2991,8 +2984,9 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
                 plt.plot(rr.detach().cpu().numpy(), np.array(temp.cpu()), linewidth=1,c='k')
         plt.xlim([0, 0.02])
     if bMesh:
-        for n in range(nparticle_types):
-            plt.scatter(x[index_particles[n],1].detach().cpu().numpy(), x[index_particles[n],2].detach().cpu().numpy(), color=cmap.color(kmeans.labels_[index_particles[n]]), s=10)
+
+    for n in range(nparticle_types):
+        plt.scatter(x[index_particles[n],1].detach().cpu().numpy(), x[index_particles[n],2].detach().cpu().numpy(), color=cmap.color(kmeans.labels_[index_particles[n]]), s=10)
 
     plt.tight_layout()
     plt.show()
@@ -3028,7 +3022,7 @@ def load_model_config(id=48):
                              'nrun': 2,
                              'clamp': 0.002,
                              'pred_limit': 1E9,
-                             'start_frame': -1000,
+                             'start_frame': 1,
                              'arrow_length':10,
                              'cmap':'tab10',
                              'arrow_length':10,
@@ -3061,7 +3055,8 @@ def load_model_config(id=48):
                              'nrun': 10,
                              'clamp': 0.002,
                              'pred_limit': 1E9,
-                             'start_frame': -1000,
+                             'start_frame': 0.5,
+                             'arrow_length':10,
                              'cmap':'tab10',
                              'arrow_length':100,
                              'description':'Gravity'}
@@ -3071,13 +3066,13 @@ def load_model_config(id=48):
                              'output_size': 2,
                              'hidden_size': 128,
                              'n_mp_layers': 5,
-                             'noise_level': 0,
+                             'noise_level': 5E-5,
                              'radius': 0.3,
                              'dataset': f'231001_{id}',
                              'nparticles': 960,
                              'nparticle_types': 4,
                              'ninteractions': 4,
-                             'nframes': 400,
+                             'nframes': 2000,
                              'sigma': .005,
                              'tau': 1E-9/100,
                              'v_init': 5E-5/100,
@@ -3090,13 +3085,81 @@ def load_model_config(id=48):
                              'prediction': '2nd_derivative',
                              'upgrade_type': 'none',
                              'p': np.linspace(0.2, 5, 4).tolist(),
-                             'nrun': 30,
+                             'nrun': 10,
                              'clamp': 0.002,
                              'pred_limit': 1E9,
-                             'start_frame': -1000,
+                             'start_frame': 0.5,
+                             'arrow_length':10,
                              'cmap':'tab10',
                              'arrow_length':100,
                              'description':'Gravity'}
+    if id == 47:
+        model_config_test = {'ntry': id,
+                             'input_size': 9,
+                             'output_size': 2,
+                             'hidden_size': 128,
+                             'n_mp_layers': 5,
+                             'noise_level': 1E-4,
+                             'radius': 0.3,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 960,
+                             'nparticle_types': 4,
+                             'ninteractions': 4,
+                             'nframes': 2000,
+                             'sigma': .005,
+                             'tau': 1E-9/100,
+                             'v_init': 5E-5/100,
+                             'aggr_type': 'add',
+                             'boundary': 'no',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'GravityParticles',
+                             'prediction': '2nd_derivative',
+                             'upgrade_type': 'none',
+                             'p': np.linspace(0.2, 5, 4).tolist(),
+                             'nrun': 10,
+                             'clamp': 0.002,
+                             'pred_limit': 1E9,
+                             'start_frame': 0.5,
+                             'arrow_length':10,
+                             'cmap':'tab20c',
+                             'arrow_length':100,
+                             'description':'Gravity'}
+    if id == 48:
+        model_config_test = {'ntry': id,
+                             'input_size': 9,
+                             'output_size': 2,
+                             'hidden_size': 128,
+                             'n_mp_layers': 5,
+                             'noise_level': 5E-4,
+                             'radius': 0.3,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 960,
+                             'nparticle_types': 4,
+                             'ninteractions': 4,
+                             'nframes': 2000,
+                             'sigma': .005,
+                             'tau': 1E-9/100,
+                             'v_init': 5E-5/100,
+                             'aggr_type': 'add',
+                             'boundary': 'no',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'GravityParticles',
+                             'prediction': '2nd_derivative',
+                             'upgrade_type': 'none',
+                             'p': np.linspace(0.2, 5, 4).tolist(),
+                             'nrun': 10,
+                             'clamp': 0.002,
+                             'pred_limit': 1E9,
+                             'start_frame': 0.5,
+                             'arrow_length':10,
+                             'cmap':'tab20c',
+                             'arrow_length':100,
+                             'description':'Gravity'}
+
 
     # particles
     if id == 74:
@@ -3126,7 +3189,7 @@ def load_model_config(id=48):
                              'p': [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855],
                                    [1.785, 1.8579, 1.7226, 1.0584]],
                              'nrun': 2,
-                             'start_frame': 20,
+                             'start_frame': 0.1,
                              'arrow_length':20,
                              'cmap':'tab10'}
     if id == 75:
@@ -3156,7 +3219,7 @@ def load_model_config(id=48):
                              'p': [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855],
                                    [1.785, 1.8579, 1.7226, 1.0584]],
                              'nrun': 2,
-                             'start_frame': 20,
+                             'start_frame': 0.1,
                              'arrow_length':20,
                              'cmap':'tab10',
                              'description': 'pred=first derivative Particles_A is a first derivative simulation, interaction is function of r.exp-r^2 interaction is type dependent best_model:14'}
@@ -3187,7 +3250,7 @@ def load_model_config(id=48):
                              'p': [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855],
                                    [1.785, 1.8579, 1.7226, 1.0584]],
                              'nrun': 2,
-                             'start_frame': 20,
+                             'start_frame': 0.1,
                              'cmap':'tab10',
                              'arrow_length':20,
                              'description': 'pred=second derivative Particles_A is a first derivative simulation, interaction is function of r.exp-r^2 interaction is type dependent best_model:14'}
@@ -3444,7 +3507,7 @@ def load_model_config(id=48):
                              'nrun': 2,
                              'clamp': 0.01,
                              'pred_limit': 1E9,
-                             'start_frame': -300,
+                             'start_frame': 0.3,
                              'cmap':'tab20b',
                              'arrow_length':10
                              }
@@ -3514,7 +3577,7 @@ def load_model_config(id=48):
                              'nrun': 2,
                              'clamp': 0.01,
                              'pred_limit': 1E9,
-                             'start_frame': -300,
+                             'start_frame': 0.3,
                              'cmap':'tab20b',
                              'arrow_length':10,
                              'description':'Heat equation fixed particles 4 conductivities'
@@ -3545,8 +3608,6 @@ def load_model_config(id=48):
                              'upgrade_type': 'none',
                              'p': np.linspace(0.2, 5, 5).tolist(),
                              'c': [0,0.2,0.9,1,0.3],
-                             'particle_value_map': 'pattern_6.tif',
-                             'particle_type_map': 'pattern_8.tif',
                              'beta': 1E-2,
                              'nrun': 10,
                              'clamp': 0,
@@ -3582,8 +3643,6 @@ def load_model_config(id=48):
                              'upgrade_type': 'none',
                              'p': np.linspace(0.2, 5, 5).tolist(),
                              'c': [0,0.2,0.9,1,0.3],
-                             'particle_value_map': 'pattern_9.tif',
-                             'particle_type_map': 'pattern_8.tif',
                              'beta': 1E-2,
                              'nrun': 10,
                              'clamp': 0,
@@ -3718,7 +3777,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [46] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [124,125] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
@@ -3747,14 +3806,14 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-
-        if gtest>=140:
-            data_generate_boid(model_config, bVisu=True, bDetails=False, bSave=True, step=10)
-        else:
-            data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=10)
-        data_train(model_config, bSparse=False)
+        # if gtest==125:
+        #     if gtest>=140:
+        #         data_generate_boid(model_config, bVisu=True, bDetails=False, bSave=True, step=10)
+        #     else:
+        #         data_generate(model_config, bVisu=True, bDetails=True, bSave=True, step=5)
+        # data_train(model_config, bSparse=False)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=5, bTest='')
-        # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
+        data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
 
