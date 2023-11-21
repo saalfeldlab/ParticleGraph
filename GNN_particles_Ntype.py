@@ -2727,7 +2727,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
         x = x_list[0][0].clone().detach()
         index_particles = []
         for n in range(model_config['nparticle_types']):
-            index=np.argwhere(x[:,5]==n)
+            index=np.argwhere(x[:,5].detach().cpu().numpy()==n)
             index_particles.append(index.squeeze())
     embedding = []
     for n in range(model.a.shape[0]):
@@ -3766,6 +3766,41 @@ def load_model_config(id=48):
                              'arrow_length':5,
                              'description':'Boids acceleration pred aggr mean boid speed/4 4 different params'
                              }
+    if id == 145:
+        model_config_test = {'ntry': id,
+                             'input_size': 9,
+                             'output_size': 2,
+                             'hidden_size': 128,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.04,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 1800,
+                             'nparticle_types': 4,
+                             'ninteractions': 4,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-10,
+                             'v_init': 0,
+                             'aggr_type': 'mean',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'Particles_A',
+                             'prediction': '2nd_derivative',
+                             'upgrade_type': 'linear',
+                             'nlayers_update': 3,
+                             'hidden_size_update': 64,
+                             'p': [[50,10,0],[40,20,20],[20,30,20],[35,40,20]],        # separation alignement cohesion
+                             'nrun': 10,
+                             'clamp': 1E-3,
+                             'pred_limit': 1E9,
+                             'start_frame': 0.,
+                             'cmap':'tab10',
+                             'arrow_length':5,
+                             'description':'Boids acceleration pred aggr mean boid speed/4 4 different params'
+                             }
 
     for key, value in model_config_test.items():
         print(key, ":", value)
@@ -3779,13 +3814,13 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [144] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [126] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
@@ -3816,12 +3851,12 @@ if __name__ == '__main__':
 
 
         # if gtest>=140:
-        #     data_generate_boid(model_config, bVisu=False, bDetails=False, bErase=False, step=10)
+        #     data_generate_boid(model_config, bVisu=True, bDetails=False, bErase=False, step=10)
         # else:
         #     data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
-        # data_train(model_config, bSparse=False)
-        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=5, bTest='', initial_map='pattern_12.tif')
-        # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
+        # data_train(model_config, bSparse=True)
+        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=5, bTest='', initial_map='')
+        data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
 
