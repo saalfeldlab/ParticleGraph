@@ -1414,9 +1414,9 @@ def data_train(model_config, bSparse=False):
         model = MeshDiffusion(model_config, device)
         print(f'Training MeshDiffusion for waves')
 
-    # net = f"./log/try_{ntry}/models/best_model_with_9_graphs_13.pt"
-    # state_dict = torch.load(net,map_location=device)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    net = f"./log/try_{ntry}/models/best_model_with_9_graphs_13.pt"
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
 
     lra = 1E-3
     lr = 1E-3
@@ -1461,7 +1461,7 @@ def data_train(model_config, bSparse=False):
 
     print('Start training ...')
     time.sleep(0.5)
-    for epoch in range(Nepochs + 1):
+    for epoch in range(14, 26):
 
         if epoch == 1:
             batch_size = model_config['batch_size']
@@ -1484,11 +1484,11 @@ def data_train(model_config, bSparse=False):
                     optimizer.add_param_group({'params': parameter, 'lr': lr})
                 it += 1
             print(f'Learning rates: {lr}, {lra}')
-        if (epoch ==17):
+        if (epoch ==20):
             print('training embedding again ...')
             model.a.requires_grad = True
 
-        if (epoch == 20) | (epoch==15):
+        if (epoch == 25) | (epoch==15):
             print('not training embedding ...')
             model.a.requires_grad = False
 
@@ -1743,7 +1743,7 @@ def data_train(model_config, bSparse=False):
             plt.xlabel('UMAP 0', fontsize=12)
             plt.ylabel('UMAP 1', fontsize=12)
 
-            if (epoch==14) | (epoch==19):
+            if (epoch==14) | (epoch==24):
                 kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=5000, max_iter=10000,random_state=13)
                 kmeans.fit(proj_interaction)
                 for n in range(nparticle_types):
@@ -3857,7 +3857,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [146] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [126] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
@@ -3887,10 +3887,10 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
 
-        if 'Boids' in model_config['description']:
-            data_generate_boid(model_config, bVisu=True, bDetails=False, bErase=False, step=10)
-        else:
-            data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
+        # if gtest>=140:
+        #     data_generate_boid(model_config, bVisu=True, bDetails=False, bErase=False, step=10)
+        # else:
+        #     data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
         data_train(model_config, bSparse=True)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=5, bTest='', initial_map='')
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
