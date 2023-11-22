@@ -78,6 +78,7 @@ def norm_acceleration(yy, device):
     ay01, ay99 = normalize99(nay)
 
     return torch.tensor([ax01, ax99, ay01, ay99, ax, ay], device=device)
+
 class cc:
 
     def __init__(self, model_config):
@@ -1430,11 +1431,15 @@ def data_train(model_config, bSparse=False):
                         format='%(asctime)s %(message)s',
                         filemode='w')
     logger = logging.getLogger()
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
+
+    logger.info(model_config)
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
     NGraphs = len(graph_files)
-    print('Graph files N: ', NGraphs - 1)
+    print(f'Graph files N: {NGraphs - 1}')
+    logger.info(f'Graph files N: {NGraphs - 1}')
+
 
     if model_config['model'] == 'GravityParticles':
         model = GravityParticles(model_config, device)
@@ -1442,13 +1447,10 @@ def data_train(model_config, bSparse=False):
         model = ElecParticles(model_config, device)
     if (model_config['model'] == 'Particles_A'):
         model = InteractionParticles(model_config, device)
-        print(f'Training InteractionParticles')
     if (model_config['model'] == 'DiffMesh'):
         model = MeshDiffusion(model_config, device)
-        print(f'Training MeshDiffusion for diffusion')
     if (model_config['model'] == 'WaveMesh'):
         model = MeshDiffusion(model_config, device)
-        print(f'Training MeshDiffusion for waves')
 
     net = f"./log/try_126/models/best_model_with_9_graphs_13.pt"
     state_dict = torch.load(net,map_location=device)
@@ -1471,14 +1473,15 @@ def data_train(model_config, bSparse=False):
         param = parameter.numel()
         table.add_row([name, param])
         total_params += param
-    print(table)
-    print(f"Total Trainable Params: {total_params}")
-    print(f'Learning rates: {lr}, {lra}')
-    print('')
+    logger.info(table)
+    logger.info(f"Total Trainable Params: {total_params}")
+    logger.info(f'Learning rates: {lr}, {lra}')
+
     net = f"./log/try_{ntry}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     print(f'network: {net}')
+    logger.info(f'network: {net}')
     Nepochs = 25  ######################## 22
-    print(f'N epochs: {Nepochs}')
+    logger.info(f'N epochs: {Nepochs}')
     print('')
 
     model.train()
@@ -1488,6 +1491,7 @@ def data_train(model_config, bSparse=False):
     regul_embedding=0
     data_augmentation_loop = 20
     print(f'data_augmentation_loop: {data_augmentation_loop}')
+    logger.info(f'data_augmentation_loop: {data_augmentation_loop}')
     print('Load data ...')
     x_list=[]
     y_list=[]
@@ -1498,8 +1502,8 @@ def data_train(model_config, bSparse=False):
         y_list.append(torch.stack(y))
     ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt', map_location=device).to(device)
     vnorm = torch.load(f'./log/try_{ntry}/vnorm.pt', map_location=device).to(device)
-    logger.debug(ynorm)
-    logger.debug(vnorm)
+    logger.info(ynorm)
+    logger.info(vnorm)
     if bMesh:
         h_list=[]
         for run in tqdm(np.arange(0, NGraphs)):
@@ -1511,23 +1515,23 @@ def data_train(model_config, bSparse=False):
         for n in range(model_config['nparticle_types']):
             index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
             index_particles.append(index.squeeze())
-        logger.debug(hnorm)
+        logger.info(hnorm)
 
     print('Start training ...')
-    logger.debug("Start training ...")
+    logger.info("Start training ...")
     time.sleep(0.5)
-    for epoch in range(Nepochs + 1):
+    for epoch in range(14, Nepochs + 1):
 
         if epoch == 1:
             batch_size = model_config['batch_size']
             print(f'batch_size: {batch_size}')
-            logger.debug(f'batch_size: {batch_size}')
+            logger.info(f'batch_size: {batch_size}')
 
         if epoch == 5:
             if data_augmentation:
                 data_augmentation_loop = 200
                 print(f'data_augmentation_loop: {data_augmentation_loop}')
-                logger.debug(f'data_augmentation_loop: {data_augmentation_loop}')
+                logger.info(f'data_augmentation_loop: {data_augmentation_loop}')
         if epoch == 10:
             lra = 1E-3
             lr = 5E-4
@@ -1542,16 +1546,16 @@ def data_train(model_config, bSparse=False):
                     optimizer.add_param_group({'params': parameter, 'lr': lr})
                 it += 1
             print(f'Learning rates: {lr}, {lra}')
-            logger.debug(f'Learning rates: {lr}, {lra}')
+            logger.info(f'Learning rates: {lr}, {lra}')
         if epoch == 24:
             print('not training embedding ...')
-            logger.debug('not training embedding ...')
+            logger.info('not training embedding ...')
             model.a.requires_grad = False
             regul_embedding = 0
 
         total_loss = 0
 
-        for N in range(14, nframes * data_augmentation_loop // batch_size):
+        for N in range(0, nframes * data_augmentation_loop // batch_size):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -1579,7 +1583,6 @@ def data_train(model_config, bSparse=False):
                         y_batch = y
                     else:
                         y_batch = torch.cat((y_batch, y), axis=0)
-
                 else:
                     distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
                     adj_t = (distance < radius ** 2).float() * 1
@@ -1611,19 +1614,26 @@ def data_train(model_config, bSparse=False):
                     else:
                         pred = model(batch, data_id=run - 1, step=1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
 
-            loss = (pred - y_batch).norm(2)
-
             if regul_embedding>0:
-                regul_term_embedding = (model.a[run] - embedding_center[0]) ** 2
+                regul_term_embedding = (model.a[run] - embedding_center[0].clone().detach()) ** 2
                 for k in range(1,model_config['ninteractions']):
-                        regul_term_embedding = regul_term_embedding * (model.a[run]-embedding_center[k])**2
+                        regul_term_embedding = regul_term_embedding * (model.a[run-1]-embedding_center[k].clone().detach())**2
                 regul_term_embedding = regul_embedding * torch.sqrt(torch.mean(regul_term_embedding))
-                loss += regul_term_embedding
+                loss = (pred - y_batch).norm(2) + regul_term_embedding
+            else:
+                loss = (pred - y_batch).norm(2)
 
             loss.backward()
-
             optimizer.step()
             total_loss += loss.item()
+
+            # optimizer.zero_grad()
+            # t = torch.sum(model.a[run])
+            # loss = (pred - y_batch).norm(2) + t
+            # loss.backward()
+            # optimizer.step()
+            # total_loss += loss.item()
+
 
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs_{epoch}.pt'))
@@ -1634,10 +1644,10 @@ def data_train(model_config, bSparse=False):
                         'optimizer_state_dict': optimizer.state_dict()},
                        os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs.pt'))
             print("Epoch {}. Loss: {:.6f} saving model  ".format(epoch,total_loss / N / nparticles / batch_size))
-            logger.debug("Epoch {}. Loss: {:.6f} saving model  ".format(epoch,total_loss / N / nparticles / batch_size))
+            logger.info("Epoch {}. Loss: {:.6f} saving model  ".format(epoch,total_loss / N / nparticles / batch_size))
         else:
             print("Epoch {}. Loss: {:.6f}".format(epoch,total_loss / N / nparticles / batch_size))
-            logger.debug("Epoch {}. Loss: {:.6f}".format(epoch,total_loss / N / nparticles / batch_size))
+            logger.info("Epoch {}. Loss: {:.6f}".format(epoch,total_loss / N / nparticles / batch_size))
 
         list_loss.append(total_loss / N / nparticles / batch_size)
 
@@ -1650,13 +1660,11 @@ def data_train(model_config, bSparse=False):
         plt.xlim([0, 50])
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
-
         embedding = []
         for n in range(model.a.shape[0]):
             embedding.append(model.a[n])
         embedding = torch.stack(embedding).detach().cpu().numpy()
         embedding = np.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
-
         embedding_particle = []
         for m in range(model.a.shape[0]):
             for n in range(nparticle_types):
@@ -1795,24 +1803,26 @@ def data_train(model_config, bSparse=False):
         plt.xlabel('UMAP 0', fontsize=12)
         plt.ylabel('UMAP 1', fontsize=12)
 
-        if (epoch==14) | (epoch==19):
-            kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=5000, max_iter=10000,random_state=13)
-            kmeans.fit(proj_interaction)
-            for n in range(nparticle_types):
-                tmp = kmeans.labels_[index_particles[n]]
-                sub_group = np.round(np.median(tmp))
-                accuracy = len(np.argwhere(tmp == sub_group)) / len(tmp) * 100
-                print(f'Sub-group {n} accuracy: {np.round(accuracy, 3)}')
-                logger.debug(f'Sub-group {n} accuracy: {np.round(accuracy, 3)}')
-            for n in range(model_config['ninteractions']):
-                plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
+        kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=5000, max_iter=10000,random_state=13)
+        kmeans.fit(proj_interaction)
+        for n in range(nparticle_types):
+            tmp = kmeans.labels_[index_particles[n]]
+            sub_group = np.round(np.median(tmp))
+            accuracy = len(np.argwhere(tmp == sub_group)) / len(tmp) * 100
+            print(f'Sub-group {n} accuracy: {np.round(accuracy, 3)}')
+            logger.info(f'Sub-group {n} accuracy: {np.round(accuracy, 3)}')
+        for n in range(model_config['ninteractions']):
+            plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
+
+        if (epoch==9) | (epoch==14) | (epoch==19) | (epoch==24):
 
             model_a_=model.a.clone().detach()
             model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
             embedding_center=[]
             for k in range(model_config['ninteractions']):
                 pos = np.argwhere(kmeans.labels_ == k).squeeze().astype(int)
-                median_center = model_a_[pos, :].clone().detach()
+                median_center = model_a_[pos, :]
+                median_center = torch.median(median_center, axis=0).values
                 embedding_center.append(median_center.clone().detach())
                 model_a_[pos, :] = torch.median(median_center, axis=0).values
             model_a_ = torch.reshape(model_a_, (model.a.shape[0],model.a.shape[1], model.a.shape[2]))
@@ -1821,44 +1831,13 @@ def data_train(model_config, bSparse=False):
             if sparsity=='replace':
                 with torch.no_grad():
                     for n in range(model.a.shape[0]):
-                        model.a[n]=model_a_[0]
-                ax = fig.add_subplot(2, 4, 5)
+                        model.a[n]=model_a_[0].clone().detach()
                 print(f'regul_embedding: replaced')
-                logger.debug(f'regul_embedding: replaced')
+                logger.info(f'regul_embedding: replaced')
             elif 'regul' in sparsity:
                 regul_embedding = float(sparsity[-4:])
                 print(f'regul_embedding: {regul_embedding}')
-                logger.debug(f'regul_embedding: {regul_embedding}')
-
-
-            ax = fig.add_subplot(2, 4, 5)
-            embedding = []
-
-            for n in range(model.a.shape[0]):
-                embedding.append(model.a[n])
-            embedding = torch.stack(embedding).detach().cpu().numpy()
-            embedding = np.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
-
-            embedding_particle = []
-            for m in range(model.a.shape[0]):
-                for n in range(nparticle_types):
-                    embedding_particle.append(embedding[index_particles[n] + m * nparticles, :])
-            if (embedding.shape[1] > 2):
-
-                for n in range(nparticle_types):
-                    ax.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1],
-                               embedding_particle[n][:, 2], color=cmap.color(n), s=1)
-            else:
-                if (embedding.shape[1] > 1):
-                    for m in range(model.a.shape[0]):
-                        for n in range(nparticle_types):
-                            plt.scatter(embedding_particle[n + m * nparticle_types][:, 0],
-                                        embedding_particle[n + m * nparticle_types][:, 1], color=cmap.color(n), s=3)
-                    plt.xlabel('Embedding 0', fontsize=12)
-                    plt.ylabel('Embedding 1', fontsize=12)
-                else:
-                    for n in range(nparticle_types):
-                        plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5, color=cmap.color(n))
+                logger.info(f'regul_embedding: {regul_embedding}')
 
             if (epoch % 10 == 0) & (epoch > 0):
                 best_loss = total_loss / N / nparticles / batch_size
@@ -1890,6 +1869,7 @@ def data_train(model_config, bSparse=False):
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{ntry}_{epoch}.tif")
         plt.close()
+
 def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0,prev_index_particles=0,best_model=0,step=5, bTest='', folder_out='tmp_recons',initial_map=''):
     # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_recons/*")
     # for f in files:
@@ -2330,216 +2310,6 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
 
     torch.save(x_recons, f'{log_dir}/x_list.pt')
     torch.save(y_recons, f'{log_dir}/y_list.pt')
-
-    return x.detach().cpu().numpy(), rmserr_list
-
-def data_test_tracking(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0,prev_index_particles=0):
-    # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_recons/*")
-    # for f in files:
-    #     os.remove(f)
-    if bPrint:
-        print('')
-        print('Plot validation test ... ')
-
-    model = []
-    ntry = model_config['ntry']
-    radius = model_config['radius']
-    nparticle_types = model_config['nparticle_types']
-    nparticles = model_config['nparticles']
-    dataset_name = model_config['dataset']
-    nframes = model_config['nframes']
-
-    if index_particles == 0:
-        index_particles = []
-        np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
-        for n in range(model_config['nparticle_types']):
-            index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
-
-    if (model_config['model'] == 'Particles_A'):
-        model = InteractionParticles(model_config, device)
-    if model_config['model'] == 'GravityParticles':
-        model = GravityParticles(model_config, device)
-        p_mass = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
-        for n in range(nparticle_types):
-            p_mass[n] = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
-        T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
-        for n in range(1, nparticle_types):
-            T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
-        T1 = torch.concatenate((T1[:, None], T1[:, None]), 1)
-    if model_config['model'] == 'ElecParticles':
-        model = ElecParticles(model_config, device)
-        p_elec = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
-        for n in range(nparticle_types):
-            p_elec[n] = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
-        print(p_elec)
-        T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
-        for n in range(1, nparticle_types):
-            T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
-        T1 = torch.concatenate((T1[:, None], T1[:, None]), 1)
-
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_*")
-    NGraphs = int(len(graph_files) / nframes)
-    net = f"./log/try_{ntry}/models/best_model_with_{NGraphs - 1}_graphs.pt"
-    if bPrint:
-        print('Graph files N: ', NGraphs - 1)
-        print(f'network: {net}')
-    state_dict = torch.load(net, map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
-    model.eval()
-
-    if new_nparticles > 0:  # nparticles larger than initially
-
-        ratio_particles = int(new_nparticles / prev_nparticles)
-        print('')
-        print(f'New_number of particles: {new_nparticles}  ratio:{ratio_particles}')
-        print('')
-
-        embedding = model.a.data
-        new_embedding = []
-
-        for n in range(nparticle_types):
-            for m in range(ratio_particles):
-                if (n == 0) & (m == 0):
-                    new_embedding = embedding[prev_index_particles[n]]
-                else:
-                    new_embedding = torch.cat((new_embedding, embedding[prev_index_particles[n]]), axis=0)
-
-        model.a = nn.Parameter(
-            torch.tensor(np.ones((int(prev_nparticles) * ratio_particles, 2)), device=device, requires_grad=False))
-        model.a.data = new_embedding
-        nparticles = new_nparticles
-        model_config['nparticles'] = new_nparticles
-
-    ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt', map_location=device)
-    vnorm = torch.load(f'./log/try_{ntry}/vnorm.pt', map_location=device)
-    ynorm = ynorm.to(device)
-    v = vnorm.to(device)
-
-    table = PrettyTable(["Modules", "Parameters"])
-    total_params = 0
-    for name, parameter in model.named_parameters():
-        if not parameter.requires_grad:
-            continue
-        param = parameter.numel()
-        table.add_row([name, param])
-        total_params += param
-    if bPrint:
-        print(table)
-        print(f"Total Trainable Params: {total_params}")
-
-    x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_0.pt')
-    x00 = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_0.pt')
-    y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_0_0.pt')
-    x = x.to(device)
-    x00 = x00.to(device)
-    y = y.to(device)
-
-    if bPrint:
-        print('')
-        print(f'x: {x.shape}')
-        print(f'index_particles: {index_particles[0].shape}')
-        print('')
-
-    rmserr_list = []
-    discrepency_list = []
-    Sxy_list = []
-    tracking_match = []
-    tracking_unmatch = []
-    error_tracking = 0
-
-    track = np.arange(nparticles).astype(int)
-
-    for it in tqdm(range(nframes - 2)):
-
-        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_{min(it, nframes - 2)}.pt',
-                       map_location=device)
-        x = x.to(device)
-
-        x00 = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_{min(it, nframes - 2)}.pt',
-                         map_location=device)
-        x00 = x00.to(device)
-
-        x0 = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_0_{min(it + 1, nframes - 2)}.pt',
-                        map_location=device)
-        x0 = x0.to(device)
-
-        distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
-        t = torch.Tensor([radius ** 2])  # threshold
-        adj_t = (distance < radius ** 2).float() * 1
-        edge_index = adj_t.nonzero().t().contiguous()
-
-        dataset = data.Data(x=x, edge_index=edge_index)
-
-        with torch.no_grad():
-            if model_config['model'] == 'ResNetGNN':
-                y = model(dataset, vnorm=v)
-            else:
-                y = model(dataset, data_id=0, step=2, vnorm=v, cos_phi=0, sin_phi=0)  # acceleration estimation
-
-        y[:, 0] = y[:, 0] * ynorm[4]
-        y[:, 1] = y[:, 1] * ynorm[4]
-
-        if model_config['prediction'] == '2nd_derivative':
-            x[:, 3:4] = x[:, 3:4] + y  # speed update
-        else:
-            x[:, 3:4] = y
-        x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:4])  # position update
-
-        rmserr = torch.sqrt(torch.mean(torch.sum(bc_diff(x[:, 1:3] - x0[:, 1:3]) ** 2, axis=1)))
-        rmserr_list.append(rmserr.item())
-
-        discrepency = MMD(x[:, 1:3], x0[:, 1:3])
-        discrepency_list.append(discrepency)
-
-        # Sxy = S_e(x[:, 1:3], x0[:, 1:3])
-        # Sxy_list.append(Sxy.item())
-
-        fx0 = pandas.DataFrame(
-            dict(x=x0[:, 1].detach().cpu().numpy().flatten(), y=x0[:, 2].detach().cpu().numpy().flatten(),
-                 frame=np.zeros(nparticles)))
-        # g = np.random.permutation(np.arange(nparticles)).astype(int)
-        g = np.arange(nparticles).astype(int)
-        fx = pandas.DataFrame(
-            dict(x=x[g, 1].detach().cpu().numpy().flatten(), y=x[g, 2].detach().cpu().numpy().flatten(),
-                 frame=np.ones(nparticles)))
-        tr = pandas.concat(trackpy.link_df_iter((fx0, fx), 100 * rmserr.detach().cpu().numpy()))
-        error_tracking += np.sum((tr.particle.to_numpy()[nparticles:2 * nparticles] - g) != 0)
-
-        if bVisu:
-
-            fig = plt.figure(figsize=(14, 7 * 0.95))
-            # plt.ion()
-
-            ax = fig.add_subplot(1, 2, 1)
-            tmp = tr.particle.to_numpy()[nparticles:2 * nparticles].astype(int)
-            pos = np.argwhere(tmp >= nparticles)
-            if len(pos) > 0:
-                tmp[pos] = 0
-            track = track[tmp]
-            plt.scatter(x[:, 1].detach().cpu(), x[:, 2].detach().cpu(), s=5, c=track[:], cmap='prism')
-            plt.xlim([0,1])
-            plt.ylim([0,1])
-            ax.axes.get_xaxis().set_visible(False)
-            ax.axes.get_yaxis().set_visible(False)
-            plt.text(-0.25, 1.38, f'frame: {it}')
-            plt.text(-0.25, 1.33, f'Graph    {x.shape[0]} nodes ', fontsize=10)
-
-            ax = fig.add_subplot(1, 2, 2)
-            plt.scatter(x[:, 1].detach().cpu(), x[:, 2].detach().cpu(), s=5, c='k')
-            plt.xlim([0,1])
-            plt.ylim([0,1])
-            ax.axes.get_xaxis().set_visible(False)
-            ax.axes.get_yaxis().set_visible(False)
-            plt.savefig(f"./tmp_recons/Fig_{ntry}_{it}.tif")
-
-            plt.close()
-
-    print(f'RMSE: {np.round(rmserr.item(), 4)}')
-    print(f'Tracking error: {error_tracking}')
-    if bPrint:
-        print('')
-        print(f'ntry: {ntry}')
-        print(f'MMD: {np.round(discrepency, 4)}')
 
     return x.detach().cpu().numpy(), rmserr_list
 def data_test_generate(model_config, bVisu=True, bDetails=False, step=5):
