@@ -1452,9 +1452,9 @@ def data_train(model_config, bSparse=False):
     if (model_config['model'] == 'WaveMesh'):
         model = MeshDiffusion(model_config, device)
 
-    net = f"./log/try_126/models/best_model_with_9_graphs_13.pt"
-    state_dict = torch.load(net,map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
+    # net = f"./log/try_126/models/best_model_with_9_graphs_13.pt"
+    # state_dict = torch.load(net,map_location=device)
+    # model.load_state_dict(state_dict['model_state_dict'])
 
     lra = 1E-3
     lr = 1E-3
@@ -1520,7 +1520,7 @@ def data_train(model_config, bSparse=False):
     print('Start training ...')
     logger.info("Start training ...")
     time.sleep(0.5)
-    for epoch in range(14, Nepochs + 1):
+    for epoch in range(Nepochs + 1):
 
         if epoch == 1:
             batch_size = model_config['batch_size']
@@ -1615,7 +1615,7 @@ def data_train(model_config, bSparse=False):
                         pred = model(batch, data_id=run - 1, step=1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
 
             if regul_embedding>0:
-                regul_term_embedding = (model.a[run] - embedding_center[0].clone().detach()) ** 2
+                regul_term_embedding = (model.a[run-1] - embedding_center[0].clone().detach()) ** 2
                 for k in range(1,model_config['ninteractions']):
                         regul_term_embedding = regul_term_embedding * (model.a[run-1]-embedding_center[k].clone().detach())**2
                 regul_term_embedding = regul_embedding * torch.sqrt(torch.mean(regul_term_embedding))
@@ -2973,6 +2973,40 @@ def load_model_config(id=48):
                              'arrow_length':100,
                              'description':'Gravity',
                              'sparsity':'replace'}
+    if id == 47:
+        model_config_test = {'ntry': id,
+                             'input_size': 9,
+                             'output_size': 2,
+                             'hidden_size': 128,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.3,
+                             'dataset': f'231001_44',
+                             'nparticles': 960,
+                             'nparticle_types': 4,
+                             'ninteractions': 4,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-9,
+                             'v_init': 5E-5,
+                             'aggr_type': 'add',
+                             'boundary': 'no',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'GravityParticles',
+                             'prediction': '2nd_derivative',
+                             'upgrade_type': 'none',
+                             'p': np.linspace(0.2, 5, 4).tolist(),
+                             'nrun': 2,
+                             'clamp': 0.002,
+                             'pred_limit': 1E9,
+                             'start_frame': -1000,
+                             'arrow_length':10,
+                             'cmap':'tab10',
+                             'arrow_length':10,
+                             'description':'Gravity sparsity regul_1E-4',
+                             'sparsity':'regul_1E-4'}
 
     # particles
     if id == 74:
@@ -2983,7 +3017,7 @@ def load_model_config(id=48):
                              'n_mp_layers': 5,
                              'noise_level': 0,
                              'radius': 0.075,
-                             'dataset': f'231001_{id}',
+                             'dataset': f'231001_74',
                              'nparticles': 4800,
                              'nparticle_types': 3,
                              'ninteractions': 3,
@@ -3005,6 +3039,7 @@ def load_model_config(id=48):
                              'start_frame': 20,
                              'arrow_length':20,
                              'cmap':'tab10',
+                             'description': 'regul_1E-4 3 interaction particles',
                              'sparsity':'replace'}
     if id == 75:
         model_config_test = {'ntry': id,
@@ -3132,6 +3167,38 @@ def load_model_config(id=48):
                              'cmap':'tab10',
                              'description': '8 types pred=first derivative Particles_A is a first derivative simulation, interaction is function of r.exp-r^2 interaction is type dependent best_model:14',
                              'sparsity':'replace'}
+    if id == 79:
+        model_config_test = {'ntry': id,
+                             'input_size': 4,
+                             'output_size': 2,
+                             'hidden_size': 64,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.075,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 4800,
+                             'nparticle_types': 3,
+                             'ninteractions': 3,
+                             'nframes': 200,
+                             'sigma': .005,
+                             'tau': 0.1,
+                             'v_init': 0,
+                             'aggr_type': 'mean',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 1,
+                             'model': 'Particles_A',
+                             'prediction': 'first_derivative_S',
+                             'upgrade_type': 'none',
+                             'p': [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855],
+                                   [1.785, 1.8579, 1.7226, 1.0584]],
+                             'nrun': 2,
+                             'start_frame': 20,
+                             'arrow_length':20,
+                             'cmap':'tab10',
+                             'sparsity':'regul_1E-4',
+                             'description: regul_1E-4 3 interaction particles'}
 
     # elctrostatic
     if id == 84:
@@ -3298,6 +3365,39 @@ def load_model_config(id=48):
                              'cmap':'tab10',
                              'description':'Periodic Particles_E is a second derivative simulation, acceleration is function of electrostatic law qiqj/r2 interaction is type-type dependent best_model:22',
                              'sparsity':'replace'}
+    if id == 89:
+        model_config_test = {'ntry': id,
+                             'input_size': 11,
+                             'output_size': 2,
+                             'hidden_size': 128,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.15,
+                             'dataset': f'231001_87',
+                             'nparticles': 960,
+                             'nparticle_types': 3,
+                             'ninteractions': 3,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-9,
+                             'v_init': 1E-4,
+                             'aggr_type': 'add',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'ElecParticles',
+                             'prediction': '2nd_derivative',
+                             'p': [[2], [1], [-1]],
+                             'upgrade_type': 'none',
+                             'nrun': 10,
+                             'clamp': 0.002,
+                             'pred_limit': 1E10,
+                             'start_frame': 0,
+                             'arrow_length':5,
+                             'cmap':'tab10',
+                             'description':'sparsity regul_1E-4 Periodic Particles_E is a second derivative simulation, acceleration is function of electrostatic law qiqj/r2 interaction is type-type dependent best_model:22',
+                             'sparsity':'regul_1E-4'}
 
     # 4 types boundary periodic N=960 mesh diffusion
     if id == 121:
@@ -3599,7 +3699,6 @@ def load_model_config(id=48):
                              'sparsity':'regul_1E-1'
                              }
 
-
     if id == 142:
         model_config_test = {'ntry': id,
                              'input_size': 9,
@@ -3799,7 +3898,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [126] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [126,47,89,74] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
