@@ -1550,7 +1550,6 @@ def data_train(model_config, bSparse=False):
 
                 k = np.random.randint(nframes - 1)
                 x = x_list[run][k].clone().detach()
-                x_next = x_list[run][k+1].clone().detach()
 
                 if bMesh:
                     dataset = data.Data(x=x, pos=x[:, 1:3])
@@ -1575,7 +1574,6 @@ def data_train(model_config, bSparse=False):
                     dataset = data.Data(x=x[:, :], edge_index=edges)
                     dataset_batch.append(dataset)
                     y = y_list[run][k].clone().detach()
-                    #torch.max(bc_diff(x[:, 1:3] + x[:, 3:5] + y - x_next[:, 1:3]))
                     if model_config['prediction'] == '2nd_derivative':
                         y = y / ynorm[4]
                     else:
@@ -1821,7 +1819,7 @@ def data_train(model_config, bSparse=False):
                 ax = fig.add_subplot(2, 4, 5)
                 print(f'regul_embedding: replaced')
             elif 'regul' in sparsity:
-                regul_embedding = float(sparsity[-3:])
+                regul_embedding = float(sparsity[-4:])
                 print(f'regul_embedding: {regul_embedding}')
 
 
