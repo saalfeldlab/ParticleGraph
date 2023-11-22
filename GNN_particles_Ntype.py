@@ -36,6 +36,7 @@ from matrix import *
 from math import pi,sin,cos
 from torch_geometric.utils import degree
 from scipy.spatial import Delaunay
+import logging
 
 def distmat_square(X, Y):
     return torch.sum(bc_diff(X[:, None, :] - Y[None, :, :]) ** 2, axis=2)
@@ -1424,8 +1425,12 @@ def data_train(model_config, bSparse=False):
     files = glob.glob(f"{log_dir}/tmp_recons/*")
     for f in files:
         os.remove(f)
-
     copyfile(os.path.realpath(__file__), os.path.join(log_dir, 'training_code.py'))
+    logging.basicConfig(filename=os.path.join(log_dir, 'training.log'),
+                        format='%(asctime)s %(message)s',
+                        filemode='w')
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
     NGraphs = len(graph_files)
@@ -1445,7 +1450,7 @@ def data_train(model_config, bSparse=False):
         model = MeshDiffusion(model_config, device)
         print(f'Training MeshDiffusion for waves')
 
-    net = f"./log/try_{ntry}/models/best_model_with_9_graphs_13.pt"
+    net = f"./log/try_126/models/best_model_with_9_graphs_13.pt"
     state_dict = torch.load(net,map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
 
@@ -1493,6 +1498,8 @@ def data_train(model_config, bSparse=False):
         y_list.append(torch.stack(y))
     ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt', map_location=device).to(device)
     vnorm = torch.load(f'./log/try_{ntry}/vnorm.pt', map_location=device).to(device)
+    logger.debug(ynorm)
+    logger.debug(vnorm)
     if bMesh:
         h_list=[]
         for run in tqdm(np.arange(0, NGraphs)):
@@ -1504,18 +1511,23 @@ def data_train(model_config, bSparse=False):
         for n in range(model_config['nparticle_types']):
             index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
             index_particles.append(index.squeeze())
+        logger.debug(hnorm)
 
     print('Start training ...')
+    logger.debug("Start training ...")
     time.sleep(0.5)
     for epoch in range(Nepochs + 1):
 
         if epoch == 1:
             batch_size = model_config['batch_size']
             print(f'batch_size: {batch_size}')
+            logger.debug(f'batch_size: {batch_size}')
+
         if epoch == 5:
             if data_augmentation:
                 data_augmentation_loop = 200
                 print(f'data_augmentation_loop: {data_augmentation_loop}')
+                logger.debug(f'data_augmentation_loop: {data_augmentation_loop}')
         if epoch == 10:
             lra = 1E-3
             lr = 5E-4
@@ -1530,8 +1542,10 @@ def data_train(model_config, bSparse=False):
                     optimizer.add_param_group({'params': parameter, 'lr': lr})
                 it += 1
             print(f'Learning rates: {lr}, {lra}')
+            logger.debug(f'Learning rates: {lr}, {lra}')
         if epoch == 24:
             print('not training embedding ...')
+            logger.debug('not training embedding ...')
             model.a.requires_grad = False
             regul_embedding = 0
 
@@ -1611,16 +1625,6 @@ def data_train(model_config, bSparse=False):
             optimizer.step()
             total_loss += loss.item()
 
-            if False: # N%250==0:
-                print(loss.item())
-            if False:
-                fig = plt.figure(figsize=(8, 8))
-                # plt.ion()
-                plt.scatter(y_batch[:,0].detach().cpu().numpy(),pred[:,0].detach().cpu().numpy(),s=5,alpha=0.5)
-                plt.scatter(y_batch[:, 1].detach().cpu().numpy(), pred[:, 1:2].detach().cpu().numpy(), s=5, alpha=0.5)
-                plt.xlim([-2.5,2.5])
-                plt.ylim([-2.5, 2.5])
-
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs_{epoch}.pt'))
 
@@ -1630,8 +1634,10 @@ def data_train(model_config, bSparse=False):
                         'optimizer_state_dict': optimizer.state_dict()},
                        os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs.pt'))
             print("Epoch {}. Loss: {:.6f} saving model  ".format(epoch,total_loss / N / nparticles / batch_size))
+            logger.debug("Epoch {}. Loss: {:.6f} saving model  ".format(epoch,total_loss / N / nparticles / batch_size))
         else:
             print("Epoch {}. Loss: {:.6f}".format(epoch,total_loss / N / nparticles / batch_size))
+            logger.debug("Epoch {}. Loss: {:.6f}".format(epoch,total_loss / N / nparticles / batch_size))
 
         list_loss.append(total_loss / N / nparticles / batch_size)
 
@@ -1797,6 +1803,7 @@ def data_train(model_config, bSparse=False):
                 sub_group = np.round(np.median(tmp))
                 accuracy = len(np.argwhere(tmp == sub_group)) / len(tmp) * 100
                 print(f'Sub-group {n} accuracy: {np.round(accuracy, 3)}')
+                logger.debug(f'Sub-group {n} accuracy: {np.round(accuracy, 3)}')
             for n in range(model_config['ninteractions']):
                 plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
 
@@ -1805,10 +1812,9 @@ def data_train(model_config, bSparse=False):
             embedding_center=[]
             for k in range(model_config['ninteractions']):
                 pos = np.argwhere(kmeans.labels_ == k).squeeze().astype(int)
-                temp = model_a_[pos, :].clone().detach()
-                print(torch.median(temp, axis=0).values)
-                embedding_center.append(torch.median(temp, axis=0).values)
-                model_a_[pos, :] = torch.median(temp, axis=0).values
+                median_center = model_a_[pos, :].clone().detach()
+                embedding_center.append(median_center.clone().detach())
+                model_a_[pos, :] = torch.median(median_center, axis=0).values
             model_a_ = torch.reshape(model_a_, (model.a.shape[0],model.a.shape[1], model.a.shape[2]))
 
             # Constrain embedding with UMAP of plots clustering
@@ -1818,9 +1824,11 @@ def data_train(model_config, bSparse=False):
                         model.a[n]=model_a_[0]
                 ax = fig.add_subplot(2, 4, 5)
                 print(f'regul_embedding: replaced')
+                logger.debug(f'regul_embedding: replaced')
             elif 'regul' in sparsity:
                 regul_embedding = float(sparsity[-4:])
                 print(f'regul_embedding: {regul_embedding}')
+                logger.debug(f'regul_embedding: {regul_embedding}')
 
 
             ax = fig.add_subplot(2, 4, 5)
@@ -3714,7 +3722,45 @@ def load_model_config(id=48):
                              'n_mp_layers': 5,
                              'noise_level': 5E-4,
                              'radius': 0.3,
-                             'dataset': f'231001_{id}',
+                             'dataset': f'231001_126',
+                             'nparticles': 4225,
+                             'nparticle_types': 5,
+                             'ninteractions': 5,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-10,
+                             'v_init': 5E-5,
+                             'aggr_type': 'add',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'WaveMesh',
+                             'prediction': '2nd_derivative',
+                             'upgrade_type': 'none',
+                             'p': np.linspace(0.2, 5, 5).tolist(),
+                             'c': [0,0.2,0.9,1,0.3],
+                             'particle_value_map': 'pattern_10.tif',     # 'particle_value_map': 'pattern_6.tif',
+                             'particle_type_map': 'pattern_8.tif',
+                             'beta': 1E-2,
+                             'nrun': 10,
+                             'clamp': 0,
+                             'pred_limit': 1E9,
+                             'start_frame': 0,
+                             'cmap':'tab10',
+                             'arrow_length':10,
+                             'description': 'Wave equation brownian particles 5 coefficients',
+                             'sparsity':'none'
+                             }
+    if id == 127:
+        model_config_test = {'ntry': id,
+                             'input_size': 4,
+                             'output_size': 1,
+                             'hidden_size': 16,
+                             'n_mp_layers': 5,
+                             'noise_level': 5E-4,
+                             'radius': 0.3,
+                             'dataset': f'231001_126',
                              'nparticles': 4225,
                              'nparticle_types': 5,
                              'ninteractions': 5,
@@ -3744,6 +3790,45 @@ def load_model_config(id=48):
                              'description': 'Wave equation brownian particles 5 coefficients',
                              'sparsity':'regul_1E-4'
                              }
+    if id == 128:
+        model_config_test = {'ntry': id,
+                             'input_size': 4,
+                             'output_size': 1,
+                             'hidden_size': 16,
+                             'n_mp_layers': 5,
+                             'noise_level': 5E-4,
+                             'radius': 0.3,
+                             'dataset': f'231001_126',
+                             'nparticles': 4225,
+                             'nparticle_types': 5,
+                             'ninteractions': 5,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-10,
+                             'v_init': 5E-5,
+                             'aggr_type': 'add',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'WaveMesh',
+                             'prediction': '2nd_derivative',
+                             'upgrade_type': 'none',
+                             'p': np.linspace(0.2, 5, 5).tolist(),
+                             'c': [0,0.2,0.9,1,0.3],
+                             'particle_value_map': 'pattern_10.tif',     # 'particle_value_map': 'pattern_6.tif',
+                             'particle_type_map': 'pattern_8.tif',
+                             'beta': 1E-2,
+                             'nrun': 10,
+                             'clamp': 0,
+                             'pred_limit': 1E9,
+                             'start_frame': 0,
+                             'cmap':'tab10',
+                             'arrow_length':10,
+                             'description': 'Wave equation brownian particles 5 coefficients',
+                             'sparsity':'regul_1E-1'
+                             }
+
 
     if id == 142:
         model_config_test = {'ntry': id,
@@ -3938,7 +4023,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3979,7 +4064,7 @@ if __name__ == '__main__':
         # else:
         #     data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
         data_train(model_config)
-        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=13, step=5, bTest='', initial_map='')
+        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=13, step=5, bTest='', initial_map='')
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
