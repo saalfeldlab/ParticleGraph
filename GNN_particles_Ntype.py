@@ -1495,6 +1495,7 @@ def data_train(model_config, bSparse=False):
     print('Load data ...')
     x_list=[]
     y_list=[]
+    time.sleep(0.5)
     for run in tqdm(np.arange(0, NGraphs)):
         x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt',map_location=device)
         y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt',map_location=device)
@@ -1652,7 +1653,7 @@ def data_train(model_config, bSparse=False):
         list_loss.append(total_loss / N / nparticles / batch_size)
 
         fig = plt.figure(figsize=(16, 8))
-        plt.ion()
+        # plt.ion()
 
         ax = fig.add_subplot(2, 4, 1)
         plt.plot(list_loss, color='k')
@@ -3198,7 +3199,7 @@ def load_model_config(id=48):
                              'arrow_length':20,
                              'cmap':'tab10',
                              'sparsity':'regul_1E-4',
-                             'description: regul_1E-4 3 interaction particles'}
+                             'description': 'regul_1E-4 3 interaction particles'}
 
     # elctrostatic
     if id == 84:
@@ -3892,7 +3893,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
