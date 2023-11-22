@@ -35,6 +35,7 @@ import colorsys
 from matrix import *
 from math import pi,sin,cos
 from torch_geometric.utils import degree
+from scipy.spatial import Delaunay
 
 def distmat_square(X, Y):
     return torch.sum(bc_diff(X[:, None, :] - Y[None, :, :]) ** 2, axis=2)
@@ -1044,9 +1045,18 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
                                     x[index_particles[n], 2].detach().cpu().numpy(), s=g,
                                     alpha=0.75,color=cmap.color(n))
                 elif bMesh:
-                    plt.scatter(x_noise[:, 1].detach().cpu().numpy(),x_noise[:, 2].detach().cpu().numpy(), s=10, alpha=0.75,
-                                    c=x[:, 6].detach().cpu().numpy(), cmap='gist_gray',vmin=-5000,vmax=5000)
-                    ax.set_facecolor([0.5,0.5,0.5])
+                    pts = x_noise[:, 1:3].detach().cpu().numpy()
+                    tri = Delaunay(pts)
+                    colors = torch.sum(x_noise[tri.simplices, 6], axis=1) / 3.0
+                    if model_config['model'] == 'WaveMesh':
+                        plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(), facecolors=colors.detach().cpu().numpy(),edgecolors='k',vmin=-1500,vmax=1500)
+                    else:
+                        plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                      facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=0, vmax=2500)
+
+                    # plt.scatter(x_noise[:, 1].detach().cpu().numpy(),x_noise[:, 2].detach().cpu().numpy(), s=10, alpha=0.75,
+                    #                 c=x[:, 6].detach().cpu().numpy(), cmap='gist_gray',vmin=-5000,vmax=5000)
+                    # ax.set_facecolor([0.5,0.5,0.5])
                 elif model_config['model'] == 'ElecParticles':
                     for n in range(nparticle_types):
                         g = np.abs(p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20)
@@ -1059,7 +1069,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
                 else:
                     for n in range(nparticle_types):
                         plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(), x[index_particles[n], 2].detach().cpu().numpy(), s=3, color=cmap.color(n))
-                if bMesh:
+                if bMesh | (model_config['boundary']=='periodic'):
                     plt.text(0, 1.08, f'frame: {it}')
                     plt.text(0, 1.03, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
                     plt.xlim([0,1])
@@ -1083,7 +1093,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
                         dataset2 = data.Data(x=x, edge_index=edge_index2)
                         vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
                     nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=0.3)
-                if bMesh:
+                if bMesh | (model_config['boundary']=='periodic'):
                     plt.xlim([-0.1,1.1])
                     plt.ylim([-0.1,1.1])
                 else:
@@ -1100,9 +1110,18 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
                                         alpha=0.75,
                                         color=cmap.color(n))  # , facecolors='none', edgecolors='k')
                     elif bMesh:
-                        plt.scatter(x_noise[:, 1].detach().cpu().numpy(), x_noise[:, 2].detach().cpu().numpy(), s=60, alpha=0.75,
-                                    c=x[:, 6].detach().cpu().numpy(), cmap='gist_gray',vmin=-5000,vmax=5000)
-                        ax.set_facecolor([0.5,0.5,0.5])
+                        pts = x_noise[:, 1:3].detach().cpu().numpy()
+                        tri = Delaunay(pts)
+                        colors = torch.sum(x_noise[tri.simplices, 6], axis=1) / 3.0
+
+                        if model_config['model'] == 'WaveMesh':
+                            plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                          facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=-1500,
+                                          vmax=1500)
+                        else:
+                            plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                          facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=0, vmax=2500)
+                        # ax.set_facecolor([0.5,0.5,0.5])
                     elif model_config['model'] == 'ElecParticles':
                         for n in range(nparticle_types):
                             g = np.abs(p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20) * 4
@@ -1118,7 +1137,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
                                         x[index_particles[n], 2].detach().cpu().numpy(), s=50, alpha=0.75,
                                         color=cmap.color(n))
 
-                    if bMesh:
+                    if bMesh | (model_config['boundary']=='periodic'):
                         plt.xlim([0.3, 0.7])
                         plt.ylim([0.3, 0.7])
                     else:
@@ -1241,7 +1260,7 @@ def data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, st
 
             if bVisu & (it % step == 0):
                 fig = plt.figure(figsize=(11.8, 12))
-                # plt.ion()
+                #plt.ion()
                 ax = fig.add_subplot(2, 2, 1)
                 plt.xlim([0, size])
                 plt.ylim([0, size])
@@ -1308,6 +1327,8 @@ def data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, st
                     for k in range(nparticles):
                             plt.arrow(x=x[k, 1].detach().cpu().item(),y=x[k, 2].detach().cpu().item(),
                                       dx=x[k, 3].detach().cpu().item()*model_config['arrow_length'], dy=x[k, 4].detach().cpu().item()*model_config['arrow_length'],color='k')
+
+                plt.tight_layout()
                 plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
                 plt.close()
 
@@ -1484,11 +1505,7 @@ def data_train(model_config, bSparse=False):
                     optimizer.add_param_group({'params': parameter, 'lr': lr})
                 it += 1
             print(f'Learning rates: {lr}, {lra}')
-        if (epoch ==17):
-            print('training embedding again ...')
-            model.a.requires_grad = True
-
-        if (epoch == 20) | (epoch==15):
+        if epoch == 20:
             print('not training embedding ...')
             model.a.requires_grad = False
 
@@ -2148,9 +2165,14 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                                         x_[index_particles[n], 2].detach().cpu().numpy(), s=g,
                                         c='b',alpha=0.5)  # , facecolors='none', edgecolors='k')
                 elif bMesh:
-                    plt.scatter(x_[:, 1].detach().cpu().numpy(),x_[:, 2].detach().cpu().numpy(), s=sc*5,
-                                    c=x_[:, 6].detach().cpu().numpy(),cmap='gist_gray', vmin=-5000, vmax=5000)
-                    ax.set_facecolor([0.5, 0.5, 0.5])
+                    pts = x_[:, 1:3].detach().cpu().numpy()
+                    tri = Delaunay(pts)
+                    colors = torch.sum(x_[tri.simplices, 6], axis=1) / 3.0
+                    if model_config['model'] == 'WaveMesh':
+                        plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(), facecolors=colors.detach().cpu().numpy(),edgecolors='k',vmin=-5000,vmax=5000)
+                    else:
+                        plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                      facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=0, vmax=5000)
                 else:
                     for n in range(nparticle_types):
                         plt.scatter(x_[index_particles[n], 1].detach().cpu(), x_[index_particles[n], 2].detach().cpu(),s=sc,color=cmap.color(n))
@@ -3617,7 +3639,7 @@ def load_model_config(id=48):
                              'particle_value_map': 'pattern_9.tif',
                              'particle_type_map': 'pattern_8.tif',
                              'beta': 1E-2,
-                             'nrun': 10,
+                             'nrun': 2,
                              'clamp': 0,
                              'pred_limit': 1E9,
                              'start_frame': 0,
@@ -3851,13 +3873,13 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [146] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [126] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
@@ -3887,12 +3909,12 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
 
-        if 'Boids' in model_config['description']:
-            data_generate_boid(model_config, bVisu=True, bDetails=False, bErase=False, step=10)
-        else:
-            data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
-        data_train(model_config, bSparse=True)
-        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=5, bTest='', initial_map='')
+        # if 'Boids' in model_config['description']:
+        #     data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
+        # else:
+        #     data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
+        # data_train(model_config, bSparse=True)
+        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=14, step=5, bTest='', initial_map='')
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
