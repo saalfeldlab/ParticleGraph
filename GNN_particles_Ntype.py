@@ -1840,32 +1840,32 @@ def data_train(model_config, bSparse=False):
                 print(f'regul_embedding: {regul_embedding}')
                 logger.info(f'regul_embedding: {regul_embedding}')
 
-            if (epoch % 10 == 0) & (epoch > 0):
-                best_loss = total_loss / N / nparticles / batch_size
-                torch.save({'model_state_dict': model.state_dict(),
-                            'optimizer_state_dict': optimizer.state_dict()},
-                           os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs.pt'))
-                xx, rmserr_list = data_test(model_config, bVisu=True, bPrint=False, step=int(nframes//20), folder_out=f'{log_dir}/tmp_recons/')
-                model.train()
-            # if (epoch > 9):
-            #     ax = fig.add_subplot(2, 4, 5)
-            #     for n in range(nparticle_types):
-            #         plt.scatter(xx[index_particles[n], 1], xx[index_particles[n], 2], s=1,color='k')
-            #     ax = plt.gca()
-            #     ax.axes.xaxis.set_ticklabels([])
-            #     ax.axes.yaxis.set_ticklabels([])
-            #     plt.xlim([0,1])
-            #     plt.ylim([0,1])
-            #     ax.axes.get_xaxis().set_visible(False)
-            #     ax.axes.get_yaxis().set_visible(False)
-            #     plt.axis('off')
-            #     ax = fig.add_subplot(2, 4, 6)
-            #     plt.plot(np.arange(len(rmserr_list)), rmserr_list, label='RMSE', color='r')
-            #     plt.ylim([0, 0.1])
-            #     plt.xlim([0, nframes])
-            #     plt.tick_params(axis='both', which='major', labelsize=10)
-            #     plt.xlabel('Frame [a.u]', fontsize=14)
-            #     ax.set_ylabel('RMSE [a.u]', fontsize=14, color='r')
+        if (epoch % 10 == 0) & (epoch > 0):
+            best_loss = total_loss / N / nparticles / batch_size
+            torch.save({'model_state_dict': model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict()},
+                       os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs.pt'))
+            xx, rmserr_list = data_test(model_config, bVisu=True, bPrint=False, step=int(nframes//20), folder_out=f'{log_dir}/tmp_recons/')
+            model.train()
+        # if (epoch > 9):
+        #     ax = fig.add_subplot(2, 4, 5)
+        #     for n in range(nparticle_types):
+        #         plt.scatter(xx[index_particles[n], 1], xx[index_particles[n], 2], s=1,color='k')
+        #     ax = plt.gca()
+        #     ax.axes.xaxis.set_ticklabels([])
+        #     ax.axes.yaxis.set_ticklabels([])
+        #     plt.xlim([0,1])
+        #     plt.ylim([0,1])
+        #     ax.axes.get_xaxis().set_visible(False)
+        #     ax.axes.get_yaxis().set_visible(False)
+        #     plt.axis('off')
+        #     ax = fig.add_subplot(2, 4, 6)
+        #     plt.plot(np.arange(len(rmserr_list)), rmserr_list, label='RMSE', color='r')
+        #     plt.ylim([0, 0.1])
+        #     plt.xlim([0, nframes])
+        #     plt.tick_params(axis='both', which='major', labelsize=10)
+        #     plt.xlabel('Frame [a.u]', fontsize=14)
+        #     ax.set_ylabel('RMSE [a.u]', fontsize=14, color='r')
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{ntry}_{epoch}.tif")
@@ -3899,7 +3899,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [126,47,89,74] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [126,127] #[126,47,89,74] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
@@ -3933,8 +3933,8 @@ if __name__ == '__main__':
         #     data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
         # else:
         #     data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
-        data_train(model_config)
-        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=13, step=5, bTest='', initial_map='')
+        # data_train(model_config)
+        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=13, step=5, bTest='', initial_map='')
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
