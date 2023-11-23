@@ -1210,7 +1210,6 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
         hnorm = torch.std(h)
         torch.save(hnorm, os.path.join(log_dir, 'hnorm.pt'))
         print(hnorm)
-
 def data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=1):
 
     # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_data/*")
@@ -1868,7 +1867,6 @@ def data_train(model_config, bSparse=False):
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{ntry}_{epoch}.tif")
         plt.close()
-
 def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0,prev_index_particles=0,best_model=0,step=5, bTest='', folder_out='tmp_recons',initial_map=''):
     # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_recons/*")
     # for f in files:
@@ -3932,7 +3930,7 @@ if __name__ == '__main__':
         # else:
         #     data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
         # data_train(model_config)
-        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=13, step=5, bTest='', initial_map='')
+        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=24, step=5, bTest='', initial_map='')
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
