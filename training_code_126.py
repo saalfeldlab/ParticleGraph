@@ -1435,9 +1435,9 @@ def data_train(model_config, bSparse=False):
         model = MeshDiffusion(model_config, device)
         print(f'Training MeshDiffusion for waves')
 
-    net = f"./log/try_{ntry}/models/best_model_with_9_graphs_13.pt"
-    state_dict = torch.load(net,map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
+    # net = f"./log/try_{ntry}/models/best_model_with_9_graphs_13.pt"
+    # state_dict = torch.load(net,map_location=device)
+    # model.load_state_dict(state_dict['model_state_dict'])
 
     lra = 1E-3
     lr = 1E-3
