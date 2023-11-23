@@ -2199,7 +2199,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                     tri = Delaunay(pts)
                     colors = torch.sum(x_[tri.simplices, 6], axis=1) / 3.0
                     if model_config['model'] == 'WaveMesh':
-                        plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(), facecolors=colors.detach().cpu().numpy(),edgecolors='k')
+                        plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(), facecolors=colors.detach().cpu().numpy(),edgecolors='k',vmin=-5000,vmax=5000)
                     else:
                         plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                       facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=0, vmax=5000)
@@ -3934,7 +3934,7 @@ if __name__ == '__main__':
         # else:
         #     data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
         # data_train(model_config)
-        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=18, step=5, bTest='', initial_map='')
+        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=13, step=5, bTest='', initial_map='')
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
