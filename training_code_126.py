@@ -136,7 +136,7 @@ class Laplacian_A(pyg.nn.MessagePassing):
 
         heat_flow = self.beta * c * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
 
-        heat_flow = heat_flow - x[:, 7:8] * 1E-3 * 0
+        heat_flow = heat_flow
 
         # if (torch.min(heat_flow)<-0.5):
         #     pos = torch.argwhere(heat_flow<-0.5).detach().cpu().numpy().astype(int)

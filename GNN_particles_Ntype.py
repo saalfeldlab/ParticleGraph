@@ -133,7 +133,6 @@ class Laplacian_A(pyg.nn.MessagePassing):
         #     print(k)
         #     pos = torch.argwhere(edge_index[0, :] == k).detach().cpu().numpy().astype(int)
         #     print(edge_index[:,pos])
-        #
         #     coeff = edge_attr[pos.squeeze()]
         #     coeff = coeff[:, None]
         #     print(coeff)
@@ -145,7 +144,6 @@ class Laplacian_A(pyg.nn.MessagePassing):
         #     print(k)
         #     pos = torch.argwhere(edge_index[0, :] == k).detach().cpu().numpy().astype(int)
         #     print(edge_index[:,pos])
-        #
         #     coeff = edge_attr[pos.squeeze()]
         #     coeff = coeff[:, None]
         #     print(coeff)
