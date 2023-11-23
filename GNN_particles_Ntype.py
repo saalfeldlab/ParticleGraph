@@ -2199,7 +2199,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                     tri = Delaunay(pts)
                     colors = torch.sum(x_[tri.simplices, 6], axis=1) / 3.0
                     if model_config['model'] == 'WaveMesh':
-                        plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(), facecolors=colors.detach().cpu().numpy(),edgecolors='k',vmin=-5000,vmax=5000)
+                        plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(), facecolors=colors.detach().cpu().numpy(),edgecolors='k')
                     else:
                         plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                       facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=0, vmax=5000)
