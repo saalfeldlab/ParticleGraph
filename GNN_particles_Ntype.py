@@ -3924,7 +3924,6 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-
         # if 'Boids' in model_config['description']:
         #     data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
         # else:
