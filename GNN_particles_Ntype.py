@@ -1598,7 +1598,7 @@ def data_train(model_config, bSparse=False):
                 regul_term_embedding = regul_embedding * torch.sqrt(torch.mean(regul_term_embedding))
                 loss = (pred - y_batch).norm(2) + regul_term_embedding
             else:
-                loss = (pred - y_batch).norm(2) # + (torch.mean(pred) - torch.mean(y_batch)).norm(2) + (torch.std(pred) - torch.std(y_batch)).norm(2)
+                loss = (pred - y_batch).norm(2) + (torch.mean(pred) - torch.mean(y_batch)).norm(2) + (torch.std(pred) - torch.std(y_batch)).norm(2)
 
             loss.backward()
             optimizer.step()
@@ -3944,13 +3944,13 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [130] #[126,47,89,74] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [131] #[126,47,89,74] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
