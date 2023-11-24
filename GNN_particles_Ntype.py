@@ -1744,7 +1744,7 @@ def data_train(model_config, bSparse=False):
         elif bMesh:
             f_list = []
             for n in range(nparticles):
-                r0 = 4 * torch.ones(device=device)
+                r0 = torch.mean(torch.abs(edge_weight)) * torch.ones(1000,device=device)
                 r1 = torch.tensor(np.linspace(-2500, 2500, 1000)).to(device)
                 embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
                 in_features = torch.cat((r0[:, None], r1[:, None], embedding), dim=1)
