@@ -1173,40 +1173,6 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
 
         bDetails = False
 
-
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
-    NGraphs = len(graph_files)
-    print('Graph files N: ', NGraphs - 1)
-    time.sleep(0.5)
-    print('Normalization ...')
-    arr = np.arange(0, NGraphs)
-    x_list=[]
-    y_list=[]
-    for run in tqdm(arr):
-        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt',map_location=device)
-        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt',map_location=device)
-        x_list.append(torch.stack(x))
-        y_list.append(torch.stack(y))
-    x = torch.stack(x_list)
-    x = torch.reshape(x,(x.shape[0] * x.shape[1] * x.shape[2], x.shape[3]))
-    y = torch.stack(y_list)
-    y = torch.reshape(y,(y.shape[0]*y.shape[1]*y.shape[2],y.shape[3]))
-    vnorm = norm_velocity(x, device)
-    ynorm = norm_acceleration(y, device)
-    torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
-    torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
-    print (vnorm)
-    print (ynorm)
-    if bMesh:
-        h_list=[]
-        for run in arr:
-            h = torch.load(f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt',map_location=device)
-            h_list.append(torch.stack(h))
-        h = torch.stack(h_list)
-        h = torch.reshape(h, (h.shape[0] * h.shape[1] * h.shape[2], h.shape[3]))
-        hnorm = torch.std(h)
-        torch.save(hnorm, os.path.join(log_dir, 'hnorm.pt'))
-        print(hnorm)
 def data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=1):
 
     # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_data/*")
@@ -1445,6 +1411,35 @@ def data_train(model_config, bSparse=False):
     print(f'Graph files N: {NGraphs - 1}')
     logger.info(f'Graph files N: {NGraphs - 1}')
 
+    x_list=[]
+    y_list=[]
+    print('Load data ...')
+    for run in tqdm(range(NGraphs)):
+        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt',map_location=device)
+        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt',map_location=device)
+        x_list.append(torch.stack(x))
+        y_list.append(torch.stack(y))
+    x = torch.stack(x_list)
+    x = torch.reshape(x,(x.shape[0] * x.shape[1] * x.shape[2], x.shape[3]))
+    y = torch.stack(y_list)
+    y = torch.reshape(y,(y.shape[0]*y.shape[1]*y.shape[2],y.shape[3]))
+    vnorm = norm_velocity(x, device)
+    ynorm = norm_acceleration(y, device)
+    torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
+    torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
+    print (vnorm,ynorm)
+    logger.info(f'vnorm ynorm: {vnorm[4].detach().cpu().numpy()} {ynorm[4].detach().cpu().numpy()}')
+    if bMesh:
+        h_list=[]
+        for run in arr:
+            h = torch.load(f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt',map_location=device)
+            h_list.append(torch.stack(h))
+        h = torch.stack(h_list)
+        h = torch.reshape(h, (h.shape[0] * h.shape[1] * h.shape[2], h.shape[3]))
+        hnorm = torch.std(h)
+        torch.save(hnorm, os.path.join(log_dir, 'hnorm.pt'))
+        print(hnorm)
+        logger.info(f'hnorm : {hnorm.detach().cpu().numpy()}')
 
     if model_config['model'] == 'GravityParticles':
         model = GravityParticles(model_config, device)
@@ -1498,30 +1493,6 @@ def data_train(model_config, bSparse=False):
     print(f'data_augmentation_loop: {data_augmentation_loop}')
     logger.info(f'data_augmentation_loop: {data_augmentation_loop}')
     print('Load data ...')
-    x_list=[]
-    y_list=[]
-    time.sleep(0.5)
-    for run in tqdm(np.arange(0, NGraphs)):
-        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt',map_location=device)
-        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt',map_location=device)
-        x_list.append(torch.stack(x))
-        y_list.append(torch.stack(y))
-    ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt', map_location=device).to(device)
-    vnorm = torch.load(f'./log/try_{ntry}/vnorm.pt', map_location=device).to(device)
-    logger.info(ynorm)
-    logger.info(vnorm)
-    if bMesh:
-        h_list=[]
-        for run in tqdm(np.arange(0, NGraphs)):
-            h = torch.load(f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt',map_location=device)
-            h_list.append(torch.stack(h))
-        hnorm = torch.load(f'./log/try_{ntry}/hnorm.pt', map_location=device).to(device)
-        x = x_list[0][0].clone().detach()
-        index_particles = []
-        for n in range(model_config['nparticle_types']):
-            index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
-            index_particles.append(index.squeeze())
-        logger.info(hnorm)
 
     print('Start training ...')
     logger.info("Start training ...")
@@ -3931,10 +3902,10 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        if 'Boids' in model_config['description']:
-            data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
-        else:
-            data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
+        # if 'Boids' in model_config['description']:
+        #     data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
+        # else:
+        #     data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
         data_train(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=20, step=5, bTest='', initial_map='')
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
