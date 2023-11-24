@@ -963,9 +963,6 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
 
         for it in tqdm(range(model_config['start_frame'], nframes)):
 
-            if it==0:
-                V1=torch.clamp(V1,min=-torch.std(V1),max=+torch.std(V1))
-
             noise_prev_prev = noise_prev_prev.clone().detach()
             noise_prev = noise_current.clone().detach()
             noise_current = torch.randn((nparticles, 2), device=device) * noise_level
@@ -2912,7 +2909,6 @@ def load_model_config(id=48):
                              'start_frame': -1000,
                              'arrow_length':10,
                              'cmap':'tab10',
-                             'arrow_length':10,
                              'description':'Gravity',
                              'sparsity':'replace'}
     if id == 45:

@@ -3953,7 +3953,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [130] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [130,131] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
@@ -3982,12 +3982,12 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-
-        if 'Boids' in model_config['description']:
-            data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
-        else:
-            data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
-        data_train(model_config, bSparse=True)
+        if gtest==131:
+            if 'Boids' in model_config['description']:
+                data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
+            else:
+                data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
+            data_train(model_config, bSparse=True)
         x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=5, bTest='', initial_map='')
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
