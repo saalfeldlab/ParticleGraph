@@ -1598,7 +1598,7 @@ def data_train(model_config, bSparse=False):
                 regul_term_embedding = regul_embedding * torch.sqrt(torch.mean(regul_term_embedding))
                 loss = (pred - y_batch).norm(2) + regul_term_embedding
             else:
-                loss = (pred - y_batch).norm(2) + (torch.mean(pred) - torch.mean(y_batch)).norm(2) + (torch.std(pred) - torch.std(y_batch)).norm(2)
+                loss = (pred - y_batch).norm(2) # (torch.mean(pred) - torch.mean(y_batch)).norm(2) + (torch.std(pred) - torch.std(y_batch)).norm(2)
 
             loss.backward()
             optimizer.step()
