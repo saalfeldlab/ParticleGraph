@@ -1431,7 +1431,7 @@ def data_train(model_config, bSparse=False):
     logger.info(f'vnorm ynorm: {vnorm[4].detach().cpu().numpy()} {ynorm[4].detach().cpu().numpy()}')
     if bMesh:
         h_list=[]
-        for run in arr:
+        for run in tqdm(range(NGraphs)):
             h = torch.load(f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt',map_location=device)
             h_list.append(torch.stack(h))
         h = torch.stack(h_list)
@@ -1598,7 +1598,7 @@ def data_train(model_config, bSparse=False):
                 regul_term_embedding = regul_embedding * torch.sqrt(torch.mean(regul_term_embedding))
                 loss = (pred - y_batch).norm(2) + regul_term_embedding
             else:
-                loss = (pred - y_batch).norm(2) + (torch.mean(pred) - torch.mean(y_batch)).norm(2) + (torch.std(pred) - torch.std(y_batch)).norm(2)
+                loss = (pred - y_batch).norm(2) # + (torch.mean(pred) - torch.mean(y_batch)).norm(2) + (torch.std(pred) - torch.std(y_batch)).norm(2)
 
             loss.backward()
             optimizer.step()
@@ -3950,7 +3950,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [131] #[126,47,89,74] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [130] #[126,47,89,74] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
