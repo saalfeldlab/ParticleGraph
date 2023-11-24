@@ -1326,6 +1326,17 @@ def data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, st
                     ps = np.array(ps)
                     plt.plot(ps[:, 0], ps[:, 1], c=cmap.color(T1[n].detach().cpu().numpy()), alpha=0.5)
 
+            if bVisu & (it % step == 0) & bDetails:
+                ax = fig.add_subplot(2, 2, 3)
+                for n, boid in enumerate(flock):
+                    ps = boid.Draw(Distance, scale)
+                    ps = np.array(ps)
+                    plt.plot(ps[:, 0], ps[:, 1], c=cmap.color(T1[n].detach().cpu().numpy()), alpha=0.5)
+                plt.xlim([400, 800])
+                plt.ylim([400, 800])
+
+
+
             y = torch.zeros((nparticles,2),device=device)
             for n, boid  in enumerate(flock):
                 y[n,0]=torch.tensor(boid.acceleration.x/1000, device=device)
@@ -1351,7 +1362,7 @@ def data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, st
                     plt.xlim([0, 1])
                     plt.ylim([0, 1])
 
-                    ax = fig.add_subplot(2, 2, 3)
+                    ax = fig.add_subplot(2, 2, 4)
 
                     for n in range(nparticle_types):
                         plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
@@ -3895,7 +3906,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [127] #[126,47,89,74] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [144] #[126,47,89,74] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
@@ -3924,12 +3935,12 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        # if 'Boids' in model_config['description']:
-        #     data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
-        # else:
-        #     data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
-        # data_train(model_config)
-        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=20, step=5, bTest='', initial_map='')
+        if 'Boids' in model_config['description']:
+            data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
+        else:
+            data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
+        data_train(model_config)
+        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=20, step=5, bTest='', initial_map='')
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
