@@ -1524,7 +1524,7 @@ def data_train(model_config, bSparse=False):
                 it += 1
             print(f'Learning rates: {lr}, {lra}')
             logger.info(f'Learning rates: {lr}, {lra}')
-        if epoch == 24:
+        if epoch == 25:
             print('not training embedding ...')
             logger.info('not training embedding ...')
             model.a.requires_grad = False
@@ -1805,7 +1805,7 @@ def data_train(model_config, bSparse=False):
             model_a_ = torch.reshape(model_a_, (model.a.shape[0],model.a.shape[1], model.a.shape[2]))
 
             # Constrain embedding with UMAP of plots clustering
-            if sparsity=='replace':
+            if (sparsity=='replace') | ((epoch==24)&(sparsity!='replace')):
                 with torch.no_grad():
                     for n in range(model.a.shape[0]):
                         model.a[n]=model_a_[0].clone().detach()
@@ -3674,6 +3674,83 @@ def load_model_config(id=48):
                              'sparsity':'regul_1E-1'
                              }
 
+    if id == 130:
+        model_config_test = {'ntry': id,
+                             'input_size': 4,
+                             'output_size': 1,
+                             'hidden_size': 16,
+                             'n_mp_layers': 5,
+                             'noise_level': 5E-4,
+                             'radius': 0.3,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 4225,
+                             'nparticle_types': 5,
+                             'ninteractions': 5,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-10,
+                             'v_init': 5E-5,
+                             'aggr_type': 'add',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'WaveMesh',
+                             'prediction': '2nd_derivative',
+                             'upgrade_type': 'none',
+                             'p': np.linspace(0.2, 5, 5).tolist(),
+                             'c': [0,0.2,0.9,1,0.3],
+                             'particle_value_map': 'pattern_10.tif',     # 'particle_value_map': 'pattern_6.tif',
+                             'particle_type_map': 'pattern_8.tif',
+                             'beta': 1E-2,
+                             'nrun': 10,
+                             'clamp': 0,
+                             'pred_limit': 1E9,
+                             'start_frame': 0,
+                             'cmap':'tab10',
+                             'arrow_length':10,
+                             'description': 'Wave equation brownian particles 5 coefficients',
+                             'sparsity':'replaced'
+                             }
+    if id == 131:
+        model_config_test = {'ntry': id,
+                             'input_size': 4,
+                             'output_size': 1,
+                             'hidden_size': 16,
+                             'n_mp_layers': 5,
+                             'noise_level': 5E-4,
+                             'radius': 0.3,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 4225,
+                             'nparticle_types': 5,
+                             'ninteractions': 5,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-10,
+                             'v_init': 5E-5,
+                             'aggr_type': 'add',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'WaveMesh',
+                             'prediction': '2nd_derivative',
+                             'upgrade_type': 'none',
+                             'p': np.linspace(0.2, 5, 5).tolist(),
+                             'c': [0,0.2,0.9,1,0.3],
+                             'particle_value_map': 'pattern_10.tif',     # 'particle_value_map': 'pattern_6.tif',
+                             'particle_type_map': 'pattern_8.tif',
+                             'beta': 1E-2,
+                             'nrun': 10,
+                             'clamp': 0,
+                             'pred_limit': 1E9,
+                             'start_frame': 0,
+                             'cmap':'tab10',
+                             'arrow_length':10,
+                             'description': 'Wave equation brownian particles 5 coefficients',
+                             'sparsity':'replaced'
+                             }
+
     if id == 142:
         model_config_test = {'ntry': id,
                              'input_size': 9,
@@ -3873,7 +3950,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [44] #[126,47,89,74] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [130] #[126,47,89,74] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
