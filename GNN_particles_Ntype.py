@@ -1744,8 +1744,8 @@ def data_train(model_config, bSparse=False):
         elif bMesh:
             f_list = []
             for n in range(nparticles):
-                r0 = torch.tensor(np.linspace(4, 5, 1000)).to(device)
-                r1 = torch.tensor(np.linspace(-250, 250, 1000)).to(device)
+                r0 = 4 * torch.ones(device=device)
+                r1 = torch.tensor(np.linspace(-2500, 2500, 1000)).to(device)
                 embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
                 in_features = torch.cat((r0[:, None], r1[:, None], embedding), dim=1)
                 h = model.lin_edge(in_features.float())
@@ -3674,6 +3674,44 @@ def load_model_config(id=48):
                              'sparsity':'regul_1E-1'
                              }
 
+    if id == 129:
+        model_config_test = {'ntry': id,
+                             'input_size': 4,
+                             'output_size': 1,
+                             'hidden_size': 16,
+                             'n_mp_layers': 5,
+                             'noise_level': 5E-4,
+                             'radius': 0.3,
+                             'dataset': f'231001_126',
+                             'nparticles': 4225,
+                             'nparticle_types': 5,
+                             'ninteractions': 5,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-10,
+                             'v_init': 5E-5,
+                             'aggr_type': 'add',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'WaveMesh',
+                             'prediction': '2nd_derivative',
+                             'upgrade_type': 'none',
+                             'p': np.linspace(0.2, 5, 5).tolist(),
+                             'c': [0,0.2,0.9,1,0.3],
+                             'particle_value_map': 'pattern_10.tif',     # 'particle_value_map': 'pattern_6.tif',
+                             'particle_type_map': 'pattern_8.tif',
+                             'beta': 1E-2,
+                             'nrun': 10,
+                             'clamp': 0,
+                             'pred_limit': 1E9,
+                             'start_frame': 0,
+                             'cmap':'tab10',
+                             'arrow_length':10,
+                             'description': 'Wave equation brownian particles 5 coefficients',
+                             'sparsity':'replaced'
+                             }
     if id == 130:
         model_config_test = {'ntry': id,
                              'input_size': 4,
@@ -3950,7 +3988,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [130] #[126,47,89,74] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [129] #[126,47,89,74] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
