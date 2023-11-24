@@ -1438,7 +1438,7 @@ def data_train(model_config, bSparse=False):
         h = torch.reshape(h, (h.shape[0] * h.shape[1] * h.shape[2], h.shape[3]))
         hnorm = torch.std(h)
         torch.save(hnorm, os.path.join(log_dir, 'hnorm.pt'))
-        print(hnorm)
+        print(torch.mean(h),torch.std(h))
         logger.info(f'hnorm : {hnorm.detach().cpu().numpy()}')
 
     if model_config['model'] == 'GravityParticles':
