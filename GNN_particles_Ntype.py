@@ -1096,8 +1096,8 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
                         vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
                     nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=0.05)
                 if bMesh | (model_config['boundary']=='periodic'):
-                    plt.xlim([-0.1,1.1])
-                    plt.ylim([-0.1,1.1])
+                    plt.xlim([0,1])
+                    plt.ylim([0,1])
                 else:
                     plt.xlim([-1.3, 1.3])
                     plt.ylim([-1.3, 1.3])
