@@ -3865,7 +3865,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [84] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [87] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
