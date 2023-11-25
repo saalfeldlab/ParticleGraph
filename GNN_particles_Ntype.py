@@ -3803,7 +3803,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [74] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [144] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
@@ -3834,7 +3834,7 @@ if __name__ == '__main__':
 
 
         if 'Boids' in model_config['description']:
-            data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
+            data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=1)
         else:
             data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=5)
         # data_train(model_config)
