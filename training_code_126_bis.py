@@ -941,9 +941,10 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
             # plt.ion()
             # plt.scatter(X1[:,0].detach().cpu().numpy(),X1[:,1].detach().cpu().numpy(),s=10)
 
+            run_list=[1,0.9,0.7,0.6,0.5,1.1,1.2,1.3,1.4,1.5,1,1,1,1]
             i0 = imread(f'graphs_data/{particle_value_map}')
             values = i0[(X1[:, 0].detach().cpu().numpy() * 255).astype(int), (X1[:, 1].detach().cpu().numpy() * 255).astype(int)]
-            H1[:,0] = torch.tensor(values / 255 * 5000, device=device)
+            H1[:,0] = torch.tensor(values / 255 * 5000, device=device) * torch.tensor(run_list[run],device)
             torchsum0 = torch.sum(H1)
             # plt.scatter(X1[:, 0].detach().cpu().numpy(), X1[:, 1].detach().cpu().numpy(), s=1,
             #             c=H1[:, 0].detach().cpu().numpy())
@@ -3631,7 +3632,7 @@ def load_model_config(id=48):
                              'n_mp_layers': 5,
                              'noise_level': 5E-4,
                              'radius': 0.3,
-                             'dataset': f'231001_126',
+                             'dataset': f'231001_{id}',
                              'nparticles': 4225,
                              'nparticle_types': 5,
                              'ninteractions': 5,
@@ -3667,9 +3668,9 @@ def load_model_config(id=48):
                              'output_size': 1,
                              'hidden_size': 16,
                              'n_mp_layers': 5,
-                             'noise_level': 5E-4,
+                             'noise_level': 0,
                              'radius': 0.3,
-                             'dataset': f'231001_126',
+                             'dataset': f'231001_{id}',
                              'nparticles': 4225,
                              'nparticle_types': 5,
                              'ninteractions': 5,
@@ -3893,13 +3894,13 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [126,47,89,74] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [128]  # [126,47,89,74] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
