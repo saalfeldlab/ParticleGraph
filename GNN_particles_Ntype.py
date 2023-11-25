@@ -975,14 +975,6 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
                 edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face, normalization="None")  # "None", "sym", "rw"
                 dataset_mesh = data.Data(x=x_noise, edge_index=edge_index, edge_attr=edge_weight, device=device)
 
-                # pos = torch.argwhere(edge_index[0, :] == 4)
-                # pos = pos.detach().cpu().numpy().astype(int)
-                # pos = edge_index[1,pos].detach().cpu().numpy().astype(int)
-                # g = x_noise.detach().cpu().numpy()
-                # g = g[pos, 1:3]
-                # g = g.squeeze()
-
-
             distance = torch.sum(bc_diff(x_noise[:, None, 1:3] - x_noise[None, :, 1:3]) ** 2, axis=2)
             t = torch.Tensor([radius ** 2])  # threshold
             adj_t = (distance < radius ** 2).float() * 1
@@ -1043,7 +1035,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
                     tri = Delaunay(pts)
                     colors = torch.sum(x_noise[tri.simplices, 6], axis=1) / 3.0
                     if model_config['model'] == 'WaveMesh':
-                        plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(), facecolors=colors.detach().cpu().numpy(),edgecolors='k',vmin=-5000,vmax=5000)
+                        plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(), facecolors=colors.detach().cpu().numpy(),edgecolors='k',vmin=-2500,vmax=2500)
                     else:
                         plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                       facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=0, vmax=2500)
@@ -3874,7 +3866,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
