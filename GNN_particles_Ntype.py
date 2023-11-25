@@ -3874,13 +3874,13 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [127] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [128] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
