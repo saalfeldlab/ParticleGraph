@@ -1083,7 +1083,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
                     plt.ylim([-1.3, 1.3])
 
                 ax = fig.add_subplot(2, 2, 2)
-                plt.scatter(x_noise[:, 1].detach().cpu().numpy(), x_noise[:, 2].detach().cpu().numpy(), s=1, color='k',alpha=0.25)
+                plt.scatter(x_noise[:, 1].detach().cpu().numpy(), x_noise[:, 2].detach().cpu().numpy(), s=1, color='k',alpha=0.05)
                 if bDetails: # model_config['radius']<0.01:
                     pos = dict(enumerate(np.array(x_noise[:, 1:3].detach().cpu()), 0))
                     if bMesh:
@@ -3336,7 +3336,7 @@ def load_model_config(id=48):
                              'clamp': 0.002,
                              'pred_limit': 1E10,
                              'start_frame': 0,
-                             'arrow_length':20,
+                             'arrow_length':40,
                              'cmap':'tab10',
                              'description':'Periodic Particles_E is a second derivative simulation, acceleration is function of electrostatic law qiqj/r2 interaction is type-type dependent best_model:22',
                              'sparsity':'replace',
