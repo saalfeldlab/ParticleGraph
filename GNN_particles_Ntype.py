@@ -3236,8 +3236,8 @@ def load_model_config(id=48):
                              'start_frame': 0,
                              'arrow_length':40,
                              'cmap':'tab20c',
-                             'arrow_length':10,
-                             'sparsity':'replace'}
+                             'sparsity':'replace',
+                             'description':'Electrostatic simulation'}
     if id == 85:
         model_config_test = {'ntry': id,
                              'input_size': 11,
@@ -3335,7 +3335,8 @@ def load_model_config(id=48):
                              'arrow_length':5,
                              'cmap':'tab10',
                              'description':'Periodic Particles_E is a second derivative simulation, acceleration is function of electrostatic law qiqj/r2 interaction is type-type dependent best_model:22',
-                             'sparsity':'replace'}
+                             'sparsity':'replace',
+                             'description':'Electrostatic simulation'}
     if id == 88:
         model_config_test = {'ntry': id,
                              'input_size': 11,
