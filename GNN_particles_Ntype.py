@@ -1038,7 +1038,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
             if (run == 0) & (it % step == 0) & (it >= 0) & bVisu:
 
                 fig = plt.figure(figsize=(11.8, 12))
-                # plt.ion()
+                plt.ion()
                 ax = fig.add_subplot(2, 2, 1)
                 if model_config['model'] == 'GravityParticles':
                     for n in range(nparticle_types):
@@ -3336,11 +3336,10 @@ def load_model_config(id=48):
                              'clamp': 0.002,
                              'pred_limit': 1E10,
                              'start_frame': 0,
-                             'arrow_length':40,
+                             'arrow_length':50,
                              'cmap':'tab10',
                              'description':'Periodic Particles_E is a second derivative simulation, acceleration is function of electrostatic law qiqj/r2 interaction is type-type dependent best_model:22',
-                             'sparsity':'replace',
-                             'description':'Electrostatic simulation'}
+                             'sparsity':'replace'}
     if id == 88:
         model_config_test = {'ntry': id,
                              'input_size': 11,
@@ -3863,7 +3862,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
