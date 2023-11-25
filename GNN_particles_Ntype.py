@@ -2950,8 +2950,39 @@ def load_model_config(id=48):
                              'description':'Gravity',
                              'sparsity':'replace'}
 
-
     # particles
+    if id == 73:
+        model_config_test = {'ntry': id,
+                             'input_size': 4,
+                             'output_size': 2,
+                             'hidden_size': 64,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.075,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 4800,
+                             'nparticle_types': 3,
+                             'ninteractions': 3,
+                             'nframes': 400,
+                             'sigma': .005,
+                             'tau': 0.05,
+                             'v_init': 0,
+                             'aggr_type': 'mean',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 1,
+                             'model': 'Particles_A',
+                             'prediction': 'first_derivative_S',
+                             'upgrade_type': 'none',
+                             'p': [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855],
+                                   [1.785, 1.8579, 1.7226, 1.0584]],
+                             'nrun': 2,
+                             'start_frame': 20,
+                             'arrow_length':20,
+                             'cmap':'tab10',
+                             'description': 'regul_1E-4 3 interaction particles',
+                             'sparsity':'replace'}
     if id == 74:
         model_config_test = {'ntry': id,
                              'input_size': 4,
@@ -3841,7 +3872,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [128] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [73] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
@@ -3870,12 +3901,11 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-
-        # if 'Boids' in model_config['description']:
-        #     data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=1)
-        # else:
-        #     data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=5)
-        data_train(model_config)
+        if 'Boids' in model_config['description']:
+            data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=1)
+        else:
+            data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=5)
+        # data_train(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=13, step=5, bTest='', initial_map='')
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
