@@ -2927,72 +2927,6 @@ def load_model_config(id=48):
                              'nparticles': 960,
                              'nparticle_types': 4,
                              'ninteractions': 4,
-                             'nframes': 2000,
-                             'sigma': .005,
-                             'tau': 1E-9/100,
-                             'v_init': 5E-5/100,
-                             'aggr_type': 'add',
-                             'boundary': 'no',  # periodic   'no'  # no boundary condition
-                             'data_augmentation': True,
-                             'batch_size': 8,
-                             'embedding': 2,
-                             'model': 'GravityParticles',
-                             'prediction': '2nd_derivative',
-                             'upgrade_type': 'none',
-                             'p': np.linspace(0.2, 5, 4).tolist(),
-                             'nrun': 10,
-                             'clamp': 0.002,
-                             'pred_limit': 1E9,
-                             'start_frame': -1000,
-                             'cmap':'tab10',
-                             'arrow_length':100,
-                             'description':'Gravity',
-                             'sparsity':'replace'}
-    if id == 46:
-        model_config_test = {'ntry': id,
-                             'input_size': 9,
-                             'output_size': 2,
-                             'hidden_size': 128,
-                             'n_mp_layers': 5,
-                             'noise_level': 0,
-                             'radius': 0.3,
-                             'dataset': f'231001_{id}',
-                             'nparticles': 960,
-                             'nparticle_types': 4,
-                             'ninteractions': 4,
-                             'nframes': 2000,
-                             'sigma': .005,
-                             'tau': 1E-9/100,
-                             'v_init': 5E-5/100,
-                             'aggr_type': 'add',
-                             'boundary': 'no',  # periodic   'no'  # no boundary condition
-                             'data_augmentation': True,
-                             'batch_size': 8,
-                             'embedding': 2,
-                             'model': 'GravityParticles',
-                             'prediction': '2nd_derivative',
-                             'upgrade_type': 'none',
-                             'p': np.linspace(0.2, 5, 4).tolist(),
-                             'nrun': 10,
-                             'clamp': 0.002,
-                             'pred_limit': 1E9,
-                             'start_frame': -1000,
-                             'cmap':'tab10',
-                             'arrow_length':100,
-                             'description':'Gravity',
-                             'sparsity':'replace'}
-    if id == 47:
-        model_config_test = {'ntry': id,
-                             'input_size': 9,
-                             'output_size': 2,
-                             'hidden_size': 128,
-                             'n_mp_layers': 5,
-                             'noise_level': 0,
-                             'radius': 0.3,
-                             'dataset': f'231001_44',
-                             'nparticles': 960,
-                             'nparticle_types': 4,
-                             'ninteractions': 4,
                              'nframes': 1000,
                              'sigma': .005,
                              'tau': 1E-9,
@@ -3013,8 +2947,9 @@ def load_model_config(id=48):
                              'arrow_length':10,
                              'cmap':'tab10',
                              'arrow_length':10,
-                             'description':'Gravity sparsity regul_1E-4',
-                             'sparsity':'regul_1E-4'}
+                             'description':'Gravity',
+                             'sparsity':'replace'}
+
 
     # particles
     if id == 74:
@@ -3868,7 +3803,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [87] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [45] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
@@ -3902,7 +3837,7 @@ if __name__ == '__main__':
             data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
         else:
             data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
-        data_train(model_config)
+        # data_train(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=13, step=5, bTest='', initial_map='')
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
