@@ -1083,7 +1083,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
                     plt.ylim([-1.3, 1.3])
 
                 ax = fig.add_subplot(2, 2, 2)
-                plt.scatter(x_noise[:, 1].detach().cpu().numpy(), x_noise[:, 2].detach().cpu().numpy(), s=1, color='k',alpha=0.05)
+                plt.scatter(x_noise[:, 1].detach().cpu().numpy(), x_noise[:, 2].detach().cpu().numpy(), s=1, color='k',alpha=0.75)
                 if bDetails: # model_config['radius']<0.01:
                     pos = dict(enumerate(np.array(x_noise[:, 1:3].detach().cpu()), 0))
                     if bMesh:
@@ -1094,7 +1094,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
                         edge_index2 = adj_t2.nonzero().t().contiguous()
                         dataset2 = data.Data(x=x, edge_index=edge_index2)
                         vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
-                    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=0.3)
+                    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=0.05)
                 if bMesh | (model_config['boundary']=='periodic'):
                     plt.xlim([-0.1,1.1])
                     plt.ylim([-0.1,1.1])
