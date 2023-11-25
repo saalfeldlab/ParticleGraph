@@ -1178,6 +1178,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
 
         bDetails = False
 def data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=1):
+
     # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_data/*")
     # for f in files:
     #     os.remove(f)
@@ -1222,7 +1223,7 @@ def data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, st
     scale = 40
     Distance = 5
     speed = 0.0005
-    size = 1000
+    size =1000
 
     for run in range(model_config['nrun']):
 
@@ -1261,17 +1262,16 @@ def data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, st
 
             if bVisu & (it % step == 0):
                 fig = plt.figure(figsize=(11.8, 12))
-                # plt.ion()
+                #plt.ion()
                 ax = fig.add_subplot(2, 2, 1)
                 plt.xlim([0, size])
                 plt.ylim([0, size])
-            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
-                                   H1.clone().detach()), 1)
-            for n, boid in enumerate(flock):
-                x[n, 1] = torch.tensor(boid.position.x / 1000, device=device)
-                x[n, 2] = torch.tensor(boid.position.y / 1000, device=device)
-                x[n, 3] = torch.tensor(boid.velocity.x / 1000, device=device)
-                x[n, 4] = torch.tensor(boid.velocity.y / 1000, device=device)
+            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach()), 1)
+            for n, boid  in enumerate(flock):
+                x[n,1]=torch.tensor(boid.position.x/1000, device=device)
+                x[n,2]=torch.tensor(boid.position.y/1000, device=device)
+                x[n,3]=torch.tensor(boid.velocity.x/1000, device=device)
+                x[n,4]=torch.tensor(boid.velocity.y/1000, device=device)
 
             if (it >= 0) & (noise_level == 0):
                 x_list.append(x)
@@ -1283,7 +1283,7 @@ def data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, st
                 x_list.append(x_noise)
                 # torch.save(x_noise, f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{it}.pt')
 
-            for n, boid in enumerate(flock):
+            for n,boid in enumerate (flock):
                 boid.radius = scale
                 boid.limits(size, size)
                 boid.behaviour(flock)
@@ -1293,26 +1293,17 @@ def data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, st
                     ps = np.array(ps)
                     plt.plot(ps[:, 0], ps[:, 1], c=cmap.color(T1[n].detach().cpu().numpy()), alpha=0.5)
 
-            if bVisu & (it % step == 0) & bDetails:
-                ax = fig.add_subplot(2, 2, 3)
-                for n, boid in enumerate(flock):
-                    ps = boid.Draw(Distance, scale)
-                    ps = np.array(ps)
-                    plt.plot(ps[:, 0], ps[:, 1], c=cmap.color(T1[n].detach().cpu().numpy()), alpha=0.5)
-                plt.xlim([400, 800])
-                plt.ylim([400, 800])
-
-            y = torch.zeros((nparticles, 2), device=device)
-            for n, boid in enumerate(flock):
-                y[n, 0] = torch.tensor(boid.acceleration.x / 1000, device=device)
-                y[n, 1] = torch.tensor(boid.acceleration.y / 1000, device=device)
+            y = torch.zeros((nparticles,2),device=device)
+            for n, boid  in enumerate(flock):
+                y[n,0]=torch.tensor(boid.acceleration.x/1000, device=device)
+                y[n,1]=torch.tensor(boid.acceleration.y/1000, device=device)
             if (it >= 0) & (noise_level == 0):
                 y_list.append(y)
             if (it >= 0) & (noise_level > 0):
                 y_noise = y[:, 0:2] + noise_current - 2 * noise_prev + noise_prev_prev
                 y_list.append(y_noise)
 
-            if bVisu & (it % step == 0):
+            if bVisu & (it%step==0):
                 if bDetails:
                     ax = fig.add_subplot(2, 2, 2)
                     plt.scatter(x[:, 1].detach().cpu().numpy(), x[:, 2].detach().cpu().numpy(), s=1, color='k',
@@ -1327,7 +1318,7 @@ def data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, st
                     plt.xlim([0, 1])
                     plt.ylim([0, 1])
 
-                    ax = fig.add_subplot(2, 2, 4)
+                    ax = fig.add_subplot(2, 2, 3)
 
                     for n in range(nparticle_types):
                         plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
@@ -1336,21 +1327,20 @@ def data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, st
                     plt.xlim([0.3, 0.7])
                     plt.ylim([0.3, 0.7])
                     for k in range(nparticles):
-                        plt.arrow(x=x[k, 1].detach().cpu().item(), y=x[k, 2].detach().cpu().item(),
-                                  dx=x[k, 3].detach().cpu().item() * model_config['arrow_length'],
-                                  dy=x[k, 4].detach().cpu().item() * model_config['arrow_length'], color='k')
+                            plt.arrow(x=x[k, 1].detach().cpu().item(),y=x[k, 2].detach().cpu().item(),
+                                      dx=x[k, 3].detach().cpu().item()*model_config['arrow_length'], dy=x[k, 4].detach().cpu().item()*model_config['arrow_length'],color='k')
 
                 plt.tight_layout()
                 plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
                 plt.close()
 
-        for k in range(1, len(x_list)):
-            prev = x_list[k - 1]
-            next = x_list[k]
-            v = bc_diff(next[:, 1:3] - prev[:, 1:3])
-            acc = v - prev[:, 3:5]
-            x_list[k][:, 3:5] = v
-            y_list[k - 1][:, 0:2] = acc
+        for k in range(1,len(x_list)):
+            prev=x_list[k-1]
+            next=x_list[k]
+            v = bc_diff(next[:,1:3]-prev[:,1:3])
+            acc = v - prev[:,3:5]
+            x_list[k][:,3:5]=v
+            y_list[k-1][:,0:2]=acc
 
         # x_list[0][:,1:3]+x_list[0][:,3:5]+y_list[0]-x_list[1][:,1:3]
 
@@ -3665,6 +3655,7 @@ def load_model_config(id=48):
                              'sparsity':'none'
                              }
 
+
     if id == 142:
         model_config_test = {'ntry': id,
                              'input_size': 9,
@@ -3858,13 +3849,13 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [44] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [127] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
