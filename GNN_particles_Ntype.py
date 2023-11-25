@@ -1083,7 +1083,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
                     plt.ylim([-1.3, 1.3])
 
                 ax = fig.add_subplot(2, 2, 2)
-                plt.scatter(x_noise[:, 1].detach().cpu().numpy(), x_noise[:, 2].detach().cpu().numpy(), s=1, color='k',alpha=0.75)
+                plt.scatter(x_noise[:, 1].detach().cpu().numpy(), x_noise[:, 2].detach().cpu().numpy(), s=1, color='k',alpha=0.25)
                 if bDetails: # model_config['radius']<0.01:
                     pos = dict(enumerate(np.array(x_noise[:, 1:3].detach().cpu()), 0))
                     if bMesh:
