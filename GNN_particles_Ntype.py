@@ -788,7 +788,6 @@ class MeshDiffusion(pyg.nn.MessagePassing):
 
         return r * (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(
             -r ** (2 * p[1]) / (2 * sigma ** 2)))
-
 def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5):
     print('')
     print('Generating data ...')
@@ -928,28 +927,14 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
             X1[0:nparticles,0:1] = x[0:nparticles]
             X1[0:nparticles,1:2] = y[0:nparticles]
             X1=X1+torch.randn(nparticles, 2, device=device) * x_width
-            X1=torch.clamp(X1,min=0,max=1)
-
-            # X1=X1*0
-            # n_width = int(np.sqrt(nparticles))
-            # for k in range(n_width):
-            #     for n in range(n_width):
-            #         X1[k + n * n_width,0]=k/n_width + (n%2) / n_width / 2
-            #         X1[k + n * n_width, 1] = n / n_width
-            # X1 = X1 + torch.randn(nparticles, 2, device=device) * 1/n_width/8
-            # X1 = torch.clamp(X1, min=0, max=1)
-            # plt.ion()
-            # plt.scatter(X1[:,0].detach().cpu().numpy(),X1[:,1].detach().cpu().numpy(),s=10)
+            X1_=torch.clamp(X1,min=0,max=1)
 
             i0 = imread(f'graphs_data/{particle_value_map}')
-            values = i0[(X1[:, 0].detach().cpu().numpy() * 255).astype(int), (X1[:, 1].detach().cpu().numpy() * 255).astype(int)]
+            values = i0[(X1_[:, 0].detach().cpu().numpy() * 255).astype(int), (X1_[:, 1].detach().cpu().numpy() * 255).astype(int)]
             H1[:,0] = torch.tensor(values / 255 * 5000, device=device)
-            torchsum0 = torch.sum(H1)
-            # plt.scatter(X1[:, 0].detach().cpu().numpy(), X1[:, 1].detach().cpu().numpy(), s=1,
-            #             c=H1[:, 0].detach().cpu().numpy())
 
             i0 = imread(f'graphs_data/{particle_type_map}')
-            values = i0[(X1[:, 0].detach().cpu().numpy() * 255).astype(int), (X1[:, 1].detach().cpu().numpy()*255).astype(int)]
+            values = i0[(X1_[:, 0].detach().cpu().numpy() * 255).astype(int), (X1_[:, 1].detach().cpu().numpy()*255).astype(int)]
             T1 = torch.tensor(values, device=device)
             T1 = T1[:, None]
             # plt.scatter(X1[:, 0].detach().cpu().numpy(), X1[:, 1].detach().cpu().numpy(), s=10,
@@ -987,9 +972,16 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
                 transform_0 = T.Compose([T.Delaunay()])
                 dataset_face = transform_0(dataset).face
                 mesh_pos = torch.cat((x_noise[:, 1:3], torch.ones((x_noise.shape[0], 1), device=device)), dim=1)
-                edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,
-                                                                       normalization="None")  # "None", "sym", "rw"
+                edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face, normalization="None")  # "None", "sym", "rw"
                 dataset_mesh = data.Data(x=x_noise, edge_index=edge_index, edge_attr=edge_weight, device=device)
+
+                # pos = torch.argwhere(edge_index[0, :] == 4)
+                # pos = pos.detach().cpu().numpy().astype(int)
+                # pos = edge_index[1,pos].detach().cpu().numpy().astype(int)
+                # g = x_noise.detach().cpu().numpy()
+                # g = g[pos, 1:3]
+                # g = g.squeeze()
+
 
             distance = torch.sum(bc_diff(x_noise[:, None, 1:3] - x_noise[None, :, 1:3]) ** 2, axis=2)
             t = torch.Tensor([radius ** 2])  # threshold
@@ -3693,7 +3685,7 @@ def load_model_config(id=48):
                              'output_size': 1,
                              'hidden_size': 16,
                              'n_mp_layers': 5,
-                             'noise_level': 5E-4,
+                             'noise_level': 0,
                              'radius': 0.3,
                              'dataset': f'231001_{id}',
                              'nparticles': 4225,
@@ -3925,7 +3917,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [129] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [127] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
