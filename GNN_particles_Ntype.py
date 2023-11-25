@@ -3836,7 +3836,7 @@ if __name__ == '__main__':
         if 'Boids' in model_config['description']:
             data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
         else:
-            data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=10)
+            data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=5)
         # data_train(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=13, step=5, bTest='', initial_map='')
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
