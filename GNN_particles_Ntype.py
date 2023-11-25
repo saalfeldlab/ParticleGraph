@@ -1038,7 +1038,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
             if (run == 0) & (it % step == 0) & (it >= 0) & bVisu:
 
                 fig = plt.figure(figsize=(11.8, 12))
-                plt.ion()
+                # plt.ion()
                 ax = fig.add_subplot(2, 2, 1)
                 if model_config['model'] == 'GravityParticles':
                     for n in range(nparticle_types):
@@ -1051,7 +1051,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
                     tri = Delaunay(pts)
                     colors = torch.sum(x_noise[tri.simplices, 6], axis=1) / 3.0
                     if model_config['model'] == 'WaveMesh':
-                        plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(), facecolors=colors.detach().cpu().numpy(),edgecolors='k',vmin=-1500,vmax=1500)
+                        plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(), facecolors=colors.detach().cpu().numpy(),edgecolors='k',vmin=-5000,vmax=5000)
                     else:
                         plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                       facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=0, vmax=2500)
@@ -1094,7 +1094,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
                         edge_index2 = adj_t2.nonzero().t().contiguous()
                         dataset2 = data.Data(x=x, edge_index=edge_index2)
                         vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
-                    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=0.05)
+                    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=0.25)
                 if bMesh | (model_config['boundary']=='periodic'):
                     plt.xlim([0,1])
                     plt.ylim([0,1])
@@ -1171,6 +1171,21 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
                         else:
                             plt.xlim([-1.3, 1.3])
                             plt.ylim([-1.3, 1.3])
+                    else:
+                        pts = x_noise[:, 1:3].detach().cpu().numpy()
+                        tri = Delaunay(pts)
+                        t = pred.norm(2, dim=1)
+                        colors = torch.sum(t[tri.simplices], axis=1) / 3.0
+                        if model_config['model'] == 'WaveMesh':
+                            plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                          facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=-20,
+                                          vmax=20)
+                        else:
+                            plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                          facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=0, vmax=250)
+                        plt.xlim([0, 1])
+                        plt.ylim([0, 1])
+
 
                 plt.tight_layout()
                 plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
@@ -3672,6 +3687,44 @@ def load_model_config(id=48):
                              'description': 'Wave equation brownian particles 5 coefficients',
                              'sparsity':'none'
                              }
+    if id == 129:
+        model_config_test = {'ntry': id,
+                             'input_size': 4,
+                             'output_size': 1,
+                             'hidden_size': 16,
+                             'n_mp_layers': 5,
+                             'noise_level': 5E-4,
+                             'radius': 0.3,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 4225,
+                             'nparticle_types': 5,
+                             'ninteractions': 5,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-10,
+                             'v_init': 5E-5,
+                             'aggr_type': 'add',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'WaveMesh',
+                             'prediction': '2nd_derivative',
+                             'upgrade_type': 'none',
+                             'p': np.linspace(0.2, 5, 5).tolist(),
+                             'c': [0,0.2,0.9,1,0.3],
+                             'particle_value_map': 'pattern_10.tif',     # 'particle_value_map': 'pattern_6.tif',
+                             'particle_type_map': 'pattern_8.tif',
+                             'beta': 1E-2,
+                             'nrun': 10,
+                             'clamp': 0,
+                             'pred_limit': 1E9,
+                             'start_frame': 0,
+                             'cmap':'tab10',
+                             'arrow_length':10,
+                             'description': 'Wave equation brownian particles 5 coefficients',
+                             'sparsity':'none'
+                             }
 
     if id == 142:
         model_config_test = {'ntry': id,
@@ -3866,13 +3919,13 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [73] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [129] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
