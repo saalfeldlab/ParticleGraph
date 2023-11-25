@@ -1165,8 +1165,12 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
                                 xc = x_all[:, k, 1].detach().cpu().numpy().squeeze()
                                 yc = x_all[:, k, 2].detach().cpu().numpy().squeeze()
                                 plt.scatter(xc,yc,s=0.05, color='k',alpha=0.75)
-                        plt.xlim([-1.3, 1.3])
-                        plt.ylim([-1.3, 1.3])
+                        if model_config['boundary'] == 'periodic':
+                            plt.xlim([0, 1])
+                            plt.ylim([0, 1])
+                        else:
+                            plt.xlim([-1.3, 1.3])
+                            plt.ylim([-1.3, 1.3])
 
                 plt.tight_layout()
                 plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
@@ -3332,7 +3336,7 @@ def load_model_config(id=48):
                              'clamp': 0.002,
                              'pred_limit': 1E10,
                              'start_frame': 0,
-                             'arrow_length':5,
+                             'arrow_length':20,
                              'cmap':'tab10',
                              'description':'Periodic Particles_E is a second derivative simulation, acceleration is function of electrostatic law qiqj/r2 interaction is type-type dependent best_model:22',
                              'sparsity':'replace',
