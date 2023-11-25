@@ -1078,7 +1078,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
                         edge_index2 = adj_t2.nonzero().t().contiguous()
                         dataset2 = data.Data(x=x, edge_index=edge_index2)
                         vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
-                    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=0.25)
+                    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=0.05)
                 if bMesh | (model_config['boundary']=='periodic'):
                     plt.xlim([0,1])
                     plt.ylim([0,1])
@@ -2962,7 +2962,7 @@ def load_model_config(id=48):
                              'nparticles': 4800,
                              'nparticle_types': 3,
                              'ninteractions': 3,
-                             'nframes': 400,
+                             'nframes': 800,
                              'sigma': .005,
                              'tau': 0.05,
                              'v_init': 0,
@@ -3620,7 +3620,7 @@ def load_model_config(id=48):
                              'prediction': '2nd_derivative',
                              'upgrade_type': 'none',
                              'p': np.linspace(0.2, 5, 5).tolist(),
-                             'c': [0,0.2,0.9,1,0.3],
+                             'c': [0,0.6,0.8,1,0.4],
                              'particle_value_map': 'pattern_10.tif',     # 'particle_value_map': 'pattern_6.tif',
                              'particle_type_map': 'pattern_8.tif',
                              'beta': 1E-2,
@@ -3658,7 +3658,7 @@ def load_model_config(id=48):
                              'prediction': '2nd_derivative',
                              'upgrade_type': 'none',
                              'p': np.linspace(0.2, 5, 5).tolist(),
-                             'c': [0,0.2,0.9,1,0.3],
+                             'c': [0,0.6,0.8,1,0.4],
                              'particle_value_map': 'pattern_10.tif',     # 'particle_value_map': 'pattern_6.tif',
                              'particle_type_map': 'pattern_8.tif',
                              'beta': 1E-2,
@@ -3872,7 +3872,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [128] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [127] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
@@ -3906,7 +3906,8 @@ if __name__ == '__main__':
         else:
             data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=5)
         data_train(model_config)
-        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=13, step=5, bTest='', initial_map='')
+        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=13, step=5, bTest='', initial_map='')
+        
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
