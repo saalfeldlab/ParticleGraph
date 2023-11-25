@@ -944,7 +944,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
             run_list=[1,0.9,0.7,0.6,0.5,1.1,1.2,1.3,1.4,1.5,1,1,1,1]
             i0 = imread(f'graphs_data/{particle_value_map}')
             values = i0[(X1[:, 0].detach().cpu().numpy() * 255).astype(int), (X1[:, 1].detach().cpu().numpy() * 255).astype(int)]
-            H1[:,0] = torch.tensor(values / 255 * 5000, device=device) * torch.tensor(run_list[run],device)
+            H1[:,0] = torch.tensor(values / 255 * 5000, device=device) * torch.tensor(run_list[run],device=device)
             torchsum0 = torch.sum(H1)
             # plt.scatter(X1[:, 0].detach().cpu().numpy(), X1[:, 1].detach().cpu().numpy(), s=1,
             #             c=H1[:, 0].detach().cpu().numpy())
