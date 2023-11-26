@@ -1850,13 +1850,13 @@ def data_train(model_config, bSparse=False):
                 print(f'regul_embedding: {regul_embedding}')
                 logger.info(f'regul_embedding: {regul_embedding}')
 
-            if (epoch % 10 == 0) & (epoch > 0):
-                best_loss = total_loss / N / nparticles / batch_size
-                torch.save({'model_state_dict': model.state_dict(),
-                            'optimizer_state_dict': optimizer.state_dict()},
-                           os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs.pt'))
-                xx, rmserr_list = data_test(model_config, bVisu=True, bPrint=False, step=int(nframes//20), folder_out=f'{log_dir}/tmp_recons/')
-                model.train()
+        if (epoch % 10 == 0) & (epoch > 0):
+            best_loss = total_loss / N / nparticles / batch_size
+            torch.save({'model_state_dict': model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict()},
+                       os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs.pt'))
+            xx, rmserr_list = data_test(model_config, bVisu=True, bPrint=False, step=int(nframes//20), folder_out=f'{log_dir}/tmp_recons/')
+            model.train()
             # if (epoch > 9):
             #     ax = fig.add_subplot(2, 4, 5)
             #     for n in range(nparticle_types):
