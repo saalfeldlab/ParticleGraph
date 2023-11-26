@@ -124,8 +124,6 @@ class Laplacian_A(pyg.nn.MessagePassing):
 
         heat_flow = self.beta * c * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
 
-        heat_flow = heat_flow - x[:,7:8]*1E-3*0
-
         # if (torch.min(heat_flow)<-0.5):
         #     pos = torch.argwhere(heat_flow<-0.5).detach().cpu().numpy().astype(int)
         #     k=pos[0,0]
@@ -827,7 +825,6 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
         particle_value_map = model_config['particle_value_map']
         particle_type_map = model_config['particle_type_map']
 
-
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
     for n in range(model_config['nparticle_types']):
@@ -1268,6 +1265,8 @@ def data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, st
                 ax = fig.add_subplot(2, 2, 1)
                 plt.xlim([0, size])
                 plt.ylim([0, size])
+                plt.text(0, 1080, f'frame: {it}')
+                plt.text(0, 1030, f'{nparticles} nodes ', fontsize=10)
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                                    H1.clone().detach()), 1)
             for n, boid in enumerate(flock):
@@ -1336,8 +1335,8 @@ def data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, st
                         plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                     x[index_particles[n], 2].detach().cpu().numpy(), s=50, alpha=0.75,
                                     color=cmap.color(n))
-                    plt.xlim([0.3, 0.7])
-                    plt.ylim([0.3, 0.7])
+                    plt.xlim([0.4, 0.8])
+                    plt.ylim([0.4, 0.8])
                     for k in range(nparticles):
                         plt.arrow(x=x[k, 1].detach().cpu().item(), y=x[k, 2].detach().cpu().item(),
                                   dx=x[k, 3].detach().cpu().item() * model_config['arrow_length'],
@@ -1528,6 +1527,17 @@ def data_train(model_config, bSparse=False):
     print('Start training ...')
     logger.info("Start training ...")
     time.sleep(0.5)
+
+    x = x_list[1][0].clone().detach()
+
+    if bMesh:
+        dataset = data.Data(x=x, pos=x[:, 1:3])
+        transform_0 = T.Compose([T.Delaunay()])
+        dataset_face = transform_0(dataset).face
+        mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
+        edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,
+                                                               normalization="None")  # "None", "sym", "rw"
+
     for epoch in range(Nepochs + 1):
 
         if epoch == 1:
@@ -1578,12 +1588,6 @@ def data_train(model_config, bSparse=False):
                 x = x_list[run][k].clone().detach()
 
                 if bMesh:
-                    dataset = data.Data(x=x, pos=x[:, 1:3])
-                    transform_0 = T.Compose([T.Delaunay()])
-                    dataset_face = transform_0(dataset).face
-                    mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
-                    edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,
-                                                                           normalization="None")  # "None", "sym", "rw"
                     dataset = data.Data(x=x, edge_index=edge_index, edge_attr=edge_weight, device=device)
                     dataset_batch.append(dataset)
                     y = h_list[run][k].clone().detach()/hnorm
@@ -1641,7 +1645,6 @@ def data_train(model_config, bSparse=False):
             # loss.backward()
             # optimizer.step()
             # total_loss += loss.item()
-
 
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs_{epoch}.pt'))
@@ -2974,6 +2977,7 @@ def load_model_config(id=48):
                              'model': 'Particles_A',
                              'prediction': 'first_derivative_S',
                              'upgrade_type': 'none',
+                             'nlayers_update': 3,
                              'p': [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855],
                                    [1.785, 1.8579, 1.7226, 1.0584]],
                              'nrun': 2,
@@ -3006,6 +3010,7 @@ def load_model_config(id=48):
                              'model': 'Particles_A',
                              'prediction': 'first_derivative_S',
                              'upgrade_type': 'none',
+                             'nlayers_update': 3,
                              'p': [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855],
                                    [1.785, 1.8579, 1.7226, 1.0584]],
                              'nrun': 2,
@@ -3038,6 +3043,7 @@ def load_model_config(id=48):
                              'model': 'Particles_A',
                              'prediction': '2nd_derivative',
                              'upgrade_type': 'none',
+                             'nlayers_update': 3,
                              'p': [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855],
                                    [1.785, 1.8579, 1.7226, 1.0584]],
                              'nrun': 2,
@@ -3070,6 +3076,7 @@ def load_model_config(id=48):
                              'model': 'Particles_A',
                              'prediction': '2nd_derivative',
                              'upgrade_type': 'none',
+                             'nlayers_update': 3,
                              'p': [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855],
                                    [1.785, 1.8579, 1.7226, 1.0584]],
                              'nrun': 2,
@@ -3102,6 +3109,7 @@ def load_model_config(id=48):
                              'model': 'Particles_A',
                              'prediction': 'first_derivative_S',
                              'upgrade_type': 'none',
+                             'nlayers_update': 3,
                              'p': [[1.2425, 1.3355, 1.3397, 1.3929], [1.629, 1.4932, 1.5311, 1.8677],[1.9852, 1.1892, 1.1544, 1.993],[1.6898, 1.1336, 1.4869, 1.7767],[1.8847, 1.5448, 1.8063, 1.3873],[1.496, 1.4064, 1.9045, 1.733],[1.5108, 1.9904, 1.1665, 1.6975],[1.6153, 1.8557, 1.2758, 1.0684]],
                              'nrun': 2,
                              'start_frame': 0,
@@ -3133,6 +3141,7 @@ def load_model_config(id=48):
                              'model': 'Particles_A',
                              'prediction': 'first_derivative_S',
                              'upgrade_type': 'none',
+                             'nlayers_update': 3,
                              'p': [],
                              'nrun': 2,
                              'start_frame': 0,
@@ -3164,6 +3173,7 @@ def load_model_config(id=48):
                              'model': 'Particles_A',
                              'prediction': 'first_derivative_S',
                              'upgrade_type': 'none',
+                             'nlayers_update': 3,
                              'p': [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855],
                                    [1.785, 1.8579, 1.7226, 1.0584]],
                              'nrun': 2,
@@ -3671,7 +3681,82 @@ def load_model_config(id=48):
                              'description': 'Wave equation brownian particles 5 coefficients',
                              'sparsity':'none'
                              }
-
+    if id == 129:
+        model_config_test = {'ntry': id,
+                             'input_size': 4,
+                             'output_size': 1,
+                             'hidden_size': 16,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.3,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 4225,
+                             'nparticle_types': 5,
+                             'ninteractions': 5,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-10,
+                             'v_init': 5E-5,
+                             'aggr_type': 'add',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'WaveMesh',
+                             'prediction': '2nd_derivative',
+                             'upgrade_type': 'none',
+                             'p': np.linspace(0.2, 5, 5).tolist(),
+                             'c': [0,0.6,0.8,1,0.4],
+                             'particle_value_map': 'pattern_10.tif',     # 'particle_value_map': 'pattern_6.tif',
+                             'particle_type_map': 'pattern_8.tif',
+                             'beta': 1E-2,
+                             'nrun': 2,
+                             'clamp': 0,
+                             'pred_limit': 1E9,
+                             'start_frame': 0,
+                             'cmap':'tab10',
+                             'arrow_length':10,
+                             'description': 'Wave equation brownian particles 5 coefficients',
+                             'sparsity':'none'
+                             }
+    if id == 130:
+        model_config_test = {'ntry': id,
+                             'input_size': 4,
+                             'output_size': 1,
+                             'hidden_size': 64,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.3,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 4225,
+                             'nparticle_types': 5,
+                             'ninteractions': 5,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-10,
+                             'v_init': 5E-5,
+                             'aggr_type': 'add',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'WaveMesh',
+                             'prediction': '2nd_derivative',
+                             'upgrade_type': 'none',
+                             'p': np.linspace(0.2, 5, 5).tolist(),
+                             'c': [0,0.6,0.8,1,0.4],
+                             'particle_value_map': 'pattern_10.tif',     # 'particle_value_map': 'pattern_6.tif',
+                             'particle_type_map': 'pattern_8.tif',
+                             'beta': 1E-2,
+                             'nrun': 2,
+                             'clamp': 0,
+                             'pred_limit': 1E9,
+                             'start_frame': 0,
+                             'cmap':'tab10',
+                             'arrow_length':10,
+                             'description': 'Wave equation brownian particles 5 coefficients',
+                             'sparsity':'none'
+                             }
 
     if id == 142:
         model_config_test = {'ntry': id,
@@ -3866,13 +3951,13 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [128] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [129] #[123, 140, 141, 73, 123] # [75,84,85]
 
     for gtest in gtestlist:
 
@@ -3906,7 +3991,7 @@ if __name__ == '__main__':
         else:
             data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=5)
         data_train(model_config)
-        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=13, step=5, bTest='', initial_map='')
+        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=13, step=5, bTest='', initial_map='')
 
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
