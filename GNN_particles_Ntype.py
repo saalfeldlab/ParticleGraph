@@ -3899,7 +3899,7 @@ def load_model_config(id=48):
                              'c': [0,0.6,0.8,1,0.4],
                              'particle_value_map': 'pattern_14.tif',     # 'particle_value_map': 'pattern_6.tif',
                              'particle_type_map': 'pattern_8.tif',
-                             'beta': 5E-3,
+                             'beta': 1E-3,
                              'nrun': 2,
                              'clamp': 0,
                              'pred_limit': 1E9,
@@ -3937,7 +3937,7 @@ def load_model_config(id=48):
                              'c': [0,0.6,0.8,1,0.4],
                              'particle_value_map': 'pattern_14.tif',     # 'particle_value_map': 'pattern_6.tif',
                              'particle_type_map': 'pattern_8.tif',
-                             'beta': 5E-3,
+                             'beta': 1E-3,
                              'nrun': 2,
                              'clamp': 0,
                              'pred_limit': 1E9,
@@ -4147,7 +4147,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [131] #[123, 140, 141, 73, 123] # [75,84,85]
+    gtestlist = [134,135]
 
     for gtest in gtestlist:
 
@@ -4176,12 +4176,12 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        # if 'Boids' in model_config['description']:
-        #     data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=1)
-        # else:
-        #     data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=5)
-        # data_train(model_config)
-        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=24, step=5, bTest='', initial_map='')
+        if 'Boids' in model_config['description']:
+            data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=1)
+        else:
+            data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=5)
+        data_train(model_config)
+        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=24, step=5, bTest='', initial_map='')
 
         #data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
