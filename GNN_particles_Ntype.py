@@ -470,8 +470,8 @@ class InteractionParticles(pyg.nn.MessagePassing):
             torch.tensor(np.ones((self.ndataset, int(self.nparticles), self.embedding)), device=self.device,
                          requires_grad=True, dtype=torch.float32))
 
-        self.lin_update = MLP(input_size=self.output_size + self.embedding + 2, output_size=self.output_size, nlayers=self.nlayers_update,
-                            hidden_size=self.hidden_size_update, device=self.device)
+        if  self.upgrade_type!='none':
+            self.lin_update = MLP(input_size=self.output_size + self.embedding + 2, output_size=self.output_size, nlayers=self.nlayers_update,hidden_size=self.hidden_size_update, device=self.device)
 
     def forward(self, data, data_id, step, vnorm, cos_phi, sin_phi):
 
@@ -2233,7 +2233,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                         plt.xlim([0,1])
                         plt.ylim([0,1])
                 else:
-                    if bMesh | ('Boids' in model_config['description']):
+                    if bMesh | ('Boids' in model_config['description']) | (model_config['boundary']=='periodic'):
                         plt.xlim([0.3, 0.7])
                         plt.ylim([0.3, 0.7])
                     else:
@@ -2977,7 +2977,8 @@ def load_model_config(id=48):
                              'model': 'Particles_A',
                              'prediction': 'first_derivative_S',
                              'upgrade_type': 'none',
-                             'nlayers_update': 3,
+                            'nlayers_update': 3,
+                             'hidden_size_update': 64,
                              'p': [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855],
                                    [1.785, 1.8579, 1.7226, 1.0584]],
                              'nrun': 2,
@@ -3011,6 +3012,7 @@ def load_model_config(id=48):
                              'prediction': 'first_derivative_S',
                              'upgrade_type': 'none',
                              'nlayers_update': 3,
+                             'hidden_size_update': 64,
                              'p': [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855],
                                    [1.785, 1.8579, 1.7226, 1.0584]],
                              'nrun': 2,
@@ -3018,104 +3020,6 @@ def load_model_config(id=48):
                              'arrow_length':20,
                              'cmap':'tab10',
                              'description': 'regul_1E-4 3 interaction particles',
-                             'sparsity':'replace'}
-    if id == 75:
-        model_config_test = {'ntry': id,
-                             'input_size': 8,
-                             'output_size': 2,
-                             'hidden_size': 64,
-                             'n_mp_layers': 5,
-                             'noise_level': 0,
-                             'radius': 0.075,
-                             'dataset': f'231001_{id}',
-                             'nparticles': 4800,
-                             'nparticle_types': 3,
-                             'ninteractions': 3,
-                             'nframes': 200,
-                             'sigma': .005,
-                             'tau': 0.1,
-                             'v_init': 0,
-                             'aggr_type': 'mean',
-                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-                             'data_augmentation': True,
-                             'batch_size': 8,
-                             'embedding': 1,
-                             'model': 'Particles_A',
-                             'prediction': '2nd_derivative',
-                             'upgrade_type': 'none',
-                             'nlayers_update': 3,
-                             'p': [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855],
-                                   [1.785, 1.8579, 1.7226, 1.0584]],
-                             'nrun': 2,
-                             'start_frame': 20,
-                             'arrow_length':20,
-                             'cmap':'tab10',
-                             'description': 'pred=first derivative Particles_A is a first derivative simulation, interaction is function of r.exp-r^2 interaction is type dependent best_model:14',
-                             'sparsity':'replace'}
-    if id == 76:
-        model_config_test = {'ntry': id,
-                             'input_size': 8,
-                             'output_size': 2,
-                             'hidden_size': 64,
-                             'n_mp_layers': 5,
-                             'noise_level': 0,
-                             'radius': 0.075,
-                             'dataset': f'231001_{id}',
-                             'nparticles': 4800,
-                             'nparticle_types': 3,
-                             'ninteractions': 3,
-                             'nframes': 200,
-                             'sigma': .005,
-                             'tau': 0.1,
-                             'v_init': 0,
-                             'aggr_type': 'mean',
-                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-                             'data_augmentation': True,
-                             'batch_size': 8,
-                             'embedding': 1,
-                             'model': 'Particles_A',
-                             'prediction': '2nd_derivative',
-                             'upgrade_type': 'none',
-                             'nlayers_update': 3,
-                             'p': [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855],
-                                   [1.785, 1.8579, 1.7226, 1.0584]],
-                             'nrun': 2,
-                             'start_frame': 20,
-                             'cmap':'tab10',
-                             'arrow_length':20,
-                             'description': 'pred=second derivative Particles_A is a first derivative simulation, interaction is function of r.exp-r^2 interaction is type dependent best_model:14',
-                             'sparsity':'replace'}
-    if id == 77:
-        model_config_test = {'ntry': id,
-                             'input_size': 4,
-                             'output_size': 2,
-                             'hidden_size': 64,
-                             'n_mp_layers': 5,
-                             'noise_level': 0,
-                             'radius': 0.075,
-                             'dataset': f'231001_{id}',
-                             'nparticles': 4800,
-                             'nparticle_types': 8,
-                             'ninteractions': 8,
-                             'nframes': 200,
-                             'sigma': .005,
-                             'tau': 0.1,
-                             'v_init': 0,
-                             'aggr_type': 'mean',
-                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-                             'data_augmentation': True,
-                             'batch_size': 8,
-                             'embedding': 1,
-                             'model': 'Particles_A',
-                             'prediction': 'first_derivative_S',
-                             'upgrade_type': 'none',
-                             'nlayers_update': 3,
-                             'p': [[1.2425, 1.3355, 1.3397, 1.3929], [1.629, 1.4932, 1.5311, 1.8677],[1.9852, 1.1892, 1.1544, 1.993],[1.6898, 1.1336, 1.4869, 1.7767],[1.8847, 1.5448, 1.8063, 1.3873],[1.496, 1.4064, 1.9045, 1.733],[1.5108, 1.9904, 1.1665, 1.6975],[1.6153, 1.8557, 1.2758, 1.0684]],
-                             'nrun': 2,
-                             'start_frame': 0,
-                             'arrow_length':20,
-                             'cmap':'tab10',
-                             'description': '8 types pred=first derivative Particles_A is a first derivative simulation, interaction is function of r.exp-r^2 interaction is type dependent best_model:14',
                              'sparsity':'replace'}
     if id == 78:
         model_config_test = {'ntry': id,
@@ -3141,7 +3045,8 @@ def load_model_config(id=48):
                              'model': 'Particles_A',
                              'prediction': 'first_derivative_S',
                              'upgrade_type': 'none',
-                             'nlayers_update': 3,
+                              'nlayers_update': 3,
+                             'hidden_size_update': 64,
                              'p': [],
                              'nrun': 2,
                              'start_frame': 0,
@@ -3149,39 +3054,7 @@ def load_model_config(id=48):
                              'cmap':'tab10',
                              'description': '8 types pred=first derivative Particles_A is a first derivative simulation, interaction is function of r.exp-r^2 interaction is type dependent best_model:14',
                              'sparsity':'replace'}
-    if id == 79:
-        model_config_test = {'ntry': id,
-                             'input_size': 4,
-                             'output_size': 2,
-                             'hidden_size': 64,
-                             'n_mp_layers': 5,
-                             'noise_level': 0,
-                             'radius': 0.075,
-                             'dataset': f'231001_{id}',
-                             'nparticles': 4800,
-                             'nparticle_types': 3,
-                             'ninteractions': 3,
-                             'nframes': 200,
-                             'sigma': .005,
-                             'tau': 0.1,
-                             'v_init': 0,
-                             'aggr_type': 'mean',
-                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
-                             'data_augmentation': True,
-                             'batch_size': 8,
-                             'embedding': 1,
-                             'model': 'Particles_A',
-                             'prediction': 'first_derivative_S',
-                             'upgrade_type': 'none',
-                             'nlayers_update': 3,
-                             'p': [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855],
-                                   [1.785, 1.8579, 1.7226, 1.0584]],
-                             'nrun': 2,
-                             'start_frame': 20,
-                             'arrow_length':20,
-                             'cmap':'tab10',
-                             'sparsity':'regul_1E-4',
-                             'description': 'regul_1E-4 3 interaction particles'}
+
 
     # elctrostatic
     if id == 84:
@@ -3296,7 +3169,7 @@ def load_model_config(id=48):
                              'ninteractions': 3,
                              'nframes': 1000,
                              'sigma': .005,
-                             'tau': 1E-9,
+                             'tau': 5E-9,
                              'v_init': 1E-4,
                              'aggr_type': 'add',
                              'boundary': 'periodic',  # periodic   'no'  # no boundary condition
@@ -3311,7 +3184,7 @@ def load_model_config(id=48):
                              'clamp': 0.002,
                              'pred_limit': 1E10,
                              'start_frame': 0,
-                             'arrow_length':50,
+                             'arrow_length':10,
                              'cmap':'tab10',
                              'description':'Periodic Particles_E is a second derivative simulation, acceleration is function of electrostatic law qiqj/r2 interaction is type-type dependent best_model:22',
                              'sparsity':'replace'}
@@ -4141,13 +4014,13 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [134,135]
+    gtestlist = [74,77] #[44,74,77]
 
     for gtest in gtestlist:
 
@@ -4176,12 +4049,12 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        if 'Boids' in model_config['description']:
-            data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=1)
-        else:
-            data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=5)
-        data_train(model_config)
-        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=24, step=5, bTest='', initial_map='')
+        # if 'Boids' in model_config['description']:
+        #     data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=1)
+        # else:
+        #     data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=5)
+        # data_train(model_config)
+        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=1, bTest='', initial_map='')
 
         #data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
