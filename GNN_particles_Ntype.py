@@ -4372,7 +4372,7 @@ if __name__ == '__main__':
 
         model_config = load_model_config(id=config)
 
-        model_config['nrun']: 1
+        model_config['nrun'] = 1
 
         # Load parameters from config file
         # with open(f'./config/{config}.yaml', 'r') as file:
