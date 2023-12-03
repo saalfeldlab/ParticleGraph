@@ -24,11 +24,11 @@ upgrade_type: 'none'
 nlayers_update: 3
 hidden_size_update: 64
 p: [[50,0,0],[10,30,40],[20,50,40],[35,80,40]]        # separation alignement cohesion
-nrun: 1
+nrun: 10
 clamp: 1E-3
 pred_limit: 1E+9
 start_frame: 0
 cmap: 'tab10'
 arrow_length: 20
 description: 'Acceleration pred aggr mean boid speed/4 4 different params'
-sparsity': 'replace'
+sparsity: 'replace'
