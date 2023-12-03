@@ -37,6 +37,7 @@ from math import pi,sin,cos
 from torch_geometric.utils import degree
 from scipy.spatial import Delaunay
 import logging
+import yaml # need to install pyyaml
 
 def distmat_square(X, Y):
     return torch.sum(bc_diff(X[:, None, :] - Y[None, :, :]) ** 2, axis=2)
@@ -122,41 +123,15 @@ class Laplacian_A(pyg.nn.MessagePassing):
         c = self.c[x[:, 5].detach().cpu().numpy()]
         c = c[:,None]
 
-        heat_flow = self.beta * c * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
+        laplacian = self.beta * c * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
 
-        # if (torch.min(heat_flow)<-0.5):
-        #     pos = torch.argwhere(heat_flow<-0.5).detach().cpu().numpy().astype(int)
-        #     k=pos[0,0]
-        #     print(x[pos, 1], x[pos, 2], x[pos, 6])
-        #     print(k)
-        #     pos = torch.argwhere(edge_index[0, :] == k).detach().cpu().numpy().astype(int)
-        #     print(edge_index[:,pos])
-        #
-        #     coeff = edge_attr[pos.squeeze()]
-        #     coeff = coeff[:, None]
-        #     print(coeff)
-        #     print(coeff * x[edge_index[1, pos], 6])
-        # if (torch.max(x[:, 6:7] + x[:, 7:8] + heat_flow[:,0:1]) > 5.05):
-        #     pos = torch.argwhere(x[:, 6:7] + x[:, 7:8] + heat_flow[:,0:1]>5.05).detach().cpu().numpy().astype(int)
-        #     k=pos[0,0]
-        #     print(x[pos, 1], x[pos, 2], x[pos, 6])
-        #     print(k)
-        #     pos = torch.argwhere(edge_index[0, :] == k).detach().cpu().numpy().astype(int)
-        #     print(edge_index[:,pos])
-        #
-        #     coeff = edge_attr[pos.squeeze()]
-        #     coeff = coeff[:, None]
-        #     print(coeff)
-        #     print(coeff * x[edge_index[1, pos], 6])
-
-        return heat_flow
+        return laplacian        
 
     def message(self, x_i, x_j, edge_attr):
 
-        # edge_attr = torch.clamp(edge_attr,min=-2*torch.std(edge_attr),max=2*torch.std(edge_attr))
-        heat = edge_attr * x_j[:, 6]
+        L = edge_attr * x_j[:, 6]
 
-        return heat[:, None]
+        return L[:, None]
 
     def psi(self, r, p):
         r_ = torch.clamp(r, min=self.clamp)
@@ -188,6 +163,7 @@ class MLP(nn.Module):
             x = F.relu(x)
         x = self.layers[-1](x)
         return x
+    
 class Boid:
 	def __init__(self, x, y):
 		self.position = Vector(x, y)
@@ -324,13 +300,12 @@ class Boid:
 
 		ps.append(ps[0])
 		return ps
-
-class Particles_A(pyg.nn.MessagePassing):
+class PDE_A(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
     def __init__(self, aggr_type=[], p=[], tau=[], prediction=[]):
-        super(Particles_A, self).__init__(aggr=aggr_type)  # "mean" aggregation.
+        super(PDE_A, self).__init__(aggr=aggr_type)  # "mean" aggregation.
 
         self.p = p
         self.tau = tau
@@ -356,14 +331,40 @@ class Particles_A(pyg.nn.MessagePassing):
         return psi[:, None] * bc_diff(x_i[:, 1:3] - x_j[:, 1:3])
 
     def psi(self, r, p):
-        return r * (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(
-            -r ** (2 * p[1]) / (2 * sigma ** 2)))
-class Particles_E(pyg.nn.MessagePassing):
+        return r * (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(-r ** (2 * p[1]) / (2 * sigma ** 2)))
+class PDE_B(pyg.nn.MessagePassing):
+    """Interaction Network as proposed in this paper:
+    https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
+
+    def __init__(self, aggr_type=[], p=[], tau=[], prediction=[]):
+        super(PDE_B, self).__init__(aggr=aggr_type)  # "mean" aggregation.
+
+        self.p = p
+        self.tau = tau
+        self.prediction = prediction
+
+    def forward(self, data):
+        x, edge_index = data.x, data.edge_index
+        edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+        acc = self.tau * self.propagate(edge_index, x=(x, x))
+
+        return acc
+
+    def message(self, x_i, x_j):
+        r = torch.sqrt(torch.sum(bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) ** 2, axis=1))  #distance
+
+        pp = self.p[x_i[:, 5].detach().cpu().numpy(), :]
+        psi = - pp[:, 2] * torch.exp(-r ** pp[:, 0] / (2 * sigma ** 2)) + pp[:, 3] * torch.exp(-r ** pp[:, 1] / (2 * sigma ** 2))
+        return psi[:, None] * bc_diff(x_i[:, 1:3] - x_j[:, 1:3])
+
+    def psi(self, r, p):
+        return r
+class PDE_E(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
     def __init__(self, aggr_type=[], p=[], tau=[], clamp=[], pred_limit=[], prediction=[]):
-        super(Particles_E, self).__init__(aggr='add')  # "mean" aggregation.
+        super(PDE_E, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.p = p
         self.tau = tau
@@ -400,12 +401,12 @@ class Particles_E(pyg.nn.MessagePassing):
         acc = p1 * p2 * r / r_ ** 2
         acc = torch.clamp(acc, max=self.pred_limit)
         return acc  # Elec particles
-class Particles_G(pyg.nn.MessagePassing):
+class PDE_G(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
     def __init__(self, aggr_type=[], p=[], tau=[], clamp=[], pred_limit=[]):
-        super(Particles_G, self).__init__(aggr='add')  # "mean" aggregation.
+        super(PDE_G, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.p = p
         self.tau = tau
@@ -726,13 +727,13 @@ class ElecParticles(pyg.nn.MessagePassing):
         acc = p1 * p2 * r / r_ ** 3
         acc = torch.clamp(acc, max=self.pred_limit)
         return -acc  # Elec particles
-class MeshDiffusion(pyg.nn.MessagePassing):
+class MeshLaplacian(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
     def __init__(self, model_config, device):
 
-        super(MeshDiffusion, self).__init__(aggr=aggr_type)  # "Add" aggregation.
+        super(MeshLaplacian, self).__init__(aggr=aggr_type)  # "Add" aggregation.
 
         self.device = device
         self.input_size = model_config['input_size']
@@ -786,6 +787,7 @@ class MeshDiffusion(pyg.nn.MessagePassing):
 
         return r * (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(
             -r ** (2 * p[1]) / (2 * sigma ** 2)))
+    
 def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5):
     print('')
     print('Generating data ...')
@@ -830,17 +832,34 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
     for n in range(model_config['nparticle_types']):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
-    if model_config['model'] == 'Particles_A':
-        print(f'Generate Particles_A')
+    if model_config['model'] == 'PDE_A':
+        print(f'Generate PDE_A')
         p = torch.ones(nparticle_types, 4, device=device) + torch.rand(nparticle_types, 4, device=device)
         if len(model_config['p']) > 0:
             for n in range(nparticle_types):
                 p[n] = torch.tensor(model_config['p'][n])
         if nparticle_types == 1:
-            model = Particles_A(aggr_type=aggr_type, p=p, tau=model_config['tau'],
+            model = PDE_A(aggr_type=aggr_type, p=p, tau=model_config['tau'],
                                 prediction=model_config['prediction'])
         else:
-            model = Particles_A(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'],
+            model = PDE_A(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'],
+                                prediction=model_config['prediction'])
+        psi_output = []
+        for n in range(nparticle_types):
+            psi_output.append(model.psi(rr, torch.squeeze(p[n])))
+            print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
+            torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
+    if model_config['model'] == 'PDE_B':
+        print(f'Generate PDE_B')
+        p = torch.rand(nparticle_types, 3, device=device)*100
+        if len(model_config['p']) > 0:
+            for n in range(nparticle_types):
+                p[n] = torch.tensor(model_config['p'][n])
+        if nparticle_types == 1:
+            model = PDE_A(aggr_type=aggr_type, p=p, tau=model_config['tau'],
+                                prediction=model_config['prediction'])
+        else:
+            model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'],
                                 prediction=model_config['prediction'])
         psi_output = []
         for n in range(nparticle_types):
@@ -852,7 +871,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
         if len(model_config['p']) > 0:
             for n in range(nparticle_types):
                 p[n] = torch.tensor(model_config['p'][n])
-        model = Particles_G(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'],
+        model = PDE_G(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'],
                             clamp=model_config['clamp'], pred_limit=model_config['pred_limit'])
         psi_output = []
         for n in range(nparticle_types):
@@ -866,7 +885,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
                 p[n] = torch.tensor(model_config['p'][n])
                 print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
                 torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
-        model = Particles_E(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'],
+        model = PDE_E(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'],
                             clamp=model_config['clamp'], pred_limit=model_config['pred_limit'],
                             prediction=model_config['prediction'])
         psi_output = []
@@ -878,7 +897,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
         if len(model_config['p']) > 0:
             for n in range(nparticle_types):
                 p[n] = torch.tensor(model_config['p'][n])
-        model = Particles_G(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'],
+        model = PDE_G(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'],
                             clamp=model_config['clamp'], pred_limit=model_config['pred_limit'])
         c = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         for n in range(nparticle_types):
@@ -1114,7 +1133,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
                             else:
                                 plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                             x[index_particles[n], 2].detach().cpu().numpy(), s=g, c='b', alpha=0.5)
-                    elif model_config['model'] == 'Particles_A':
+                    elif model_config['model'] == 'PDE_A':
                         for n in range(nparticle_types):
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                         x[index_particles[n], 2].detach().cpu().numpy(), s=50, alpha=0.75,
@@ -1451,12 +1470,12 @@ def data_train(model_config, bSparse=False):
         model = GravityParticles(model_config, device)
     if model_config['model'] == 'ElecParticles':
         model = ElecParticles(model_config, device)
-    if (model_config['model'] == 'Particles_A'):
+    if (model_config['model'] == 'PDE_A'):
         model = InteractionParticles(model_config, device)
     if (model_config['model'] == 'DiffMesh'):
-        model = MeshDiffusion(model_config, device)
+        model = MeshLaplacian(model_config, device)
     if (model_config['model'] == 'WaveMesh'):
-        model = MeshDiffusion(model_config, device)
+        model = MeshLaplacian(model_config, device)
 
     # net = f"./log/try_126/models/best_model_with_9_graphs_13.pt"
     # state_dict = torch.load(net,map_location=device)
@@ -1747,7 +1766,7 @@ def data_train(model_config, bSparse=False):
             trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int),
                               n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
             proj_interaction = trans.transform(coeff_norm)
-        elif model_config['model'] == 'Particles_A':
+        elif model_config['model'] == 'PDE_A':
             acc_list = []
             for n in range(nparticles):
                 rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
@@ -1903,7 +1922,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         for n in range(model_config['nparticle_types']):
             index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
-    if (model_config['model'] == 'Particles_A'):
+    if (model_config['model'] == 'PDE_A'):
         model = InteractionParticles(model_config, device)
     if model_config['model'] == 'GravityParticles':
         model = GravityParticles(model_config, device)
@@ -1931,13 +1950,13 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         if len(model_config['p']) > 0:
             for n in range(nparticle_types):
                 p[n] = torch.tensor(model_config['p'][n])
-        model = Particles_G(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'],
+        model = PDE_G(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'],
                             clamp=model_config['clamp'], pred_limit=model_config['pred_limit'])
 
         c = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         for n in range(nparticle_types):
             c[n] = torch.tensor(model_config['c'][n])
-        model_mesh = MeshDiffusion(model_config, device)
+        model_mesh = MeshLaplacian(model_config, device)
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
     NGraphs = int(len(graph_files))
@@ -2365,13 +2384,9 @@ def data_test_generate(model_config, bVisu=True, bDetails=False, step=5):
     # H1 = torch.tensor(values/255*1.5,device=device)
     # H1 = H1[:,None]
 
-
     return prev_nparticles, new_nparticles, prev_index_particles, index_particles
-def data_plot(model_config, epoch, bPrint, best_model=0):
-    print('')
 
-    # for loop in range(25):
-    #     print(f'Loop: {loop}')
+def data_plot(model_config, epoch, bPrint, best_model=0):
 
     model = []
     ntry = model_config['ntry']
@@ -2527,12 +2542,12 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
         hnorm = torch.std(h)
         torch.save(hnorm, os.path.join(log_dir, 'hnorm.pt'))
         print(hnorm)
-        model = MeshDiffusion(model_config, device)
+        model = MeshLaplacian(model_config, device)
     if model_config['model'] == 'GravityParticles':
         model = GravityParticles(model_config, device)
     if model_config['model'] == 'ElecParticles':
         model = ElecParticles(model_config, device)
-    if (model_config['model'] == 'Particles_A'):
+    if (model_config['model'] == 'PDE_A'):
         model = InteractionParticles(model_config, device)
         print(f'Training InteractionParticles')
 
@@ -2661,7 +2676,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
                           random_state=42, transform_queue_size=0).fit(coeff_norm)
         proj_interaction = trans.transform(coeff_norm)
         proj_interaction = np.squeeze(proj_interaction)
-    elif model_config['model'] == 'Particles_A':
+    elif model_config['model'] == 'PDE_A':
         acc_list = []
         for n in range(nparticles):
             embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
@@ -2807,7 +2822,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
         plt.ylim([1, 1E7])
         plt.xlabel('Distance [a.u]', fontsize=12)
         plt.ylabel('MLP [a.u]', fontsize=12)
-    elif model_config['model'] == 'Particles_A':
+    elif model_config['model'] == 'PDE_A':
         acc_list = []
         for n in range(nparticles):
             embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
@@ -2840,7 +2855,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
     plt.ylabel('MLP [a.u]', fontsize=12)
 
     ax = fig.add_subplot(2, 4, 8)
-    if model_config['model'] == 'Particles_A':
+    if model_config['model'] == 'PDE_A':
         p = model_config['p']
         p = torch.tensor(p,device=device)
         psi_output = []
@@ -2974,7 +2989,7 @@ def load_model_config(id=48):
                              'data_augmentation': True,
                              'batch_size': 8,
                              'embedding': 1,
-                             'model': 'Particles_A',
+                             'model': 'PDE_A',
                              'prediction': 'first_derivative_S',
                              'upgrade_type': 'none',
                             'nlayers_update': 3,
@@ -3008,7 +3023,7 @@ def load_model_config(id=48):
                              'data_augmentation': True,
                              'batch_size': 8,
                              'embedding': 1,
-                             'model': 'Particles_A',
+                             'model': 'PDE_A',
                              'prediction': 'first_derivative_S',
                              'upgrade_type': 'none',
                              'nlayers_update': 3,
@@ -3042,7 +3057,7 @@ def load_model_config(id=48):
                              'data_augmentation': True,
                              'batch_size': 8,
                              'embedding': 1,
-                             'model': 'Particles_A',
+                             'model': 'PDE_A',
                              'prediction': 'first_derivative_S',
                              'upgrade_type': 'none',
                               'nlayers_update': 3,
@@ -3052,7 +3067,7 @@ def load_model_config(id=48):
                              'start_frame': 0,
                              'arrow_length':20,
                              'cmap':'tab10',
-                             'description': '8 types pred=first derivative Particles_A is a first derivative simulation, interaction is function of r.exp-r^2 interaction is type dependent best_model:14',
+                             'description': '8 types pred=first derivative PDE_A is a first derivative simulation, interaction is function of r.exp-r^2 interaction is type dependent best_model:14',
                              'sparsity':'replace'}
 
 
@@ -3186,7 +3201,7 @@ def load_model_config(id=48):
                              'start_frame': 0,
                              'arrow_length':10,
                              'cmap':'tab10',
-                             'description':'Periodic Particles_E is a second derivative simulation, acceleration is function of electrostatic law qiqj/r2 interaction is type-type dependent best_model:22',
+                             'description':'Periodic PDE_E is a second derivative simulation, acceleration is function of electrostatic law qiqj/r2 interaction is type-type dependent best_model:22',
                              'sparsity':'replace'}
     if id == 88:
         model_config_test = {'ntry': id,
@@ -3219,7 +3234,7 @@ def load_model_config(id=48):
                              'start_frame': 0,
                              'arrow_length':20,
                              'cmap':'tab10',
-                             'description':'Periodic Particles_E is a second derivative simulation, acceleration is function of electrostatic law qiqj/r2 interaction is type-type dependent best_model:22',
+                             'description':'Periodic PDE_E is a second derivative simulation, acceleration is function of electrostatic law qiqj/r2 interaction is type-type dependent best_model:22',
                              'sparsity':'replace'}
     if id == 89:
         model_config_test = {'ntry': id,
@@ -3252,7 +3267,7 @@ def load_model_config(id=48):
                              'start_frame': 0,
                              'arrow_length':5,
                              'cmap':'tab10',
-                             'description':'sparsity regul_1E-4 Periodic Particles_E is a second derivative simulation, acceleration is function of electrostatic law qiqj/r2 interaction is type-type dependent best_model:22',
+                             'description':'sparsity regul_1E-4 Periodic PDE_E is a second derivative simulation, acceleration is function of electrostatic law qiqj/r2 interaction is type-type dependent best_model:22',
                              'sparsity':'regul_1E-4'}
 
     # 4 types boundary periodic N=960 mesh diffusion
@@ -3842,7 +3857,7 @@ def load_model_config(id=48):
                              'data_augmentation': True,
                              'batch_size': 8,
                              'embedding': 2,
-                             'model': 'Particles_A',
+                             'model': 'PDE_A',
                              'prediction': '2nd_derivative',
                              'upgrade_type': 'linear',
                              'nlayers_update': 3,
@@ -3878,7 +3893,7 @@ def load_model_config(id=48):
                              'data_augmentation': True,
                              'batch_size': 8,
                              'embedding': 2,
-                             'model': 'Particles_A',
+                             'model': 'PDE_A',
                              'prediction': '2nd_derivative',
                              'upgrade_type': 'linear',
                              'nlayers_update': 3,
@@ -3914,7 +3929,7 @@ def load_model_config(id=48):
                              'data_augmentation': True,
                              'batch_size': 8,
                              'embedding': 2,
-                             'model': 'Particles_A',
+                             'model': 'PDE_A',
                              'prediction': '2nd_derivative',
                              'upgrade_type': 'linear',
                              'nlayers_update': 3,
@@ -3950,7 +3965,7 @@ def load_model_config(id=48):
                              'data_augmentation': True,
                              'batch_size': 8,
                              'embedding': 2,
-                             'model': 'Particles_A',
+                             'model': 'PDE_A',
                              'prediction': '2nd_derivative',
                              'upgrade_type': 'linear',
                              'nlayers_update': 3,
@@ -3986,7 +4001,7 @@ def load_model_config(id=48):
                              'data_augmentation': True,
                              'batch_size': 8,
                              'embedding': 2,
-                             'model': 'Particles_A',
+                             'model': 'PDE_A',
                              'prediction': '2nd_derivative',
                              'upgrade_type': 'linear',
                              'nlayers_update': 3,
@@ -4020,21 +4035,20 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    gtestlist = [74,77] #[44,74,77]
+    config_list = ['config_145_boid'] # ['config_144_boid']
 
-    for gtest in gtestlist:
+    for config in config_list:
 
-        model_config = load_model_config(id=gtest)
+        # model_config = load_model_config(id=gtest)
 
-        # if (gtest>=0) and (gtest<10):
-        #     model_config = load_model_config(id=44)
-        # if (gtest>=10) and (gtest<20):
-        #     model_config = load_model_config(id=45)
-        # if (gtest>=20) and (gtest<30):
-        #     model_config = load_model_config(id=46)
-        # model_config['ntry']=gtest
+        # Load parameters from config file
+        with open(f'./config/{config}.yaml', 'r') as file:
+            model_config = yaml.safe_load(file)
+
+        for key, value in model_config.items():
+            print(key, ":", value)
+
         cmap = cc(model_config=model_config)
-
         sigma = model_config['sigma']
         aggr_type = model_config['aggr_type']
 
@@ -4049,10 +4063,10 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        # if 'Boids' in model_config['description']:
-        #     data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=1)
-        # else:
-        #     data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=5)
+        if 'Boids' in model_config['description']:
+            data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=1)
+        else:
+            data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=5)
         # data_train(model_config)
         x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=1, bTest='', initial_map='')
 
