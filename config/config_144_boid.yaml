@@ -5,7 +5,7 @@ hidden_size: 128
 n_mp_layers: 5
 noise_level: 0
 radius: 0.04
-dataset: '231001_144'
+dataset: '231001_144bis'    # new
 nparticles: 1800
 nparticle_types: 4
 ninteractions: 4
@@ -23,11 +23,11 @@ prediction: '2nd_derivative'
 upgrade_type: 'none'
 nlayers_update: 3
 hidden_size_update: 64
-p: [[50,10,0],[10,30,40],[20,50,40],[35,80,40]]        # separation alignement cohesion
+p: [[50,10,0,0],[10,30,40,0],[20,50,40,0],[35,80,40,0]]        # separation alignement cohesion
 nrun: 10
 clamp: 1E-3
 pred_limit: 1E9
-start_frame: 0.
+start_frame: 0
 cmap: 'tab10'
 arrow_length: 5
 description: 'Boids acceleration pred aggr mean boid speed/4 4 different params'
