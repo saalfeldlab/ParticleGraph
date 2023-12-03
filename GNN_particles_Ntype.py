@@ -300,6 +300,7 @@ class Boid:
 
 		ps.append(ps[0])
 		return ps
+
 class PDE_A(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -348,14 +349,16 @@ class PDE_B(pyg.nn.MessagePassing):
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         acc = self.tau * self.propagate(edge_index, x=(x, x))
 
-        return acc
+        return acc*0
 
     def message(self, x_i, x_j):
         r = torch.sqrt(torch.sum(bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) ** 2, axis=1))  #distance
 
         pp = self.p[x_i[:, 5].detach().cpu().numpy(), :]
-        psi = - pp[:, 2] * torch.exp(-r ** pp[:, 0] / (2 * sigma ** 2)) + pp[:, 3] * torch.exp(-r ** pp[:, 1] / (2 * sigma ** 2))
-        return psi[:, None] * bc_diff(x_i[:, 1:3] - x_j[:, 1:3])
+
+        separation = bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) / (r + 1E-9)
+
+        return bc_diff(x_i[:, 1:3] - x_j[:, 1:3])
 
     def psi(self, r, p):
         return r
@@ -796,9 +799,9 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
     folder = f'./graphs_data/graphs_particles_{dataset_name}/'
     os.makedirs(folder, exist_ok=True)
 
-    # files = glob.glob(f"./tmp_data/*")
-    # for f in files:
-    #     os.remove(f)
+    files = glob.glob(f"./tmp_data/*")
+    for f in files:
+        os.remove(f)
 
     if bErase:
         files = glob.glob(f"{folder}/*")
@@ -1381,6 +1384,7 @@ def data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, st
 
         bDetails = False
         bVisu = False
+
 def data_train(model_config, bSparse=False):
 
     print('')
@@ -4017,6 +4021,331 @@ def load_model_config(id=48):
                              'sparsity':'replace'
                              }
 
+    if id == 147:
+        model_config_test = {'ntry': id,
+                             'input_size': 9,
+                             'output_size': 2,
+                             'hidden_size': 128,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.04,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 1800,
+                             'nparticle_types': 4,
+                             'ninteractions': 4,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-10,
+                             'v_init': 0,
+                             'aggr_type': 'mean',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'PDE_A',
+                             'prediction': '2nd_derivative',
+                             'upgrade_type': 'linear',
+                             'nlayers_update': 3,
+                             'hidden_size_update': 64,
+                             'p': [[10,0,0],[10,0,0],[10,0,0],[10,0,0]],        # separation alignement cohesion
+                             'nrun': 10,
+                             'clamp': 1E-3,
+                             'pred_limit': 1E9,
+                             'start_frame': 0.,
+                             'cmap':'tab10',
+                             'arrow_length':5,
+                             'description':'Boids acceleration pred aggr mean boid speed/4 4 different params',
+                             'sparsity':'replace'
+                             }
+    if id == 148:
+        model_config_test = {'ntry': id,
+                             'input_size': 9,
+                             'output_size': 2,
+                             'hidden_size': 128,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.04,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 1800,
+                             'nparticle_types': 4,
+                             'ninteractions': 4,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-10,
+                             'v_init': 0,
+                             'aggr_type': 'mean',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'PDE_A',
+                             'prediction': '2nd_derivative',
+                             'upgrade_type': 'linear',
+                             'nlayers_update': 3,
+                             'hidden_size_update': 64,
+                             'p': [[40,0,0],[40,0,0],[40,0,0],[40,0,0]],       # separation alignement cohesion
+                             'nrun': 10,
+                             'clamp': 1E-3,
+                             'pred_limit': 1E9,
+                             'start_frame': 0.,
+                             'cmap':'tab10',
+                             'arrow_length':5,
+                             'description':'Boids acceleration pred aggr mean boid speed/4 4 different params',
+                             'sparsity':'replace'
+                             }
+    if id == 149:
+        model_config_test = {'ntry': id,
+                             'input_size': 9,
+                             'output_size': 2,
+                             'hidden_size': 128,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.04,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 1800,
+                             'nparticle_types': 4,
+                             'ninteractions': 4,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-10,
+                             'v_init': 0,
+                             'aggr_type': 'mean',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'PDE_A',
+                             'prediction': '2nd_derivative',
+                             'upgrade_type': 'linear',
+                             'nlayers_update': 3,
+                             'hidden_size_update': 64,
+                             'p': [[80,0,0],[80,0,0],[80,0,0],[80,0,0]],          # separation alignement cohesion
+                             'nrun': 10,
+                             'clamp': 1E-3,
+                             'pred_limit': 1E9,
+                             'start_frame': 0.,
+                             'cmap':'tab10',
+                             'arrow_length':5,
+                             'description':'Boids acceleration pred aggr mean boid speed/4 4 different params',
+                             'sparsity':'replace'
+                             }
+    if id == 150:
+        model_config_test = {'ntry': id,
+                             'input_size': 9,
+                             'output_size': 2,
+                             'hidden_size': 128,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.04,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 1800,
+                             'nparticle_types': 4,
+                             'ninteractions': 4,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-10,
+                             'v_init': 0,
+                             'aggr_type': 'mean',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'PDE_A',
+                             'prediction': '2nd_derivative',
+                             'upgrade_type': 'linear',
+                             'nlayers_update': 3,
+                             'hidden_size_update': 64,
+                             'p': [[0,10,0],[0,10,0],[0,10,0],[0,10,0]],        # separation alignement cohesion
+                             'nrun': 10,
+                             'clamp': 1E-3,
+                             'pred_limit': 1E9,
+                             'start_frame': 0.,
+                             'cmap':'tab10',
+                             'arrow_length':5,
+                             'description':'Boids acceleration pred aggr mean boid speed/4 4 different params',
+                             'sparsity':'replace'
+                             }
+    if id == 151:
+        model_config_test = {'ntry': id,
+                             'input_size': 9,
+                             'output_size': 2,
+                             'hidden_size': 128,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.04,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 1800,
+                             'nparticle_types': 4,
+                             'ninteractions': 4,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-10,
+                             'v_init': 0,
+                             'aggr_type': 'mean',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'PDE_A',
+                             'prediction': '2nd_derivative',
+                             'upgrade_type': 'linear',
+                             'nlayers_update': 3,
+                             'hidden_size_update': 64,
+                             'p': [[0,40,0],[0,40,0],[0,40,0],[0,40,0]],        # separation alignement cohesion
+                             'nrun': 10,
+                             'clamp': 1E-3,
+                             'pred_limit': 1E9,
+                             'start_frame': 0.,
+                             'cmap':'tab10',
+                             'arrow_length':5,
+                             'description':'Boids acceleration pred aggr mean boid speed/4 4 different params',
+                             'sparsity':'replace'
+                             }
+    if id == 152:
+        model_config_test = {'ntry': id,
+                             'input_size': 9,
+                             'output_size': 2,
+                             'hidden_size': 128,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.04,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 1800,
+                             'nparticle_types': 4,
+                             'ninteractions': 4,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-10,
+                             'v_init': 0,
+                             'aggr_type': 'mean',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'PDE_A',
+                             'prediction': '2nd_derivative',
+                             'upgrade_type': 'linear',
+                             'nlayers_update': 3,
+                             'hidden_size_update': 64,
+                             'p': [[0,80,0],[0,80,0],[0,80,0],[0,80,0]],            # separation alignement cohesion
+                             'nrun': 10,
+                             'clamp': 1E-3,
+                             'pred_limit': 1E9,
+                             'start_frame': 0.,
+                             'cmap':'tab10',
+                             'arrow_length':5,
+                             'description':'Boids acceleration pred aggr mean boid speed/4 4 different params',
+                             'sparsity':'replace'
+                             }
+    if id == 153:
+        model_config_test = {'ntry': id,
+                             'input_size': 9,
+                             'output_size': 2,
+                             'hidden_size': 128,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.04,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 1800,
+                             'nparticle_types': 4,
+                             'ninteractions': 4,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-10,
+                             'v_init': 0,
+                             'aggr_type': 'mean',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'PDE_A',
+                             'prediction': '2nd_derivative',
+                             'upgrade_type': 'linear',
+                             'nlayers_update': 3,
+                             'hidden_size_update': 64,
+                             'p': [[0,0,10],[0,0,10],[0,0,10],[0,0,10]],        # separation alignement cohesion
+                             'nrun': 10,
+                             'clamp': 1E-3,
+                             'pred_limit': 1E9,
+                             'start_frame': 0.,
+                             'cmap':'tab10',
+                             'arrow_length':5,
+                             'description':'Boids acceleration pred aggr mean boid speed/4 4 different params',
+                             'sparsity':'replace'
+                             }
+    if id == 154:
+        model_config_test = {'ntry': id,
+                             'input_size': 9,
+                             'output_size': 2,
+                             'hidden_size': 128,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.04,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 1800,
+                             'nparticle_types': 4,
+                             'ninteractions': 4,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-10,
+                             'v_init': 0,
+                             'aggr_type': 'mean',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'PDE_A',
+                             'prediction': '2nd_derivative',
+                             'upgrade_type': 'linear',
+                             'nlayers_update': 3,
+                             'hidden_size_update': 64,
+                             'p': [[0,0,40],[0,0,40],[0,0,40],[0,0,40]],         # separation alignement cohesion
+                             'nrun': 10,
+                             'clamp': 1E-3,
+                             'pred_limit': 1E9,
+                             'start_frame': 0.,
+                             'cmap':'tab10',
+                             'arrow_length':5,
+                             'description':'Boids acceleration pred aggr mean boid speed/4 4 different params',
+                             'sparsity':'replace'
+                             }
+    if id == 155:
+        model_config_test = {'ntry': id,
+                             'input_size': 9,
+                             'output_size': 2,
+                             'hidden_size': 128,
+                             'n_mp_layers': 5,
+                             'noise_level': 0,
+                             'radius': 0.04,
+                             'dataset': f'231001_{id}',
+                             'nparticles': 1800,
+                             'nparticle_types': 4,
+                             'ninteractions': 4,
+                             'nframes': 1000,
+                             'sigma': .005,
+                             'tau': 1E-10,
+                             'v_init': 0,
+                             'aggr_type': 'mean',
+                             'boundary': 'periodic',  # periodic   'no'  # no boundary condition
+                             'data_augmentation': True,
+                             'batch_size': 8,
+                             'embedding': 2,
+                             'model': 'PDE_A',
+                             'prediction': '2nd_derivative',
+                             'upgrade_type': 'linear',
+                             'nlayers_update': 3,
+                             'hidden_size_update': 64,
+                             'p': [[0,0,80],[0,0,80],[0,0,80],[0,0,80]],            # separation alignement cohesion
+                             'nrun': 10,
+                             'clamp': 1E-3,
+                             'pred_limit': 1E9,
+                             'start_frame': 0.,
+                             'cmap':'tab10',
+                             'arrow_length':5,
+                             'description':'Boids acceleration pred aggr mean boid speed/4 4 different params',
+                             'sparsity':'replace'
+                             }
+
     for key, value in model_config_test.items():
         print(key, ":", value)
 
@@ -4035,18 +4364,25 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    config_list = ['config_145_boid'] # ['config_144_boid']
+    # config_list = ['config_144_boid'] # ['config_144_boid']
+
+    config_list = [147,148,149,150]  # [151,152,153,154,155]
 
     for config in config_list:
 
-        # model_config = load_model_config(id=gtest)
+        model_config = load_model_config(id=config)
+
+        model_config['nrun']: 1
 
         # Load parameters from config file
-        with open(f'./config/{config}.yaml', 'r') as file:
-            model_config = yaml.safe_load(file)
-
-        for key, value in model_config.items():
-            print(key, ":", value)
+        # with open(f'./config/{config}.yaml', 'r') as file:
+        #     model_config = yaml.safe_load(file)
+        #
+        # for key, value in model_config.items():
+        #     print(key, ":", value)
+        #     if ('E-' in str(value)) | ('E+' in str(value)) :
+        #         value=float(value)
+        #         model_config[key]=value
 
         cmap = cc(model_config=model_config)
         sigma = model_config['sigma']
@@ -4064,9 +4400,9 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
         if 'Boids' in model_config['description']:
-            data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=1)
+            data_generate_boid(model_config, bVisu=True, bDetails=False, bErase=True, step=5)
         else:
-            data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=5)
+            data_generate(model_config, bVisu=True, bDetails=False, bErase=True, step=5)
         # data_train(model_config)
         x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=1, bTest='', initial_map='')
 
