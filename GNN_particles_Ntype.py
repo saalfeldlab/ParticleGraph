@@ -4422,9 +4422,9 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
         if 'Boids' in model_config['description']:
-            data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=True, step=1)
+            data_generate_boid(model_config, bVisu=False, bDetails=False, bErase=True, step=10)
         else:
-            data_generate(model_config, bVisu=True, bDetails=True, bErase=True, step=1)
+            data_generate(model_config, bVisu=True, bDetails=True, bErase=True, step=10)
         data_train(model_config)
 
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=1, bTest='', initial_map='')
