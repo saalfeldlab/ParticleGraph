@@ -4388,7 +4388,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    config_list = ['config_145_boid'] # ['config_144_boid']
+    config_list = ['config_146_boid'] # ['config_144_boid']
 
     # config_list = [147,148,149,150]  #
 
