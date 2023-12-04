@@ -354,7 +354,7 @@ class PDE_B(pyg.nn.MessagePassing):
 
         oldv_norm = torch.norm(oldv,dim=1)
         newv_norm = torch.norm(newv,dim=1)
-        factor = (oldv_norm + pp[:,1] /100/5 * (newv_norm - oldv_norm)) / newv_norm
+        factor = (oldv_norm + pp[:,1] /5E2 * (newv_norm - oldv_norm)) / newv_norm
         newv *= factor[:,None].repeat(1,2)
 
         acc = newv - oldv
@@ -375,18 +375,21 @@ class PDE_B(pyg.nn.MessagePassing):
 
     def message(self, x_i, x_j):
 
-        r = torch.sqrt(torch.sum(bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) ** 2, axis=1))  #distance
+        r = torch.sum(bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) ** 2, axis=1) #distance squared
 
         pp =self.p[x_i[:, 5].detach().cpu().numpy(), :]
 
-        alignment = pp[:,1:2].repeat(1,2)/100/5 * bc_diff(x_j[:, 3:5] - x_i[:, 3:5])
-        # alignment = bc_diff(x_j[:, 3:5] - x_i[:, 3:5])
-        # alignment = x_j[:, 3:5]
+        alignment = pp[:,1:2].repeat(1,2)/5E2 * bc_diff(x_j[:, 3:5] - x_i[:, 3:5])
 
-        return alignment
+        cohesion = pp[:,0:1].repeat(1,2)/5E4 * bc_diff(x_j[:, 1:3] - x_i[:, 1:3])
+
+        separation = pp[:,2:3].repeat(1,2)/5E7 * bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) / (r[:,None].repeat(1,2))
+
+        return separation + alignment + cohesion
 
     def psi(self, r, p):
         return r
+
 class PDE_E(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -2413,7 +2416,6 @@ def data_test_generate(model_config, bVisu=True, bDetails=False, step=5):
     # H1 = H1[:,None]
 
     return prev_nparticles, new_nparticles, prev_index_particles, index_particles
-
 def data_plot(model_config, epoch, bPrint, best_model=0):
 
     model = []
@@ -2936,7 +2938,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    config_list = ['config_44_gravity','config_45_gravity','config_145_boid','config_146_boid'] # ['config_144_boid']
+    config_list = ['config_147_boid'] #['config_44_gravity','config_45_gravity','config_145_boid','config_146_boid'] # ['config_144_boid']
 
     for config in config_list:
 
@@ -2967,12 +2969,9 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        # if 'Boids' in model_config['description']:
-        #     data_generate_boid(model_config, bVisu=False, bDetails=False, bErase=True, step=10)
-        # else:
-        #     data_generate(model_config, bVisu=False, bDetails=True, bErase=True, step=10)
-        data_train(model_config)
-        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=1, bTest='', initial_map='')
+        data_generate(model_config, bVisu=True, bDetails=True, bErase=True, step=10)
+        # data_train(model_config)
+        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=1, bTest='', initial_map='')
 
         #data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
