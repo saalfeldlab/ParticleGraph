@@ -1505,9 +1505,9 @@ def data_train(model_config, bSparse=False):
     if (model_config['model'] == 'WaveMesh'):
         model = MeshLaplacian(model_config, device)
 
-    # net = f"./log/try_126/models/best_model_with_9_graphs_13.pt"
-    # state_dict = torch.load(net,map_location=device)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    net = f"./log/try_145/models/best_model_with_9_graphs_8.pt"
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
 
     lra = 1E-3
     lr = 1E-3
@@ -1585,7 +1585,7 @@ def data_train(model_config, bSparse=False):
         edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,
                                                                normalization="None")  # "None", "sym", "rw"
 
-    for epoch in range(Nepochs + 1):
+    for epoch in range(9, Nepochs + 1):
 
         if epoch == 1:
             batch_size = model_config['batch_size']
@@ -1715,7 +1715,7 @@ def data_train(model_config, bSparse=False):
         ax = fig.add_subplot(2, 4, 1)
         plt.plot(list_loss, color='k')
         plt.ylim([0, 0.003])
-        plt.xlim([0, 50])
+        plt.xlim([0, 25])
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
         embedding = []
@@ -4388,7 +4388,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    config_list = ['config_146_boid'] # ['config_144_boid']
+    config_list = ['config_145_boid'] # ['config_144_boid']
 
     # config_list = [147,148,149,150]  #
 
@@ -4421,10 +4421,10 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        if 'Boids' in model_config['description']:
-            data_generate_boid(model_config, bVisu=False, bDetails=False, bErase=True, step=10)
-        else:
-            data_generate(model_config, bVisu=True, bDetails=True, bErase=True, step=10)
+        # if 'Boids' in model_config['description']:
+        #     data_generate_boid(model_config, bVisu=False, bDetails=False, bErase=True, step=10)
+        # else:
+        #     data_generate(model_config, bVisu=True, bDetails=True, bErase=True, step=10)
         data_train(model_config)
 
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=1, bTest='', initial_map='')

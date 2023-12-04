@@ -31,4 +31,4 @@ start_frame: 0
 cmap: 'tab10'
 arrow_length: 20
 description: 'Acceleration pred aggr mean boid speed/4 4 different params'
-sparsity: 'replace'
+sparsity: 'none'
