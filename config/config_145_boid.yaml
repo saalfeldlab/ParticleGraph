@@ -8,7 +8,7 @@ radius: 0.04
 dataset: '231202_145'
 nparticles: 1800
 nparticle_types: 4
-ninteractions: 43
+ninteractions: 4
 nframes: 2000
 sigma: .005
 tau: 1E-10
