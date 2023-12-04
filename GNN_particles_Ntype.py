@@ -1505,9 +1505,9 @@ def data_train(model_config, bSparse=False):
     if (model_config['model'] == 'WaveMesh'):
         model = MeshLaplacian(model_config, device)
 
-    net = f"./log/try_145/models/best_model_with_9_graphs_8.pt"
-    state_dict = torch.load(net,map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
+    # net = f"./log/try_145/models/best_model_with_9_graphs_8.pt"
+    # state_dict = torch.load(net,map_location=device)
+    # model.load_state_dict(state_dict['model_state_dict'])
 
     lra = 1E-3
     lr = 1E-3
@@ -1585,7 +1585,7 @@ def data_train(model_config, bSparse=False):
         edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,
                                                                normalization="None")  # "None", "sym", "rw"
 
-    for epoch in range(9, Nepochs + 1):
+    for epoch in range(Nepochs + 1):
 
         if epoch == 1:
             batch_size = model_config['batch_size']
@@ -4388,7 +4388,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    config_list = ['config_145_boid'] # ['config_144_boid']
+    config_list = ['config_145_boid','config_146_boid'] # ['config_144_boid']
 
     # config_list = [147,148,149,150]  #
 
@@ -4425,9 +4425,8 @@ if __name__ == '__main__':
         #     data_generate_boid(model_config, bVisu=False, bDetails=False, bErase=True, step=10)
         # else:
         #     data_generate(model_config, bVisu=True, bDetails=True, bErase=True, step=10)
-        data_train(model_config)
-
-        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=1, bTest='', initial_map='')
+        # data_train(model_config)
+        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=1, bTest='', initial_map='')
 
         #data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
