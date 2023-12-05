@@ -822,9 +822,9 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
     folder = f'./graphs_data/graphs_particles_{dataset_name}/'
     os.makedirs(folder, exist_ok=True)
 
-    # files = glob.glob(f"./tmp_data/*")
-    # for f in files:
-    #     os.remove(f)
+    files = glob.glob(f"./tmp_data/*")
+    for f in files:
+        os.remove(f)
 
     if bErase:
         files = glob.glob(f"{folder}/*")
@@ -893,7 +893,7 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
             print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
             torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
     if model_config['model'] == 'GravityParticles':
-        p = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
+        p = torch.ones(nparticle_types, 1, device=device) * 3 + 2 * torch.rand(nparticle_types, 1, device=device)
         if len(model_config['p']) > 0:
             for n in range(nparticle_types):
                 p[n] = torch.tensor(model_config['p'][n])
@@ -946,6 +946,8 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
 
         if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
             X1 = torch.rand(nparticles, 2, device=device)
+        elif model_config['model'] == 'GravityParticles':
+            X1 = torch.rand(nparticles, 2, device=device) * 2.6 - 1.3*torch.ones(nparticles, 2, device=device)
         else:
             X1 = torch.randn(nparticles, 2, device=device) * 0.5
         V1 = v_init * torch.randn((nparticles, 2), device=device)
@@ -1003,8 +1005,7 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
             noise_prev = noise_current.clone().detach()
             noise_current = torch.randn((nparticles, 2), device=device) * noise_level
 
-            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
-                                   H1.clone().detach()), 1)
+            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach()), 1)
             x_noise = x.clone().detach()
 
             if (it >= 0) & (noise_level > 0):
@@ -1122,8 +1123,8 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
                     for n in range(nparticle_types):
                         g = p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 7.5
                         plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                    x[index_particles[n], 2].detach().cpu().numpy(), s=g,
-                                    alpha=0.75, color=cmap.color(n))
+                                    x[index_particles[n], 2].detach().cpu().numpy(), s=0.5,
+                                    alpha=0.75, color='k')
                 elif bMesh:
                     pts = x_noise[:, 1:3].detach().cpu().numpy()
                     tri = Delaunay(pts)
@@ -2955,13 +2956,13 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    config_list = ['config_148_boid_1800_8_rnd'] # 'config_148_boid_1800_8_rnd'] #,'config_149_boid_3600_8_rnd','config_150_boid_3600_16_rnd'] # ['config_44_gravity','config_45_gravity'] 'config_147_boid']  #['config_44_gravity','config_45_gravity','config_145_boid','config_146_boid'] # ['config_144_boid']
+    config_list = ['config_46_gravity'] # 'config_148_boid_1800_8_rnd'] #,'config_149_boid_3600_8_rnd','config_150_boid_3600_16_rnd'] # ['config_44_gravity','config_45_gravity'] 'config_147_boid']  #['config_44_gravity','config_45_gravity','config_145_boid','config_146_boid'] # ['config_144_boid']
 
     for config in config_list:
 
@@ -2996,7 +2997,7 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        data_generate(model_config, bVisu=True, bDetails=True, bErase=True, step=1)
+        data_generate(model_config, bVisu=True, bDetails=True, bErase=True, step=10)
         data_train(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='', initial_map='')
 
