@@ -1,0 +1,34 @@
+ntry: 147
+input_size: 9
+output_size: 2
+hidden_size: 128
+n_mp_layers: 5
+noise_level: 0
+radius: 0.04
+dataset: '231202_147'
+nparticles: 1800
+nparticle_types: 4
+ninteractions: 4
+nframes: 2000
+sigma: .005
+tau: 1E-10
+v_init: 1E-3
+aggr_type: 'mean'
+boundary: 'periodic'  # periodic   'no'  # no boundary condition
+data_augmentation: True
+batch_size: 8
+embedding: 2
+model: 'PDE_B'
+prediction: '2nd_derivative'
+upgrade_type: 'none'
+nlayers_update: 3
+hidden_size_update: 64
+p: [[50,0,0], [10,30,20], [20,50,20], [35,80,20]]        # separation alignement cohesion
+nrun: 10
+clamp: 1E-3
+pred_limit: 1E+9
+start_frame: 0
+cmap: 'tab10'
+arrow_length: 20
+description: 'Acceleration pred aggr mean boid speed/4 4 different params'
+sparsity: 'none'
