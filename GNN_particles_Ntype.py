@@ -710,10 +710,9 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
     v_init = model_config['v_init']
     bMesh = (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh')
     bDivision = 'division_cycle' in model_config
-    if bDivision:
-        cycle_length = model_config['division_cycle']
-    else:
-        cycle_length = 10
+
+    cycle_length = torch.clamp(torch.abs(torch.ones(nparticle_types, 1, device=device) * 400 + torch.randn(nparticle_types, 1,device=device) * 150),min=100, max=700)
+
     rr = torch.tensor(np.linspace(0, radius * 2, 1000))
     rr = rr.to(device)
     if bMesh:
@@ -824,8 +823,10 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
         # h = torch.zeros((nparticles, 1), device=device)
         H1 = torch.zeros((nparticles, 2), device=device)
         H1[:, 0:1] = torch.ones((nparticles, 1), device=device) + torch.randn((nparticles, 1), device=device) / 2
-        A1 = torch.rand(nparticles, device=device) * cycle_length
+        cycle_length_distrib = cycle_length[T1[:,0].detach().cpu().numpy().astype(int)]
+        A1 = torch.rand(nparticles, device=device)
         A1 = A1[:, None]
+        A1 = A1 * cycle_length_distrib
 
         if bMesh:
             x_width = int(np.sqrt(nparticles))
@@ -866,21 +867,30 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
         for it in tqdm(range(model_config['start_frame'], nframes)):
 
             if (it>0) & bDivision:
-
-
-                cycle_test = (torch.ones(nparticles, device=device) + 0.05 * torch.randn(nparticles, device=device))* cycle_length
-                pos = torch.argwhere(A1>cycle_test[:,None])
+                cycle_test = (torch.ones(nparticles, device=device) + 0.05 * torch.randn(nparticles, device=device))
+                cycle_test = cycle_test[:, None]
+                cycle_length_distrib = cycle_length[T1[:, 0].detach().cpu().numpy().astype(int)]
+                pos = torch.argwhere(A1>cycle_test * cycle_length_distrib)
                 if len(pos) > 1:
                     n_add_nodes = len(pos)
                     pos = pos[:, 0].squeeze().detach().cpu().numpy().astype(int)
-
                     nparticles = nparticles + n_add_nodes
                     N1 = torch.arange(nparticles, device=device)
                     N1 = N1[:, None]
 
-                    X1 = torch.cat((X1, X1[pos,:] + 1E-3 * torch.randn((n_add_nodes, 2), device=device)     ),axis=0)
-                    X1[pos,:] = X1[pos,:] + 1E-3 * torch.randn((n_add_nodes, 2), device=device)
+                    separation = 1E-3 * torch.randn((n_add_nodes, 2), device=device)
+                    X1 = torch.cat((X1, X1[pos,:] + separation),axis=0)
+                    X1[pos,:] = X1[pos,:] - separation
+
+                    phi = torch.randn(n_add_nodes, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
+                    cos_phi = torch.cos(phi)
+                    sin_phi = torch.sin(phi)
+                    new_x = cos_phi * V1[pos, 0] + sin_phi * V1[pos, 1]
+                    new_y = -sin_phi * V1[pos, 0] + cos_phi * V1[pos, 1]
+                    V1[pos, 0] = new_x * 1.5
+                    V1[pos, 1] = new_y * 1.5
                     V1 = torch.cat((V1, -V1[pos,:]), axis=0)
+
                     T1 = torch.cat((T1, T1[pos,:]), axis=0)
                     H1 = torch.cat((H1, H1[pos,:]), axis=0)
                     A1[pos, :] = 0
