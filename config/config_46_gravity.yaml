@@ -5,8 +5,13 @@ hidden_size: 128
 n_mp_layers: 5
 noise_level: 0
 radius: 0.5
+<<<<<<< HEAD
 dataset: 231001_46
 nparticles: 1024
+=======
+dataset: f'231001_46'
+nparticles: 512
+>>>>>>> fa78e7f8cf8d2fa3e21cb78f03f5ee0e3e11ec27
 nparticle_types: 4
 ninteractions: 4
 nframes: 2000
