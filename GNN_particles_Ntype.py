@@ -712,6 +712,8 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
     bDivision = 'division_cycle' in model_config
     if bDivision:
         cycle_length = model_config['division_cycle']
+    else:
+        cycle_length = 10
     rr = torch.tensor(np.linspace(0, radius * 2, 1000))
     rr = rr.to(device)
     if bMesh:
@@ -822,6 +824,8 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
         # h = torch.zeros((nparticles, 1), device=device)
         H1 = torch.zeros((nparticles, 2), device=device)
         H1[:, 0:1] = torch.ones((nparticles, 1), device=device) + torch.randn((nparticles, 1), device=device) / 2
+        A1 = torch.rand(nparticles, device=device) * cycle_length
+        A1 = A1[:, None]
 
         if bMesh:
             x_width = int(np.sqrt(nparticles))
@@ -861,20 +865,32 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
 
         for it in tqdm(range(model_config['start_frame'], nframes)):
 
-            if (it%cycle_length == 0) & (it>0) & bDivision:
-                nparticles = nparticles*2
-                N1 = torch.arange(nparticles, device=device)
-                N1 = N1[:, None]
-                X1 = torch.cat((X1,X1),axis=0)
-                X1 = X1 + 1E-3 * torch.randn((nparticles, 2), device=device)
-                V1 = torch.cat((V1, -V1), axis=0)
-                T1 = torch.cat((T1, T1), axis=0)
-                H1 = torch.cat((H1, H1), axis=0)
+            if (it>0) & bDivision:
 
-                index_particles = []
-                np_i = int(nparticles / model_config['nparticle_types'])
-                for n in range(model_config['nparticle_types']):
-                    index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
+
+                cycle_test = (torch.ones(nparticles, device=device) + 0.05 * torch.randn(nparticles, device=device))* cycle_length
+                pos = torch.argwhere(A1>cycle_test[:,None])
+                if len(pos) > 1:
+                    n_add_nodes = len(pos)
+                    pos = pos[:, 0].squeeze().detach().cpu().numpy().astype(int)
+
+                    nparticles = nparticles + n_add_nodes
+                    N1 = torch.arange(nparticles, device=device)
+                    N1 = N1[:, None]
+
+                    X1 = torch.cat((X1, X1[pos,:] + 1E-3 * torch.randn((n_add_nodes, 2), device=device)     ),axis=0)
+                    X1[pos,:] = X1[pos,:] + 1E-3 * torch.randn((n_add_nodes, 2), device=device)
+                    V1 = torch.cat((V1, -V1[pos,:]), axis=0)
+                    T1 = torch.cat((T1, T1[pos,:]), axis=0)
+                    H1 = torch.cat((H1, H1[pos,:]), axis=0)
+                    A1[pos, :] = 0
+                    A1 = torch.cat((A1, A1[pos, :]), axis=0)
+
+                    index_particles=[]
+                    for n in range(nparticles):
+                        pos = torch.argwhere(T1 == n)
+                        pos = pos[:, 0].squeeze().detach().cpu().numpy().astype(int)
+                        index_particles.append(pos)
 
 
             if it == 0:
@@ -885,7 +901,7 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
             noise_current = torch.randn((nparticles, 2), device=device) * noise_level
 
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
-                                   H1.clone().detach()), 1)
+                                   H1.clone().detach(), A1.clone().detach()), 1)
             x_noise = x.clone().detach()
 
             if (it >= 0) & (noise_level > 0):
@@ -925,6 +941,9 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
 
             if not (bMesh):
                 X1 = bc_pos(X1 + V1)
+
+            A1 = A1 + 1
+
 
             if model_config['model'] == 'DiffMesh':
                 if it >= 0:
@@ -2686,7 +2705,7 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        data_generate(model_config, bVisu=True, bDetails=True, bErase=True, step=2)
+        data_generate(model_config, bVisu=True, bDetails=True, bErase=True, step=1)
         # data_train(model_config)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
