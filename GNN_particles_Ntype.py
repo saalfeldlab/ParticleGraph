@@ -1928,10 +1928,12 @@ def data_train(model_config, bSparse=False):
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{ntry}_{epoch}.tif")
         plt.close()
 def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0,
-              prev_index_particles=0, best_model=0, step=5, bTest='', folder_out='tmp_recons', initial_map=''):
+              prev_index_particles=0, best_model=0, step=5, bTest='', folder_out='tmp_recons', initial_map='',forced_embedding=[], forced_color=0):
+
     # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_recons/*")
     # for f in files:
     #     os.remove(f)
+
     if bPrint:
         print('')
         print('Plot validation test ... ')
@@ -2005,6 +2007,10 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             state_dict = torch.load(net, map_location=device)
             model.load_state_dict(state_dict['model_state_dict'])
             model.eval()
+
+    if len(forced_embedding)>0:
+        with torch.no_grad():
+            model.a[0] = torch.tensor(forced_embedding, device=device).repeat(nparticles, 1)
 
     if new_nparticles > 0:  # nparticles larger than initially
 
@@ -2270,7 +2276,11 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                                       facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=0, vmax=5000)
                 else:
                     for n in range(nparticle_types):
-                        plt.scatter(x_[index_particles[n], 1].detach().cpu(), x_[index_particles[n], 2].detach().cpu(),
+                        if ((k == 2) | (k == 4)) & (len(forced_embedding)>0):
+                            plt.scatter(x_[index_particles[n], 1].detach().cpu(), x_[index_particles[n], 2].detach().cpu(),
+                                    s=sc, color=cmap.color(forced_color))
+                        else:
+                            plt.scatter(x_[index_particles[n], 1].detach().cpu(), x_[index_particles[n], 2].detach().cpu(),
                                     s=sc, color=cmap.color(n))
                 if (k > 2) & (bMesh == False):
                     for n in range(nparticles):
@@ -2313,26 +2323,6 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                 ax2.set_ylabel('MMD [a.u]', fontsize="14", color='b')
                 ax2.set_ylim([0, 2E-3])
 
-            # ax = fig.add_subplot(2, 5, 5)
-            # plt.scatter(y0[:,0].detach().cpu().numpy(),y[:,0].detach().cpu().numpy(),s=1,color='b')
-            # plt.scatter(y0[:,1].detach().cpu().numpy(),y[:,1].detach().cpu().numpy(), s=1, color='r')
-            # plt.xlabel('Y true [a.u]', fontsize="14")
-            # plt.ylabel('Y pred [a.u]', fontsize="14")
-            # if model_config['prediction']=='2nd_derivative':
-            #     plt.xlim([-ynorm[4].detach().cpu().numpy(),ynorm[4].detach().cpu().numpy()])
-            #     plt.ylim([-ynorm[4].detach().cpu().numpy(), ynorm[4].detach().cpu().numpy()])
-            # else:
-            #     plt.xlim([-ynorm[4].detach().cpu().numpy(),ynorm[4].detach().cpu().numpy()])
-            #     plt.ylim([-ynorm[4].detach().cpu().numpy(), ynorm[4].detach().cpu().numpy()])
-            #
-            # ax = fig.add_subplot(2, 5, 10)
-            # plt.hist(y0[:,0].detach().cpu().numpy(),200,alpha=0.25,color='b')
-            # plt.hist(y[:,0].detach().cpu().numpy(),200,alpha=0.25,color='r')
-            # if model_config['prediction']=='2nd_derivative':
-            #     plt.xlim([-ynorm[4].detach().cpu().numpy(),ynorm[4].detach().cpu().numpy()])
-            # else:
-            #     plt.xlim([-ynorm[4].detach().cpu().numpy(),ynorm[4].detach().cpu().numpy()])
-
             ax = fig.add_subplot(2, 5, 6)
             pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
             vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
@@ -2367,7 +2357,10 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
 
             plt.tight_layout()
 
-            plt.savefig(f"./{folder_out}/Fig_{ntry}_{it}.tif")
+            if len(forced_embedding) > 0:
+                plt.savefig(f"./{folder_out}/Fig_{ntry}_{forced_color}_{it}.tif")
+            else:
+                plt.savefig(f"./{folder_out}/Fig_{ntry}_{it}.tif")
 
             plt.close()
 
@@ -2474,7 +2467,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
     y_stat = []
     distance_list = []
     deg_list = []
-    if False:  # analyse tmp_recons
+    if True:  # analyse tmp_recons
         x = torch.load(f'{log_dir}/x_list.pt')
         y = torch.load(f'{log_dir}/y_list.pt')
         for k in np.arange(0, len(x) - 1, 4):
@@ -2955,7 +2948,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -2996,9 +2989,17 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        data_generate(model_config, bVisu=True, bDetails=True, bErase=True, step=1)
-        data_train(model_config)
-        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='', initial_map='')
+        # data_generate(model_config, bVisu=True, bDetails=True, bErase=True, step=1)
+        # data_train(model_config)
+        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[1.265,0.636], forced_color=0)
+        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[1.59,1.561], forced_color=1)
+        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='', initial_map='', forced_embedding=[0.911,0.983], forced_color=3)
+        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[1.777,0.906], forced_color=4)
+        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[0.852,1.291], forced_color=5)
+        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[0.645, 1.889], forced_color=6)
+        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[0.8, 0.5], forced_color=7)
+        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[2.5, 2.5], forced_color=8)
+
 
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
