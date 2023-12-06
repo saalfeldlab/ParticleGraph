@@ -163,144 +163,6 @@ class MLP(nn.Module):
         x = self.layers[-1](x)
         return x
 
-class Boid:
-    def __init__(self, x, y):
-        self.position = Vector(x, y)
-        vec_x = uniform(-1, 1)
-        vec_y = uniform(-1, 1)
-        self.velocity = Vector(vec_x, vec_y)
-        self.velocity.normalize()
-        # set a random magnitude
-        self.velocity = self.velocity * uniform(1.5, 4) / 4
-        self.acceleration = Vector()
-        self.color = (255, 255, 255)
-        self.temp = self.color
-        self.secondaryColor = (70, 70, 70)
-        self.max_speed = 5 / 4
-        self.max_length = 1 / 4
-        self.size = 2
-        self.stroke = 5
-        self.angle = 0
-        self.hue = 0
-        self.toggles = {"separation": True, "alignment": True, "cohesion": True}
-        self.values = {"separation": 0.1, "alignment": 0.1, "cohesion": 0.1}
-        self.radius = 40
-
-    def limits(self, width, height):
-        if self.position.x > width:
-            self.position.x = 0
-        elif self.position.x < 0:
-            self.position.x = width
-
-        if self.position.y > height:
-            self.position.y = 0
-        elif self.position.y < 0:
-            self.position.y = height
-
-    def behaviour(self, flock):
-        self.acceleration.reset()
-
-        if self.toggles["separation"] == True:
-            avoid = self.separation(flock)
-            avoid = avoid * self.values["separation"]
-            self.acceleration.add(avoid)
-
-        if self.toggles["cohesion"] == True:
-            coh = self.cohesion(flock)
-            coh = coh * self.values["cohesion"]
-            self.acceleration.add(coh)
-
-        if self.toggles["alignment"] == True:
-            align = self.alignment(flock)
-            align = align * self.values["alignment"]
-            self.acceleration.add(align)
-
-    def separation(self, flockMates):
-        total = 0
-        steering = Vector()
-
-        for mate in flockMates:
-            dist = getDistance(self.position, mate.position)
-            if mate is not self and dist < self.radius:
-                temp = SubVectors(self.position, mate.position)
-                temp = temp / (dist ** 2 + 1E-9)
-                steering.add(temp)
-                total += 1
-        if total > 0:
-            steering = steering / total
-            # steering = steering - self.position
-            steering.normalize()
-            steering = steering * self.max_speed
-            steering = steering - self.velocity
-            steering.limit(self.max_length)
-
-        return steering
-
-    def alignment(self, flockMates):
-        total = 0
-        steering = Vector()
-        # hue = uniform(0, 0.5)
-        for mate in flockMates:
-            dist = getDistance(self.position, mate.position)
-            if mate is not self and dist < self.radius:
-                vel = mate.velocity.Normalize()
-                steering.add(vel)
-                mate.color = hsv_to_rgb(self.hue, 1, 1)
-                total += 1
-        if total > 0:
-            steering = steering / total
-            steering.normalize()
-            steering = steering * self.max_speed
-            steering = steering - self.velocity.Normalize()
-            steering.limit(self.max_length)
-        return steering
-
-    def cohesion(self, flockMates):
-        total = 0
-        steering = Vector()
-        for mate in flockMates:
-            dist = getDistance(self.position, mate.position)
-            if mate is not self and dist < self.radius:
-                steering.add(mate.position)
-                total += 1
-        if total > 0:
-            steering = steering / total
-            steering = steering - self.position
-            steering.normalize()
-            steering = steering * self.max_speed
-            steering = steering - self.velocity
-            steering.limit(self.max_length)
-
-        return steering
-
-    def update(self):
-
-        self.position = self.position + self.velocity
-        self.velocity = self.velocity + self.acceleration
-        self.velocity.limit(self.max_speed)
-        self.angle = self.velocity.heading() + pi / 2
-
-    def Draw(self, distance, scale):
-        ps = []
-        points = [None for _ in range(3)]
-
-        points[0] = [[0], [-self.size], [0]]
-        points[1] = [[self.size // 2], [self.size // 2], [0]]
-        points[2] = [[-self.size // 2], [self.size // 2], [0]]
-
-        for point in points:
-            rotated = matrix_multiplication(rotationZ(self.angle), point)
-            z = 1 / (distance - rotated[2][0])
-
-            projection_matrix = [[z, 0, 0], [0, z, 0]]
-            projected_2d = matrix_multiplication(projection_matrix, rotated)
-
-            x = int(projected_2d[0][0] * scale) + self.position.x
-            y = int(projected_2d[1][0] * scale) + self.position.y
-            ps.append((x, y))
-
-        ps.append(ps[0])
-        return ps
 class PDE_A(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -822,9 +684,9 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
     folder = f'./graphs_data/graphs_particles_{dataset_name}/'
     os.makedirs(folder, exist_ok=True)
 
-    # files = glob.glob(f"./tmp_data/*")
-    # for f in files:
-    #     os.remove(f)
+    files = glob.glob(f"./tmp_data/*")
+    for f in files:
+        os.remove(f)
 
     if bErase:
         files = glob.glob(f"{folder}/*")
@@ -847,6 +709,9 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
     noise_level = model_config['noise_level']
     v_init = model_config['v_init']
     bMesh = (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh')
+    bDivision = 'division_cycle' in model_config
+    if bDivision:
+        cycle_length = model_config['division_cycle']
     rr = torch.tensor(np.linspace(0, radius * 2, 1000))
     rr = rr.to(device)
     if bMesh:
@@ -995,6 +860,22 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
         noise_prev_prev = 0 * torch.randn((nparticles, 2), device=device)
 
         for it in tqdm(range(model_config['start_frame'], nframes)):
+
+            if (it%cycle_length == 0) & (it>0) & bDivision:
+                nparticles = nparticles*2
+                N1 = torch.arange(nparticles, device=device)
+                N1 = N1[:, None]
+                X1 = torch.cat((X1,X1),axis=0)
+                X1 = X1 + 1E-3 * torch.randn((nparticles, 2), device=device)
+                V1 = torch.cat((V1, -V1), axis=0)
+                T1 = torch.cat((T1, T1), axis=0)
+                H1 = torch.cat((H1, H1), axis=0)
+
+                index_particles = []
+                np_i = int(nparticles / model_config['nparticle_types'])
+                for n in range(model_config['nparticle_types']):
+                    index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
+
 
             if it == 0:
                 V1 = torch.clamp(V1, min=-torch.std(V1), max=+torch.std(V1))
@@ -1239,191 +1120,7 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
         torch.save(h_list, f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt')
 
         bDetails = False
-def data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=1):
-    # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_data/*")
-    # for f in files:
-    #     os.remove(f)
 
-    print('')
-    print('Generating data ...')
-    print('use of https://github.com/Josephbakulikira/simple-Flocking-simulation-python-pygame')
-
-    dataset_name = model_config['dataset']
-    folder = f'./graphs_data/graphs_particles_{dataset_name}/'
-    os.makedirs(folder, exist_ok=True)
-
-    if bErase:
-        files = glob.glob(f"{folder}/*")
-        for f in files:
-            os.remove(f)
-
-    copyfile(os.path.realpath(__file__), os.path.join(folder, 'generation_code.py'))
-
-    json_ = json.dumps(model_config)
-    f = open(f"{folder}/model_config.json", "w")
-    f.write(json_)
-    f.close()
-
-    ntry = model_config['ntry']
-    radius = model_config['radius']
-    nparticle_types = model_config['nparticle_types']
-    nparticles = model_config['nparticles']
-    dataset_name = model_config['dataset']
-    nframes = model_config['nframes']
-    noise_level = model_config['noise_level']
-    v_init = model_config['v_init']
-    rr = torch.tensor(np.linspace(0, radius * 2, 1000))
-    rr = rr.to(device)
-
-    index_particles = []
-    np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
-    for n in range(model_config['nparticle_types']):
-        index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
-
-    fps = 60
-    scale = 40
-    Distance = 5
-    speed = 0.0005
-    size = 1000
-
-    for run in range(model_config['nrun']):
-
-        x_list = []
-        y_list = []
-        h_list = []
-
-        X1 = torch.randn(nparticles, 2, device=device) * 0.5
-        V1 = v_init * torch.randn((nparticles, 2), device=device)
-        T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
-        for n in range(1, nparticle_types):
-            T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
-        T1 = T1[:, None]
-        H1 = torch.ones((nparticles, 2), device=device) + torch.randn((nparticles, 1), device=device) / 2
-        N1 = torch.arange(nparticles, device=device)
-        N1 = N1[:, None]
-
-        time.sleep(0.5)
-
-        noise_current = 0 * torch.randn((nparticles, 2), device=device)
-        noise_prev_prev = 0 * torch.randn((nparticles, 2), device=device)
-        noise_prev = 0 * torch.randn((nparticles, 2), device=device)
-
-        flock = []
-        for i in range(nparticles):
-            flock.append(Boid(np.random.randint(20, size - 20), np.random.randint(20, size - 20)))
-        for n, boid in enumerate(flock):
-            if nparticle_types == 1:
-                p = model_config['p']
-            else:
-                p = model_config['p'][int(T1[n].detach().cpu().numpy())]
-            boid.toggles = {"separation": True, "alignment": True, "cohesion": True}
-            boid.values = {"separation": p[0] / 100, "alignment": p[1] / 100, "cohesion": p[2] / 100}
-
-        for it in tqdm(range(nframes)):
-
-            if bVisu & (it % step == 0):
-                fig = plt.figure(figsize=(11.8, 12))
-                # plt.ion()
-                ax = fig.add_subplot(2, 2, 1)
-                plt.xlim([0, size])
-                plt.ylim([0, size])
-                plt.text(0, 1080, f'frame: {it}')
-                plt.text(0, 1030, f'{nparticles} nodes ', fontsize=10)
-            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
-                                   H1.clone().detach()), 1)
-            for n, boid in enumerate(flock):
-                x[n, 1] = torch.tensor(boid.position.x / 1000, device=device)
-                x[n, 2] = torch.tensor(boid.position.y / 1000, device=device)
-                x[n, 3] = torch.tensor(boid.velocity.x / 1000, device=device)
-                x[n, 4] = torch.tensor(boid.velocity.y / 1000, device=device)
-
-            if (it >= 0) & (noise_level == 0):
-                x_list.append(x)
-                # torch.save(x, f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{it}.pt')
-            if (it >= 0) & (noise_level > 0):
-                x_noise = x
-                x_noise[:, 1:3] = x[:, 1:3] + noise_current
-                x_noise[:, 3:5] = x[:, 3:5] + noise_current - noise_prev
-                x_list.append(x_noise)
-                # torch.save(x_noise, f'graphs_data/graphs_particles_{dataset_name}/x_{run}_{it}.pt')
-
-            for n, boid in enumerate(flock):
-                boid.radius = scale
-                boid.limits(size, size)
-                boid.behaviour(flock)
-                boid.update()
-                if bVisu & (it % step == 0):
-                    ps = boid.Draw(Distance, scale)
-                    ps = np.array(ps)
-                    plt.plot(ps[:, 0], ps[:, 1], c=cmap.color(T1[n].detach().cpu().numpy()), alpha=0.5)
-
-            if bVisu & (it % step == 0) & bDetails:
-                ax = fig.add_subplot(2, 2, 3)
-                for n, boid in enumerate(flock):
-                    ps = boid.Draw(Distance, scale)
-                    ps = np.array(ps)
-                    plt.plot(ps[:, 0], ps[:, 1], c=cmap.color(T1[n].detach().cpu().numpy()), alpha=0.5)
-                plt.xlim([400, 800])
-                plt.ylim([400, 800])
-
-            y = torch.zeros((nparticles, 2), device=device)
-            for n, boid in enumerate(flock):
-                y[n, 0] = torch.tensor(boid.acceleration.x / 1000, device=device)
-                y[n, 1] = torch.tensor(boid.acceleration.y / 1000, device=device)
-            if (it >= 0) & (noise_level == 0):
-                y_list.append(y)
-            if (it >= 0) & (noise_level > 0):
-                y_noise = y[:, 0:2] + noise_current - 2 * noise_prev + noise_prev_prev
-                y_list.append(y_noise)
-
-            if bVisu & (it % step == 0):
-                if bDetails:
-                    ax = fig.add_subplot(2, 2, 2)
-                    plt.scatter(x[:, 1].detach().cpu().numpy(), x[:, 2].detach().cpu().numpy(), s=1, color='k',
-                                alpha=0.75)
-                    pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
-                    distance2 = torch.sum((x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
-                    adj_t2 = ((distance2 < radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
-                    edge_index2 = adj_t2.nonzero().t().contiguous()
-                    dataset2 = data.Data(x=x, edge_index=edge_index2)
-                    vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
-                    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False, alpha=0.3)
-                    plt.xlim([0, 1])
-                    plt.ylim([0, 1])
-
-                    ax = fig.add_subplot(2, 2, 4)
-
-                    for n in range(nparticle_types):
-                        plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                    x[index_particles[n], 2].detach().cpu().numpy(), s=50, alpha=0.75,
-                                    color=cmap.color(n))
-                    plt.xlim([0.4, 0.8])
-                    plt.ylim([0.4, 0.8])
-                    for k in range(nparticles):
-                        plt.arrow(x=x[k, 1].detach().cpu().item(), y=x[k, 2].detach().cpu().item(),
-                                  dx=x[k, 3].detach().cpu().item() * model_config['arrow_length'],
-                                  dy=x[k, 4].detach().cpu().item() * model_config['arrow_length'], color='k')
-
-                plt.tight_layout()
-                plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
-                plt.close()
-
-        for k in range(1, len(x_list)):
-            prev = x_list[k - 1]
-            next = x_list[k]
-            v = bc_diff(next[:, 1:3] - prev[:, 1:3])
-            acc = v - prev[:, 3:5]
-            x_list[k][:, 3:5] = v
-            y_list[k - 1][:, 0:2] = acc
-
-        # x_list[0][:,1:3]+x_list[0][:,3:5]+y_list[0]-x_list[1][:,1:3]
-
-        torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
-        torch.save(y_list, f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
-        torch.save(h_list, f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt')
-
-        bDetails = False
-        bVisu = False
 def data_train(model_config, bSparse=False):
     print('')
 
@@ -2954,7 +2651,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    config_list = ['config_148_boid_1800_8_rnd'] # 'config_148_boid_1800_8_rnd'] #,'config_149_boid_3600_8_rnd','config_150_boid_3600_16_rnd'] # ['config_44_gravity','config_45_gravity'] 'config_147_boid']  #['config_44_gravity','config_45_gravity','config_145_boid','config_146_boid'] # ['config_144_boid']
+    config_list = ['config_150_boid_division_8_rnd'] # 'config_148_boid_1800_8_rnd'] #,'config_149_boid_3600_8_rnd','config_150_boid_3600_16_rnd'] # ['config_44_gravity','config_45_gravity'] 'config_147_boid']  #['config_44_gravity','config_45_gravity','config_145_boid','config_146_boid'] # ['config_144_boid']
 
     for config in config_list:
 
@@ -2989,20 +2686,22 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        # data_generate(model_config, bVisu=True, bDetails=True, bErase=True, step=1)
+        data_generate(model_config, bVisu=True, bDetails=True, bErase=True, step=2)
         # data_train(model_config)
+        # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
+        # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
+        # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
+
+
+
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[1.265,0.636], forced_color=0)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[1.59,1.561], forced_color=1)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='', initial_map='', forced_embedding=[0.911,0.983], forced_color=3)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[1.777,0.906], forced_color=4)
-        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[0.852,1.291], forced_color=5)
-        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[0.645, 1.889], forced_color=6)
-        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[0.8, 0.5], forced_color=7)
-        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[2.5, 2.5], forced_color=8)
+        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[0.852,1.291], forced_color=5)
+        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[0.645, 1.889], forced_color=6)
+        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[0.8, 0.5], forced_color=7)
+        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[2.5, 2.5], forced_color=8)
 
-
-        # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
-        # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
-        # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
 
 
