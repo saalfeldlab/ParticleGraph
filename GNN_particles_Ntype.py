@@ -712,6 +712,9 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
     bDivision = 'division_cycle' in model_config
 
     cycle_length = torch.clamp(torch.abs(torch.ones(nparticle_types, 1, device=device) * 400 + torch.randn(nparticle_types, 1,device=device) * 150),min=100, max=700)
+    if bDivision:
+        for n in range(model_config['nparticle_types']):
+            print(f'cell cycle duration: {cycle_length[n].detach().cpu().numpy()}')
 
     rr = torch.tensor(np.linspace(0, radius * 2, 1000))
     rr = rr.to(device)
@@ -887,8 +890,8 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
                     sin_phi = torch.sin(phi)
                     new_x = cos_phi * V1[pos, 0] + sin_phi * V1[pos, 1]
                     new_y = -sin_phi * V1[pos, 0] + cos_phi * V1[pos, 1]
-                    V1[pos, 0] = new_x * 1.5
-                    V1[pos, 1] = new_y * 1.5
+                    V1[pos, 0] = new_x
+                    V1[pos, 1] = new_y
                     V1 = torch.cat((V1, -V1[pos,:]), axis=0)
 
                     T1 = torch.cat((T1, T1[pos,:]), axis=0)
@@ -1149,7 +1152,6 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
         torch.save(h_list, f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt')
 
         bDetails = False
-
 def data_train(model_config, bSparse=False):
     print('')
 
