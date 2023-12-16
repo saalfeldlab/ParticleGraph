@@ -1889,7 +1889,8 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         else:
             distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
             t = torch.Tensor([radius ** 2])  # threshold
-            adj_t = (distance < radius ** 2).float() * 1
+            adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
+
             edge_index = adj_t.nonzero().t().contiguous()
 
             dataset = data.Data(x=x, edge_index=edge_index)
@@ -2206,7 +2207,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
         for k in np.arange(0, len(x) - 1, 4):
             distance = torch.sum(bc_diff(x[k][:, None, 1:3] - x[k][None, :, 1:3]) ** 2, axis=2)
             t = torch.Tensor([radius ** 2])  # threshold
-            adj_t = (distance < radius ** 2).float() * 1
+            adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
             edge_index = adj_t.nonzero().t().contiguous()
             dataset = data.Data(x=x, edge_index=edge_index)
             distance = np.sqrt(distance[edge_index[0, :], edge_index[1, :]].detach().cpu().numpy())
@@ -2227,7 +2228,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
                 for k in np.arange(0, len(x) - 1, 4):
                     distance = torch.sum(bc_diff(x[k][:, None, 1:3] - x[k][None, :, 1:3]) ** 2, axis=2)
                     t = torch.Tensor([radius ** 2])  # threshold
-                    adj_t = (distance < radius ** 2).float() * 1
+                    adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
                     edge_index = adj_t.nonzero().t().contiguous()
                     dataset = data.Data(x=x, edge_index=edge_index)
                     distance = np.sqrt(distance[edge_index[0, :], edge_index[1, :]].detach().cpu().numpy())
@@ -2696,6 +2697,9 @@ if __name__ == '__main__':
         # Load parameters from config file
         with open(f'./config/{config}.yaml', 'r') as file:
             model_config = yaml.safe_load(file)
+
+        if not('min_radius' in model_config):
+            model_config['min_radius']=0
 
         for key, value in model_config.items():
             print(key, ":", value)
