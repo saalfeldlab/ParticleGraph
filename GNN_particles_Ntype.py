@@ -2688,7 +2688,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    config_list = ['config_44_gravity', 'config_48_gravity'] # 'config_148_boid_1800_8_rnd'] #,'config_149_boid_3600_8_rnd','config_150_boid_3600_16_rnd'] # ['config_44_gravity','config_45_gravity'] 'config_147_boid']  #['config_44_gravity','config_45_gravity','config_145_boid','config_146_boid'] # ['config_144_boid']
+    config_list = ['config_44_gravity'] # 'config_148_boid_1800_8_rnd'] #,'config_149_boid_3600_8_rnd','config_150_boid_3600_16_rnd'] # ['config_44_gravity','config_45_gravity'] 'config_147_boid']  #['config_44_gravity','config_45_gravity','config_145_boid','config_146_boid'] # ['config_144_boid']
 
     for config in config_list:
 
