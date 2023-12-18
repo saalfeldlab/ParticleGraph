@@ -1149,7 +1149,8 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
 
 
                 plt.tight_layout()
-                plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
+                local_path = ensure_local_path_exists("tmp_data")
+                plt.savefig(os.path.join(local_path, f"Fig_{ntry}_{it}.tif"))
                 plt.close()
 
         torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')

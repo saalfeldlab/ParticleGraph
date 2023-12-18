@@ -1,6 +1,8 @@
 from math import sqrt, atan2
 import colorsys
+import os
 NEIGHBORHOOD_RADIUS = 40
+
 
 class Vector:
 	def __init__(self, x=0, y=0):
@@ -83,3 +85,9 @@ def hsv_to_rgb(h, s, v):
 
 def SubVectors(v1, v2):
 	return Vector(v1.x - v2.x, v1.y - v2.y)
+
+
+def ensure_local_path_exists(path):
+	if not os.path.exists(path):
+		os.makedirs(path)
+	return os.path.join(os.getcwd(), path)
