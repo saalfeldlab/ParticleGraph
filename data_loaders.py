@@ -18,25 +18,9 @@ def load_shrofflab_celegans(file_path):
         torch.Tensor: A PyTorch tensor containing the loaded data.
     """
 
-    dtypes = {"time": np.float32, "x": np.float32, "y": np.float32, "z": np.float32, "cell": str, "log10 mean cpm": str}
+    dtypes = {"time": np.float32, "x": np.float32, "y": np.float32,
+              "z": np.float32, "cell": str, "log10 mean cpm": str}
     data = pd.read_csv(file_path, dtype=dtypes)
-    data, time = clean_and_prepare(data)
-
-    tensor = torch.from_numpy(data)
-
-    return tensor, time
-
-
-def clean_and_prepare(data):
-    """
-    Separate the data for each cell into its own dataset.
-
-    Args:
-        array (numpy.ndarray): A numpy array containing the data for all cells.
-
-    Returns:
-        tensor (numpy.ndarray): tensor where each page is the data for one timepoint.
-    """
 
     # Find the indices where the data for each cell begins (time resets)
     timeseries_start = np.hstack(
@@ -61,17 +45,16 @@ def clean_and_prepare(data):
         print(f"Warning: some cells have abnormal time series lengths and will be padded by NaN: {abnormal_cells}")
 
     # Put values into a 3D tensor
-    tensor = np.nan * np.ones((n_cells * n_normal_datapoints, 5))
+    relevant_fields = ["x", "y", "z", "log10 mean cpm"]
+    tensor = np.nan * np.ones((n_cells * n_normal_datapoints, len(relevant_fields)))
     time_idx = (data["time"].values - start_time).astype(int)
     cell_idx = np.repeat(np.arange(n_cells), n_datapoints)
     time = np.arange(start_time, end_time)
     idx = np.ravel_multi_index((cell_idx, time_idx), (n_cells, n_normal_datapoints))
-    tensor[idx, 0] = data["time"].values
-    tensor[idx, 1] = data["x"].values
-    tensor[idx, 2] = data["y"].values
-    tensor[idx, 3] = data["z"].values
-    tensor[idx, 4] = data["log10 mean cpm"].values
-    tensor = tensor.reshape((n_cells, n_normal_datapoints, 5))
-    np.transpose(tensor, (0, 2, 1))
+    for i, name in enumerate(relevant_fields):
+        tensor[idx, i] = data[name].values
+    tensor =  np.transpose(tensor.reshape((n_cells, n_normal_datapoints, len(relevant_fields))), (0, 2, 1))
+
+    tensor = torch.from_numpy(tensor)
 
     return tensor, time
