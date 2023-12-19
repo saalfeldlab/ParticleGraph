@@ -684,6 +684,8 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
     dataset_name = model_config['dataset']
     folder = f'./graphs_data/graphs_particles_{dataset_name}/'
     os.makedirs(folder, exist_ok=True)
+    folder = f'./graphs_data/graphs_particles_{dataset_name}/tmp_data/'
+    os.makedirs(folder, exist_ok=True)
 
     files = glob.glob(f"./tmp_data/*")
     for f in files:
@@ -1148,7 +1150,7 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
 
 
                 plt.tight_layout()
-                plt.savefig(f"./tmp_data/Fig_{dataset_name}_{it}.tif")
+                plt.savefig(f'./graphs_data/graphs_particles_{dataset_name}/tmp_data/Fig_{dataset_name}_{it}.tif')
                 plt.close()
 
         torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
@@ -1156,6 +1158,7 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
         torch.save(h_list, f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt')
 
         bDetails = False
+
 def data_train(model_config, bSparse=False):
     print('')
 
@@ -2680,7 +2683,7 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        data_generate(model_config, bVisu=True, bDetails=False, bErase=True, step=5)
+        data_generate(model_config, bVisu=True, bDetails=True, bErase=True, step=5)
         data_train(model_config)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
