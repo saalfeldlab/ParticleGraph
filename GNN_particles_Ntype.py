@@ -683,18 +683,19 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
 
     dataset_name = model_config['dataset']
     folder = f'./graphs_data/graphs_particles_{dataset_name}/'
-    os.makedirs(folder, exist_ok=True)
-    folder = f'./graphs_data/graphs_particles_{dataset_name}/tmp_data/'
-    os.makedirs(folder, exist_ok=True)
-
-    files = glob.glob(f"./tmp_data/*")
-    for f in files:
-        os.remove(f)
 
     if bErase:
         files = glob.glob(f"{folder}/*")
         for f in files:
-            os.remove(f)
+            if f[-8:]!='tmp_data':
+                os.remove(f)
+
+    os.makedirs(folder, exist_ok=True)
+    os.makedirs(f'./graphs_data/graphs_particles_{dataset_name}/tmp_data/', exist_ok=True)
+
+    files = glob.glob(f'./graphs_data/graphs_particles_{dataset_name}/tmp_data/*')
+    for f in files:
+        os.remove(f)
 
     copyfile(os.path.realpath(__file__), os.path.join(folder, 'generation_code.py'))
 
@@ -1089,7 +1090,7 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
                         edge_index2 = adj_t2.nonzero().t().contiguous()
                         dataset2 = data.Data(x=x, edge_index=edge_index2)
                         vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
-                    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False, alpha=0.25)
+                    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False, alpha=0.05)
                 if bMesh | (model_config['boundary'] == 'periodic'):
                     plt.xlim([0, 1])
                     plt.ylim([0, 1])
@@ -1147,7 +1148,6 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
                             plt.arrow(x=x[k, 1].detach().cpu().item(), y=x[k, 2].detach().cpu().item(),
                                       dx=x[k, 3].detach().cpu().item() * model_config['arrow_length'],
                                       dy=x[k, 4].detach().cpu().item() * model_config['arrow_length'], color='k',alpha=0.25)
-
 
                 plt.tight_layout()
                 plt.savefig(f'./graphs_data/graphs_particles_{dataset_name}/tmp_data/Fig_{dataset_name}_{it}.tif')
@@ -1280,7 +1280,7 @@ def data_train(model_config, bSparse=False):
     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     print(f'network: {net}')
     logger.info(f'network: {net}')
-    Nepochs = 25  ######################## 22
+    Nepochs = 20  ######################## 22
     logger.info(f'N epochs: {Nepochs}')
     print('')
 
@@ -1309,16 +1309,16 @@ def data_train(model_config, bSparse=False):
 
     for epoch in range(Nepochs + 1):
 
-        if epoch == 1:
+        if epoch == 0:
             batch_size = model_config['batch_size']
             print(f'batch_size: {batch_size}')
             logger.info(f'batch_size: {batch_size}')
-        if epoch == 5:
+        if epoch == 0:
             if data_augmentation:
                 data_augmentation_loop = 200
                 print(f'data_augmentation_loop: {data_augmentation_loop}')
                 logger.info(f'data_augmentation_loop: {data_augmentation_loop}')
-        if epoch == 10:
+        if epoch == 3*Nepochs//4:
             lra = 1E-3
             lr = 5E-4
             table = PrettyTable(["Modules", "Parameters"])
@@ -1333,7 +1333,7 @@ def data_train(model_config, bSparse=False):
                 it += 1
             print(f'Learning rates: {lr}, {lra}')
             logger.info(f'Learning rates: {lr}, {lra}')
-        if epoch == 24:
+        if epoch == Nepochs-2:
             print('not training embedding ...')
             logger.info('not training embedding ...')
             model.a.requires_grad = False
@@ -1606,8 +1606,7 @@ def data_train(model_config, bSparse=False):
         for n in range(model_config['ninteractions']):
             plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
 
-        if (epoch == 9) | (epoch == 14) | (epoch == 19) | (epoch == 24):
-
+        if (epoch == 1*Nepochs//4) | (epoch == 2*Nepochs//4) | (epoch == 3*Nepochs//4) | (epoch == Nepochs-3):
             model_a_ = model.a.clone().detach()
             model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
             embedding_center = []
