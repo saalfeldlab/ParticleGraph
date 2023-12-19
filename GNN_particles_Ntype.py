@@ -701,7 +701,6 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
     f.write(json_)
     f.close()
 
-    ntry = model_config['ntry']
     radius = model_config['radius']
     min_radius = model_config['min_radius']
     nparticle_types = model_config['nparticle_types']
@@ -872,7 +871,7 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
         noise_current = 0 * torch.randn((nparticles, 2), device=device)
         noise_prev_prev = 0 * torch.randn((nparticles, 2), device=device)
 
-        for it in tqdm(range(model_config['start_frame'], nframes)):
+        for it in tqdm(range(model_config['start_frame'], model_config['start_frame']+nframes)):
 
             if (it>0) & bDivision & (nparticles<20000):
                 cycle_test = (torch.ones(nparticles, device=device) + 0.05 * torch.randn(nparticles, device=device))
@@ -1149,7 +1148,7 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
 
 
                 plt.tight_layout()
-                plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
+                plt.savefig(f"./tmp_data/Fig_{dataset_name}_{it}.tif")
                 plt.close()
 
         torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
@@ -1161,7 +1160,6 @@ def data_train(model_config, bSparse=False):
     print('')
 
     model = []
-    ntry = model_config['ntry']
     radius = model_config['radius']
     min_radius = model_config['min_radius']
     nparticle_types = model_config['nparticle_types']
@@ -1181,7 +1179,7 @@ def data_train(model_config, bSparse=False):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
     l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(ntry))
+    log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
     print('log_dir: {}'.format(log_dir))
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'models'), exist_ok=True)
@@ -1276,7 +1274,7 @@ def data_train(model_config, bSparse=False):
     logger.info(f"Total Trainable Params: {total_params}")
     logger.info(f'Learning rates: {lr}, {lra}')
 
-    net = f"./log/try_{ntry}/models/best_model_with_{NGraphs - 1}_graphs.pt"
+    net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     print(f'network: {net}')
     logger.info(f'network: {net}')
     Nepochs = 25  ######################## 22
@@ -1659,7 +1657,7 @@ def data_train(model_config, bSparse=False):
             #     ax.set_ylabel('RMSE [a.u]', fontsize=14, color='r')
 
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/Fig_{ntry}_{epoch}.tif")
+        plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
         plt.close()
 def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0,
               prev_index_particles=0, best_model=0, step=5, bTest='', folder_out='tmp_recons', initial_map='',forced_embedding=[], forced_color=0):
@@ -1673,8 +1671,8 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         print('Plot validation test ... ')
 
     model = []
-    ntry = model_config['ntry']
     radius = model_config['radius']
+    min_radius = model_config['min_radius']
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
     dataset_name = model_config['dataset']
@@ -1726,9 +1724,9 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
     NGraphs = int(len(graph_files))
     if best_model == -1:
-        net = f"./log/try_{ntry}/models/best_model_with_{NGraphs - 1}_graphs.pt"
+        net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     else:
-        net = f"./log/try_{ntry}/models/best_model_with_{NGraphs - 1}_graphs_{best_model}.pt"
+        net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_{best_model}.pt"
     if bPrint:
         print('Graph files N: ', NGraphs - 1)
         print(f'network: {net}')
@@ -1772,10 +1770,10 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             nparticles = new_nparticles
             model_config['nparticles'] = new_nparticles
 
-    ynorm = torch.load(f'./log/try_{ntry}/ynorm.pt', map_location=device).to(device)
-    vnorm = torch.load(f'./log/try_{ntry}/vnorm.pt', map_location=device).to(device)
+    ynorm = torch.load(f'./log/try_{dataset_name}/ynorm.pt', map_location=device).to(device)
+    vnorm = torch.load(f'./log/try_{dataset_name}/vnorm.pt', map_location=device).to(device)
     if bMesh:
-        hnorm = torch.load(f'./log/try_{ntry}/hnorm.pt', map_location=device).to(device)
+        hnorm = torch.load(f'./log/try_{dataset_name}/hnorm.pt', map_location=device).to(device)
 
     table = PrettyTable(["Modules", "Parameters"])
     total_params = 0
@@ -1789,7 +1787,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
         print(table)
         print(f"Total Trainable Params: {total_params}")
     l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(ntry))
+    log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
     print('log_dir: {}'.format(log_dir))
 
     x_recons = []
@@ -2093,67 +2091,25 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             plt.tight_layout()
 
             if len(forced_embedding) > 0:
-                plt.savefig(f"./{folder_out}/Fig_{ntry}_{forced_color}_{it}.tif")
+                plt.savefig(f"./{folder_out}/Fig_{dataset_name}_{forced_color}_{it}.tif")
             else:
-                plt.savefig(f"./{folder_out}/Fig_{ntry}_{it}.tif")
+                plt.savefig(f"./{folder_out}/Fig_{dataset_name}_{it}.tif")
 
             plt.close()
 
     print(f'RMSE: {np.round(rmserr.item(), 4)}')
     if bPrint:
-        print(f'ntry: {ntry}')
+        print(f'dataset_name: {dataset_name}')
         # print(f'MMD: {np.round(discrepency, 4)}')
 
     torch.save(x_recons, f'{log_dir}/x_list.pt')
     torch.save(y_recons, f'{log_dir}/y_list.pt')
 
     return x.detach().cpu().numpy(), rmserr_list
-def data_test_generate(model_config, bVisu=True, bDetails=False, step=5):
-    # scenario A
-    # X1[:, 0] = X1[:, 0] / nparticle_types
-    # for n in range(nparticle_types):
-    #     X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / nparticle_types
-
-    # scenario B
-    # X1[index_particles[0], :] = X1[index_particles[0], :]/2 + 1/4
-
-    # scenario C
-    # i0 = imread('graphs_data/pattern_1.tif')
-    # pos = np.argwhere(i0 == 255)
-    # l = np.arange(pos.shape[0])
-    # l = np.random.permutation(l)
-    # X1[index_particles[0],:] = torch.tensor(pos[l[index_particles[0]],:]/255,dtype=torch.float32,device=device)
-    # pos = np.argwhere(i0 == 0)
-    # l = np.arange(pos.shape[0])
-    # l = np.random.permutation(l)
-    # X1[index_particles[1],:] = torch.tensor(pos[l[index_particles[0]],:]/255,dtype=torch.float32,device=device)
-
-    # scenario D
-    # i0 = imread('graphs_data/pattern_3.tif')
-    # pos = np.argwhere(i0 == 255)
-    # l = np.arange(pos.shape[0])
-    # l = np.random.permutation(l)
-    # X1[index_particles[0],:] = torch.tensor(pos[l[0:1600*3],:]/255,dtype=torch.float32,device=device)
-    # pos = np.argwhere(i0 == 128)
-    # l = np.arange(pos.shape[0])
-    # l = np.random.permutation(l)
-    # X1[index_particles[1],:] = torch.tensor(pos[l[0:1600*3],:]/255,dtype=torch.float32,device=device)
-    # pos = np.argwhere(i0 == 0)
-    # l = np.arange(pos.shape[0])
-    # l = np.random.permutation(l)
-    # X1[index_particles[2],:] = torch.tensor(pos[l[0:1600*3],:]/255,dtype=torch.float32,device=device)
-
-    # scenario E
-    # i0 = imread('graphs_data/pattern_5.tif')
-    # values=i0[(X1[:,0].detach().cpu().numpy()*256).astype(int),(X1[:,1].detach().cpu().numpy()*256).astype(int)]
-    # H1 = torch.tensor(values/255*1.5,device=device)
-    # H1 = H1[:,None]
-
-    return prev_nparticles, new_nparticles, prev_index_particles, index_particles
 def data_plot(model_config, epoch, bPrint, best_model=0):
     model = []
-    ntry = model_config['ntry']
     radius = model_config['radius']
+    min_radius = model_config['min_radius']
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
     dataset_name = model_config['dataset']
@@ -2166,7 +2122,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
     l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(ntry))
+    log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
     print('log_dir: {}'.format(log_dir))
 
     os.makedirs(log_dir, exist_ok=True)
@@ -2318,9 +2274,9 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
         print(f'Training InteractionParticles')
 
     if best_model == -1:
-        net = f"./log/try_{ntry}/models/best_model_with_{NGraphs - 1}_graphs.pt"
+        net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     else:
-        net = f"./log/try_{ntry}/models/best_model_with_{NGraphs - 1}_graphs_{best_model}.pt"
+        net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_{best_model}.pt"
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
 
@@ -2689,7 +2645,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    config_list = ['config_49_gravity'] # 'config_148_boid_1800_8_rnd'] #,'config_149_boid_3600_8_rnd','config_150_boid_3600_16_rnd'] # ['config_44_gravity','config_45_gravity'] 'config_147_boid']  #['config_44_gravity','config_45_gravity','config_145_boid','config_146_boid'] # ['config_144_boid']
+    config_list = ['config_arbitrary','config_arbitrary_replace']
 
     for config in config_list:
 
@@ -2698,7 +2654,6 @@ if __name__ == '__main__':
         # Load parameters from config file
         with open(f'./config/{config}.yaml', 'r') as file:
             model_config = yaml.safe_load(file)
-
         if not('min_radius' in model_config):
             model_config['min_radius']=0
 
