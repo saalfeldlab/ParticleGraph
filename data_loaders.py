@@ -67,7 +67,13 @@ def load_shrofflab_celegans(
     idx = np.ravel_multi_index((cell_idx, time_idx), (n_cells, n_normal_timepoints))
     for i, name in enumerate(relevant_fields):
         tensor[idx, i] = data[name].values
-    tensor =  np.transpose(tensor.reshape(shape), (0, 2, 1))
+    tensor = np.transpose(tensor.reshape(shape), (0, 2, 1))
+
+    # Compute the time derivatives and concatenate such that columns corespond to:
+    # x, y, z, d/dt x, d/dt y, d/dt z, cpm, d/dt cpm
+    tensor_gradient = np.gradient(tensor, axis=2)
+    tensor = np.concatenate([tensor[:, 0:3, :], tensor_gradient[:, 0:3, :],
+                             tensor[:, 3:4, :], tensor_gradient[:, 3:4, :]], axis=1)
 
     torch_tensor = torch.from_numpy(tensor)
     time = np.arange(start_time, end_time)
