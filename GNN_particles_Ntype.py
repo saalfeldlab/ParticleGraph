@@ -2662,14 +2662,14 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    # config_list = ['config_arbitrary', 'config_arbitrary_regul_replace']
-    config_list = ['config_arbitrary_replace','config_arbitrary_regul']
+    config_list = ['config_arbitrary', 'config_arbitrary_regul_replace']
+    # config_list = ['config_arbitrary_replace','config_arbitrary_regul']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
