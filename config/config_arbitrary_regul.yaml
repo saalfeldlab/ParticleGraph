@@ -5,7 +5,7 @@ n_mp_layers: 5
 noise_level: 0
 radius: 0.075
 min_radius: 0
-dataset: 'arbitrary'
+dataset: 'aribtrary_regul'
 nparticles: 4800
 nparticle_types: 3
 ninteractions: 3
@@ -17,7 +17,7 @@ aggr_type: 'mean'
 boundary: 'periodic' # periodic   'no'  # no boundary condition
 data_augmentation: True
 batch_size: 8
-embedding: 2 
+embedding: 2
 model: 'PDE_A'
 prediction: 'first_derivative_S'
 upgrade_type: 'none'
@@ -29,4 +29,4 @@ start_frame: 20
 arrow_length: 20
 cmap: 'tab10'
 description: '3 interaction particles'
-sparsity: 'none'
+sparsity: 'regul'

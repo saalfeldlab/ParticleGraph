@@ -195,6 +195,7 @@ class PDE_A(pyg.nn.MessagePassing):
     def psi(self, r, p):
         return r * (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(
             -r ** (2 * p[1]) / (2 * sigma ** 2)))
+
 class PDE_embedding(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -221,6 +222,10 @@ class PDE_embedding(pyg.nn.MessagePassing):
     def psi(self, r, p):
         return r * (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(
             -r ** (2 * p[1]) / (2 * sigma ** 2)))
+
+
+
+
 class PDE_B(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -1363,7 +1368,7 @@ def data_train(model_config, model_embedding, bSparse=False):
 
         total_loss = 0
 
-        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size//10)):
+        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size)):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -1372,8 +1377,6 @@ def data_train(model_config, model_embedding, bSparse=False):
             run = 1 + np.random.randint(NGraphs - 1)
 
             dataset_batch = []
-            loss_embedding = torch.zeros(1,dtype=torch.float32, device=device)
-
             for batch in range(batch_size):
 
                 k = np.random.randint(nframes - 1)
@@ -1409,37 +1412,24 @@ def data_train(model_config, model_embedding, bSparse=False):
                     else:
                         y_batch = torch.cat((y_batch, y), axis=0)
 
-                    if (sparsity=='regul') & (epoch>Nepochs//4) & (epoch<3*Nepochs//4):
+                    if False: # epoch>3*Nepochs//4:
                         embedding = []
                         for n in range(model.a.shape[0]):
                             embedding.append(model.a[n])
                         embedding = torch.stack(embedding).squeeze()
-
-                        # dataset = data.Data(x=embedding, pos=embedding.detach())
-                        # transform_0 = T.Compose([T.Delaunay()])
-                        # dataset_face = transform_0(dataset).face
-                        # mesh_pos = torch.cat((embedding, torch.ones((embedding.shape[0], 1), device=device)), dim=1)
-                        # edges_embedding, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,normalization="None")  # "None", "sym", "rw"
-                        # dataset_embedding = data.Data(x=embedding, edge_index=edges_embedding)
-                        # pred = model_embedding(dataset_embedding)
-                        # loss_embedding += pred.norm(2)*1E4
-
                         radius_embedding = torch.std(embedding) / 2
                         distance = torch.sum((embedding[:, None, :] - embedding[None, :, :]) ** 2, axis=2)
                         adj_t = (distance < radius_embedding ** 2).float() * 1
                         t = torch.Tensor([radius_embedding ** 2])
                         edges_embedding = adj_t.nonzero().t().contiguous()
                         dataset_embedding = data.Data(x=embedding, edge_index=edges_embedding)
+                        pos = dict(enumerate(np.array(embedding.detach().cpu()), 0))
+                        vis = to_networkx(dataset_embedding, remove_self_loops=True, to_undirected=True)
+                        fig = plt.figure(figsize=(12, 12))
+                        plt.ion()
+                        plt.scatter(embedding[:,0].detach().cpu().numpy(),embedding[:,1].detach().cpu().numpy(),s=1,alpha=0.05,c='k')
+                        nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False, alpha=0.1)
                         pred = model_embedding(dataset_embedding)
-                        loss_embedding += pred.norm(2)
-
-                        # pos = dict(enumerate(np.array(embedding.detach().cpu()), 0))
-                        # vis = to_networkx(dataset_embedding, remove_self_loops=True, to_undirected=True)
-                        # fig = plt.figure(figsize=(12, 12))
-                        # plt.ion()
-                        # plt.scatter(embedding[:,0].detach().cpu().numpy(),embedding[:,1].detach().cpu().numpy(),s=1,alpha=0.05,c='k')
-                        # nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False, alpha=0.1)
-                        # pred = model_embedding(dataset_embedding)
 
                 batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
                 optimizer.zero_grad()
@@ -1450,7 +1440,15 @@ def data_train(model_config, model_embedding, bSparse=False):
                     else:
                         pred = model(batch, data_id=run - 1, step=1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
 
-            loss = (pred - y_batch).norm(2) + loss_embedding
+            if regul_embedding > 0:
+                regul_term_embedding = (model.a[run - 1] - embedding_center[0].clone().detach()) ** 2
+                for k in range(1, model_config['ninteractions']):
+                    regul_term_embedding = regul_term_embedding * (
+                                model.a[run - 1] - embedding_center[k].clone().detach()) ** 2
+                regul_term_embedding = regul_embedding * torch.sqrt(torch.mean(regul_term_embedding))
+                loss = (pred - y_batch).norm(2) + regul_term_embedding
+            else:
+                loss = (pred - y_batch).norm(2)
 
             loss.backward()
             optimizer.step()
@@ -1675,7 +1673,38 @@ def data_train(model_config, model_embedding, bSparse=False):
                         model.a[n] = model_a_[0].clone().detach()
                 print(f'regul_embedding: replaced')
                 logger.info(f'regul_embedding: replaced')
+            elif 'regul' in sparsity:
+                regul_embedding = float(sparsity[-4:])
+                print(f'regul_embedding: {regul_embedding}')
+                logger.info(f'regul_embedding: {regul_embedding}')
 
+        if False: #(epoch % 10 == 0) & (epoch > 0):
+            best_loss = total_loss / N / nparticles / batch_size
+            torch.save({'model_state_dict': model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict()},
+                       os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs.pt'))
+            xx, rmserr_list = data_test(model_config, bVisu=True, bPrint=False, step=int(nframes // 20),
+                                        folder_out=f'{log_dir}/tmp_recons/')
+            model.train()
+            # if (epoch > 9):
+            #     ax = fig.add_subplot(2, 4, 5)
+            #     for n in range(nparticle_types):
+            #         plt.scatter(xx[index_particles[n], 1], xx[index_particles[n], 2], s=1,color='k')
+            #     ax = plt.gca()
+            #     ax.axes.xaxis.set_ticklabels([])
+            #     ax.axes.yaxis.set_ticklabels([])
+            #     plt.xlim([0,1])
+            #     plt.ylim([0,1])
+            #     ax.axes.get_xaxis().set_visible(False)
+            #     ax.axes.get_yaxis().set_visible(False)
+            #     plt.axis('off')
+            #     ax = fig.add_subplot(2, 4, 6)
+            #     plt.plot(np.arange(len(rmserr_list)), rmserr_list, label='RMSE', color='r')
+            #     plt.ylim([0, 0.1])
+            #     plt.xlim([0, nframes])
+            #     plt.tick_params(axis='both', which='major', labelsize=10)
+            #     plt.xlabel('Frame [a.u]', fontsize=14)
+            #     ax.set_ylabel('RMSE [a.u]', fontsize=14, color='r')
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
@@ -2661,20 +2690,20 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    config_list = ['config_arbitrary_replace','config_arbitrary_regul']
+    config_list = ['config_arbitrary']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
     p = torch.ones(1, 4, device=device)
     p[0] = torch.tensor(model_config_embedding['p'][0])
-    model_embedding = PDE_embedding(aggr_type='mean', p=p, tau=model_config_embedding['tau'],prediction=model_config_embedding['prediction'])
-    model_embedding.eval()
+    model_embedding = PDE_embedding(aggr_type='mean', p=p, tau=model_config_embedding['tau'],
+                  prediction=model_config_embedding['prediction'])
 
     for config in config_list:
 
@@ -2704,6 +2733,8 @@ if __name__ == '__main__':
         else:
             def bc_pos(X):
                 return torch.remainder(X, 1.0)
+
+
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 

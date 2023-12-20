@@ -5,9 +5,9 @@ n_mp_layers: 5
 noise_level: 0
 radius: 0.075
 min_radius: 0
-dataset: 'arbitrary'
+dataset: 'embedding'
 nparticles: 4800
-nparticle_types: 3
+nparticle_types: 1
 ninteractions: 3
 nframes: 250
 sigma: 0.005
@@ -23,7 +23,7 @@ prediction: 'first_derivative_S'
 upgrade_type: 'none'
 nlayers_update: 3
 hidden_size_update: 64
-p: [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855], [1.785, 1.8579, 1.7226, 1.0584]]
+p: [[1.8308, 1.9055, 1.7667, 1.0855]]
 nrun: 2
 start_frame: 20
 arrow_length: 20
