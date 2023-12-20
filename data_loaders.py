@@ -21,8 +21,12 @@ def load_shrofflab_celegans(
         replace_missing_cpm (float): If not None, replace missing cpm values with this value.
 
     Returns:
-        torch_tensor (torch.Tensor): A PyTorch tensor containing the loaded data.
-        times (np.ndarray): The time points corresponding to the data.
+        tensor_list (List[torch.Tensor]): A list of PyTorch tensors containing the loaded data for each time point.
+        time (np.ndarray): The time points corresponding to the data.
+        cell_names (np.ndarray): The names of the cells in the data.
+
+    Raises:
+        ValueError: If the time series are not part of the same timeframe or if too many cells have abnormal time series lengths.
     """
 
     # Load the data from the CSV file and clean it a bit:
@@ -57,7 +61,7 @@ def load_shrofflab_celegans(
     if n_normal_data != n_cells:
         abnormal_data = n_timepoints != n_normal_timepoints
         abnormal_cells = cell_names[abnormal_data]
-        print(f"Warning: incomplete time series data will be replaced by NaN for {abnormal_cells}")
+        print(f"Warning: incomplete time series data for {abnormal_cells}")
 
     # Put values into a 3D tensor
     relevant_fields = ["x", "y", "z", "log10 mean cpm"]
