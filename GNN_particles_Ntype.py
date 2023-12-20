@@ -310,7 +310,6 @@ class PDE_E(pyg.nn.MessagePassing):
         acc = p1 * p2 * r / r_ ** 3
         acc = torch.clamp(acc, max=self.pred_limit)
         return acc  # Elec particles
-
 class PDE_G(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -1429,7 +1428,7 @@ def data_train(model_config, model_embedding):
 
         total_loss = 0
 
-        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size//5)):
+        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size)):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -1765,6 +1764,7 @@ def data_train_shrofflab_celegans(model_config):
     bMesh = (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh')
     bRegul = 'regul' in model_config['sparsity']
     bReplace = 'replace' in model_config['sparsity']
+    Nepochs = model_config['Nepochs']
 
     # training file management ###
 
@@ -1864,7 +1864,6 @@ def data_train_shrofflab_celegans(model_config):
 
     model = InteractionCElegans(model_config, device)
 
-
     lra = 1E-3
     lr = 1E-3
 
@@ -1889,7 +1888,6 @@ def data_train_shrofflab_celegans(model_config):
     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs}_graphs.pt"
     print(f'network: {net}')
     logger.info(f'network: {net}')
-    Nepochs = 20  ######################## 22
     logger.info(f'N epochs: {Nepochs}')
     print('')
 
@@ -1939,7 +1937,7 @@ def data_train_shrofflab_celegans(model_config):
 
         total_loss = 0
 
-        for N in tqdm(range(0, nframes[0] // batch_size * 2)):
+        for N in tqdm(range(0, nframes[0] // batch_size * 10)):
 
             run = np.random.randint(NGraphs)
 
@@ -1976,7 +1974,7 @@ def data_train_shrofflab_celegans(model_config):
                 if model_config['prediction'] == '2nd_derivative':
                     y = y[:,4:7] / ynorm
                 else:
-                    y = y[:,4:7] / vnorm
+                    y = y[:,1:4] / vnorm
                 if batch == 0:
                     y_batch = y
                 else:
@@ -2014,31 +2012,39 @@ def data_train_shrofflab_celegans(model_config):
             torch.save({'model_state_dict': model.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict()},
                        os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs.pt'))
-            print("Epoch {}. Loss: {:.6f} saving model  ".format(epoch, total_loss / (N+1) / nparticles / batch_size))
-            logger.info("Epoch {}. Loss: {:.6f} saving model  ".format(epoch, total_loss / (N+1) / nparticles / batch_size))
+            print("Epoch {}. Loss: {:.6f} saving model  ".format(epoch, total_loss / (N+1) / batch_size))
+            logger.info("Epoch {}. Loss: {:.6f} saving model  ".format(epoch, total_loss / (N+1) / batch_size))
         else:
             print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N+1)  / batch_size))
             logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N+1)  / batch_size))
 
         list_loss.append(total_loss / (N+1) / nparticles / batch_size)
 
-        fig = plt.figure(figsize=(16, 8))
-        plt.ion()
+        fig = plt.figure(figsize=(16, 4))
+        # plt.ion()
 
-        ax = fig.add_subplot(2, 4, 1)
+        ax = fig.add_subplot(1, 4, 1)
         plt.plot(list_loss, color='k')
         plt.xlim([0, Nepochs])
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
+
         embedding = []
         for n in range(model.a.shape[0]):
             embedding.append(model.a[n])
         embedding = torch.stack(embedding).detach().cpu().numpy()
         embedding = np.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
-        embedding_particle = []
-        for m in range(model.a.shape[0]):
-            for n in range(nparticle_types):
-                embedding_particle.append(embedding[index_particles[n] + m * nparticles, :])
+
+        ax = fig.add_subplot(1, 4, 2)
+        if (embedding.shape[1] > 2):
+            ax = fig.add_subplot(2, 4, 2, projection='3d')
+            ax.scatter(embedding[:, 0], embedding[n][:, 1], embedding[n][:, 2],color='k', s=1)
+        else:
+            if (embedding.shape[1] > 1):
+                for m in range(model.a.shape[0]):
+                    plt.scatter(embedding[:, 0],embedding[:, 1], color='k', s=3)
+                plt.xlabel('Embedding 0', fontsize=12)
+                plt.ylabel('Embedding 1', fontsize=12)
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
@@ -3024,7 +3030,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3032,7 +3038,10 @@ if __name__ == '__main__':
 
     # config_list = ['config_arbitrary', 'config_arbitrary_regul_replace']
     # config_list = ['config_arbitrary_replace','config_arbitrary_regul']
-    config_list=['config_CElegans']
+
+    config_list = ['config_gravity_regul_replace']
+
+    # config_list=['config_CElegans_acc']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3073,9 +3082,9 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
         # data_generate(model_config, bVisu=True, bDetails=False, bErase=True, step=5)
-        # data_train(model_config,model_embedding)
+        data_train(model_config,model_embedding)
 
-        data_train_shrofflab_celegans(model_config)
+        # data_train_shrofflab_celegans(model_config)
 
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)

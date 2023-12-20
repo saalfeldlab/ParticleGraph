@@ -6,7 +6,7 @@ noise_level: 0
 radius: 0.075
 min_radius: 0
 input_dataset: '~/Desktop/signaling/4D_CElegans/log10_mean-and-smoothed_lin-32.csv'
-dataset: 'CElegans'
+dataset: 'CElegans_acc'
 nparticles: 4800
 nparticle_types: 3
 ninteractions: 3
@@ -21,7 +21,7 @@ batch_size: 8
 embedding: 2 
 model: 'PDE_A'
 Nepochs: 100 
-prediction: '1st_derivative'
+prediction: '2nd_derivative'
 upgrade_type: 'none'
 nlayers_update: 3
 hidden_size_update: 64
