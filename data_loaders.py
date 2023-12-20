@@ -11,7 +11,8 @@ import pandas as pd
 def load_shrofflab_celegans(
         file_path,
         *,
-        replace_missing_cpm=None
+        replace_missing_cpm=None,
+        device='cuda:0'
 ):
     """
     Load the Shrofflab C. elegans data from a CSV file and convert it to a PyTorch tensor.
@@ -86,7 +87,7 @@ def load_shrofflab_celegans(
         cell_tensor = tensor[i]
         cell_ids = np.where(~np.isnan(cell_tensor[:, 0]))[0]
         cell_tensor = np.column_stack((cell_ids, cell_tensor[cell_ids, :]))
-        tensor_list.append(torch.from_numpy(cell_tensor))
+        tensor_list.append(torch.tensor(cell_tensor,device=device))
 
     time = np.arange(start_time, end_time)
 
