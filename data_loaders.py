@@ -2,6 +2,7 @@
 A collection of functions for loading data from various sources.
 """
 
+import os
 import numpy as np
 import torch
 import pandas as pd
@@ -11,7 +12,7 @@ def load_shrofflab_celegans(
         file_path,
         *,
         replace_missing_cpm=None
-        ):
+):
     """
     Load the Shrofflab C. elegans data from a CSV file and convert it to a PyTorch tensor.
 
@@ -79,3 +80,19 @@ def load_shrofflab_celegans(
     time = np.arange(start_time, end_time)
 
     return torch_tensor, time
+
+
+def ensure_local_path_exists(path):
+    """
+    Ensure that the local path exists. If it doesn't, create the directory structure.
+
+    Args:
+        path (str): The path to be checked and created if necessary.
+
+    Returns:
+        str: The absolute path of the created directory.
+    """
+
+    if not os.path.exists(path):
+        os.makedirs(path)
+    return os.path.join(os.getcwd(), path)

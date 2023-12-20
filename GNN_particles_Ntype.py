@@ -32,7 +32,6 @@ import pygame
 from data_loaders import ensure_local_path_exists
 from random import uniform
 import colorsys
-from matrix import *
 from math import pi, sin, cos
 from torch_geometric.utils import degree
 from scipy.spatial import Delaunay
