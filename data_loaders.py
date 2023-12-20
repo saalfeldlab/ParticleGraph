@@ -82,12 +82,11 @@ def load_shrofflab_celegans(
         cell_tensor = tensor[i]
         cell_ids = np.where(~np.isnan(cell_tensor[0]))[0]
         cell_tensor = np.row_stack((cell_ids, cell_tensor[:,cell_ids]))
-        tensor_list.append(cell_tensor)
+        tensor_list.append(torch.from_numpy(cell_tensor))
 
-    torch_tensor = torch.from_numpy(tensor)
     time = np.arange(start_time, end_time)
 
-    return torch_tensor, time, cell_names
+    return tensor_list, time, cell_names
 
 
 def ensure_local_path_exists(path):
@@ -104,6 +103,3 @@ def ensure_local_path_exists(path):
     if not os.path.exists(path):
         os.makedirs(path)
     return os.path.join(os.getcwd(), path)
-
-if __name__ == "__main__":
-    load_shrofflab_celegans("/home/innerbergerm@hhmi.org/big-data/shrofflab-celegans/log10_mean-and-smoothed_lin-32.csv")
