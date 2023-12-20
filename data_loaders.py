@@ -49,14 +49,14 @@ def load_shrofflab_celegans(
 
     # Sanity checks to make sure the data is not too bad
     n_normal_data = np.count_nonzero(n_timepoints == n_normal_timepoints)
+    cell_names = data["cell"].values[timeseries_boundaries[:-1]]
     if (end_time - start_time) != n_normal_timepoints:
         raise ValueError("The time series are not part of the same timeframe.")
     if n_normal_data < 0.5 * n_cells:
         raise ValueError("Too many cells have abnormal time series lengths.")
     if n_normal_data != n_cells:
-        first_cell_data = timeseries_boundaries[:-1]
-        abnormal_data = first_cell_data[n_timepoints != n_normal_timepoints]
-        abnormal_cells = data["cell"][abnormal_data].values
+        abnormal_data = n_timepoints != n_normal_timepoints
+        abnormal_cells = cell_names[abnormal_data]
         print(f"Warning: incomplete time series data will be replaced by NaN for {abnormal_cells}")
 
     # Put values into a 3D tensor
@@ -76,10 +76,18 @@ def load_shrofflab_celegans(
     tensor = np.concatenate([tensor[:, 0:3, :], tensor_gradient[:, 0:3, :],
                              tensor[:, 3:4, :], tensor_gradient[:, 3:4, :]], axis=1)
 
+    # Put all the time points into a separate tensor
+    tensor_list = []
+    for i in range(n_normal_timepoints):
+        cell_tensor = tensor[i]
+        cell_ids = np.where(~np.isnan(cell_tensor[0]))[0]
+        cell_tensor = np.row_stack((cell_ids, cell_tensor[:,cell_ids]))
+        tensor_list.append(cell_tensor)
+
     torch_tensor = torch.from_numpy(tensor)
     time = np.arange(start_time, end_time)
 
-    return torch_tensor, time
+    return torch_tensor, time, cell_names
 
 
 def ensure_local_path_exists(path):
@@ -96,3 +104,6 @@ def ensure_local_path_exists(path):
     if not os.path.exists(path):
         os.makedirs(path)
     return os.path.join(os.getcwd(), path)
+
+if __name__ == "__main__":
+    load_shrofflab_celegans("/home/innerbergerm@hhmi.org/big-data/shrofflab-celegans/log10_mean-and-smoothed_lin-32.csv")
