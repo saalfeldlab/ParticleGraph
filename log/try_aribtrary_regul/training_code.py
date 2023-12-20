@@ -1199,7 +1199,8 @@ def data_train(model_config, model_embedding, bSparse=False):
     batch_size = model_config['batch_size']
     batch_size = 1
     bMesh = (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh')
-    sparsity = model_config['sparsity']
+    bRegul = 'regul' in model_config['sparsity']
+    bReplace = 'replace' in model_config['sparsity']
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -1363,7 +1364,7 @@ def data_train(model_config, model_embedding, bSparse=False):
 
         total_loss = 0
 
-        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size)):
+        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size//5)):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -1409,7 +1410,7 @@ def data_train(model_config, model_embedding, bSparse=False):
                     else:
                         y_batch = torch.cat((y_batch, y), axis=0)
 
-                    if (sparsity=='regul') & (epoch>2) & (epoch<3*Nepochs//4):
+                    if bRegul & (epoch>Nepochs//4) & (epoch<3*Nepochs//4):
                         embedding = []
                         for n in range(model.a.shape[0]):
                             embedding.append(model.a[n])
@@ -1669,41 +1670,13 @@ def data_train(model_config, model_embedding, bSparse=False):
             model_a_ = torch.reshape(model_a_, (model.a.shape[0], model.a.shape[1], model.a.shape[2]))
 
             # Constrain embedding with UMAP of plots clustering
-            if sparsity == 'replace':
+            if bReplace:
                 with torch.no_grad():
                     for n in range(model.a.shape[0]):
                         model.a[n] = model_a_[0].clone().detach()
                 print(f'regul_embedding: replaced')
                 logger.info(f'regul_embedding: replaced')
 
-
-        if False: #(epoch % 10 == 0) & (epoch > 0):
-            best_loss = total_loss / N / nparticles / batch_size
-            torch.save({'model_state_dict': model.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict()},
-                       os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs.pt'))
-            xx, rmserr_list = data_test(model_config, bVisu=True, bPrint=False, step=int(nframes // 20),
-                                        folder_out=f'{log_dir}/tmp_recons/')
-            model.train()
-            # if (epoch > 9):
-            #     ax = fig.add_subplot(2, 4, 5)
-            #     for n in range(nparticle_types):
-            #         plt.scatter(xx[index_particles[n], 1], xx[index_particles[n], 2], s=1,color='k')
-            #     ax = plt.gca()
-            #     ax.axes.xaxis.set_ticklabels([])
-            #     ax.axes.yaxis.set_ticklabels([])
-            #     plt.xlim([0,1])
-            #     plt.ylim([0,1])
-            #     ax.axes.get_xaxis().set_visible(False)
-            #     ax.axes.get_yaxis().set_visible(False)
-            #     plt.axis('off')
-            #     ax = fig.add_subplot(2, 4, 6)
-            #     plt.plot(np.arange(len(rmserr_list)), rmserr_list, label='RMSE', color='r')
-            #     plt.ylim([0, 0.1])
-            #     plt.xlim([0, nframes])
-            #     plt.tick_params(axis='both', which='major', labelsize=10)
-            #     plt.xlabel('Frame [a.u]', fontsize=14)
-            #     ax.set_ylabel('RMSE [a.u]', fontsize=14, color='r')
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
@@ -2689,13 +2662,14 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    config_list = ['config_arbitrary_regul','config_arbitrary_replace']
+    config_list = ['config_arbitrary', 'config_arbitrary_regul_replace']
+    # config_list = ['config_arbitrary_replace','config_arbitrary_regul']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)

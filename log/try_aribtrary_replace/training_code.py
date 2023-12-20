@@ -1199,7 +1199,8 @@ def data_train(model_config, model_embedding, bSparse=False):
     batch_size = model_config['batch_size']
     batch_size = 1
     bMesh = (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh')
-    sparsity = model_config['sparsity']
+    bRegul = 'regul' in model_config['sparsity']
+    bReplace = 'replace' in model_config['sparsity']
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -1363,7 +1364,7 @@ def data_train(model_config, model_embedding, bSparse=False):
 
         total_loss = 0
 
-        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size//10)):
+        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size//5)):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -1409,7 +1410,7 @@ def data_train(model_config, model_embedding, bSparse=False):
                     else:
                         y_batch = torch.cat((y_batch, y), axis=0)
 
-                    if (sparsity=='regul') & (epoch>Nepochs//4) & (epoch<3*Nepochs//4):
+                    if bRegul & (epoch>Nepochs//4) & (epoch<3*Nepochs//4):
                         embedding = []
                         for n in range(model.a.shape[0]):
                             embedding.append(model.a[n])
@@ -1669,7 +1670,7 @@ def data_train(model_config, model_embedding, bSparse=False):
             model_a_ = torch.reshape(model_a_, (model.a.shape[0], model.a.shape[1], model.a.shape[2]))
 
             # Constrain embedding with UMAP of plots clustering
-            if sparsity == 'replace':
+            if bReplace:
                 with torch.no_grad():
                     for n in range(model.a.shape[0]):
                         model.a[n] = model_a_[0].clone().detach()
@@ -2667,6 +2668,7 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
+    # config_list = ['config_arbitrary', 'config_arbitrary_regul_replace']
     config_list = ['config_arbitrary_replace','config_arbitrary_regul']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
