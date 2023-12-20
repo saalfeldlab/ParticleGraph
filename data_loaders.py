@@ -76,7 +76,7 @@ def load_shrofflab_celegans(
 
     # Compute the time derivatives and concatenate such that columns corespond to:
     # x, y, z, d/dt x, d/dt y, d/dt z, cpm, d/dt cpm
-    tensor_gradient = np.gradient(tensor, axis=2)
+    tensor_gradient = np.gradient(tensor, axis=0)
     tensor = np.concatenate([tensor[:, :, 0:3], tensor_gradient[:, :, 0:3],
                              tensor[:, :, 3:4], tensor_gradient[:, :, 3:4]], axis=2)
 
