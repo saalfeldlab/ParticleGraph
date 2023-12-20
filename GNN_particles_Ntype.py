@@ -29,10 +29,9 @@ import trackpy
 import umap
 from tifffile import imwrite, imread
 import pygame
-from tools import *
+from data_loaders import ensure_local_path_exists
 from random import uniform
 import colorsys
-from matrix import *
 from math import pi, sin, cos
 from torch_geometric.utils import degree
 from scipy.spatial import Delaunay
@@ -1175,7 +1174,8 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
                                       dy=x[k, 4].detach().cpu().item() * model_config['arrow_length'], color='k',alpha=0.25)
 
                 plt.tight_layout()
-                plt.savefig(f'./graphs_data/graphs_particles_{dataset_name}/tmp_data/Fig_{dataset_name}_{it}.tif')
+                local_path = ensure_local_path_exists(f"graphs_data/graphs_particles_{dataset_name}/tmp_data")
+                plt.savefig(os.path.join(local_path, f"Fig_{dataset_name}_{it}.tif"))
                 plt.close()
 
         torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
