@@ -68,7 +68,7 @@ def load_shrofflab_celegans(
     idx = np.ravel_multi_index((cell_idx, time_idx), (n_cells, n_normal_timepoints))
     for i, name in enumerate(relevant_fields):
         tensor[idx, i] = data[name].values
-    tensor = np.transpose(tensor.reshape(shape), (0, 2, 1))
+    tensor = np.transpose(tensor.reshape(shape), (1, 2, 0))
 
     # Compute the time derivatives and concatenate such that columns corespond to:
     # x, y, z, d/dt x, d/dt y, d/dt z, cpm, d/dt cpm
