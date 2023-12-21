@@ -20,14 +20,15 @@ def load_shrofflab_celegans(
     Args:
         file_path (str): The path to the CSV file.
         replace_missing_cpm (float): If not None, replace missing cpm values with this value.
+        device (str): The PyTorch device to use for the tensor.
 
     Returns:
         tensor_list (List[torch.Tensor]): A list of PyTorch tensors containing the loaded data for each time point.
         time (np.ndarray): The time points corresponding to the data.
         cell_names (np.ndarray): The names of the cells in the data.
 
-    Raises:
-        ValueError: If the time series are not part of the same timeframe or if too many cells have abnormal time series lengths.
+    Raises: ValueError: If the time series are not part of the same timeframe or if too many cells have abnormal time
+    series lengths.
     """
 
     # Load the data from the CSV file and clean it a bit:
@@ -75,7 +76,7 @@ def load_shrofflab_celegans(
         tensor[idx, i] = data[name].values
     tensor = np.transpose(tensor.reshape(shape), (1, 0, 2))
 
-    # Compute the time derivatives and concatenate such that columns corespond to:
+    # Compute the time derivatives and concatenate such that columns correspond to:
     # x, y, z, d/dt x, d/dt y, d/dt z, cpm, d/dt cpm
     tensor_gradient = np.gradient(tensor, axis=0)
     tensor = np.concatenate([tensor[:, :, 0:3], tensor_gradient[:, :, 0:3],
@@ -87,7 +88,7 @@ def load_shrofflab_celegans(
         cell_tensor = tensor[i]
         cell_ids = np.where(~np.isnan(cell_tensor[:, 0]))[0]
         cell_tensor = np.column_stack((cell_ids, cell_tensor[cell_ids, :]))
-        tensor_list.append(torch.tensor(cell_tensor,device=device))
+        tensor_list.append(torch.tensor(cell_tensor, device=device))
 
     time = np.arange(start_time, end_time)
 
@@ -108,3 +109,7 @@ def ensure_local_path_exists(path):
     if not os.path.exists(path):
         os.makedirs(path)
     return os.path.join(os.getcwd(), path)
+
+
+if __name__ == "__main__":
+    data, time, names = load_shrofflab_celegans("/home/innerbergerm@hhmi.org/big-data/shrofflab-celegans/log10_mean-and-smoothed_lin-32.csv")
