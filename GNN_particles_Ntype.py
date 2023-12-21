@@ -502,7 +502,7 @@ class InteractionCElegans(pyg.nn.MessagePassing):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
-        pred = self.propagate(edge_index, x=(x, x))
+        pred = self.propagate(edge_index, x=(x, x), time=time)
 
         if self.upgrade_type == 'linear':
             embedding = self.a[self.data_id, x[:, 0].detach().cpu().numpy(), :]
@@ -510,14 +510,14 @@ class InteractionCElegans(pyg.nn.MessagePassing):
 
         return pred
 
-    def message(self, x_i, x_j):
+    def message(self, x_i, x_j,time):
 
         r = torch.sqrt(torch.sum(bc_diff(x_i[:, 1:4] - x_j[:, 1:4]) ** 2, axis=1))  # squared distance
         r = r[:, None]
 
         delta_pos = bc_diff(x_i[:, 1:4] - x_j[:, 1:4])
         embedding = self.a[self.data_id, x_i[:, 0].detach().cpu().numpy().astype(int), :]
-        in_features = torch.cat((delta_pos, r, x_i[:,4:7], x_j[:,4:7], embedding), dim=-1)
+        in_features = torch.cat((delta_pos, r, x_i[:,4:7], x_j[:,4:7], embedding, time[:,None]), dim=-1)
 
         out = self.lin_edge(in_features)
 
@@ -1428,7 +1428,7 @@ def data_train(model_config, model_embedding):
 
         total_loss = 0
 
-        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size // 50)):
+        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size)):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -1474,7 +1474,7 @@ def data_train(model_config, model_embedding):
                     else:
                         y_batch = torch.cat((y_batch, y), axis=0)
 
-                    if bRegul & (epoch>Nepochs//4) & (epoch<3*Nepochs//4):
+                    if bRegul & (epoch>=Nepochs//4) & (epoch<=3*Nepochs//4):
                         embedding = []
                         for n in range(model.a.shape[0]):
                             embedding.append(model.a[n])
@@ -1546,9 +1546,9 @@ def data_train(model_config, model_embedding):
 
         list_loss.append(total_loss / (N+1) / nparticles / batch_size)
 
-        fig = plt.figure(figsize=(16, 8))
-        plt.ion()
-        ax = fig.add_subplot(2, 4, 1)
+        fig = plt.figure(figsize=(16, 4))
+        # plt.ion()
+        ax = fig.add_subplot(1, 4, 1)
         plt.plot(list_loss, color='k')
         plt.ylim([0, 0.010])
         plt.xlim([0, Nepochs])
@@ -1567,7 +1567,7 @@ def data_train(model_config, model_embedding):
         for m in range(model.a.shape[0]):
             for n in range(nparticle_types):
                 embedding_particle.append(embedding[index_particles[n] + m * nparticles, :])
-        ax = fig.add_subplot(2, 4, 2)
+        ax = fig.add_subplot(1, 4, 2)
         if (embedding.shape[1] > 2):
             ax = fig.add_subplot(2, 4, 2, projection='3d')
             for n in range(nparticle_types):
@@ -1584,7 +1584,7 @@ def data_train(model_config, model_embedding):
             else:
                 for n in range(nparticle_types):
                     plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5, color=cmap.color(n))
-        ax = fig.add_subplot(2, 4, 3)
+        ax = fig.add_subplot(1, 4, 3)
         if model_config['model'] == 'ElecParticles':
             acc_list = []
             for m in range(model.a.shape[0]):
@@ -1703,7 +1703,7 @@ def data_train(model_config, model_embedding):
             for n in range(nparticle_types):
                 plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
                 pos = np.argwhere(kmeans.labels_ == n).squeeze().astype(int)
-        ax = fig.add_subplot(2, 4, 4)
+        ax = fig.add_subplot(1, 4, 4)
         for n in range(nparticle_types):
             plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1],
                         color=cmap.color(n), s=5, alpha=0.75)
@@ -1725,8 +1725,6 @@ def data_train(model_config, model_embedding):
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
         plt.close()
 
-
-
         if (epoch == 1*Nepochs//4) | (epoch == 2*Nepochs//4) | (epoch == 3*Nepochs//4) | (epoch == Nepochs-3):
 
             model_a_ = model.a.clone().detach()
@@ -1747,11 +1745,6 @@ def data_train(model_config, model_embedding):
                         model.a[n] = model_a_[0].clone().detach()
                 print(f'regul_embedding: replaced')
                 logger.info(f'regul_embedding: replaced')
-
-
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
-        plt.close()
 
 def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0,
               prev_index_particles=0, best_model=0, step=5, bTest='', folder_out='tmp_recons', initial_map='',forced_embedding=[], forced_color=0):
@@ -2922,11 +2915,11 @@ def data_train_shrofflab_celegans(model_config):
 
             dataset_batch = []
             mask_batch = []
+            time_batch=[]
 
             for batch in range(batch_size):
 
                 k = np.random.randint(nframes[run] - 2)
-                kk = k
                 x = x_list[run][k].clone().detach()
                 x = torch.nan_to_num(x, nan=0)
 
@@ -2946,8 +2939,11 @@ def data_train_shrofflab_celegans(model_config):
 
                 if batch == 0:
                     mask_batch = mask
+                    time_batch = torch.tensor(kk,device=device)
+
                 else:
                     mask_batch = torch.cat((mask_batch, mask), axis=0)
+                    time_batch = torch.cat((time_batch, torch.tensor(k,device=device)), axis=0)
 
                 y = torch.nan_to_num(y, nan=0)
                 if model_config['prediction'] == '2nd_derivative':
@@ -2965,7 +2961,7 @@ def data_train_shrofflab_celegans(model_config):
                 optimizer.zero_grad()
 
                 for k, batch in enumerate(batch_loader):
-                    pred = model(batch, data_id=run, time=torch.tensor(k,device=device))
+                    pred = model(batch, data_id=run, time=time_batch[k])
 
                 mask_batch=mask_batch[:, None].repeat(1, 3)
                 loss = (mask_batch*(pred-y_batch)).norm(2)
@@ -3187,7 +3183,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3198,8 +3194,8 @@ if __name__ == '__main__':
 
 
 
-    # config_list=['config_CElegans_39']
-    config_list = ['config_gravity_regul_replace']
+    config_list=['config_CElegans_32']
+    # config_list = ['config_gravity_regul_replace']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3240,13 +3236,13 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
         # data_generate(model_config, bVisu=True, bDetails=False, bErase=True, step=5)
-        data_train(model_config,model_embedding)
+        # data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
 
-        # data_train_shrofflab_celegans(model_config)
-        # data_test_shrofflab_celegans(model_config)
+        data_train_shrofflab_celegans(model_config)
+        data_test_shrofflab_celegans(model_config)
 
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[1.265,0.636], forced_color=0)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[1.59,1.561], forced_color=1)
