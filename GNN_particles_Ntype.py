@@ -1428,7 +1428,7 @@ def data_train(model_config, model_embedding):
 
         total_loss = 0
 
-        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size)):
+        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size // 50)):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -1548,7 +1548,6 @@ def data_train(model_config, model_embedding):
 
         fig = plt.figure(figsize=(16, 8))
         plt.ion()
-
         ax = fig.add_subplot(2, 4, 1)
         plt.plot(list_loss, color='k')
         plt.ylim([0, 0.010])
@@ -1561,10 +1560,13 @@ def data_train(model_config, model_embedding):
         embedding = torch.stack(embedding).detach().cpu().numpy()
         embedding = np.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
         embedding_particle = []
+        kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=5000, max_iter=10000,
+                        random_state=13)
+        kmeans.fit(embedding)
+        print(f'kmeans.inertia_: {np.round(kmeans.inertia_, 3)}')
         for m in range(model.a.shape[0]):
             for n in range(nparticle_types):
                 embedding_particle.append(embedding[index_particles[n] + m * nparticles, :])
-
         ax = fig.add_subplot(2, 4, 2)
         if (embedding.shape[1] > 2):
             ax = fig.add_subplot(2, 4, 2, projection='3d')
@@ -1582,7 +1584,6 @@ def data_train(model_config, model_embedding):
             else:
                 for n in range(nparticle_types):
                     plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5, color=cmap.color(n))
-
         ax = fig.add_subplot(2, 4, 3)
         if model_config['model'] == 'ElecParticles':
             acc_list = []
@@ -1702,17 +1703,16 @@ def data_train(model_config, model_embedding):
             for n in range(nparticle_types):
                 plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
                 pos = np.argwhere(kmeans.labels_ == n).squeeze().astype(int)
-
         ax = fig.add_subplot(2, 4, 4)
         for n in range(nparticle_types):
             plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1],
                         color=cmap.color(n), s=5, alpha=0.75)
         plt.xlabel('UMAP 0', fontsize=12)
         plt.ylabel('UMAP 1', fontsize=12)
-
         kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=5000, max_iter=10000,
                         random_state=13)
         kmeans.fit(proj_interaction)
+        print(f'kmeans.inertia_: {np.round(kmeans.inertia_, 3)}')
         for n in range(nparticle_types):
             tmp = kmeans.labels_[index_particles[n]]
             sub_group = np.round(np.median(tmp))
@@ -1721,8 +1721,14 @@ def data_train(model_config, model_embedding):
             logger.info(f'Sub-group {n} accuracy: {np.round(accuracy, 3)}')
         for n in range(model_config['ninteractions']):
             plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
+        plt.close()
+
+
 
         if (epoch == 1*Nepochs//4) | (epoch == 2*Nepochs//4) | (epoch == 3*Nepochs//4) | (epoch == Nepochs-3):
+
             model_a_ = model.a.clone().detach()
             model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
             embedding_center = []
@@ -1742,309 +1748,6 @@ def data_train(model_config, model_embedding):
                 print(f'regul_embedding: replaced')
                 logger.info(f'regul_embedding: replaced')
 
-
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
-        plt.close()
-
-def data_train_shrofflab_celegans(model_config):
-    print('')
-
-    model = []
-    radius = model_config['radius']
-    min_radius = model_config['min_radius']
-    nparticle_types = model_config['nparticle_types']
-    nparticles = model_config['nparticles']
-    dataset_name = model_config['dataset']
-    nframes = model_config['nframes']
-    data_augmentation = model_config['data_augmentation']
-    embedding = model_config['embedding']
-    batch_size = model_config['batch_size']
-    batch_size = 1
-    bMesh = (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh')
-    bRegul = 'regul' in model_config['sparsity']
-    bReplace = 'replace' in model_config['sparsity']
-    Nepochs = model_config['Nepochs']
-
-    # training file management ###
-
-    l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
-    print('log_dir: {}'.format(log_dir))
-    os.makedirs(log_dir, exist_ok=True)
-    os.makedirs(os.path.join(log_dir, 'models'), exist_ok=True)
-    os.makedirs(log_dir, exist_ok=True)
-    os.makedirs(os.path.join(log_dir, 'tmp_training'), exist_ok=True)
-    os.makedirs(log_dir, exist_ok=True)
-    os.makedirs(os.path.join(log_dir, 'tmp_recons'), exist_ok=True)
-    os.makedirs(log_dir, exist_ok=True)
-
-    files = glob.glob(f"{log_dir}/tmp_training/*")
-    for f in files:
-        os.remove(f)
-    files = glob.glob(f"{log_dir}/tmp_recons/*")
-    for f in files:
-        os.remove(f)
-    copyfile(os.path.realpath(__file__), os.path.join(log_dir, 'training_code.py'))
-    logging.basicConfig(filename=os.path.join(log_dir, 'training.log'),
-                        format='%(asctime)s %(message)s',
-                        filemode='w')
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    logger.info(model_config)
-
-    # load dataset ###
-
-    print('load dataset ...')
-
-    x_list=[]
-    y_list=[]
-    dataset, time_points, cell_names= load_shrofflab_celegans(model_config['input_dataset'],device=device)
-    x_list.append(dataset)
-    y=[]
-    for t in range(time_points.shape[0]-1):
-        x_prev = dataset[t]
-        x_next = dataset[t+1]
-        id_prev = x_prev[:,0]
-        id_next = x_next[:,0]
-        y_ = []
-        for id in id_prev:
-            if id in id_next:
-                y_.append(x_next[id_next==id,:]-x_prev[id_prev==id,:])
-            else:
-                y_.append(torch.nan(x_prev.shape[0],device=device))
-        y.append(torch.stack(y_).squeeze())
-    y_list.append(y)
-
-
-    NGraphs = len(x_list)
-    print(f'Graph files N: {NGraphs}')
-    logger.info(f'Graph files N: {NGraphs}')
-    model_config['ndataset'] = NGraphs
-
-
-    # normalization
-
-    print('normalization ...')
-
-    t=[]
-    Ncells=0
-    nframes = np.zeros(NGraphs)
-    for n in range(NGraphs):
-        for k in tqdm(range(len(x_list[n]))):
-            nframes[n]=int(len(x_list[n]))
-            t_=x_list[n][k]
-            if torch.max(t_[:,0]).detach().cpu().numpy()>Ncells:
-                Ncells = torch.max(t_[:,0]).detach().cpu().numpy()
-                model_config['nparticles'] = int(Ncells)
-            if t==[]:
-                t=t_
-            else:
-                t=torch.concatenate((t,t_),axis=0)
-    nframes=nframes.astype(int)
-    t=torch.nan_to_num(t, nan=0)
-    xnorm=torch.max(torch.abs(t[:,1:4]))
-    vnorm = torch.std(torch.abs(t[:, 4:7]))
-    t=[]
-    for n in range(NGraphs):
-        for k in tqdm(range(len(y_list[n]))):
-            t_=y_list[n][k]
-            if t==[]:
-                t=t_
-            else:
-                t=torch.concatenate((t,t_),axis=0)
-    t = torch.nan_to_num(t, nan=0)
-    ynorm=torch.std(torch.abs(t[:,4:7]))
-
-    torch.save(xnorm, os.path.join(log_dir, 'xnorm.pt'))
-    torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
-    torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
-    print(xnorm.detach().cpu().numpy(), vnorm.detach().cpu().numpy(), ynorm.detach().cpu().numpy())
-    logger.info(f'xnorm vnorm ynorm: {xnorm.detach().cpu().numpy(), vnorm.detach().cpu().numpy(), ynorm.detach().cpu().numpy()}')
-
-    model = InteractionCElegans(model_config, device)
-
-    lra = 1E-3
-    lr = 1E-3
-
-    table = PrettyTable(["Modules", "Parameters"])
-    total_params = 0
-    it = 0
-    for name, parameter in model.named_parameters():
-        if not parameter.requires_grad:
-            continue
-        if it == 0:
-            optimizer = torch.optim.Adam([model.a], lr=lra)
-        else:
-            optimizer.add_param_group({'params': parameter, 'lr': lr})
-        it += 1
-        param = parameter.numel()
-        table.add_row([name, param])
-        total_params += param
-    logger.info(table)
-    logger.info(f"Total Trainable Params: {total_params}")
-    logger.info(f'Learning rates: {lr}, {lra}')
-
-    net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs}_graphs.pt"
-    print(f'network: {net}')
-    logger.info(f'network: {net}')
-    logger.info(f'N epochs: {Nepochs}')
-    print('')
-
-    model.train()
-    best_loss = np.inf
-    list_loss = []
-    embedding_center = []
-    regul_embedding = 0
-
-    print('Start training ...')
-    logger.info("Start training ...")
-    time.sleep(0.5)
-
-    data_augmentation = False
-
-    for epoch in range(Nepochs + 1):
-
-        if epoch == 0:
-            batch_size = model_config['batch_size']
-            print(f'batch_size: {batch_size}')
-            logger.info(f'batch_size: {batch_size}')
-        if epoch == 0:
-            if data_augmentation:
-                data_augmentation_loop = 200
-                print(f'data_augmentation_loop: {data_augmentation_loop}')
-                logger.info(f'data_augmentation_loop: {data_augmentation_loop}')
-        if epoch == 3*Nepochs//4:
-            lra = 1E-3
-            lr = 5E-4
-            table = PrettyTable(["Modules", "Parameters"])
-            it = 0
-            for name, parameter in model.named_parameters():
-                if not parameter.requires_grad:
-                    continue
-                if it == 0:
-                    optimizer = torch.optim.Adam([model.a], lr=lra)
-                else:
-                    optimizer.add_param_group({'params': parameter, 'lr': lr})
-                it += 1
-            print(f'Learning rates: {lr}, {lra}')
-            logger.info(f'Learning rates: {lr}, {lra}')
-        if epoch == Nepochs-2:
-            print('not training embedding ...')
-            logger.info('not training embedding ...')
-            model.a.requires_grad = False
-            regul_embedding = 0
-
-        total_loss = 0
-
-        for N in tqdm(range(0, nframes[0] // batch_size * 10)):
-
-            run = np.random.randint(NGraphs)
-
-            dataset_batch = []
-            mask_batch = []
-
-            for batch in range(batch_size):
-
-                k = np.random.randint(nframes[run] - 2)
-                kk = k
-                x = x_list[run][k].clone().detach()
-                x = torch.nan_to_num(x, nan=0)
-
-                x[:,1:4] = x[:, 1:4] / xnorm
-
-                distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
-                adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                t = torch.Tensor([radius ** 2])
-                edges = adj_t.nonzero().t().contiguous()
-                dataset = data.Data(x=x[:, :], edge_index=edges)
-                dataset_batch.append(dataset)
-                y = y_list[run][k].clone().detach()
-
-                mask=torch.isnan(y[:,0])
-
-                mask=1-mask.long()
-
-                if batch == 0:
-                    mask_batch = mask
-                else:
-                    mask_batch = torch.cat((mask_batch, mask), axis=0)
-
-                y = torch.nan_to_num(y, nan=0)
-                if model_config['prediction'] == '2nd_derivative':
-                    y = y[:,4:7] / ynorm
-                else:
-                    y = y[:,1:4] / vnorm
-                if batch == 0:
-                    y_batch = y
-                else:
-                    y_batch = torch.cat((y_batch, y), axis=0)
-
-            if dataset_batch != []:
-
-                batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
-                optimizer.zero_grad()
-
-                for k, batch in enumerate(batch_loader):
-                    pred = model(batch, data_id=run, time=torch.tensor(k,device=device))
-
-                mask_batch=mask_batch[:, None].repeat(1, 3)
-                loss = (mask_batch*(pred-y_batch)).norm(2)
-
-                loss.backward()
-                optimizer.step()
-
-                total_loss += loss.item()
-
-            # optimizer.zero_grad()
-            # t = torch.sum(model.a[run])
-            # loss = (pred - y_batch).norm(2) + t
-            # loss.backward()
-            # optimizer.step()
-            # total_loss += loss.item()
-
-        torch.save({'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict()},
-                   os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs_{epoch}.pt'))
-
-        if (total_loss / batch_size / (N+1) < best_loss):
-            best_loss = total_loss / (N+1) / batch_size
-            torch.save({'model_state_dict': model.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict()},
-                       os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs.pt'))
-            print("Epoch {}. Loss: {:.6f} saving model  ".format(epoch, total_loss / (N+1) / batch_size))
-            logger.info("Epoch {}. Loss: {:.6f} saving model  ".format(epoch, total_loss / (N+1) / batch_size))
-        else:
-            print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N+1)  / batch_size))
-            logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N+1)  / batch_size))
-
-        list_loss.append(total_loss / (N+1) / nparticles / batch_size)
-
-        fig = plt.figure(figsize=(16, 4))
-        # plt.ion()
-
-        ax = fig.add_subplot(1, 4, 1)
-        plt.plot(list_loss, color='k')
-        plt.xlim([0, Nepochs])
-        plt.ylabel('Loss', fontsize=12)
-        plt.xlabel('Epochs', fontsize=12)
-
-        embedding = []
-        for n in range(model.a.shape[0]):
-            embedding.append(model.a[n])
-        embedding = torch.stack(embedding).detach().cpu().numpy()
-        embedding = np.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
-
-        ax = fig.add_subplot(1, 4, 2)
-        if (embedding.shape[1] > 2):
-            ax = fig.add_subplot(2, 4, 2, projection='3d')
-            ax.scatter(embedding[:, 0], embedding[n][:, 1], embedding[n][:, 2],color='k', s=1)
-        else:
-            if (embedding.shape[1] > 1):
-                for m in range(model.a.shape[0]):
-                    plt.scatter(embedding[:, 0],embedding[:, 1], color='k', s=3)
-                plt.xlabel('Embedding 0', fontsize=12)
-                plt.ylabel('Embedding 1', fontsize=12)
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
@@ -3023,6 +2726,460 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
     plt.tight_layout()
     plt.show()
 
+def data_train_shrofflab_celegans(model_config):
+    print('')
+
+    model = []
+    radius = model_config['radius']
+    min_radius = model_config['min_radius']
+    nparticle_types = model_config['nparticle_types']
+    nparticles = model_config['nparticles']
+    dataset_name = model_config['dataset']
+    nframes = model_config['nframes']
+    data_augmentation = model_config['data_augmentation']
+    embedding = model_config['embedding']
+    batch_size = model_config['batch_size']
+    batch_size = 1
+    bMesh = (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh')
+    bRegul = 'regul' in model_config['sparsity']
+    bReplace = 'replace' in model_config['sparsity']
+    Nepochs = model_config['Nepochs']
+
+    # training file management ###
+
+    l_dir = os.path.join('.', 'log')
+    log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
+    print('log_dir: {}'.format(log_dir))
+    os.makedirs(log_dir, exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'models'), exist_ok=True)
+    os.makedirs(log_dir, exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'tmp_training'), exist_ok=True)
+    os.makedirs(log_dir, exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'tmp_recons'), exist_ok=True)
+    os.makedirs(log_dir, exist_ok=True)
+
+    files = glob.glob(f"{log_dir}/tmp_training/*")
+    for f in files:
+        os.remove(f)
+    files = glob.glob(f"{log_dir}/tmp_recons/*")
+    for f in files:
+        os.remove(f)
+    copyfile(os.path.realpath(__file__), os.path.join(log_dir, 'training_code.py'))
+    logging.basicConfig(filename=os.path.join(log_dir, 'training.log'),
+                        format='%(asctime)s %(message)s',
+                        filemode='w')
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    logger.info(model_config)
+
+    # load dataset ###
+
+    print('load dataset ...')
+
+    x_list=[]
+    y_list=[]
+    dataset, time_points, cell_names= load_shrofflab_celegans(model_config['input_dataset'],device=device)
+    x_list.append(dataset)
+    y=[]
+    for t in range(time_points.shape[0]-1):
+        x_prev = dataset[t]
+        x_next = dataset[t+1]
+        id_prev = x_prev[:,0]
+        id_next = x_next[:,0]
+        y_ = []
+        for id in id_prev:
+            if id in id_next:
+                y_.append(x_next[id_next==id,:]-x_prev[id_prev==id,:])
+            else:
+                y_.append(torch.nan(x_prev.shape[0],device=device))
+        y.append(torch.stack(y_).squeeze())
+    y_list.append(y)
+
+
+    NGraphs = len(x_list)
+    print(f'Graph files N: {NGraphs}')
+    logger.info(f'Graph files N: {NGraphs}')
+    model_config['ndataset'] = NGraphs
+
+
+    # normalization
+
+    print('normalization ...')
+
+    t=[]
+    Ncells=0
+    nframes = np.zeros(NGraphs)
+    for n in range(NGraphs):
+        for k in tqdm(range(len(x_list[n]))):
+            nframes[n]=int(len(x_list[n]))
+            t_=x_list[n][k]
+            if torch.max(t_[:,0]).detach().cpu().numpy()>Ncells:
+                Ncells = torch.max(t_[:,0]).detach().cpu().numpy()
+                model_config['nparticles'] = int(Ncells)
+            if t==[]:
+                t=t_
+            else:
+                t=torch.concatenate((t,t_),axis=0)
+    nframes=nframes.astype(int)
+    t=torch.nan_to_num(t, nan=0)
+    xnorm=torch.max(torch.abs(t[:,1:4]))
+    vnorm = torch.std(torch.abs(t[:, 4:7]))
+    t=[]
+    for n in range(NGraphs):
+        for k in tqdm(range(len(y_list[n]))):
+            t_=y_list[n][k]
+            if t==[]:
+                t=t_
+            else:
+                t=torch.concatenate((t,t_),axis=0)
+    t = torch.nan_to_num(t, nan=0)
+    ynorm=torch.std(torch.abs(t[:,4:7]))
+
+    torch.save(xnorm, os.path.join(log_dir, 'xnorm.pt'))
+    torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
+    torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
+    print(xnorm.detach().cpu().numpy(), vnorm.detach().cpu().numpy(), ynorm.detach().cpu().numpy())
+    logger.info(f'xnorm vnorm ynorm: {xnorm.detach().cpu().numpy(), vnorm.detach().cpu().numpy(), ynorm.detach().cpu().numpy()}')
+
+    model = InteractionCElegans(model_config, device)
+
+    lra = 1E-3
+    lr = 1E-3
+
+    table = PrettyTable(["Modules", "Parameters"])
+    total_params = 0
+    it = 0
+    for name, parameter in model.named_parameters():
+        if not parameter.requires_grad:
+            continue
+        if it == 0:
+            optimizer = torch.optim.Adam([model.a], lr=lra)
+        else:
+            optimizer.add_param_group({'params': parameter, 'lr': lr})
+        it += 1
+        param = parameter.numel()
+        table.add_row([name, param])
+        total_params += param
+    logger.info(table)
+    logger.info(f"Total Trainable Params: {total_params}")
+    logger.info(f'Learning rates: {lr}, {lra}')
+
+    net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs}_graphs.pt"
+    print(f'network: {net}')
+    logger.info(f'network: {net}')
+    logger.info(f'N epochs: {Nepochs}')
+    print('')
+
+    model.train()
+    best_loss = np.inf
+    list_loss = []
+    embedding_center = []
+    regul_embedding = 0
+
+    print('Start training ...')
+    logger.info("Start training ...")
+    time.sleep(0.5)
+
+    data_augmentation = False
+
+    for epoch in range(Nepochs + 1):
+
+        if epoch == 0:
+            batch_size = model_config['batch_size']
+            print(f'batch_size: {batch_size}')
+            logger.info(f'batch_size: {batch_size}')
+        if epoch == 0:
+            if data_augmentation:
+                data_augmentation_loop = 200
+                print(f'data_augmentation_loop: {data_augmentation_loop}')
+                logger.info(f'data_augmentation_loop: {data_augmentation_loop}')
+        if epoch == 3*Nepochs//4:
+            lra = 1E-3
+            lr = 5E-4
+            table = PrettyTable(["Modules", "Parameters"])
+            it = 0
+            for name, parameter in model.named_parameters():
+                if not parameter.requires_grad:
+                    continue
+                if it == 0:
+                    optimizer = torch.optim.Adam([model.a], lr=lra)
+                else:
+                    optimizer.add_param_group({'params': parameter, 'lr': lr})
+                it += 1
+            print(f'Learning rates: {lr}, {lra}')
+            logger.info(f'Learning rates: {lr}, {lra}')
+        if epoch == Nepochs-2:
+            print('not training embedding ...')
+            logger.info('not training embedding ...')
+            model.a.requires_grad = False
+            regul_embedding = 0
+
+        total_loss = 0
+
+        for N in tqdm(range(0, nframes[0] // batch_size * 10)):
+
+            run = np.random.randint(NGraphs)
+
+            dataset_batch = []
+            mask_batch = []
+
+            for batch in range(batch_size):
+
+                k = np.random.randint(nframes[run] - 2)
+                kk = k
+                x = x_list[run][k].clone().detach()
+                x = torch.nan_to_num(x, nan=0)
+
+                x[:,1:4] = x[:, 1:4] / xnorm
+
+                distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+                adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                t = torch.Tensor([radius ** 2])
+                edges = adj_t.nonzero().t().contiguous()
+                dataset = data.Data(x=x[:, :], edge_index=edges)
+                dataset_batch.append(dataset)
+                y = y_list[run][k].clone().detach()
+
+                mask=torch.isnan(y[:,0])
+
+                mask=1-mask.long()
+
+                if batch == 0:
+                    mask_batch = mask
+                else:
+                    mask_batch = torch.cat((mask_batch, mask), axis=0)
+
+                y = torch.nan_to_num(y, nan=0)
+                if model_config['prediction'] == '2nd_derivative':
+                    y = y[:,4:7] / ynorm
+                else:
+                    y = y[:,1:4] / vnorm
+                if batch == 0:
+                    y_batch = y
+                else:
+                    y_batch = torch.cat((y_batch, y), axis=0)
+
+            if dataset_batch != []:
+
+                batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
+                optimizer.zero_grad()
+
+                for k, batch in enumerate(batch_loader):
+                    pred = model(batch, data_id=run, time=torch.tensor(k,device=device))
+
+                mask_batch=mask_batch[:, None].repeat(1, 3)
+                loss = (mask_batch*(pred-y_batch)).norm(2)
+
+                loss.backward()
+                optimizer.step()
+
+                total_loss += loss.item()
+
+            # optimizer.zero_grad()
+            # t = torch.sum(model.a[run])
+            # loss = (pred - y_batch).norm(2) + t
+            # loss.backward()
+            # optimizer.step()
+            # total_loss += loss.item()
+
+        torch.save({'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict()},
+                   os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs_{epoch}.pt'))
+
+        if (total_loss / batch_size / (N+1) < best_loss):
+            best_loss = total_loss / (N+1) / batch_size
+            torch.save({'model_state_dict': model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict()},
+                       os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs.pt'))
+            print("Epoch {}. Loss: {:.6f} saving model  ".format(epoch, total_loss / (N+1) / batch_size))
+            logger.info("Epoch {}. Loss: {:.6f} saving model  ".format(epoch, total_loss / (N+1) / batch_size))
+        else:
+            print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N+1)  / batch_size))
+            logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N+1)  / batch_size))
+
+        list_loss.append(total_loss / (N+1) / nparticles / batch_size)
+
+        fig = plt.figure(figsize=(16, 4))
+        # plt.ion()
+
+        ax = fig.add_subplot(1, 4, 1)
+        plt.plot(list_loss, color='k')
+        plt.xlim([0, Nepochs])
+        plt.ylabel('Loss', fontsize=12)
+        plt.xlabel('Epochs', fontsize=12)
+
+        embedding = []
+        for n in range(model.a.shape[0]):
+            embedding.append(model.a[n])
+        embedding = torch.stack(embedding).detach().cpu().numpy()
+        embedding = np.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
+
+        ax = fig.add_subplot(1, 4, 2)
+        if (embedding.shape[1] > 2):
+            ax = fig.add_subplot(2, 4, 2, projection='3d')
+            ax.scatter(embedding[:, 0], embedding[n][:, 1], embedding[n][:, 2],color='k', s=1)
+        else:
+            if (embedding.shape[1] > 1):
+                for m in range(model.a.shape[0]):
+                    plt.scatter(embedding[:, 0],embedding[:, 1], color='k', s=3)
+                plt.xlabel('Embedding 0', fontsize=12)
+                plt.ylabel('Embedding 1', fontsize=12)
+
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
+        plt.close()
+
+def data_test_shrofflab_celegans(model_config):
+
+    model = []
+    radius = model_config['radius']
+    min_radius = model_config['min_radius']
+    nparticle_types = model_config['nparticle_types']
+    nparticles = model_config['nparticles']
+    dataset_name = model_config['dataset']
+    nframes = model_config['nframes']
+    data_augmentation = model_config['data_augmentation']
+    embedding = model_config['embedding']
+    batch_size = model_config['batch_size']
+    batch_size = 1
+    bMesh = (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh')
+    bRegul = 'regul' in model_config['sparsity']
+    bReplace = 'replace' in model_config['sparsity']
+    Nepochs = model_config['Nepochs']
+
+    # load dataset ###
+
+    print('load dataset ...')
+
+    x_list=[]
+    y_list=[]
+    dataset, time_points, cell_names= load_shrofflab_celegans(model_config['input_dataset'],device=device)
+    x_list.append(dataset)
+    y=[]
+    for t in tqdm(range(time_points.shape[0]-1)):
+        x_prev = dataset[t]
+        x_next = dataset[t+1]
+        id_prev = x_prev[:,0]
+        id_next = x_next[:,0]
+        y_ = []
+        for id in id_prev:
+            if id in id_next:
+                y_.append(x_next[id_next==id,:]-x_prev[id_prev==id,:])
+            else:
+                y_.append(torch.nan(x_prev.shape[0],device=device))
+        y.append(torch.stack(y_).squeeze())
+    y_list.append(y)
+
+    xnorm = torch.load(f'./log/try_{dataset_name}/xnorm.pt', map_location=device).to(device)
+    vnorm = torch.load(f'./log/try_{dataset_name}/vnorm.pt', map_location=device).to(device)
+    ynorm = torch.load(f'./log/try_{dataset_name}/ynorm.pt', map_location=device).to(device)
+
+    NGraphs = len(x_list)
+    print(f'Graph files N: {NGraphs}')
+    model_config['ndataset'] = NGraphs
+
+    t=[]
+    Ncells=0
+    nframes = np.zeros(NGraphs)
+    for n in range(NGraphs):
+        for k in tqdm(range(len(x_list[n]))):
+            nframes[n]=int(len(x_list[n]))
+            t_=x_list[n][k]
+            if torch.max(t_[:,0]).detach().cpu().numpy()>Ncells:
+                Ncells = torch.max(t_[:,0]).detach().cpu().numpy()
+                model_config['nparticles'] = int(Ncells)
+    nframes=nframes.astype(int)
+    t=[]
+
+    # set up model ###
+
+    print('set up model ...')
+
+    model = InteractionCElegans(model_config, device)
+
+    net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
+    print(f'network: {net}')
+    state_dict = torch.load(net, map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
+    model.eval()
+
+
+    run=0
+    mina = torch.min(model.a).detach().cpu().numpy()
+    maxa = torch.max(model.a).detach().cpu().numpy()
+    error_list = []
+
+
+
+    for k in tqdm(range(nframes[run] - 2)):
+        x = x_list[run][k].clone().detach()
+        x = torch.nan_to_num(x, nan=0)
+
+        x[:, 1:4] = x[:, 1:4] / xnorm
+        embedding = model.a[run, x[:, 0].detach().cpu().numpy().astype(int), :]
+
+        distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+        adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
+        t = torch.Tensor([radius ** 2])
+        edges = adj_t.nonzero().t().contiguous()
+        dataset = data.Data(x=x[:, :], edge_index=edges)
+        y = y_list[run][k].clone().detach()
+        mask = torch.isnan(y[:, 0])
+        mask = 1 - mask.long()
+        y = torch.nan_to_num(y, nan=0)
+        if model_config['prediction'] == '2nd_derivative':
+            y = y[:, 4:7] / ynorm
+        else:
+            y = y[:, 1:4] / vnorm
+        pred = model(dataset, data_id=run, time=torch.tensor(k, device=device))
+
+        fig = plt.figure(figsize=(14, 5))
+        ax = fig.add_subplot(1, 3, 1, projection='3d')
+        ax.scatter(x[:, 1].detach().cpu().numpy(), x[:, 3].detach().cpu().numpy(), x[:, 2].detach().cpu().numpy(), c=embedding[:,1].detach().cpu().numpy(),alpha=1,vmin=mina,vmax=maxa)
+        ax.set_aspect('equal')
+        # remove axis ticks
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_zticks([])
+        plt.title(f'Time: {np.round(time_points[k])}     LUT=Network embedding', fontsize=10)
+        plt.tight_layout()
+        # ax = fig.add_subplot(1, 3, 2, projection='3d')
+        # ax.scatter(x[:, 1].detach().cpu().numpy(), x[:, 3].detach().cpu().numpy(), x[:, 2].detach().cpu().numpy(), c=embedding[:,0].detach().cpu().numpy() ,alpha=1,vmin=mina,vmax=maxa)
+        # ax.set_aspect('equal')
+        # plt.tight_layout()
+        ax = fig.add_subplot(1, 3, 2)
+        plt.plot(y[:, 0].detach().cpu().numpy(), pred[:, 0].detach().cpu().numpy(), 'o', color='b', markersize=1)
+        plt.plot(y[:, 1].detach().cpu().numpy(), pred[:, 1].detach().cpu().numpy(), 'o', color='g', markersize=1)
+        if model_config['prediction'] == '1st_derivative':
+            plt.xlabel('True velocity [a.u.]', fontsize=12)
+            plt.ylabel('Predicted velocity [a.u.]', fontsize=12)
+            plt.xlim([-1,1])
+            plt.ylim([-1, 1])
+        else:
+            plt.xlabel('True acceleration [a.u.]', fontsize=12)
+            plt.ylabel('Predicted acceleration [a.u.]', fontsize=12)
+            plt.xlim([-1, 1])
+            plt.ylim([-1, 1])
+        ax = fig.add_subplot(1, 3, 3)
+        error_list.append(100*torch.sqrt(torch.mean((pred - y)**2)).detach().cpu().numpy())
+        plt.plot(time_points[0:len(error_list)], error_list, color='k')
+        plt.xlim([time_points[0], time_points[-1]])
+        plt.ylim([0, 10])
+        plt.xlabel('Time [a.u.]', fontsize=12)
+        plt.ylabel('Error/S.D. [%]', fontsize=12)
+        plt.tight_layout()
+        plt.savefig(f"./log/try_{dataset_name}/tmp_recons/Fig_{dataset_name}_{k}.tif")
+        plt.close()
+
+
+    # pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
+    # distance = torch.sum((x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+    # adj_t = (distance < radius ** 2).float() * 1
+    # edge_index = adj_t.nonzero().t().contiguous()
+    # dataset = data.Data(x=x, edge_index=edge_index)
+    # vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
+    # nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False, alpha=0.005
+
 if __name__ == '__main__':
 
     print('')
@@ -3030,7 +3187,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3039,9 +3196,10 @@ if __name__ == '__main__':
     # config_list = ['config_arbitrary', 'config_arbitrary_regul_replace']
     # config_list = ['config_arbitrary_replace','config_arbitrary_regul']
 
-    config_list = ['config_gravity_regul_replace']
 
-    # config_list=['config_CElegans_acc']
+
+    # config_list=['config_CElegans_39']
+    config_list = ['config_gravity_regul_replace']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3083,14 +3241,12 @@ if __name__ == '__main__':
 
         # data_generate(model_config, bVisu=True, bDetails=False, bErase=True, step=5)
         data_train(model_config,model_embedding)
-
-        # data_train_shrofflab_celegans(model_config)
-
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
 
-
+        # data_train_shrofflab_celegans(model_config)
+        # data_test_shrofflab_celegans(model_config)
 
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[1.265,0.636], forced_color=0)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[1.59,1.561], forced_color=1)
@@ -3100,6 +3256,8 @@ if __name__ == '__main__':
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[0.645, 1.889], forced_color=6)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[0.8, 0.5], forced_color=7)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[2.5, 2.5], forced_color=8)
+
+
 
 
 
