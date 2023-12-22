@@ -5,9 +5,9 @@ n_mp_layers: 5
 noise_level: 0
 radius: 0.15
 min_radius: 0.002
-dataset: 'Coulomb_regul_replace'
+dataset: 'Coulomb_5_regul_replace'
 nparticles: 960
-nparticle_types: 3
+nparticle_types: 5
 ninteractions: 3
 nframes: 1000
 sigma: 0.005
@@ -20,7 +20,7 @@ batch_size: 8
 embedding: 2
 model: 'ElecParticles'
 prediction: '2nd_derivative'
-p: [[2], [1], [-1]]
+p: [[3], [2], [-2], [1], [-1]]
 upgrade_type: 'none'
 nrun: 10
 clamp: 0
