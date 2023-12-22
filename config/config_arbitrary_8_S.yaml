@@ -6,8 +6,8 @@ noise_level: 0
 radius: 0.075
 min_radius: 0
 nparticles: 4800
-nparticle_types: 3
-ninteractions: 3
+nparticle_types: 8
+ninteractions: 8
 nframes: 250
 sigma: 0.005
 tau: 0.1
@@ -22,10 +22,11 @@ prediction: 'first_derivative_S'
 upgrade_type: 'none'
 nlayers_update: 3
 hidden_size_update: 64
-p: [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855], [1.785, 1.8579, 1.7226, 1.0584]]
+p: []
 nrun: 2
+clamp: 0
 start_frame: 20
 arrow_length: 20
 cmap: 'tab10'
 description: '3 interaction particles'
-sparsity: 'none'
+sparsity: 'regul_replace'

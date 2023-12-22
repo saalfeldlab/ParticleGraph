@@ -3183,7 +3183,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3194,7 +3194,7 @@ if __name__ == '__main__':
 
     # config_list=['config_CElegans_32']
     # config_list = ['config_gravity_regul_replace','config_Coulomb_regul_replace','config_gravity_8_regul_replace', 'Config_Coulomb_5_regul_replace']
-    config_list = ['config_arbitrary_regul_replace_S_8','config_arbitrary_regul_replace_S','config_arbitrary_regul_replace_L']
+    config_list = ['config_arbitrary_8_S','config_arbitrary_S','config_arbitrary_L']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3210,6 +3210,7 @@ if __name__ == '__main__':
         # Load parameters from config file
         with open(f'./config/{config}.yaml', 'r') as file:
             model_config = yaml.safe_load(file)
+        model_config['dataset']=config[7:]
         if not('min_radius' in model_config):
             model_config['min_radius']=0
 

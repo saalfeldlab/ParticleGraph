@@ -1,4 +1,4 @@
-input_size: 5
+input_size: 13
 output_size: 2
 hidden_size: 64
 n_mp_layers: 5
@@ -18,14 +18,15 @@ data_augmentation: True
 batch_size: 8
 embedding: 2 
 model: 'PDE_A'
-prediction: 'first_derivative_S'
+prediction: 'first_derivative_L'
 upgrade_type: 'none'
 nlayers_update: 3
 hidden_size_update: 64
 p: [[1.0413, 1.5615, 1.6233, 1.6012], [1.8308, 1.9055, 1.7667, 1.0855], [1.785, 1.8579, 1.7226, 1.0584]]
 nrun: 2
+clamp: 0
 start_frame: 20
 arrow_length: 20
 cmap: 'tab10'
 description: '3 interaction particles'
-sparsity: 'none'
+sparsity: 'regul_replace'
