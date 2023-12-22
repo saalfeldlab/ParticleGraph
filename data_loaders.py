@@ -78,7 +78,8 @@ def load_shrofflab_celegans(
 
     # Compute the time derivatives and concatenate such that columns correspond to:
     # x, y, z, d/dt x, d/dt y, d/dt z, cpm, d/dt cpm
-    tensor_gradient = np.gradient(tensor, axis=0)
+    tensor_gradient = tensor - np.roll(tensor, 1, 0)
+    tensor_gradient[0, :, :] = np.nan
     tensor = np.concatenate([tensor[:, :, 0:3], tensor_gradient[:, :, 0:3],
                              tensor[:, :, 3:4], tensor_gradient[:, :, 3:4]], axis=2)
 
@@ -109,7 +110,3 @@ def ensure_local_path_exists(path):
     if not os.path.exists(path):
         os.makedirs(path)
     return os.path.join(os.getcwd(), path)
-
-
-if __name__ == "__main__":
-    data, time, names = load_shrofflab_celegans("/home/innerbergerm@hhmi.org/big-data/shrofflab-celegans/log10_mean-and-smoothed_lin-32.csv")
