@@ -288,8 +288,8 @@ class PDE_E(pyg.nn.MessagePassing):
 
     def message(self, x_i, x_j):
         r = torch.sqrt(torch.sum(bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) ** 2, axis=1))
-        r = torch.clamp(r, min=self.clamp)
-        # r = torch.concatenate((r[:, None], r[:, None]), -1)
+        # r = torch.clamp(r, min=self.clamp)
+        r = torch.concatenate((r[:, None], r[:, None]), -1)
 
         p1 = self.p[x_i[:, 5].detach().cpu().numpy()]
         p1 = p1.squeeze()
