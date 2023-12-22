@@ -1427,7 +1427,7 @@ def data_train(model_config, model_embedding):
 
         total_loss = 0
 
-        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size/100)):
+        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size//100)):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -3192,9 +3192,10 @@ if __name__ == '__main__':
     # config_list = ['config_arbitrary_replace','config_arbitrary_regul']
 
     # config_list=['config_CElegans_32']
-    config_list = ['config_gravity_regul_replace']
+    # config_list = ['config_gravity_regul_replace']
     # config_list = ['config_Coulomb_regul_replace','config_gravity_8_regul_replace', 'Config_Coulomb_5_regul_replace']
     # config_list = ['config_arbitrary_regul_replace_L','config_arbitrary_regul_replace_S']
+    config_list = ['config_embedding']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3235,7 +3236,7 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
         data_generate(model_config, bVisu=True, bDetails=False, bErase=True, step=5)
-        data_train(model_config,model_embedding)
+        # data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
