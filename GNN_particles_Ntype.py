@@ -961,7 +961,7 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
         noise_current = 0 * torch.randn((nparticles, 2), device=device)
         noise_prev_prev = 0 * torch.randn((nparticles, 2), device=device)
 
-        for it in tqdm(range(model_config['start_frame'], model_config['start_frame']+nframes)):
+        for it in tqdm(range(model_config['start_frame'], nframes)):
 
             if (it>0) & bDivision & (nparticles<20000):
                 cycle_test = (torch.ones(nparticles, device=device) + 0.05 * torch.randn(nparticles, device=device))
@@ -1341,9 +1341,9 @@ def data_train(model_config, model_embedding):
     if (model_config['model'] == 'WaveMesh'):
         model = MeshLaplacian(model_config, device)
 
-    # net = f"./log/try_148/models/best_model_with_9_graphs_4.pt"
-    # state_dict = torch.load(net,map_location=device)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    net = f"./log/try_gravity_regul_replace/models/best_model_with_1_graphs_5.pt"
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
 
     lra = 1E-3
     lr = 1E-3
@@ -1427,7 +1427,7 @@ def data_train(model_config, model_embedding):
 
         total_loss = 0
 
-        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size)):
+        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size/100)):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -1473,7 +1473,7 @@ def data_train(model_config, model_embedding):
                     else:
                         y_batch = torch.cat((y_batch, y), axis=0)
 
-                    if bRegul & (epoch>=Nepochs//4) & (epoch<=3*Nepochs//4):
+                    if True: # bRegul & (epoch>=Nepochs//4) & (epoch<=3*Nepochs//4):
                         embedding = []
                         for n in range(model.a.shape[0]):
                             embedding.append(model.a[n])
@@ -1724,7 +1724,7 @@ def data_train(model_config, model_embedding):
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
         plt.close()
 
-        if (epoch == 1*Nepochs//4) | (epoch == 2*Nepochs//4) | (epoch == 3*Nepochs//4) | (epoch == Nepochs-3):
+        if False: # (epoch == 1*Nepochs//4) | (epoch == 2*Nepochs//4) | (epoch == 3*Nepochs//4) | (epoch == Nepochs-3):
 
             model_a_ = model.a.clone().detach()
             model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
