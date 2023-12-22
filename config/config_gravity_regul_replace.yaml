@@ -10,7 +10,7 @@ nparticles: 960
 nparticle_types: 4
 ninteractions: 4
 nframes: 1000
-sigma: .005
+sigma: 0.005
 tau: 1E-9
 v_init: 5E-5
 aggr_type: 'add'

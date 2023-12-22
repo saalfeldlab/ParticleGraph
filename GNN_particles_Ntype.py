@@ -31,7 +31,6 @@ from scipy.spatial import Delaunay
 import logging
 import yaml  # need to install pyyaml
 
-
 def distmat_square(X, Y):
     return torch.sum(bc_diff(X[:, None, :] - Y[None, :, :]) ** 2, axis=2)
 def kernel(X, Y):
@@ -290,7 +289,7 @@ class PDE_E(pyg.nn.MessagePassing):
     def message(self, x_i, x_j):
         r = torch.sqrt(torch.sum(bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) ** 2, axis=1))
         r = torch.clamp(r, min=self.clamp)
-        r = torch.concatenate((r[:, None], r[:, None]), -1)
+        # r = torch.concatenate((r[:, None], r[:, None]), -1)
 
         p1 = self.p[x_i[:, 5].detach().cpu().numpy()]
         p1 = p1.squeeze()
@@ -301,7 +300,7 @@ class PDE_E(pyg.nn.MessagePassing):
         p2 = torch.concatenate((p2[:, None], p2[:, None]), -1)
 
         acc = p1 * p2 * bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) / r ** 3
-        acc = torch.clamp(acc, max=self.pred_limit)
+        # acc = torch.clamp(acc, max=self.pred_limit)
 
         return acc
 
@@ -3183,7 +3182,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3192,10 +3191,9 @@ if __name__ == '__main__':
     # config_list = ['config_arbitrary', 'config_arbitrary_regul_replace']
     # config_list = ['config_arbitrary_replace','config_arbitrary_regul']
 
-
-
     config_list=['config_CElegans_32']
     # config_list = ['config_gravity_regul_replace']
+    config_list = ['config_Coulomb_regul_replace']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3235,14 +3233,14 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        # data_generate(model_config, bVisu=True, bDetails=False, bErase=True, step=5)
-        # data_train(model_config,model_embedding)
+        data_generate(model_config, bVisu=True, bDetails=False, bErase=True, step=5)
+        data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
 
-        data_train_shrofflab_celegans(model_config)
-        data_test_shrofflab_celegans(model_config)
+        # data_train_shrofflab_celegans(model_config)
+        # data_test_shrofflab_celegans(model_config)
 
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[1.265,0.636], forced_color=0)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[1.59,1.561], forced_color=1)
