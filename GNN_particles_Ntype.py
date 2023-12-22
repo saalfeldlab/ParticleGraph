@@ -3183,7 +3183,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3193,7 +3193,7 @@ if __name__ == '__main__':
     # config_list = ['config_arbitrary_replace','config_arbitrary_regul']
 
     # config_list=['config_CElegans_32']
-    # config_list = ['config_gravity_3','config_Coulomb_3','config_gravity_8', 'Config_Coulomb_4']
+    # config_list = ['config_gravity_4','config_Coulomb_3','config_gravity_8', 'Config_Coulomb_4']
     config_list = ['config_arbitrary_8_S','config_arbitrary_3_S','config_arbitrary_3_L']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:

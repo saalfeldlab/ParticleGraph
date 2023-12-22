@@ -25,7 +25,7 @@ hidden_size_update: 64
 p: []
 nrun: 2
 clamp: 0
-start_frame: 20
+start_frame: -20
 arrow_length: 20
 cmap: 'tab10'
 description: '3 interaction particles'
