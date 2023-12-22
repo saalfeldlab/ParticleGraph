@@ -999,6 +999,7 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
                         pos = pos[:, 0].squeeze().detach().cpu().numpy().astype(int)
                         index_particles.append(pos)
 
+
             if it == 0:
                 V1 = torch.clamp(V1, min=-torch.std(V1), max=+torch.std(V1))
 
@@ -1426,7 +1427,7 @@ def data_train(model_config, model_embedding):
 
         total_loss = 0
 
-        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size)):
+        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size/100)):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -1472,7 +1473,7 @@ def data_train(model_config, model_embedding):
                     else:
                         y_batch = torch.cat((y_batch, y), axis=0)
 
-                    if bRegul & (epoch>=Nepochs//4) & (epoch<=3*Nepochs//4):
+                    if True: # bRegul & (epoch>=Nepochs//4) & (epoch<=3*Nepochs//4):
                         embedding = []
                         for n in range(model.a.shape[0]):
                             embedding.append(model.a[n])
@@ -1723,7 +1724,7 @@ def data_train(model_config, model_embedding):
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
         plt.close()
 
-        if (epoch == 1*Nepochs//4) | (epoch == 2*Nepochs//4) | (epoch == 3*Nepochs//4) | (epoch == Nepochs-3):
+        if False: # (epoch == 1*Nepochs//4) | (epoch == 2*Nepochs//4) | (epoch == 3*Nepochs//4) | (epoch == Nepochs-3):
 
             model_a_ = model.a.clone().detach()
             model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
@@ -3191,8 +3192,8 @@ if __name__ == '__main__':
     # config_list = ['config_arbitrary_replace','config_arbitrary_regul']
 
     # config_list=['config_CElegans_32']
-    config_list = ['config_gravity_regul_replace']
-    # config_list = ['config_Coulomb_regul_replace','config_gravity_8_regul_replace', 'Config_Coulomb_5_regul_replace']
+    # config_list = ['config_gravity_regul_replace']
+    config_list = ['config_Coulomb_regul_replace','config_gravity_8_regul_replace', 'Config_Coulomb_5_regul_replace']
     # config_list = ['config_arbitrary_regul_replace_L','config_arbitrary_regul_replace_S']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
