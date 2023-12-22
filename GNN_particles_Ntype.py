@@ -190,12 +190,13 @@ class PDE_embedding(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, aggr_type=[], p=[], tau=[], prediction=[]):
-        super(PDE_embedding, self).__init__(aggr=aggr_type)  # "mean" aggregation.
+    def __init__(self, aggr_type=[], p=[], tau=[], prediction=[],sigma=[]):
+        super(PDE_embedding, self).__init__(aggr='mean')  # "mean" aggregation.
 
         self.p = p
         self.tau = tau
         self.prediction = prediction
+        self.sigma = torch.tensor([sigma],device=device)
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
@@ -207,7 +208,8 @@ class PDE_embedding(pyg.nn.MessagePassing):
     def message(self, x_i, x_j):
         r = torch.sum((x_i[:,:] - x_j[:,:]) ** 2, axis=1)  # squared distance
         pp = self.p[0].repeat(x_i.shape[0], 1)
-        psi = - pp[:, 2] * torch.exp(-r ** pp[:, 0] / (2 * sigma ** 2)) + pp[:, 3] * torch.exp(-r ** pp[:, 1] / (2 * sigma ** 2))
+        ssigma = self.sigma[0].repeat(x_i.shape[0], 1)
+        psi = - pp[:, 2] * torch.exp(-r ** pp[:, 0] / (2 * ssigma[:, 0] ** 2)) + pp[:, 3] * torch.exp(-r ** pp[:, 1] / (2 * ssigma[:, 0] ** 2))
         return psi[:, None] * (x_i-x_j)
     def psi(self, r, p):
         return r * (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(
@@ -3191,15 +3193,14 @@ if __name__ == '__main__':
     # config_list = ['config_arbitrary_replace','config_arbitrary_regul']
 
     # config_list=['config_CElegans_32']
-    # config_list = ['config_gravity_regul_replace']
-    config_list = ['config_Coulomb_regul_replace','config_gravity_8_regul_replace', 'Config_Coulomb_5_regul_replace']
+    config_list = ['config_gravity_regul_replace','config_Coulomb_regul_replace','config_gravity_8_regul_replace', 'Config_Coulomb_5_regul_replace']
     # config_list = ['config_arbitrary_regul_replace_L','config_arbitrary_regul_replace_S']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
     p = torch.ones(1, 4, device=device)
     p[0] = torch.tensor(model_config_embedding['p'][0])
-    model_embedding = PDE_embedding(aggr_type='mean', p=p, tau=model_config_embedding['tau'],prediction=model_config_embedding['prediction'])
+    model_embedding = PDE_embedding(aggr_type='mean', p=p, tau=model_config_embedding['tau'], sigma = model_config_embedding['sigma'], prediction=model_config_embedding['prediction'])
     model_embedding.eval()
 
     for config in config_list:

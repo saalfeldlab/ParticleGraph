@@ -190,12 +190,13 @@ class PDE_embedding(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, aggr_type=[], p=[], tau=[], prediction=[]):
-        super(PDE_embedding, self).__init__(aggr=aggr_type)  # "mean" aggregation.
+    def __init__(self, aggr_type=[], p=[], tau=[], prediction=[],sigma=[]):
+        super(PDE_embedding, self).__init__(aggr='mean')  # "mean" aggregation.
 
         self.p = p
         self.tau = tau
         self.prediction = prediction
+        self.sigma = torch.tensor([sigma],device=device)
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
@@ -207,7 +208,8 @@ class PDE_embedding(pyg.nn.MessagePassing):
     def message(self, x_i, x_j):
         r = torch.sum((x_i[:,:] - x_j[:,:]) ** 2, axis=1)  # squared distance
         pp = self.p[0].repeat(x_i.shape[0], 1)
-        psi = - pp[:, 2] * torch.exp(-r ** pp[:, 0] / (2 * sigma ** 2)) + pp[:, 3] * torch.exp(-r ** pp[:, 1] / (2 * sigma ** 2))
+        ssigma = self.sigma[0].repeat(x_i.shape[0], 1)
+        psi = - pp[:, 2] * torch.exp(-r ** pp[:, 0] / (2 * ssigma[:, 0] ** 2)) + pp[:, 3] * torch.exp(-r ** pp[:, 1] / (2 * ssigma[:, 0] ** 2))
         return psi[:, None] * (x_i-x_j)
     def psi(self, r, p):
         return r * (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(
@@ -1341,7 +1343,7 @@ def data_train(model_config, model_embedding):
     if (model_config['model'] == 'WaveMesh'):
         model = MeshLaplacian(model_config, device)
 
-    net = f"./log/try_gravity_regul_replace/models/best_model_with_1_graphs_5.pt"
+    net = f"./log/try_gravity_regul_replace/models/best_model_with_1_graphs_4.pt"
     state_dict = torch.load(net,map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
 
@@ -1369,7 +1371,7 @@ def data_train(model_config, model_embedding):
     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     print(f'network: {net}')
     logger.info(f'network: {net}')
-    Nepochs = 20  ######################## 22
+    Nepochs = 10  ######################## 22
     logger.info(f'N epochs: {Nepochs}')
     print('')
 
@@ -1427,7 +1429,7 @@ def data_train(model_config, model_embedding):
 
         total_loss = 0
 
-        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size//100)):
+        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size//200)):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -1473,7 +1475,7 @@ def data_train(model_config, model_embedding):
                     else:
                         y_batch = torch.cat((y_batch, y), axis=0)
 
-                    if True: # bRegul & (epoch>=Nepochs//4) & (epoch<=3*Nepochs//4):
+                    if epoch>0: # bRegul & (epoch>=Nepochs//4) & (epoch<=3*Nepochs//4):
                         embedding = []
                         for n in range(model.a.shape[0]):
                             embedding.append(model.a[n])
@@ -1528,20 +1530,20 @@ def data_train(model_config, model_embedding):
             # optimizer.step()
             # total_loss += loss.item()
 
-        torch.save({'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict()},
-                   os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs_{epoch}.pt'))
-
-        if (total_loss / nparticles / batch_size / (N+1) < best_loss):
-            best_loss = total_loss / (N+1) / nparticles / batch_size
-            torch.save({'model_state_dict': model.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict()},
-                       os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs.pt'))
-            print("Epoch {}. Loss: {:.6f} saving model  ".format(epoch, total_loss / (N+1) / nparticles / batch_size))
-            logger.info("Epoch {}. Loss: {:.6f} saving model  ".format(epoch, total_loss / (N+1) / nparticles / batch_size))
-        else:
-            print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N+1) / nparticles / batch_size))
-            logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N+1) / nparticles / batch_size))
+        # torch.save({'model_state_dict': model.state_dict(),
+        #             'optimizer_state_dict': optimizer.state_dict()},
+        #            os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs_{epoch}.pt'))
+        #
+        # if (total_loss / nparticles / batch_size / (N+1) < best_loss):
+        #     best_loss = total_loss / (N+1) / nparticles / batch_size
+        #     torch.save({'model_state_dict': model.state_dict(),
+        #                 'optimizer_state_dict': optimizer.state_dict()},
+        #                os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs.pt'))
+        #     print("Epoch {}. Loss: {:.6f} saving model  ".format(epoch, total_loss / (N+1) / nparticles / batch_size))
+        #     logger.info("Epoch {}. Loss: {:.6f} saving model  ".format(epoch, total_loss / (N+1) / nparticles / batch_size))
+        # else:
+        #     print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N+1) / nparticles / batch_size))
+        #     logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N+1) / nparticles / batch_size))
 
         list_loss.append(total_loss / (N+1) / nparticles / batch_size)
 
@@ -3192,16 +3194,19 @@ if __name__ == '__main__':
     # config_list = ['config_arbitrary_replace','config_arbitrary_regul']
 
     # config_list=['config_CElegans_32']
-    # config_list = ['config_gravity_regul_replace']
+    config_list = ['config_gravity_regul_replace']
     # config_list = ['config_Coulomb_regul_replace','config_gravity_8_regul_replace', 'Config_Coulomb_5_regul_replace']
     # config_list = ['config_arbitrary_regul_replace_L','config_arbitrary_regul_replace_S']
-    config_list = ['config_embedding']
+    # config_list = ['config_embedding']
+
+
+
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
     p = torch.ones(1, 4, device=device)
     p[0] = torch.tensor(model_config_embedding['p'][0])
-    model_embedding = PDE_embedding(aggr_type='mean', p=p, tau=model_config_embedding['tau'],prediction=model_config_embedding['prediction'])
+    model_embedding = PDE_embedding(aggr_type='mean', p=p, tau=model_config_embedding['tau'], sigma = model_config_embedding['sigma'], prediction=model_config_embedding['prediction'])
     model_embedding.eval()
 
     for config in config_list:
@@ -3235,8 +3240,8 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        data_generate(model_config, bVisu=True, bDetails=False, bErase=True, step=5)
-        # data_train(model_config,model_embedding)
+        # data_generate(model_config, bVisu=True, bDetails=False, bErase=True, step=5)
+        data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)

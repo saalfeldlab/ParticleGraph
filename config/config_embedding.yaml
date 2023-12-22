@@ -10,8 +10,8 @@ nparticles: 4800
 nparticle_types: 1
 ninteractions: 3
 nframes: 250
-sigma: 0.005
-tau: 0.1
+sigma: 0.7
+tau: 0.05
 v_init: 0
 aggr_type: 'mean'
 boundary: 'periodic' # periodic   'no'  # no boundary condition
@@ -23,7 +23,7 @@ prediction: 'first_derivative_S'
 upgrade_type: 'none'
 nlayers_update: 3
 hidden_size_update: 64
-p: [[1.8308, 1.9055, 1.7667, 1.0855]]
+p: [[0, 1.65, 0, 1.35]]
 nrun: 2
 start_frame: 20
 arrow_length: 20
