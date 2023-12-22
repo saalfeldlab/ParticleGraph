@@ -1371,7 +1371,7 @@ def data_train(model_config, model_embedding):
     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     print(f'network: {net}')
     logger.info(f'network: {net}')
-    Nepochs = 10  ######################## 22
+    Nepochs = 20  ######################## 22
     logger.info(f'N epochs: {Nepochs}')
     print('')
 

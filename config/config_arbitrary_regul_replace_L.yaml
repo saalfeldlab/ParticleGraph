@@ -1,4 +1,4 @@
-input_size: 13
+input_size: 9
 output_size: 2
 hidden_size: 64
 n_mp_layers: 5
