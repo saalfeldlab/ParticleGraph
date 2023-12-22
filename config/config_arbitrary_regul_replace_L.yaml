@@ -1,11 +1,11 @@
-input_size: 5
+input_size: 13
 output_size: 2
 hidden_size: 64
 n_mp_layers: 5
 noise_level: 0
 radius: 0.075
 min_radius: 0
-dataset: 'arbitrary_regul_replace_S'
+dataset: 'arbitrary_regul_replace_L'
 nparticles: 4800
 nparticle_types: 3
 ninteractions: 3
@@ -19,7 +19,7 @@ data_augmentation: True
 batch_size: 8
 embedding: 2 
 model: 'PDE_A'
-prediction: 'first_derivative_S'
+prediction: 'first_derivative_L'
 upgrade_type: 'none'
 nlayers_update: 3
 hidden_size_update: 64
