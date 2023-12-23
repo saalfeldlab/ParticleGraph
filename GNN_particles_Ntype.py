@@ -1479,7 +1479,9 @@ def data_train(model_config, model_embedding):
                         for n in range(model.a.shape[0]):
                             embedding.append(model.a[n])
                         embedding = torch.stack(embedding).squeeze()
-                        embedding = torch.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
+
+                        if model.a.shape[0]>0:
+                            embedding = torch.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
 
                         # dataset = data.Data(x=embedding, pos=embedding.detach())
                         # transform_0 = T.Compose([T.Delaunay()])
