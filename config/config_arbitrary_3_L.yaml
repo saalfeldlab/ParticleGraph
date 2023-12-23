@@ -1,6 +1,6 @@
 input_size: 13
 output_size: 2
-hidden_size: 64
+hidden_size: 128
 n_mp_layers: 5
 noise_level: 0
 radius: 0.075
