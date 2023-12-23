@@ -21,7 +21,7 @@ model: 'ElecParticles'
 prediction: '2nd_derivative'
 p: [[2], [-2], [1], [-1]]
 upgrade_type: 'none'
-nrun: 10
+nrun: 2
 clamp: 0
 pred_limit: 1E+10
 start_frame: 0
