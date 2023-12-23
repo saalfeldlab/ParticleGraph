@@ -1479,6 +1479,7 @@ def data_train(model_config, model_embedding):
                         for n in range(model.a.shape[0]):
                             embedding.append(model.a[n])
                         embedding = torch.stack(embedding).squeeze()
+                        embedding = torch.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
 
                         # dataset = data.Data(x=embedding, pos=embedding.detach())
                         # transform_0 = T.Compose([T.Delaunay()])
@@ -3193,7 +3194,7 @@ if __name__ == '__main__':
     # config_list = ['config_arbitrary_replace','config_arbitrary_regul']
 
     # config_list=['config_CElegans_32']
-    config_list = ['config_gravity_8'] #, 'Config_Coulomb_4','config_Coulomb_3','config_gravity_4',,]
+    config_list = ['config_Coulomb_3','config_Coulomb_4','config_gravity_8']
     # config_list = ['config_arbitrary_5_S','config_arbitrary_8_S','config_arbitrary_3_S','config_arbitrary_3_L']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
