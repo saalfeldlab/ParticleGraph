@@ -1480,7 +1480,7 @@ def data_train(model_config, model_embedding):
                             embedding.append(model.a[n])
                         embedding = torch.stack(embedding).squeeze()
 
-                        if model.a.shape[0]>0:
+                        if model.a.shape[0]>2:
                             embedding = torch.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
 
                         # dataset = data.Data(x=embedding, pos=embedding.detach())
