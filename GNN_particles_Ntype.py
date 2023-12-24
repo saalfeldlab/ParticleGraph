@@ -2663,7 +2663,8 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
             else:
                 in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
                                          rr[:, None] / model_config['radius'], embedding), dim=1)
-            acc = model.lin_edge(in_features.float())
+            with torch.no_grad():
+                acc = model.lin_edge(in_features.float())
             acc = acc[:, 0]
             acc_list.append(acc)
             if n % 5 == 0:
@@ -2688,12 +2689,16 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
     ax = fig.add_subplot(2, 4, 8)
     if (model_config['model'] == 'PDE_A') | (model_config['model'] == 'PDE_B'):
         p = model_config['p']
-        p = torch.tensor(p, device=device)
+        if len(p)>0:
+            p = torch.tensor(p, device=device)
+        else:
+            p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
+
         psi_output = []
         for n in range(nparticle_types):
             psi_output.append(model.psi(rr, p[n]))
         for n in range(nparticle_types - 1, -1, -1):
-            plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), linewidth=1)
+            plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), color=cmap.color(n), linewidth=1)
         plt.xlabel('Distance [a.u]', fontsize=12)
         plt.ylabel('MLP [a.u]', fontsize=12)
     if model_config['model'] == 'GravityParticles':
