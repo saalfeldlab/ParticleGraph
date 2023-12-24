@@ -1749,7 +1749,7 @@ def data_train(model_config, model_embedding):
                 print(f'regul_embedding: replaced')
                 logger.info(f'regul_embedding: replaced')
 
-def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0,
+def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_particles=0, prev_nparticles=0, new_nparticles=0,
               prev_index_particles=0, best_model=0, step=5, bTest='', folder_out='tmp_recons', initial_map='',forced_embedding=[], forced_color=0):
 
     # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_recons/*")
@@ -2146,16 +2146,17 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                 ax2.set_ylabel('MMD [a.u]', fontsize="14", color='b')
                 ax2.set_ylim([0, 2E-3])
 
-            ax = fig.add_subplot(2, 5, 6)
-            pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
-            vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
-            nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False, alpha=0.2)
-            if model_config['boundary'] == 'no':
-                plt.xlim([-1.3, 1.3])
-                plt.ylim([-1.3, 1.3])
-            else:
-                plt.xlim([0, 1])
-                plt.ylim([0, 1])
+            if bDetails:
+                ax = fig.add_subplot(2, 5, 6)
+                pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
+                vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
+                nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False, alpha=0.2)
+                if model_config['boundary'] == 'no':
+                    plt.xlim([-1.3, 1.3])
+                    plt.ylim([-1.3, 1.3])
+                else:
+                    plt.xlim([0, 1])
+                    plt.ylim([0, 1])
 
             ax = fig.add_subplot(2, 5, 9)
 
@@ -2181,9 +2182,9 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             plt.tight_layout()
 
             if len(forced_embedding) > 0:
-                plt.savefig(f"./{folder_out}/Fig_{dataset_name}_{forced_color}_{it}.tif")
+                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{dataset_name}_{forced_color}_{it}.tif")
             else:
-                plt.savefig(f"./{folder_out}/Fig_{dataset_name}_{it}.tif")
+                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{dataset_name}_{it}.tif")
 
             plt.close()
 
@@ -2196,6 +2197,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
     torch.save(y_recons, f'{log_dir}/y_list.pt')
 
     return x.detach().cpu().numpy(), rmserr_list
+
 def data_plot(model_config, epoch, bPrint, best_model=0):
     model = []
     radius = model_config['radius']
@@ -2248,7 +2250,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
     y_stat = []
     distance_list = []
     deg_list = []
-    if True:  # analyse tmp_recons
+    if False:  # analyse tmp_recons
         x = torch.load(f'{log_dir}/x_list.pt')
         y = torch.load(f'{log_dir}/y_list.pt')
         for k in np.arange(0, len(x) - 1, 4):
@@ -2423,7 +2425,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
         ax = fig.add_subplot(2, 4, 2, projection='3d')
         for n in range(nparticle_types):
             ax.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], embedding_particle[n][:, 2],
-                       color=cmap.color(n), s=1)  #
+                       color=cmap.color(n), s=1)
     else:
         if (embedding.shape[1] > 1):
             for m in range(model.a.shape[0]):
@@ -2434,7 +2436,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
             plt.ylabel('Embedding 1', fontsize=12)
         else:
             for n in range(nparticle_types):
-                plt.hist(embedding_particle[n][:, 0], 100, alpha=0.5, color=cmap.color(n))
+                plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5, color=cmap.color(n))
 
     rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
     ax = fig.add_subplot(2, 4, 3)
@@ -2447,7 +2449,8 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
                     in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
                                              rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
                                              0 * rr[:, None], 0 * rr[:, None], embedding, embedding), dim=1)
-                    acc = model.lin_edge(in_features.float())
+                    with torch.no_grad():
+                        acc = model.lin_edge(in_features.float())
                     acc = acc[:, 0]
                     acc_list.append(acc)
                     if n % 5 == 0:
@@ -2471,7 +2474,8 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
             in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
                                      rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
                                      0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
-            acc = model.lin_edge(in_features.float())
+            with torch.no_grad():
+                acc = model.lin_edge(in_features.float())
             acc = acc[:, 0]
             acc_list.append(acc)
             plt.plot(rr.detach().cpu().numpy(),
@@ -2500,7 +2504,8 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
             else:
                 in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
                                          rr[:, None] / model_config['radius'], embedding), dim=1)
-            acc = model.lin_edge(in_features.float())
+            with torch.no_grad():
+                acc = model.lin_edge(in_features.float())
             acc = acc[:, 0]
             acc_list.append(acc)
             if n % 5 == 0:
@@ -2520,7 +2525,8 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
             r1 = torch.tensor(np.linspace(-250, 250, 1000)).to(device)
             embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
             in_features = torch.cat((r0[:, None], r1[:, None], embedding), dim=1)
-            h = model.lin_edge(in_features.float())
+            with torch.no_grad():
+                h = model.lin_edge(in_features.float())
             h = h[:, 0]
             h_list.append(h)
             if n % 5 == 0:
@@ -3197,7 +3203,7 @@ if __name__ == '__main__':
 
     # config_list=['config_CElegans_32']
     # config_list = ['config_Coulomb_3','config_Coulomb_4','config_gravity_8']
-    config_list = ['config_arbitrary_3_S','config_arbitrary_16_S','config_arbitrary_3_L'] #'config_arbitrary_5_S','config_arbitrary_8_S',
+    config_list = ['config_arbitrary_8_S'] #'config_arbitrary_3_S','config_arbitrary_5_S','config_arbitrary_8_S'] #'config_arbitrary_16_S','config_arbitrary_3_L'] #'config_arbitrary_5_S','config_arbitrary_8_S',
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3238,9 +3244,10 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        data_generate(model_config, bVisu=True, bDetails=False, bErase=True, step=5)
-        data_train(model_config,model_embedding)
-        # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
+        # data_generate(model_config, bVisu=True, bDetails=False, bErase=True, step=5)
+        # data_train(model_config,model_embedding)
+        data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
+        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, bDetails=False, step=10)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
 
