@@ -1723,19 +1723,7 @@ def data_train(model_config, model_embedding):
                         random_state=13)
         kmeans.fit(proj_interaction)
         print(f'kmeans.inertia_: {np.round(kmeans.inertia_, 3)}')
-        label_list=[]
-        for n in range(nparticle_types):
-            tmp = kmeans.labels_[index_particles[n]]
-            sub_group = np.round(np.median(tmp))
-            label_list.append(sub_group)
-            accuracy = len(np.argwhere(tmp == sub_group)) / len(tmp) * 100
-            print(f'Sub-group {n} accuracy: {np.round(accuracy, 3)}')
-            logger.info(f'Sub-group {n} accuracy: {np.round(accuracy, 3)}')
-        label_list = np.array(label_list)
-        new_labels= kmeans.labels_.copy()
-        for n in range(nparticle_types):
-            new_labels[kmeans.labels_ == label_list[n]] = n
-        torch.save(torch.tensor(new_labels,device=device), os.path.join(log_dir, 'labels.pt'))
+
 
 
         for n in range(model_config['ninteractions']):
@@ -2398,7 +2386,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
     #     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     # else:
     #     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_{best_model}.pt"
-    net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_17.pt"
+    net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_17.pt"
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
 
@@ -2433,7 +2421,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
     print('Plotting ...')
 
     fig = plt.figure(figsize=(16, 8))
-    # plt.ion()
+    plt.ion()
 
     if bMesh:
         x = x_list[0][0].clone().detach()
@@ -2450,9 +2438,9 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
     for m in range(model.a.shape[0]):
         for n in range(nparticle_types):
             embedding_particle.append(embedding[index_particles[n] + m * nparticles, :])
-    ax = fig.add_subplot(2, 4, 2)
+    ax = fig.add_subplot(2, 4, 1)
     if (embedding.shape[1] > 2):
-        ax = fig.add_subplot(2, 4, 2, projection='3d')
+        ax = fig.add_subplot(2, 4, 1, projection='3d')
         for n in range(nparticle_types):
             ax.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], embedding_particle[n][:, 2],
                        color=cmap.color(n), s=1)
@@ -2469,7 +2457,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
                 plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5, color=cmap.color(n))
 
     rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
-    ax = fig.add_subplot(2, 4, 3)
+    ax = fig.add_subplot(2, 4, 2)
     if model_config['model'] == 'ElecParticles':
         acc_list = []
         for m in range(model.a.shape[0]):
@@ -2569,16 +2557,24 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
         proj_interaction = trans.transform(coeff_norm)
         proj_interaction = np.squeeze(proj_interaction)
 
-    ax = fig.add_subplot(2, 4, 4)
+    ax = fig.add_subplot(2, 4, 3)
 
     kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=1000, max_iter=10000,
                     random_state=13)
     kmeans.fit(proj_interaction)
+
+    label_list = []
     for n in range(nparticle_types):
         tmp = kmeans.labels_[index_particles[n]]
         sub_group = np.round(np.median(tmp))
+        label_list.append(sub_group)
         accuracy = len(np.argwhere(tmp == sub_group)) / len(tmp) * 100
         print(f'Sub-group {n} accuracy: {np.round(accuracy, 3)}')
+    label_list = np.array(label_list)
+    new_labels = kmeans.labels_.copy()
+    for n in range(nparticle_types):
+        new_labels[kmeans.labels_ == label_list[n]] = n
+    torch.save(torch.tensor(new_labels, device=device), os.path.join(log_dir, 'labels.pt'))
 
     for n in range(nparticle_types):
         if proj_interaction.ndim == 1:
@@ -2615,9 +2611,9 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
         for n in range(nparticle_types):
             embedding_particle.append(embedding[index_particles[n] + m * nparticles, :])
 
-    ax = fig.add_subplot(2, 4, 6)
+    ax = fig.add_subplot(2, 4, 5)
     if (embedding.shape[1] > 2):
-        ax = fig.add_subplot(2, 4, 6, projection='3d')
+        ax = fig.add_subplot(2, 4, 5, projection='3d')
         for m in range(model.a.shape[0]):
             for n in range(nparticle_types):
                 ax.scatter(model.a[m][index_particles[n], 0].detach().cpu().numpy(),
@@ -2630,7 +2626,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
                 for n in range(nparticle_types - 1, -1, -1):
                     plt.scatter(model.a[m][index_particles[n], 0].detach().cpu().numpy(),
                                 model.a[m][index_particles[n], 1].detach().cpu().numpy(),
-                                color=cmap.color(n), s=20)
+                                color=cmap.color(new_labels[index_particles[n]]), s=20)
             plt.xlabel('Embedding 0', fontsize=12)
             plt.ylabel('Embedding 1', fontsize=12)
         else:
@@ -2639,7 +2635,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
                     plt.hist(model.a[m][index_particles[n], 0].detach().cpu().numpy(), width=0.01, alpha=0.5,
                              color=cmap.color(n))
 
-    ax = fig.add_subplot(2, 4, 7)
+    ax = fig.add_subplot(2, 4, 6)
     if model_config['model'] == 'ElecParticles':
         t = model.a.detach().cpu().numpy()
         tmean = np.ones((model_config['nparticle_types'], model_config['embedding']))
@@ -2716,7 +2712,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
     plt.xlabel('Distance [a.u]', fontsize=12)
     plt.ylabel('MLP [a.u]', fontsize=12)
 
-    ax = fig.add_subplot(2, 4, 8)
+    ax = fig.add_subplot(2, 4, 7)
     if (model_config['model'] == 'PDE_A') | (model_config['model'] == 'PDE_B'):
         p = model_config['p']
         if len(p)>0:
@@ -2760,8 +2756,24 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
                         x[index_particles[n], 2].detach().cpu().numpy(),
                         color=cmap.color(kmeans.labels_[index_particles[n]]), s=10)
 
+    ax = fig.add_subplot(2, 4, 3)
+
+    from sklearn import metrics
+
+    T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
+    for n in range(1, nparticle_types):
+        T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
+    T1 = T1[:, None]
+
+    confusion_matrix = metrics.confusion_matrix(T1.detach().cpu().numpy(), new_labels)
+    cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix=confusion_matrix)
+    cm_display.plot(ax=fig.gca(), cmap='Blues')
+
     plt.tight_layout()
-    plt.show()
+
+    fig.savefig(os.path.join(log_dir, 'embedding_result.png'), dpi=300)
+
+    plt.close
 
 def data_train_shrofflab_celegans(model_config):
     print('')
@@ -3237,8 +3249,8 @@ if __name__ == '__main__':
     # config_list = ['config_arbitrary_replace','config_arbitrary_regul']
 
     # config_list=['config_CElegans_32']
-    # config_list = ['config_Coulomb_4','config_gravity_8']
-    config_list = ['config_arbitrary_16_S'] #'config_arbitrary_3_S','config_arbitrary_5_S','config_arbitrary_8_S'] #'config_arbitrary_16_S'] #'config_arbitrary_5_S','config_arbitrary_8_S',
+    config_list = ['config_Coulomb_4','config_gravity_8']
+    # config_list = ['config_arbitrary_3_S','config_arbitrary_5_S','config_arbitrary_8_S''config_arbitrary_16_S'] #'config_arbitrary_3_S','config_arbitrary_5_S','config_arbitrary_8_S'] #'config_arbitrary_16_S'] #'config_arbitrary_5_S','config_arbitrary_8_S',
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3279,10 +3291,10 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        # data_generate(model_config, bVisu=True, bDetails=False, bErase=True, bLoad_p=False, step=5)
-        # data_train(model_config,model_embedding)
+        data_generate(model_config, bVisu=True, bDetails=False, bErase=True, bLoad_p=False, step=5)
+        data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
-        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=17, bDetails=False, step=10)
+        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=17, bDetails=False, step=10)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
 
