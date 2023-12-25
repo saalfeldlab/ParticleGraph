@@ -835,7 +835,6 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_
                 for n in range(nparticle_types):
                     p[n] = torch.tensor(model_config['p'][n])
 
-
         if nparticle_types == 1:
             model = PDE_A(aggr_type=aggr_type, p=p, tau=model_config['tau'],
                           prediction=model_config['prediction'])
@@ -1724,12 +1723,21 @@ def data_train(model_config, model_embedding):
                         random_state=13)
         kmeans.fit(proj_interaction)
         print(f'kmeans.inertia_: {np.round(kmeans.inertia_, 3)}')
+        label_list=[]
         for n in range(nparticle_types):
             tmp = kmeans.labels_[index_particles[n]]
             sub_group = np.round(np.median(tmp))
+            label_list.append(sub_group)
             accuracy = len(np.argwhere(tmp == sub_group)) / len(tmp) * 100
             print(f'Sub-group {n} accuracy: {np.round(accuracy, 3)}')
             logger.info(f'Sub-group {n} accuracy: {np.round(accuracy, 3)}')
+        label_list = np.array(label_list)
+        new_labels= kmeans.labels_.copy()
+        for n in range(nparticle_types):
+            new_labels[kmeans.labels_ == label_list[n]] = n
+        torch.save(torch.tensor(new_labels,device=device), os.path.join(log_dir, 'labels.pt'))
+
+
         for n in range(model_config['ninteractions']):
             plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
         plt.tight_layout()
@@ -1951,6 +1959,19 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
     rmserr_list = []
     discrepency_list = []
 
+    T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
+    for n in range(1, nparticle_types):
+        T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
+    T1 = T1[:, None]
+    if os.path.isfile(os.path.join(log_dir, 'labels.pt')):
+        print('Use learned labels')
+        labels =  torch.load(os.path.join(log_dir, 'labels.pt'))
+    else:
+        labels = T1
+        print('Use ground truth labels')
+
+
+
     for it in tqdm(range(nframes - 1)):
 
         x0 = x_list[0][it].clone().detach()
@@ -2106,13 +2127,13 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
                         plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                       facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=0, vmax=5000)
                 else:
-                    for n in range(nparticle_types):
-                        if ((k == 2) | (k == 4)) & (len(forced_embedding)>0):
+                    if ((k == 2) | (k == 4)) & (len(forced_embedding)>0):
+                        for n in range(nparticle_types):
                             plt.scatter(x_[index_particles[n], 1].detach().cpu(), x_[index_particles[n], 2].detach().cpu(),
                                     s=sc, color=cmap.color(forced_color))
-                        else:
-                            plt.scatter(x_[index_particles[n], 1].detach().cpu(), x_[index_particles[n], 2].detach().cpu(),
-                                    s=sc, color=cmap.color(n))
+                    else:
+                        plt.scatter(x_[:, 1].detach().cpu(), x_[:, 2].detach().cpu(),
+                                s=sc, color=cmap.color(labels.detach().cpu().numpy()))
                 if (k > 2) & (bMesh == False):
                     for n in range(nparticles):
                         plt.arrow(x=x_[n, 1].detach().cpu().item(), y=x_[n, 2].detach().cpu().item(),
@@ -2412,7 +2433,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
     print('Plotting ...')
 
     fig = plt.figure(figsize=(16, 8))
-    plt.ion()
+    # plt.ion()
 
     if bMesh:
         x = x_list[0][0].clone().detach()
@@ -3258,10 +3279,10 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        data_generate(model_config, bVisu=True, bDetails=False, bErase=True, bLoad_p=True, step=5)
+        # data_generate(model_config, bVisu=True, bDetails=False, bErase=True, bLoad_p=False, step=5)
         # data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
-        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, bDetails=False, step=10)
+        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=17, bDetails=False, step=10)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
 
