@@ -768,7 +768,7 @@ class MeshLaplacian(pyg.nn.MessagePassing):
         return r * (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(
             -r ** (2 * p[1]) / (2 * sigma ** 2)))
 
-def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5):
+def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_p=False, step=5):
     print('')
     print('Generating data ...')
 
@@ -826,10 +826,16 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
 
     if model_config['model'] == 'PDE_A':
         print(f'Generate PDE_A')
-        p = torch.ones(nparticle_types, 4, device=device) + torch.rand(nparticle_types, 4, device=device)
-        if len(model_config['p']) > 0:
-            for n in range(nparticle_types):
-                p[n] = torch.tensor(model_config['p'][n])
+
+        if bLoad_p:
+            p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
+        else:
+            p = torch.ones(nparticle_types, 4, device=device) + torch.rand(nparticle_types, 4, device=device)
+            if len(model_config['p']) > 0:
+                for n in range(nparticle_types):
+                    p[n] = torch.tensor(model_config['p'][n])
+
+
         if nparticle_types == 1:
             model = PDE_A(aggr_type=aggr_type, p=p, tau=model_config['tau'],
                           prediction=model_config['prediction'])
@@ -2305,48 +2311,48 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
     x_stat = np.array(x_stat)
     y_stat = np.array(y_stat)
 
-    fig = plt.figure(figsize=(20, 5))
-    plt.ion()
-    ax = fig.add_subplot(1, 5, 4)
-
-    deg_list = np.array(deg_list)
-    distance_list = np.array(distance_list)
-    plt.plot(np.arange(deg_list.shape[0]) * 4, deg_list[:, 0] + deg_list[:, 1], c='k')
-    plt.plot(np.arange(deg_list.shape[0]) * 4, deg_list[:, 0], c='r')
-    plt.plot(np.arange(deg_list.shape[0]) * 4, deg_list[:, 0] - deg_list[:, 1], c='k')
-    plt.xlim([0, nframes])
-    plt.xlabel('Frame [a.u]', fontsize="14")
-    plt.ylabel('Degree [a.u]', fontsize="14")
-    ax = fig.add_subplot(1, 5, 1)
-    plt.plot(np.arange(distance_list.shape[0]) * 4, distance_list[:, 0] + distance_list[:, 1], c='k')
-    plt.plot(np.arange(distance_list.shape[0]) * 4, distance_list[:, 0], c='r')
-    plt.plot(np.arange(distance_list.shape[0]) * 4, distance_list[:, 0] - distance_list[:, 1], c='k')
-    plt.ylim([0, model_config['radius']])
-    plt.xlim([0, nframes])
-    plt.xlabel('Frame [a.u]', fontsize="14")
-    plt.ylabel('Distance [a.u]', fontsize="14")
-    ax = fig.add_subplot(1, 5, 2)
-    plt.plot(np.arange(x_stat.shape[0]) * 4, x_stat[:, 0] + x_stat[:, 2], c='k')
-    plt.plot(np.arange(x_stat.shape[0]) * 4, x_stat[:, 0], c='r')
-    plt.plot(np.arange(x_stat.shape[0]) * 4, x_stat[:, 0] - x_stat[:, 2], c='k')
-    plt.plot(np.arange(x_stat.shape[0]) * 4, x_stat[:, 1] + x_stat[:, 3], c='k')
-    plt.plot(np.arange(x_stat.shape[0]) * 4, x_stat[:, 1], c='r')
-    plt.plot(np.arange(x_stat.shape[0]) * 4, x_stat[:, 1] - x_stat[:, 3], c='k')
-    plt.xlim([0, nframes])
-    plt.xlabel('Frame [a.u]', fontsize="14")
-    plt.ylabel('Velocity [a.u]', fontsize="14")
-    ax = fig.add_subplot(1, 5, 3)
-    plt.plot(np.arange(y_stat.shape[0]) * 4, y_stat[:, 0] + y_stat[:, 2], c='k')
-    plt.plot(np.arange(y_stat.shape[0]) * 4, y_stat[:, 0], c='r')
-    plt.plot(np.arange(y_stat.shape[0]) * 4, y_stat[:, 0] - y_stat[:, 2], c='k')
-    plt.plot(np.arange(y_stat.shape[0]) * 4, y_stat[:, 1] + y_stat[:, 3], c='k')
-    plt.plot(np.arange(y_stat.shape[0]) * 4, y_stat[:, 1], c='r')
-    plt.plot(np.arange(y_stat.shape[0]) * 4, y_stat[:, 1] - y_stat[:, 3], c='k')
-    plt.xlim([0, nframes])
-    plt.xlabel('Frame [a.u]', fontsize="14")
-    plt.ylabel('Acceleration [a.u]', fontsize="14")
-    plt.tight_layout()
-    plt.show()
+    # fig = plt.figure(figsize=(20, 5))
+    # plt.ion()
+    # ax = fig.add_subplot(1, 5, 4)
+    #
+    # deg_list = np.array(deg_list)
+    # distance_list = np.array(distance_list)
+    # plt.plot(np.arange(deg_list.shape[0]) * 4, deg_list[:, 0] + deg_list[:, 1], c='k')
+    # plt.plot(np.arange(deg_list.shape[0]) * 4, deg_list[:, 0], c='r')
+    # plt.plot(np.arange(deg_list.shape[0]) * 4, deg_list[:, 0] - deg_list[:, 1], c='k')
+    # plt.xlim([0, nframes])
+    # plt.xlabel('Frame [a.u]', fontsize="14")
+    # plt.ylabel('Degree [a.u]', fontsize="14")
+    # ax = fig.add_subplot(1, 5, 1)
+    # plt.plot(np.arange(distance_list.shape[0]) * 4, distance_list[:, 0] + distance_list[:, 1], c='k')
+    # plt.plot(np.arange(distance_list.shape[0]) * 4, distance_list[:, 0], c='r')
+    # plt.plot(np.arange(distance_list.shape[0]) * 4, distance_list[:, 0] - distance_list[:, 1], c='k')
+    # plt.ylim([0, model_config['radius']])
+    # plt.xlim([0, nframes])
+    # plt.xlabel('Frame [a.u]', fontsize="14")
+    # plt.ylabel('Distance [a.u]', fontsize="14")
+    # ax = fig.add_subplot(1, 5, 2)
+    # plt.plot(np.arange(x_stat.shape[0]) * 4, x_stat[:, 0] + x_stat[:, 2], c='k')
+    # plt.plot(np.arange(x_stat.shape[0]) * 4, x_stat[:, 0], c='r')
+    # plt.plot(np.arange(x_stat.shape[0]) * 4, x_stat[:, 0] - x_stat[:, 2], c='k')
+    # plt.plot(np.arange(x_stat.shape[0]) * 4, x_stat[:, 1] + x_stat[:, 3], c='k')
+    # plt.plot(np.arange(x_stat.shape[0]) * 4, x_stat[:, 1], c='r')
+    # plt.plot(np.arange(x_stat.shape[0]) * 4, x_stat[:, 1] - x_stat[:, 3], c='k')
+    # plt.xlim([0, nframes])
+    # plt.xlabel('Frame [a.u]', fontsize="14")
+    # plt.ylabel('Velocity [a.u]', fontsize="14")
+    # ax = fig.add_subplot(1, 5, 3)
+    # plt.plot(np.arange(y_stat.shape[0]) * 4, y_stat[:, 0] + y_stat[:, 2], c='k')
+    # plt.plot(np.arange(y_stat.shape[0]) * 4, y_stat[:, 0], c='r')
+    # plt.plot(np.arange(y_stat.shape[0]) * 4, y_stat[:, 0] - y_stat[:, 2], c='k')
+    # plt.plot(np.arange(y_stat.shape[0]) * 4, y_stat[:, 1] + y_stat[:, 3], c='k')
+    # plt.plot(np.arange(y_stat.shape[0]) * 4, y_stat[:, 1], c='r')
+    # plt.plot(np.arange(y_stat.shape[0]) * 4, y_stat[:, 1] - y_stat[:, 3], c='k')
+    # plt.xlim([0, nframes])
+    # plt.xlabel('Frame [a.u]', fontsize="14")
+    # plt.ylabel('Acceleration [a.u]', fontsize="14")
+    # plt.tight_layout()
+    # plt.show()
 
     if bMesh:
         h_list = []
@@ -2367,10 +2373,11 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
         model = InteractionParticles(model_config, device)
         print(f'Training InteractionParticles')
 
-    if best_model == -1:
-        net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
-    else:
-        net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_{best_model}.pt"
+    # if best_model == -1:
+    #     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
+    # else:
+    #     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_{best_model}.pt"
+    net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_17.pt"
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
 
@@ -3199,7 +3206,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3209,8 +3216,8 @@ if __name__ == '__main__':
     # config_list = ['config_arbitrary_replace','config_arbitrary_regul']
 
     # config_list=['config_CElegans_32']
-    config_list = ['config_Coulomb_4','config_gravity_8']
-    # config_list = ['config_arbitrary_8_S'] #'config_arbitrary_3_S','config_arbitrary_5_S','config_arbitrary_8_S'] #'config_arbitrary_16_S','config_arbitrary_3_L'] #'config_arbitrary_5_S','config_arbitrary_8_S',
+    # config_list = ['config_Coulomb_4','config_gravity_8']
+    config_list = ['config_arbitrary_16_S'] #'config_arbitrary_3_S','config_arbitrary_5_S','config_arbitrary_8_S'] #'config_arbitrary_16_S'] #'config_arbitrary_5_S','config_arbitrary_8_S',
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3251,10 +3258,10 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        data_generate(model_config, bVisu=True, bDetails=False, bErase=True, step=5)
-        data_train(model_config,model_embedding)
+        data_generate(model_config, bVisu=True, bDetails=False, bErase=True, bLoad_p=True, step=5)
+        # data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
-        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, bDetails=False, step=10)
+        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, bDetails=False, step=10)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
 
