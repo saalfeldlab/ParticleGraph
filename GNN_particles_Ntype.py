@@ -87,9 +87,11 @@ class cc:
             if index == 0:
                 index = (0, 0, 1)
             elif index == 1:
-                index = (0, 0.5, 0.75)
-            elif index == 2:
                 index = (1, 0, 0)
+            elif index == 2:
+                index = (0, 0.5, 0.75)
+            elif index == 3:
+                index = (0.75, 0.5, 0)
             return (index)
         else:
             # color_map = plt.cm.get_cmap(self.model_config['cmap'])
@@ -2559,8 +2561,8 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
             plt.xlabel('UMAP 0', fontsize=12)
             plt.ylabel('UMAP 1', fontsize=12)
 
-    for n in range(model_config['ninteractions']):
-        plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
+    # for n in range(model_config['ninteractions']):
+    #     plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
 
     model_a_ = model.a.clone().detach()
     model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
@@ -3197,7 +3199,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
