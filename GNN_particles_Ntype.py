@@ -30,6 +30,7 @@ from torch_geometric.utils import degree
 from scipy.spatial import Delaunay
 import logging
 import yaml  # need to install pyyaml
+from sklearn import metrics
 
 def distmat_square(X, Y):
     return torch.sum(bc_diff(X[:, None, :] - Y[None, :, :]) ** 2, axis=2)
@@ -778,8 +779,9 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_
     if bErase:
         files = glob.glob(f"{folder}/*")
         for f in files:
-            if f[-8:]!='tmp_data':
+            if (f[-8:]!='tmp_data') & (f!='p.pt') & (f!='cycle_length.pt') & (f!='model_config.json') & (f!='generation_code.py'):
                 os.remove(f)
+
 
     os.makedirs(folder, exist_ok=True)
     os.makedirs(f'./graphs_data/graphs_particles_{dataset_name}/tmp_data/', exist_ok=True)
@@ -1958,8 +1960,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         labels = T1
         print('Use ground truth labels')
 
-
-
+    time.sleep(1)
     for it in tqdm(range(nframes - 1)):
 
         x0 = x_list[0][it].clone().detach()
@@ -2421,7 +2422,6 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
     print('Plotting ...')
 
     fig = plt.figure(figsize=(16, 8))
-    plt.ion()
 
     if bMesh:
         x = x_list[0][0].clone().detach()
@@ -2756,16 +2756,12 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
                         x[index_particles[n], 2].detach().cpu().numpy(),
                         color=cmap.color(kmeans.labels_[index_particles[n]]), s=10)
 
-    ax = fig.add_subplot(2, 4, 3)
-
-    from sklearn import metrics
-
+    ax = fig.add_subplot(2, 4, 4)
     T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
     for n in range(1, nparticle_types):
         T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
     T1 = T1[:, None]
-
-    confusion_matrix = metrics.confusion_matrix(T1.detach().cpu().numpy(), new_labels)
+    confusion_matrix = metrics.confusion_matrix(T1.detach().cpu().numpy(), new_labels) #, normalize='true')
     cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix=confusion_matrix)
     cm_display.plot(ax=fig.gca(), cmap='Blues')
 
@@ -2773,6 +2769,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
 
     fig.savefig(os.path.join(log_dir, 'embedding_result.png'), dpi=300)
 
+    plt.show()
     plt.close
 
 def data_train_shrofflab_celegans(model_config):
@@ -3249,8 +3246,8 @@ if __name__ == '__main__':
     # config_list = ['config_arbitrary_replace','config_arbitrary_regul']
 
     # config_list=['config_CElegans_32']
-    config_list = ['config_Coulomb_4','config_gravity_8']
-    # config_list = ['config_arbitrary_3_S','config_arbitrary_5_S','config_arbitrary_8_S''config_arbitrary_16_S'] #'config_arbitrary_3_S','config_arbitrary_5_S','config_arbitrary_8_S'] #'config_arbitrary_16_S'] #'config_arbitrary_5_S','config_arbitrary_8_S',
+    # config_list = ['config_Coulomb_4','config_gravity_8']
+    config_list = ['config_arbitrary_3','config_arbitrary_5','config_arbitrary_8','config_arbitrary_16'] #'config_arbitrary_3_S','config_arbitrary_5_S','config_arbitrary_8_S'] #'config_arbitrary_16_S'] #'config_arbitrary_5_S','config_arbitrary_8_S',
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3291,10 +3288,10 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        data_generate(model_config, bVisu=True, bDetails=False, bErase=True, bLoad_p=False, step=5)
-        data_train(model_config,model_embedding)
-        # data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
-        # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=17, bDetails=False, step=10)
+        data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_p=True, step=5)
+        # data_train(model_config,model_embedding)
+        data_plot(model_config, epoch=-1, bPrint=True, best_model=-1)
+        x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=17, bDetails=False, step=5) #model_config['nframes']-1)
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
 
