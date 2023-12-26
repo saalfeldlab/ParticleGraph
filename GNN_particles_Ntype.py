@@ -1160,7 +1160,7 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_
                 else:
                     for n in range(nparticle_types):
                         plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                    x[index_particles[n], 2].detach().cpu().numpy(), s=3, color=cmap.color(n))
+                                    x[index_particles[n], 2].detach().cpu().numpy(), s=8, color=cmap.color(n))
                 if bMesh | (model_config['boundary'] == 'periodic'):
                     plt.text(0, 1.08, f'frame: {it}')
                     plt.text(0, 1.03, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
@@ -1171,8 +1171,10 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_
                     plt.text(-1.25, 1.4, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
                     plt.xlim([-1.3, 1.3])
                     plt.ylim([-1.3, 1.3])
+                plt.xticks([])
+                plt.yticks([])
 
-                ax = fig.add_subplot(2, 2, 2)
+                ax = fig.add_subplot(2, 2, 3)
                 if model_config['model'] == 'GravityParticles':
                     for n in range(nparticle_types):
                         g = p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 7.5
@@ -1205,13 +1207,15 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_
                 else:
                     for n in range(nparticle_types):
                         plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                    x[index_particles[n], 2].detach().cpu().numpy(), s=0.3, color='k')
+                                    x[index_particles[n], 2].detach().cpu().numpy(), s=8, color='k')
                 if bMesh | (model_config['boundary'] == 'periodic'):
                     plt.xlim([0, 1])
                     plt.ylim([0, 1])
                 else:
                     plt.xlim([-1.3, 1.3])
                     plt.ylim([-1.3, 1.3])
+                plt.xticks([])
+                plt.yticks([])
 
                 ax = fig.add_subplot(2, 2, 4)
                 # plt.scatter(x_noise[:, 1].detach().cpu().numpy(), x_noise[:, 2].detach().cpu().numpy(), s=1, color='k', alpha=0.2)
@@ -1232,9 +1236,11 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_
                 else:
                     plt.xlim([-1.3, 1.3])
                     plt.ylim([-1.3, 1.3])
+                plt.xticks([])
+                plt.yticks([])
 
                 if bDetails:
-                    ax = fig.add_subplot(2, 2, 3)
+                    ax = fig.add_subplot(2, 2, 2)
                     if model_config['model'] == 'GravityParticles':
                         for n in range(nparticle_types):
                             g = p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 7.5 * 4
@@ -1283,10 +1289,12 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_
                             plt.arrow(x=x[k, 1].detach().cpu().item(), y=x[k, 2].detach().cpu().item(),
                                       dx=x[k, 3].detach().cpu().item() * model_config['arrow_length'],
                                       dy=x[k, 4].detach().cpu().item() * model_config['arrow_length'], color='k',alpha=0.25)
+                    plt.xticks([])
+                    plt.yticks([])
 
                 plt.tight_layout()
                 local_path = ensure_local_path_exists(f"graphs_data/graphs_particles_{dataset_name}/tmp_data")
-                plt.savefig(os.path.join(local_path, f"Fig_{dataset_name}_{it}.tif"),dpi=300)
+                plt.savefig(os.path.join(local_path, f"Fig_{dataset_name}_{it}.tif"), dpi=300)
                 plt.close()
 
         torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
@@ -1422,7 +1430,7 @@ def data_train(model_config, model_embedding):
     Nepochs = 20  ######################## 22
     logger.info(f'N epochs: {Nepochs}')
     print('')
-
+    min_radius = 0.002
     model.train()
     best_loss = np.inf
     list_loss = []
@@ -1449,11 +1457,13 @@ def data_train(model_config, model_embedding):
             batch_size = model_config['batch_size']
             print(f'batch_size: {batch_size}')
             logger.info(f'batch_size: {batch_size}')
-        if epoch == 0:
             if data_augmentation:
                 data_augmentation_loop = 200
                 print(f'data_augmentation_loop: {data_augmentation_loop}')
                 logger.info(f'data_augmentation_loop: {data_augmentation_loop}')
+        if epoch == 1:
+            min_radius = model_config['min_radius']
+            logger.info(f'min_radius: {min_radius}')
         if epoch == 3*Nepochs//4:
             lra = 1E-3
             lr = 5E-4
@@ -1776,7 +1786,6 @@ def data_train(model_config, model_embedding):
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
         plt.close()
-
 
         if (epoch == 1*Nepochs//4) | (epoch == 2*Nepochs//4) | (epoch == 3*Nepochs//4) | (epoch == Nepochs-3):
 
@@ -3308,7 +3317,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3318,8 +3327,10 @@ if __name__ == '__main__':
     # config_list = ['config_arbitrary_replace','config_arbitrary_regul']
 
     # config_list=['config_CElegans_32']
-    # config_list = ['config_Coulomb_3_02', 'config_Coulomb_3_01']
-    config_list = ['config_gravity_16'] # ['config_gravity_4','config_gravity_8'] #['config_arbitrary_3','config_arbitrary_5','config_arbitrary_8','config_arbitrary_16',
+    config_list = ['config_Coulomb_3_01', 'config_Coulomb_3_02']
+    # config_list = ['config_gravity_4','config_gravity_8']
+    #config_list = ['config_arbitrary_3','config_arbitrary_5','config_arbitrary_8','config_arbitrary_16']
+    config_list = ['config_arbitrary_16']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
