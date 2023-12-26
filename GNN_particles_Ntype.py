@@ -3329,8 +3329,8 @@ if __name__ == '__main__':
     # config_list=['config_CElegans_32']
     config_list = ['config_Coulomb_3_01', 'config_Coulomb_3_02']
     # config_list = ['config_gravity_4','config_gravity_8']
-    #config_list = ['config_arbitrary_3','config_arbitrary_5','config_arbitrary_8','config_arbitrary_16']
-    config_list = ['config_arbitrary_16']
+    # config_list = ['config_arbitrary_3','config_arbitrary_5','config_arbitrary_8','config_arbitrary_16']
+    # config_list = ['config_arbitrary_16']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
