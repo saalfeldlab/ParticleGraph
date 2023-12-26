@@ -944,9 +944,9 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_
         A1 = A1 * cycle_length_distrib
 
         # scenario A
-        X1[:, 0] = X1[:, 0] / nparticle_types
-        for n in range(nparticle_types):
-            X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / nparticle_types
+        # X1[:, 0] = X1[:, 0] / nparticle_types
+        # for n in range(nparticle_types):
+        #     X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / nparticle_types
 
         # scenario C
         # i0 = imread('graphs_data/pattern_1.tif')
@@ -3308,7 +3308,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3318,8 +3318,8 @@ if __name__ == '__main__':
     # config_list = ['config_arbitrary_replace','config_arbitrary_regul']
 
     # config_list=['config_CElegans_32']
-    # config_list = ['config_Coulomb_3_02', 'config_Coulomb_3_01']
-    config_list = ['config_gravity_16'] # ['config_gravity_4','config_gravity_8'] #['config_arbitrary_3','config_arbitrary_5','config_arbitrary_8','config_arbitrary_16',
+    config_list = ['config_Coulomb_3_02', 'config_Coulomb_3_01']
+    # config_list = ['config_gravity_16'] # ['config_gravity_4','config_gravity_8'] #['config_arbitrary_3','config_arbitrary_5','config_arbitrary_8','config_arbitrary_16',
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3360,7 +3360,7 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        data_generate(model_config, bVisu=False, bDetails=False, bErase=False, bLoad_p=True, step=5)
+        data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_p=True, step=5)
         data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=17)
         # data_test(model_config, bVisu=True, bPrint=True, best_model=17, bDetails=False, step=model_config['nframes']-5)
