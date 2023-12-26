@@ -7,7 +7,7 @@ radius: 0.3
 min_radius: 0.002
 nparticles: 960
 nparticle_types: 16
-ninteractions: 8
+ninteractions: 16
 nframes: 1000
 sigma: 0.005
 tau: 1E-9
