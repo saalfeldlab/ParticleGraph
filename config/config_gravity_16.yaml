@@ -6,7 +6,7 @@ noise_level: 0
 radius: 0.3
 min_radius: 0.002
 nparticles: 960
-nparticle_types: 8
+nparticle_types: 16
 ninteractions: 8
 nframes: 1000
 sigma: 0.005
@@ -20,7 +20,7 @@ embedding: 2
 model: 'GravityParticles'
 prediction: '2nd_derivative'
 upgrade_type: 'none'
-p: [0.2, 1, 2, 3, 3.5, 4, 4.5, 5.0]
+p: []
 nrun: 2
 clamp: 0
 pred_limit: 1E+9

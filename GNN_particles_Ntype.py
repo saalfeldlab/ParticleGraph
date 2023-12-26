@@ -872,7 +872,8 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_
             print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
         torch.save(torch.squeeze(p), f'graphs_data/graphs_particles_{dataset_name}/p.pt')
     if model_config['model'] == 'GravityParticles':
-        p = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
+        p = np.linspace(0.5,5,nparticle_types)
+        p = torch.tensor(p,device=device)
         if len(model_config['p']) > 0:
             for n in range(nparticle_types):
                 p[n] = torch.tensor(model_config['p'][n])
@@ -1828,8 +1829,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
     if model_config['model'] == 'GravityParticles':
         model = GravityParticles(model_config, device)
         p_mass = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
-        for n in range(nparticle_types):
-            p_mass[n] = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
+        p_mass = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
         T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
         for n in range(1, nparticle_types):
             T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
@@ -1889,7 +1889,8 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         labels = T1
         print('Use ground truth labels')
 
-    if True:  # nparticles larger than initially
+    # nparticles larger than initially
+    if False:  # nparticles larger than initially
 
         prev_index_particles = index_particles
 
@@ -2477,7 +2478,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
     print('Plotting ...')
 
     fig = plt.figure(figsize=(16, 8))
-    plt.ion()
+    # plt.ion()
     if bMesh:
         x = x_list[0][0].clone().detach()
         index_particles = []
@@ -2836,7 +2837,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
 
     fig.savefig(os.path.join(log_dir, 'embedding_result.png'), dpi=300)
 
-    plt.show()
+    # plt.show()
     plt.close()
 
 def data_train_shrofflab_celegans(model_config):
@@ -3303,7 +3304,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3313,8 +3314,8 @@ if __name__ == '__main__':
     # config_list = ['config_arbitrary_replace','config_arbitrary_regul']
 
     # config_list=['config_CElegans_32']
-    config_list = ['config_Coulomb_3_02', 'config_Coulomb_3_01']
-    # config_list = ['config_Coulomb_3','config_Coulomb_4','config_arbitrary_3','config_arbitrary_5','config_arbitrary_8','config_arbitrary_16','config_gravity_4','config_gravity_8'] #''
+    # config_list = ['config_Coulomb_3_02', 'config_Coulomb_3_01']
+    config_list = ['config_gravity_16'] # ['config_gravity_4','config_gravity_8'] #['config_arbitrary_3','config_arbitrary_5','config_arbitrary_8','config_arbitrary_16',
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
