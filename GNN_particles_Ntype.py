@@ -1582,8 +1582,7 @@ def data_train(model_config, model_embedding):
             # total_loss += loss.item()
 
         torch.save({'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict()},
-                   os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs_{epoch}.pt'))
+                    'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs_{epoch}.pt'))
 
         if (total_loss / nparticles / batch_size / (N+1) < best_loss):
             best_loss = total_loss / (N+1) / nparticles / batch_size
@@ -1766,13 +1765,18 @@ def data_train(model_config, model_embedding):
         kmeans.fit(proj_interaction)
         print(f'kmeans.inertia_: {np.round(kmeans.inertia_, 3)}')
 
-
-
+        for n in range(nparticle_types):
+            tmp = kmeans.labels_[index_particles[n]]
+            sub_group = np.round(np.median(tmp))
+            accuracy = len(np.argwhere(tmp == sub_group)) / len(tmp) * 100
+            print(f'Sub-group {n} accuracy: {np.round(accuracy, 3)}')
+            logger.info(f'Sub-group {n} accuracy: {np.round(accuracy, 3)}')
         for n in range(model_config['ninteractions']):
             plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif",dpi=300)
+        plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
         plt.close()
+
 
         if (epoch == 1*Nepochs//4) | (epoch == 2*Nepochs//4) | (epoch == 3*Nepochs//4) | (epoch == Nepochs-3):
 
@@ -3304,7 +3308,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3314,8 +3318,8 @@ if __name__ == '__main__':
     # config_list = ['config_arbitrary_replace','config_arbitrary_regul']
 
     # config_list=['config_CElegans_32']
-    # config_list = ['config_Coulomb_3_02', 'config_Coulomb_3_01']
-    config_list = ['config_gravity_16'] # ['config_gravity_4','config_gravity_8'] #['config_arbitrary_3','config_arbitrary_5','config_arbitrary_8','config_arbitrary_16',
+    config_list = ['config_Coulomb_3_02', 'config_Coulomb_3_01']
+    #config_list = ['config_gravity_16'] # ['config_gravity_4','config_gravity_8'] #['config_arbitrary_3','config_arbitrary_5','config_arbitrary_8','config_arbitrary_16',
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
