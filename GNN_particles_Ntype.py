@@ -1311,6 +1311,7 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_
     model_config['nparticles'] = int(model_config['nparticles'] / ratio)
 
 def data_train(model_config, model_embedding):
+
     print('')
 
     model = []
@@ -2794,7 +2795,6 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
             p = torch.tensor(p, device=device)
         else:
             p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
-
         psi_output = []
         for n in range(nparticle_types):
             psi_output.append(model.psi(rr, p[n]))
@@ -2804,7 +2804,10 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
         plt.ylabel('MLP [a.u]', fontsize=12)
     if model_config['model'] == 'GravityParticles':
         p = model_config['p']
-        p = torch.tensor(p, device=device)
+        if len(p)>0:
+            p = torch.tensor(p, device=device)
+        else:
+            p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
         psi_output = []
         for n in range(nparticle_types):
             psi_output.append(model.psi(rr, p[n]))
@@ -2818,7 +2821,10 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
         plt.ylabel('MLP [a.u]', fontsize=12)
     if model_config['model'] == 'ElecParticles':
         p = model_config['p']
-        p = torch.tensor(p, device=device)
+        if len(p)>0:
+            p = torch.tensor(p, device=device)
+        else:
+            p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
         psi_output = []
         for m in range(nparticle_types):
             for n in range(nparticle_types):
@@ -3322,7 +3328,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3336,7 +3342,7 @@ if __name__ == '__main__':
     # config_list = ['config_Coulomb_3_01', 'config_Coulomb_3_02']
     # config_list = ['config_gravity_4','config_gravity_8']
     # config_list = ['config_arbitrary_3','config_arbitrary_5','config_arbitrary_8','config_arbitrary_16']
-    config_list = ['config_arbitrary_16_bis']
+    config_list = ['config_gravity_16'] #['config_arbitrary_16_bis', 'config_Coulomb_3_01']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3377,10 +3383,10 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_p=False, step=5)
-        data_train(model_config,model_embedding)
-        # data_plot(model_config, epoch=-1, bPrint=True, best_model=17)
-        # data_test(model_config, bVisu=True, bPrint=True, best_model=17, bDetails=False, step=5) # model_config['nframes']-5)
+        # data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_p=False, step=5)
+        # data_train(model_config,model_embedding)
+        data_plot(model_config, epoch=-1, bPrint=True, best_model=17)
+        data_test(model_config, bVisu=True, bPrint=True, best_model=17, bDetails=False, step=5) # model_config['nframes']-5)
 
         # data_train_shrofflab_celegans(model_config)
         # data_test_shrofflab_celegans(model_config)
