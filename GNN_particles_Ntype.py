@@ -785,7 +785,6 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_
             if (f[-8:]!='tmp_data') & (f!='p.pt') & (f!='cycle_length.pt') & (f!='model_config.json') & (f!='generation_code.py'):
                 os.remove(f)
 
-
     os.makedirs(folder, exist_ok=True)
     os.makedirs(f'./graphs_data/graphs_particles_{dataset_name}/tmp_data/', exist_ok=True)
 
@@ -856,7 +855,7 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_
         torch.save(torch.squeeze(p), f'graphs_data/graphs_particles_{dataset_name}/p.pt')
     if model_config['model'] == 'PDE_B':
         print(f'Generate PDE_B')
-        p = torch.rand(nparticle_types, 3, device=device) * 100
+        p = torch.rand(nparticle_types, 3, device=device)
         if len(model_config['p']) > 0:
             for n in range(nparticle_types):
                 p[n] = torch.tensor(model_config['p'][n])
@@ -1300,7 +1299,6 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_
                                           dy=x[k, 4].detach().cpu().item() * model_config['arrow_length'], color='k',alpha=0.25)
                         plt.xticks([])
                         plt.yticks([])
-
 
         torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
         torch.save(y_list, f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
@@ -2552,7 +2550,8 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
                                  linewidth=1,
                                  color=cmap.color(k), alpha=0.25)
         acc_list = torch.stack(acc_list)
-        plt.xlim([0, 0.05])
+        plt.xlim([0, 0.02])
+        plt.ylim([-0.5E6,0.5E6])
         plt.xlabel('Distance [a.u]', fontsize=12)
         plt.ylabel('MLP [a.u]', fontsize=12)
         coeff_norm = acc_list.detach().cpu().numpy()
@@ -2575,10 +2574,10 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
                      acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],
                      color=cmap.color(x[n, 5].detach().cpu().numpy()), linewidth=1, alpha=0.25)
         acc_list = torch.stack(acc_list)
-        plt.yscale('log')
-        plt.xscale('log')
-        plt.xlim([1E-3, 0.2])
-        plt.ylim([1, 1E7])
+        # plt.yscale('log')
+        # plt.xscale('log')
+        plt.xlim([0, 0.02])
+        plt.ylim([0,0.5E6])
         plt.xlabel('Distance [a.u]', fontsize=12)
         plt.ylabel('MLP [a.u]', fontsize=12)
         coeff_norm = acc_list.detach().cpu().numpy()
@@ -2748,10 +2747,12 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
                      acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],
                      color=cmap.color(x[n, 5].detach().cpu().numpy()), linewidth=1, alpha=0.25)
         acc_list = torch.stack(acc_list)
-        plt.yscale('log')
-        plt.xscale('log')
-        plt.xlim([1E-3, 0.2])
-        plt.ylim([1, 1E7])
+        # plt.yscale('log')
+        # plt.xscale('log')
+        plt.xlim([0, 0.02])
+        plt.ylim([0,0.5E6])
+        # plt.xlim([1E-3, 0.2])
+        # plt.ylim([1, 1E7])
         plt.xlabel('Distance [a.u]', fontsize=12)
         plt.ylabel('MLP [a.u]', fontsize=12)
     elif (model_config['model'] == 'PDE_A') | (model_config['model'] == 'PDE_B'):
@@ -2813,10 +2814,10 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
             psi_output.append(model.psi(rr, p[n]))
         for n in range(nparticle_types - 1, -1, -1):
             plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), linewidth=1, color=cmap.color(n))
-        plt.yscale('log')
-        plt.xscale('log')
-        plt.xlim([1E-3, 0.2])
-        plt.ylim([1, 1E7])
+        # plt.yscale('log')
+        # plt.xscale('log')
+        plt.xlim([0, 0.02])
+        plt.ylim([0,0.5E6])
         plt.xlabel('Distance [a.u]', fontsize=12)
         plt.ylabel('MLP [a.u]', fontsize=12)
     if model_config['model'] == 'ElecParticles':
@@ -3342,7 +3343,8 @@ if __name__ == '__main__':
     # config_list = ['config_Coulomb_3_01', 'config_Coulomb_3_02']
     # config_list = ['config_gravity_4','config_gravity_8']
     # config_list = ['config_arbitrary_3','config_arbitrary_5','config_arbitrary_8','config_arbitrary_16']
-    config_list = ['config_gravity_16'] #['config_arbitrary_16_bis', 'config_Coulomb_3_01']
+    # config_list = ['config_gravity_16','config_Coulomb_3_01'] #['config_arbitrary_16_bis', 'config_Coulomb_3_01']
+    config_list = ['config_boids_4']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3383,10 +3385,10 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        # data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_p=False, step=5)
+        data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_p=False, step=5)
         # data_train(model_config,model_embedding)
-        data_plot(model_config, epoch=-1, bPrint=True, best_model=17)
-        data_test(model_config, bVisu=True, bPrint=True, best_model=17, bDetails=False, step=5) # model_config['nframes']-5)
+        # data_plot(model_config, epoch=-1, bPrint=True, best_model=17)
+        # data_test(model_config, bVisu=True, bPrint=True, best_model=17, bDetails=False, step=5) # model_config['nframes']-5)
 
         # data_train_shrofflab_celegans(model_config)
         # data_test_shrofflab_celegans(model_config)
