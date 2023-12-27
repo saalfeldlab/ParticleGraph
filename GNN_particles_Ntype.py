@@ -268,7 +268,7 @@ class PDE_B(pyg.nn.MessagePassing):
 
         cohesion = pp[:, 0:1].repeat(1, 2) / 5E4 * bc_diff(x_j[:, 1:3] - x_i[:, 1:3])
 
-        separation = pp[:, 2:3].repeat(1, 2) / 5E6 * bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) / (r[:, None].repeat(1, 2))   #5E7 normal
+        separation = pp[:, 2:3].repeat(1, 2) / 5E7 * bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) / (r[:, None].repeat(1, 2))   #5E7 normal
 
         return separation + alignment + cohesion
 
@@ -855,7 +855,7 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_
         torch.save(torch.squeeze(p), f'graphs_data/graphs_particles_{dataset_name}/p.pt')
     if model_config['model'] == 'PDE_B':
         print(f'Generate PDE_B')
-        p = torch.rand(nparticle_types, 3, device=device)
+        p = torch.rand(nparticle_types, 3, device=device)*100   # comprised between 10 and 50
         if len(model_config['p']) > 0:
             for n in range(nparticle_types):
                 p[n] = torch.tensor(model_config['p'][n])
@@ -3385,8 +3385,8 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_p=False, step=5)
-        # data_train(model_config,model_embedding)
+        data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_p=False, step=20)
+        data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=17)
         # data_test(model_config, bVisu=True, bPrint=True, best_model=17, bDetails=False, step=5) # model_config['nframes']-5)
 
