@@ -1,0 +1,34 @@
+input_size: 9
+output_size: 2
+hidden_size: 128
+n_mp_layers: 5
+noise_level: 0
+radius: 0.04
+min_radius: 0
+nparticles: 3600
+nparticle_types: 16
+ninteractions: 16
+nframes: 2000
+sigma: 0.005
+tau: 1E-10
+v_init: 1E-3
+aggr_type: 'mean'
+boundary: 'periodic'  # periodic   'no'  # no boundary condition
+data_augmentation: True
+batch_size: 8
+embedding: 2
+model: 'PDE_B'
+prediction: '2nd_derivative'
+upgrade_type: 'none'
+nlayers_update: 3
+hidden_size_update: 64
+p: []
+nrun: 2
+clamp: 0
+pred_limit: 1E+9
+start_frame: 0
+cmap: 'tab10'
+arrow_length: 5
+description: 'Boids'
+sparsity: 'regul_replace'
+   

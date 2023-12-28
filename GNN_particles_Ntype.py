@@ -1131,7 +1131,7 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_
                     for n in range(nparticle_types):
                         g = p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 7.5
                         plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                    x[index_particles[n], 2].detach().cpu().numpy(), s=g,
+                                    x[index_particles[n], 2].detach().cpu().numpy(), s=40,
                                     alpha=0.75, color=cmap.color(n))
                 elif bMesh:
                     pts = x_noise[:, 1:3].detach().cpu().numpy()
@@ -1149,17 +1149,17 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_
                     # ax.set_facecolor([0.5,0.5,0.5])
                 elif model_config['model'] == 'ElecParticles':
                     for n in range(nparticle_types):
-                        g = np.abs(p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20)
+                        g = 40 #np.abs(p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20)
                         if model_config['p'][n][0] <= 0:
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                        x[index_particles[n], 2].detach().cpu().numpy(), s=g, c='r', alpha=0.5)
+                                        x[index_particles[n], 2].detach().cpu().numpy(), s=g, c=cmap.color(n))
                         else:
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                        x[index_particles[n], 2].detach().cpu().numpy(), s=g, c='b', alpha=0.5)
+                                        x[index_particles[n], 2].detach().cpu().numpy(), s=g, c=cmap.color(n))
                 else:
                     for n in range(nparticle_types):
                         plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                    x[index_particles[n], 2].detach().cpu().numpy(), s=20, color=cmap.color(n),alpha=1)
+                                    x[index_particles[n], 2].detach().cpu().numpy(), s=40, color=cmap.color(n),alpha=1)
                 if bMesh | (model_config['boundary'] == 'periodic'):
                     # plt.text(0, 1.08, f'frame: {it}')
                     # plt.text(0, 1.03, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
@@ -1199,13 +1199,13 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_
                     # ax.set_facecolor([0.5,0.5,0.5])
                 elif model_config['model'] == 'ElecParticles':
                     for n in range(nparticle_types):
-                        g = np.abs(p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20)
+                        g = 40 #np.abs(p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20)
                         if model_config['p'][n][0] <= 0:
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                        x[index_particles[n], 2].detach().cpu().numpy(), s=g, c='k', alpha=0.5)
+                                        x[index_particles[n], 2].detach().cpu().numpy(), s=g, c='k')
                         else:
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                        x[index_particles[n], 2].detach().cpu().numpy(), s=g, c='k', alpha=0.5)
+                                        x[index_particles[n], 2].detach().cpu().numpy(), s=g, c='k')
                 else:
                     for n in range(nparticle_types):
                         plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
@@ -3329,7 +3329,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3342,9 +3342,9 @@ if __name__ == '__main__':
     # config_list = ['config_Coulomb_3', 'config_Coulomb_4']
     # config_list = ['config_Coulomb_3_01', 'config_Coulomb_3_02']
     # config_list = ['config_gravity_4','config_gravity_8']
-    # config_list = ['config_arbitrary_3','config_arbitrary_5','config_arbitrary_8','config_arbitrary_16']
-    # config_list = ['config_gravity_16','config_Coulomb_3_01'] #['config_arbitrary_16_bis', 'config_Coulomb_3_01']
-    config_list = ['config_boids_8']
+    # config_list = ['config_arbitrary_16_bis'] #,'config_arbitrary_5','config_arbitrary_8','config_arbitrary_16']
+    # config_list = ['config_Coulomb_3_01']  # ['config_arbitrary_3','config_arbitrary_16'] #, #,'config_Coulomb_3_01'] #['config_arbitrary_16_bis', 'config_Coulomb_3_01']
+    config_list = ['config_boids_16']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3385,7 +3385,7 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_p=False, step=20)
+        data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_p=False, step=5)
         data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=17)
         # data_test(model_config, bVisu=True, bPrint=True, best_model=17, bDetails=False, step=5) # model_config['nframes']-5)
