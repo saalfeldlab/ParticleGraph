@@ -1499,11 +1499,19 @@ def data_train(model_config, model_embedding):
     embedding_center = []
     regul_embedding = 0
 
+    batch_size = model_config['batch_size']
+    print(f'batch_size: {batch_size}')
+    logger.info(f'batch_size: {batch_size}')
+    if data_augmentation:
+        data_augmentation_loop = 200
+        print(f'data_augmentation_loop: {data_augmentation_loop}')
+        logger.info(f'data_augmentation_loop: {data_augmentation_loop}')
+
+    print(f'   {nframes * data_augmentation_loop // batch_size} iterations per epoch')
+    logger.info(f'   {nframes * data_augmentation_loop // batch_size} iterations per epoch')
     print('Start training ...')
     logger.info("Start training ...")
     time.sleep(0.5)
-    print(f'   {nframes * data_augmentation_loop // batch_size // 16} iterations per epoch')
-    logger.info(f'   {nframes * data_augmentation_loop // batch_size // 16} iterations per epoch')
 
     x = x_list[1][0].clone().detach()
 
@@ -1517,14 +1525,6 @@ def data_train(model_config, model_embedding):
 
     for epoch in range(Nepochs + 1):
 
-        if epoch == 0:
-            batch_size = model_config['batch_size']
-            print(f'batch_size: {batch_size}')
-            logger.info(f'batch_size: {batch_size}')
-            if data_augmentation:
-                data_augmentation_loop = 200
-                print(f'data_augmentation_loop: {data_augmentation_loop}')
-                logger.info(f'data_augmentation_loop: {data_augmentation_loop}')
         if epoch == 1:
             min_radius = model_config['min_radius']
             logger.info(f'min_radius: {min_radius}')
@@ -1551,7 +1551,7 @@ def data_train(model_config, model_embedding):
 
         total_loss = 0
 
-        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size // 16)):
+        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size//8)):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -2994,12 +2994,10 @@ def data_train_shrofflab_celegans(model_config):
         y.append(torch.stack(y_).squeeze())
     y_list.append(y)
 
-
     NGraphs = len(x_list)
     print(f'Graph files N: {NGraphs}')
     logger.info(f'Graph files N: {NGraphs}')
     model_config['ndataset'] = NGraphs
-
 
     # normalization
 
@@ -3389,7 +3387,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3445,9 +3443,9 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        data_generate(model_config, bVisu=False, bDetails=False, bErase=False, bLoad_p=False, step=5)
+        # data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_p=False, step=400)
         data_train(model_config,model_embedding)
-        # data_plot(model_config, epoch=0, bPrint=True, best_model=17)
+        # data_plot(model_config, epoch=-1, bPrint=True, best_model=17)
         # data_test(model_config, bVisu=True, bPrint=True, best_model=17, bDetails=False, step=5) # model_config['nframes']-5)
 
         # data_train_shrofflab_celegans(model_config)
