@@ -1502,6 +1502,8 @@ def data_train(model_config, model_embedding):
     print('Start training ...')
     logger.info("Start training ...")
     time.sleep(0.5)
+    print(f'   {nframes * data_augmentation_loop // batch_size // 16} iterations per epoch')
+    logger.info(f'   {nframes * data_augmentation_loop // batch_size // 16} iterations per epoch')
 
     x = x_list[1][0].clone().detach()
 
@@ -1549,7 +1551,7 @@ def data_train(model_config, model_embedding):
 
         total_loss = 0
 
-        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size // 4)):
+        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size // 16)):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -3444,8 +3446,8 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
         data_generate(model_config, bVisu=False, bDetails=False, bErase=False, bLoad_p=False, step=5)
-        data_train(model_config,model_embedding)
-        # data_plot(model_config, epoch=-1, bPrint=True, best_model=17)
+        # data_train(model_config,model_embedding)
+        # data_plot(model_config, epoch=0, bPrint=True, best_model=17)
         # data_test(model_config, bVisu=True, bPrint=True, best_model=17, bDetails=False, step=5) # model_config['nframes']-5)
 
         # data_train_shrofflab_celegans(model_config)
