@@ -5,7 +5,7 @@ n_mp_layers: 5
 noise_level: 0
 radius: 0.04
 min_radius: 0
-nparticles: 3600
+nparticles: 1800
 nparticle_types: 16
 ninteractions: 16
 nframes: 2000
@@ -27,7 +27,7 @@ nrun: 2
 clamp: 0
 pred_limit: 1E+9
 start_frame: 0
-cmap: 'tab10'
+cmap: 'tab20'
 arrow_length: 5
 description: 'Boids'
 sparsity: 'regul_replace'
