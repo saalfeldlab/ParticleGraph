@@ -5,7 +5,7 @@ n_mp_layers: 5
 noise_level: 0
 radius: 0.04
 min_radius: 0
-nparticles: 1800
+nparticles: 1792
 nparticle_types: 16
 ninteractions: 16
 nframes: 2000
