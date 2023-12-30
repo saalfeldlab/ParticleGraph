@@ -272,7 +272,7 @@ class PDE_B(pyg.nn.MessagePassing):
         return acc
 
     def message(self, x_i, x_j):
-        r = torch.sum(bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) ** 2, axis=1)  # distance squared
+        r = torch.sum(bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)  # distance squared
 
         pp = self.p[x_i[:, 5].detach().cpu().numpy(), :]
 
@@ -306,7 +306,7 @@ class PDE_E(pyg.nn.MessagePassing):
         return acc
 
     def message(self, x_i, x_j):
-        r = torch.sqrt(torch.sum(bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) ** 2, axis=1))
+        r = torch.sqrt(torch.sum(bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1))
         # r = torch.clamp(r, min=self.clamp)
         r = torch.concatenate((r[:, None], r[:, None]), -1)
 
@@ -324,10 +324,8 @@ class PDE_E(pyg.nn.MessagePassing):
         return acc
 
     def psi(self, r, p1, p2):
-        r_ = torch.clamp(r, min=self.clamp)
-        acc = p1 * p2 * r / r_ ** 3
-        acc = torch.clamp(acc, max=self.pred_limit)
-        return acc  # Elec particles
+        acc = p1 * p2 / r**2
+        return -acc  # Elec particles
 class PDE_G(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -347,7 +345,7 @@ class PDE_G(pyg.nn.MessagePassing):
         return acc
 
     def message(self, x_i, x_j):
-        r = torch.sqrt(torch.sum(bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) ** 2, axis=1))
+        r = torch.sqrt(torch.sum(bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1))
         r = torch.clamp(r, min=self.clamp)
         r = torch.concatenate((r[:, None], r[:, None]), -1)
 
@@ -479,7 +477,6 @@ class InteractionParticles(pyg.nn.MessagePassing):
             return p[1] / 5E2 * (cohesion+separation)
         else: # PDE_A
             return r * (p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) - p[3] * torch.exp(-r ** (2 * p[1]) / (2 * sigma ** 2)))
-
 class InteractionCElegans(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -606,7 +603,7 @@ class GravityParticles(pyg.nn.MessagePassing):
         r = torch.sqrt(torch.sum(bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) ** 2, axis=1)) / self.radius  # squared distance
         r = r[:, None]
 
-        delta_pos = bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) / self.radius
+        delta_pos = bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) / self.radius
         x_i_vx = x_i[:, 3:4] / self.vnorm[4]
         x_i_vy = x_i[:, 4:5] / self.vnorm[5]
         x_j_vx = x_j[:, 3:4] / self.vnorm[4]
@@ -636,11 +633,7 @@ class GravityParticles(pyg.nn.MessagePassing):
         return aggr_out  # self.lin_node(aggr_out)
 
     def psi(self, r, p):
-
-        r_ = torch.clamp(r, min=self.clamp)
-        psi = p * r / r_ ** 3
-        psi = torch.clamp(psi, max=self.pred_limit)
-
+        psi = p / r ** 2
         return psi[:, None]
 class ElecParticles(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
@@ -695,7 +688,7 @@ class ElecParticles(pyg.nn.MessagePassing):
 
     def message(self, x_i, x_j):
 
-        r = torch.sqrt(torch.sum(bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) ** 2, axis=1)) / self.radius  # squared distance
+        r = torch.sqrt(torch.sum(bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)) / self.radius  # squared distance
         r = r[:, None]
 
         delta_pos = bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) / self.radius
@@ -729,9 +722,7 @@ class ElecParticles(pyg.nn.MessagePassing):
         return aggr_out  # self.lin_node(aggr_out)
 
     def psi(self, r, p1, p2):
-        r_ = torch.clamp(r, min=self.clamp)
-        acc = p1 * p2 * r / r_ ** 3
-        acc = torch.clamp(acc, max=self.pred_limit)
+        acc = p1 * p2 / r_ ** 2
         return -acc  # Elec particles
 class MeshLaplacian(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
@@ -2639,7 +2630,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
         acc_list = []
         for n in range(nparticles):
             embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
-            in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
+            in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
                                      rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
                                      0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
             with torch.no_grad():
@@ -2816,7 +2807,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
         acc_list = []
         for n in range(nparticles):
             embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
-            in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
+            in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
                                      rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
                                      0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
             acc = model.lin_edge(in_features.float())
@@ -3003,7 +2994,6 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
 
 
     print (f'RMSE: {np.mean(rmserr_list)}+\-{np.std(rmserr_list)} ')
-
 
 def data_train_shrofflab_celegans(model_config):
     print('')
@@ -3467,7 +3457,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3482,7 +3472,7 @@ if __name__ == '__main__':
     # config_list = ['config_gravity_4','config_gravity_8']
     # config_list = ['config_arbitrary_16_bis'] #,'config_arbitrary_5','config_arbitrary_8','config_arbitrary_16']
     # config_list = ['config_Coulomb_3_01']  # ['config_arbitrary_3','config_arbitrary_16'] #, #,'config_Coulomb_3_01'] #['config_arbitrary_16_bis', 'config_Coulomb_3_01']
-    config_list = ['config_arbitrary_3','config_arbitrary_16']
+    config_list = ['config_gravity_16']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3523,9 +3513,9 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_p=False, step=20)
-        data_train(model_config,model_embedding)
-        # data_plot(model_config, epoch=-1, bPrint=True, best_model=17)
+        # data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_p=False, step=50)
+        # data_train(model_config,model_embedding)
+        data_plot(model_config, epoch=-1, bPrint=True, best_model=17)
         # data_test(model_config, bVisu=True, bPrint=True, best_model=17, bDetails=False, step=5) # model_config['nframes']-5)
 
         # data_train_shrofflab_celegans(model_config)
