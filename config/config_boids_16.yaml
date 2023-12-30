@@ -10,7 +10,7 @@ nparticle_types: 16
 ninteractions: 16
 nframes: 2000
 sigma: 0.005
-tau: 1E-10
+tau: 1
 v_init: 1E-3
 aggr_type: 'mean'
 boundary: 'periodic'  # periodic   'no'  # no boundary condition

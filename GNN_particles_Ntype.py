@@ -45,8 +45,6 @@ def minkowski_distance(x, y, p_value):
     return (p_root(sum(pow(abs(a - b), p_value)
                        for a, b in zip(x, y)), p_value))
 
-
-
 def distmat_square(X, Y):
     return torch.sum(bc_diff(X[:, None, :] - Y[None, :, :]) ** 2, axis=2)
 def kernel(X, Y):
@@ -476,8 +474,13 @@ class InteractionParticles(pyg.nn.MessagePassing):
 
     def psi(self, r, p):
 
-        return -(r * (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(
-            -r ** (2 * p[1]) / (2 * sigma ** 2))))
+        if (len(p)==3): #PDE_B
+            cohesion = p[0] / 5E4 * r
+            separation = -p[2] / 5E7 / r
+            return cohesion+separation
+        else: # PDE_A
+            return -(r * (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(-r ** (2 * p[1]) / (2 * sigma ** 2))))
+
 class InteractionCElegans(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -2569,7 +2572,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
     print('Plotting ...')
 
     fig = plt.figure(figsize=(16, 8))
-    # plt.ion()
+    plt.ion()
     if bMesh:
         x = x_list[0][0].clone().detach()
         index_particles = []
@@ -2704,6 +2707,9 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
                           random_state=42, transform_queue_size=0).fit(coeff_norm)
         proj_interaction = trans.transform(coeff_norm)
         proj_interaction = np.squeeze(proj_interaction)
+    if (model_config['model'] == 'PDE_B'):
+        plt.xlim([0, 0.02])
+        plt.ylim([-0.001, 0.00025])
 
     ax = fig.add_subplot(2, 4, 3)
 
@@ -2859,6 +2865,9 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
             if n % 5 == 0:
                 plt.plot(r1.detach().cpu().numpy(), h.detach().cpu().numpy() * hnorm.detach().cpu().numpy(),
                          linewidth=1, color='k', alpha=0.05)
+    if (model_config['model'] == 'PDE_B'):
+        plt.xlim([0, 0.02])
+        plt.ylim([-0.001, 0.00025])
 
 
     plt.xlabel('Distance [a.u]', fontsize=12)
@@ -2878,6 +2887,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
             plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), color=cmap.color(n), linewidth=1)
         plt.xlabel('Distance [a.u]', fontsize=12)
         plt.ylabel('MLP [a.u]', fontsize=12)
+
     if model_config['model'] == 'GravityParticles':
         p = model_config['p']
         if len(p)>0:
@@ -2913,6 +2923,10 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                         x[index_particles[n], 2].detach().cpu().numpy(),
                         color=cmap.color(kmeans.labels_[index_particles[n]]), s=10)
+
+    if (model_config['model'] == 'PDE_B'):
+        plt.xlim([0, 0.02])
+        plt.ylim([-0.001, 0.00025])
 
     ax = fig.add_subplot(2, 4, 4)
     T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
@@ -3511,8 +3525,8 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
         # data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_p=False, step=400)
-        data_train(model_config,model_embedding)
-        # data_plot(model_config, epoch=-1, bPrint=True, best_model=7)
+        # data_train(model_config,model_embedding)
+        data_plot(model_config, epoch=-1, bPrint=True, best_model=7)
         # data_test(model_config, bVisu=True, bPrint=True, best_model=17, bDetails=False, step=5) # model_config['nframes']-5)
 
         # data_train_shrofflab_celegans(model_config)
