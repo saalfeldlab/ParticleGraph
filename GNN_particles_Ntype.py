@@ -1478,9 +1478,9 @@ def data_train(model_config, model_embedding):
     if (model_config['model'] == 'WaveMesh'):
         model = MeshLaplacian(model_config, device)
 
-    net = f"./log/try_boids_16/models/best_model_with_1_graphs_7.pt"
-    state_dict = torch.load(net,map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
+    # net = f"./log/try_boids_16/models/best_model_with_1_graphs_7.pt"
+    # state_dict = torch.load(net,map_location=device)
+    # model.load_state_dict(state_dict['model_state_dict'])
 
     lra = 1E-3
     lr = 1E-3
@@ -1540,7 +1540,7 @@ def data_train(model_config, model_embedding):
         edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,
                                                                normalization="None")  # "None", "sym", "rw"
 
-    for epoch in range(8, Nepochs + 1):
+    for epoch in range(Nepochs + 1):
 
         if epoch == 1:
             min_radius = model_config['min_radius']
