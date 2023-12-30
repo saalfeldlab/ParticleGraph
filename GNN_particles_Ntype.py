@@ -31,6 +31,21 @@ from scipy.spatial import Delaunay
 import logging
 import yaml  # need to install pyyaml
 from sklearn import metrics
+from math import *
+from decimal import Decimal
+
+def p_root(value, root):
+    root_value = 1 / float(root)
+    return round(Decimal(value) **
+                 Decimal(root_value), 3)
+
+def minkowski_distance(x, y, p_value):
+    # pass the p_root function to calculate
+    # all the value of vector parallelly
+    return (p_root(sum(pow(abs(a - b), p_value)
+                       for a, b in zip(x, y)), p_value))
+
+
 
 def distmat_square(X, Y):
     return torch.sum(bc_diff(X[:, None, :] - Y[None, :, :]) ** 2, axis=2)
@@ -1461,9 +1476,9 @@ def data_train(model_config, model_embedding):
     if (model_config['model'] == 'WaveMesh'):
         model = MeshLaplacian(model_config, device)
 
-    # net = f"./log/try_gravity_regul_replace/models/best_model_with_1_graphs_5.pt"
-    # state_dict = torch.load(net,map_location=device)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    net = f"./log/try_gravity_regul_replace/models/best_model_with_1_graphs_7.pt"
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
 
     lra = 1E-3
     lr = 1E-3
@@ -1489,7 +1504,7 @@ def data_train(model_config, model_embedding):
     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     print(f'network: {net}')
     logger.info(f'network: {net}')
-    Nepochs = 5  ######################## 20
+    Nepochs = 20  ######################## 20
     logger.info(f'N epochs: {Nepochs}')
     print('')
     min_radius = 0.002
@@ -1523,7 +1538,7 @@ def data_train(model_config, model_embedding):
         edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,
                                                                normalization="None")  # "None", "sym", "rw"
 
-    for epoch in range(Nepochs + 1):
+    for epoch in range(8, Nepochs + 1):
 
         if epoch == 1:
             min_radius = model_config['min_radius']
@@ -1551,7 +1566,7 @@ def data_train(model_config, model_embedding):
 
         total_loss = 0
 
-        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size//16)):
+        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size)):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -1959,7 +1974,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         with torch.no_grad():
             model.a[0] = torch.tensor(forced_embedding, device=device).repeat(nparticles, 1)
 
-    if os.path.isfile(os.path.join(log_dir, 'labels.pt')):
+    if os.path.isfile(os.path.join(log_dir, f'labels_{best_model}.pt')):
         print('Use learned labels')
         labels =  torch.load(os.path.join(log_dir, 'labels.pt'))
     else:
@@ -2020,7 +2035,6 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
     if bPrint:
         print(table)
         print(f"Total Trainable Params: {total_params}")
-
 
     x_recons = []
     y_recons = []
@@ -2520,7 +2534,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
     # else:
     #     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_{best_model}.pt"
 
-    net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_17.pt"
+    net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_{best_model}.pt"
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
 
@@ -2708,7 +2722,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
     new_labels = kmeans.labels_.copy()
     for n in range(nparticle_types):
         new_labels[kmeans.labels_ == label_list[n]] = n
-    torch.save(torch.tensor(new_labels, device=device), os.path.join(log_dir, 'labels.pt'))
+    torch.save(torch.tensor(new_labels, device=device), os.path.join(log_dir, f'labels_{best_model}.pt'))
 
     for n in range(nparticle_types):
         if proj_interaction.ndim == 1:
@@ -2846,6 +2860,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
                 plt.plot(r1.detach().cpu().numpy(), h.detach().cpu().numpy() * hnorm.detach().cpu().numpy(),
                          linewidth=1, color='k', alpha=0.05)
 
+
     plt.xlabel('Distance [a.u]', fontsize=12)
     plt.ylabel('MLP [a.u]', fontsize=12)
 
@@ -2924,6 +2939,58 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
 
     # plt.show()
     plt.close()
+
+    # calculation of Minkowski distance
+
+    plot_list = []
+    for n in range(nparticle_types):
+        embedding = t[n] * torch.ones((1000, model_config['embedding']), device=device)
+        if model_config['prediction'] == '2nd_derivative':
+            in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                     rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
+                                     0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
+        else:
+            in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                     rr[:, None] / model_config['radius'], embedding), dim=1)
+        with torch.no_grad():
+            pred = model.lin_edge(in_features.float())
+        pred = pred[:, 0]
+        plot_list.append(pred * ynorm[4] / torch.tensor(model_config['tau'],device=device))
+
+    min_norm=torch.min(plot_list[0])
+    max_norm = torch.max(plot_list[0])
+
+    for n in range(nparticle_types):
+        if  torch.min(plot_list[n]) < min_norm:
+            min_norm=torch.min(plot_list[n])
+        if  torch.min(psi_output[n]) < min_norm:
+            min_norm=torch.min(psi_output[n])
+        if  torch.max(plot_list[n]) > max_norm:
+            max_norm=torch.max(plot_list[n])
+        if  torch.max(psi_output[n]) > max_norm:
+            max_norm=torch.max(psi_output[n])
+    for n in range(nparticle_types):
+        plot_list[n] = (plot_list[n]-min_norm)/(max_norm-min_norm)
+        psi_output[n] = (psi_output[n]-min_norm)/(max_norm-min_norm)
+
+    rmserr_list=[]
+    for n in range(nparticle_types):
+        # distance = minkowski_distance(plot_list[n].detach().cpu().numpy(), psi_output[0].detach().cpu().numpy(), 3)
+        # for m in range(1,nparticle_types):
+        #     if minkowski_distance(plot_list[n].detach().cpu().numpy(), psi_output[m].detach().cpu().numpy(), 3) < distance:
+        #         distance = minkowski_distance(plot_list[n].detach().cpu().numpy(), psi_output[m].detach().cpu().numpy(), 3)
+        # print(f'sub-group {n}: Minkowski distance: {distance}')
+
+        rmserr = torch.sqrt(torch.mean((plot_list[n]-psi_output[0]) ** 2))
+        for m in range(1,nparticle_types):
+            if torch.sqrt(torch.mean((plot_list[n]-psi_output[m]) ** 2)) < rmserr:
+                rmserr = torch.sqrt(torch.mean((plot_list[n]-psi_output[m]) ** 2))
+        rmserr_list.append(rmserr.item())
+        print(f'sub-group {n}: RMSE: {rmserr.item()}')
+
+
+    print (f'RMSE: {np.mean(rmserr_list)}+\-{np.std(rmserr_list)} ')
+
 
 def data_train_shrofflab_celegans(model_config):
     print('')
@@ -3387,7 +3454,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3402,7 +3469,7 @@ if __name__ == '__main__':
     # config_list = ['config_gravity_4','config_gravity_8']
     # config_list = ['config_arbitrary_16_bis'] #,'config_arbitrary_5','config_arbitrary_8','config_arbitrary_16']
     # config_list = ['config_Coulomb_3_01']  # ['config_arbitrary_3','config_arbitrary_16'] #, #,'config_Coulomb_3_01'] #['config_arbitrary_16_bis', 'config_Coulomb_3_01']
-    config_list = ['config_arbitrary_3']
+    config_list = ['config_boids_16']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
