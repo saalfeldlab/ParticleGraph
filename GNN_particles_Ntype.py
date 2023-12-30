@@ -3513,9 +3513,9 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        # data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_p=False, step=50)
-        # data_train(model_config,model_embedding)
-        data_plot(model_config, epoch=-1, bPrint=True, best_model=17)
+        data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_p=False, step=50)
+        data_train(model_config,model_embedding)
+        # data_plot(model_config, epoch=-1, bPrint=True, best_model=17)
         # data_test(model_config, bVisu=True, bPrint=True, best_model=17, bDetails=False, step=5) # model_config['nframes']-5)
 
         # data_train_shrofflab_celegans(model_config)
