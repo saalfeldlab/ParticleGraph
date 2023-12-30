@@ -477,7 +477,7 @@ class InteractionParticles(pyg.nn.MessagePassing):
         if (len(p)==3): #PDE_B
             cohesion = p[0] / 5E4 * r
             separation = -p[2] / 5E7 / r
-            return cohesion+separation
+            return p[1] / 5E2 * (cohesion+separation)
         else: # PDE_A
             return -(r * (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(-r ** (2 * p[1]) / (2 * sigma ** 2))))
 
