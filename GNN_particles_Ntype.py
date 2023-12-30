@@ -1476,7 +1476,7 @@ def data_train(model_config, model_embedding):
     if (model_config['model'] == 'WaveMesh'):
         model = MeshLaplacian(model_config, device)
 
-    net = f"./log/try_gravity_regul_replace/models/best_model_with_1_graphs_6.pt"
+    net = f"./log/try_boids_16/models/best_model_with_1_graphs_7.pt"
     state_dict = torch.load(net,map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
 
@@ -1538,7 +1538,7 @@ def data_train(model_config, model_embedding):
         edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,
                                                                normalization="None")  # "None", "sym", "rw"
 
-    for epoch in range(7, Nepochs + 1):
+    for epoch in range(8, Nepochs + 1):
 
         if epoch == 1:
             min_radius = model_config['min_radius']
@@ -3512,7 +3512,7 @@ if __name__ == '__main__':
 
         # data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_p=False, step=400)
         data_train(model_config,model_embedding)
-        # data_plot(model_config, epoch=-1, bPrint=True, best_model=17)
+        # data_plot(model_config, epoch=-1, bPrint=True, best_model=7)
         # data_test(model_config, bVisu=True, bPrint=True, best_model=17, bDetails=False, step=5) # model_config['nframes']-5)
 
         # data_train_shrofflab_celegans(model_config)
