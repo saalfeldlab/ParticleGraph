@@ -248,11 +248,11 @@ class PDE_B(pyg.nn.MessagePassing):
         oldv = x[:, 3:5]
         newv = oldv + alignment
 
-        # p = self.p[x[:, 5].detach().cpu().numpy(), :]
-        # oldv_norm = torch.norm(oldv, dim=1)
-        # newv_norm = torch.norm(newv, dim=1)
-        # factor = (oldv_norm + p[:, 1] / 5E2 * (newv_norm - oldv_norm)) / newv_norm
-        # newv *= factor[:, None].repeat(1, 2)
+        p = self.p[x[:, 5].detach().cpu().numpy(), :]
+        oldv_norm = torch.norm(oldv, dim=1)
+        newv_norm = torch.norm(newv, dim=1)
+        factor = (oldv_norm + p[:, 1] / 5E2 * (newv_norm - oldv_norm)) / newv_norm
+        newv *= factor[:, None].repeat(1, 2)
 
         acc = newv - oldv
 
@@ -3422,7 +3422,7 @@ if __name__ == '__main__':
     # config_list = ['config_gravity_4','config_gravity_8']
     # config_list = ['config_arbitrary_16_bis'] #,'config_arbitrary_5','config_arbitrary_8','config_arbitrary_16']
     # config_list = ['config_Coulomb_3_01']  # ['config_arbitrary_3','config_arbitrary_16'] #, #,'config_Coulomb_3_01'] #['config_arbitrary_16_bis', 'config_Coulomb_3_01']
-    config_list = ['config_boids_16_lin','config_boids_16']
+    config_list = ['config_boids_16_lin','config_boids_16_lin_10','config_boids_16']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
