@@ -3416,7 +3416,6 @@ if __name__ == '__main__':
 
     # config_list = ['config_arbitrary', 'config_arbitrary_regul_replace']
     # config_list = ['config_arbitrary_replace','config_arbitrary_regul']
-
     # config_list=['config_CElegans_32']
     # config_list = ['config_Coulomb_3', 'config_Coulomb_4']
     # config_list = ['config_Coulomb_3_01', 'config_Coulomb_3_02']
