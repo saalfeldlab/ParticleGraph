@@ -1,33 +1,36 @@
-input_size: 9
-output_size: 2
-hidden_size: 128
+input_size: 4
+output_size: 1
+hidden_size: 16 
 n_mp_layers: 5
-noise_level: 0
+noise_level: 0.0005
 radius: 0.3
-min_radius: 0.002
-dataset: 'gravity'
-nparticles: 960
-nparticle_types: 4
-ninteractions: 4
+min_radius: 0
+nparticles: 4225 
+nparticle_types: 5
+ninteractions: 5, 
 nframes: 1000
-sigma: .005
-tau: 1E-9
-v_init: 5E-5
+sigma: 0.005 
+tau: 1
+v_init: 0
 aggr_type: 'add'
-boundary: 'no'  # periodic   'no'  # no boundary condition
+boundary: 'periodic'
 data_augmentation: True
 batch_size: 8
-embedding: 2
-model: 'GravityParticles'
-prediction: '2nd_derivative'
+embedding: 2,
+model: 'WaveMesh'
+prediction: ''
 upgrade_type: 'none'
-p: [0.2, 1.8, 3.4, 5.0]
-nrun: 2
+p: [0.2, 1.4, 2.6, 3.8, 5.0]
+c: [0, 0.2, 0.9, 1, 0.3]
+particle_value_map: 'pattern_10.tif'
+particle_type_map: 'pattern_8.tif'
+beta: 0.01 
+nrun: 10
 clamp: 0
-pred_limit: 1E+9
-start_frame: -1000
-arrow_length: 10
+pred_limit: 1000000000.0
+start_frame: 0
 cmap: 'tab10'
 arrow_length: 10
-description: 'Gravity'
+description: 'Wave equation brownian particles 5 coefficients'
 sparsity: 'none'
+

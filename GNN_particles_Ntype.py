@@ -1130,65 +1130,65 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_
 
             if (run == 0) & (it % step == 0) & (it >= 0) & bVisu:
 
-                fig = plt.figure(figsize=(10, 10))
-                # plt.ion()
-
-                distance2 = torch.sum((x_noise[:, None, 1:3] - x_noise[None, :, 1:3]) ** 2, axis=2)
-                adj_t2 = ((distance2 < radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
-                edge_index2 = adj_t2.nonzero().t().contiguous()
-                dataset2 = data.Data(x=x, edge_index=edge_index2)
-                pos = dict(enumerate(np.array(x_noise[:, 1:3].detach().cpu()), 0))
-                vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
-                nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=alpha)
-
-                # ax = fig.add_subplot(2, 2, 1)
-                if model_config['model'] == 'GravityParticles':
-                    for n in range(nparticle_types):
-                        g = p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 7.5
-                        plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                    x[index_particles[n], 2].detach().cpu().numpy(), s=40, color=cmap.color(n))
-                elif bMesh:
-                    pts = x_noise[:, 1:3].detach().cpu().numpy()
-                    tri = Delaunay(pts)
-                    colors = torch.sum(x_noise[tri.simplices, 6], axis=1) / 3.0
-                    if model_config['model'] == 'WaveMesh':
-                        plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                      facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=-2500, vmax=2500)
-                    else:
-                        plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                      facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=0, vmax=2500)
-
-                    # plt.scatter(x_noise[:, 1].detach().cpu().numpy(),x_noise[:, 2].detach().cpu().numpy(), s=10, alpha=0.75,
-                    #                 c=x[:, 6].detach().cpu().numpy(), cmap='gist_gray',vmin=-5000,vmax=5000)
-                    # ax.set_facecolor([0.5,0.5,0.5])
-                elif model_config['model'] == 'ElecParticles':
-                    for n in range(nparticle_types):
-                        g = 40 #np.abs(p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20)
-                        if model_config['p'][n][0] <= 0:
-                            plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                        x[index_particles[n], 2].detach().cpu().numpy(), s=g, c=cmap.color(n))
-                        else:
-                            plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                        x[index_particles[n], 2].detach().cpu().numpy(), s=g, c=cmap.color(n))
-                else:
-                    for n in range(nparticle_types):
-                        plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                    x[index_particles[n], 2].detach().cpu().numpy(), s=40, color=cmap.color(n),alpha=1)
-                if bMesh | (model_config['boundary'] == 'periodic'):
-                    # plt.text(0, 1.08, f'frame: {it}')
-                    # plt.text(0, 1.03, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
-                    plt.xlim([0, 1])
-                    plt.ylim([0, 1])
-                else:
-                    # plt.text(-1.25, 1.5, f'frame: {it}')
-                    # plt.text(-1.25, 1.4, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
-                    plt.xlim([-0.5, 0.5])
-                    plt.ylim([-0.5, 0.5])
-                plt.xticks([])
-                plt.yticks([])
-                plt.tight_layout()
-                plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/tmp_data/Fig_g_color_{it}.tif", dpi=300)
-                plt.close()
+                # fig = plt.figure(figsize=(10, 10))
+                # # plt.ion()
+                #
+                # distance2 = torch.sum((x_noise[:, None, 1:3] - x_noise[None, :, 1:3]) ** 2, axis=2)
+                # adj_t2 = ((distance2 < radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
+                # edge_index2 = adj_t2.nonzero().t().contiguous()
+                # dataset2 = data.Data(x=x, edge_index=edge_index2)
+                # pos = dict(enumerate(np.array(x_noise[:, 1:3].detach().cpu()), 0))
+                # vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
+                # nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=alpha)
+                #
+                # # ax = fig.add_subplot(2, 2, 1)
+                # if model_config['model'] == 'GravityParticles':
+                #     for n in range(nparticle_types):
+                #         g = p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 7.5
+                #         plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
+                #                     x[index_particles[n], 2].detach().cpu().numpy(), s=40, color=cmap.color(n))
+                # elif bMesh:
+                #     pts = x_noise[:, 1:3].detach().cpu().numpy()
+                #     tri = Delaunay(pts)
+                #     colors = torch.sum(x_noise[tri.simplices, 6], axis=1) / 3.0
+                #     if model_config['model'] == 'WaveMesh':
+                #         plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                #                       facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=-2500, vmax=2500)
+                #     else:
+                #         plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                #                       facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=0, vmax=2500)
+                #
+                #     # plt.scatter(x_noise[:, 1].detach().cpu().numpy(),x_noise[:, 2].detach().cpu().numpy(), s=10, alpha=0.75,
+                #     #                 c=x[:, 6].detach().cpu().numpy(), cmap='gist_gray',vmin=-5000,vmax=5000)
+                #     # ax.set_facecolor([0.5,0.5,0.5])
+                # elif model_config['model'] == 'ElecParticles':
+                #     for n in range(nparticle_types):
+                #         g = 40 #np.abs(p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20)
+                #         if model_config['p'][n][0] <= 0:
+                #             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
+                #                         x[index_particles[n], 2].detach().cpu().numpy(), s=g, c=cmap.color(n))
+                #         else:
+                #             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
+                #                         x[index_particles[n], 2].detach().cpu().numpy(), s=g, c=cmap.color(n))
+                # else:
+                #     for n in range(nparticle_types):
+                #         plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
+                #                     x[index_particles[n], 2].detach().cpu().numpy(), s=40, color=cmap.color(n),alpha=1)
+                # if bMesh | (model_config['boundary'] == 'periodic'):
+                #     # plt.text(0, 1.08, f'frame: {it}')
+                #     # plt.text(0, 1.03, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
+                #     plt.xlim([0, 1])
+                #     plt.ylim([0, 1])
+                # else:
+                #     # plt.text(-1.25, 1.5, f'frame: {it}')
+                #     # plt.text(-1.25, 1.4, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
+                #     plt.xlim([-0.5, 0.5])
+                #     plt.ylim([-0.5, 0.5])
+                # plt.xticks([])
+                # plt.yticks([])
+                # plt.tight_layout()
+                # plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/tmp_data/Fig_g_color_{it}.tif", dpi=300)
+                # plt.close()
 
                 fig = plt.figure(figsize=(10, 10))
                 # plt.ion()
@@ -3408,7 +3408,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3422,7 +3422,7 @@ if __name__ == '__main__':
     # config_list = ['config_gravity_4','config_gravity_8']
     # config_list = ['config_arbitrary_16_bis'] #,'config_arbitrary_5','config_arbitrary_8','config_arbitrary_16']
     # config_list = ['config_Coulomb_3_01']  # ['config_arbitrary_3','config_arbitrary_16'] #, #,'config_Coulomb_3_01'] #['config_arbitrary_16_bis', 'config_Coulomb_3_01']
-    config_list = ['config_boids_8','config_boids_16']
+    config_list = ['config_wave']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3463,8 +3463,8 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        data_generate(model_config, bVisu=False, bDetails=False, alpha=0.2, bErase=False, bLoad_p=False, step=400)
-        data_train(model_config,model_embedding)
+        data_generate(model_config, bVisu=True, bDetails=False, alpha=0.2, bErase=False, bLoad_p=False, step=200)
+        # data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
         # data_test(model_config, bVisu=True, bPrint=True, best_model=17, bDetails=False, step=50) # model_config['nframes']-5)
 
