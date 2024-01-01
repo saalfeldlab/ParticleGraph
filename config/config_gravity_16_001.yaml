@@ -5,7 +5,7 @@ hidden_size: 128
 n_mp_layers: 5
 noise_level: 0
 radius: 0.3
-min_radius: 0.002
+min_radius: 0.001
 nparticles: 960
 nparticle_types: 16
 ninteractions: 16
