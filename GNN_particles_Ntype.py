@@ -804,7 +804,7 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_
     f.write(json_)
     f.close()
 
-    ratio = 2
+    ratio = 1
     model_config['nparticles'] = model_config['nparticles'] * ratio
 
     radius = model_config['radius']
@@ -1881,7 +1881,7 @@ def data_train(model_config, model_embedding):
 def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_particles=0, prev_nparticles=0, new_nparticles=0,
               prev_index_particles=0, best_model=0, step=5, bTest='', folder_out='tmp_recons', initial_map='',forced_embedding=[], forced_color=0):
 
-    ratio = 2
+    ratio = 1
 
     if bPrint:
         print('')
