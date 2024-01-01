@@ -1,3 +1,4 @@
+Nepochs: 20
 input_size: 4
 output_size: 1
 hidden_size: 16 

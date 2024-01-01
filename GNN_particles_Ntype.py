@@ -1376,6 +1376,7 @@ def data_train(model_config, model_embedding):
     print('')
 
     model = []
+    Nepochs = model_config['Nepochs']
     radius = model_config['radius']
     min_radius = model_config['min_radius']
     nparticle_types = model_config['nparticle_types']
@@ -1466,9 +1467,9 @@ def data_train(model_config, model_embedding):
     if (model_config['model'] == 'WaveMesh'):
         model = MeshLaplacian(model_config, device)
 
-    net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_17.pt"
-    state_dict = torch.load(net,map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
+    # net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_17.pt"
+    # state_dict = torch.load(net,map_location=device)
+    # model.load_state_dict(state_dict['model_state_dict'])
 
     lra = 1E-3
     lr = 1E-3
@@ -1494,7 +1495,7 @@ def data_train(model_config, model_embedding):
     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     print(f'network: {net}')
     logger.info(f'network: {net}')
-    Nepochs = 20  ######################## 20
+    # Nepochs = 20  ######################## 20
     logger.info(f'N epochs: {Nepochs}')
     print('')
     min_radius = 0.002
@@ -1528,7 +1529,7 @@ def data_train(model_config, model_embedding):
         edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,
                                                                normalization="None")  # "None", "sym", "rw"
 
-    for epoch in range(18,Nepochs + 1):
+    for epoch in range(Nepochs + 1):
 
         if epoch == 1:
             min_radius = model_config['min_radius']
@@ -2545,7 +2546,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
             for n in range(nparticle_types):
                 plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5, color=cmap.color(n))
 
-    rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
+    rr = torch.tensor(np.linspace(min_radius, radius, 1000)).to(device)
     ax = fig.add_subplot(2, 4, 2)
     if model_config['model'] == 'ElecParticles':
         acc_list = []
@@ -3419,7 +3420,8 @@ if __name__ == '__main__':
     # config_list = ['config_arbitrary_16_bis'] #,'config_arbitrary_5','config_arbitrary_8','config_arbitrary_16']
     # config_list = ['config_Coulomb_3']  # ['config_arbitrary_3','config_arbitrary_16'] #, #,'config_Coulomb_3_01'] #['config_arbitrary_16_bis', 'config_Coulomb_3_01']
     # config_list = ['config_boids_16_lin_10','config_boids_16']
-    config_list = ['config_arbitrary_3','config_gravity_16','config_arbitrary_16']
+    # config_list = ['config_arbitrary_3','config_gravity_16','config_arbitrary_16']
+    config_list = ['config_Coulomb_3', 'config_wave']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
