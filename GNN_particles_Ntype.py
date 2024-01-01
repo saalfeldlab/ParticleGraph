@@ -1466,9 +1466,9 @@ def data_train(model_config, model_embedding):
     if (model_config['model'] == 'WaveMesh'):
         model = MeshLaplacian(model_config, device)
 
-    # net = f"./log/try_boids_16/models/best_model_with_1_graphs_7.pt"
-    # state_dict = torch.load(net,map_location=device)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_17.pt"
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
 
     lra = 1E-3
     lr = 1E-3
@@ -1528,7 +1528,7 @@ def data_train(model_config, model_embedding):
         edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,
                                                                normalization="None")  # "None", "sym", "rw"
 
-    for epoch in range(Nepochs + 1):
+    for epoch in range(18,Nepochs + 1):
 
         if epoch == 1:
             min_radius = model_config['min_radius']
@@ -3418,9 +3418,9 @@ if __name__ == '__main__':
 
     # config_list = ['config_gravity_4','config_gravity_8']
     # config_list = ['config_arbitrary_16_bis'] #,'config_arbitrary_5','config_arbitrary_8','config_arbitrary_16']
-    # config_list = ['config_Coulomb_3_01']  # ['config_arbitrary_3','config_arbitrary_16'] #, #,'config_Coulomb_3_01'] #['config_arbitrary_16_bis', 'config_Coulomb_3_01']
+    config_list = ['config_Coulomb_3']  # ['config_arbitrary_3','config_arbitrary_16'] #, #,'config_Coulomb_3_01'] #['config_arbitrary_16_bis', 'config_Coulomb_3_01']
     # config_list = ['config_boids_16_lin_10','config_boids_16']
-    config_list = ['config_wave']
+    # config_list = ['config_gravity_16','config_arbitrary_3','config_arbitrary_16']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3462,9 +3462,9 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
         data_generate(model_config, bVisu=False, bDetails=False, alpha=0.2, bErase=False, bLoad_p=False, step=400)
-        data_train(model_config,model_embedding)
-        #data_plot(model_config, epoch=-1, bPrint=True, best_model=17)
-        # data_test(model_config, bVisu=True, bPrint=True, best_model=17, bDetails=False, step=10) # model_config['nframes']-5)
+        # data_train(model_config,model_embedding)
+        data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
+        # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=10) # model_config['nframes']-5)
 
         # data_train_shrofflab_celegans(model_config)
         # data_test_shrofflab_celegans(model_config)
