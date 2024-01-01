@@ -3462,8 +3462,8 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        # data_generate(model_config, bVisu=False, bDetails=False, alpha=0.2, bErase=False, bLoad_p=False, step=400)
-        # data_train(model_config,model_embedding)
+        data_generate(model_config, bVisu=False, bDetails=False, alpha=0.2, bErase=False, bLoad_p=False, step=400)
+        data_train(model_config,model_embedding)
         data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=10) # model_config['nframes']-5)
 
