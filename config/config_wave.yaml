@@ -16,7 +16,7 @@ aggr_type: 'add'
 boundary: 'periodic'
 data_augmentation: True
 batch_size: 8
-embedding: 2,
+embedding: 2
 model: 'WaveMesh'
 prediction: ''
 upgrade_type: 'none'

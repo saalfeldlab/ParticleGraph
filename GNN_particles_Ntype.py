@@ -744,6 +744,7 @@ class MeshLaplacian(pyg.nn.MessagePassing):
         self.ndataset = model_config['nrun']
         self.upgrade_type = model_config['upgrade_type']
         self.prediction = model_config['prediction']
+        self.ndataset
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
@@ -3405,7 +3406,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3414,13 +3415,12 @@ if __name__ == '__main__':
     # config_list = ['config_arbitrary', 'config_arbitrary_regul_replace']
     # config_list = ['config_arbitrary_replace','config_arbitrary_regul']
     # config_list=['config_CElegans_32']
-    # config_list = ['config_Coulomb_3', 'config_Coulomb_4']
-    # config_list = ['config_Coulomb_3_01', 'config_Coulomb_3_02']
+
     # config_list = ['config_gravity_4','config_gravity_8']
     # config_list = ['config_arbitrary_16_bis'] #,'config_arbitrary_5','config_arbitrary_8','config_arbitrary_16']
     # config_list = ['config_Coulomb_3_01']  # ['config_arbitrary_3','config_arbitrary_16'] #, #,'config_Coulomb_3_01'] #['config_arbitrary_16_bis', 'config_Coulomb_3_01']
-    config_list = ['config_boids_16_lin_10','config_boids_16']
-    # config_list = ['config_wave']
+    # config_list = ['config_boids_16_lin_10','config_boids_16']
+    config_list = ['config_wave']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
