@@ -1968,7 +1968,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
 
     if os.path.isfile(os.path.join(log_dir, f'labels_{best_model}.pt')):
         print('Use learned labels')
-        labels =  torch.load(os.path.join(log_dir, 'labels.pt'))
+        labels =  torch.load(os.path.join(log_dir, f'labels_{best_model}.pt'))
     else:
         labels = T1
         print('Use ground truth labels')
@@ -2152,7 +2152,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
             fig = plt.figure(figsize=(12,12))
             # plt.ion()
 
-            for k in range(2,3):
+            for k in range(1,2):
                 if k == 0:
                     ax = fig.add_subplot(2, 5, 1)
                     x_ = x00
@@ -2160,11 +2160,11 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
                 elif k == 1:
                     # ax = fig.add_subplot(2, 5, 2)
                     x_ = x0
-                    sc = 20
+                    sc = 40
                 elif k == 2:
-                    ax = fig.add_subplot(2, 5, 6)
+                    # ax = fig.add_subplot(2, 5, 6)
                     x_ = x
-                    sc = 1
+                    sc = 40
                 elif k == 3:
                     ax = fig.add_subplot(2, 5, 3)
                     x_ = x0
@@ -2292,9 +2292,9 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
             plt.tight_layout()
 
             if len(forced_embedding) > 0:
-                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{dataset_name}_{forced_color}_{it}.tif",dpi=300)
+                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{dataset_name}_{forced_color}_{it}.tif",dpi=100)
             else:
-                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{dataset_name}_{it}.tif",dpi=300)
+                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{dataset_name}_{it}.tif",dpi=100)
 
             plt.close()
 
@@ -3408,7 +3408,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3422,7 +3422,7 @@ if __name__ == '__main__':
     # config_list = ['config_gravity_4','config_gravity_8']
     # config_list = ['config_arbitrary_16_bis'] #,'config_arbitrary_5','config_arbitrary_8','config_arbitrary_16']
     # config_list = ['config_Coulomb_3_01']  # ['config_arbitrary_3','config_arbitrary_16'] #, #,'config_Coulomb_3_01'] #['config_arbitrary_16_bis', 'config_Coulomb_3_01']
-    config_list = ['config_boids_16_lin','config_boids_16_lin_10','config_boids_16']
+    config_list = ['config_boids_16_lin_10','config_boids_16']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3463,10 +3463,10 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        data_generate(model_config, bVisu=True, bDetails=False, alpha=0.2, bErase=False, bLoad_p=False, step=400)
-        data_train(model_config,model_embedding)
-        # data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
-        # data_test(model_config, bVisu=True, bPrint=True, best_model=17, bDetails=False, step=50) # model_config['nframes']-5)
+        #data_generate(model_config, bVisu=True, bDetails=False, alpha=0.2, bErase=False, bLoad_p=False, step=400)
+        # data_train(model_config,model_embedding)
+        #data_plot(model_config, epoch=-1, bPrint=True, best_model=17)
+        data_test(model_config, bVisu=True, bPrint=True, best_model=17, bDetails=False, step=10) # model_config['nframes']-5)
 
         # data_train_shrofflab_celegans(model_config)
         # data_test_shrofflab_celegans(model_config)

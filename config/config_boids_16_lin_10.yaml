@@ -30,5 +30,5 @@ start_frame: 0
 cmap: 'tab20'
 arrow_length: 5
 description: 'Boids'
-sparsity: 'regul_replace'
+sparsity: 'none'
    
