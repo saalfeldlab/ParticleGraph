@@ -804,7 +804,7 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_
     f.write(json_)
     f.close()
 
-    ratio = 1
+    ratio = 2
     model_config['nparticles'] = model_config['nparticles'] * ratio
 
     radius = model_config['radius']
@@ -947,9 +947,9 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_
         A1 = A1 * cycle_length_distrib
 
         # scenario A
-        # X1[:, 0] = X1[:, 0] / nparticle_types
-        # for n in range(nparticle_types):
-        #     X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / nparticle_types
+        X1[:, 0] = X1[:, 0] / nparticle_types
+        for n in range(nparticle_types):
+            X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / nparticle_types
 
         # scenario C
         # i0 = imread('graphs_data/pattern_1.tif')
@@ -1881,6 +1881,8 @@ def data_train(model_config, model_embedding):
 def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_particles=0, prev_nparticles=0, new_nparticles=0,
               prev_index_particles=0, best_model=0, step=5, bTest='', folder_out='tmp_recons', initial_map='',forced_embedding=[], forced_color=0):
 
+    ratio = 2
+
     if bPrint:
         print('')
         print('Plot validation test ... ')
@@ -1973,16 +1975,15 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         print('Use ground truth labels')
 
     # nparticles larger than initially
-    if False:  # nparticles larger than initially
+    if ratio>1:  # nparticles larger than initially
 
         prev_index_particles = index_particles
 
-        new_nparticles = nparticles * 2
+        new_nparticles = nparticles * ratio
         prev_nparticles = nparticles
 
-        ratio_particles = int(new_nparticles / prev_nparticles)
         print('')
-        print(f'New_number of particles: {new_nparticles}  ratio:{ratio_particles}')
+        print(f'New_number of particles: {new_nparticles}  ratio:{ratio}')
         print('')
 
         embedding = model.a[0].data.clone().detach()
@@ -1990,7 +1991,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         new_labels = []
 
         for n in range(nparticle_types):
-            for m in range(ratio_particles):
+            for m in range(ratio):
                 if (n == 0) & (m == 0):
                     new_embedding = embedding[prev_index_particles[n].astype(int),:]
                     new_labels = labels[prev_index_particles[n].astype(int)]
@@ -1998,7 +1999,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
                     new_embedding = torch.cat((new_embedding, embedding[prev_index_particles[n].astype(int),:]), axis=0)
                     new_labels = torch.cat((new_labels, labels[prev_index_particles[n].astype(int)]), axis=0)
 
-        model.a = nn.Parameter(torch.tensor(np.ones((NGraphs-1,int(prev_nparticles) * ratio_particles, 2)), device=device, dtype=torch.float32, requires_grad=False))
+        model.a = nn.Parameter(torch.tensor(np.ones((NGraphs-1,int(prev_nparticles) * ratio, 2)), device=device, dtype=torch.float32, requires_grad=False))
         model.a.requires_grad=False
         model.a[0] = new_embedding
         labels=new_labels
@@ -3404,8 +3405,8 @@ if __name__ == '__main__':
     # config_list = ['config_Coulomb_3']  # ['config_arbitrary_3','config_arbitrary_16'] #, #,'config_Coulomb_3_01'] #['config_arbitrary_16_bis', 'config_Coulomb_3_01']
     # config_list = ['config_boids_16_lin_10','config_boids_16']
     # config_list = ['config_arbitrary_3','config_gravity_16','config_arbitrary_16']
-    # config_list = ['config_Coulomb_3', 'config_wave', 'config_gravity_16']
-    config_list = ['config_arbitrary_16']
+    config_list = ['config_gravity_16']
+    # config_list = ['config_arbitrary_16']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3447,9 +3448,9 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
         data_generate(model_config, bVisu=False, bDetails=False, alpha=0.2, bErase=False, bLoad_p=False, step=20)
-        # data_train(model_config,model_embedding)
-        # data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
-        data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=25) # model_config['nframes']-5)
+        data_train(model_config,model_embedding)
+        # data_plot(model_config, epoch=-1, bPrint=True, best_model=1)
+        # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=75) # model_config['nframes']-5)
 
         # data_train_shrofflab_celegans(model_config)
         # data_test_shrofflab_celegans(model_config)
