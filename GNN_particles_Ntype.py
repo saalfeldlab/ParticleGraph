@@ -741,10 +741,7 @@ class MeshLaplacian(pyg.nn.MessagePassing):
         self.noise_level = model_config['noise_level']
         self.embedding = model_config['embedding']
         self.dataset_name = model_config['dataset']
-        graph_files = glob.glob(f"graphs_data/graphs_particles_{self.dataset_name}/x_list*")
-        NGraphs = len(graph_files)
-
-        self.ndataset = NGraphs - 1
+        self.ndataset = model_config['nrun']
         self.upgrade_type = model_config['upgrade_type']
         self.prediction = model_config['prediction']
 
@@ -3408,7 +3405,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3422,7 +3419,8 @@ if __name__ == '__main__':
     # config_list = ['config_gravity_4','config_gravity_8']
     # config_list = ['config_arbitrary_16_bis'] #,'config_arbitrary_5','config_arbitrary_8','config_arbitrary_16']
     # config_list = ['config_Coulomb_3_01']  # ['config_arbitrary_3','config_arbitrary_16'] #, #,'config_Coulomb_3_01'] #['config_arbitrary_16_bis', 'config_Coulomb_3_01']
-    config_list = ['config_boids_16_lin_10','config_boids_16']
+    # config_list = ['config_boids_16_lin_10','config_boids_16']
+    config_list = ['config_wave']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3463,7 +3461,7 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        data_generate(model_config, bVisu=False, bDetails=False, alpha=0.2, bErase=False, bLoad_p=False, step=400)
+        # data_generate(model_config, bVisu=False, bDetails=False, alpha=0.2, bErase=False, bLoad_p=False, step=400)
         data_train(model_config,model_embedding)
         #data_plot(model_config, epoch=-1, bPrint=True, best_model=17)
         # data_test(model_config, bVisu=True, bPrint=True, best_model=17, bDetails=False, step=10) # model_config['nframes']-5)
