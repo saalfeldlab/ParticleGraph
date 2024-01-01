@@ -1881,10 +1881,6 @@ def data_train(model_config, model_embedding):
 def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_particles=0, prev_nparticles=0, new_nparticles=0,
               prev_index_particles=0, best_model=0, step=5, bTest='', folder_out='tmp_recons', initial_map='',forced_embedding=[], forced_color=0):
 
-    # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_recons/*")
-    # for f in files:
-    #     os.remove(f)
-
     if bPrint:
         print('')
         print('Plot validation test ... ')
@@ -1941,6 +1937,10 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         for n in range(nparticle_types):
             c[n] = torch.tensor(model_config['c'][n])
         model_mesh = MeshLaplacian(model_config, device)
+
+    files = glob.glob(f"./{log_dir}/tmp_recons/*")
+    for f in files:
+        os.remove(f)
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
     NGraphs = int(len(graph_files))
@@ -2148,28 +2148,28 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
                 edge_index2 = adj_t2.nonzero().t().contiguous()
                 dataset2 = data.Data(x=x, edge_index=edge_index2)
 
-            fig = plt.figure(figsize=(12,12))
+            fig = plt.figure(figsize=(16,7.2))
             # plt.ion()
 
-            for k in range(1,2):
+            for k in range(5):
                 if k == 0:
-                    ax = fig.add_subplot(2, 5, 1)
+                    ax = fig.add_subplot(2, 4, 1)
                     x_ = x00
-                    sc = 1
+                    sc = 2
                 elif k == 1:
-                    # ax = fig.add_subplot(2, 5, 2)
+                    ax = fig.add_subplot(2, 4, 2)
                     x_ = x0
-                    sc = 40
+                    sc = 2
                 elif k == 2:
-                    # ax = fig.add_subplot(2, 5, 6)
+                    ax = fig.add_subplot(2, 4, 6)
                     x_ = x
-                    sc = 40
+                    sc = 2
                 elif k == 3:
-                    ax = fig.add_subplot(2, 5, 3)
+                    ax = fig.add_subplot(2, 4, 3)
                     x_ = x0
                     sc = 5
                 elif k == 4:
-                    ax = fig.add_subplot(2, 5, 8)
+                    ax = fig.add_subplot(2, 4, 7)
                     x_ = x
                     sc = 5
 
@@ -2238,8 +2238,8 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
                 plt.xticks([])
                 plt.yticks([])
 
-            if False:
-                ax = fig.add_subplot(2, 5, 4)
+            if True:
+                ax = fig.add_subplot(2, 4, 4)
                 plt.plot(np.arange(len(rmserr_list)), rmserr_list, label='RMSE', c='k')
                 plt.ylim([0, 0.1])
                 plt.xlim([0, nframes])
@@ -2267,8 +2267,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
                         plt.xlim([0, 1])
                         plt.ylim([0, 1])
 
-                ax = fig.add_subplot(2, 5, 7)
-
+                ax = fig.add_subplot(2, 4, 8)
                 if not (bMesh):
                     temp1 = torch.cat((x, x0_next), 0)
                     temp2 = torch.tensor(np.arange(nparticles), device=device)
@@ -2291,9 +2290,9 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
             plt.tight_layout()
 
             if len(forced_embedding) > 0:
-                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{dataset_name}_{forced_color}_{it}.tif",dpi=100)
+                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{dataset_name}_{forced_color}_{it}.tif",dpi=300)
             else:
-                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{dataset_name}_{it}.tif",dpi=100)
+                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{dataset_name}_{it}.tif",dpi=300)
 
             plt.close()
 
@@ -2664,6 +2663,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
         label_list.append(sub_group)
         accuracy = len(np.argwhere(tmp == sub_group)) / len(tmp) * 100
         print(f'Sub-group {n} accuracy: {np.round(accuracy, 3)}')
+
     label_list = np.array(label_list)
     new_labels = kmeans.labels_.copy()
     for n in range(nparticle_types):
@@ -2713,7 +2713,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
                 ax.scatter(model.a[m][index_particles[n], 0].detach().cpu().numpy(),
                            model.a[m][index_particles[n], 1].detach().cpu().numpy(),
                            model.a[m][index_particles[n], 1].detach().cpu().numpy(),
-                           color=cmap.color(n), s=20)
+                           color=cmap.color(new_labels[n]), s=20)
     else:
         if (embedding.shape[1] > 1):
             for m in range(model.a.shape[0]):
@@ -2898,7 +2898,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
 
     plot_list = []
     for n in range(nparticle_types):
-        embedding = t[n] * torch.ones((1000, model_config['embedding']), device=device)
+        embedding = t[int(label_list[n])] * torch.ones((1000, model_config['embedding']), device=device)
         if model_config['prediction'] == '2nd_derivative':
             in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
                                      rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
@@ -2911,34 +2911,17 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
         pred = pred[:, 0]
         plot_list.append(pred * ynorm[4] / torch.tensor(model_config['tau'],device=device))
 
-    min_norm=torch.min(plot_list[0])
-    max_norm = torch.max(plot_list[0])
-
-    for n in range(nparticle_types):
-        if  torch.min(plot_list[n]) < min_norm:
-            min_norm=torch.min(plot_list[n])
-        if  torch.min(psi_output[n]) < min_norm:
-            min_norm=torch.min(psi_output[n])
-        if  torch.max(plot_list[n]) > max_norm:
-            max_norm=torch.max(plot_list[n])
-        if  torch.max(psi_output[n]) > max_norm:
-            max_norm=torch.max(psi_output[n])
-    for n in range(nparticle_types):
-        plot_list[n] = (plot_list[n]-min_norm)/(max_norm-min_norm)
-        psi_output[n] = (psi_output[n]-min_norm)/(max_norm-min_norm)
-
     rmserr_list=[]
     for n in range(nparticle_types):
-        # distance = minkowski_distance(plot_list[n].detach().cpu().numpy(), psi_output[0].detach().cpu().numpy(), 3)
-        # for m in range(1,nparticle_types):
-        #     if minkowski_distance(plot_list[n].detach().cpu().numpy(), psi_output[m].detach().cpu().numpy(), 3) < distance:
-        #         distance = minkowski_distance(plot_list[n].detach().cpu().numpy(), psi_output[m].detach().cpu().numpy(), 3)
-        # print(f'sub-group {n}: Minkowski distance: {distance}')
-
-        rmserr = torch.sqrt(torch.mean((plot_list[n]-psi_output[0]) ** 2))
-        for m in range(1,nparticle_types):
-            if torch.sqrt(torch.mean((plot_list[n]-psi_output[m]) ** 2)) < rmserr:
-                rmserr = torch.sqrt(torch.mean((plot_list[n]-psi_output[m]) ** 2))
+        min_norm = torch.min(plot_list[n])
+        max_norm = torch.max(plot_list[n])
+        if  torch.min(plot_list[n]) < min_norm:
+            min_norm=torch.min(plot_list[n])
+        if  torch.max(psi_output[n]) > max_norm:
+            max_norm=torch.max(psi_output[n])
+        plot_list[n] = (plot_list[n]-min_norm)/(max_norm-min_norm)
+        psi_output[n] = (psi_output[n]-min_norm)/(max_norm-min_norm)
+        rmserr = torch.sqrt(torch.mean((plot_list[n] - psi_output[n]) ** 2))
         rmserr_list.append(rmserr.item())
         print(f'sub-group {n}: RMSE: {rmserr.item()}')
 
@@ -3421,7 +3404,8 @@ if __name__ == '__main__':
     # config_list = ['config_Coulomb_3']  # ['config_arbitrary_3','config_arbitrary_16'] #, #,'config_Coulomb_3_01'] #['config_arbitrary_16_bis', 'config_Coulomb_3_01']
     # config_list = ['config_boids_16_lin_10','config_boids_16']
     # config_list = ['config_arbitrary_3','config_gravity_16','config_arbitrary_16']
-    config_list = ['config_Coulomb_3', 'config_wave', 'config_gravity_16']
+    # config_list = ['config_Coulomb_3', 'config_wave', 'config_gravity_16']
+    config_list = ['config_arbitrary_16']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3462,10 +3446,10 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        data_generate(model_config, bVisu=False, bDetails=False, alpha=0.2, bErase=False, bLoad_p=False, step=400)
-        data_train(model_config,model_embedding)
-        data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
-        # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=10) # model_config['nframes']-5)
+        data_generate(model_config, bVisu=False, bDetails=False, alpha=0.2, bErase=False, bLoad_p=False, step=20)
+        # data_train(model_config,model_embedding)
+        # data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
+        data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=25) # model_config['nframes']-5)
 
         # data_train_shrofflab_celegans(model_config)
         # data_test_shrofflab_celegans(model_config)

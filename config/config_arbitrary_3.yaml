@@ -9,7 +9,7 @@ min_radius: 0
 nparticles: 4800
 nparticle_types: 3
 ninteractions: 3
-nframes: 250
+nframes: 275
 sigma: 0.005
 tau: 0.1
 v_init: 0
