@@ -749,7 +749,7 @@ class MeshLaplacian(pyg.nn.MessagePassing):
                             hidden_size=self.hidden_size, device=self.device)
 
         self.a = nn.Parameter(
-            torch.tensor(np.ones((self.ndataset, int(self.nparticles), self.embedding)), device=self.device,
+            torch.tensor(np.ones((int(self.ndataset), int(self.nparticles), self.embedding)), device=self.device,
                          requires_grad=True, dtype=torch.float32))
 
     def forward(self, data, data_id):
