@@ -3408,7 +3408,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3463,10 +3463,10 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        #data_generate(model_config, bVisu=True, bDetails=False, alpha=0.2, bErase=False, bLoad_p=False, step=400)
-        # data_train(model_config,model_embedding)
+        data_generate(model_config, bVisu=False, bDetails=False, alpha=0.2, bErase=False, bLoad_p=False, step=400)
+        data_train(model_config,model_embedding)
         #data_plot(model_config, epoch=-1, bPrint=True, best_model=17)
-        data_test(model_config, bVisu=True, bPrint=True, best_model=17, bDetails=False, step=10) # model_config['nframes']-5)
+        # data_test(model_config, bVisu=True, bPrint=True, best_model=17, bDetails=False, step=10) # model_config['nframes']-5)
 
         # data_train_shrofflab_celegans(model_config)
         # data_test_shrofflab_celegans(model_config)
