@@ -2899,11 +2899,11 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
     for n in range(nparticle_types):
         embedding = t[n] * torch.ones((1000, model_config['embedding']), device=device)
         if model_config['prediction'] == '2nd_derivative':
-            in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
+            in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
                                      rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
                                      0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
         else:
-            in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
+            in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
                                      rr[:, None] / model_config['radius'], embedding), dim=1)
         with torch.no_grad():
             pred = model.lin_edge(in_features.float())
@@ -2940,7 +2940,6 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
                 rmserr = torch.sqrt(torch.mean((plot_list[n]-psi_output[m]) ** 2))
         rmserr_list.append(rmserr.item())
         print(f'sub-group {n}: RMSE: {rmserr.item()}')
-
 
     print (f'RMSE: {np.mean(rmserr_list)}+\-{np.std(rmserr_list)} ')
 
@@ -3418,9 +3417,9 @@ if __name__ == '__main__':
 
     # config_list = ['config_gravity_4','config_gravity_8']
     # config_list = ['config_arbitrary_16_bis'] #,'config_arbitrary_5','config_arbitrary_8','config_arbitrary_16']
-    config_list = ['config_Coulomb_3']  # ['config_arbitrary_3','config_arbitrary_16'] #, #,'config_Coulomb_3_01'] #['config_arbitrary_16_bis', 'config_Coulomb_3_01']
+    # config_list = ['config_Coulomb_3']  # ['config_arbitrary_3','config_arbitrary_16'] #, #,'config_Coulomb_3_01'] #['config_arbitrary_16_bis', 'config_Coulomb_3_01']
     # config_list = ['config_boids_16_lin_10','config_boids_16']
-    # config_list = ['config_gravity_16','config_arbitrary_3','config_arbitrary_16']
+    config_list = ['config_arbitrary_3','config_gravity_16','config_arbitrary_16']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3461,9 +3460,9 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        data_generate(model_config, bVisu=False, bDetails=False, alpha=0.2, bErase=False, bLoad_p=False, step=400)
-        data_train(model_config,model_embedding)
-        # data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
+        # data_generate(model_config, bVisu=False, bDetails=False, alpha=0.2, bErase=False, bLoad_p=False, step=400)
+        # data_train(model_config,model_embedding)
+        data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=10) # model_config['nframes']-5)
 
         # data_train_shrofflab_celegans(model_config)
