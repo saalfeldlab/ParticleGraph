@@ -466,6 +466,7 @@ class InteractionParticles(pyg.nn.MessagePassing):
             return cohesion+separation #
         else: # PDE_A
             return r * (p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) - p[3] * torch.exp(-r ** (2 * p[1]) / (2 * sigma ** 2)))
+
 class InteractionCElegans(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -1536,7 +1537,7 @@ def data_train(model_config, model_embedding):
         edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,
                                                                normalization="None")  # "None", "sym", "rw"
 
-    for epoch in range(Nepochs + 1):
+    for epoch in range(6,Nepochs + 1):
 
         if epoch == 1:
             min_radius = model_config['min_radius']
