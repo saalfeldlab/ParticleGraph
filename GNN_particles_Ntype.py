@@ -2923,7 +2923,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
             max_norm=torch.max(psi_output[n])
         plot_list[n] = (plot_list[n]-min_norm)/(max_norm-min_norm)
         psi_output[n] = (psi_output[n]-min_norm)/(max_norm-min_norm)
-        rmserr = torch.sqrt(torch.mean((plot_list[n] - psi_output[n]) ** 2))
+        rmserr = torch.sqrt(torch.mean((plot_list[n] - torch.squeeze(psi_output[n])) ** 2))
         rmserr_list.append(rmserr.item())
         print(f'sub-group {n}: RMSE: {rmserr.item()}')
 
@@ -3406,7 +3406,7 @@ if __name__ == '__main__':
     # config_list = ['config_Coulomb_3']  # ['config_arbitrary_3','config_arbitrary_16'] #, #,'config_Coulomb_3_01'] #['config_arbitrary_16_bis', 'config_Coulomb_3_01']
     # config_list = ['config_arbitrary_3','config_gravity_16','config_arbitrary_16']
     # config_list = ['config_arbitrary_16_HR','config_gravity_16_001']
-    config_list = ['config_gravity_16_001']
+    config_list = ['config_arbitrary_3']
     # config_list = ['config_boids_16_1','config_boids_16_4'] # ,'config_boids_16_lin','config_boids_16_lin_10']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
@@ -3450,8 +3450,8 @@ if __name__ == '__main__':
 
         ratio = 1
         data_generate(model_config, bVisu=False, bDetails=False, alpha=0.2, bErase=False, bLoad_p=False, step=400)
-        data_train(model_config,model_embedding)
-        # data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
+        # data_train(model_config,model_embedding)
+        data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=160) # model_config['nframes']-5)
 
         # data_train_shrofflab_celegans(model_config)
