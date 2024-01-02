@@ -271,7 +271,7 @@ class PDE_B(pyg.nn.MessagePassing):
         return (separation + alignment + cohesion)
 
     def psi(self, r, p):
-        cohesion = p[0] * 1E-5 * r
+        cohesion = p[0] * 0.5E-5 * r
         separation = -p[2] * 1E-8 / r
         return (cohesion + separation)  # 5E-4 alignement
 
@@ -461,8 +461,8 @@ class InteractionParticles(pyg.nn.MessagePassing):
     def psi(self, r, p):
 
         if (len(p)==3): #PDE_B
-            cohesion = p[0] * 1E-5 * r
-            separation = -p[2] * 2E-8 / r
+            cohesion = p[0] * 0.5E-5 * r
+            separation = -p[2] * 1E-8 / r
             return cohesion+separation #
         else: # PDE_A
             return r * (p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) - p[3] * torch.exp(-r ** (2 * p[1]) / (2 * sigma ** 2)))
