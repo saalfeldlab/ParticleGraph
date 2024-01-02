@@ -10,10 +10,10 @@ nparticles: 960
 nparticle_types: 16
 ninteractions: 16
 kmeans_input: 'embedding'
-nframes: 2
+nframes: 2000
 sigma: 0.005
-tau: 1E-9
-v_init: 5E-5
+tau: 2.5E-10
+v_init: 2.5E-5
 aggr_type: 'add'
 boundary: 'no'  # periodic   'no'  # no boundary condition
 data_augmentation: True
@@ -26,7 +26,7 @@ p: []
 nrun: 2
 clamp: 0
 pred_limit: 1E+9
-start_frame: -1000
+start_frame: -500
 arrow_length: 10
 cmap: 'tab20'
 arrow_length: 10

@@ -33,6 +33,7 @@ import yaml  # need to install pyyaml
 from sklearn import metrics
 from math import *
 from decimal import Decimal
+from scipy.optimize import curve_fit
 
 def p_root(value, root):
     root_value = 1 / float(root)
@@ -1396,6 +1397,7 @@ def data_train(model_config, model_embedding):
     bMesh = (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh')
     bRegul = 'regul' in model_config['sparsity']
     bReplace = 'replace' in model_config['sparsity']
+    kmeans_input = model_config['kmeans_input']
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -1699,7 +1701,10 @@ def data_train(model_config, model_embedding):
         embedding_particle = []
         kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=5000, max_iter=10000,
                         random_state=13)
-        kmeans.fit(embedding)
+        if kmeans_input == 'plot':
+            kmeans.fit(proj_interaction)
+        if kmeans_input == 'embedding':
+            kmeans.fit(embedding)
         print(f'kmeans.inertia_: {np.round(kmeans.inertia_, 3)}')
         for m in range(model.a.shape[0]):
             for n in range(nparticle_types):
@@ -2309,7 +2314,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
     torch.save(x_recons, f'{log_dir}/x_list.pt')
     torch.save(y_recons, f'{log_dir}/y_list.pt')
 
-def data_plot(model_config, epoch, bPrint, best_model=0):
+def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
     model = []
     radius = model_config['radius']
     min_radius = model_config['min_radius']
@@ -2529,6 +2534,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
         embedding.append(model.a[n])
     embedding = torch.stack(embedding).detach().cpu().numpy()
     embedding = np.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
+    embedding_ = embedding
     embedding_particle = []
     for m in range(model.a.shape[0]):
         for n in range(nparticle_types):
@@ -2660,7 +2666,11 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
 
     kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=1000, max_iter=10000,
                     random_state=13)
-    kmeans.fit(proj_interaction)
+
+    if kmeans_input=='plot':
+        kmeans.fit(proj_interaction)
+    if kmeans_input == 'embedding':
+        kmeans.fit(embedding_)
 
     label_list = []
     for n in range(nparticle_types):
@@ -2902,7 +2912,20 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
 
     # calculation of Minkowski distance
 
-
+    plot_list = []
+    for n in range(nparticle_types):
+        embedding = t[int(label_list[n])] * torch.ones((1000, model_config['embedding']), device=device)
+        if model_config['prediction'] == '2nd_derivative':
+            in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                     rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
+                                     0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
+        else:
+            in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                     rr[:, None] / model_config['radius'], embedding), dim=1)
+        with torch.no_grad():
+            pred = model.lin_edge(in_features.float())
+        pred = pred[:, 0]
+        plot_list.append(pred * ynorm[4] / torch.tensor(model_config['tau'],device=device))
 
     if model_config['model'] == 'GravityParticles':
         p = np.linspace(0.5, 5, nparticle_types)
@@ -3459,7 +3482,7 @@ if __name__ == '__main__':
     # config_list = ['config_Coulomb_3']  # ['config_arbitrary_3','config_arbitrary_16'] #, #,'config_Coulomb_3_01'] #['config_arbitrary_16_bis', 'config_Coulomb_3_01']
     # config_list = ['config_arbitrary_3','config_gravity_16','config_arbitrary_16']
     # config_list = ['config_arbitrary_16_HR','config_gravity_16_001']
-    config_list = ['config_gravity_16']
+    config_list = ['config_gravity_16_001_HR','config_gravity_16_001']
     # config_list = ['config_boids_16_1','config_boids_16_4'] # ,'config_boids_16_lin','config_boids_16_lin_10']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
@@ -3502,9 +3525,9 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
         ratio = 1
-        # data_generate(model_config, bVisu=False, bDetails=False, alpha=0.2, bErase=False, bLoad_p=False, step=400)
-        # data_train(model_config,model_embedding)
-        data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
+        data_generate(model_config, bVisu=True, bDetails=False, alpha=0.2, bErase=False, bLoad_p=False, step=20)
+        data_train(model_config,model_embedding)
+        # data_plot(model_config, epoch=-1, bPrint=True, best_model=20, kmeans_input='embedding')
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=160) # model_config['nframes']-5)
 
         # data_train_shrofflab_celegans(model_config)
