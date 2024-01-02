@@ -9,6 +9,7 @@ min_radius: 0
 nparticles: 4800
 nparticle_types: 16
 ninteractions: 16
+kmeans_input: 'plot'
 nframes: 500
 sigma: 0.005
 tau: 0.05

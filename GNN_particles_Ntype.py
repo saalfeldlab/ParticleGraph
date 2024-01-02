@@ -917,23 +917,24 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_
 
     torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model.pt')
 
-    fig = plt.figure(figsize=(10, 10))
-    # plt.ion()
-    rr = torch.tensor(np.linspace(min_radius, radius, 1000)).to(device)
-    p = model_config['p']
-    if len(p) > 0:
-        p = torch.tensor(p, device=device)
-    else:
-        p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
-    psi_output = []
-    for n in range(nparticle_types):
-        psi_output.append(model.psi(rr, p[n]))
-    for n in range(nparticle_types - 1, -1, -1):
-        plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), color=cmap.color(n), linewidth=1)
-    plt.xlabel('Distance [a.u]', fontsize=12)
-    plt.ylabel('MLP [a.u]', fontsize=12)
-    plt.xlim([0, 0.04])
-    plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/Fig_MLP.tif", dpi=300)
+    if model_config['model'] == 'PDE_B':
+        fig = plt.figure(figsize=(10, 10))
+        plt.ion()
+        rr = torch.tensor(np.linspace(min_radius, radius, 1000)).to(device)
+        p = model_config['p']
+        if len(p) > 0:
+            p = torch.tensor(p, device=device)
+        else:
+            p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
+        psi_output = []
+        for n in range(nparticle_types):
+            psi_output.append(model.psi(rr, p[n]))
+        for n in range(nparticle_types - 1, -1, -1):
+            plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), color=cmap.color(n), linewidth=1)
+        plt.xlabel('Distance [a.u]', fontsize=12)
+        plt.ylabel('MLP [a.u]', fontsize=12)
+        plt.xlim([0, 0.04])
+        plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/Fig_MLP.tif", dpi=300)
 
     for run in range(model_config['nrun']):
 
@@ -3477,13 +3478,11 @@ if __name__ == '__main__':
     # config_list = ['config_arbitrary_replace','config_arbitrary_regul']
     # config_list=['config_CElegans_32']
 
-    # config_list = ['config_gravity_4','config_gravity_8']
-    # config_list = ['config_arbitrary_16_bis'] #,'config_arbitrary_5','config_arbitrary_8','config_arbitrary_16']
-    # config_list = ['config_Coulomb_3']  # ['config_arbitrary_3','config_arbitrary_16'] #, #,'config_Coulomb_3_01'] #['config_arbitrary_16_bis', 'config_Coulomb_3_01']
     # config_list = ['config_arbitrary_3','config_gravity_16','config_arbitrary_16']
     # config_list = ['config_arbitrary_16_HR','config_gravity_16_001']
     # config_list = ['config_gravity_16_001_HR','config_gravity_16_001']
-    config_list = ['config_boids_16']
+    # config_list = ['config_Coulomb_3']
+    config_list = ['config_arbitrary_16']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3525,7 +3524,7 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
         ratio = 1
-        data_generate(model_config, bVisu=True, bDetails=False, alpha=0.2, bErase=False, bLoad_p=False, step=20)
+        data_generate(model_config, bVisu=True, bDetails=False, alpha=0.2, bErase=True, bLoad_p=False, step=20)
         data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=20, kmeans_input='embedding')
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=160) # model_config['nframes']-5)
