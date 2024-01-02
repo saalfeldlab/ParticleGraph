@@ -1537,7 +1537,7 @@ def data_train(model_config, model_embedding):
         edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,
                                                                normalization="None")  # "None", "sym", "rw"
 
-    for epoch in range(6,Nepochs + 1):
+    for epoch in range(Nepochs + 1):
 
         if epoch == 1:
             min_radius = model_config['min_radius']
