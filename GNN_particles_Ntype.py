@@ -3482,7 +3482,7 @@ if __name__ == '__main__':
     # config_list = ['config_arbitrary_16_HR','config_gravity_16_001']
     # config_list = ['config_gravity_16_001_HR','config_gravity_16_001']
     # config_list = ['config_Coulomb_3']
-    config_list = ['config_arbitrary_16']
+    config_list = ['config_boids_16']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
