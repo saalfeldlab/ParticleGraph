@@ -795,7 +795,6 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_
     f.write(json_)
     f.close()
 
-    ratio = 1
     model_config['nparticles'] = model_config['nparticles'] * ratio
 
     radius = model_config['radius']
@@ -1751,7 +1750,7 @@ def data_train(model_config, model_embedding):
             for n in range(nparticles):
                 rr = torch.tensor(np.linspace(0, radius * 1.3, 1000)).to(device)
                 embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
-                in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
                                          rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
                                          0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
                 acc = model.lin_edge(in_features.float())
@@ -1883,8 +1882,6 @@ def data_train(model_config, model_embedding):
 
 def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_particles=0, prev_nparticles=0, new_nparticles=0,
               prev_index_particles=0, best_model=0, step=5, bTest='', folder_out='tmp_recons', initial_map='',forced_embedding=[], forced_color=0):
-
-    ratio = 1
 
     if bPrint:
         print('')
@@ -3394,7 +3391,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3409,8 +3406,8 @@ if __name__ == '__main__':
     # config_list = ['config_Coulomb_3']  # ['config_arbitrary_3','config_arbitrary_16'] #, #,'config_Coulomb_3_01'] #['config_arbitrary_16_bis', 'config_Coulomb_3_01']
     # config_list = ['config_arbitrary_3','config_gravity_16','config_arbitrary_16']
     # config_list = ['config_arbitrary_16_HR','config_gravity_16_001']
-    # config_list = ['config_arbitrary_16']
-    config_list = ['config_boids_16_1','config_boids_16_4'] # ,'config_boids_16_lin','config_boids_16_lin_10']
+    config_list = ['config_gravity_16_001']
+    # config_list = ['config_boids_16_1','config_boids_16_4'] # ,'config_boids_16_lin','config_boids_16_lin_10']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3451,10 +3448,11 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
+        ratio = 1
         data_generate(model_config, bVisu=False, bDetails=False, alpha=0.2, bErase=False, bLoad_p=False, step=400)
         data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
-        # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=20) # model_config['nframes']-5)
+        # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=160) # model_config['nframes']-5)
 
         # data_train_shrofflab_celegans(model_config)
         # data_test_shrofflab_celegans(model_config)
