@@ -38,6 +38,10 @@ def p_root(value, root):
     root_value = 1 / float(root)
     return round(Decimal(value) **
                  Decimal(root_value), 3)
+def func_pow(x, a, b):
+    return a / (x**b)
+def func_lin(x, a, b):
+    return a * x + b
 
 def minkowski_distance(x, y, p_value):
     # pass the p_root function to calculate
@@ -2898,20 +2902,68 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
 
     # calculation of Minkowski distance
 
-    plot_list = []
-    for n in range(nparticle_types):
-        embedding = t[int(label_list[n])] * torch.ones((1000, model_config['embedding']), device=device)
-        if model_config['prediction'] == '2nd_derivative':
-            in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
-                                     rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
-                                     0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
-        else:
-            in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
-                                     rr[:, None] / model_config['radius'], embedding), dim=1)
-        with torch.no_grad():
-            pred = model.lin_edge(in_features.float())
-        pred = pred[:, 0]
-        plot_list.append(pred * ynorm[4] / torch.tensor(model_config['tau'],device=device))
+
+
+    if model_config['model'] == 'GravityParticles':
+        p = np.linspace(0.5, 5, nparticle_types)
+        popt_list=[]
+        pcov_list = []
+        for n in range(nparticle_types):
+            popt, pcov = curve_fit(func_pow, rr.detach().cpu().numpy(), plot_list[n].detach().cpu().numpy())
+            popt_list.append(popt)
+            pcov_list.append(pcov)
+        popt_list=np.array(popt_list)
+
+        plot_list_2 = []
+        vv = torch.tensor(np.linspace(0, 2, 100)).to(device)
+        r_list = np.linspace(0.002, 0.01, 5)
+        for r_ in r_list:
+            rr_ = r_ * torch.tensor(np.ones((vv.shape[0], 1)), device=device)
+            embedding = t[int(label_list[5])] * torch.ones((100, model_config['embedding']), device=device)
+            in_features = torch.cat((rr_ / model_config['radius'], 0 * rr_,
+                                     rr_ / model_config['radius'], vv[:, None], vv[:, None], vv[:, None], vv[:, None],
+                                     embedding), dim=1)
+            with torch.no_grad():
+                pred = model.lin_edge(in_features.float())
+            pred = pred[:, 0]
+            plot_list_2.append(pred * ynorm[4] / torch.tensor(model_config['tau'], device=device))
+
+        fig = plt.figure(figsize=(16, 4))
+        ax = fig.add_subplot(1, 4, 1)
+        for n in range(len(r_list)):
+            plt.plot(vv.detach().cpu().numpy(), plot_list_2[n].detach().cpu().numpy(), linewidth=1, color=cmap.color(n),label=f'r={r_list[n]}')
+        plt.xlabel('Normalized Velocity [a.u.]', fontsize=12)
+        plt.ylabel('MLP [a.u.]', fontsize=12)
+        plt.xlim([0, 2])
+        plt.legend()
+
+        ax = fig.add_subplot(1, 4, 2)
+        plt.scatter(p,popt_list[:, 0],color='k')
+        x_data=p
+        y_data=popt_list[:, 0]
+        lin_fit, lin_fitv = curve_fit(func_lin, x_data, y_data)
+        plt.plot(p, func_lin(x_data,lin_fit[0],lin_fit[1]), color='r')
+        plt.xlabel('True mass [a.u.]', fontsize=12)
+        plt.ylabel('Predicted mass [a.u.]', fontsize=12)
+        plt.xlim([0, 5.5])
+        plt.ylim([0, 5.5])
+        plt.text(0.5,5,f"Slope: {np.round(lin_fit[0],2)}",fontsize=10)
+        residuals = y_data - func_lin(x_data, *lin_fit)
+        ss_res = np.sum(residuals ** 2)
+        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot)
+        plt.text(0.5,4.5,f"R2: {np.round(r_squared,2)}",fontsize=10)
+        ax = fig.add_subplot(1, 4, 3)
+        plt.scatter(p,popt_list[:, 1],color='k')
+        plt.xlim([0, 5.5])
+        plt.ylim([0, 4])
+        plt.xlabel('True mass [a.u.]', fontsize=12)
+        plt.ylabel('Power fit [a.u.]', fontsize=12)
+        plt.text(0.5, 3.5, f"{np.round(np.mean(popt_list[:, 1]), 3)}+/-{np.round(np.std(popt_list[:, 1]), 3)}", fontsize=10)
+
+        plt.tight_layout()
+        plt.close()
+        fig.savefig(os.path.join(log_dir, 'gravity_result.png'), dpi=300)
 
     rmserr_list=[]
     for n in range(nparticle_types):
@@ -2928,6 +2980,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
         print(f'sub-group {n}: RMSE: {rmserr.item()}')
 
     print (f'RMSE: {np.mean(rmserr_list)}+\-{np.std(rmserr_list)} ')
+
 
 def data_train_shrofflab_celegans(model_config):
     print('')
@@ -3406,7 +3459,7 @@ if __name__ == '__main__':
     # config_list = ['config_Coulomb_3']  # ['config_arbitrary_3','config_arbitrary_16'] #, #,'config_Coulomb_3_01'] #['config_arbitrary_16_bis', 'config_Coulomb_3_01']
     # config_list = ['config_arbitrary_3','config_gravity_16','config_arbitrary_16']
     # config_list = ['config_arbitrary_16_HR','config_gravity_16_001']
-    config_list = ['config_arbitrary_3']
+    config_list = ['config_gravity_16']
     # config_list = ['config_boids_16_1','config_boids_16_4'] # ,'config_boids_16_lin','config_boids_16_lin_10']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
@@ -3449,7 +3502,7 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
         ratio = 1
-        data_generate(model_config, bVisu=False, bDetails=False, alpha=0.2, bErase=False, bLoad_p=False, step=400)
+        # data_generate(model_config, bVisu=False, bDetails=False, alpha=0.2, bErase=False, bLoad_p=False, step=400)
         # data_train(model_config,model_embedding)
         data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=160) # model_config['nframes']-5)
