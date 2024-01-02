@@ -243,30 +243,16 @@ class PDE_B(pyg.nn.MessagePassing):
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        alignment = self.propagate(edge_index, x=(x, x))
+        acc = self.propagate(edge_index, x=(x, x))
 
         oldv = x[:, 3:5]
-        newv = oldv + alignment
-
+        newv = oldv + acc
         p = self.p[x[:, 5].detach().cpu().numpy(), :]
         oldv_norm = torch.norm(oldv, dim=1)
         newv_norm = torch.norm(newv, dim=1)
         factor = (oldv_norm + p[:, 1] / 5E2 * (newv_norm - oldv_norm)) / newv_norm
         newv *= factor[:, None].repeat(1, 2)
-
         acc = newv - oldv
-
-        # pos = torch.argwhere(edge_index[0] == 0)
-        # pos0 = pos.detach().cpu().numpy().astype(int)
-        # pos1 = edge_index[1,pos0]
-        # pos1 = pos1.detach().cpu().numpy().astype(int)
-        # pos0 = edge_index[0,pos0]
-        # pos0 = pos0.detach().cpu().numpy().astype(int)
-        # print(' ')
-
-        # print(torch.norm(oldv[0])*1000)
-        # print(torch.norm(torch.mean(x[pos1, 3:5], axis=0))*1000)
-        # print(torch.norm(acc[0])*1000)
 
         return acc
 
@@ -275,16 +261,20 @@ class PDE_B(pyg.nn.MessagePassing):
 
         pp = self.p[x_i[:, 5].detach().cpu().numpy(), :]
 
+        cohesion = pp[:, 0:1].repeat(1, 2) * 0.5E-5 * bc_diff(x_j[:, 1:3] - x_i[:, 1:3])
+
         alignment = pp[:, 1:2].repeat(1, 2) * 5E-4 * bc_diff(x_j[:, 3:5] - x_i[:, 3:5])
 
-        cohesion = pp[:, 0:1].repeat(1, 2) * 1E-5 * bc_diff(x_j[:, 1:3] - x_i[:, 1:3])
+        separation = pp[:, 2:3].repeat(1, 2) * 1E-8 * bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) / (r[:, None].repeat(1, 2))
 
-        separation = pp[:, 2:3].repeat(1, 2) * 2E-8 * bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) / (r[:, None].repeat(1, 2))
 
-        return separation + alignment + cohesion
+        return (separation + alignment + cohesion)
 
     def psi(self, r, p):
-        return r
+        cohesion = p[0] * 1E-5 * r
+        separation = -p[2] * 1E-8 / r
+        return (cohesion + separation)  # 5E-4 alignement
+
 class PDE_E(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -471,9 +461,9 @@ class InteractionParticles(pyg.nn.MessagePassing):
     def psi(self, r, p):
 
         if (len(p)==3): #PDE_B
-            cohesion = p[0] / 5E4 * r
-            separation = -p[2] / 5E7 / r
-            return p[1] / 5E2 * (cohesion+separation) #
+            cohesion = p[0] * 1E-5 * r
+            separation = -p[2] * 2E-8 / r
+            return cohesion+separation #
         else: # PDE_A
             return r * (p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) - p[3] * torch.exp(-r ** (2 * p[1]) / (2 * sigma ** 2)))
 class InteractionCElegans(pyg.nn.MessagePassing):
@@ -922,6 +912,24 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_
 
     torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model.pt')
 
+    fig = plt.figure(figsize=(10, 10))
+    # plt.ion()
+    rr = torch.tensor(np.linspace(min_radius, radius, 1000)).to(device)
+    p = model_config['p']
+    if len(p) > 0:
+        p = torch.tensor(p, device=device)
+    else:
+        p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
+    psi_output = []
+    for n in range(nparticle_types):
+        psi_output.append(model.psi(rr, p[n]))
+    for n in range(nparticle_types - 1, -1, -1):
+        plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), color=cmap.color(n), linewidth=1)
+    plt.xlabel('Distance [a.u]', fontsize=12)
+    plt.ylabel('MLP [a.u]', fontsize=12)
+    plt.xlim([0, 0.04])
+    plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/Fig_MLP.tif", dpi=300)
+
     for run in range(model_config['nrun']):
 
         x_list = []
@@ -1101,7 +1109,6 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_
                 X1 = bc_pos(X1 + V1)
 
             A1 = A1 + 1
-
 
             if model_config['model'] == 'DiffMesh':
                 if it >= 0:
@@ -3391,7 +3398,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3407,7 +3414,7 @@ if __name__ == '__main__':
     # config_list = ['config_arbitrary_3','config_gravity_16','config_arbitrary_16']
     # config_list = ['config_arbitrary_16_HR','config_gravity_16_001']
     # config_list = ['config_arbitrary_16']
-    config_list = ['config_boids_16','config_boids_16_lin','config_boids_16_lin_10']
+    config_list = ['config_boids_16'] # ,'config_boids_16_lin','config_boids_16_lin_10']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3448,10 +3455,10 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        # data_generate(model_config, bVisu=False, bDetails=False, alpha=0.2, bErase=False, bLoad_p=False, step=20)
-        # data_train(model_config,model_embedding)
+        data_generate(model_config, bVisu=True, bDetails=False, alpha=0.2, bErase=False, bLoad_p=False, step=50)
+        data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=20)
-        data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=20) # model_config['nframes']-5)
+        # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=20) # model_config['nframes']-5)
 
         # data_train_shrofflab_celegans(model_config)
         # data_test_shrofflab_celegans(model_config)
