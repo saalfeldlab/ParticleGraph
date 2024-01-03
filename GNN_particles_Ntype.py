@@ -919,7 +919,7 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_
 
     if model_config['model'] == 'PDE_B':
         fig = plt.figure(figsize=(10, 10))
-        plt.ion()
+        # plt.ion()
         rr = torch.tensor(np.linspace(min_radius, radius, 1000)).to(device)
         p = model_config['p']
         if len(p) > 0:
@@ -2911,31 +2911,91 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
     # plt.show()
     plt.close()
 
-    # calculation of Minkowski distance
+    # Post analysis of interaction function plots
 
-    plot_list = []
-    for n in range(nparticle_types):
-        embedding = t[int(label_list[n])] * torch.ones((1000, model_config['embedding']), device=device)
-        if model_config['prediction'] == '2nd_derivative':
-            in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
-                                     rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
-                                     0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
-        else:
-            in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
-                                     rr[:, None] / model_config['radius'], embedding), dim=1)
-        with torch.no_grad():
-            pred = model.lin_edge(in_features.float())
-        pred = pred[:, 0]
-        plot_list.append(pred * ynorm[4] / torch.tensor(model_config['tau'],device=device))
+    if model_config['model'] == 'ElecParticles':
+
+        plot_list_pairwise = []
+        for m in range(nparticle_types):
+            for n in range(nparticle_types):
+                embedding0 = torch.tensor(tmean[m], device=device) * torch.ones((1000, model_config['embedding']),
+                                                                                device=device)
+                embedding1 = torch.tensor(tmean[n], device=device) * torch.ones((1000, model_config['embedding']),
+                                                                                device=device)
+                in_features = torch.cat((-rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                         rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
+                                         0 * rr[:, None], 0 * rr[:, None], embedding0, embedding1), dim=1)
+                with torch.no_grad():
+                    pred = model.lin_edge(in_features.float())
+                pred = pred[:, 0]
+                plot_list_pairwise.append(pred * ynorm[4] / torch.tensor(model_config['tau'], device=device))
+
+        p=[ 2, 1, -1]
+        popt_list=[]
+        ptrue_list=[]
+        nn=0
+        for m in range(nparticle_types):
+            for n in range(nparticle_types):
+                if plot_list_pairwise[nn][10]<0:
+                    popt, pocv = curve_fit(func_pow, rr.detach().cpu().numpy(), -plot_list_pairwise[nn].detach().cpu().numpy(), bounds=([0,1.5], [5., 2.5]))
+                    popt[0] = -popt[0]
+                else:
+                    popt, pocv = curve_fit(func_pow, rr.detach().cpu().numpy(), plot_list_pairwise[nn].detach().cpu().numpy(), bounds=([0,1.5], [5., 2.5]))
+                nn +=1
+                popt_list.append(popt)
+                ptrue_list.append(-p[n]*p[m])
+        popt_list = -np.array(popt_list)
+        ptrue_list = -np.array(ptrue_list)
+
+        fig = plt.figure(figsize=(16, 4))
+
+        ax = fig.add_subplot(1, 4, 2)
+        plt.scatter(ptrue_list,popt_list[:, 0],color='k')
+        x_data=ptrue_list
+        y_data=popt_list[:, 0]
+        lin_fit, lin_fitv = curve_fit(func_lin, x_data, y_data)
+        plt.plot(ptrue_list, func_lin(x_data,lin_fit[0],lin_fit[1]), color='r')
+        plt.xlabel('True q_i.q_j [a.u.]', fontsize=12)
+        plt.ylabel('Predicted q_i.q_j [a.u.]', fontsize=12)
+        plt.text(-2,4,f"Slope: {np.round(lin_fit[0],2)}",fontsize=10)
+        residuals = y_data - func_lin(x_data, *lin_fit)
+        ss_res = np.sum(residuals ** 2)
+        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot)
+        plt.text(-2,3.5,f"R2: {np.round(r_squared,3)}",fontsize=10)
+        ax = fig.add_subplot(1, 4, 3)
+        plt.scatter(ptrue_list,-popt_list[:, 1],color='k')
+        plt.ylim([0, 4])
+        plt.xlabel('True q_i.q_j [a.u.]', fontsize=12)
+        plt.ylabel('Power fit [a.u.]', fontsize=12)
+        plt.text(-2, 3.5, f"{np.round(np.mean(popt_list[:, 1]), 3)}+/-{np.round(np.std(popt_list[:, 1]), 3)}", fontsize=10)
+        plt.tight_layout()
+        fig.savefig(os.path.join(log_dir, 'electrostatic_result.png'), dpi=300)
+        plt.close()
+
+    else:
+        plot_list = []
+        for n in range(nparticle_types):
+            embedding = t[int(label_list[n])] * torch.ones((1000, model_config['embedding']), device=device)
+            if model_config['prediction'] == '2nd_derivative':
+                in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                         rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
+                                         0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
+            else:
+                in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                         rr[:, None] / model_config['radius'], embedding), dim=1)
+            with torch.no_grad():
+                pred = model.lin_edge(in_features.float())
+            pred = pred[:, 0]
+            plot_list.append(pred * ynorm[4] / torch.tensor(model_config['tau'],device=device))
+
 
     if model_config['model'] == 'GravityParticles':
         p = np.linspace(0.5, 5, nparticle_types)
         popt_list=[]
-        pcov_list = []
         for n in range(nparticle_types):
             popt, pcov = curve_fit(func_pow, rr.detach().cpu().numpy(), plot_list[n].detach().cpu().numpy())
             popt_list.append(popt)
-            pcov_list.append(pcov)
         popt_list=np.array(popt_list)
 
         plot_list_2 = []
@@ -2984,26 +3044,26 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
         plt.xlabel('True mass [a.u.]', fontsize=12)
         plt.ylabel('Power fit [a.u.]', fontsize=12)
         plt.text(0.5, 3.5, f"{np.round(np.mean(popt_list[:, 1]), 3)}+/-{np.round(np.std(popt_list[:, 1]), 3)}", fontsize=10)
-
         plt.tight_layout()
-        plt.close()
         fig.savefig(os.path.join(log_dir, 'gravity_result.png'), dpi=300)
+        plt.close()
 
-    rmserr_list=[]
-    for n in range(nparticle_types):
-        min_norm = torch.min(plot_list[n])
-        max_norm = torch.max(plot_list[n])
-        if  torch.min(plot_list[n]) < min_norm:
-            min_norm=torch.min(plot_list[n])
-        if  torch.max(psi_output[n]) > max_norm:
-            max_norm=torch.max(psi_output[n])
-        plot_list[n] = (plot_list[n]-min_norm)/(max_norm-min_norm)
-        psi_output[n] = (psi_output[n]-min_norm)/(max_norm-min_norm)
-        rmserr = torch.sqrt(torch.mean((plot_list[n] - torch.squeeze(psi_output[n])) ** 2))
-        rmserr_list.append(rmserr.item())
-        print(f'sub-group {n}: RMSE: {rmserr.item()}')
+    if model_config['model'] != 'ElecParticles':
+        rmserr_list=[]
+        for n in range(nparticle_types):
+            min_norm = torch.min(plot_list[n])
+            max_norm = torch.max(plot_list[n])
+            if  torch.min(plot_list[n]) < min_norm:
+                min_norm=torch.min(plot_list[n])
+            if  torch.max(psi_output[n]) > max_norm:
+                max_norm=torch.max(psi_output[n])
+            plot_list[n] = (plot_list[n]-min_norm)/(max_norm-min_norm)
+            psi_output[n] = (psi_output[n]-min_norm)/(max_norm-min_norm)
+            rmserr = torch.sqrt(torch.mean((plot_list[n] - torch.squeeze(psi_output[n])) ** 2))
+            rmserr_list.append(rmserr.item())
+            print(f'sub-group {n}: RMSE: {rmserr.item()}')
 
-    print (f'RMSE: {np.mean(rmserr_list)}+\-{np.std(rmserr_list)} ')
+        print (f'RMSE: {np.mean(rmserr_list)}+\-{np.std(rmserr_list)} ')
 
 
 def data_train_shrofflab_celegans(model_config):
@@ -3464,11 +3524,11 @@ def data_test_shrofflab_celegans(model_config):
 if __name__ == '__main__':
 
     print('')
-    print('version 1.7 231120')
+    print('version 1.9 240103')
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3480,9 +3540,10 @@ if __name__ == '__main__':
 
     # config_list = ['config_arbitrary_3','config_gravity_16','config_arbitrary_16']
     # config_list = ['config_arbitrary_16_HR','config_gravity_16_001']
-    # config_list = ['config_gravity_16_001_HR','config_gravity_16_001']
+    config_list = ['config_gravity_16_001_HR','config_gravity_16_001']
     # config_list = ['config_Coulomb_3']
-    config_list = ['config_boids_16']
+    # config_list = ['config_boids_16']
+
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3524,9 +3585,9 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
         ratio = 1
-        data_generate(model_config, bVisu=True, bDetails=False, alpha=0.2, bErase=True, bLoad_p=False, step=20)
-        data_train(model_config,model_embedding)
-        # data_plot(model_config, epoch=-1, bPrint=True, best_model=20, kmeans_input='embedding')
+        data_generate(model_config, bVisu=False, bDetails=False, alpha=0.2, bErase=True, bLoad_p=False, step=20)
+        # data_train(model_config,model_embedding)
+        data_plot(model_config, epoch=-1, bPrint=True, best_model=20, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=160) # model_config['nframes']-5)
 
         # data_train_shrofflab_celegans(model_config)
