@@ -3543,7 +3543,7 @@ if __name__ == '__main__':
     #config_list = ['config_gravity_16_001_HR','config_gravity_16_001']
     # config_list = ['config_Coulomb_3_HR']
     # config_list = ['config_boids_16']
-    config_list = ['config_wave','config_wave_HR']
+    config_list = ['config_wave_HR','config_wave']
 
 
     with open(f'./config/config_embedding.yaml', 'r') as file:

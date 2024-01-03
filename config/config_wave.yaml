@@ -23,10 +23,10 @@ model: 'WaveMesh'
 prediction: ''
 upgrade_type: 'none'
 p: [0.2, 1.4, 2.6, 3.8, 5.0]
-c: [0, 0.2, 0.9, 1, 0.3]
+c: [0, 0.25, 0.75, 1, 0.5]
 particle_value_map: 'pattern_10.tif'
 particle_type_map: 'pattern_8.tif'
-beta: 0.005 
+beta: 2.5E-3 
 nrun: 2
 clamp: 0
 pred_limit: 1000000000.0
