@@ -1700,10 +1700,7 @@ def data_train(model_config, model_embedding):
         embedding = torch.stack(embedding).detach().cpu().numpy()
         embedding = np.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
         embedding_particle = []
-        kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=5000, max_iter=10000,
-                        random_state=13)
 
-        print(f'kmeans.inertia_: {np.round(kmeans.inertia_, 3)}')
         for m in range(model.a.shape[0]):
             for n in range(nparticle_types):
                 embedding_particle.append(embedding[index_particles[n] + m * nparticles, :])
