@@ -1702,10 +1702,7 @@ def data_train(model_config, model_embedding):
         embedding_particle = []
         kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=5000, max_iter=10000,
                         random_state=13)
-        if kmeans_input == 'plot':
-            kmeans.fit(proj_interaction)
-        if kmeans_input == 'embedding':
-            kmeans.fit(embedding)
+
         print(f'kmeans.inertia_: {np.round(kmeans.inertia_, 3)}')
         for m in range(model.a.shape[0]):
             for n in range(nparticle_types):
@@ -1854,7 +1851,12 @@ def data_train(model_config, model_embedding):
         plt.ylabel('UMAP 1', fontsize=12)
         kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=5000, max_iter=10000,
                         random_state=13)
-        kmeans.fit(proj_interaction)
+
+        if kmeans_input == 'plot':
+            kmeans.fit(proj_interaction)
+        if kmeans_input == 'embedding':
+            kmeans.fit(embedding)
+
         print(f'kmeans.inertia_: {np.round(kmeans.inertia_, 3)}')
 
         for n in range(nparticle_types):
