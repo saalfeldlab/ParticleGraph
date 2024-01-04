@@ -27,7 +27,7 @@ from torch.nn import functional as F
 from torch_geometric.loader import DataLoader
 from torch_geometric.utils import degree
 from torch_geometric.utils.convert import to_networkx
-from tqdm import tqdm
+from tqdm import trange
 
 from data_loaders import *
 
@@ -1068,7 +1068,7 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, bLoad_
         noise_current = 0 * torch.randn((nparticles, 2), device=device)
         noise_prev_prev = 0 * torch.randn((nparticles, 2), device=device)
 
-        for it in tqdm(range(model_config['start_frame'], nframes)):
+        for it in trange(model_config['start_frame'], nframes):
 
             if (it > 0) & bDivision & (nparticles < 20000):
                 cycle_test = (torch.ones(nparticles, device=device) + 0.05 * torch.randn(nparticles, device=device))
@@ -1481,7 +1481,7 @@ def data_train(model_config, model_embedding):
     x_list = []
     y_list = []
     print('Load data ...')
-    for run in tqdm(range(NGraphs)):
+    for run in trange(NGraphs):
         x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
         y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(torch.stack(x))
@@ -1498,7 +1498,7 @@ def data_train(model_config, model_embedding):
     logger.info(f'vnorm ynorm: {vnorm[4].detach().cpu().numpy()} {ynorm[4].detach().cpu().numpy()}')
     if bMesh:
         h_list = []
-        for run in tqdm(range(NGraphs)):
+        for run in trange(NGraphs):
             h = torch.load(f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt', map_location=device)
             h_list.append(torch.stack(h))
         h = torch.stack(h_list)
@@ -1609,7 +1609,7 @@ def data_train(model_config, model_embedding):
 
         total_loss = 0
 
-        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size)):
+        for N in trange(0, nframes * data_augmentation_loop // batch_size):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -2125,7 +2125,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
     T1 = T1[:, None]
 
     time.sleep(1)
-    for it in tqdm(range(nframes - 1)):
+    for it in trange(nframes - 1):
 
         x0 = x_list[0][it].clone().detach()
         x0_next = x_list[0][it + 1].clone().detach()
@@ -2444,7 +2444,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
         x_list.append(torch.stack(x))
         y_list.append(torch.stack(y))
     else:
-        for run in tqdm(range(NGraphs)):
+        for run in trange(NGraphs):
             x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
             y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
             if run == 0:
@@ -2522,7 +2522,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
 
     if bMesh:
         h_list = []
-        for run in tqdm(range(NGraphs)):
+        for run in trange(NGraphs):
             h = torch.load(f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt', map_location=device)
             h_list.append(torch.stack(h))
         h = torch.stack(h_list)
@@ -3224,7 +3224,7 @@ def data_train_shrofflab_celegans(model_config):
     Ncells = 0
     nframes = np.zeros(NGraphs)
     for n in range(NGraphs):
-        for k in tqdm(range(len(x_list[n]))):
+        for k in trange(len(x_list[n])):
             nframes[n] = int(len(x_list[n]))
             t_ = x_list[n][k]
             if torch.max(t_[:, 0]).detach().cpu().numpy() > Ncells:
@@ -3240,7 +3240,7 @@ def data_train_shrofflab_celegans(model_config):
     vnorm = torch.std(torch.abs(t[:, 4:7]))
     t = []
     for n in range(NGraphs):
-        for k in tqdm(range(len(y_list[n]))):
+        for k in trange(len(y_list[n])):
             t_ = y_list[n][k]
             if t == []:
                 t = t_
@@ -3331,7 +3331,7 @@ def data_train_shrofflab_celegans(model_config):
 
         total_loss = 0
 
-        for N in tqdm(range(0, nframes[0] // batch_size * 10)):
+        for N in trange(0, nframes[0] // batch_size * 10):
 
             run = np.random.randint(NGraphs)
 
@@ -3474,7 +3474,7 @@ def data_test_shrofflab_celegans(model_config):
     dataset, time_points, cell_names = load_shrofflab_celegans(model_config['input_dataset'], device=device)
     x_list.append(dataset)
     y = []
-    for t in tqdm(range(time_points.shape[0] - 1)):
+    for t in trange(time_points.shape[0] - 1):
         x_prev = dataset[t]
         x_next = dataset[t + 1]
         id_prev = x_prev[:, 0]
@@ -3500,7 +3500,7 @@ def data_test_shrofflab_celegans(model_config):
     Ncells = 0
     nframes = np.zeros(NGraphs)
     for n in range(NGraphs):
-        for k in tqdm(range(len(x_list[n]))):
+        for k in trange(len(x_list[n])):
             nframes[n] = int(len(x_list[n]))
             t_ = x_list[n][k]
             if torch.max(t_[:, 0]).detach().cpu().numpy() > Ncells:
@@ -3526,7 +3526,7 @@ def data_test_shrofflab_celegans(model_config):
     maxa = torch.max(model.a).detach().cpu().numpy()
     error_list = []
 
-    for k in tqdm(range(nframes[run] - 2)):
+    for k in trange(nframes[run] - 2):
         x = x_list[run][k].clone().detach()
         x = torch.nan_to_num(x, nan=0)
 

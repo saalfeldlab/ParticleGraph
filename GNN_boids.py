@@ -16,7 +16,6 @@ import torch_geometric.utils as pyg_utils
 import umap
 import yaml  # need to install pyyaml
 from geomloss import SamplesLoss
-from matrix import *
 from prettytable import PrettyTable
 from scipy.spatial import Delaunay
 from sklearn.cluster import KMeans
@@ -26,7 +25,7 @@ from torch.nn import functional as F
 from torch_geometric.loader import DataLoader
 from torch_geometric.utils import degree
 from torch_geometric.utils.convert import to_networkx
-from tqdm import tqdm
+from tqdm import trange
 
 from tools import *
 
@@ -894,7 +893,7 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
         noise_current = 0 * torch.randn((nparticles, 2), device=device)
         noise_prev_prev = 0 * torch.randn((nparticles, 2), device=device)
 
-        for it in tqdm(range(model_config['start_frame'], nframes)):
+        for it in trange(model_config['start_frame'], nframes):
 
             if (it > 0) & bDivision & (nparticles < 20000):
                 cycle_test = (torch.ones(nparticles, device=device) + 0.05 * torch.randn(nparticles, device=device))
@@ -1234,7 +1233,7 @@ def data_train(model_config, bSparse=False):
     x_list = []
     y_list = []
     print('Load data ...')
-    for run in tqdm(range(NGraphs)):
+    for run in trange(NGraphs):
         x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
         y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(torch.stack(x))
@@ -1251,7 +1250,7 @@ def data_train(model_config, bSparse=False):
     logger.info(f'vnorm ynorm: {vnorm[4].detach().cpu().numpy()} {ynorm[4].detach().cpu().numpy()}')
     if bMesh:
         h_list = []
-        for run in tqdm(range(NGraphs)):
+        for run in trange(NGraphs):
             h = torch.load(f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt', map_location=device)
             h_list.append(torch.stack(h))
         h = torch.stack(h_list)
@@ -1878,7 +1877,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
     rmserr_list = []
     discrepency_list = []
 
-    for it in tqdm(range(nframes - 1)):
+    for it in trange(nframes - 1):
 
         x0 = x_list[0][it].clone().detach()
         x0_next = x_list[0][it + 1].clone().detach()
@@ -2250,7 +2249,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
         x_list.append(torch.stack(x))
         y_list.append(torch.stack(y))
     else:
-        for run in tqdm(range(NGraphs)):
+        for run in trange(NGraphs):
             x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
             y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
             if run == 0:
@@ -2328,7 +2327,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
 
     if bMesh:
         h_list = []
-        for run in tqdm(range(NGraphs)):
+        for run in trange(NGraphs):
             h = torch.load(f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt', map_location=device)
             h_list.append(torch.stack(h))
         h = torch.stack(h_list)
