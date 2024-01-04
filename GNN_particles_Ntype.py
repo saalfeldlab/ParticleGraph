@@ -3549,7 +3549,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3561,10 +3561,10 @@ if __name__ == '__main__':
 
     # config_list = ['config_arbitrary_3','config_gravity_16','config_arbitrary_16']
     # config_list = ['config_arbitrary_16_HR','config_gravity_16_001']
-    #config_list = ['config_gravity_16_001_HR','config_gravity_16_001']
+    # config_list = ['config_gravity_16_001_HR','config_gravity_16_001']
     # config_list = ['config_Coulomb_3_HR']
     # config_list = ['config_boids_16_HR']
-    # config_list = ['config_wave_HR','config_wave']
+    config_list = ['config_wave'] #,'config_wave']
 
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
@@ -3608,7 +3608,7 @@ if __name__ == '__main__':
 
         ratio = 1
         data_generate(model_config, bVisu=False, bDetails=False, alpha=0.2, bErase=True, bLoad_p=False, step=200)
-        # data_train(model_config,model_embedding)
+        data_train(model_config,model_embedding)
         data_plot(model_config, epoch=-1, bPrint=True, best_model=20, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=160) # model_config['nframes']-5)
 
