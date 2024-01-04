@@ -755,9 +755,9 @@ class MeshLaplacian(pyg.nn.MessagePassing):
         # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         # deg = pyg_utils.degree(edge_index[0], data.num_nodes)
 
-        heat = self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
+        height = self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
 
-        return heat
+        return height
 
     def message(self, x_i, x_j, edge_attr):
         embedding = self.a[self.data_id, x_i[:, 0].detach().cpu().numpy(), :]
