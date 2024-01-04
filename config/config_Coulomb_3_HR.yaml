@@ -1,0 +1,33 @@
+Nepochs: 20
+input_size: 11
+output_size: 2
+hidden_size: 128
+n_mp_layers: 5
+noise_level: 0
+radius: 0.15
+min_radius: 0.001
+nparticles: 960
+nparticle_types: 3
+ninteractions: 3
+kmeans_input: 'plot'
+nframes: 2000
+sigma: 0.005
+tau: 2.5E-10
+v_init: 5E-5
+aggr_type: 'add'
+boundary: 'periodic' # periodic   'no'  # no boundary condition
+data_augmentation: True
+batch_size: 8
+embedding: 2
+model: 'ElecParticles'
+prediction: '2nd_derivative'
+p: [[2], [1], [-1]]
+upgrade_type: 'none'
+nrun: 2
+clamp: 0
+pred_limit: 1E+10
+start_frame: 0
+arrow_length: 10
+cmap: 'tab10'
+description: 'Periodic PDE_E is a second derivative simulation, acceleration is function of electrostatic law qiqj/r2 interaction is type-type dependent best_model:22'
+sparsity: 'regul_replace'
