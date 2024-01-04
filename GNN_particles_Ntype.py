@@ -244,11 +244,12 @@ class PDE_B(pyg.nn.MessagePassing):
         super(PDE_B, self).__init__(aggr=aggr_type)  # "mean" aggregation.
 
         self.p = p
+        self.tau = tau
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        acc = self.propagate(edge_index, x=(x, x))
+        acc = self.tau * self.propagate(edge_index, x=(x, x))
 
         oldv = x[:, 3:5]
         newv = oldv + acc
@@ -468,7 +469,7 @@ class InteractionParticles(pyg.nn.MessagePassing):
         if (len(p)==3): #PDE_B
             cohesion = p[0] * 0.5E-5 * r
             separation = -p[2] * 1E-8 / r
-            return cohesion+separation #
+            return (cohesion+separation) * p[1]/500  #
         else: # PDE_A
             return r * (p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) - p[3] * torch.exp(-r ** (2 * p[1]) / (2 * sigma ** 2)))
 
@@ -2368,6 +2369,9 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
     y_stat = []
     distance_list = []
     deg_list = []
+    print('Load normalizations ...')
+    time.sleep(1)
+
     if False:  # analyse tmp_recons
         x = torch.load(f'{log_dir}/x_list.pt')
         y = torch.load(f'{log_dir}/y_list.pt')
@@ -2792,7 +2796,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
         # plt.ylim([1, 1E7])
         plt.xlabel('Distance [a.u]', fontsize=12)
         plt.ylabel('MLP [a.u]', fontsize=12)
-    elif (model_config['model'] == 'PDE_A') | (model_config['model'] == 'PDE_B'):
+    elif (model_config['model'] == 'PDE_A'):
         acc_list = []
         for n in range(nparticles):
             embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
@@ -2805,6 +2809,24 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
                                          rr[:, None] / model_config['radius'], embedding), dim=1)
             with torch.no_grad():
                 acc = model.lin_edge(in_features.float())
+            acc = acc[:, 0]
+            acc_list.append(acc)
+            if n % 5 == 0:
+                plt.plot(rr.detach().cpu().numpy(),
+                         acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],
+                         color=cmap.color(x[n, 5].detach().cpu().numpy()), linewidth=1, alpha=0.25)
+    elif (model_config['model'] == 'PDE_B'):
+        acc_list = []
+        for n in range(nparticles):
+            embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
+            in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                     rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
+                                     0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
+            with torch.no_grad():
+                acc = model.lin_edge(in_features.float())
+            update_features=torch.cat((acc, acc*0, embedding), dim=1)
+            with torch.no_grad():
+                acc = model.lin_update(update_features.float())
             acc = acc[:, 0]
             acc_list.append(acc)
             if n % 5 == 0:
@@ -2824,7 +2846,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
                          linewidth=1, color='k', alpha=0.05)
     if (model_config['model'] == 'PDE_B'):
         plt.xlim([0, 0.02])
-        plt.ylim([-0.001, 0.00025])
+        plt.ylim([-5E-5,1E-5])
 
 
     plt.xlabel('Distance [a.u]', fontsize=12)
@@ -2844,7 +2866,6 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), color=cmap.color(n), linewidth=1)
         plt.xlabel('Distance [a.u]', fontsize=12)
         plt.ylabel('MLP [a.u]', fontsize=12)
-
     if model_config['model'] == 'GravityParticles':
         p = model_config['p']
         if len(p)>0:
@@ -2883,7 +2904,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
 
     if (model_config['model'] == 'PDE_B'):
         plt.xlim([0, 0.02])
-        plt.ylim([-0.001, 0.00025])
+        plt.ylim([-5E-5,1E-5])
 
     ax = fig.add_subplot(2, 4, 4)
     T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
@@ -3528,7 +3549,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3542,8 +3563,8 @@ if __name__ == '__main__':
     # config_list = ['config_arbitrary_16_HR','config_gravity_16_001']
     #config_list = ['config_gravity_16_001_HR','config_gravity_16_001']
     # config_list = ['config_Coulomb_3_HR']
-    # config_list = ['config_boids_16']
-    config_list = ['config_wave_HR','config_wave']
+    config_list = ['config_boids_16_HR']
+    # config_list = ['config_wave_HR','config_wave']
 
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
@@ -3586,7 +3607,7 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
         ratio = 1
-        data_generate(model_config, bVisu=True, bDetails=False, alpha=0.2, bErase=True, bLoad_p=False, step=200)
+        data_generate(model_config, bVisu=False, bDetails=False, alpha=0.2, bErase=True, bLoad_p=False, step=200)
         data_train(model_config,model_embedding)
         data_plot(model_config, epoch=-1, bPrint=True, best_model=20, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=160) # model_config['nframes']-5)
