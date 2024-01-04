@@ -1,39 +1,36 @@
-import os
-import matplotlib.pyplot as plt
-import numpy as np
-import torch
-import networkx as nx
-from torch_geometric.utils.convert import to_networkx
-from tqdm import tqdm
 import glob
+import json
+import logging
+import time
+from decimal import Decimal
+from math import *
+from shutil import copyfile
+
+import matplotlib.pyplot as plt
+import networkx as nx
+import torch.nn as nn
 import torch_geometric as pyg
 import torch_geometric.data as data
+import torch_geometric.transforms as T
 import torch_geometric.utils as pyg_utils
-from torch_geometric.loader import DataLoader
-import torch.nn as nn
-from torch.nn import functional as F
-import time
-from shutil import copyfile
+import umap
+import yaml  # need to install pyyaml
+from geomloss import SamplesLoss
 from prettytable import PrettyTable
+from scipy.optimize import curve_fit
+from scipy.spatial import Delaunay
+from sklearn import metrics
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
-import json
-from geomloss import SamplesLoss
-import torch_geometric.transforms as T
-# from numpy import vstack
-# from sklearn.metrics import confusion_matrix, recall_score, f1_score
-# from torch_geometric.utils import degree
-import umap
-from tifffile import imwrite, imread
-from data_loaders import *
+from tifffile import imread
+from torch.nn import functional as F
+from torch_geometric.loader import DataLoader
 from torch_geometric.utils import degree
-from scipy.spatial import Delaunay
-import logging
-import yaml  # need to install pyyaml
-from sklearn import metrics
-from math import *
-from decimal import Decimal
-from scipy.optimize import curve_fit
+from torch_geometric.utils.convert import to_networkx
+from tqdm import tqdm
+
+from data_loaders import *
+
 
 def p_root(value, root):
     root_value = 1 / float(root)

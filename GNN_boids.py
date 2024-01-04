@@ -1,43 +1,34 @@
-import os
-import matplotlib.pyplot as plt
-import numpy as np
-import torch
-import networkx as nx
-from torch_geometric.utils.convert import to_networkx
-from tqdm import tqdm
 import glob
-import torch_geometric as pyg
-import torch_geometric.data as data
-import torch_geometric.utils as pyg_utils
-from torch_geometric.loader import DataLoader
-import torch.nn as nn
-from torch.nn import functional as F
+import json
+import logging
 import time
 from shutil import copyfile
+
+import matplotlib.pyplot as plt
+import networkx as nx
+import numpy as np
+import torch
+import torch.nn as nn
+import torch_geometric as pyg
+import torch_geometric.data as data
+import torch_geometric.transforms as T
+import torch_geometric.utils as pyg_utils
+import umap
+import yaml  # need to install pyyaml
+from geomloss import SamplesLoss
+from matrix import *
 from prettytable import PrettyTable
-from kneed import KneeLocator
+from scipy.spatial import Delaunay
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
-import json
-from geomloss import SamplesLoss
-import torch_geometric.transforms as T
-import pandas
-import trackpy
-# from numpy import vstack
-# from sklearn.metrics import confusion_matrix, recall_score, f1_score
-# from torch_geometric.utils import degree
-import umap
-from tifffile import imwrite, imread
-import pygame
-from tools import *
-from random import uniform
-import colorsys
-from matrix import *
-from math import pi, sin, cos
+from tifffile import imread
+from torch.nn import functional as F
+from torch_geometric.loader import DataLoader
 from torch_geometric.utils import degree
-from scipy.spatial import Delaunay
-import logging
-import yaml  # need to install pyyaml
+from torch_geometric.utils.convert import to_networkx
+from tqdm import tqdm
+
+from tools import *
 
 
 def distmat_square(X, Y):
