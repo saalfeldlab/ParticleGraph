@@ -33,8 +33,12 @@ from tools import *
 
 def distmat_square(X, Y):
     return torch.sum(bc_diff(X[:, None, :] - Y[None, :, :]) ** 2, axis=2)
+
+
 def kernel(X, Y):
     return -torch.sqrt(distmat_square(X, Y))
+
+
 def MMD(X, Y):
     n = X.shape[0]
     m = Y.shape[0]
@@ -42,6 +46,8 @@ def MMD(X, Y):
         torch.sum(kernel(Y, Y)) / m ** 2 - \
         2 * torch.sum(kernel(X, Y)) / (n * m)
     return a.item()
+
+
 def normalize99(Y, lower=1, upper=99):
     """ normalize image so 0.0 is 1st percentile and 1.0 is 99th percentile """
     X = Y.copy()
@@ -49,6 +55,8 @@ def normalize99(Y, lower=1, upper=99):
     x99 = np.percentile(X, upper)
     X = (X - x01) / (x99 - x01)
     return x01, x99
+
+
 def norm_velocity(xx, device):
     mvx = torch.mean(xx[:, 3])
     mvy = torch.mean(xx[:, 4])
@@ -60,6 +68,8 @@ def norm_velocity(xx, device):
     vy01, vy99 = normalize99(nvy)
 
     return torch.tensor([vx01, vx99, vy01, vy99, vx, vy], device=device)
+
+
 def norm_acceleration(yy, device):
     max = torch.mean(yy[:, 0])
     may = torch.mean(yy[:, 1])
@@ -71,6 +81,7 @@ def norm_acceleration(yy, device):
     ay01, ay99 = normalize99(nay)
 
     return torch.tensor([ax01, ax99, ay01, ay99, ax, ay], device=device)
+
 
 class cc:
 
@@ -97,6 +108,8 @@ class cc:
             index = color_map(index / self.nmap)
 
         return index
+
+
 class Laplacian_A(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -129,6 +142,8 @@ class Laplacian_A(pyg.nn.MessagePassing):
         psi = torch.clamp(psi, max=self.pred_limit)
 
         return psi[:, None]
+
+
 class MLP(nn.Module):
 
     def __init__(self, input_size, output_size, nlayers, hidden_size, device):
@@ -153,6 +168,7 @@ class MLP(nn.Module):
             x = F.relu(x)
         x = self.layers[-1](x)
         return x
+
 
 class PDE_A(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
@@ -187,6 +203,8 @@ class PDE_A(pyg.nn.MessagePassing):
     def psi(self, r, p):
         return r * (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(
             -r ** (2 * p[1]) / (2 * sigma ** 2)))
+
+
 class PDE_B(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -236,12 +254,15 @@ class PDE_B(pyg.nn.MessagePassing):
 
         cohesion = pp[:, 0:1].repeat(1, 2) / 5E4 * bc_diff(x_j[:, 1:3] - x_i[:, 1:3])
 
-        separation = pp[:, 2:3].repeat(1, 2) / 5E6 * bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) / (r[:, None].repeat(1, 2))   #5E7 normal
+        separation = pp[:, 2:3].repeat(1, 2) / 5E6 * bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) / (
+            r[:, None].repeat(1, 2))  # 5E7 normal
 
         return separation + alignment + cohesion
 
     def psi(self, r, p):
         return r
+
+
 class PDE_E(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -284,6 +305,8 @@ class PDE_E(pyg.nn.MessagePassing):
         acc = p1 * p2 * r / r_ ** 2
         acc = torch.clamp(acc, max=self.pred_limit)
         return acc  # Elec particles
+
+
 class PDE_G(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -321,6 +344,7 @@ class PDE_G(pyg.nn.MessagePassing):
         psi = torch.clamp(psi, max=self.pred_limit)
 
         return psi[:, None]
+
 
 class InteractionParticles(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
@@ -430,6 +454,8 @@ class InteractionParticles(pyg.nn.MessagePassing):
 
         return -(r * (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(
             -r ** (2 * p[1]) / (2 * sigma ** 2))))
+
+
 class GravityParticles(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -521,6 +547,8 @@ class GravityParticles(pyg.nn.MessagePassing):
         psi = torch.clamp(psi, max=self.pred_limit)
 
         return psi[:, None]
+
+
 class ElecParticles(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -612,6 +640,8 @@ class ElecParticles(pyg.nn.MessagePassing):
         acc = p1 * p2 * r / r_ ** 3
         acc = torch.clamp(acc, max=self.pred_limit)
         return -acc  # Elec particles
+
+
 class MeshLaplacian(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -667,6 +697,8 @@ class MeshLaplacian(pyg.nn.MessagePassing):
     def psi(self, r, p):
         return r * (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(
             -r ** (2 * p[1]) / (2 * sigma ** 2)))
+
+
 def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5):
     print('')
     print('Generating data ...')
@@ -702,12 +734,13 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
     bMesh = (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh')
     bDivision = 'division_cycle' in model_config
 
-    cycle_length = torch.clamp(torch.abs(torch.ones(nparticle_types, 1, device=device) * 400 + torch.randn(nparticle_types, 1,device=device) * 150),min=100, max=700)
+    cycle_length = torch.clamp(torch.abs(
+        torch.ones(nparticle_types, 1, device=device) * 400 + torch.randn(nparticle_types, 1, device=device) * 150),
+                               min=100, max=700)
     if bDivision:
         for n in range(model_config['nparticle_types']):
             print(f'cell cycle duration: {cycle_length[n].detach().cpu().numpy()}')
         torch.save(torch.squeeze(cycle_length), f'graphs_data/graphs_particles_{dataset_name}/cycle_length.pt')
-
 
     rr = torch.tensor(np.linspace(0, radius * 2, 1000))
     rr = rr.to(device)
@@ -820,7 +853,7 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
         # h = torch.zeros((nparticles, 1), device=device)
         H1 = torch.zeros((nparticles, 2), device=device)
         H1[:, 0:1] = torch.ones((nparticles, 1), device=device) + torch.randn((nparticles, 1), device=device) / 2
-        cycle_length_distrib = cycle_length[T1[:,0].detach().cpu().numpy().astype(int)]
+        cycle_length_distrib = cycle_length[T1[:, 0].detach().cpu().numpy().astype(int)]
         A1 = torch.rand(nparticles, device=device)
         A1 = A1[:, None]
         A1 = A1 * cycle_length_distrib
@@ -863,11 +896,11 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
 
         for it in tqdm(range(model_config['start_frame'], nframes)):
 
-            if (it>0) & bDivision & (nparticles<20000):
+            if (it > 0) & bDivision & (nparticles < 20000):
                 cycle_test = (torch.ones(nparticles, device=device) + 0.05 * torch.randn(nparticles, device=device))
                 cycle_test = cycle_test[:, None]
                 cycle_length_distrib = cycle_length[T1[:, 0].detach().cpu().numpy().astype(int)]
-                pos = torch.argwhere(A1>cycle_test * cycle_length_distrib)
+                pos = torch.argwhere(A1 > cycle_test * cycle_length_distrib)
                 if len(pos) > 1:
                     n_add_nodes = len(pos)
                     pos = pos[:, 0].squeeze().detach().cpu().numpy().astype(int)
@@ -876,8 +909,8 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
                     N1 = N1[:, None]
 
                     separation = 1E-3 * torch.randn((n_add_nodes, 2), device=device)
-                    X1 = torch.cat((X1, X1[pos,:] + separation),axis=0)
-                    X1[pos,:] = X1[pos,:] - separation
+                    X1 = torch.cat((X1, X1[pos, :] + separation), axis=0)
+                    X1[pos, :] = X1[pos, :] - separation
 
                     phi = torch.randn(n_add_nodes, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
                     cos_phi = torch.cos(phi)
@@ -886,19 +919,18 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
                     new_y = -sin_phi * V1[pos, 0] + cos_phi * V1[pos, 1]
                     V1[pos, 0] = new_x
                     V1[pos, 1] = new_y
-                    V1 = torch.cat((V1, -V1[pos,:]), axis=0)
+                    V1 = torch.cat((V1, -V1[pos, :]), axis=0)
 
-                    T1 = torch.cat((T1, T1[pos,:]), axis=0)
-                    H1 = torch.cat((H1, H1[pos,:]), axis=0)
+                    T1 = torch.cat((T1, T1[pos, :]), axis=0)
+                    H1 = torch.cat((H1, H1[pos, :]), axis=0)
                     A1[pos, :] = 0
                     A1 = torch.cat((A1, A1[pos, :]), axis=0)
 
-                    index_particles=[]
+                    index_particles = []
                     for n in range(nparticles):
                         pos = torch.argwhere(T1 == n)
                         pos = pos[:, 0].squeeze().detach().cpu().numpy().astype(int)
                         index_particles.append(pos)
-
 
             if it == 0:
                 V1 = torch.clamp(V1, min=-torch.std(V1), max=+torch.std(V1))
@@ -951,11 +983,10 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
 
             A1 = A1 + 1
 
-
             if model_config['model'] == 'DiffMesh':
                 if it >= 0:
                     mask = torch.argwhere((X1[:, 0] > 0.1) & (X1[:, 0] < 0.9) & (X1[:, 1] > 0.1) & (
-                                X1[:, 1] < 0.9)).detach().cpu().numpy().astype(int)
+                            X1[:, 1] < 0.9)).detach().cpu().numpy().astype(int)
                     mask = mask[:, 0:1]
                     with torch.no_grad():
                         pred = model_mesh(dataset_mesh)
@@ -1134,8 +1165,8 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
                         for k in range(nparticles):
                             plt.arrow(x=x[k, 1].detach().cpu().item(), y=x[k, 2].detach().cpu().item(),
                                       dx=x[k, 3].detach().cpu().item() * model_config['arrow_length'],
-                                      dy=x[k, 4].detach().cpu().item() * model_config['arrow_length'], color='k',alpha=0.25)
-
+                                      dy=x[k, 4].detach().cpu().item() * model_config['arrow_length'], color='k',
+                                      alpha=0.25)
 
                 plt.tight_layout()
                 plt.savefig(f"./tmp_data/Fig_{ntry}_{it}.tif")
@@ -1146,6 +1177,8 @@ def data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=5
         torch.save(h_list, f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt')
 
         bDetails = False
+
+
 def data_train(model_config, bSparse=False):
     print('')
 
@@ -1385,7 +1418,7 @@ def data_train(model_config, bSparse=False):
                 regul_term_embedding = (model.a[run - 1] - embedding_center[0].clone().detach()) ** 2
                 for k in range(1, model_config['ninteractions']):
                     regul_term_embedding = regul_term_embedding * (
-                                model.a[run - 1] - embedding_center[k].clone().detach()) ** 2
+                            model.a[run - 1] - embedding_center[k].clone().detach()) ** 2
                 regul_term_embedding = regul_embedding * torch.sqrt(torch.mean(regul_term_embedding))
                 loss = (pred - y_batch).norm(2) + regul_term_embedding
             else:
@@ -1649,9 +1682,11 @@ def data_train(model_config, bSparse=False):
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{ntry}_{epoch}.tif")
         plt.close()
-def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0,
-              prev_index_particles=0, best_model=0, step=5, bTest='', folder_out='tmp_recons', initial_map='',forced_embedding=[], forced_color=0):
 
+
+def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_nparticles=0, new_nparticles=0,
+              prev_index_particles=0, best_model=0, step=5, bTest='', folder_out='tmp_recons', initial_map='',
+              forced_embedding=[], forced_color=0):
     # files = glob.glob(f"/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/tmp_recons/*")
     # for f in files:
     #     os.remove(f)
@@ -1730,7 +1765,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
             model.load_state_dict(state_dict['model_state_dict'])
             model.eval()
 
-    if len(forced_embedding)>0:
+    if len(forced_embedding) > 0:
         with torch.no_grad():
             model.a[0] = torch.tensor(forced_embedding, device=device).repeat(nparticles, 1)
 
@@ -1906,7 +1941,7 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
 
         if bMesh:
             mask = torch.argwhere((x[:, 1] < 0.025) | (x[:, 1] > 0.975) | (x[:, 2] < 0.025) | (
-                        x[:, 2] > 0.975)).detach().cpu().numpy().astype(int)
+                    x[:, 2] > 0.975)).detach().cpu().numpy().astype(int)
             mask = mask[:, 0:1]
             x[mask, 6:8] = 0
             rmserr = torch.sqrt(torch.mean(torch.sum((x[:, 6:7] - x0_next[:, 6:7]) ** 2, axis=1)))
@@ -1998,12 +2033,14 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
                                       facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=0, vmax=5000)
                 else:
                     for n in range(nparticle_types):
-                        if ((k == 2) | (k == 4)) & (len(forced_embedding)>0):
-                            plt.scatter(x_[index_particles[n], 1].detach().cpu(), x_[index_particles[n], 2].detach().cpu(),
-                                    s=sc, color=cmap.color(forced_color))
+                        if ((k == 2) | (k == 4)) & (len(forced_embedding) > 0):
+                            plt.scatter(x_[index_particles[n], 1].detach().cpu(),
+                                        x_[index_particles[n], 2].detach().cpu(),
+                                        s=sc, color=cmap.color(forced_color))
                         else:
-                            plt.scatter(x_[index_particles[n], 1].detach().cpu(), x_[index_particles[n], 2].detach().cpu(),
-                                    s=sc, color=cmap.color(n))
+                            plt.scatter(x_[index_particles[n], 1].detach().cpu(),
+                                        x_[index_particles[n], 2].detach().cpu(),
+                                        s=sc, color=cmap.color(n))
                 if (k > 2) & (bMesh == False):
                     for n in range(nparticles):
                         plt.arrow(x=x_[n, 1].detach().cpu().item(), y=x_[n, 2].detach().cpu().item(),
@@ -2095,6 +2132,8 @@ def data_test(model_config, bVisu=False, bPrint=True, index_particles=0, prev_np
     torch.save(y_recons, f'{log_dir}/y_list.pt')
 
     return x.detach().cpu().numpy(), rmserr_list
+
+
 def data_test_generate(model_config, bVisu=True, bDetails=False, step=5):
     # scenario A
     # X1[:, 0] = X1[:, 0] / nparticle_types
@@ -2137,6 +2176,8 @@ def data_test_generate(model_config, bVisu=True, bDetails=False, step=5):
     # H1 = H1[:,None]
 
     return prev_nparticles, new_nparticles, prev_index_particles, index_particles
+
+
 def data_plot(model_config, epoch, bPrint, best_model=0):
     model = []
     ntry = model_config['ntry']
@@ -2663,6 +2704,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0):
     plt.tight_layout()
     plt.show()
 
+
 if __name__ == '__main__':
 
     print('')
@@ -2676,7 +2718,8 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    config_list = ['config_152_boid_division_8_rnd'] # 'config_148_boid_1800_8_rnd'] #,'config_149_boid_3600_8_rnd','config_150_boid_3600_16_rnd'] # ['config_44_gravity','config_45_gravity'] 'config_147_boid']  #['config_44_gravity','config_45_gravity','config_145_boid','config_146_boid'] # ['config_144_boid']
+    config_list = [
+        'config_152_boid_division_8_rnd']  # 'config_148_boid_1800_8_rnd'] #,'config_149_boid_3600_8_rnd','config_150_boid_3600_16_rnd'] # ['config_44_gravity','config_45_gravity'] 'config_147_boid']  #['config_44_gravity','config_45_gravity','config_145_boid','config_146_boid'] # ['config_144_boid']
 
     for config in config_list:
 
@@ -2699,6 +2742,8 @@ if __name__ == '__main__':
         if model_config['boundary'] == 'no':  # change this for usual BC
             def bc_pos(X):
                 return X
+
+
             def bc_diff(D):
                 return D
         else:
@@ -2715,8 +2760,6 @@ if __name__ == '__main__':
         # prev_nparticles, new_nparticles, prev_index_particles, index_particles = data_test_generate(model_config, bVisu=True, bDetails=True, step=10)
         # x, rmserr_list = data_test(model_config, bVisu = True, bPrint=True, index_particles=index_particles, prev_nparticles=prev_nparticles, new_nparticles=new_nparticles, prev_index_particles=prev_index_particles, best_model=-1, step=100)
 
-
-
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[1.265,0.636], forced_color=0)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[1.59,1.561], forced_color=1)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='', initial_map='', forced_embedding=[0.911,0.983], forced_color=3)
@@ -2725,6 +2768,3 @@ if __name__ == '__main__':
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[0.645, 1.889], forced_color=6)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[0.8, 0.5], forced_color=7)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=-1, step=10, bTest='',initial_map='', forced_embedding=[2.5, 2.5], forced_color=8)
-
-
-
