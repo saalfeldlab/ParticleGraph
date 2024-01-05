@@ -12,7 +12,7 @@ ninteractions: 16
 kmeans_input: 'embedding'
 nframes: 2000
 sigma: 0.005
-tau: 1
+delta_t: 1
 v_init: 5E-4
 aggr_type: 'mean'
 boundary: 'periodic'  # periodic   'no'  # no boundary condition

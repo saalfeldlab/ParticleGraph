@@ -12,7 +12,7 @@ ninteractions: 3
 kmeans_input: 'plot'
 nframes: 250
 sigma: 0.005
-tau: 0.1
+delta_t: 0.1
 v_init: 0
 aggr_type: 'mean'
 boundary: 'periodic' # periodic   'no'  # no boundary condition
@@ -20,7 +20,7 @@ data_augmentation: True
 batch_size: 8
 embedding: 2 
 model: 'PDE_A'
-prediction: 'first_derivative_S'
+prediction: 'first_derivative'
 upgrade_type: 'none'
 nlayers_update: 3
 hidden_size_update: 64

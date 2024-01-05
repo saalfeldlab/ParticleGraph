@@ -35,20 +35,10 @@ from math import *
 from decimal import Decimal
 from scipy.optimize import curve_fit
 
-def p_root(value, root):
-    root_value = 1 / float(root)
-    return round(Decimal(value) **
-                 Decimal(root_value), 3)
 def func_pow(x, a, b):
     return a / (x**b)
 def func_lin(x, a, b):
     return a * x + b
-
-def minkowski_distance(x, y, p_value):
-    # pass the p_root function to calculate
-    # all the value of vector parallelly
-    return (p_root(sum(pow(abs(a - b), p_value)
-                       for a, b in zip(x, y)), p_value))
 
 def distmat_square(X, Y):
     return torch.sum(bc_diff(X[:, None, :] - Y[None, :, :]) ** 2, axis=2)
@@ -181,49 +171,44 @@ class PDE_A(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, aggr_type=[], p=[], tau=[], prediction=[]):
+    def __init__(self, aggr_type=[], p=[], delta_t=[], sigma=[]):
         super(PDE_A, self).__init__(aggr=aggr_type)  # "mean" aggregation.
 
         self.p = p
-        self.tau = tau
-        self.prediction = prediction
+        self.delta_t = delta_t
+        self.sigma = torch.tensor([sigma], device=device)
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        newv = self.tau * self.propagate(edge_index, x=(x, x))
+        delta_v = self.delta_t * self.propagate(edge_index, x=(x, x))
 
-        if self.prediction == '2nd_derivative':
-            oldv = x[:, 3:5]
-            acc = newv - oldv
-            return acc
-        else:
-            return newv
+        return delta_v
 
     def message(self, x_i, x_j):
         r = torch.sum(bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)  # squared distance
         pp = self.p[x_i[:, 5].detach().cpu().numpy(), :]
-        psi = pp[:, 0] * torch.exp(-r ** pp[:, 1] / (2 * sigma ** 2)) - pp[:, 2] * torch.exp(
-            -r ** pp[:, 3] / (2 * sigma ** 2))
+        psi = pp[:, 0] * torch.exp(-r ** pp[:, 1] / (2 * self.sigma ** 2)) - pp[:, 2] * torch.exp(
+            -r ** pp[:, 3] / (2 * self.sigma ** 2))
         return psi[:, None] * bc_diff(x_j[:, 1:3] - x_i[:, 1:3])
     def psi(self, r, p):
-        return r * (p[0] * torch.exp(-r ** (2 * p[1]) / (2 * sigma ** 2)) - p[2] * torch.exp(-r ** (2 * p[3]) / (2 * sigma ** 2)))
+        return r * (p[0] * torch.exp(-r ** (2 * p[1]) / (2 * self.sigma ** 2)) - p[2] * torch.exp(-r ** (2 * p[3]) / (2 * self.sigma ** 2)))
 class PDE_embedding(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, aggr_type=[], p=[], tau=[], prediction=[],sigma=[]):
+    def __init__(self, aggr_type=[], p=[], delta_t=[], prediction=[],sigma=[]):
         super(PDE_embedding, self).__init__(aggr='mean')  # "mean" aggregation.
 
         self.p = p
-        self.tau = tau
+        self.delta_t = delta_t
         self.prediction = prediction
         self.sigma = torch.tensor([sigma],device=device)
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        newv = self.tau * self.propagate(edge_index, x=(x, x))
+        newv = self.delta_t * self.propagate(edge_index, x=(x, x))
 
         return newv
 
@@ -240,16 +225,16 @@ class PDE_B(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, aggr_type=[], p=[], tau=[], prediction=[]):
+    def __init__(self, aggr_type=[], p=[], delta_t=[]):
         super(PDE_B, self).__init__(aggr=aggr_type)  # "mean" aggregation.
 
         self.p = p
-        self.tau = tau
+        self.delta_t = delta_t
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        acc = self.tau * self.propagate(edge_index, x=(x, x))
+        acc = self.delta_t * self.propagate(edge_index, x=(x, x))
 
         oldv = x[:, 3:5]
         newv = oldv + acc
@@ -280,16 +265,15 @@ class PDE_B(pyg.nn.MessagePassing):
         cohesion = p[0] * 0.5E-5 * r
         separation = -p[2] * 1E-8 / r
         return (cohesion + separation)  # 5E-4 alignement
-
 class PDE_E(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, aggr_type=[], p=[], tau=[], clamp=[], pred_limit=[], prediction=[]):
+    def __init__(self, aggr_type=[], p=[], delta_t=[], clamp=[], pred_limit=[], prediction=[]):
         super(PDE_E, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.p = p
-        self.tau = tau
+        self.delta_t = delta_t
         self.clamp = clamp
         self.pred_limit = pred_limit
         self.prediction = prediction
@@ -297,7 +281,7 @@ class PDE_E(pyg.nn.MessagePassing):
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        acc = self.tau * self.propagate(edge_index, x=(x, x))
+        acc = self.delta_t * self.propagate(edge_index, x=(x, x))
         return acc
 
     def message(self, x_i, x_j):
@@ -325,18 +309,18 @@ class PDE_G(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, aggr_type=[], p=[], tau=[], clamp=[], pred_limit=[]):
+    def __init__(self, aggr_type=[], p=[], delta_t=[], clamp=[], pred_limit=[]):
         super(PDE_G, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.p = p
-        self.tau = tau
+        self.delta_t = delta_t
         self.clamp = clamp
         self.pred_limit = pred_limit
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        acc = self.tau * self.propagate(edge_index, x=(x, x))
+        acc = self.delta_t * self.propagate(edge_index, x=(x, x))
         return acc
 
     def message(self, x_i, x_j):
@@ -383,6 +367,7 @@ class InteractionParticles(pyg.nn.MessagePassing):
         self.upgrade_type = model_config['upgrade_type']
         self.nlayers_update = model_config['nlayers_update']
         self.hidden_size_update = model_config['hidden_size_update']
+        self.sigma = model_config['sigma']
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
@@ -471,8 +456,8 @@ class InteractionParticles(pyg.nn.MessagePassing):
             separation = -p[2] * 1E-8 / r
             return (cohesion+separation) * p[1]/500  #
         else: # PDE_A
-            return r * (p[0] * torch.exp(-r ** (2 * p[1]) / (2 * sigma ** 2)) - p[2] * torch.exp(-r ** (2 * p[3]) / (2 * sigma ** 2)))
 
+            return r * (p[0] * torch.exp(-r ** (2 * p[1]) / (2 * self.sigma ** 2)) - p[2] * torch.exp(-r ** (2 * p[3]) / (2 * self.sigma ** 2)))
 class InteractionCElegans(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -543,7 +528,6 @@ class InteractionCElegans(pyg.nn.MessagePassing):
     def update(self, aggr_out):
 
         return aggr_out  # self.lin_node(aggr_out)
-
 class GravityParticles(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -833,7 +817,6 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
 
     if model_config['model'] == 'PDE_A':
         print(f'Generate PDE_A')
-
         if bLoad_p:
             p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
         else:
@@ -841,13 +824,10 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             if len(model_config['p']) > 0:
                 for n in range(nparticle_types):
                     p[n] = torch.tensor(model_config['p'][n])
-
         if nparticle_types == 1:
-            model = PDE_A(aggr_type=aggr_type, p=p, tau=model_config['tau'],
-                          prediction=model_config['prediction'])
+            model = PDE_A(aggr_type=aggr_type, p=p, delta_t=model_config['delta_t'], sigma=model_config['sigma'])
         else:
-            model = PDE_A(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'],
-                          prediction=model_config['prediction'])
+            model = PDE_A(aggr_type=aggr_type, p=torch.squeeze(p), delta_t=model_config['delta_t'], sigma=model_config['sigma'])
         psi_output = []
         for n in range(nparticle_types):
             psi_output.append(model.psi(rr, torch.squeeze(p[n])))
@@ -860,10 +840,10 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             for n in range(nparticle_types):
                 p[n] = torch.tensor(model_config['p'][n])
         if nparticle_types == 1:
-            model = PDE_A(aggr_type=aggr_type, p=p, tau=model_config['tau'],
+            model = PDE_A(aggr_type=aggr_type, p=p, delta_t=model_config['delta_t'],
                           prediction=model_config['prediction'])
         else:
-            model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'],
+            model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), delta_t=model_config['delta_t'],
                           prediction=model_config['prediction'])
         psi_output = []
         for n in range(nparticle_types):
@@ -876,7 +856,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
         if len(model_config['p']) > 0:
             for n in range(nparticle_types):
                 p[n] = torch.tensor(model_config['p'][n])
-        model = PDE_G(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'],
+        model = PDE_G(aggr_type=aggr_type, p=torch.squeeze(p), delta_t=model_config['delta_t'],
                       clamp=model_config['clamp'], pred_limit=model_config['pred_limit'])
         psi_output = []
         for n in range(nparticle_types):
@@ -890,7 +870,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                 p[n] = torch.tensor(model_config['p'][n])
                 print(f'p{n}: {np.round(torch.squeeze(p[n]).detach().cpu().numpy(), 4)}')
                 torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
-        model = PDE_E(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'],
+        model = PDE_E(aggr_type=aggr_type, p=torch.squeeze(p), delta_t=model_config['delta_t'],
                       clamp=model_config['clamp'], pred_limit=model_config['pred_limit'],
                       prediction=model_config['prediction'])
         psi_output = []
@@ -903,7 +883,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
         if len(model_config['p']) > 0:
             for n in range(nparticle_types):
                 p[n] = torch.tensor(model_config['p'][n])
-        model = PDE_G(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'],
+        model = PDE_G(aggr_type=aggr_type, p=torch.squeeze(p), delta_t=model_config['delta_t'],
                       clamp=model_config['clamp'], pred_limit=model_config['pred_limit'])
         c = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         for n in range(nparticle_types):
@@ -1284,7 +1264,6 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
         torch.save(h_list, f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt')
 
     model_config['nparticles'] = int(model_config['nparticles'] / ratio)
-
 def data_train(model_config, model_embedding):
 
     print('')
@@ -1645,7 +1624,7 @@ def data_train(model_config, model_embedding):
                         acc_list.append(acc)
                         if n % 5 == 0:
                             plt.plot(rr.detach().cpu().numpy(),
-                                     acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],
+                                     acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['delta_t'],
                                      linewidth=1,
                                      color=cmap.color(k), alpha=0.25)
             acc_list = torch.stack(acc_list)
@@ -1668,7 +1647,7 @@ def data_train(model_config, model_embedding):
                 acc = acc[:, 0]
                 acc_list.append(acc)
                 plt.plot(rr.detach().cpu().numpy(),
-                         acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],
+                         acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['delta_t'],
                          color=cmap.color(x[n, 5].detach().cpu().numpy()), linewidth=1, alpha=0.25)
             acc_list = torch.stack(acc_list)
             plt.yscale('log')
@@ -1705,7 +1684,7 @@ def data_train(model_config, model_embedding):
                 acc_list.append(acc)
                 if n % 5 == 0:
                     plt.plot(rr.detach().cpu().numpy(),
-                             acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],
+                             acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['delta_t'],
                              color=cmap.color(x[n, 5].detach().cpu().numpy()), linewidth=1, alpha=0.25)
             plt.xlabel('Distance [a.u]', fontsize=12)
             plt.ylabel('MLP [a.u]', fontsize=12)
@@ -1795,7 +1774,6 @@ def data_train(model_config, model_embedding):
                         model.a[n] = model_a_[0].clone().detach()
                 print(f'regul_embedding: replaced')
                 logger.info(f'regul_embedding: replaced')
-
 def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_particles=0, prev_nparticles=0, new_nparticles=0,
               prev_index_particles=0, best_model=0, step=5, bTest='', folder_out='tmp_recons', initial_map='',forced_embedding=[], forced_color=0):
 
@@ -1848,7 +1826,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         if len(model_config['p']) > 0:
             for n in range(nparticle_types):
                 p[n] = torch.tensor(model_config['p'][n])
-        model = PDE_G(aggr_type=aggr_type, p=torch.squeeze(p), tau=model_config['tau'],
+        model = PDE_G(aggr_type=aggr_type, p=torch.squeeze(p), delta_t=model_config['delta_t'],
                       clamp=model_config['clamp'], pred_limit=model_config['pred_limit'])
 
         c = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
@@ -2220,7 +2198,6 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
 
     torch.save(x_recons, f'{log_dir}/x_list.pt')
     torch.save(y_recons, f'{log_dir}/y_list.pt')
-
 def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
     model = []
     radius = model_config['radius']
@@ -2484,7 +2461,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
                     acc_list.append(acc)
                     if n % 5 == 0:
                         plt.plot(rr.detach().cpu().numpy(),
-                                 acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],
+                                 acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['delta_t'],
                                  linewidth=1,
                                  color=cmap.color(k), alpha=0.25)
         acc_list = torch.stack(acc_list)
@@ -2509,7 +2486,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             acc = acc[:, 0]
             acc_list.append(acc)
             plt.plot(rr.detach().cpu().numpy(),
-                     acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],
+                     acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['delta_t'],
                      color=cmap.color(x[n, 5].detach().cpu().numpy()), linewidth=1, alpha=0.25)
         acc_list = torch.stack(acc_list)
         # plt.yscale('log')
@@ -2540,7 +2517,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             acc_list.append(acc)
             if n % 5 == 0:
                 plt.plot(rr.detach().cpu().numpy(),
-                         acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],
+                         acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['delta_t'],
                          color=cmap.color(x[n, 5].detach().cpu().numpy()), linewidth=1, alpha=0.25)
         acc_list = torch.stack(acc_list)
         coeff_norm = acc_list.detach().cpu().numpy()
@@ -2673,7 +2650,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
                 acc = model.lin_edge(in_features.float())
                 acc = acc[:, 0]
                 plt.plot(rr.detach().cpu().numpy(),
-                         acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],
+                         acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['delta_t'],
                          linewidth=1)
         plt.xlim([0, 0.02])
         plt.ylim([-0.5E6,0.5E6])
@@ -2690,7 +2667,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             acc = acc[:, 0]
             acc_list.append(acc)
             plt.plot(rr.detach().cpu().numpy(),
-                     acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],
+                     acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['delta_t'],
                      color=cmap.color(x[n, 5].detach().cpu().numpy()), linewidth=1, alpha=0.25)
         acc_list = torch.stack(acc_list)
         # plt.yscale('log')
@@ -2718,7 +2695,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             acc_list.append(acc)
             if n % 5 == 0:
                 plt.plot(rr.detach().cpu().numpy(),
-                         acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],
+                         acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['delta_t'],
                          color=cmap.color(x[n, 5].detach().cpu().numpy()), linewidth=1, alpha=0.25)
     elif (model_config['model'] == 'PDE_B'):
         acc_list = []
@@ -2736,7 +2713,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             acc_list.append(acc)
             if n % 5 == 0:
                 plt.plot(rr.detach().cpu().numpy(),
-                         acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['tau'],
+                         acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['delta_t'],
                          color=cmap.color(x[n, 5].detach().cpu().numpy()), linewidth=1, alpha=0.25)
     elif bMesh:
         for n in range(nparticles):
@@ -2855,7 +2832,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
                 with torch.no_grad():
                     pred = model.lin_edge(in_features.float())
                 pred = pred[:, 0]
-                plot_list_pairwise.append(pred * ynorm[4] / torch.tensor(model_config['tau'], device=device))
+                plot_list_pairwise.append(pred * ynorm[4] / torch.tensor(model_config['delta_t'], device=device))
 
         p=[ 2, 1, -1]
         popt_list=[]
@@ -2914,7 +2891,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             with torch.no_grad():
                 pred = model.lin_edge(in_features.float())
             pred = pred[:, 0]
-            plot_list.append(pred * ynorm[4] / torch.tensor(model_config['tau'],device=device))
+            plot_list.append(pred * ynorm[4] / torch.tensor(model_config['delta_t'],device=device))
 
 
     if model_config['model'] == 'GravityParticles':
@@ -2937,7 +2914,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             with torch.no_grad():
                 pred = model.lin_edge(in_features.float())
             pred = pred[:, 0]
-            plot_list_2.append(pred * ynorm[4] / torch.tensor(model_config['tau'], device=device))
+            plot_list_2.append(pred * ynorm[4] / torch.tensor(model_config['delta_t'], device=device))
 
         fig = plt.figure(figsize=(16, 4))
         ax = fig.add_subplot(1, 4, 1)
@@ -3295,7 +3272,6 @@ def data_train_shrofflab_celegans(model_config):
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif",dpi=300)
         plt.close()
-
 def data_test_shrofflab_celegans(model_config):
 
     model = []
@@ -3469,14 +3445,14 @@ if __name__ == '__main__':
     # config_list = ['config_gravity_16_001_HR','config_gravity_16_001']
     # config_list = ['config_Coulomb_3_HR']
     # config_list = ['config_boids_16_HR']
-    config_list = ['config_arbitrary_16_HR'] #,'config_wave']
+    config_list = ['config_arbitrary_3'] #,'config_wave']
 
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
     p = torch.ones(1, 4, device=device)
     p[0] = torch.tensor(model_config_embedding['p'][0])
-    model_embedding = PDE_embedding(aggr_type='mean', p=p, tau=model_config_embedding['tau'], sigma = model_config_embedding['sigma'], prediction=model_config_embedding['prediction'])
+    model_embedding = PDE_embedding(aggr_type='mean', p=p, delta_t=model_config_embedding['delta_t'], sigma = model_config_embedding['sigma'], prediction=model_config_embedding['prediction'])
     model_embedding.eval()
 
     for config in config_list:
@@ -3487,8 +3463,6 @@ if __name__ == '__main__':
         with open(f'./config/{config}.yaml', 'r') as file:
             model_config = yaml.safe_load(file)
         model_config['dataset']=config[7:]
-        if not('min_radius' in model_config):
-            model_config['min_radius']=0
 
         for key, value in model_config.items():
             print(key, ":", value)
@@ -3497,9 +3471,7 @@ if __name__ == '__main__':
                 model_config[key] = value
 
         cmap = cc(model_config=model_config)
-        sigma = model_config['sigma']
         aggr_type = model_config['aggr_type']
-
         if model_config['boundary'] == 'no':  # change this for usual BC
             def bc_pos(X):
                 return X
