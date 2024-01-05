@@ -175,15 +175,15 @@ class PDE_A(pyg.nn.MessagePassing):
         super(PDE_A, self).__init__(aggr=aggr_type)  # "mean" aggregation.
 
         self.p = p
+        self.sigma = sigma
         self.delta_t = delta_t
-        self.sigma = torch.tensor([sigma], device=device)
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        delta_v = self.delta_t * self.propagate(edge_index, x=(x, x))
+        delta_x = self.delta_t * self.propagate(edge_index, x=(x, x))
 
-        return delta_v
+        return delta_x
 
     def message(self, x_i, x_j):
         r = torch.sum(bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)  # squared distance
@@ -840,11 +840,9 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             for n in range(nparticle_types):
                 p[n] = torch.tensor(model_config['p'][n])
         if nparticle_types == 1:
-            model = PDE_A(aggr_type=aggr_type, p=p, delta_t=model_config['delta_t'],
-                          prediction=model_config['prediction'])
+            model = PDE_A(aggr_type=aggr_type, p=p, delta_t=model_config['delta_t'])
         else:
-            model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), delta_t=model_config['delta_t'],
-                          prediction=model_config['prediction'])
+            model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), delta_t=model_config['delta_t'])
         psi_output = []
         for n in range(nparticle_types):
             psi_output.append(model.psi(rr, torch.squeeze(p[n])))
@@ -989,7 +987,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
         noise_current = 0 * torch.randn((nparticles, 2), device=device)
         noise_prev_prev = 0 * torch.randn((nparticles, 2), device=device)
 
-        for it in tqdm(range(model_config['start_frame'], nframes)):
+        for it in tqdm(range(model_config['start_frame'], nframes+1)):
 
             if (it>0) & bDivision & (nparticles<20000):
                 cycle_test = (torch.ones(nparticles, device=device) + 0.05 * torch.randn(nparticles, device=device))
@@ -1162,40 +1160,25 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                 if 'color' in bStyle:
                     fig = plt.figure(figsize=(10, 10))
                     # plt.ion()
-
-                    # ax = fig.add_subplot(2, 2, 1)
-                    if model_config['model'] == 'GravityParticles':
-                        for n in range(nparticle_types):
-                            g = p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 7.5
-                            plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                        x[index_particles[n], 2].detach().cpu().numpy(), s=40, color=cmap.color(n))
-                    elif bMesh:
+                    if bMesh:
                         pts = x_noise[:, 1:3].detach().cpu().numpy()
                         tri = Delaunay(pts)
                         colors = torch.sum(x_noise[tri.simplices, 6], axis=1) / 3.0
                         if model_config['model'] == 'WaveMesh':
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                          facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=-2500, vmax=2500)
+                                          facecolors=colors.detach().cpu().numpy(), vmin=-1000, vmax=1000)
                         else:
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                          facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=0, vmax=2500)
+                                          facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=0, vmax=1000)
 
                         # plt.scatter(x_noise[:, 1].detach().cpu().numpy(),x_noise[:, 2].detach().cpu().numpy(), s=10, alpha=0.75,
                         #                 c=x[:, 6].detach().cpu().numpy(), cmap='gist_gray',vmin=-5000,vmax=5000)
                         # ax.set_facecolor([0.5,0.5,0.5])
-                    elif model_config['model'] == 'ElecParticles':
-                        for n in range(nparticle_types):
-                            g = 40 #np.abs(p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 20)
-                            if model_config['p'][n][0] <= 0:
-                                plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                            x[index_particles[n], 2].detach().cpu().numpy(), s=g, c=cmap.color(n))
-                            else:
-                                plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                            x[index_particles[n], 2].detach().cpu().numpy(), s=g, c=cmap.color(n))
                     else:
                         for n in range(nparticle_types):
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                        x[index_particles[n], 2].detach().cpu().numpy(), s=40, color=cmap.color(n),alpha=1)
+                                            x[index_particles[n], 2].detach().cpu().numpy(), s=160, c=cmap.color(n))
+
                     if bMesh | (model_config['boundary'] == 'periodic'):
                         # plt.text(0, 1.08, f'frame: {it}')
                         # plt.text(0, 1.03, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
@@ -1208,6 +1191,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                         plt.ylim([-0.5, 0.5])
                     plt.xticks([])
                     plt.yticks([])
+                    plt.axis('off')
                     plt.tight_layout()
                     plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/tmp_data/Fig_color_{it}.tif", dpi=300)
                     plt.close()
@@ -1264,6 +1248,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
         torch.save(h_list, f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt')
 
     model_config['nparticles'] = int(model_config['nparticles'] / ratio)
+
 def data_train(model_config, model_embedding):
 
     print('')
@@ -3445,7 +3430,7 @@ if __name__ == '__main__':
     # config_list = ['config_gravity_16_001_HR','config_gravity_16_001']
     # config_list = ['config_Coulomb_3_HR']
     # config_list = ['config_boids_16_HR']
-    config_list = ['config_arbitrary_3'] #,'config_wave']
+    config_list = ['config_arbitrary_3']
 
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
@@ -3484,9 +3469,9 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
         ratio = 1
-        data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=62)
+        data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//4)
         # data_train(model_config,model_embedding)
-        data_plot(model_config, epoch=-1, bPrint=True, best_model=20, kmeans_input=model_config['kmeans_input'])
+        # data_plot(model_config, epoch=-1, bPrint=True, best_model=20, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=160) # model_config['nframes']-5)
 
         # data_train_shrofflab_celegans(model_config)
