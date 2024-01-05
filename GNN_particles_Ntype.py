@@ -725,7 +725,7 @@ class MeshLaplacian(pyg.nn.MessagePassing):
         self.ndataset = model_config['nrun']
         self.upgrade_type = model_config['upgrade_type']
         self.prediction = model_config['prediction']
-        self.ndataset
+        self.ndataset = model_config['nrun'] - 1
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
@@ -755,8 +755,7 @@ class MeshLaplacian(pyg.nn.MessagePassing):
         return aggr_out  # self.lin_node(aggr_out)
 
     def psi(self, r, p):
-        return r * (-p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) + p[3] * torch.exp(
-            -r ** (2 * p[1]) / (2 * sigma ** 2)))
+        return r
 
 def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_p=False, step=5, alpha=0.2):
     print('')
@@ -1024,7 +1023,6 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                         pos = torch.argwhere(T1 == n)
                         pos = pos[:, 0].squeeze().detach().cpu().numpy().astype(int)
                         index_particles.append(pos)
-
             if it == 0:
                 V1 = torch.clamp(V1, min=-torch.std(V1), max=+torch.std(V1))
 
@@ -3430,7 +3428,7 @@ if __name__ == '__main__':
     # config_list = ['config_gravity_16_001_HR','config_gravity_16_001']
     # config_list = ['config_Coulomb_3_HR']
     # config_list = ['config_boids_16_HR']
-    config_list = ['config_arbitrary_3']
+    config_list = ['config_wave_testA']
 
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
@@ -3469,8 +3467,8 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
         ratio = 1
-        data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//4)
-        # data_train(model_config,model_embedding)
+        # data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//200)
+        data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=20, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=160) # model_config['nframes']-5)
 
