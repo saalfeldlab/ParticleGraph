@@ -203,11 +203,11 @@ class PDE_A(pyg.nn.MessagePassing):
     def message(self, x_i, x_j):
         r = torch.sum(bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)  # squared distance
         pp = self.p[x_i[:, 5].detach().cpu().numpy(), :]
-        psi = pp[:, 2] * torch.exp(-r ** pp[:, 0] / (2 * sigma ** 2)) - pp[:, 3] * torch.exp(
-            -r ** pp[:, 1] / (2 * sigma ** 2))
+        psi = pp[:, 0] * torch.exp(-r ** pp[:, 1] / (2 * sigma ** 2)) - pp[:, 2] * torch.exp(
+            -r ** pp[:, 3] / (2 * sigma ** 2))
         return psi[:, None] * bc_diff(x_j[:, 1:3] - x_i[:, 1:3])
     def psi(self, r, p):
-        return r * (p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) - p[3] * torch.exp(-r ** (2 * p[1]) / (2 * sigma ** 2)))
+        return r * (p[0] * torch.exp(-r ** (2 * p[1]) / (2 * sigma ** 2)) - p[2] * torch.exp(-r ** (2 * p[3]) / (2 * sigma ** 2)))
 class PDE_embedding(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -471,7 +471,7 @@ class InteractionParticles(pyg.nn.MessagePassing):
             separation = -p[2] * 1E-8 / r
             return (cohesion+separation) * p[1]/500  #
         else: # PDE_A
-            return r * (p[2] * torch.exp(-r ** (2 * p[0]) / (2 * sigma ** 2)) - p[3] * torch.exp(-r ** (2 * p[1]) / (2 * sigma ** 2)))
+            return r * (p[0] * torch.exp(-r ** (2 * p[1]) / (2 * sigma ** 2)) - p[2] * torch.exp(-r ** (2 * p[3]) / (2 * sigma ** 2)))
 
 class InteractionCElegans(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
@@ -918,25 +918,6 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
 
     torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model.pt')
 
-    if model_config['model'] == 'PDE_B':
-        fig = plt.figure(figsize=(10, 10))
-        # plt.ion()
-        rr = torch.tensor(np.linspace(min_radius, radius, 1000)).to(device)
-        p = model_config['p']
-        if len(p) > 0:
-            p = torch.tensor(p, device=device)
-        else:
-            p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
-        psi_output = []
-        for n in range(nparticle_types):
-            psi_output.append(model.psi(rr, p[n]))
-        for n in range(nparticle_types - 1, -1, -1):
-            plt.plot(rr.detach().cpu().numpy(), np.array(psi_output[n].cpu()), color=cmap.color(n), linewidth=1)
-        plt.xlabel('Distance [a.u]', fontsize=12)
-        plt.ylabel('MLP [a.u]', fontsize=12)
-        plt.xlim([0, 0.04])
-        plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/Fig_MLP.tif", dpi=300)
-
     for run in range(model_config['nrun']):
 
         x_list = []
@@ -1301,7 +1282,6 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
         torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
         torch.save(y_list, f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
         torch.save(h_list, f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt')
-
 
     model_config['nparticles'] = int(model_config['nparticles'] / ratio)
 
@@ -2784,6 +2764,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             p = torch.tensor(p, device=device)
         else:
             p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
+
         psi_output = []
         for n in range(nparticle_types):
             psi_output.append(model.psi(rr, p[n]))
@@ -3488,7 +3469,7 @@ if __name__ == '__main__':
     # config_list = ['config_gravity_16_001_HR','config_gravity_16_001']
     # config_list = ['config_Coulomb_3_HR']
     # config_list = ['config_boids_16_HR']
-    config_list = ['config_arbitrary_3'] #,'config_wave']
+    config_list = ['config_arbitrary_16_HR'] #,'config_wave']
 
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
@@ -3533,7 +3514,7 @@ if __name__ == '__main__':
         ratio = 1
         data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=62)
         # data_train(model_config,model_embedding)
-        # data_plot(model_config, epoch=-1, bPrint=True, best_model=20, kmeans_input=model_config['kmeans_input'])
+        data_plot(model_config, epoch=-1, bPrint=True, best_model=20, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=160) # model_config['nframes']-5)
 
         # data_train_shrofflab_celegans(model_config)
