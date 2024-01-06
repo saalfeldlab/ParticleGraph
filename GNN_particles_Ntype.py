@@ -3498,10 +3498,10 @@ if __name__ == '__main__':
     # config_list = ['config_gravity_16_001_HR','config_gravity_16_001']
     # config_list = ['config_Coulomb_3_HR']
     # config_list = ['config_boids_16_HR']
-    config_list = ['config_wave_testA']
+    # config_list = ['config_wave_testA']
 
     # Test plotting figures paper
-    # config_list = ['config_wave_testA', 'config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16']
+    config_list = ['config_wave_testA', 'config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3520,6 +3520,9 @@ if __name__ == '__main__':
         with open(f'./config/{config}.yaml', 'r') as file:
             model_config = yaml.safe_load(file)
         model_config['dataset']=config[7:]
+
+        if config=='config_wave_testA':
+            model_config['dataset']='231001_129'
 
         for key, value in model_config.items():
             print(key, ":", value)
