@@ -123,31 +123,6 @@ class Laplacian_A(pyg.nn.MessagePassing):
 
         heat_flow = self.beta * c * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
 
-        # if (torch.min(heat_flow)<-0.5):
-        #     pos = torch.argwhere(heat_flow<-0.5).detach().cpu().numpy().astype(int)
-        #     k=pos[0,0]
-        #     print(x[pos, 1], x[pos, 2], x[pos, 6])
-        #     print(k)
-        #     pos = torch.argwhere(edge_index[0, :] == k).detach().cpu().numpy().astype(int)
-        #     print(edge_index[:,pos])
-        #
-        #     coeff = edge_attr[pos.squeeze()]
-        #     coeff = coeff[:, None]
-        #     print(coeff)
-        #     print(coeff * x[edge_index[1, pos], 6])
-        # if (torch.max(x[:, 6:7] + x[:, 7:8] + heat_flow[:,0:1]) > 5.05):
-        #     pos = torch.argwhere(x[:, 6:7] + x[:, 7:8] + heat_flow[:,0:1]>5.05).detach().cpu().numpy().astype(int)
-        #     k=pos[0,0]
-        #     print(x[pos, 1], x[pos, 2], x[pos, 6])
-        #     print(k)
-        #     pos = torch.argwhere(edge_index[0, :] == k).detach().cpu().numpy().astype(int)
-        #     print(edge_index[:,pos])
-        #
-        #     coeff = edge_attr[pos.squeeze()]
-        #     coeff = coeff[:, None]
-        #     print(coeff)
-        #     print(coeff * x[edge_index[1, pos], 6])
-
         return heat_flow
 
     def message(self, x_i, x_j, edge_attr):
@@ -158,11 +133,8 @@ class Laplacian_A(pyg.nn.MessagePassing):
         return heat[:, None]
 
     def psi(self, r, p):
-        r_ = torch.clamp(r, min=self.clamp)
-        psi = p * r / r_ ** 3
-        psi = torch.clamp(psi, max=self.pred_limit)
 
-        return psi[:, None]
+        return r
 class MLP(nn.Module):
 
     def __init__(self, input_size, output_size, nlayers, hidden_size, device):

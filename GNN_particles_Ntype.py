@@ -2459,11 +2459,12 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
         for n in range(nparticle_types):
             embedding_particle.append(embedding[index_particles[n] + m * nparticles, :])
 
-    plt.rcParams['text.usetex'] = True
+    # plt.rcParams['text.usetex'] = True
     # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
     cm = 1 / 2.54
-    fig = plt.figure(figsize=(3*cm, 3*cm))
+    #fig = plt.figure(figsize=(3*cm, 3*cm))
+    fig = plt.figure(figsize=(10, 10))
     plt.ion()
     # plt.subplots(frameon=False)
     # matplotlib.use("pgf")
@@ -2473,7 +2474,6 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
     #     'text.usetex': True,
     #     'pgf.rcfonts': False,
     # })
-
     if (embedding.shape[1] > 2):
         ax = fig.add_subplot(2, 4, 1, projection='3d')
         for n in range(nparticle_types):
@@ -2493,7 +2493,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
     plt.xticks(fontsize=6)
     plt.yticks(fontsize=6)
     plt.tight_layout()
-    plt.savefig("fig.pdf", format="pdf",bbox_inches='tight',pad_inches=0.0)
+    # plt.savefig("fig.pdf", format="pdf",bbox_inches='tight',pad_inches=0.0)
 
     fig.savefig(os.path.join(log_dir, 'result_1.png'), dpi=300)
     plt.close()
@@ -3501,7 +3501,7 @@ if __name__ == '__main__':
     # config_list = ['config_wave_testA']
 
     # Test plotting figures paper
-    config_list = ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16']
+    config_list = ['config_arbitrary_3'] #, 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3549,8 +3549,8 @@ if __name__ == '__main__':
 
         ratio = 1
         data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//4)
-        data_train(model_config,model_embedding)
-        # data_plot(model_config, epoch=-1, bPrint=True, best_model=20, kmeans_input=model_config['kmeans_input'])
+        # data_train(model_config,model_embedding)
+        data_plot(model_config, epoch=-1, bPrint=True, best_model=20, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=160) # model_config['nframes']-5)
 
         # data_train_shrofflab_celegans(model_config)
