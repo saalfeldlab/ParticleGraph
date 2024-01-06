@@ -154,12 +154,9 @@ class Laplacian_A(pyg.nn.MessagePassing):
 
         return L[:, None]
 
-    def psi(self, r, p):
-        r_ = torch.clamp(r, min=self.clamp)
-        psi = p * r / r_ ** 3
-        psi = torch.clamp(psi, max=self.pred_limit)
+    def psi(self, I, p):
 
-        return psi[:, None]
+        return I
 
 
 class MLP(nn.Module):
@@ -1136,7 +1133,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                     H1[:, 0:1] += H1[:, 1:2]
                     h_list.append(pred)
 
-            if (run == 0) & (it % step == 0) & (it >= 0) & bVisu:
+            if bVisu & (run == 0) & (it % step == 0) & (it >= 0) :
 
                 if 'graph' in bStyle:
                     fig = plt.figure(figsize=(10, 10))
@@ -1203,7 +1200,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                         colors = torch.sum(x_noise[tri.simplices, 6], axis=1) / 3.0
                         if model_config['model'] == 'WaveMesh':
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                          facecolors=colors.detach().cpu().numpy(), vmin=-1000, vmax=1000)
+                                          facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=-1000, vmax=1000)
                         else:
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                           facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=0, vmax=1000)
@@ -1456,7 +1453,6 @@ def data_train(model_config, bSparse=False):
     print(f'   {nframes * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info("Start training ...")
     time.sleep(0.5)
-
 
     for epoch in range(Nepochs + 1):
 
@@ -3485,7 +3481,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3501,7 +3497,7 @@ if __name__ == '__main__':
     # config_list = ['config_wave_testA']
 
     # Test plotting figures paper
-    config_list = ['config_arbitrary_3'] #, 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16']
+    config_list = ['config_wave'] # ['config_arbitrary_3'] #, 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3520,9 +3516,6 @@ if __name__ == '__main__':
         with open(f'./config/{config}.yaml', 'r') as file:
             model_config = yaml.safe_load(file)
         model_config['dataset']=config[7:]
-
-        if config=='config_wave_testA':
-            model_config['dataset']='231001_129'
 
         for key, value in model_config.items():
             print(key, ":", value)
@@ -3548,8 +3541,8 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
         ratio = 1
-        data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//4)
-        # data_train(model_config,model_embedding)
+        data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=50) #model_config['nframes']//4)
+        data_train(model_config,model_embedding)
         data_plot(model_config, epoch=-1, bPrint=True, best_model=20, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=160) # model_config['nframes']-5)
 

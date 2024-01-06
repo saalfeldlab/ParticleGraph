@@ -1003,7 +1003,7 @@ def data_generate(model_config,bVisu=True, bDetails=False, bErase=False, step=5)
                     tri = Delaunay(pts)
                     colors = torch.sum(x_noise[tri.simplices, 6], axis=1) / 3.0
                     if model_config['model'] == 'WaveMesh':
-                        plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(), facecolors=colors.detach().cpu().numpy(),edgecolors='k',vmin=-2500,vmax=2500)
+                        plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(), facecolors=colors.detach().cpu().numpy(),edgecolors='k',vmin=-1500,vmax=1500)
                     else:
                         plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                       facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=0, vmax=2500)
@@ -3922,7 +3922,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3957,10 +3957,10 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        if 'Boids' in model_config['description']:
-            data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=1)
-        else:
-            data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=5)
+        # if 'Boids' in model_config['description']:
+        #     data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=1)
+        # else:
+        #     data_generate(model_config, bVisu=True, bDetails=False, bErase=False, step=50)
         data_train(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=13, step=5, bTest='', initial_map='')
 
