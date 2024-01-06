@@ -1537,8 +1537,6 @@ def data_train(model_config, bSparse=False):
         edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,
                                                                normalization="None")  # "None", "sym", "rw"
 
-    print(f'   {nframes * data_augmentation_loop // batch_size} iterations per epoch')
-
     for epoch in range(Nepochs + 1):
 
         if epoch == 1:
@@ -1574,7 +1572,7 @@ def data_train(model_config, bSparse=False):
 
         total_loss = 0
 
-        for N in tqdm(range(0, nframes * data_augmentation_loop // batch_size)):
+        for N in range(0, nframes * data_augmentation_loop // batch_size):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -3987,10 +3985,10 @@ if __name__ == '__main__':
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
-        # if 'Boids' in model_config['description']:
-        #     data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=1)
-        # else:
-        #     data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=5)
+        if 'Boids' in model_config['description']:
+            data_generate_boid(model_config, bVisu=True, bDetails=True, bErase=False, step=1)
+        else:
+            data_generate(model_config, bVisu=True, bDetails=True, bErase=False, step=5)
         data_train(model_config)
         # x, rmserr_list = data_test(model_config, bVisu=True, bPrint=True, best_model=13, step=5, bTest='', initial_map='')
 
