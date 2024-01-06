@@ -1421,7 +1421,7 @@ def data_train(model_config, bSparse=False):
     model.train()
     best_loss = np.inf
     list_loss = []
-    data_augmentation_loop = 20
+    data_augmentation_loop = 200
     print(f'data_augmentation_loop: {data_augmentation_loop}')
     logger.info(f'data_augmentation_loop: {data_augmentation_loop}')
 
@@ -3501,7 +3501,7 @@ if __name__ == '__main__':
     # config_list = ['config_wave_testA']
 
     # Test plotting figures paper
-    config_list = ['config_wave_testA', 'config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16']
+    config_list = ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
