@@ -1320,12 +1320,12 @@ def data_train(model_config, bSparse=False):
     os.makedirs(os.path.join(log_dir, 'tmp_recons'), exist_ok=True)
     os.makedirs(log_dir, exist_ok=True)
 
-    files = glob.glob(f"{log_dir}/tmp_training/*")
-    for f in files:
-        os.remove(f)
-    files = glob.glob(f"{log_dir}/tmp_recons/*")
-    for f in files:
-        os.remove(f)
+    # files = glob.glob(f"{log_dir}/tmp_training/*")
+    # for f in files:
+    #     os.remove(f)
+    # files = glob.glob(f"{log_dir}/tmp_recons/*")
+    # for f in files:
+    #     os.remove(f)
     copyfile(os.path.realpath(__file__), os.path.join(log_dir, 'training_code.py'))
     logging.basicConfig(filename=os.path.join(log_dir, 'training.log'),
                         format='%(asctime)s %(message)s',
@@ -2435,8 +2435,6 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
     print('Plotting ...')
 
 
-    # plt.ion()
-
     if bMesh:
         x = x_list[0][0].clone().detach()
         index_particles = []
@@ -2455,13 +2453,10 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
         for n in range(nparticle_types):
             embedding_particle.append(embedding[index_particles[n] + m * nparticles, :])
 
-    # plt.rcParams['text.usetex'] = True
-    # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+    plt.rcParams['text.usetex'] = True
+    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
-    cm = 1 / 2.54
-    #fig = plt.figure(figsize=(3*cm, 3*cm))
-    fig = plt.figure(figsize=(10, 10))
-    plt.ion()
+    # cm = 1 / 2.54 * 3 / 2.3
     # plt.subplots(frameon=False)
     # matplotlib.use("pgf")
     # matplotlib.rcParams.update({
@@ -2470,6 +2465,11 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
     #     'text.usetex': True,
     #     'pgf.rcfonts': False,
     # })
+    # fig = plt.figure(figsize=(3*cm, 3*cm))
+
+    fig = plt.figure(figsize=(16, 7.6))
+    plt.ion()
+    ax = fig.add_subplot(2, 4, 1)
     if (embedding.shape[1] > 2):
         ax = fig.add_subplot(2, 4, 1, projection='3d')
         for n in range(nparticle_types):
@@ -2480,21 +2480,16 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             for m in range(model.a.shape[0]):
                 for n in range(nparticle_types):
                     plt.scatter(embedding_particle[n + m * nparticle_types][:, 0],
-                                embedding_particle[n + m * nparticle_types][:, 1], color=cmap.color(n), s=3)
-            plt.xlabel(r'Embedding 0',fontsize=6)
-            plt.ylabel(r'Embedding 1',fontsize=6)
+                                embedding_particle[n + m * nparticle_types][:, 1], color=cmap.color(n), s=1)
+            plt.xlabel(r'Embedding 0',fontsize=14)
+            plt.ylabel(r'Embedding 1',fontsize=14)
         else:
             for n in range(nparticle_types):
                 plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5, color=cmap.color(n))
-    plt.xticks(fontsize=6)
-    plt.yticks(fontsize=6)
-    plt.tight_layout()
-    # plt.savefig("fig.pdf", format="pdf",bbox_inches='tight',pad_inches=0.0)
+    plt.xticks(fontsize=10)
+    plt.yticks(fontsize=10)
 
-    fig.savefig(os.path.join(log_dir, 'result_1.png'), dpi=300)
-    plt.close()
-
-    fig = plt.figure(figsize=(10, 10))
+    ax = fig.add_subplot(2, 4, 2)
     if model_config['model'] == 'ElecParticles':
         acc_list = []
         for m in range(model.a.shape[0]):
@@ -2567,13 +2562,15 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             if n % 5 == 0:
                 plt.plot(to_numpy(rr),
                          to_numpy(acc) * to_numpy(ynorm[4]) / model_config['delta_t'],
-                         color=cmap.color(to_numpy(x[n, 5])), linewidth=1, alpha=0.25)
+                         color=cmap.color(to_numpy(x[n, 5])), linewidth=0.1, alpha=0.25)
         acc_list = torch.stack(acc_list)
         coeff_norm = to_numpy(acc_list)
         trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int), n_components=2,
                           random_state=42, transform_queue_size=0).fit(coeff_norm)
         proj_interaction = trans.transform(coeff_norm)
         proj_interaction = np.squeeze(proj_interaction)
+        plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=14)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij}) [a.u.]$', fontsize=14)
     elif bMesh:
         h_list = []
         for n in range(nparticles):
@@ -2596,11 +2593,10 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
     if (model_config['model'] == 'PDE_B'):
         plt.xlim([0, 0.02])
         plt.ylim([-0.001, 0.00025])
-    plt.tight_layout()
-    fig.savefig(os.path.join(log_dir, 'result_2.png'), dpi=300)
-    plt.close()
+    plt.xticks(fontsize=10)
+    plt.yticks(fontsize=10)
 
-    fig = plt.figure(figsize=(10, 10))
+    ax = fig.add_subplot(2, 4, 3)
     kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=1000, max_iter=10000,
                     random_state=13)
     if kmeans_input == 'plot':
@@ -2624,9 +2620,9 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             plt.hist(proj_interaction[index_particles[n]], width=0.01, alpha=0.5, color=cmap.color(n))
         if proj_interaction.ndim == 2:
             plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1],
-                        color=cmap.color(n), s=5)
-            plt.xlabel('UMAP 0', fontsize=12)
-            plt.ylabel('UMAP 1', fontsize=12)
+                        color=cmap.color(n), s=0.1)
+            plt.xlabel(r'UMAP 0', fontsize=14)
+            plt.ylabel(r'UMAP 1', fontsize=14)
     model_a_ = model.a.clone().detach()
     model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
     t = []
@@ -2649,11 +2645,11 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
     for m in range(model.a.shape[0]):
         for n in range(nparticle_types):
             embedding_particle.append(embedding[index_particles[n] + m * nparticles, :])
+    plt.xticks(fontsize=10)
+    plt.yticks(fontsize=10)
     plt.tight_layout()
-    fig.savefig(os.path.join(log_dir, 'result_3.png'), dpi=300)
-    plt.close()
 
-    fig = plt.figure(figsize=(10, 10))
+    ax = fig.add_subplot(2, 4, 5)
     if (embedding.shape[1] > 2):
         ax = fig.add_subplot(2, 4, 5, projection='3d')
         for m in range(model.a.shape[0]):
@@ -2668,19 +2664,18 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
                 for n in range(model.a.shape[1]):
                     plt.scatter(to_numpy(model.a[m][n, 0]),
                                 to_numpy(model.a[m][n, 1]),
-                                color=cmap.color(new_labels[n]), s=20)
-            plt.xlabel('Embedding 0', fontsize=12)
-            plt.ylabel('Embedding 1', fontsize=12)
+                                color=cmap.color(new_labels[n]), s=1)
+            plt.xlabel(r'Embedding 0', fontsize=14)
+            plt.ylabel(r'Embedding 1', fontsize=14)
         else:
             for m in range(model.a.shape[0]):
                 for n in range(nparticle_types - 1, -1, -1):
                     plt.hist(to_numpy(model.a[m][index_particles[n], 0]), width=0.01, alpha=0.5,
                              color=cmap.color(n))
-    plt.tight_layout()
-    fig.savefig(os.path.join(log_dir, 'result_4.png'), dpi=300)
-    plt.close()
+    plt.xticks(fontsize=10)
+    plt.yticks(fontsize=10)
 
-    fig = plt.figure(figsize=(10, 10))
+    ax = fig.add_subplot(2, 4, 6)
     if model_config['model'] == 'ElecParticles':
         t = to_numpy(model.a)
         tmean = np.ones((model_config['nparticle_types'], model_config['embedding']))
@@ -2744,7 +2739,9 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             if n % 5 == 0:
                 plt.plot(to_numpy(rr),
                          to_numpy(acc) * to_numpy(ynorm[4]) / model_config['delta_t'],
-                         color=cmap.color(to_numpy(x[n, 5])), linewidth=1, alpha=0.25)
+                         color=cmap.color(to_numpy(x[n, 5])), linewidth=0.1, alpha=0.25)
+        plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=14)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij}) [a.u.]$', fontsize=14)
     elif (model_config['model'] == 'PDE_B'):
         acc_list = []
         for n in range(nparticles):
@@ -2777,13 +2774,10 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
     if (model_config['model'] == 'PDE_B'):
         plt.xlim([0, 0.02])
         plt.ylim([-5E-5, 1E-5])
-    plt.xlabel('Distance [a.u]', fontsize=12)
-    plt.ylabel('MLP [a.u]', fontsize=12)
-    plt.tight_layout()
-    fig.savefig(os.path.join(log_dir, 'result_5.png'), dpi=300)
-    plt.close()
+    plt.xticks(fontsize=10)
+    plt.yticks(fontsize=10)
 
-    fig = plt.figure(figsize=(10, 10))
+    ax = fig.add_subplot(2, 4, 7)
     if (model_config['model'] == 'PDE_A') | (model_config['model'] == 'PDE_B'):
         p = model_config['p']
         if len(p) > 0:
@@ -2796,8 +2790,8 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             psi_output.append(model.psi(rr, p[n]))
         for n in range(nparticle_types - 1, -1, -1):
             plt.plot(to_numpy(rr), np.array(psi_output[n].cpu()), color=cmap.color(n), linewidth=1)
-        plt.xlabel('Distance [a.u]', fontsize=12)
-        plt.ylabel('MLP [a.u]', fontsize=12)
+        plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=14)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij}) [a.u.]$', fontsize=14)
     if model_config['model'] == 'GravityParticles':
         p = model_config['p']
         if len(p) > 0:
@@ -2836,11 +2830,12 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
     if (model_config['model'] == 'PDE_B'):
         plt.xlim([0, 0.02])
         plt.ylim([-5E-5, 1E-5])
+    plt.xticks(fontsize=10)
+    plt.yticks(fontsize=10)
     plt.tight_layout()
-    fig.savefig(os.path.join(log_dir, 'result_4.png'), dpi=300)
-    plt.close()
 
-    fig = plt.figure(figsize=(10, 10))
+
+    ax = fig.add_subplot(2, 4, 4)
     T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
     for n in range(1, nparticle_types):
         T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
@@ -2850,15 +2845,16 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
     if nparticle_types > 8:
         cm_display.plot(ax=fig.gca(), cmap='Blues', include_values=False)
     else:
-        cm_display.plot(ax=fig.gca(), cmap='Blues')
+        cm_display.plot(ax=fig.gca(), cmap='Blues', include_values=True, values_format='d')
     Accuracy = metrics.accuracy_score(to_numpy(T1), new_labels)
     Precision = metrics.precision_score(to_numpy(T1), new_labels, average='micro')
     Recall = metrics.recall_score(to_numpy(T1), new_labels, average='micro')
     F1 = metrics.f1_score(to_numpy(T1), new_labels, average='micro')
-    plt.text(0, -1, "F1: {:.3f}".format(F1), fontsize=12)
+    plt.text(0, -0.5, r"F1: {:.3f}".format(F1), fontsize=12)
+    plt.xticks(fontsize=10)
+    plt.yticks(fontsize=10)
     plt.tight_layout()
-    fig.savefig(os.path.join(log_dir, 'result_6.png'), dpi=300)
-    plt.close()
+
 
     # Post analysis of interaction function plots
 
@@ -2941,7 +2937,6 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             pred = pred[:, 0]
             plot_list.append(pred * ynorm[4] / torch.tensor(model_config['delta_t'],device=device))
 
-
     if model_config['model'] == 'GravityParticles':
         p = np.linspace(0.5, 5, nparticle_types)
         popt_list = []
@@ -2965,6 +2960,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             plot_list_2.append(pred * ynorm[4] / torch.tensor(model_config['delta_t'], device=device))
 
         fig = plt.figure(figsize=(16, 4))
+        plt.ion()
         ax = fig.add_subplot(1, 4, 1)
         for n in range(len(r_list)):
             plt.plot(to_numpy(vv), to_numpy(plot_list_2[n]), linewidth=1, color=cmap.color(n),
@@ -3481,7 +3477,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
@@ -3497,7 +3493,7 @@ if __name__ == '__main__':
     # config_list = ['config_wave_testA']
 
     # Test plotting figures paper
-    config_list = ['config_wave'] # ['config_arbitrary_3'] #, 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16']
+    config_list = ['config_gravity_16'] # ['config_arbitrary_3'] #, 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3528,21 +3524,17 @@ if __name__ == '__main__':
         if model_config['boundary'] == 'no':  # change this for usual BC
             def bc_pos(X):
                 return X
-
-
             def bc_diff(D):
                 return D
         else:
             def bc_pos(X):
                 return torch.remainder(X, 1.0)
-
-
             def bc_diff(D):
                 return torch.remainder(D - .5, 1.0) - .5
 
         ratio = 1
-        data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=50) #model_config['nframes']//4)
-        data_train(model_config,model_embedding)
+        # data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=50) #model_config['nframes']//4)
+        # data_train(model_config,model_embedding)
         data_plot(model_config, epoch=-1, bPrint=True, best_model=20, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=160) # model_config['nframes']-5)
 
