@@ -158,6 +158,38 @@ class Laplacian_A(pyg.nn.MessagePassing):
 
         return I
 
+class Laplacian_RD_Pearson(pyg.nn.MessagePassing):
+    """Interaction Network as proposed in this paper:
+    https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
+
+    def __init__(self, aggr_type=[], c=[], beta=[], clamp=[]):
+        super(Laplacian_A, self).__init__(aggr='add')  # "mean" aggregation.
+
+        self.c = c
+        self.beta = beta
+        self.clamp = clamp
+
+    def forward(self, data):
+        x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
+        edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+
+        # c = self.c[to_numpy(x[:, 5])]
+        # c = c[:, None]
+
+        laplacian = self.beta * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
+
+        return laplacian
+
+    def message(self, x_i, x_j, edge_attr):
+
+        L = edge_attr * (x_j[:, 6]-x_i[:, 6])
+
+        return L[:, None]
+
+    def psi(self, I, p):
+
+        return I
+
 
 class MLP(nn.Module):
 
@@ -3479,7 +3511,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     scaler = StandardScaler()
