@@ -10,7 +10,7 @@ nparticles: 4225
 nparticle_types: 5
 ninteractions: 5
 kmeans_input: 'plot'
-nframes: 1000
+nframes: 2000
 sigma: 0.005 
 delta_t: 1
 v_init: 0
@@ -23,11 +23,11 @@ model: 'RD_Pearson_Mesh'
 prediction: '2nd_derivative'
 upgrade_type: 'none'
 p: [0.2,1.4,2.6,3.8,5.0]
-c: [0,0.6,0.8,1,0.4]
+c: [0,1,1,1,1]
 particle_value_map: 'pattern_10.tif'
 particle_type_map: 'pattern_8.tif'
-beta: 1E-2 
-nrun: 2
+beta: 1
+nrun: 1
 clamp: 0
 pred_limit: 1E+10
 start_frame: 0
