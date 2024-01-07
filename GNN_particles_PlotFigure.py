@@ -1794,30 +1794,6 @@ def data_plot_FIG3():
         popt_list.append(popt)
     popt_list = np.array(popt_list)
 
-    plot_list_2 = []
-    vv = torch.tensor(np.linspace(0, 2, 100)).to(device)
-    r_list = np.linspace(0.002, 0.01, 5)
-    for r_ in r_list:
-        rr_ = r_ * torch.tensor(np.ones((vv.shape[0], 1)), device=device)
-        embedding = t[int(label_list[5])] * torch.ones((100, model_config['embedding']), device=device)
-        in_features = torch.cat((rr_ / model_config['radius'], 0 * rr_,
-                                 rr_ / model_config['radius'], vv[:, None], vv[:, None], vv[:, None], vv[:, None],
-                                 embedding), dim=1)
-        with torch.no_grad():
-            pred = model.lin_edge(in_features.float())
-        pred = pred[:, 0]
-        plot_list_2.append(pred * ynorm[4] / torch.tensor(model_config['delta_t'], device=device))
-
-    ax = fig.add_subplot(3, 3, 9)
-    print('9')
-    for n in range(len(r_list)):
-        plt.plot(to_numpy(vv), to_numpy(plot_list_2[n]), linewidth=1, color=cmap.color(n),
-                 label=f'$r$={r_list[n]}')
-    plt.xlabel(r'Normalized velocity $[a.u.]$', fontsize=14)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, r_{ij}, \ensuremath{\mathbf{\dot{x}}}_i,) [a.u.]$', fontsize=14)
-    plt.xlim([0, 2])
-    plt.legend()
-
     ax = fig.add_subplot(3, 3, 7)
     print('7')
     plt.scatter(p, popt_list[:, 0], color='k')
@@ -1834,7 +1810,8 @@ def data_plot_FIG3():
     ss_res = np.sum(residuals ** 2)
     ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
     r_squared = 1 - (ss_res / ss_tot)
-    plt.text(0.5, 4.5, f"$R^2$: {np.round(r_squared, 2)}", fontsize=10)
+    plt.text(0.5, 4.5, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
+
     ax = fig.add_subplot(3, 3, 8)
     print('8')
     plt.scatter(p, popt_list[:, 1], color='k')
@@ -1844,6 +1821,30 @@ def data_plot_FIG3():
     plt.ylabel(r'Exponential fit $[a.u.]$', fontsize=14)
     plt.text(0.5, 3.5, f"{np.round(np.mean(popt_list[:, 1]), 3)}+/-{np.round(np.std(popt_list[:, 1]), 3)}",
              fontsize=10)
+
+    plot_list_2 = []
+    vv = torch.tensor(np.linspace(0, 2, 100)).to(device)
+    r_list = np.linspace(0.002, 0.01, 5)
+    for r_ in r_list:
+        rr_ = r_ * torch.tensor(np.ones((vv.shape[0], 1)), device=device)
+        for n in range(nparticle_types):
+            embedding = t[int(label_list[n])] * torch.ones((100, model_config['embedding']), device=device)
+            in_features = torch.cat((rr_ / model_config['radius'], 0 * rr_,
+                                     rr_ / model_config['radius'], vv[:, None], vv[:, None], vv[:, None], vv[:, None],
+                                     embedding), dim=1)
+            with torch.no_grad():
+                pred = model.lin_edge(in_features.float())
+            pred = pred[:, 0]
+            plot_list_2.append(pred * ynorm[4] / torch.tensor(model_config['delta_t'], device=device))
+
+    ax = fig.add_subplot(3, 3, 9)
+    print('9')
+    for n in range(len(plot_list_2)):
+        plt.plot(to_numpy(vv), to_numpy(plot_list_2[n]), linewidth=1)
+    plt.xlabel(r'Normalized $\ensuremath{\mathbf{\dot{x}}}_i [a.u.]$', fontsize=14)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, r_{ij}, \ensuremath{\mathbf{\dot{x}}}_i) [a.u.]$', fontsize=14)
+    plt.xlim([0, 2])
+
     plt.tight_layout()
 
     plt.savefig('Fig3.pdf', format="pdf", dpi=300)
@@ -2289,7 +2290,7 @@ def data_plot_FIG4():
     popt_list = -np.array(popt_list)
     ptrue_list = -np.array(ptrue_list)
 
-    ax = fig.add_subplot(3, 3, 8)
+    ax = fig.add_subplot(3, 3, 7)
 
     plt.scatter(ptrue_list, popt_list[:, 0], color='k')
     x_data = ptrue_list
@@ -2305,7 +2306,7 @@ def data_plot_FIG4():
     r_squared = 1 - (ss_res / ss_tot)
     plt.text(-2, 3, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
 
-    ax = fig.add_subplot(3,3,9)
+    ax = fig.add_subplot(3,3,8)
     plt.scatter(ptrue_list, -popt_list[:, 1], color='k')
     plt.ylim([0, 4])
     plt.xlabel(r'True $q_i q_j [a.u.]$', fontsize=14)
@@ -2313,6 +2314,34 @@ def data_plot_FIG4():
     plt.text(-2, 3.5, f"{np.round(-np.mean(popt_list[:, 1]), 3)}+/-{np.round(np.std(popt_list[:, 1]), 3)}",
              fontsize=10)
     plt.tight_layout()
+
+
+    plot_list_2 = []
+    vv = torch.tensor(np.linspace(0, 2, 100)).to(device)
+    r_list = np.linspace(0.002, 0.01, 5)
+    for r_ in r_list:
+        rr_ = r_ * torch.tensor(np.ones((vv.shape[0], 1)), device=device)
+        for m in range(nparticle_types):
+            for n in range(nparticle_types):
+                embedding0 = torch.tensor(tmean[m], device=device) * torch.ones((100, model_config['embedding']),
+                                                                                device=device)
+                embedding1 = torch.tensor(tmean[n], device=device) * torch.ones((100, model_config['embedding']),
+                                                                                device=device)
+                in_features = torch.cat((-rr_ / model_config['radius'], 0 * rr_,
+                                         rr_ / model_config['radius'], vv[:, None], vv[:, None], vv[:, None], vv[:, None],
+                                         embedding0,embedding1), dim=1)
+                with torch.no_grad():
+                    pred = model.lin_edge(in_features.float())
+                pred = pred[:, 0]
+                plot_list_2.append(pred * ynorm[4] / torch.tensor(model_config['delta_t'], device=device))
+
+    ax = fig.add_subplot(3, 3, 9)
+    print('9')
+    for n in range(len(plot_list_2)):
+        plt.plot(to_numpy(vv), to_numpy(plot_list_2[n]), linewidth=1)
+    plt.xlabel(r'Normalized $\ensuremath{\mathbf{\dot{x}}}_i [a.u.]$', fontsize=14)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i,\ensuremath{\mathbf{a}}_j, r_{ij}, \ensuremath{\mathbf{\dot{x}}}_i) [a.u.]$', fontsize=14)
+    plt.xlim([0, 2])
 
     plt.savefig('Fig4.pdf', format="pdf", dpi=300)
     plt.close()
