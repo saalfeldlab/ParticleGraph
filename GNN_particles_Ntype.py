@@ -2855,6 +2855,8 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
     plt.yticks(fontsize=10)
     plt.tight_layout()
 
+    plt.savefig(os.path.join(log_dir, 'result.png'), dpi=300)
+
 
     # Post analysis of interaction function plots
 
@@ -2921,7 +2923,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
         fig.savefig(os.path.join(log_dir, 'electrostatic_result.png'), dpi=300)
         plt.close()
 
-    else:
+    elif not(bMesh):
         plot_list = []
         for n in range(nparticle_types):
             embedding = t[int(label_list[n])] * torch.ones((1000, model_config['embedding']), device=device)
@@ -3493,7 +3495,7 @@ if __name__ == '__main__':
     # config_list = ['config_wave_testA']
 
     # Test plotting figures paper
-    config_list = ['config_wave_regul'] # ['config_arbitrary_3'] #, 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16']
+    config_list = ['config_wave_128'] # ['config_arbitrary_3'] #, 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)

@@ -2370,19 +2370,19 @@ if __name__ == '__main__':
     # aggr_type = 'mean'
     # data_plot_FIG2()
 
-    # def bc_pos(X):
-    #     return X
-    # def bc_diff(D):
-    #     return D
-    # aggr_type= 'add'
-    # data_plot_FIG3()
-
     def bc_pos(X):
-        return torch.remainder(X, 1.0)
+        return X
     def bc_diff(D):
-        return torch.remainder(D - .5, 1.0) - .5
-    aggr_type = 'add'
-    data_plot_FIG4()
+        return D
+    aggr_type= 'add'
+    data_plot_FIG3()
+    #
+    # def bc_pos(X):
+    #     return torch.remainder(X, 1.0)
+    # def bc_diff(D):
+    #     return torch.remainder(D - .5, 1.0) - .5
+    # aggr_type = 'add'
+    # data_plot_FIG4()
 
 
 
