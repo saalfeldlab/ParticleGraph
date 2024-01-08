@@ -157,6 +157,7 @@ class Laplacian_A(pyg.nn.MessagePassing):
 
         return I
 
+
 class RD_Gray_Scott(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -240,7 +241,7 @@ class RD_FitzHugh_Nagumo(pyg.nn.MessagePassing):
         dU = (Du * laplacian[:,0] + x[:,7] - x[:,6]) / tau
         dV = Dv * laplacian[:,1] + x[:,7]-x[:,7]**3 - x[:,6] + k
 
-        pred = 0.01 * torch.cat((dU[:,None],dV[:,None]),axis=1)
+        pred = 0.1 * torch.cat((dU[:,None],dV[:,None]),axis=1)
 
         return pred
 
@@ -250,10 +251,10 @@ class RD_FitzHugh_Nagumo(pyg.nn.MessagePassing):
 
         # L = edge_attr * (x_j[:, 6]-x_i[:, 6])
 
-        L1 = edge_attr * x_j[:, 6]
-        L2 = edge_attr * x_j[:, 7]
+        Lu = edge_attr * x_j[:, 6]
+        Lv = edge_attr * x_j[:, 7]
 
-        L = torch.cat((L1[:, None], L2[:, None]), axis=1)
+        L = torch.cat((Lu[:, None], Lv[:, None]), axis=1)
 
         return L
 
@@ -1114,9 +1115,9 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                 H1[:, 0] -= 0.5 * torch.tensor(values / 255, device=device)
                 H1[:, 1] = 0.25 * torch.tensor(values / 255, device=device)
             elif (model_config['model'] == 'RD_FitzHugh_Nagumo_Mesh'):
-                H1[:, 0:1] = torch.ones((nparticles, 1), device=device) + torch.randn((nparticles, 1),device=device) / 2
-                H1[:, 0] -= 0.5 * torch.tensor(values / 255, device=device)
-                H1[:, 1] = 0.25 * torch.tensor(values / 255, device=device)
+                H1 = torch.zeros((nparticles, 2), device=device) + torch.rand((nparticles, 2),device=device) * 0.1
+                # H1[:, 0] -= 0.5 * torch.tensor(values / 255, device=device)
+                # H1[:, 1] = 0.25 * torch.tensor(values / 255, device=device)
             elif (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
                 H1[:, 0] = torch.tensor(values / 255 * 5000, device=device)
 
@@ -1332,7 +1333,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                         if (model_config['model'] == 'RD_Gray_Scott_Mesh') | (model_config['model'] == 'RD_FitzHugh_Nagumo_Mesh'):
                             colors = torch.sum(x_noise[tri.simplices, 7], axis=1) / 3.0
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                          facecolors=colors.detach().cpu().numpy(), vmin=-0.5, vmax=0.5)
+                                          facecolors=colors.detach().cpu().numpy())
 
                         # plt.scatter(x_noise[:, 1].detach().cpu().numpy(),x_noise[:, 2].detach().cpu().numpy(), s=10, alpha=0.75,
                         #                 c=x[:, 6].detach().cpu().numpy(), cmap='gist_gray',vmin=-5000,vmax=5000)
