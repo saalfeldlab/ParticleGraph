@@ -1342,7 +1342,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                     else:
                         for n in range(nparticle_types):
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                            x[index_particles[n], 2].detach().cpu().numpy(), s=120, c=cmap.color(n))
+                                            x[index_particles[n], 2].detach().cpu().numpy(), s=160, c=cmap.color(n))
 
                     if bMesh | (model_config['boundary'] == 'periodic'):
                         # plt.text(0, 1.08, f'frame: {it}')
