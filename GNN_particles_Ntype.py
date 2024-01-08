@@ -157,12 +157,12 @@ class Laplacian_A(pyg.nn.MessagePassing):
 
         return I
 
-class RD_Pearson(pyg.nn.MessagePassing):
+class RD_Gray_Scott(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
     def __init__(self, aggr_type=[], c=[], beta=[]):
-        super(RD_Pearson, self).__init__(aggr='add')  # "mean" aggregation.
+        super(RD_Gray_Scott, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.c = c
         self.beta = beta
@@ -186,6 +186,61 @@ class RD_Pearson(pyg.nn.MessagePassing):
         dV = Dv * laplacian[:,1] + x[:,6]*x[:,7]**2 - (F+k)*x[:,7]
 
         pred = self.beta * torch.cat((dU[:,None],dV[:,None]),axis=1)
+
+        return pred
+
+    def message(self, x_i, x_j, edge_attr):
+
+        # U column 6, V column 7
+
+        # L = edge_attr * (x_j[:, 6]-x_i[:, 6])
+
+        L1 = edge_attr * x_j[:, 6]
+        L2 = edge_attr * x_j[:, 7]
+
+        L = torch.cat((L1[:, None], L2[:, None]), axis=1)
+
+        return L
+
+    def psi(self, I, p):
+
+        return I
+
+
+class RD_FitzHugh_Nagumo(pyg.nn.MessagePassing):
+    """Interaction Network as proposed in this paper:
+    https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
+
+    def __init__(self, aggr_type=[], c=[], beta=[]):
+        super(RD_FitzHugh_Nagumo, self).__init__(aggr='add')  # "mean" aggregation.
+
+        self.c = c
+        self.beta = beta
+
+    def forward(self, data):
+        x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
+        # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+
+        c = self.c[to_numpy(x[:, 5])]
+        c = c[:, None]
+
+        laplacian = c * self.beta * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
+
+        # dx = 2./size
+        # dt = 0.9 * dx**2/2
+        # params = {"Du":5e-3, "Dv":2.8e-4, "tau":0.1, "k":-0.005,
+        # su = (Du*Lu + v - u)/tau
+        # sv = Dv*Lv + v - v*v*v - u + k
+
+        Du = 5E-3
+        Dv = 2.8E-4
+        k = torch.tensor(-0.005,device=device)
+        tau = torch.tensor(0.1,device=device)
+
+        dU = (Du * laplacian[:,0] + x[:,7] - x[:,6]) / tau
+        dV = Dv * laplacian[:,1] + x[:,7]-x[:,7]**3 - x[:,6] + k
+
+        pred = 0.01 * torch.cat((dU[:,None],dV[:,None]),axis=1)
 
         return pred
 
@@ -875,7 +930,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
     nframes = model_config['nframes']
     noise_level = model_config['noise_level']
     v_init = model_config['v_init']
-    bMesh = (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh') | (model_config['model'] == 'RD_Pearson_Mesh')
+    bMesh = 'Mesh' in model_config['model']
     bDivision = 'division_cycle' in model_config
 
     cycle_length = torch.clamp(torch.abs(
@@ -969,9 +1024,11 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
         for n in range(nparticle_types):
             c[n] = torch.tensor(model_config['c'][n])
 
-        if (model_config['model'] == 'RD_Pearson_Mesh'):
-            model_mesh = RD_Pearson(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'])
-        else:
+        if (model_config['model'] == 'RD_Gray_Scott_Mesh'):
+            model_mesh = RD_Gray_Scott(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'])
+        elif (model_config['model'] == 'RD_FitzHugh_Nagumo_Mesh'):
+            model_mesh = RD_FitzHugh_Nagumo(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'])
+        elif (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
             model_mesh = Laplacian_A(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'])
         psi_output = []
         for n in range(nparticle_types):
@@ -999,10 +1056,6 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
         ####### TO BE CHANGED #############################
         # h = torch.zeros((nparticles, 1), device=device)
         H1 = torch.zeros((nparticles, 2), device=device)
-        if (model_config['model'] == 'RD_Pearson_Mesh'):
-            H1[:, 0:1] = torch.ones((nparticles, 1), device=device)
-        else:
-            H1[:, 0:1] = torch.ones((nparticles, 1), device=device) + torch.randn((nparticles, 1), device=device) / 2
         cycle_length_distrib = cycle_length[to_numpy(T1[:, 0]).astype(int)]
         A1 = torch.rand(nparticles, device=device)
         A1 = A1[:, None]
@@ -1057,10 +1110,14 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                 (to_numpy(X1_[:, 0]) * 255).astype(int), (to_numpy(X1_[:, 1]) * 255).astype(
                     int)]
 
-            if (model_config['model'] == 'RD_Pearson_Mesh'):
+            if (model_config['model'] == 'RD_Gray_Scott_Mesh'):
                 H1[:, 0] -= 0.5 * torch.tensor(values / 255, device=device)
                 H1[:, 1] = 0.25 * torch.tensor(values / 255, device=device)
-            else:
+            elif (model_config['model'] == 'RD_FitzHugh_Nagumo_Mesh'):
+                H1[:, 0:1] = torch.ones((nparticles, 1), device=device) + torch.randn((nparticles, 1),device=device) / 2
+                H1[:, 0] -= 0.5 * torch.tensor(values / 255, device=device)
+                H1[:, 1] = 0.25 * torch.tensor(values / 255, device=device)
+            elif (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
                 H1[:, 0] = torch.tensor(values / 255 * 5000, device=device)
 
             i0 = imread(f'graphs_data/{particle_type_map}')
@@ -1191,7 +1248,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                     H1[:, 0:1] += H1[:, 1:2]
                     h_list.append(pred)
 
-            if model_config['model'] == 'RD_Pearson_Mesh':
+            if (model_config['model'] == 'RD_Gray_Scott_Mesh') | (model_config['model'] == 'RD_FitzHugh_Nagumo_Mesh'):
                 if it >= 0:
                     mask = to_numpy(torch.argwhere((X1[:, 0] > 0.1) & (X1[:, 0] < 0.9) & (X1[:, 1] > 0.1) & (X1[:, 1] < 0.9))).astype(int)
                     mask = mask[:, 0:1]
@@ -1268,14 +1325,14 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                         colors = torch.sum(x_noise[tri.simplices, 6], axis=1) / 3.0
                         if model_config['model'] == 'DiffMesh':
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                          facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=0, vmax=1000)
+                                          facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1000)
                         if model_config['model'] == 'WaveMesh':
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                          facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=-1000, vmax=1000)
-                        if model_config['model'] == 'RD_Pearson_Mesh':
+                                          facecolors=colors.detach().cpu().numpy(), vmin=-1000, vmax=1000)
+                        if (model_config['model'] == 'RD_Gray_Scott_Mesh') | (model_config['model'] == 'RD_FitzHugh_Nagumo_Mesh'):
                             colors = torch.sum(x_noise[tri.simplices, 7], axis=1) / 3.0
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                          facecolors=colors.detach().cpu().numpy(), edgecolors='k',vmin=-0.5, vmax=0.5)
+                                          facecolors=colors.detach().cpu().numpy(), vmin=-0.5, vmax=0.5)
 
                         # plt.scatter(x_noise[:, 1].detach().cpu().numpy(),x_noise[:, 2].detach().cpu().numpy(), s=10, alpha=0.75,
                         #                 c=x[:, 6].detach().cpu().numpy(), cmap='gist_gray',vmin=-5000,vmax=5000)
@@ -1283,7 +1340,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                     else:
                         for n in range(nparticle_types):
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                            x[index_particles[n], 2].detach().cpu().numpy(), s=160, c=cmap.color(n))
+                                            x[index_particles[n], 2].detach().cpu().numpy(), s=120, c=cmap.color(n))
 
                     if bMesh | (model_config['boundary'] == 'periodic'):
                         # plt.text(0, 1.08, f'frame: {it}')
@@ -3567,7 +3624,7 @@ if __name__ == '__main__':
     # config_list = ['config_wave_testA']
 
     # Test plotting figures paper
-    config_list = ['config_RD_Pearson'] # ['config_arbitrary_3'] #, 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16']
+    config_list = ['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3'] #, 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3607,7 +3664,7 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
         ratio = 1
-        data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=50) #model_config['nframes']//4)
+        data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=50) # model_config['nframes']//4)
         # data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=20, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=160) # model_config['nframes']-5)
