@@ -1944,6 +1944,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
     dataset_name = model_config['dataset']
     nframes = model_config['nframes']
     bMesh = (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh')
+    delta_t, = model_config['delta_t']
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
@@ -2135,7 +2136,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
             dataset_mesh = data.Data(x=x, edge_index=edge_index, edge_attr=edge_weight, device=device)
             with torch.no_grad():
                 pred = model_mesh(dataset_mesh, data_id=0, )
-            x[:, 6:7] += pred * hnorm
+            x[:, 6:7] += pred * hnorm * delta_t
         elif model_config['model'] == 'WaveMesh':
             x[:, 1:5] = x0[:, 1:5].clone().detach()
             dataset = data.Data(x=x, pos=x[:, 1:3])
@@ -2146,8 +2147,8 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
             dataset_mesh = data.Data(x=x, edge_index=edge_index, edge_attr=edge_weight, device=device)
             with torch.no_grad():
                 pred = model_mesh(dataset_mesh, data_id=0, )
-            x[:, 7:8] += pred * hnorm
-            x[:, 6:7] += x[:, 7:8]
+            x[:, 7:8] += pred * hnorm * delta_t
+            x[:, 6:7] += x[:, 7:8] * delta_t
         else:
             distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
             t = torch.Tensor([radius ** 2])  # threshold
@@ -2157,23 +2158,18 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
 
             dataset = data.Data(x=x, edge_index=edge_index)
 
-            if bTest == 'integration':
-                if model_config['prediction'] == '2nd_derivative':
-                    y = y0 / ynorm[4]
-                else:
-                    y = y0 / vnorm[4]
-            else:
-                with torch.no_grad():
-                    y = model(dataset, data_id=0, step=2, vnorm=vnorm, cos_phi=0, sin_phi=0)  # acceleration estimation
+
+            with torch.no_grad():
+                y = model(dataset, data_id=0, step=2, vnorm=vnorm, cos_phi=0, sin_phi=0)  # acceleration estimation
 
             if model_config['prediction'] == '2nd_derivative':
-                y = y * ynorm[4]
+                y = y * ynorm[4] * delta_t
                 x[:, 3:5] = x[:, 3:5] + y  # speed update
             else:
                 y = y * vnorm[4]
                 x[:, 3:5] = y
 
-            x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5])  # position update
+            x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t )  # position update
 
             x_recons.append(x.clone().detach())
             y_recons.append(y.clone().detach())
@@ -2965,7 +2961,6 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
     plt.yticks(fontsize=10)
     plt.tight_layout()
 
-
     ax = fig.add_subplot(2, 4, 4)
     T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
     for n in range(1, nparticle_types):
@@ -3068,7 +3063,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             with torch.no_grad():
                 pred = model.lin_edge(in_features.float())
             pred = pred[:, 0]
-            plot_list.append(pred * ynorm[4] ,device=device))
+            plot_list.append(pred * ynorm[4] )
 
     if model_config['model'] == 'GravityParticles':
         p = np.linspace(0.5, 5, nparticle_types)
@@ -3090,7 +3085,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             with torch.no_grad():
                 pred = model.lin_edge(in_features.float())
             pred = pred[:, 0]
-            plot_list_2.append(pred * ynorm[4] , device=device))
+            plot_list_2.append(pred * ynorm[4] )
 
         fig = plt.figure(figsize=(16, 4))
         plt.ion()
@@ -3147,6 +3142,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             print(f'sub-group {n}: RMSE: {rmserr.item()}')
 
         print(f'RMSE: {np.mean(rmserr_list)}+\-{np.std(rmserr_list)} ')
+
 
 def data_train_shrofflab_celegans(model_config):
     print('')
@@ -3626,7 +3622,7 @@ if __name__ == '__main__':
     # config_list = ['config_wave_testA']
 
     # Test plotting figures paper
-    config_list = ['config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # , 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16']
+    config_list = ['config_arbitrary_3'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # , 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16']
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3667,7 +3663,7 @@ if __name__ == '__main__':
 
         ratio = 1
         data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//20)
-        # data_train(model_config,model_embedding)
+        data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=20, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=160) # model_config['nframes']-5)
 

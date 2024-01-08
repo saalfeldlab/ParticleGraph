@@ -576,7 +576,7 @@ def data_plot_FIG2():
         with torch.no_grad():
             pred = model.lin_edge(in_features.float())
         pred = pred[:, 0]
-        plot_list.append(pred * ynorm[4], device=device))
+        plot_list.append(pred * ynorm[4])
 
     rmserr_list = []
     for n in range(nparticle_types):
@@ -1003,7 +1003,7 @@ def data_plot_FIG3():
         with torch.no_grad():
             pred = model.lin_edge(in_features.float())
         pred = pred[:, 0]
-        plot_list.append(pred * ynorm[4], device=device))
+        plot_list.append(pred * ynorm[4])
     rmserr_list = []
     for n in range(nparticle_types):
         min_norm = torch.min(plot_list[n])
@@ -1035,7 +1035,7 @@ def data_plot_FIG3():
         with torch.no_grad():
             pred = model.lin_edge(in_features.float())
         pred = pred[:, 0]
-        plot_list.append(pred * ynorm[4],device=device))
+        plot_list.append(pred * ynorm[4])
 
     p = np.linspace(0.5, 5, nparticle_types)
     popt_list = []
@@ -1085,7 +1085,7 @@ def data_plot_FIG3():
             with torch.no_grad():
                 pred = model.lin_edge(in_features.float())
             pred = pred[:, 0]
-            plot_list_2.append(pred * ynorm[4], device=device))
+            plot_list_2.append(pred * ynorm[4])
 
     ax = fig.add_subplot(3, 3, 9)
     print('9')
@@ -1519,7 +1519,7 @@ def data_plot_FIG4():
             with torch.no_grad():
                 pred = model.lin_edge(in_features.float())
             pred = pred[:, 0]
-            plot_list_pairwise.append(pred * ynorm[4], device=device))
+            plot_list_pairwise.append(pred * ynorm[4])
 
     p = [2, 1, -1]
     popt_list = []
@@ -1583,7 +1583,7 @@ def data_plot_FIG4():
                 with torch.no_grad():
                     pred = model.lin_edge(in_features.float())
                 pred = pred[:, 0]
-                plot_list_2.append(pred * ynorm[4], device=device))
+                plot_list_2.append(pred * ynorm[4])
 
     ax = fig.add_subplot(3, 3, 9)
     print('9')
