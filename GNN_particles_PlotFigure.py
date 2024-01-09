@@ -1693,7 +1693,7 @@ def data_plot_FIG3():
     # fig = plt.figure(figsize=(3*cm, 3*cm))
 
     fig = plt.figure(figsize=(10, 9))
-    # plt.ion()
+    plt.ion()
     ax = fig.add_subplot(3, 3, 1)
     print('1')
     if (embedding.shape[1] > 1):
@@ -1847,7 +1847,7 @@ def data_plot_FIG3():
     if len(p) > 0:
         p = torch.tensor(p, device=device)
     else:
-        p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
+        p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt',map_location=device)
     psi_output = []
     for n in range(nparticle_types):
         psi_output.append(model.psi(rr, p[n]))
@@ -2482,20 +2482,20 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
-    def bc_pos(X):
-        return torch.remainder(X, 1.0)
-    def bc_diff(D):
-        return torch.remainder(D - .5, 1.0) - .5
-    aggr_type = 'mean'
-    data_plot_FIG2()
-
     # def bc_pos(X):
-    #     return X
+    #     return torch.remainder(X, 1.0)
     # def bc_diff(D):
-    #     return D
-    # aggr_type= 'add'
-    # data_plot_FIG3()
-    #
+    #     return torch.remainder(D - .5, 1.0) - .5
+    # aggr_type = 'mean'
+    # data_plot_FIG2()
+
+    def bc_pos(X):
+        return X
+    def bc_diff(D):
+        return D
+    aggr_type= 'add'
+    data_plot_FIG3()
+
     # def bc_pos(X):
     #     return torch.remainder(X, 1.0)
     # def bc_diff(D):

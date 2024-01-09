@@ -29,6 +29,6 @@ pred_limit: 1E+9
 start_frame: -1000
 arrow_length: 10
 cmap: 'tab20'
-arrow_length: 10
+arrow_length: 1
 description: 'Gravity'
 sparsity: 'regul_replace'

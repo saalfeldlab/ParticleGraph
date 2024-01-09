@@ -2030,15 +2030,15 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
     if bPrint:
         print('Graph files N: ', NGraphs - 1)
         print(f'network: {net}')
-    if bTest != 'integration':
-        if bMesh:
-            state_dict = torch.load(net, map_location=device)
-            model_mesh.load_state_dict(state_dict['model_state_dict'])
-            model_mesh.eval()
-        else:
-            state_dict = torch.load(net, map_location=device)
-            model.load_state_dict(state_dict['model_state_dict'])
-            model.eval()
+
+    if bMesh:
+        state_dict = torch.load(net, map_location=device)
+        model_mesh.load_state_dict(state_dict['model_state_dict'])
+        model_mesh.eval()
+    else:
+        state_dict = torch.load(net, map_location=device)
+        model.load_state_dict(state_dict['model_state_dict'])
+        model.eval()
 
     if len(forced_embedding) > 0:
         with torch.no_grad():
@@ -3646,7 +3646,7 @@ if __name__ == '__main__':
     # config_list = ['config_wave_testA']
 
     # Test plotting figures paper
-    config_list = ['config_arbitrary_3'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
+    config_list = ['config_gravity_16'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3687,9 +3687,9 @@ if __name__ == '__main__':
 
         ratio = 1
         # data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//4)
-        data_train(model_config,model_embedding)
-        data_plot(model_config, epoch=-1, bPrint=True, best_model=20, kmeans_input=model_config['kmeans_input'])
-        # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=10)
+        # data_train(model_config,model_embedding)
+        # data_plot(model_config, epoch=-1, bPrint=True, best_model=20, kmeans_input=model_config['kmeans_input'])
+        data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=10)
 
         # data_train_shrofflab_celegans(model_config)
         # data_test_shrofflab_celegans(model_config)
