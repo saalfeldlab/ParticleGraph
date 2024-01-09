@@ -9,6 +9,7 @@ from shutil import copyfile
 import matplotlib.pyplot as plt
 import matplotlib
 import networkx as nx
+import torch
 import torch.nn as nn
 import torch_geometric as pyg
 import torch_geometric.data as data
@@ -272,6 +273,80 @@ class RD_FitzHugh_Nagumo(pyg.nn.MessagePassing):
         L = torch.cat((Lu[:, None], Lv[:, None]), axis=1)
 
         return L
+
+    def psi(self, I, p):
+
+        return I
+
+
+class RD_RPS(pyg.nn.MessagePassing):
+    """Interaction Network as proposed in this paper:
+    https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
+
+    def __init__(self, aggr_type=[], c=[], beta=[]):
+        super(RD_RPS, self).__init__(aggr='add')  # "mean" aggregation.
+
+        self.c = c
+        self.beta = beta
+
+    def forward(self, data):
+        x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
+        # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+
+        # dx = 2./size
+        # dt = 0.9 * dx**2/2
+        # params = {"Du":5e-3, "Dv":2.8e-4, "tau":0.1, "k":-0.005,
+        # su = (Du*Lu + v - u)/tau
+        # sv = Dv*Lv + v - v*v*v - u + k
+
+        c = self.c[to_numpy(x[:, 5])]
+        c = c[:, None]
+
+        u = x[:,6]
+        v = x[:,7]
+        w = x[:,8]
+
+        laplacian = self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
+        laplacian_u = laplacian[:, 0]
+        laplacian_v = laplacian[:, 1]
+        laplacian_w = laplacian[:, 2]
+
+        # Du = 5E-3
+        # Dv = 2.8E-4
+        # k = torch.tensor(-0.005,device=device)
+        # tau = torch.tensor(0.1,device=device)
+        #
+        # dU = (Du * laplacian[:,0] + v - u) / tau
+        # dV = Dv * laplacian[:,1] + v - v**3 - u + k
+
+        D = 0.05
+        a = 0.6
+        p = u + v + w
+
+        du = D * laplacian_u + u*(1-p-a*v)
+        dv = D * laplacian_v + v*(1-p-a*w)
+        dw = D * laplacian_w + w*(1-p-a*u)
+
+        # U = U + 0.125 * dU
+        # V = V + 0.125 * dV
+
+        increment = torch.cat((du[:,None],dv[:,None],dw[:,None]),axis=1)
+
+        return increment
+
+    def message(self, x_i, x_j, edge_attr):
+
+        # U column 6, V column 7
+
+        # L = edge_attr * (x_j[:, 6]-x_i[:, 6])
+
+        Lu = edge_attr * x_j[:, 6]
+        Lv = edge_attr * x_j[:, 7]
+        Lw = edge_attr * x_j[:, 8]
+
+        Laplace = torch.cat((Lu[:, None], Lv[:, None], Lw[:, None]), axis=1)
+
+        return Laplace
 
     def psi(self, I, p):
 
@@ -1045,6 +1120,8 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             model_mesh = RD_Gray_Scott(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'])
         elif (model_config['model'] == 'RD_FitzHugh_Nagumo_Mesh'):
             model_mesh = RD_FitzHugh_Nagumo(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'])
+        elif (model_config['model'] == 'RD_RPS_Mesh'):
+            model_mesh = RD_RPS(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'])
         elif (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
             model_mesh = Laplacian_A(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'])
         psi_output = []
@@ -1132,8 +1209,11 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                 H1[:, 1] = 0.25 * torch.tensor(values / 255, device=device)
             elif (model_config['model'] == 'RD_FitzHugh_Nagumo_Mesh'):
                 H1 = torch.zeros((nparticles, 2), device=device) + torch.rand((nparticles, 2),device=device) * 0.1
-                # H1[:, 0] -= 0.5 * torch.tensor(values / 255, device=device)
-                # H1[:, 1] = 0.25 * torch.tensor(values / 255, device=device)
+            elif (model_config['model'] == 'RD_RPS_Mesh'):
+                H1 = torch.rand((nparticles, 3),device=device)
+                s = torch.sum(H1,axis=1)
+                for k in range(3):
+                    H1[:,k]=H1[:,k]/s
             elif (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
                 H1[:, 0] = torch.tensor(values / 255 * 5000, device=device)
 
@@ -1153,7 +1233,6 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
 
         noise_current = 0 * torch.randn((nparticles, 2), device=device)
         noise_prev_prev = 0 * torch.randn((nparticles, 2), device=device)
-
 
         for it in trange(model_config['start_frame'], nframes+1):
 
@@ -1265,13 +1344,21 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                     H1[:, 0:1] += H1[:, 1:2]
                     h_list.append(pred)
 
-            if (model_config['model'] == 'RD_Gray_Scott_Mesh') | (model_config['model'] == 'RD_FitzHugh_Nagumo_Mesh'):
+            if (model_config['model'] == 'RD_Gray_Scott_Mesh') | (model_config['model'] == 'RD_FitzHugh_Nagumo_Mesh') | (model_config['model'] == 'RD_RPS_Mesh'):
                 if it >= 0:
-                    mask = to_numpy(torch.argwhere((X1[:, 0] > 0.1) & (X1[:, 0] < 0.9) & (X1[:, 1] > 0.1) & (X1[:, 1] < 0.9))).astype(int)
+                    mask = to_numpy(torch.argwhere((X1[:, 0] > 0.02) & (X1[:, 0] < 0.98) & (X1[:, 1] > 0.02) & (X1[:, 1] < 0.98))).astype(int)
                     mask = mask[:, 0:1]
                     with torch.no_grad():
                         pred = model_mesh(dataset_mesh)
-                        H1 += pred
+                        H1[mask] += pred[mask] * delta_t
+
+                    if (model_config['model'] == 'RD_RPS_Mesh'):
+
+                        H1=torch.clamp(H1,min=0,max=1)
+                        s = torch.sum(H1, axis=1)
+                        for k in range(3):
+                            H1[:, k] = H1[:, k] / s
+
                     h_list.append(pred)
 
 
@@ -1346,19 +1433,42 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                         if model_config['model'] == 'WaveMesh':
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                           facecolors=colors.detach().cpu().numpy(), vmin=-1000, vmax=1000)
-                        if (model_config['model'] == 'RD_Gray_Scott_Mesh') | (model_config['model'] == 'RD_FitzHugh_Nagumo_Mesh'):
+                        if (model_config['model'] == 'RD_Gray_Scott_Mesh'):
                             fig = plt.figure(figsize=(12, 6))
                             ax = fig.add_subplot(1, 2, 1)
                             colors = torch.sum(x_noise[tri.simplices, 6], axis=1) / 3.0
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                          facecolors=colors.detach().cpu().numpy(),vmin=-0.5,vmax=1)
+                                          facecolors=colors.detach().cpu().numpy(),vmin=0,vmax=1)
                             plt.xticks([])
                             plt.yticks([])
                             plt.axis('off')
                             ax = fig.add_subplot(1, 2, 2)
                             colors = torch.sum(x_noise[tri.simplices, 7], axis=1) / 3.0
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                          facecolors=colors.detach().cpu().numpy(),vmin=-0.5,vmax=1)
+                                          facecolors=colors.detach().cpu().numpy(),vmin=0,vmax=1)
+                            plt.xticks([])
+                            plt.yticks([])
+                            plt.axis('off')
+                        if (model_config['model'] == 'RD_RPS_Mesh'):
+                            fig = plt.figure(figsize=(12, 4))
+                            ax = fig.add_subplot(1, 3, 1)
+                            colors = torch.sum(x_noise[tri.simplices, 6], axis=1) / 3.0
+                            plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                          facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1.2,cmap='gist_gray')
+                            plt.xticks([])
+                            plt.yticks([])
+                            plt.axis('off')
+                            ax = fig.add_subplot(1, 3, 2)
+                            colors = torch.sum(x_noise[tri.simplices, 7], axis=1) / 3.0
+                            plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                          facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1.2,cmap='gist_gray')
+                            plt.xticks([])
+                            plt.yticks([])
+                            plt.axis('off')
+                            ax = fig.add_subplot(1, 3, 3)
+                            colors = torch.sum(x_noise[tri.simplices, 8], axis=1) / 3.0
+                            plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                          facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1.2,cmap='gist_gray')
                             plt.xticks([])
                             plt.yticks([])
                             plt.axis('off')
@@ -1383,7 +1493,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                         plt.ylim([-0.5, 0.5])
 
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/tmp_data/Fig_color_{it}.jpg", dpi=100)
+                    plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/tmp_data/Fig_color_{it}.jpg", dpi=200)
                     plt.close()
 
                 if 'bw' in bStyle:
@@ -3646,7 +3756,7 @@ if __name__ == '__main__':
     # config_list = ['config_wave_testA']
 
     # Test plotting figures paper
-    config_list = ['config_gravity_16'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
+    config_list = ['config_RD_RPS'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3686,10 +3796,10 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
         ratio = 1
-        # data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//4)
+        data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=5) #model_config['nframes']//4)
         # data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=20, kmeans_input=model_config['kmeans_input'])
-        data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=10)
+        # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=10)
 
         # data_train_shrofflab_celegans(model_config)
         # data_test_shrofflab_celegans(model_config)
