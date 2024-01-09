@@ -12,7 +12,7 @@ ninteractions: 3
 kmeans_input: 'plot'
 nframes: 1000
 sigma: 0.005
-delta_t: 1E-9
+delta_t: 3E-5
 v_init: 1E-4
 aggr_type: 'add'
 boundary: 'periodic' # periodic   'no'  # no boundary condition
