@@ -222,28 +222,43 @@ class RD_FitzHugh_Nagumo(pyg.nn.MessagePassing):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
         # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
-        c = self.c[to_numpy(x[:, 5])]
-        c = c[:, None]
-
-        laplacian = c * self.beta * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
-
         # dx = 2./size
         # dt = 0.9 * dx**2/2
         # params = {"Du":5e-3, "Dv":2.8e-4, "tau":0.1, "k":-0.005,
         # su = (Du*Lu + v - u)/tau
         # sv = Dv*Lv + v - v*v*v - u + k
 
-        Du = 5E-3
-        Dv = 2.8E-4
-        k = torch.tensor(-0.005,device=device)
-        tau = torch.tensor(0.1,device=device)
+        c = self.c[to_numpy(x[:, 5])]
+        c = c[:, None]
 
-        dU = (Du * laplacian[:,0] + x[:,7] - x[:,6]) / tau
-        dV = Dv * laplacian[:,1] + x[:,7]-x[:,7]**3 - x[:,6] + k
+        u = x[:,6]
+        v = x[:,7]
 
-        pred = 0.1 * torch.cat((dU[:,None],dV[:,None]),axis=1)
+        laplacian = c * self.beta * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
+        laplacian_U = laplacian[:, 0]
+        laplacian_V = laplacian[:, 1]
 
-        return pred
+        # Du = 5E-3
+        # Dv = 2.8E-4
+        # k = torch.tensor(-0.005,device=device)
+        # tau = torch.tensor(0.1,device=device)
+        #
+        # dU = (Du * laplacian[:,0] + v - u) / tau
+        # dV = Dv * laplacian[:,1] + v - v**3 - u + k
+
+        a1 = 5E-3
+        a2 = -2.8E-3
+        a3 = 5E-3
+
+        dU = a3 * laplacian_U + 0.02 * (v - v ** 3 - u * v + torch.randn(4225,device=device))
+        dV = (a1 * u + a2 * v)
+
+        # U = U + 0.125 * dU
+        # V = V + 0.125 * dV
+
+        increment = 0.125 * torch.cat((dU[:,None],dV[:,None]),axis=1)
+
+        return increment
 
     def message(self, x_i, x_j, edge_attr):
 
@@ -1332,9 +1347,21 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                           facecolors=colors.detach().cpu().numpy(), vmin=-1000, vmax=1000)
                         if (model_config['model'] == 'RD_Gray_Scott_Mesh') | (model_config['model'] == 'RD_FitzHugh_Nagumo_Mesh'):
+                            fig = plt.figure(figsize=(12, 6))
+                            ax = fig.add_subplot(1, 2, 1)
+                            colors = torch.sum(x_noise[tri.simplices, 6], axis=1) / 3.0
+                            plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                          facecolors=colors.detach().cpu().numpy(),vmin=-0.5,vmax=1)
+                            plt.xticks([])
+                            plt.yticks([])
+                            plt.axis('off')
+                            ax = fig.add_subplot(1, 2, 2)
                             colors = torch.sum(x_noise[tri.simplices, 7], axis=1) / 3.0
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                          facecolors=colors.detach().cpu().numpy())
+                                          facecolors=colors.detach().cpu().numpy(),vmin=-0.5,vmax=1)
+                            plt.xticks([])
+                            plt.yticks([])
+                            plt.axis('off')
 
                         # plt.scatter(x_noise[:, 1].detach().cpu().numpy(),x_noise[:, 2].detach().cpu().numpy(), s=10, alpha=0.75,
                         #                 c=x[:, 6].detach().cpu().numpy(), cmap='gist_gray',vmin=-5000,vmax=5000)
@@ -1345,20 +1372,18 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                                             x[index_particles[n], 2].detach().cpu().numpy(), s=160, c=cmap.color(n))
 
                     if bMesh | (model_config['boundary'] == 'periodic'):
-                        # plt.text(0, 1.08, f'frame: {it}')
+                        plt.text(0.08, 0.92, f'frame: {it}',fontsize=8,color='w')
                         # plt.text(0, 1.03, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
-                        plt.xlim([0, 1])
-                        plt.ylim([0, 1])
+                        # plt.xlim([0, 1])
+                        # plt.ylim([0, 1])
                     else:
                         # plt.text(-1.25, 1.5, f'frame: {it}')
                         # plt.text(-1.25, 1.4, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
                         plt.xlim([-0.5, 0.5])
                         plt.ylim([-0.5, 0.5])
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.axis('off')
+
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/tmp_data/Fig_color_{it}.tif", dpi=300)
+                    plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/tmp_data/Fig_color_{it}.jpg", dpi=100)
                     plt.close()
 
                 if 'bw' in bStyle:
@@ -1580,12 +1605,14 @@ def data_train(model_config, bSparse=False):
         edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,
                                                                normalization="None")  # "None", "sym", "rw"
 
+    data_augmentation_loop = 2 #######################################
+
     print('Start training ...')
     print(f'   {nframes * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info("Start training ...")
     time.sleep(0.5)
 
-    for epoch in range(Nepochs + 1):
+    for epoch in range(1): #Nepochs + 1):
 
         if epoch == 1:
             min_radius = model_config['min_radius']
@@ -1944,7 +1971,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
     dataset_name = model_config['dataset']
     nframes = model_config['nframes']
     bMesh = (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh')
-    delta_t, = model_config['delta_t']
+    delta_t = model_config['delta_t']
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
@@ -2122,9 +2149,6 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         x0 = x_list[0][it].clone().detach()
         x0_next = x_list[0][it + 1].clone().detach()
         y0 = y_list[0][it].clone().detach()
-
-        if (it % 10 == 0) & (bTest == 'prediction'):
-            x[:, 1:5] = x0[:, 1:5].clone().detach()
 
         if model_config['model'] == 'DiffMesh':
             x[:, 1:5] = x0[:, 1:5].clone().detach()
@@ -3622,7 +3646,7 @@ if __name__ == '__main__':
     # config_list = ['config_wave_testA']
 
     # Test plotting figures paper
-    config_list = ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
+    config_list = ['config_arbitrary_3'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3662,10 +3686,10 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
         ratio = 1
-        data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//20)
+        # data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//4)
         data_train(model_config,model_embedding)
-        # data_plot(model_config, epoch=-1, bPrint=True, best_model=20, kmeans_input=model_config['kmeans_input'])
-        # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=160) # model_config['nframes']-5)
+        data_plot(model_config, epoch=-1, bPrint=True, best_model=20, kmeans_input=model_config['kmeans_input'])
+        # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=10)
 
         # data_train_shrofflab_celegans(model_config)
         # data_test_shrofflab_celegans(model_config)

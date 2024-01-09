@@ -27,7 +27,7 @@ c: [0,0.6,0.8,1,0.7]
 particle_value_map: 'pattern_15.tif'
 particle_type_map: 'pattern_8.tif'
 beta: 1
-nrun: 2
+nrun: 1
 clamp: 0
 pred_limit: 1E+10
 start_frame: 0
