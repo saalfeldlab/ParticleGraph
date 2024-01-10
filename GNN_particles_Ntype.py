@@ -306,7 +306,7 @@ class RD_RPS(pyg.nn.MessagePassing):
         v = x[:,7]
         w = x[:,8]
 
-        laplacian = self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
+        laplacian = self.beta * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
         laplacian_u = laplacian[:, 0]
         laplacian_v = laplacian[:, 1]
         laplacian_w = laplacian[:, 2]
@@ -1479,10 +1479,11 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                     else:
                         for n in range(nparticle_types):
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                            x[index_particles[n], 2].detach().cpu().numpy(), s=160, c=cmap.color(n))
+                                            x[index_particles[n], 2].detach().cpu().numpy(), s=160, color=cmap.color(n))
 
                     if bMesh | (model_config['boundary'] == 'periodic'):
-                        plt.text(0.08, 0.92, f'frame: {it}',fontsize=8,color='w')
+                        # plt.text(0.08, 0.92, f'frame: {it}',fontsize=8,color='w')
+                        gg=0
                         # plt.text(0, 1.03, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
                         # plt.xlim([0, 1])
                         # plt.ylim([0, 1])
@@ -1715,14 +1716,12 @@ def data_train(model_config, bSparse=False):
         edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,
                                                                normalization="None")  # "None", "sym", "rw"
 
-    data_augmentation_loop = 2 #######################################
-
     print('Start training ...')
     print(f'   {nframes * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info("Start training ...")
     time.sleep(0.5)
 
-    for epoch in range(1): #Nepochs + 1):
+    for epoch in range(Nepochs + 1):
 
         if epoch == 1:
             min_radius = model_config['min_radius']
@@ -1968,8 +1967,13 @@ def data_train(model_config, bSparse=False):
             for n in range(nparticles):
                 rr = torch.tensor(np.linspace(0, radius, 200)).to(device)
                 embedding = model.a[0, n, :] * torch.ones((200, model_config['embedding']), device=device)
-                in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
-                                                 rr[:, None] / model_config['radius'], embedding), dim=1)
+                if ((model_config['model'] == 'PDE_A')):
+                    in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                                     rr[:, None] / model_config['radius'], embedding), dim=1)
+                else:
+                    in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                             rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
+                                             0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
                 acc = model.lin_edge(in_features.float())
                 acc = acc[:, 0]
                 acc_list.append(acc)
@@ -3756,7 +3760,7 @@ if __name__ == '__main__':
     # config_list = ['config_wave_testA']
 
     # Test plotting figures paper
-    config_list = ['config_RD_RPS'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
+    config_list = ['config_wave'] #['config_RD_RPS','config_RD_RPS_05','config_RD_RPS_025'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3796,8 +3800,8 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
         ratio = 1
-        data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=5) #model_config['nframes']//4)
-        # data_train(model_config,model_embedding)
+        data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//4)
+        data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=20, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=10)
 

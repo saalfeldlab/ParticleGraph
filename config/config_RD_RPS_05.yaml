@@ -26,7 +26,7 @@ p: [0.2,1.4,2.6,3.8,5.0]
 c: [0,0.6,0.8,1,0.7]
 particle_value_map: 'pattern_10.tif'
 particle_type_map: 'pattern_8.tif'
-beta: 1
+beta: 0.5
 nrun: 1
 clamp: 0
 pred_limit: 1E+10
