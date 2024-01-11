@@ -20,7 +20,7 @@ data_augmentation: True
 batch_size: 8
 embedding: 2 
 model: 'PDE_A'
-prediction: 'first_derivative_S'
+prediction: 'first_derivative'
 upgrade_type: 'none'
 nlayers_update: 3
 hidden_size_update: 64
