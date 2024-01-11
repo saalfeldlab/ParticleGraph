@@ -30,5 +30,5 @@ clamp: 0
 start_frame: 0
 arrow_length: 20
 cmap: 'tab20'
-description: '3 interaction particles'
+description: '16 interaction particles small delta t'
 sparsity: 'regul_replace'
