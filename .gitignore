@@ -13,7 +13,8 @@ vis*/*
 archive/*
 archive/*/*
 *.pdf
-
+*.xml
+*.tif
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
