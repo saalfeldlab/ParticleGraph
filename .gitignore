@@ -15,6 +15,13 @@ archive/*/*
 *.pdf
 *.xml
 *.tif
+*.gif
+*.jpg
+*.png
+*.iml
+*.mp4
+*.avi
+*.ijm
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -1873,7 +1873,7 @@ def data_train(model_config, bSparse=False):
         list_loss.append(total_loss / (N + 1) / nparticles / batch_size)
 
         fig = plt.figure(figsize=(16, 4))
-        # plt.ion()
+        plt.ion()
         ax = fig.add_subplot(1, 4, 1)
         plt.plot(list_loss, color='k')
         plt.ylim([0, 0.010])
@@ -2041,7 +2041,7 @@ def data_train(model_config, bSparse=False):
             sub_group = np.round(np.median(tmp))
             accuracy = len(np.argwhere(tmp == sub_group)) / len(tmp) * 100
             print(f'Sub-group {n} accuracy: {np.round(accuracy, 3)}')
-            logger.info(f'Sub-group {n} accuracy: {np.round(accuracy, 3)}')
+            #logger.info(f'Sub-group {n} accuracy: {np.round(accuracy, 3)}')
         for n in range(model_config['ninteractions']):
             plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
         plt.tight_layout()
@@ -2875,9 +2875,21 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
         accuracy = len(np.argwhere(tmp == sub_group)) / len(tmp) * 100
         print(f'Sub-group {n} accuracy: {np.round(accuracy, 3)}')
     label_list = np.array(label_list)
-    new_labels = kmeans.labels_.copy()
+    new_labels = 0* kmeans.labels_.copy()
     for n in range(nparticle_types):
         new_labels[kmeans.labels_ == label_list[n]] = n
+
+    T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
+    for n in range(1, nparticle_types):
+        T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
+    T1 = T1[:, None]
+
+    Accuracy = metrics.accuracy_score(to_numpy(T1), new_labels)
+    print(' ')
+    print (f'Accuracy: {np.round(Accuracy,3)}')
+
+
+
     torch.save(torch.tensor(new_labels, device=device), os.path.join(log_dir, f'labels_{best_model}.pt'))
     for n in range(nparticle_types):
         if proj_interaction.ndim == 1:
@@ -3739,7 +3751,7 @@ def data_test_shrofflab_celegans(model_config):
 if __name__ == '__main__':
 
     print('')
-    print('version 1.9 240103')
+    print('version 0.2.0 240111')
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
@@ -3759,7 +3771,7 @@ if __name__ == '__main__':
     # config_list = ['config_wave_testA']
 
     # Test plotting figures paper
-    config_list = ['config_boids_16_HR'] #['config_RD_RPS','config_RD_RPS_05','config_RD_RPS_025'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
+    config_list = ['config_arbitrary_3'] #['config_RD_RPS','config_RD_RPS_05','config_RD_RPS_025'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3801,7 +3813,7 @@ if __name__ == '__main__':
         ratio = 1
         data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//4, ratio=ratio, scenario='none')
         data_train(model_config,model_embedding)
-        # data_plot(model_config, epoch=-1, bPrint=True, best_model=20, kmeans_input=model_config['kmeans_input'])
+        data_plot(model_config, epoch=-1, bPrint=True, best_model=20, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=10)
 
         # data_train_shrofflab_celegans(model_config)
