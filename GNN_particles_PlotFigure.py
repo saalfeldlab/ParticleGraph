@@ -4095,9 +4095,6 @@ def data_plot_FIG3():
         plt.ylabel(r'Embedding $\ensuremath{\mathbf{a}}_{i1} [a.u.]$',fontsize=14)
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
-
-    # ax = fig.add_subplot(3, 4, 2)
-    # print('2')
     acc_list = []
     for n in range(nparticles):
         embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
@@ -4108,9 +4105,7 @@ def data_plot_FIG3():
             acc = model.lin_edge(in_features.float())
         acc = acc[:, 0]
         acc_list.append(acc)
-        # plt.plot(to_numpy(rr),
-        #          to_numpy(acc) * to_numpy(ynorm[4]),
-        #          color=cmap.color(to_numpy(x[n, 5])), linewidth=1, alpha=0.25)
+
     acc_list = torch.stack(acc_list)
     # plt.xlim([0, 0.02])
     # plt.ylim([0, 0.5E6])
@@ -4119,13 +4114,6 @@ def data_plot_FIG3():
                       random_state=42, transform_queue_size=0).fit(coeff_norm)
     proj_interaction = trans.transform(coeff_norm)
     proj_interaction = np.squeeze(proj_interaction)
-
-    # plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=14)
-    # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, r_{ij}) [a.u.]$', fontsize=14)
-    # plt.xticks(fontsize=10)
-    # plt.yticks(fontsize=10)
-    # plt.ylim([0, 0.5E6])
-
 
     ax = fig.add_subplot(3, 3, 2)
     print('2')
@@ -4245,8 +4233,7 @@ def data_plot_FIG3():
         psi_output.append(model.psi(rr, p[n]))
     for n in range(nparticle_types - 1, -1, -1):
         plt.plot(to_numpy(rr), np.array(psi_output[n].cpu()), linewidth=1, color=cmap.color(n))
-    # plt.yscale('log')
-    # plt.xscale('log')
+
     plt.xlim([0, 0.02])
     plt.ylim([0, 0.5E6])
     plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=14)
@@ -4355,6 +4342,12 @@ def data_plot_FIG3():
     plt.xlabel(r'Normalized $\ensuremath{\mathbf{\dot{x}}}_i [a.u.]$', fontsize=14)
     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, r_{ij}, \ensuremath{\mathbf{\dot{x}}}_i) [a.u.]$', fontsize=14)
     plt.xlim([0, 2])
+    plt.tight_layout()
+
+    plt.savefig('Fig3.pdf', format="pdf", dpi=300)
+    plt.savefig('Fig3.jpg', dpi=300)
+
+    plt.close()
 
 
     t = torch.tensor(tt, device=device)
@@ -4439,10 +4432,7 @@ def data_plot_FIG3():
 
     plt.tight_layout()
 
-    plt.savefig('Fig3.pdf', format="pdf", dpi=300)
-    plt.savefig('Fig3.jpg', dpi=300)
 
-    plt.close()
 
 def data_plot_FIG4():
 
@@ -4510,24 +4500,6 @@ def data_plot_FIG4():
     print('Graph files N: ', NGraphs - 1)
     time.sleep(0.5)
 
-    # arr = np.arange(0, NGraphs)
-    # x_list=[]
-    # y_list=[]
-    # for run in arr:
-    #     x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
-    #     y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
-    #     x_list.append(torch.stack(x))
-    #     y_list.append(torch.stack(y))
-    # x = torch.stack(x_list)
-    # x = torch.reshape(x,(x.shape[0] * x.shape[1] * x.shape[2], x.shape[3]))
-    # y = torch.stack(y_list)
-    # y = torch.reshape(y,(y.shape[0]*y.shape[1]*y.shape[2],y.shape[3]))
-    # vnorm = norm_velocity(x, device)
-    # ynorm = norm_acceleration(y, device)
-    # torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
-    # torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
-    # print (vnorm,ynorm)
-
     x_list = []
     y_list = []
     x_stat = []
@@ -4537,44 +4509,26 @@ def data_plot_FIG4():
     print('Load normalizations ...')
     time.sleep(1)
 
-    if False:  # analyse tmp_recons
-        x = torch.load(f'{log_dir}/x_list.pt')
-        y = torch.load(f'{log_dir}/y_list.pt')
-        for k in np.arange(0, len(x) - 1, 4):
-            distance = torch.sum(bc_diff(x[k][:, None, 1:3] - x[k][None, :, 1:3]) ** 2, axis=2)
-            t = torch.Tensor([radius ** 2])  # threshold
-            adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
-            edge_index = adj_t.nonzero().t().contiguous()
-            dataset = data.Data(x=x, edge_index=edge_index)
-            distance = np.sqrt(to_numpy(distance[edge_index[0, :], edge_index[1, :]]))
-            deg = degree(dataset.edge_index[0], dataset.num_nodes)
-            deg_list.append(to_numpy(deg))
-            distance_list.append([np.mean(distance), np.std(distance)])
-            x_stat.append(to_numpy(torch.concatenate((torch.mean(x[k][:, 3:5], axis=0), torch.std(x[k][:, 3:5], axis=0)), axis=-1)))
-            y_stat.append(to_numpy(torch.concatenate((torch.mean(y[k], axis=0), torch.std(y[k], axis=0)), axis=-1)))
+    for run in trange(NGraphs):
+        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
+        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
+        if run == 0:
+            for k in np.arange(0, len(x) - 1, 4):
+                distance = torch.sum(bc_diff(x[k][:, None, 1:3] - x[k][None, :, 1:3]) ** 2, axis=2)
+                t = torch.Tensor([radius ** 2])  # threshold
+                adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                edge_index = adj_t.nonzero().t().contiguous()
+                dataset = data.Data(x=x, edge_index=edge_index)
+                distance = np.sqrt(to_numpy(distance[edge_index[0, :], edge_index[1, :]]))
+                deg = degree(dataset.edge_index[0], dataset.num_nodes)
+                deg_list.append(to_numpy(deg))
+                distance_list.append([np.mean(distance), np.std(distance)])
+                x_stat.append(to_numpy(torch.concatenate((torch.mean(x[k][:, 3:5], axis=0), torch.std(x[k][:, 3:5], axis=0)),
+                                                axis=-1)))
+                y_stat.append(to_numpy(torch.concatenate((torch.mean(y[k], axis=0), torch.std(y[k], axis=0)),
+                                                axis=-1)))
         x_list.append(torch.stack(x))
         y_list.append(torch.stack(y))
-    else:
-        for run in trange(NGraphs):
-            x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
-            y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
-            if run == 0:
-                for k in np.arange(0, len(x) - 1, 4):
-                    distance = torch.sum(bc_diff(x[k][:, None, 1:3] - x[k][None, :, 1:3]) ** 2, axis=2)
-                    t = torch.Tensor([radius ** 2])  # threshold
-                    adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                    edge_index = adj_t.nonzero().t().contiguous()
-                    dataset = data.Data(x=x, edge_index=edge_index)
-                    distance = np.sqrt(to_numpy(distance[edge_index[0, :], edge_index[1, :]]))
-                    deg = degree(dataset.edge_index[0], dataset.num_nodes)
-                    deg_list.append(to_numpy(deg))
-                    distance_list.append([np.mean(distance), np.std(distance)])
-                    x_stat.append(to_numpy(torch.concatenate((torch.mean(x[k][:, 3:5], axis=0), torch.std(x[k][:, 3:5], axis=0)),
-                                                    axis=-1)))
-                    y_stat.append(to_numpy(torch.concatenate((torch.mean(y[k], axis=0), torch.std(y[k], axis=0)),
-                                                    axis=-1)))
-            x_list.append(torch.stack(x))
-            y_list.append(torch.stack(y))
 
     x = torch.stack(x_list)
     x = torch.reshape(x, (x.shape[0] * x.shape[1] * x.shape[2], x.shape[3]))
