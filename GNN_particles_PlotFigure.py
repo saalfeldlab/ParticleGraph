@@ -9,6 +9,7 @@ from shutil import copyfile
 import matplotlib.pyplot as plt
 import matplotlib
 import networkx as nx
+import torch
 import torch.nn as nn
 import torch_geometric as pyg
 import torch_geometric.data as data
@@ -1992,6 +1993,7 @@ def data_plot_FIG2():
 
     plt.tight_layout()
     plt.savefig('Fig2.pdf', format="pdf", dpi=300)
+    plt.savefig('Fig2.jpg', dpi=300)
     plt.close()
 
     plot_list = []
@@ -2260,6 +2262,9 @@ def data_plot_FIG2sup():
     else:
         labels = T1
         print('Use ground truth labels')
+
+    model_config['nframes'] = 500
+    nframes = 500
 
     ratio = 1
 
@@ -3453,6 +3458,9 @@ def data_plot_FIG4sup():
 
     ratio = 1
 
+    model_config['nframes'] = 500
+    nframes = 500
+
     data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4,ratio = ratio, bc_diff=bc_diff, bc_pos=bc_pos, aggr_type=model_config['aggr_type'])
 
     index_particles = []
@@ -4146,12 +4154,14 @@ def data_plot_FIG3():
     model_a_ = model.a.clone().detach()
     model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
     t = []
+    tt = []
     for k in range(model_config['ninteractions']):
         pos = np.argwhere(kmeans.labels_ == k).squeeze().astype(int)
         temp = model_a_[pos, :].clone().detach()
         print(torch.median(temp, axis=0).values)
         model_a_[pos, :] = torch.median(temp, axis=0).values.repeat((len(pos), 1))
         t.append(torch.median(temp, axis=0).values)
+        tt = np.append(tt, torch.median(temp, axis=0).values.cpu().numpy())
     model_a_ = torch.reshape(model_a_, (model.a.shape[0], model.a.shape[1], model.a.shape[2]))
     with torch.no_grad():
         for n in range(model.a.shape[0]):
@@ -4346,9 +4356,92 @@ def data_plot_FIG3():
     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, r_{ij}, \ensuremath{\mathbf{\dot{x}}}_i) [a.u.]$', fontsize=14)
     plt.xlim([0, 2])
 
+
+    t = torch.tensor(tt, device=device)
+    t = torch.reshape(t, (16, 2))
+
+    fig = plt.figure(figsize=(10, 10))
+    plt.ion()
+
+    ax = fig.add_subplot(2, 2, 1)
+    rr = torch.tensor(np.linspace(0.002, 0.005, 100)).to(device)
+    vv = torch.tensor(np.linspace(-1, 1, 100)).to(device)
+
+    tt = torch.zeros((1, 2), device=device)
+    tt[0,0] = torch.mean(t[:,0])
+    tt[0,1] = torch.mean(t[:,1])
+    tt = tt * torch.ones((10000, model_config['embedding']), device=device)
+
+    rr_, vv_ = torch.meshgrid(rr, vv, indexing='xy')
+    rr_ = torch.reshape(rr_, (rr_.shape[0] * rr_.shape[1], 1))
+    vv_ = torch.reshape(vv_, (vv_.shape[0] * vv_.shape[1], 1))
+
+    in_features = torch.cat((rr_ / model_config['radius'], 0 * rr_, rr_ / model_config['radius'], vv_, vv_, vv_, vv_, tt), dim=1)
+    with torch.no_grad():
+        pred = model.lin_edge(in_features.float())
+    pred = pred[:, 0]
+    pred=torch.reshape(pred,(100,100))
+    plt.imshow(to_numpy(pred), extent=[0.002, 0.01, -1, 1], aspect='auto', origin='lower', cmap='jet')
+
+
+    ax = fig.add_subplot(2, 2, 2)
+    vv = 0.5*torch.ones((10000,1), device=device)
+    tt = torch.zeros((1, 2), device=device)
+    tt[0,0] = torch.mean(t[0])
+    tt[0,1] = torch.mean(t[1])
+    tt = tt * torch.ones((10000, model_config['embedding']), device=device)
+    tt = tt.to(device)
+
+    tl = torch.linspace(torch.min(t[:,0]), torch.max(t[:,0]), 100)
+    tl = tl.to(torch.float64)
+    tl = tl.to(device)
+    rr_, tl_ = torch.meshgrid(rr, tl, indexing='xy')
+
+    rr_ = torch.reshape(rr_, (rr_.shape[0] * rr_.shape[1], 1))
+    tl_ = torch.reshape(tl_, (tl_.shape[0] * tl_.shape[1], 1))
+    tt[:,0:1] = tl_
+
+    in_features = torch.cat((rr_ / model_config['radius'], 0 * rr_, rr_ / model_config['radius'], vv_, vv_, vv_, vv_, tt), dim=1)
+    with torch.no_grad():
+        pred = model.lin_edge(in_features.float())
+    pred = pred[:, 0]
+    pred=torch.reshape(pred,(100,100))
+    plt.imshow(to_numpy(pred), extent=[0.002, 0.01, to_numpy(torch.min(t[:,0])), to_numpy(torch.max(t[:,0]))], aspect='auto', origin='lower', cmap='jet')
+
+
+    ax = fig.add_subplot(2, 2, 3)
+    vv = 0.5*torch.ones((10000,1), device=device)
+    tt = torch.zeros((1, 2), device=device)
+    tt[0,0] = torch.mean(t[0])
+    tt[0,1] = torch.mean(t[1])
+    tt = tt * torch.ones((10000, model_config['embedding']), device=device)
+    tt = tt.to(device)
+
+    tl = torch.linspace(torch.min(t[:,1]), torch.max(t[:,1]), 100)
+    tl = tl.to(torch.float64)
+    tl = tl.to(device)
+    rr_, tl_ = torch.meshgrid(rr, tl, indexing='xy')
+
+    rr_ = torch.reshape(rr_, (rr_.shape[0] * rr_.shape[1], 1))
+    tl_ = torch.reshape(tl_, (tl_.shape[0] * tl_.shape[1], 1))
+    tt[:,1:2] = tl_
+
+    in_features = torch.cat((rr_ / model_config['radius'], 0 * rr_, rr_ / model_config['radius'], vv_, vv_, vv_, vv_, tt), dim=1)
+
+    in_features.requires_grad = True
+
+    with torch.no_grad():
+        pred = model.lin_edge(in_features.float())
+    pred = pred[:, 0]
+    pred=torch.reshape(pred,(100,100))
+    plt.imshow(to_numpy(pred), extent=[0.002, 0.01, to_numpy(torch.min(t[:,1])), to_numpy(torch.max(t[:,1]))], aspect='auto', origin='lower', cmap='jet')
+
+
     plt.tight_layout()
 
     plt.savefig('Fig3.pdf', format="pdf", dpi=300)
+    plt.savefig('Fig3.jpg', dpi=300)
+
     plt.close()
 
 def data_plot_FIG4():
@@ -5226,14 +5319,22 @@ if __name__ == '__main__':
     scaler = StandardScaler()
     S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
 
+    # arbitrary model plot
+
     # data_plot_FIG2()
     # print(' ')
+    # print(' ')
     # data_plot_FIG2sup()
+    # print(' ')
+    # print(' ')
     # data_plot_FIG3sup()
     # print(' ')
-    data_plot_FIG4sup()
+    # print(' ')
+    # data_plot_FIG4sup()
 
-    # data_plot_FIG3()
+    # gravity model
+
+    data_plot_FIG3()
 
     # data_plot_FIG4()
 
