@@ -12,7 +12,7 @@ ninteractions: 5
 kmeans_input: 'embedding'
 nframes: 5000
 sigma: 0.005 
-delta_t: 0.2
+delta_t: 0.75
 v_init: 0
 aggr_type: 'add'
 boundary: 'periodic'
