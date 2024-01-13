@@ -1,7 +1,7 @@
 Nepochs: 20
 input_size: 4
 output_size: 1
-hidden_size: 16 
+hidden_size: 128 
 n_mp_layers: 5
 noise_level: 0.0005
 radius: 0.3
@@ -10,9 +10,9 @@ nparticles: 10000
 nparticle_types: 5
 ninteractions: 5
 kmeans_input: 'embedding'
-nframes: 5000
+nframes: 10000
 sigma: 0.005 
-delta_t: 1
+delta_t: 0.5
 v_init: 0
 aggr_type: 'add'
 boundary: 'periodic'
