@@ -3456,10 +3456,11 @@ def data_plot_FIG4sup():
         labels = T1
         print('Use ground truth labels')
 
-    ratio = 1
 
     model_config['nframes'] = 500
     nframes = 500
+
+    ratio = 1
 
     data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4,ratio = ratio, bc_diff=bc_diff, bc_pos=bc_pos, aggr_type=model_config['aggr_type'])
 
@@ -4105,10 +4106,7 @@ def data_plot_FIG3():
             acc = model.lin_edge(in_features.float())
         acc = acc[:, 0]
         acc_list.append(acc)
-
     acc_list = torch.stack(acc_list)
-    # plt.xlim([0, 0.02])
-    # plt.ylim([0, 0.5E6])
     coeff_norm = to_numpy(acc_list)
     trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int), n_components=2,
                       random_state=42, transform_queue_size=0).fit(coeff_norm)
@@ -4312,12 +4310,12 @@ def data_plot_FIG3():
 
     ax = fig.add_subplot(3, 3, 8)
     print('8')
-    plt.scatter(p, popt_list[:, 1], color='k')
+    plt.scatter(p, -popt_list[:, 1], color='k')
     plt.xlim([0, 5.5])
-    plt.ylim([0, 4])
+    plt.ylim([-4, 0])
     plt.xlabel(r'True mass $[a.u.]$', fontsize=14)
-    plt.ylabel(r'Exponential fit $[a.u.]$', fontsize=14)
-    plt.text(0.5, 3.5, f"{np.round(np.mean(popt_list[:, 1]), 3)}+/-{np.round(np.std(popt_list[:, 1]), 3)}",
+    plt.ylabel(r'Exponent fit $[a.u.]$', fontsize=14)
+    plt.text(0.5, -0.5, f"{np.round(np.mean(popt_list[:, 1]), 3)}+/-{np.round(np.std(popt_list[:, 1]), 3)}",
              fontsize=10)
 
     plot_list_2 = []
@@ -4418,6 +4416,16 @@ def data_plot_FIG3():
     rr_ = torch.reshape(rr_, (rr_.shape[0] * rr_.shape[1], 1))
     tl_ = torch.reshape(tl_, (tl_.shape[0] * tl_.shape[1], 1))
     tt[:,1:2] = tl_
+
+    in_features = torch.cat((rr_ / model_config['radius'], 0 * rr_, rr_ / model_config['radius'], vv_, vv_, vv_, vv_, tt), dim=1)
+    with torch.no_grad():
+        pred = model.lin_edge(in_features.float())
+    pred = pred[:, 0]
+    pred=torch.reshape(pred,(100,100))
+    plt.imshow(to_numpy(pred), extent=[0.002, 0.01, to_numpy(torch.min(t[:,0])), to_numpy(torch.max(t[:,0]))], aspect='auto', origin='lower', cmap='jet')
+
+    #### derivate
+
 
     in_features = torch.cat((rr_ / model_config['radius'], 0 * rr_, rr_ / model_config['radius'], vv_, vv_, vv_, vv_, tt), dim=1)
 
@@ -5281,14 +5289,14 @@ if __name__ == '__main__':
     # data_plot_FIG2sup()
     # print(' ')
     # print(' ')
-    # data_plot_FIG3sup()
-    # print(' ')
-    # print(' ')
-    # data_plot_FIG4sup()
+    data_plot_FIG3sup()
+    print(' ')
+    print(' ')
+    data_plot_FIG4sup()
 
     # gravity model
 
-    data_plot_FIG3()
+    # data_plot_FIG3()
 
     # data_plot_FIG4()
 
