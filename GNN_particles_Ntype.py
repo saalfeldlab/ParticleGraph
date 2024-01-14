@@ -1224,6 +1224,15 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             # plt.scatter(X1[:, 0].detach().cpu().numpy(), X1[:, 1].detach().cpu().numpy(), s=10,
             #             c=T1[:, 0].detach().cpu().numpy())
 
+            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
+                                   H1.clone().detach(), A1.clone().detach()), 1)
+
+            dataset = data.Data(x=x, pos=x[:, 1:3])
+            transform_0 = T.Compose([T.Delaunay()])
+            dataset_face = transform_0(dataset).face
+            mesh_pos = torch.cat((x_noise[:, 1:3], torch.ones((x_noise.shape[0], 1), device=device)), dim=1)
+            edge_index_mesh, edge_weight_mesh = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,normalization="None")  # "None", "sym", "rw"
+
         N1 = torch.arange(nparticles, device=device)
         N1 = N1[:, None]
 
@@ -1288,13 +1297,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                 x_list.append(x_noise.clone().detach())
 
             if bMesh:
-                dataset = data.Data(x=x_noise, pos=x_noise[:, 1:3])
-                transform_0 = T.Compose([T.Delaunay()])
-                dataset_face = transform_0(dataset).face
-                mesh_pos = torch.cat((x_noise[:, 1:3], torch.ones((x_noise.shape[0], 1), device=device)), dim=1)
-                edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,
-                                                                       normalization="None")  # "None", "sym", "rw"
-                dataset_mesh = data.Data(x=x_noise, edge_index=edge_index, edge_attr=edge_weight, device=device)
+                dataset_mesh = data.Data(x=x_noise, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
 
             distance = torch.sum(bc_diff(x_noise[:, None, 1:3] - x_noise[None, :, 1:3]) ** 2, axis=2)
             t = torch.Tensor([radius ** 2])  # threshold
