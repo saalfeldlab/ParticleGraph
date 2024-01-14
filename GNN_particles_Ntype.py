@@ -1327,7 +1327,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                     with torch.no_grad():
                         pred = model_mesh(dataset_mesh)
                         H1[mask, 1:2] = pred[mask]
-                    H1[mask, 0:1] += H1[mask, 1:2]
+                    H1[mask, 0:1] += H1[mask, 1:2] * delta_t
                     h_list.append(pred)
 
             if model_config['model'] == 'WaveMesh':
@@ -1338,8 +1338,8 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                     # invmask = invmask[:, 0:1]
                     with torch.no_grad():
                         pred = model_mesh(dataset_mesh)
-                        H1[:, 1:2] += pred[:]
-                    H1[:, 0:1] += H1[:, 1:2]
+                        H1[:, 1:2] += pred[:] * delta_t
+                    H1[:, 0:1] += H1[:, 1:2] * delta_t
                     h_list.append(pred)
 
             if (model_config['model'] == 'RD_Gray_Scott_Mesh') | (model_config['model'] == 'RD_FitzHugh_Nagumo_Mesh') | (model_config['model'] == 'RD_RPS_Mesh'):
@@ -3771,7 +3771,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # config_list=['config_CElegans_32']
