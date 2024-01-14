@@ -17,7 +17,6 @@ import torch_geometric.transforms as T
 import torch_geometric.utils as pyg_utils
 import umap
 import yaml  # need to install pyyaml
-from geomloss import SamplesLoss
 from prettytable import PrettyTable
 from scipy.optimize import curve_fit
 from scipy.spatial import Delaunay
@@ -874,7 +873,7 @@ class MeshLaplacian(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, model_config, device):
+    def __init__(self, model_config, device, aggr_type):
         super(MeshLaplacian, self).__init__(aggr=aggr_type)  # "Add" aggregation.
 
         self.device = device
@@ -5278,9 +5277,6 @@ if __name__ == '__main__':
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
-    scaler = StandardScaler()
-    S_e = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
-
     # arbitrary model plot
 
     # data_plot_FIG2()
@@ -5289,10 +5285,10 @@ if __name__ == '__main__':
     # data_plot_FIG2sup()
     # print(' ')
     # print(' ')
-    data_plot_FIG3sup()
-    print(' ')
-    print(' ')
-    data_plot_FIG4sup()
+    # data_plot_FIG3sup()
+    # print(' ')
+    # print(' ')
+    # data_plot_FIG4sup()
 
     # gravity model
 
@@ -5301,6 +5297,8 @@ if __name__ == '__main__':
     # data_plot_FIG4()
 
     # data_plot_FIG5sup()
+
+    data_plot_FIG5()
 
 
 
