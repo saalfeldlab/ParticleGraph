@@ -1726,6 +1726,11 @@ def data_train(model_config, bSparse=False):
         if epoch == 1:
             min_radius = model_config['min_radius']
             logger.info(f'min_radius: {min_radius}')
+        if (epoch == 2) & (batch_size==1):
+            batch_size = 8
+            print(f'batch_size: {batch_size}')
+            logger.info(f'batch_size: {batch_size}')
+
         if epoch == 3 * Nepochs // 4:
             lra = 1E-3
             lr = 5E-4
@@ -3811,7 +3816,7 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
         ratio = 1
-        data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//4, ratio=ratio, scenario='none')
+        # data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//4, ratio=ratio, scenario='none')
         data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=10)
