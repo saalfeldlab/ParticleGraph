@@ -1,7 +1,7 @@
 Nepochs: 20
-input_size: 4
+input_size: 3
 output_size: 1
-hidden_size: 32 
+hidden_size: 8 
 n_mp_layers: 5
 noise_level: 0
 radius: 0.3
@@ -10,9 +10,9 @@ nparticles: 4225
 nparticle_types: 5
 ninteractions: 5
 kmeans_input: 'plot'
-nframes: 4000
+nframes: 2000
 sigma: 0.005 
-delta_t: 0.25
+delta_t: 0.5
 v_init: 0
 aggr_type: 'add'
 boundary: 'periodic'
@@ -34,5 +34,5 @@ start_frame: 0
 cmap: 'tab10'
 arrow_length: 10
 description: 'Wave equation 5 coefficients'
-sparsity: 'none'
+sparsity: 'replace'
 
