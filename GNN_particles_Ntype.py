@@ -150,6 +150,7 @@ class Laplacian_A(pyg.nn.MessagePassing):
         return laplacian
 
     def message(self, x_i, x_j, edge_attr):
+
         L = edge_attr * x_j[:, 6]
 
         return L[:, None]
@@ -975,9 +976,9 @@ class MeshLaplacian(pyg.nn.MessagePassing):
 
     def message(self, x_i, x_j, edge_attr):
 
-        in_features = (x_j[:, 6:7] - x_i[:, 6:7])
+        L = edge_attr * x_j[:, 6]
 
-        return in_features
+        return L
 
     def update(self, aggr_out):
         return aggr_out  # self.lin_node(aggr_out)
