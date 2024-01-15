@@ -147,6 +147,15 @@ class Laplacian_A(pyg.nn.MessagePassing):
 
         laplacian = self.beta * c * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
 
+        # laplacian = self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
+        # laplacian[2178]
+        # g = edge_index.detach().cpu().numpy()
+        # xx = x.detach().cpu().numpy()
+        # ll = edge_attr.detach().cpu().numpy()
+        # pos = np.argwhere(g[0, :] == 2178)
+        # pos = np.squeeze(pos)
+        # np.sum(ll[pos] * xx[g[1, pos], 6])
+
         return laplacian
 
     def message(self, x_i, x_j, edge_attr):
@@ -978,7 +987,7 @@ class MeshLaplacian(pyg.nn.MessagePassing):
 
         L = edge_attr * x_j[:, 6]
 
-        return L
+        return L[:, None]
 
     def update(self, aggr_out):
         return aggr_out  # self.lin_node(aggr_out)
