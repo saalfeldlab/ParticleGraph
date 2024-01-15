@@ -1667,7 +1667,11 @@ def data_train(model_config, bSparse=False):
     model.train()
     best_loss = np.inf
     list_loss = []
-    data_augmentation_loop = 200
+
+    if 'data_augmentation_loop' in model_config:
+        data_augmentation_loop = model_config['data_augmentation_loop']
+    else:
+        data_augmentation_loop = 200
     print(f'data_augmentation_loop: {data_augmentation_loop}')
     logger.info(f'data_augmentation_loop: {data_augmentation_loop}')
 
