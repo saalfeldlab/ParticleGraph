@@ -1154,6 +1154,8 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
         A1 = torch.rand(nparticles, device=device)
         A1 = A1[:, None]
         A1 = A1 * cycle_length_distrib
+        N1 = torch.arange(nparticles, device=device)
+        N1 = N1[:, None]
 
         if scenario == 'scenario A':
             X1[:, 0] = X1[:, 0] / nparticle_types
@@ -1230,11 +1232,10 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             dataset = data.Data(x=x, pos=x[:, 1:3])
             transform_0 = T.Compose([T.Delaunay()])
             dataset_face = transform_0(dataset).face
-            mesh_pos = torch.cat((x_noise[:, 1:3], torch.ones((x_noise.shape[0], 1), device=device)), dim=1)
+            mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
             edge_index_mesh, edge_weight_mesh = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,normalization="None")  # "None", "sym", "rw"
 
-        N1 = torch.arange(nparticles, device=device)
-        N1 = N1[:, None]
+
 
         time.sleep(0.5)
 
@@ -1451,32 +1452,12 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                             plt.yticks([])
                             plt.axis('off')
                         if (model_config['model'] == 'RD_RPS_Mesh'):
-                            fig = plt.figure(figsize=(12, 4))
-                            ax = fig.add_subplot(1, 3, 1)
-                            colors = torch.sum(x_noise[tri.simplices, 6], axis=1) / 3.0
-                            plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                          facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1.2,cmap='gist_gray')
+                            fig = plt.figure(figsize=(12, 12))
+                            H1_IM=torch.reshape(H1,(100,100,3))
+                            plt.imshow(H1_IM.detach().cpu().numpy(),vmin=0,vmax=1)
                             plt.xticks([])
                             plt.yticks([])
                             plt.axis('off')
-                            ax = fig.add_subplot(1, 3, 2)
-                            colors = torch.sum(x_noise[tri.simplices, 7], axis=1) / 3.0
-                            plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                          facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1.2,cmap='gist_gray')
-                            plt.xticks([])
-                            plt.yticks([])
-                            plt.axis('off')
-                            ax = fig.add_subplot(1, 3, 3)
-                            colors = torch.sum(x_noise[tri.simplices, 8], axis=1) / 3.0
-                            plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                          facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1.2,cmap='gist_gray')
-                            plt.xticks([])
-                            plt.yticks([])
-                            plt.axis('off')
-
-                        # plt.scatter(x_noise[:, 1].detach().cpu().numpy(),x_noise[:, 2].detach().cpu().numpy(), s=10, alpha=0.75,
-                        #                 c=x[:, 6].detach().cpu().numpy(), cmap='gist_gray',vmin=-5000,vmax=5000)
-                        # ax.set_facecolor([0.5,0.5,0.5])
                     else:
                         for n in range(nparticle_types):
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
@@ -3774,7 +3755,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # config_list=['config_CElegans_32']
@@ -3787,7 +3768,7 @@ if __name__ == '__main__':
     # config_list = ['config_wave_testA']
 
     # Test plotting figures paper
-    config_list = ['config_wave_HR'] #, 'config_boids_16_HR'] #['config_RD_RPS','config_RD_RPS_05','config_RD_RPS_025'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
+    config_list = ['config_RD_RPS'] #, 'config_boids_16_HR'] #['config_RD_RPS','config_RD_RPS_05','config_RD_RPS_025'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3827,8 +3808,8 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
         ratio = 1
-        # data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//8, ratio=ratio, scenario='none')
-        data_train(model_config,model_embedding)
+        data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=20) # model_config['nframes']//8, ratio=ratio, scenario='none')
+        # data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=10)
 
