@@ -17,7 +17,7 @@ v_init: 5E-4
 aggr_type: 'mean'
 boundary: 'periodic'  # periodic   'no'  # no boundary condition
 data_augmentation: True
-data_augmentation_loop: 20
+data_augmentation_loop: 50
 batch_size: 8
 embedding: 2
 model: 'PDE_B'
