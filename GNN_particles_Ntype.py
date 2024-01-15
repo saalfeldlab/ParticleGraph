@@ -952,7 +952,7 @@ class MeshLaplacian(pyg.nn.MessagePassing):
         self.embedding = model_config['embedding']
         self.ndataset = model_config['nrun']-1
 
-        self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
+        self.lin_phi = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
 
         self.a = nn.Parameter(
@@ -965,16 +965,19 @@ class MeshLaplacian(pyg.nn.MessagePassing):
         # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         # deg = pyg_utils.degree(edge_index[0], data.num_nodes)
 
-        height = self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
+        laplacian = self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
 
-        return height
+        embedding = self.a[self.data_id, to_numpy(x[:, 0]), :]
+
+        pred = self.lin_phi(torch.cat((laplacian, embedding), dim=-1))
+
+        return pred
 
     def message(self, x_i, x_j, edge_attr):
-        embedding = self.a[self.data_id, to_numpy(x_i[:, 0]), :]
 
-        in_features = torch.cat((edge_attr[:, None], x_j[:, 6:7] - x_i[:, 6:7], embedding), dim=-1)
+        in_features = (x_j[:, 6:7] - x_i[:, 6:7])
 
-        return self.lin_edge(in_features)
+        return in_features
 
     def update(self, aggr_out):
         return aggr_out  # self.lin_node(aggr_out)
@@ -1871,6 +1874,8 @@ def data_train(model_config, bSparse=False):
         plt.xlim([0, Nepochs])
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
+
+        ax = fig.add_subplot(1, 4, 2)
         embedding = []
         for n in range(model.a.shape[0]):
             embedding.append(model.a[n])
@@ -1878,11 +1883,9 @@ def data_train(model_config, bSparse=False):
         embedding = np.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
         embedding_ = embedding
         embedding_particle = []
-
         for m in range(model.a.shape[0]):
             for n in range(nparticle_types):
                 embedding_particle.append(embedding[index_particles[n] + m * nparticles, :])
-        ax = fig.add_subplot(1, 4, 2)
         if (embedding.shape[1] > 2):
             ax = fig.add_subplot(2, 4, 2, projection='3d')
             for n in range(nparticle_types):
@@ -1899,6 +1902,7 @@ def data_train(model_config, bSparse=False):
             else:
                 for n in range(nparticle_types):
                     plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5, color=cmap.color(n))
+
         ax = fig.add_subplot(1, 4, 3)
         if model_config['model'] == 'ElecParticles':
             acc_list = []
@@ -1983,15 +1987,14 @@ def data_train(model_config, bSparse=False):
         elif bMesh:
             f_list = []
             for n in range(nparticles):
-                r0 = torch.tensor(np.linspace(4, 5, 1000)).to(device)
-                r1 = torch.tensor(np.linspace(-250, 250, 1000)).to(device)
+                r = torch.tensor(np.linspace(-250, 250, 1000)).to(device)
                 embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
-                in_features = torch.cat((r0[:, None], r1[:, None], embedding), dim=1)
-                h = model.lin_edge(in_features.float())
+                in_features = torch.cat((r[:,None], embedding), dim=1)
+                h = model.lin_phi(in_features.float())
                 h = h[:, 0]
                 f_list.append(h)
                 if n % 5 == 0:
-                    plt.plot(to_numpy(r1),
+                    plt.plot(to_numpy(r),
                              to_numpy(h) * to_numpy(hnorm), linewidth=1,
                              color='k', alpha=0.05)
             f_list = torch.stack(f_list)
@@ -2005,12 +2008,12 @@ def data_train(model_config, bSparse=False):
                 plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1], s=5)
             plt.xlabel('UMAP 0', fontsize=12)
             plt.ylabel('UMAP 1', fontsize=12)
-
             kmeans = KMeans(init="random", n_clusters=nparticle_types, n_init=1000, max_iter=10000, random_state=13)
             kmeans.fit(proj_interaction)
             for n in range(nparticle_types):
                 plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
                 pos = np.argwhere(kmeans.labels_ == n).squeeze().astype(int)
+
         ax = fig.add_subplot(1, 4, 4)
         for n in range(nparticle_types):
             plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1],
@@ -3772,7 +3775,7 @@ if __name__ == '__main__':
     # config_list = ['config_wave_testA']
 
     # Test plotting figures paper
-    config_list = ['config_boids_16_HR1','config_boids_16_HR2'] #, 'config_boids_16_HR'] #['config_RD_RPS','config_RD_RPS_05','config_RD_RPS_025'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
+    config_list = ['config_wave'] # ['config_boids_16_HR1','config_boids_16_HR2'] #, 'config_boids_16_HR'] #['config_RD_RPS','config_RD_RPS_05','config_RD_RPS_025'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3812,7 +3815,7 @@ if __name__ == '__main__':
                 return torch.remainder(D - .5, 1.0) - .5
 
         ratio = 1
-        data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//20, ratio=ratio, scenario='none')
+        # data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//20, ratio=ratio, scenario='none')
         data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=10)

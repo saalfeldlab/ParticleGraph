@@ -1,7 +1,7 @@
 Nepochs: 20
-input_size: 4
+input_size: 3
 output_size: 1
-hidden_size: 16 
+hidden_size: 8 
 n_mp_layers: 5
 noise_level: 0
 radius: 0.3
