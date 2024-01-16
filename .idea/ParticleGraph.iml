@@ -7,7 +7,7 @@
       <excludeFolder url="file://$MODULE_DIR$/archive" />
       <excludeFolder url="file://$MODULE_DIR$/PicsOutput" />
     </content>
-    <orderEntry type="jdk" jdkName="$USER_HOME$/mambaforge/envs/gnn2 (3)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="cellpose3" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PyDocumentationSettings">

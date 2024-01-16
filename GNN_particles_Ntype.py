@@ -46,23 +46,6 @@ def func_lin(x, a, b):
     return a * x + b
 
 
-def distmat_square(X, Y):
-    return torch.sum(bc_diff(X[:, None, :] - Y[None, :, :]) ** 2, axis=2)
-
-
-def kernel(X, Y):
-    return -torch.sqrt(distmat_square(X, Y))
-
-
-def MMD(X, Y):
-    n = X.shape[0]
-    m = Y.shape[0]
-    a = torch.sum(kernel(X, X)) / n ** 2 + \
-        torch.sum(kernel(Y, Y)) / m ** 2 - \
-        2 * torch.sum(kernel(X, Y)) / (n * m)
-    return a.item()
-
-
 def normalize99(Y, lower=1, upper=99):
     """ normalize image so 0.0 is 1st percentile and 1.0 is 99th percentile """
     X = Y.copy()
@@ -133,11 +116,12 @@ class Laplacian_A(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, aggr_type=[], c=[], beta=[]):
+    def __init__(self, aggr_type=[], c=[], beta=[], bc_diff=[]):
         super(Laplacian_A, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.c = c
         self.beta = beta
+        self.bc_diff = bc_diff
 
     def forward(self, data):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
@@ -173,11 +157,12 @@ class RD_Gray_Scott(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, aggr_type=[], c=[], beta=[]):
+    def __init__(self, aggr_type=[], c=[], beta=[], bc_diff=[]):
         super(RD_Gray_Scott, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.c = c
         self.beta = beta
+        self.bc_diff = bc_diff
 
     def forward(self, data):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
@@ -223,11 +208,12 @@ class RD_FitzHugh_Nagumo(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, aggr_type=[], c=[], beta=[]):
+    def __init__(self, aggr_type=[], c=[], beta=[], bc_diff=[]):
         super(RD_FitzHugh_Nagumo, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.c = c
         self.beta = beta
+        self.bc_diff = bc_diff
 
     def forward(self, data):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
@@ -293,11 +279,12 @@ class RD_RPS(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, aggr_type=[], c=[], beta=[]):
+    def __init__(self, aggr_type=[], c=[], beta=[], bc_diff=[]):
         super(RD_RPS, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.c = c
         self.beta = beta
+        self.bc_diff = bc_diff
 
     def forward(self, data):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
@@ -393,12 +380,13 @@ class PDE_A(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, aggr_type=[], p=[], delta_t=[], sigma=[]):
+    def __init__(self, aggr_type=[], p=[], delta_t=[], sigma=[], bc_diff=[]):
         super(PDE_A, self).__init__(aggr=aggr_type)  # "mean" aggregation.
 
         self.p = p
         self.sigma = sigma
         self.delta_t = delta_t
+        self.bc_diff = bc_diff
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
@@ -408,11 +396,11 @@ class PDE_A(pyg.nn.MessagePassing):
         return pred
 
     def message(self, x_i, x_j):
-        r = torch.sum(bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)  # squared distance
+        r = torch.sum(self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)  # squared distance
         pp = self.p[to_numpy(x_i[:, 5]), :]
         psi = pp[:, 0] * torch.exp(-r ** pp[:, 1] / (2 * self.sigma ** 2)) - pp[:, 2] * torch.exp(
             -r ** pp[:, 3] / (2 * self.sigma ** 2))
-        return psi[:, None] * bc_diff(x_j[:, 1:3] - x_i[:, 1:3])
+        return psi[:, None] * self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3])
 
     def psi(self, r, p):
         return r * (p[0] * torch.exp(-r ** (2 * p[1]) / (2 * self.sigma ** 2)) - p[2] * torch.exp(-r ** (2 * p[3]) / (2 * self.sigma ** 2)))
@@ -422,13 +410,14 @@ class PDE_embedding(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, aggr_type=[], p=[], delta_t=[], prediction=[], sigma=[]):
+    def __init__(self, aggr_type=[], p=[], delta_t=[], prediction=[], sigma=[], bc_diff=[]):
         super(PDE_embedding, self).__init__(aggr='mean')  # "mean" aggregation.
 
         self.p = p
         self.delta_t = delta_t
         self.prediction = prediction
         self.sigma = torch.tensor([sigma], device=device)
+        self.bc_diff = bc_diff
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
@@ -454,11 +443,12 @@ class PDE_B(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, aggr_type=[], p=[], delta_t=[]):
+    def __init__(self, aggr_type=[], p=[], delta_t=[], bc_diff=[]):
         super(PDE_B, self).__init__(aggr=aggr_type)  # "mean" aggregation.
 
         self.p = p
         self.delta_t = delta_t
+        self.bc_diff = bc_diff
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
@@ -477,15 +467,15 @@ class PDE_B(pyg.nn.MessagePassing):
         return pred
 
     def message(self, x_i, x_j):
-        r = torch.sum(bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)  # distance squared
+        r = torch.sum(self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)  # distance squared
 
         pp = self.p[to_numpy(x_i[:, 5]), :]
 
-        cohesion = pp[:, 0:1].repeat(1, 2) * 0.5E-5 * bc_diff(x_j[:, 1:3] - x_i[:, 1:3])
+        cohesion = pp[:, 0:1].repeat(1, 2) * 0.5E-5 * self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3])
 
-        alignment = pp[:, 1:2].repeat(1, 2) * 5E-4 * bc_diff(x_j[:, 3:5] - x_i[:, 3:5])
+        alignment = pp[:, 1:2].repeat(1, 2) * 5E-4 * self.bc_diff(x_j[:, 3:5] - x_i[:, 3:5])
 
-        separation = pp[:, 2:3].repeat(1, 2) * 1E-8 * bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) / (r[:, None].repeat(1, 2))
+        separation = pp[:, 2:3].repeat(1, 2) * 1E-8 * self.bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) / (r[:, None].repeat(1, 2))
 
         return (separation + alignment + cohesion)
 
@@ -499,7 +489,7 @@ class PDE_E(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, aggr_type=[], p=[], delta_t=[], clamp=[], pred_limit=[], prediction=[]):
+    def __init__(self, aggr_type=[], p=[], delta_t=[], clamp=[], pred_limit=[], prediction=[], bc_diff=[]):
         super(PDE_E, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.p = p
@@ -507,6 +497,7 @@ class PDE_E(pyg.nn.MessagePassing):
         self.clamp = clamp
         self.pred_limit = pred_limit
         self.prediction = prediction
+        self.bc_diff = bc_diff
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
@@ -515,7 +506,7 @@ class PDE_E(pyg.nn.MessagePassing):
         return acc
 
     def message(self, x_i, x_j):
-        r = torch.sqrt(torch.sum(bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1))
+        r = torch.sqrt(torch.sum(self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1))
         # r = torch.clamp(r, min=self.clamp)
         r = torch.concatenate((r[:, None], r[:, None]), -1)
 
@@ -527,7 +518,7 @@ class PDE_E(pyg.nn.MessagePassing):
         p2 = p2.squeeze()
         p2 = torch.concatenate((p2[:, None], p2[:, None]), -1)
 
-        acc = p1 * p2 * bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) / r ** 3
+        acc = p1 * p2 * self.bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) / r ** 3
         # acc = torch.clamp(acc, max=self.pred_limit)
 
         return acc
@@ -541,13 +532,14 @@ class PDE_G(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, aggr_type=[], p=[], delta_t=[], clamp=[], pred_limit=[]):
+    def __init__(self, aggr_type=[], p=[], delta_t=[], clamp=[], pred_limit=[], bc_diff=[]):
         super(PDE_G, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.p = p
         self.delta_t = delta_t
         self.clamp = clamp
         self.pred_limit = pred_limit
+        self.bc_diff = bc_diff
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
@@ -556,7 +548,7 @@ class PDE_G(pyg.nn.MessagePassing):
         return acc
 
     def message(self, x_i, x_j):
-        r = torch.sqrt(torch.sum(bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1))
+        r = torch.sqrt(torch.sum(self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1))
         r = torch.clamp(r, min=self.clamp)
         r = torch.concatenate((r[:, None], r[:, None]), -1)
 
@@ -564,7 +556,7 @@ class PDE_G(pyg.nn.MessagePassing):
         p = p.squeeze()
         p = torch.concatenate((p[:, None], p[:, None]), -1)
 
-        acc = p * bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) / r ** 3
+        acc = p * self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) / r ** 3
 
         return torch.clamp(acc, max=self.pred_limit)
 
@@ -580,7 +572,7 @@ class InteractionParticles(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, model_config, device):
+    def __init__(self, model_config, device, aggr_type=[], bc_diff=[]):
 
         super(InteractionParticles, self).__init__(aggr=aggr_type)  # "Add" aggregation.
 
@@ -601,6 +593,7 @@ class InteractionParticles(pyg.nn.MessagePassing):
         self.nlayers_update = model_config['nlayers_update']
         self.hidden_size_update = model_config['hidden_size_update']
         self.sigma = model_config['sigma']
+        self.bc_diff = bc_diff
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
@@ -640,10 +633,10 @@ class InteractionParticles(pyg.nn.MessagePassing):
 
     def message(self, x_i, x_j):
 
-        r = torch.sqrt(torch.sum(bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)) / self.radius  # squared distance
+        r = torch.sqrt(torch.sum(self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)) / self.radius  # squared distance
         r = r[:, None]
 
-        delta_pos = bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) / self.radius
+        delta_pos = self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) / self.radius
         x_i_vx = x_i[:, 3:4] / self.vnorm[4]
         x_i_vy = x_i[:, 4:5] / self.vnorm[4]
         x_j_vx = x_j[:, 3:4] / self.vnorm[4]
@@ -695,7 +688,7 @@ class InteractionCElegans(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, model_config, device):
+    def __init__(self, model_config, device, aggr_type=[], bc_diff=[]):
 
         super(InteractionCElegans, self).__init__(aggr='mean')  # "Add" aggregation.
 
@@ -715,6 +708,7 @@ class InteractionCElegans(pyg.nn.MessagePassing):
         self.upgrade_type = model_config['upgrade_type']
         self.nlayers_update = model_config['nlayers_update']
         self.hidden_size_update = model_config['hidden_size_update']
+        self.bc_diff = bc_diff
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
@@ -747,10 +741,10 @@ class InteractionCElegans(pyg.nn.MessagePassing):
 
     def message(self, x_i, x_j, time):
 
-        r = torch.sqrt(torch.sum(bc_diff(x_i[:, 1:4] - x_j[:, 1:4]) ** 2, axis=1))  # squared distance
+        r = torch.sqrt(torch.sum(self.bc_diff(x_i[:, 1:4] - x_j[:, 1:4]) ** 2, axis=1))  # squared distance
         r = r[:, None]
 
-        delta_pos = bc_diff(x_i[:, 1:4] - x_j[:, 1:4])
+        delta_pos = self.bc_diff(x_i[:, 1:4] - x_j[:, 1:4])
         embedding = self.a[self.data_id, to_numpy(x_i[:, 0]).astype(int), :]
         in_features = torch.cat((delta_pos, r, x_i[:, 4:7], x_j[:, 4:7], embedding, time[:, None]), dim=-1)
 
@@ -767,7 +761,7 @@ class GravityParticles(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, model_config, device):
+    def __init__(self, aggr_type=[], model_config=[], device=[], bc_diff=[]):
 
         super(GravityParticles, self).__init__(aggr='add')  # "Add" aggregation.
 
@@ -785,6 +779,7 @@ class GravityParticles(pyg.nn.MessagePassing):
         self.ndataset = model_config['nrun'] - 1
         self.clamp = model_config['clamp']
         self.pred_limit = model_config['pred_limit']
+        self.bc_diff = bc_diff
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
@@ -815,10 +810,10 @@ class GravityParticles(pyg.nn.MessagePassing):
 
     def message(self, x_i, x_j):
 
-        r = torch.sqrt(torch.sum(bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) ** 2, axis=1)) / self.radius  # squared distance
+        r = torch.sqrt(torch.sum(self.bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) ** 2, axis=1)) / self.radius  # squared distance
         r = r[:, None]
 
-        delta_pos = bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) / self.radius
+        delta_pos = self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) / self.radius
         x_i_vx = x_i[:, 3:4] / self.vnorm[4]
         x_i_vy = x_i[:, 4:5] / self.vnorm[5]
         x_j_vx = x_j[:, 3:4] / self.vnorm[4]
@@ -856,7 +851,7 @@ class ElecParticles(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, model_config, device):
+    def __init__(self, aggr_type=[], model_config=[], device=[], bc_diff=[]):
 
         super(ElecParticles, self).__init__(aggr='add')  # "Add" aggregation.
 
@@ -874,6 +869,7 @@ class ElecParticles(pyg.nn.MessagePassing):
         self.upgrade_type = model_config['upgrade_type']
         self.clamp = model_config['clamp']
         self.pred_limit = model_config['pred_limit']
+        self.bc_diff = bc_diff
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
@@ -905,10 +901,10 @@ class ElecParticles(pyg.nn.MessagePassing):
 
     def message(self, x_i, x_j):
 
-        r = torch.sqrt(torch.sum(bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)) / self.radius  # squared distance
+        r = torch.sqrt(torch.sum(self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)) / self.radius  # squared distance
         r = r[:, None]
 
-        delta_pos = bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) / self.radius
+        delta_pos = self.bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) / self.radius
         x_i_vx = x_i[:, 3:4] / self.vnorm[4]
         x_i_vy = x_i[:, 4:5] / self.vnorm[5]
         x_j_vx = x_j[:, 3:4] / self.vnorm[4]
@@ -947,7 +943,7 @@ class MeshLaplacian(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, model_config, device):
+    def __init__(self, aggr_type=[], model_config=[], device=[], bc_diff=[]):
         super(MeshLaplacian, self).__init__(aggr=aggr_type)  # "Add" aggregation.
 
         self.device = device
@@ -961,6 +957,7 @@ class MeshLaplacian(pyg.nn.MessagePassing):
         self.noise_level = model_config['noise_level']
         self.embedding = model_config['embedding']
         self.ndataset = model_config['nrun']-1
+        self.bc_diff = bc_diff
 
         self.lin_phi = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
@@ -1037,6 +1034,18 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
     bMesh = 'Mesh' in model_config['model']
     bDivision = 'division_cycle' in model_config
     delta_t = model_config['delta_t']
+    aggr_type = model_config['aggr_type']
+
+    if model_config['boundary'] == 'no':  # change this for usual BC
+        def bc_pos(X):
+            return X
+        def bc_diff(D):
+            return D
+    else:
+        def bc_pos(X):
+            return torch.remainder(X, 1.0)
+        def bc_diff(D):
+            return torch.remainder(D - .5, 1.0) - .5
 
     cycle_length = torch.clamp(torch.abs(
         torch.ones(nparticle_types, 1, device=device) * 400 + torch.randn(nparticle_types, 1, device=device) * 150),
@@ -1067,9 +1076,9 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                 for n in range(nparticle_types):
                     p[n] = torch.tensor(model_config['p'][n])
         if nparticle_types == 1:
-            model = PDE_A(aggr_type=aggr_type, p=p, delta_t=model_config['delta_t'], sigma=model_config['sigma'])
+            model = PDE_A(aggr_type=aggr_type, p=p, delta_t=model_config['delta_t'], sigma=model_config['sigma'], bc_diff=bc_diff)
         else:
-            model = PDE_A(aggr_type=aggr_type, p=torch.squeeze(p), delta_t=model_config['delta_t'], sigma=model_config['sigma'])
+            model = PDE_A(aggr_type=aggr_type, p=torch.squeeze(p), delta_t=model_config['delta_t'], sigma=model_config['sigma'], bc_diff=bc_diff)
         psi_output = []
         for n in range(nparticle_types):
             psi_output.append(model.psi(rr, torch.squeeze(p[n])))
@@ -1082,9 +1091,9 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             for n in range(nparticle_types):
                 p[n] = torch.tensor(model_config['p'][n])
         if nparticle_types == 1:
-            model = PDE_A(aggr_type=aggr_type, p=p, delta_t=model_config['delta_t'])
+            model = PDE_A(aggr_type=aggr_type, p=p, delta_t=model_config['delta_t'], bc_diff=bc_diff)
         else:
-            model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), delta_t=model_config['delta_t'])
+            model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), delta_t=model_config['delta_t'], bc_diff=bc_diff)
         psi_output = []
         for n in range(nparticle_types):
             psi_output.append(model.psi(rr, torch.squeeze(p[n])))
@@ -1097,7 +1106,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             for n in range(nparticle_types):
                 p[n] = torch.tensor(model_config['p'][n])
         model = PDE_G(aggr_type=aggr_type, p=torch.squeeze(p), delta_t=model_config['delta_t'],
-                      clamp=model_config['clamp'], pred_limit=model_config['pred_limit'])
+                      clamp=model_config['clamp'], pred_limit=model_config['pred_limit'], bc_diff=bc_diff)
         psi_output = []
         for n in range(nparticle_types):
             psi_output.append(model.psi(rr, torch.squeeze(p[n])))
@@ -1112,7 +1121,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                 torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
         model = PDE_E(aggr_type=aggr_type, p=torch.squeeze(p), delta_t=model_config['delta_t'],
                       clamp=model_config['clamp'], pred_limit=model_config['pred_limit'],
-                      prediction=model_config['prediction'])
+                      prediction=model_config['prediction'], bc_diff=bc_diff)
         psi_output = []
         for n in range(nparticle_types):
             for m in range(nparticle_types):
@@ -1124,19 +1133,19 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             for n in range(nparticle_types):
                 p[n] = torch.tensor(model_config['p'][n])
         model = PDE_G(aggr_type=aggr_type, p=torch.squeeze(p), delta_t=model_config['delta_t'],
-                      clamp=model_config['clamp'], pred_limit=model_config['pred_limit'])
+                      clamp=model_config['clamp'], pred_limit=model_config['pred_limit'], bc_diff=bc_diff)
         c = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         for n in range(nparticle_types):
             c[n] = torch.tensor(model_config['c'][n])
 
         if (model_config['model'] == 'RD_Gray_Scott_Mesh'):
-            model_mesh = RD_Gray_Scott(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'])
+            model_mesh = RD_Gray_Scott(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'], bc_diff=bc_diff)
         elif (model_config['model'] == 'RD_FitzHugh_Nagumo_Mesh'):
-            model_mesh = RD_FitzHugh_Nagumo(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'])
+            model_mesh = RD_FitzHugh_Nagumo(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'], bc_diff=bc_diff)
         elif (model_config['model'] == 'RD_RPS_Mesh'):
-            model_mesh = RD_RPS(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'])
+            model_mesh = RD_RPS(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'], bc_diff=bc_diff)
         elif (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
-            model_mesh = Laplacian_A(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'])
+            model_mesh = Laplacian_A(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'], bc_diff=bc_diff)
         psi_output = []
         for n in range(nparticle_types):
             psi_output.append(model.psi(rr, torch.squeeze(p[n])))
@@ -1565,6 +1574,18 @@ def data_train(model_config, bSparse=False):
     bRegul = 'regul' in model_config['sparsity']
     bReplace = 'replace' in model_config['sparsity']
     kmeans_input = model_config['kmeans_input']
+    aggr_type = model_config['aggr_type']
+
+    if model_config['boundary'] == 'no':  # change this for usual BC
+        def bc_pos(X):
+            return X
+        def bc_diff(D):
+            return D
+    else:
+        def bc_pos(X):
+            return torch.remainder(X, 1.0)
+        def bc_diff(D):
+            return torch.remainder(D - .5, 1.0) - .5
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -1632,15 +1653,15 @@ def data_train(model_config, bSparse=False):
         logger.info(f'hnorm : {to_numpy(hnorm)}')
 
     if model_config['model'] == 'GravityParticles':
-        model = GravityParticles(model_config, device)
+        model = GravityParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if model_config['model'] == 'ElecParticles':
-        model = ElecParticles(model_config, device)
+        model = ElecParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if (model_config['model'] == 'PDE_A') | (model_config['model'] == 'PDE_B'):
-        model = InteractionParticles(model_config, device)
+        model = InteractionParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if (model_config['model'] == 'DiffMesh'):
-        model = MeshLaplacian(model_config, device)
+        model = MeshLaplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if (model_config['model'] == 'WaveMesh'):
-        model = MeshLaplacian(model_config, device)
+        model = MeshLaplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
 
     # net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_17.pt"
     # state_dict = torch.load(net,map_location=device)
@@ -2076,9 +2097,9 @@ def data_train(model_config, bSparse=False):
 
 def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_particles=0, prev_nparticles=0, new_nparticles=0,
               prev_index_particles=0, best_model=0, step=5, bTest='', folder_out='tmp_recons', initial_map='',forced_embedding=[], forced_color=0):
-    if bPrint:
-        print('')
-        print('Plot validation test ... ')
+
+    print('')
+    print('Plot validation inference ... ')
 
     model = []
     radius = model_config['radius']
@@ -2089,6 +2110,20 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
     nframes = model_config['nframes']
     bMesh = (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh')
     delta_t = model_config['delta_t']
+    aggr_type = model_config['aggr_type']
+
+    if model_config['boundary'] == 'no':  # change this for usual BC
+        def bc_pos(X):
+            return X
+
+        def bc_diff(D):
+            return D
+    else:
+        def bc_pos(X):
+            return torch.remainder(X, 1.0)
+
+        def bc_diff(D):
+            return torch.remainder(D - .5, 1.0) - .5
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
@@ -2100,9 +2135,9 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
     if (model_config['model'] == 'PDE_A') | (model_config['model'] == 'PDE_B'):
-        model = InteractionParticles(model_config, device)
+        model = InteractionParticles(aggr_typer=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if model_config['model'] == 'GravityParticles':
-        model = GravityParticles(model_config, device)
+        model = GravityParticles(aggr_typer=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
         p_mass = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         p_mass = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
         T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
@@ -2110,7 +2145,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
             T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
         T1 = torch.concatenate((T1[:, None], T1[:, None]), 1)
     if model_config['model'] == 'ElecParticles':
-        model = ElecParticles(model_config, device)
+        model = ElecParticles(aggr_typer=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
         p_elec = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         for n in range(nparticle_types):
             p_elec[n] = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
@@ -2119,7 +2154,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
             T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
         T1 = torch.concatenate((T1[:, None], T1[:, None]), 1)
     if model_config['model'] == 'GravityParticles':
-        model = GravityParticles(model_config, device)
+        model = GravityParticles(aggr_typer=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if bMesh:
 
         p = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
@@ -2132,7 +2167,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         c = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         for n in range(nparticle_types):
             c[n] = torch.tensor(model_config['c'][n])
-        model_mesh = MeshLaplacian(model_config, device)
+        model_mesh = MeshLaplacian(model_config=model_config, device=device)
 
     files = glob.glob(f"./{log_dir}/tmp_recons/*")
     for f in files:
@@ -2325,8 +2360,6 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         else:
             rmserr = torch.sqrt(torch.mean(torch.sum(bc_diff(x[:, 1:3] - x0_next[:, 1:3]) ** 2, axis=1)))
             rmserr_list.append(rmserr.item())
-            discrepency = MMD(x[:, 1:3], x0[:, 1:3])
-            discrepency_list.append(discrepency)
 
         if (it % step == 0) & (it >= 0) & bVisu:
 
@@ -2437,12 +2470,6 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
                 ax.set_ylabel('RMSE [a.u]', fontsize="14", color='k')
                 if bMesh:
                     plt.ylim([0, 5000])
-                else:
-                    ax2 = ax.twinx()
-                    plt.plot(np.arange(len(discrepency_list)), discrepency_list, label='Maximum Mean Discrepencies',
-                             c='b')
-                    ax2.set_ylabel('MMD [a.u]', fontsize="14", color='b')
-                    ax2.set_ylim([0, 2E-3])
 
                 if bDetails:
                     ax = fig.add_subplot(2, 5, 6)
@@ -2488,7 +2515,6 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
     print(f'RMSE: {np.round(rmserr.item(), 4)}')
     if bPrint:
         print(f'dataset_name: {dataset_name}')
-        # print(f'MMD: {np.round(discrepency, 4)}')
 
     torch.save(x_recons, f'{log_dir}/x_list.pt')
     torch.save(y_recons, f'{log_dir}/y_list.pt')
@@ -2505,6 +2531,20 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
     nframes = model_config['nframes']
     bMesh = (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh')
     nrun = model_config['nrun']
+    aggr_type = model_config['aggr_type']
+
+    if model_config['boundary'] == 'no':  # change this for usual BC
+        def bc_pos(X):
+            return X
+
+        def bc_diff(D):
+            return D
+    else:
+        def bc_pos(X):
+            return torch.remainder(X, 1.0)
+
+        def bc_diff(D):
+            return torch.remainder(D - .5, 1.0) - .5
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -2660,13 +2700,13 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
         hnorm = torch.std(h)
         torch.save(hnorm, os.path.join(log_dir, 'hnorm.pt'))
         print(hnorm)
-        model = MeshLaplacian(model_config, device)
+        model = MeshLaplacian(aggr_typer=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if model_config['model'] == 'GravityParticles':
-        model = GravityParticles(model_config, device)
+        model = GravityParticles(aggr_typer=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if model_config['model'] == 'ElecParticles':
-        model = ElecParticles(model_config, device)
+        model = ElecParticles(aggr_typer=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if (model_config['model'] == 'PDE_A') | (model_config['model'] == 'PDE_B'):
-        model = InteractionParticles(model_config, device)
+        model = InteractionParticles(aggr_typer=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
         print(f'Training InteractionParticles')
 
     # if best_model == -1:
@@ -3328,6 +3368,20 @@ def data_train_shrofflab_celegans(model_config):
     bRegul = 'regul' in model_config['sparsity']
     bReplace = 'replace' in model_config['sparsity']
     Nepochs = model_config['Nepochs']
+    aggr_type = model_config['aggr_type']
+
+    if model_config['boundary'] == 'no':  # change this for usual BC
+        def bc_pos(X):
+            return X
+
+        def bc_diff(D):
+            return D
+    else:
+        def bc_pos(X):
+            return torch.remainder(X, 1.0)
+
+        def bc_diff(D):
+            return torch.remainder(D - .5, 1.0) - .5
 
     # training file management ###
 
@@ -3425,7 +3479,7 @@ def data_train_shrofflab_celegans(model_config):
     logger.info(
         f'xnorm vnorm ynorm: {to_numpy(xnorm), to_numpy(vnorm), to_numpy(ynorm)}')
 
-    model = InteractionCElegans(model_config, device)
+    model = InteractionCElegans(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
 
     lra = 1E-3
     lr = 1E-3
@@ -3633,6 +3687,20 @@ def data_test_shrofflab_celegans(model_config):
     bRegul = 'regul' in model_config['sparsity']
     bReplace = 'replace' in model_config['sparsity']
     Nepochs = model_config['Nepochs']
+    aggr_type = model_config['aggr_type']
+
+    if model_config['boundary'] == 'no':  # change this for usual BC
+        def bc_pos(X):
+            return X
+
+        def bc_diff(D):
+            return D
+    else:
+        def bc_pos(X):
+            return torch.remainder(X, 1.0)
+
+        def bc_diff(D):
+            return torch.remainder(D - .5, 1.0) - .5
 
     # load dataset ###
 
@@ -3682,7 +3750,7 @@ def data_test_shrofflab_celegans(model_config):
 
     print('set up model ...')
 
-    model = InteractionCElegans(model_config, device)
+    model = InteractionCElegans(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     print(f'network: {net}')
@@ -3812,17 +3880,6 @@ if __name__ == '__main__':
                 model_config[key] = value
 
         cmap = cc(model_config=model_config)
-        aggr_type = model_config['aggr_type']
-        # if model_config['boundary'] == 'no':  # change this for usual BC
-        #     def bc_pos(X):
-        #         return X
-        #     def bc_diff(D):
-        #         return D
-        # else:
-        #     def bc_pos(X):
-        #         return torch.remainder(X, 1.0)
-        #     def bc_diff(D):
-        #         return torch.remainder(D - .5, 1.0) - .5
 
         ratio = 1
         data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//20, ratio=ratio, scenario='none')
