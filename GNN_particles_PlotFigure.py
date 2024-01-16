@@ -45,7 +45,7 @@ class PDE_B_extract(pyg.nn.MessagePassing):
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
     def __init__(self, aggr_type=[], p=[], delta_t=[], bc_diff=[]):
-        super(PDE_B, self).__init__(aggr=aggr_type)  # "mean" aggregation.
+        super(PDE_B_extract, self).__init__(aggr=aggr_type)  # "mean" aggregation.
 
         self.p = p
         self.delta_t = delta_t
@@ -80,10 +80,13 @@ class PDE_B_extract(pyg.nn.MessagePassing):
         self.alignment = alignment
         self.separation = separation
 
-        r = torch.sqrt(torch.sum(self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)) / self.radius  # squared distance
-        r = r[:, None]
+        radius: 0.04
         vnorm= torch.tensor(0.0002, device='cuda:0', dtype=torch.float64)
-        delta_pos = self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) / self.radius
+
+        r = torch.sqrt(torch.sum(self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)) / radius  # squared distance
+        r = r[:, None]
+
+        delta_pos = self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) / radius
         x_i_vx = x_i[:, 3:4] / vnorm
         x_i_vy = x_i[:, 4:5] / vnorm
         x_j_vx = x_j[:, 3:4] / vnorm
