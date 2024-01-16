@@ -109,23 +109,6 @@ def data_plot_FIG2():
     print('Graph files N: ', NGraphs - 1)
     time.sleep(0.5)
 
-    # arr = np.arange(0, NGraphs)
-    # x_list=[]
-    # y_list=[]
-    # for run in arr:
-    #     x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
-    #     y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
-    #     x_list.append(torch.stack(x))
-    #     y_list.append(torch.stack(y))
-    # x = torch.stack(x_list)
-    # x = torch.reshape(x,(x.shape[0] * x.shape[1] * x.shape[2], x.shape[3]))
-    # y = torch.stack(y_list)
-    # y = torch.reshape(y,(y.shape[0]*y.shape[1]*y.shape[2],y.shape[3]))
-    # vnorm = norm_velocity(x, device)
-    # ynorm = norm_acceleration(y, device)
-    # torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
-    # torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
-    # print (vnorm,ynorm)
 
     x_list = []
     y_list = []
@@ -136,25 +119,7 @@ def data_plot_FIG2():
     print('Load normalizations ...')
     time.sleep(1)
 
-    if False:  # analyse tmp_recons
-        x = torch.load(f'{log_dir}/x_list.pt')
-        y = torch.load(f'{log_dir}/y_list.pt')
-        for k in np.arange(0, len(x) - 1, 4):
-            distance = torch.sum(bc_diff(x[k][:, None, 1:3] - x[k][None, :, 1:3]) ** 2, axis=2)
-            t = torch.Tensor([radius ** 2])  # threshold
-            adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
-            edge_index = adj_t.nonzero().t().contiguous()
-            dataset = data.Data(x=x, edge_index=edge_index)
-            distance = np.sqrt(to_numpy(distance[edge_index[0, :], edge_index[1, :]]))
-            deg = degree(dataset.edge_index[0], dataset.num_nodes)
-            deg_list.append(to_numpy(deg))
-            distance_list.append([np.mean(distance), np.std(distance)])
-            x_stat.append(to_numpy(torch.concatenate((torch.mean(x[k][:, 3:5], axis=0), torch.std(x[k][:, 3:5], axis=0)), axis=-1)))
-            y_stat.append(to_numpy(torch.concatenate((torch.mean(y[k], axis=0), torch.std(y[k], axis=0)), axis=-1)))
-        x_list.append(torch.stack(x))
-        y_list.append(torch.stack(y))
-    else:
-        for run in trange(NGraphs):
+    for run in trange(NGraphs):
             x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
             y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
             if run == 0:
@@ -451,7 +416,6 @@ def data_plot_FIG2():
                     color=cmap.color(n), s=0.1)
         plt.xlabel(r'UMAP 0', fontsize=14)
         plt.ylabel(r'UMAP 1', fontsize=14)
-    torch.save(torch.tensor(new_labels, device=device), os.path.join(log_dir, f'labels_20.pt'))
     model_a_ = model.a.clone().detach()
     model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
     t = []
@@ -666,13 +630,13 @@ def data_plot_FIG2sup():
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     cm = 1 / 2.54 * 3 / 2.3
-    fig = plt.figure(figsize=(22, 32))
+    fig = plt.figure(figsize=(18, 31))
     plt.ion()
 
     #################### first set of plots
 
     ratio = 1
-    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4,ratio = ratio, bc_diff=bc_diff, bc_pos=bc_pos, aggr_type=model_config['aggr_type'])
+    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4, ratio = ratio, device=device)
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -681,9 +645,6 @@ def data_plot_FIG2sup():
 
     model = InteractionParticles(model_config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_diff=bc_diff)
 
-    files = glob.glob(f"./{log_dir}/tmp_recons/*")
-    for f in files:
-        os.remove(f)
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
     NGraphs = int(len(graph_files))
@@ -753,7 +714,7 @@ def data_plot_FIG2sup():
 
         if (it % step == 0) & (it >= 0):
 
-            ax = fig.add_subplot(8, 6, 1+it // step)
+            ax = fig.add_subplot(8, 5, 1+it // step)
             x_ = x0
             sc = 4
             plt.scatter(x_[:, 1].detach().cpu(), x_[:, 2].detach().cpu(), s=sc, color=cmap.color(to_numpy(labels)))
@@ -762,7 +723,7 @@ def data_plot_FIG2sup():
             plt.xlim([0, 1])
             plt.ylim([0, 1])
             plt.tight_layout()
-            ax = fig.add_subplot(8, 6, 7+it // step)
+            ax = fig.add_subplot(8, 5, 6+it // step)
             x_ = x
             sc = 4
             plt.scatter(x_[:, 1].detach().cpu(), x_[:, 2].detach().cpu(), s=sc, color=cmap.color(to_numpy(labels)))
@@ -772,22 +733,6 @@ def data_plot_FIG2sup():
             plt.ylim([0, 1])
             plt.tight_layout()
 
-    ax = fig.add_subplot(8, 6, 12)
-
-    temp1 = torch.cat((x, x0_next), 0)
-    temp2 = torch.tensor(np.arange(nparticles), device=device)
-    temp3 = torch.tensor(np.arange(nparticles) + nparticles, device=device)
-    temp4 = torch.concatenate((temp2[:, None], temp3[:, None]), 1)
-    temp4 = torch.t(temp4)
-    distance3 = torch.sqrt(torch.sum((x[:, 1:3] - x0_next[:, 1:3]) ** 2, 1))
-    p = torch.argwhere(distance3 < 0.3)
-    pos = dict(enumerate(np.array((temp1[:, 1:3]).detach().cpu()), 0))
-    dataset = data.Data(x=temp1[:, 1:3], edge_index=torch.squeeze(temp4[:, p]))
-    vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False)
-    plt.xlim([0, 1])
-    plt.ylim([0, 1])
-    plt.text(0.1, 0.9, f"RMSE: {np.round(rmserr.item(), 4)}", fontsize=18)
 
     plt.tight_layout()
     plt.savefig('Fig2_supp.pdf', format="pdf", dpi=300)
@@ -829,7 +774,7 @@ def data_plot_FIG2sup():
 
     ratio = 1
 
-    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4,ratio = ratio, bc_diff=bc_diff, bc_pos=bc_pos, aggr_type=model_config['aggr_type'])
+    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4,ratio = ratio, device=device)
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -871,7 +816,6 @@ def data_plot_FIG2sup():
 
     step=model_config['nframes']//5
 
-
     for it in trange(nframes - 1):
 
         x0 = x_list[0][it].clone().detach()
@@ -906,7 +850,7 @@ def data_plot_FIG2sup():
 
         if (it % step == 0) & (it >= 0):
 
-            ax = fig.add_subplot(8, 6, 12 + 1+it // step)
+            ax = fig.add_subplot(8, 5, 11+it // step)
             x_ = x0
             sc = 4
             plt.scatter(x_[:, 1].detach().cpu(), x_[:, 2].detach().cpu(), s=sc, color=cmap.color(to_numpy(labels)))
@@ -915,7 +859,7 @@ def data_plot_FIG2sup():
             plt.xlim([0, 1])
             plt.ylim([0, 1])
             plt.tight_layout()
-            ax = fig.add_subplot(8, 6, 12 + 7+it // step)
+            ax = fig.add_subplot(8, 5, 16+it // step)
             x_ = x
             sc = 4
             plt.scatter(x_[:, 1].detach().cpu(), x_[:, 2].detach().cpu(), s=sc, color=cmap.color(to_numpy(labels)))
@@ -925,44 +869,18 @@ def data_plot_FIG2sup():
             plt.ylim([0, 1])
             plt.tight_layout()
 
-    ax = fig.add_subplot(8, 6, 24)
-
-    temp1 = torch.cat((x, x0_next), 0)
-    temp2 = torch.tensor(np.arange(nparticles), device=device)
-    temp3 = torch.tensor(np.arange(nparticles) + nparticles, device=device)
-    temp4 = torch.concatenate((temp2[:, None], temp3[:, None]), 1)
-    temp4 = torch.t(temp4)
-    distance3 = torch.sqrt(torch.sum((x[:, 1:3] - x0_next[:, 1:3]) ** 2, 1))
-    p = torch.argwhere(distance3 < 0.3)
-    pos = dict(enumerate(np.array((temp1[:, 1:3]).detach().cpu()), 0))
-    dataset = data.Data(x=temp1[:, 1:3], edge_index=torch.squeeze(temp4[:, p]))
-    vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False)
-    plt.xlim([0, 1])
-    plt.ylim([0, 1])
-    plt.text(0.1, 0.9, f"RMSE: {np.round(rmserr.item(), 4)}", fontsize=18)
-
     plt.tight_layout()
     plt.savefig('Fig2_supp.pdf', format="pdf", dpi=300)
     torch.cuda.empty_cache()
 
-
     #################### third set of plots
-
 
     model_config['nframes'] = 250
     nframes = 250
     ratio = 2
-
-    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4, ratio = ratio, bc_diff=bc_diff, bc_pos=bc_pos, aggr_type=model_config['aggr_type'])
-
-
+    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4, ratio = ratio, device=device)
     model = InteractionParticles(model_config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_diff=bc_diff)
 
-
-    files = glob.glob(f"./{log_dir}/tmp_recons/*")
-    for f in files:
-        os.remove(f)
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
     NGraphs = int(len(graph_files))
@@ -1070,7 +988,7 @@ def data_plot_FIG2sup():
 
         if (it % step == 0) & (it >= 0):
 
-            ax = fig.add_subplot(8, 6, 24 + 1+it // step)
+            ax = fig.add_subplot(8, 5, 21+it // step)
             x_ = x0
             sc = 4
             plt.scatter(x_[:, 1].detach().cpu(), x_[:, 2].detach().cpu(), s=sc, color=cmap.color(to_numpy(labels)))
@@ -1079,7 +997,7 @@ def data_plot_FIG2sup():
             plt.xlim([0, 1])
             plt.ylim([0, 1])
             plt.tight_layout()
-            ax = fig.add_subplot(8, 6, 24 + 7+it // step)
+            ax = fig.add_subplot(8, 5, 26+it // step)
             x_ = x
             sc = 4
             plt.scatter(x_[:, 1].detach().cpu(), x_[:, 2].detach().cpu(), s=sc, color=cmap.color(to_numpy(labels)))
@@ -1089,42 +1007,17 @@ def data_plot_FIG2sup():
             plt.ylim([0, 1])
             plt.tight_layout()
 
-    ax = fig.add_subplot(8, 6, 36)
-
-    temp1 = torch.cat((x, x0_next), 0)
-    temp2 = torch.tensor(np.arange(nparticles), device=device)
-    temp3 = torch.tensor(np.arange(nparticles) + nparticles, device=device)
-    temp4 = torch.concatenate((temp2[:, None], temp3[:, None]), 1)
-    temp4 = torch.t(temp4)
-    distance3 = torch.sqrt(torch.sum((x[:, 1:3] - x0_next[:, 1:3]) ** 2, 1))
-    p = torch.argwhere(distance3 < 0.3)
-    pos = dict(enumerate(np.array((temp1[:, 1:3]).detach().cpu()), 0))
-    dataset = data.Data(x=temp1[:, 1:3], edge_index=torch.squeeze(temp4[:, p]))
-    vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False)
-    plt.xlim([0, 1])
-    plt.ylim([0, 1])
-    plt.text(0.1, 0.9, f"RMSE: {np.round(rmserr.item(), 4)}", fontsize=18)
-
     plt.tight_layout()
     plt.savefig('Fig2_supp.pdf', format="pdf", dpi=300)
     torch.cuda.empty_cache()
 
-
     #################### fourth set of plots
-
 
     model_config['nframes'] = 500
     model_config['nparticles'] = 4800
     nframes = 500
     ratio = 2
-
-    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4, ratio = ratio, scenario = 'scenario A', bc_diff=bc_diff, bc_pos=bc_pos, aggr_type=model_config['aggr_type'])
-
-
-    files = glob.glob(f"./{log_dir}/tmp_recons/*")
-    for f in files:
-        os.remove(f)
+    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4, ratio = ratio, scenario = 'scenario A', device=device)
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
     NGraphs = int(len(graph_files))
@@ -1187,7 +1080,7 @@ def data_plot_FIG2sup():
 
         if (it % step == 0) & (it >= 0):
 
-            ax = fig.add_subplot(8, 6, 36 + 1+it // step)
+            ax = fig.add_subplot(8, 5, 31+it // step)
             x_ = x0
             sc = 4
             plt.scatter(x_[:, 1].detach().cpu(), x_[:, 2].detach().cpu(), s=sc, color=cmap.color(to_numpy(labels)))
@@ -1196,7 +1089,7 @@ def data_plot_FIG2sup():
             plt.xlim([0, 1])
             plt.ylim([0, 1])
             plt.tight_layout()
-            ax = fig.add_subplot(8, 6, 36 + 7+it // step)
+            ax = fig.add_subplot(8, 5, 36+it // step)
             x_ = x
             sc = 4
             plt.scatter(x_[:, 1].detach().cpu(), x_[:, 2].detach().cpu(), s=sc, color=cmap.color(to_numpy(labels)))
@@ -1204,29 +1097,6 @@ def data_plot_FIG2sup():
             plt.yticks([])
             plt.xlim([0, 1])
             plt.ylim([0, 1])
-            plt.tight_layout()
-
-    ax = fig.add_subplot(8, 6, 48)
-
-    temp1 = torch.cat((x, x0_next), 0)
-    temp2 = torch.tensor(np.arange(nparticles), device=device)
-    temp3 = torch.tensor(np.arange(nparticles) + nparticles, device=device)
-    temp4 = torch.concatenate((temp2[:, None], temp3[:, None]), 1)
-    temp4 = torch.t(temp4)
-    distance3 = torch.sqrt(torch.sum((x[:, 1:3] - x0_next[:, 1:3]) ** 2, 1))
-    p = torch.argwhere(distance3 < 0.3)
-    pos = dict(enumerate(np.array((temp1[:, 1:3]).detach().cpu()), 0))
-    dataset = data.Data(x=temp1[:, 1:3], edge_index=torch.squeeze(temp4[:, p]))
-    vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False)
-    plt.xlim([0, 1])
-    plt.ylim([0, 1])
-    plt.text(0.1, 0.9, f"RMSE: {np.round(rmserr.item(), 4)}", fontsize=18)
-
-    plt.tight_layout()
-    plt.savefig('Fig2_supp.pdf', format="pdf", dpi=300)
-    torch.cuda.empty_cache()
-
 
     plt.tight_layout()
     plt.savefig('Fig2_supp.pdf', format="pdf", dpi=300)
@@ -1237,9 +1107,15 @@ def data_plot_FIG2sup():
     if bPrint:
         print(f'dataset_name: {dataset_name}')
 
+    model_config['nframes'] = 250
+    nframes = 250
+    model_config['nparticles'] = 4800
+    ratio = 1
+    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4, ratio = ratio, scenario = 'scenario A', device=device)
+
 def data_plot_FIG3sup():
 
-    config = 'config_arbitrary_16_HR'
+    config = 'config_arbitrary_16_HR1'
     # model_config = load_model_config(id=config)
 
     # Load parameters from config file
@@ -1253,14 +1129,9 @@ def data_plot_FIG3sup():
             value = float(value)
             model_config[key] = value
 
-    def bc_pos(X):
-        return torch.remainder(X, 1.0)
-    def bc_diff(D):
-        return torch.remainder(D - .5, 1.0) - .5
-    aggr_type = 'mean'
-
     cmap = cc(model_config=model_config)
     aggr_type = model_config['aggr_type']
+
     if model_config['boundary'] == 'no':  # change this for usual BC
         def bc_pos(X):
             return X
@@ -1304,24 +1175,6 @@ def data_plot_FIG3sup():
     print('Graph files N: ', NGraphs - 1)
     time.sleep(0.5)
 
-    # arr = np.arange(0, NGraphs)
-    # x_list=[]
-    # y_list=[]
-    # for run in arr:
-    #     x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
-    #     y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
-    #     x_list.append(torch.stack(x))
-    #     y_list.append(torch.stack(y))
-    # x = torch.stack(x_list)
-    # x = torch.reshape(x,(x.shape[0] * x.shape[1] * x.shape[2], x.shape[3]))
-    # y = torch.stack(y_list)
-    # y = torch.reshape(y,(y.shape[0]*y.shape[1]*y.shape[2],y.shape[3]))
-    # vnorm = norm_velocity(x, device)
-    # ynorm = norm_acceleration(y, device)
-    # torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
-    # torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
-    # print (vnorm,ynorm)
-
     x_list = []
     y_list = []
     x_stat = []
@@ -1331,44 +1184,26 @@ def data_plot_FIG3sup():
     print('Load normalizations ...')
     time.sleep(1)
 
-    if False:  # analyse tmp_recons
-        x = torch.load(f'{log_dir}/x_list.pt')
-        y = torch.load(f'{log_dir}/y_list.pt')
-        for k in np.arange(0, len(x) - 1, 4):
-            distance = torch.sum(bc_diff(x[k][:, None, 1:3] - x[k][None, :, 1:3]) ** 2, axis=2)
-            t = torch.Tensor([radius ** 2])  # threshold
-            adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
-            edge_index = adj_t.nonzero().t().contiguous()
-            dataset = data.Data(x=x, edge_index=edge_index)
-            distance = np.sqrt(to_numpy(distance[edge_index[0, :], edge_index[1, :]]))
-            deg = degree(dataset.edge_index[0], dataset.num_nodes)
-            deg_list.append(to_numpy(deg))
-            distance_list.append([np.mean(distance), np.std(distance)])
-            x_stat.append(to_numpy(torch.concatenate((torch.mean(x[k][:, 3:5], axis=0), torch.std(x[k][:, 3:5], axis=0)), axis=-1)))
-            y_stat.append(to_numpy(torch.concatenate((torch.mean(y[k], axis=0), torch.std(y[k], axis=0)), axis=-1)))
+    for run in trange(NGraphs):
+        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
+        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
+        if run == 0:
+            for k in np.arange(0, len(x) - 1, 4):
+                distance = torch.sum(bc_diff(x[k][:, None, 1:3] - x[k][None, :, 1:3]) ** 2, axis=2)
+                t = torch.Tensor([radius ** 2])  # threshold
+                adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                edge_index = adj_t.nonzero().t().contiguous()
+                dataset = data.Data(x=x, edge_index=edge_index)
+                distance = np.sqrt(to_numpy(distance[edge_index[0, :], edge_index[1, :]]))
+                deg = degree(dataset.edge_index[0], dataset.num_nodes)
+                deg_list.append(to_numpy(deg))
+                distance_list.append([np.mean(distance), np.std(distance)])
+                x_stat.append(to_numpy(torch.concatenate((torch.mean(x[k][:, 3:5], axis=0), torch.std(x[k][:, 3:5], axis=0)),
+                                                axis=-1)))
+                y_stat.append(to_numpy(torch.concatenate((torch.mean(y[k], axis=0), torch.std(y[k], axis=0)),
+                                                axis=-1)))
         x_list.append(torch.stack(x))
         y_list.append(torch.stack(y))
-    else:
-        for run in trange(NGraphs):
-            x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
-            y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
-            if run == 0:
-                for k in np.arange(0, len(x) - 1, 4):
-                    distance = torch.sum(bc_diff(x[k][:, None, 1:3] - x[k][None, :, 1:3]) ** 2, axis=2)
-                    t = torch.Tensor([radius ** 2])  # threshold
-                    adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                    edge_index = adj_t.nonzero().t().contiguous()
-                    dataset = data.Data(x=x, edge_index=edge_index)
-                    distance = np.sqrt(to_numpy(distance[edge_index[0, :], edge_index[1, :]]))
-                    deg = degree(dataset.edge_index[0], dataset.num_nodes)
-                    deg_list.append(to_numpy(deg))
-                    distance_list.append([np.mean(distance), np.std(distance)])
-                    x_stat.append(to_numpy(torch.concatenate((torch.mean(x[k][:, 3:5], axis=0), torch.std(x[k][:, 3:5], axis=0)),
-                                                    axis=-1)))
-                    y_stat.append(to_numpy(torch.concatenate((torch.mean(y[k], axis=0), torch.std(y[k], axis=0)),
-                                                    axis=-1)))
-            x_list.append(torch.stack(x))
-            y_list.append(torch.stack(y))
 
     x = torch.stack(x_list)
     x = torch.reshape(x, (x.shape[0] * x.shape[1] * x.shape[2], x.shape[3]))
@@ -1383,8 +1218,8 @@ def data_plot_FIG3sup():
     y_stat = np.array(y_stat)
 
 
-    model = InteractionParticles(model_config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_diff=bc_diff)
-
+    model = InteractionParticles(model_config=model_config, device=device, aggr_type = model_config['aggr_type'], bc_diff=bc_diff)
+    print(f'Training InteractionParticles')
 
     # if best_model == -1:
     #     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
@@ -1447,17 +1282,6 @@ def data_plot_FIG3sup():
 
     cm = 1 / 2.54 * 3 / 2.3
 
-    # plt.subplots(frameon=False)
-    # matplotlib.use("pgf")
-    # matplotlib.rcParams.update({
-    #     "pgf.texsystem": "pdflatex",
-    #     'font.family': 'serif',
-    #     'text.usetex': True,
-    #     'pgf.rcfonts': False,
-    # })
-
-    # fig = plt.figure(figsize=(3*cm, 3*cm))
-
     fig = plt.figure(figsize=(13, 9.6))
     ax = fig.add_subplot(3, 4, 1)
     print('1')
@@ -1496,7 +1320,7 @@ def data_plot_FIG3sup():
     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij}) [a.u.]$', fontsize=14)
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
-    plt.ylim([-0.04,0.03])
+    plt.ylim([-0.1,0.1])
 
     ax = fig.add_subplot(3, 4, 3)
     print('3')
@@ -1621,7 +1445,7 @@ def data_plot_FIG3sup():
     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij}) [a.u.]$', fontsize=14)
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
-    plt.ylim([-0.04,0.03])
+    plt.ylim([-0.1,0.1])
 
     ax = fig.add_subplot(3, 4, 7)
     print('7')
@@ -1646,7 +1470,6 @@ def data_plot_FIG3sup():
                     color=cmap.color(n), s=0.1)
         plt.xlabel(r'UMAP 0', fontsize=14)
         plt.ylabel(r'UMAP 1', fontsize=14)
-    torch.save(torch.tensor(new_labels, device=device), os.path.join(log_dir, f'labels_20.pt'))
     model_a_ = model.a.clone().detach()
     model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
     t = []
@@ -1724,7 +1547,7 @@ def data_plot_FIG3sup():
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
     plt.text(0,0.02,r'Model', fontsize=14)
-    plt.ylim([-0.04,0.03])
+    plt.ylim([-0.1,0.1])
 
     ax = fig.add_subplot(3,4,11)
     p = model_config['p']
@@ -1742,7 +1565,7 @@ def data_plot_FIG3sup():
     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij}) [a.u.]$', fontsize=14)
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
-    plt.ylim([-0.04,0.03])
+    plt.ylim([-0.1,0.1])
     plt.text(0,0.02,r'True', fontsize=14)
 
 
@@ -1786,7 +1609,7 @@ def data_plot_FIG4sup():
 
     bPrint=True
 
-    config = 'config_arbitrary_16_HR'
+    config = 'config_arbitrary_16_HR1'
     # model_config = load_model_config(id=config)
 
     # Load parameters from config file
@@ -1861,13 +1684,13 @@ def data_plot_FIG4sup():
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     cm = 1 / 2.54 * 3 / 2.3
-    fig = plt.figure(figsize=(22, 32))
+    fig = plt.figure(figsize=(18, 31))
     plt.ion()
 
     #################### first set of plots
 
     ratio = 1
-    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4,ratio = ratio, bc_diff=bc_diff, bc_pos=bc_pos, aggr_type=model_config['aggr_type'])
+    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4, ratio = ratio, device=device)
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -1876,9 +1699,6 @@ def data_plot_FIG4sup():
 
     model = InteractionParticles(model_config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_diff=bc_diff)
 
-    files = glob.glob(f"./{log_dir}/tmp_recons/*")
-    for f in files:
-        os.remove(f)
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
     NGraphs = int(len(graph_files))
@@ -1948,7 +1768,7 @@ def data_plot_FIG4sup():
 
         if (it % step == 0) & (it >= 0):
 
-            ax = fig.add_subplot(8, 6, 1+it // step)
+            ax = fig.add_subplot(8, 5, 1+it // step)
             x_ = x0
             sc = 4
             plt.scatter(x_[:, 1].detach().cpu(), x_[:, 2].detach().cpu(), s=sc, color=cmap.color(to_numpy(labels)))
@@ -1957,7 +1777,7 @@ def data_plot_FIG4sup():
             plt.xlim([0, 1])
             plt.ylim([0, 1])
             plt.tight_layout()
-            ax = fig.add_subplot(8, 6, 7+it // step)
+            ax = fig.add_subplot(8, 5, 6+it // step)
             x_ = x
             sc = 4
             plt.scatter(x_[:, 1].detach().cpu(), x_[:, 2].detach().cpu(), s=sc, color=cmap.color(to_numpy(labels)))
@@ -1967,22 +1787,6 @@ def data_plot_FIG4sup():
             plt.ylim([0, 1])
             plt.tight_layout()
 
-    ax = fig.add_subplot(8, 6, 12)
-
-    temp1 = torch.cat((x, x0_next), 0)
-    temp2 = torch.tensor(np.arange(nparticles), device=device)
-    temp3 = torch.tensor(np.arange(nparticles) + nparticles, device=device)
-    temp4 = torch.concatenate((temp2[:, None], temp3[:, None]), 1)
-    temp4 = torch.t(temp4)
-    distance3 = torch.sqrt(torch.sum((x[:, 1:3] - x0_next[:, 1:3]) ** 2, 1))
-    p = torch.argwhere(distance3 < 0.3)
-    pos = dict(enumerate(np.array((temp1[:, 1:3]).detach().cpu()), 0))
-    dataset = data.Data(x=temp1[:, 1:3], edge_index=torch.squeeze(temp4[:, p]))
-    vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False)
-    plt.xlim([0, 1])
-    plt.ylim([0, 1])
-    plt.text(0.1, 0.9, f"RMSE: {np.round(rmserr.item(), 4)}", fontsize=18)
 
     plt.tight_layout()
     plt.savefig('Fig4_supp.pdf', format="pdf", dpi=300)
@@ -1990,7 +1794,7 @@ def data_plot_FIG4sup():
 
     #################### second set of plots
 
-    config = 'config_arbitrary_16_HR'
+    config = 'config_arbitrary_16_HR1'
     # model_config = load_model_config(id=config)
 
     # Load parameters from config file
@@ -2019,13 +1823,12 @@ def data_plot_FIG4sup():
         labels = T1
         print('Use ground truth labels')
 
-
-    model_config['nframes'] = 500
-    nframes = 500
+    model_config['nframes'] = 1000
+    nframes = 1000
 
     ratio = 1
 
-    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4,ratio = ratio, bc_diff=bc_diff, bc_pos=bc_pos, aggr_type=model_config['aggr_type'])
+    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4,ratio = ratio, device=device)
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -2067,7 +1870,6 @@ def data_plot_FIG4sup():
 
     step=model_config['nframes']//5
 
-
     for it in trange(nframes - 1):
 
         x0 = x_list[0][it].clone().detach()
@@ -2102,7 +1904,7 @@ def data_plot_FIG4sup():
 
         if (it % step == 0) & (it >= 0):
 
-            ax = fig.add_subplot(8, 6, 12 + 1+it // step)
+            ax = fig.add_subplot(8, 5, 11+it // step)
             x_ = x0
             sc = 4
             plt.scatter(x_[:, 1].detach().cpu(), x_[:, 2].detach().cpu(), s=sc, color=cmap.color(to_numpy(labels)))
@@ -2111,7 +1913,7 @@ def data_plot_FIG4sup():
             plt.xlim([0, 1])
             plt.ylim([0, 1])
             plt.tight_layout()
-            ax = fig.add_subplot(8, 6, 12 + 7+it // step)
+            ax = fig.add_subplot(8, 5, 16+it // step)
             x_ = x
             sc = 4
             plt.scatter(x_[:, 1].detach().cpu(), x_[:, 2].detach().cpu(), s=sc, color=cmap.color(to_numpy(labels)))
@@ -2121,44 +1923,18 @@ def data_plot_FIG4sup():
             plt.ylim([0, 1])
             plt.tight_layout()
 
-    ax = fig.add_subplot(8, 6, 24)
-
-    temp1 = torch.cat((x, x0_next), 0)
-    temp2 = torch.tensor(np.arange(nparticles), device=device)
-    temp3 = torch.tensor(np.arange(nparticles) + nparticles, device=device)
-    temp4 = torch.concatenate((temp2[:, None], temp3[:, None]), 1)
-    temp4 = torch.t(temp4)
-    distance3 = torch.sqrt(torch.sum((x[:, 1:3] - x0_next[:, 1:3]) ** 2, 1))
-    p = torch.argwhere(distance3 < 0.3)
-    pos = dict(enumerate(np.array((temp1[:, 1:3]).detach().cpu()), 0))
-    dataset = data.Data(x=temp1[:, 1:3], edge_index=torch.squeeze(temp4[:, p]))
-    vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False)
-    plt.xlim([0, 1])
-    plt.ylim([0, 1])
-    plt.text(0.1, 0.9, f"RMSE: {np.round(rmserr.item(), 4)}", fontsize=18)
-
     plt.tight_layout()
     plt.savefig('Fig4_supp.pdf', format="pdf", dpi=300)
     torch.cuda.empty_cache()
 
-
     #################### third set of plots
 
-
-    model_config['nframes'] = 250
-    nframes = 250
+    model_config['nframes'] = 500
+    nframes = 500
     ratio = 2
-
-    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4, ratio = ratio, bc_diff=bc_diff, bc_pos=bc_pos, aggr_type=model_config['aggr_type'])
-
-
+    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4, ratio = ratio, device=device)
     model = InteractionParticles(model_config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_diff=bc_diff)
 
-
-    files = glob.glob(f"./{log_dir}/tmp_recons/*")
-    for f in files:
-        os.remove(f)
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
     NGraphs = int(len(graph_files))
@@ -2266,7 +2042,7 @@ def data_plot_FIG4sup():
 
         if (it % step == 0) & (it >= 0):
 
-            ax = fig.add_subplot(8, 6, 24 + 1+it // step)
+            ax = fig.add_subplot(8, 5, 21+it // step)
             x_ = x0
             sc = 4
             plt.scatter(x_[:, 1].detach().cpu(), x_[:, 2].detach().cpu(), s=sc, color=cmap.color(to_numpy(labels)))
@@ -2275,7 +2051,7 @@ def data_plot_FIG4sup():
             plt.xlim([0, 1])
             plt.ylim([0, 1])
             plt.tight_layout()
-            ax = fig.add_subplot(8, 6, 24 + 7+it // step)
+            ax = fig.add_subplot(8, 5, 26+it // step)
             x_ = x
             sc = 4
             plt.scatter(x_[:, 1].detach().cpu(), x_[:, 2].detach().cpu(), s=sc, color=cmap.color(to_numpy(labels)))
@@ -2285,42 +2061,17 @@ def data_plot_FIG4sup():
             plt.ylim([0, 1])
             plt.tight_layout()
 
-    ax = fig.add_subplot(8, 6, 36)
-
-    temp1 = torch.cat((x, x0_next), 0)
-    temp2 = torch.tensor(np.arange(nparticles), device=device)
-    temp3 = torch.tensor(np.arange(nparticles) + nparticles, device=device)
-    temp4 = torch.concatenate((temp2[:, None], temp3[:, None]), 1)
-    temp4 = torch.t(temp4)
-    distance3 = torch.sqrt(torch.sum((x[:, 1:3] - x0_next[:, 1:3]) ** 2, 1))
-    p = torch.argwhere(distance3 < 0.3)
-    pos = dict(enumerate(np.array((temp1[:, 1:3]).detach().cpu()), 0))
-    dataset = data.Data(x=temp1[:, 1:3], edge_index=torch.squeeze(temp4[:, p]))
-    vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False)
-    plt.xlim([0, 1])
-    plt.ylim([0, 1])
-    plt.text(0.1, 0.9, f"RMSE: {np.round(rmserr.item(), 4)}", fontsize=18)
-
     plt.tight_layout()
     plt.savefig('Fig4_supp.pdf', format="pdf", dpi=300)
     torch.cuda.empty_cache()
 
-
     #################### fourth set of plots
 
-
-    model_config['nframes'] = 500
+    model_config['nframes'] = 1000
     model_config['nparticles'] = 4800
-    nframes = 500
+    nframes = 1000
     ratio = 2
-
-    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4, ratio = ratio, scenario = 'scenario A', bc_diff=bc_diff, bc_pos=bc_pos, aggr_type=model_config['aggr_type'])
-
-
-    files = glob.glob(f"./{log_dir}/tmp_recons/*")
-    for f in files:
-        os.remove(f)
+    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4, ratio = ratio, scenario = 'scenario A', device=device)
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
     NGraphs = int(len(graph_files))
@@ -2383,7 +2134,7 @@ def data_plot_FIG4sup():
 
         if (it % step == 0) & (it >= 0):
 
-            ax = fig.add_subplot(8, 6, 36 + 1+it // step)
+            ax = fig.add_subplot(8, 5, 31+it // step)
             x_ = x0
             sc = 4
             plt.scatter(x_[:, 1].detach().cpu(), x_[:, 2].detach().cpu(), s=sc, color=cmap.color(to_numpy(labels)))
@@ -2392,7 +2143,7 @@ def data_plot_FIG4sup():
             plt.xlim([0, 1])
             plt.ylim([0, 1])
             plt.tight_layout()
-            ax = fig.add_subplot(8, 6, 36 + 7+it // step)
+            ax = fig.add_subplot(8, 5, 36+it // step)
             x_ = x
             sc = 4
             plt.scatter(x_[:, 1].detach().cpu(), x_[:, 2].detach().cpu(), s=sc, color=cmap.color(to_numpy(labels)))
@@ -2400,29 +2151,6 @@ def data_plot_FIG4sup():
             plt.yticks([])
             plt.xlim([0, 1])
             plt.ylim([0, 1])
-            plt.tight_layout()
-
-    ax = fig.add_subplot(8, 6, 48)
-
-    temp1 = torch.cat((x, x0_next), 0)
-    temp2 = torch.tensor(np.arange(nparticles), device=device)
-    temp3 = torch.tensor(np.arange(nparticles) + nparticles, device=device)
-    temp4 = torch.concatenate((temp2[:, None], temp3[:, None]), 1)
-    temp4 = torch.t(temp4)
-    distance3 = torch.sqrt(torch.sum((x[:, 1:3] - x0_next[:, 1:3]) ** 2, 1))
-    p = torch.argwhere(distance3 < 0.3)
-    pos = dict(enumerate(np.array((temp1[:, 1:3]).detach().cpu()), 0))
-    dataset = data.Data(x=temp1[:, 1:3], edge_index=torch.squeeze(temp4[:, p]))
-    vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False)
-    plt.xlim([0, 1])
-    plt.ylim([0, 1])
-    plt.text(0.1, 0.9, f"RMSE: {np.round(rmserr.item(), 4)}", fontsize=18)
-
-    plt.tight_layout()
-    plt.savefig('Fig4_supp.pdf', format="pdf", dpi=300)
-    torch.cuda.empty_cache()
-
 
     plt.tight_layout()
     plt.savefig('Fig4_supp.pdf', format="pdf", dpi=300)
@@ -2432,6 +2160,12 @@ def data_plot_FIG4sup():
     print(f'RMSE: {np.round(rmserr.item(), 4)}')
     if bPrint:
         print(f'dataset_name: {dataset_name}')
+
+    model_config['nframes'] = 500
+    nframes = 500
+    model_config['nparticles'] = 4800
+    ratio = 1
+    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4, ratio = ratio, scenario = 'scenario A', device=device)
 
 def data_plot_FIG3():
 
@@ -2484,7 +2218,6 @@ def data_plot_FIG3():
     nrun = model_config['nrun']
     kmeans_input = model_config['kmeans_input']
     aggr_type = model_config['aggr_type']
-
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -3842,18 +3575,20 @@ if __name__ == '__main__':
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
-    # arbitrary model plot
-
+    # arbitrary_3 training
     # data_plot_FIG2()
     # print(' ')
     # print(' ')
+    # arbitrary_3 inference
     # data_plot_FIG2sup()
     # print(' ')
     # print(' ')
+    # arbitrary_16 training
     # data_plot_FIG3sup()
     # print(' ')
     # print(' ')
-    # data_plot_FIG4sup()
+    # arbitrary_3 inference
+    data_plot_FIG4sup()
 
     # gravity model
 
@@ -3863,7 +3598,7 @@ if __name__ == '__main__':
 
     # data_plot_FIG5sup()
 
-    data_plot_FIG5()
+    # data_plot_FIG5()
 
 
 
