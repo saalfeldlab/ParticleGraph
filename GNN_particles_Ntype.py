@@ -2,14 +2,10 @@ import glob
 import json
 import logging
 import time
-from decimal import Decimal
-from math import *
 from shutil import copyfile
 
 import matplotlib.pyplot as plt
-import matplotlib
 import networkx as nx
-import torch
 import torch.nn as nn
 import torch_geometric as pyg
 import torch_geometric.data as data
@@ -17,13 +13,11 @@ import torch_geometric.transforms as T
 import torch_geometric.utils as pyg_utils
 import umap
 import yaml  # need to install pyyaml
-# from geomloss import SamplesLoss
 from prettytable import PrettyTable
 from scipy.optimize import curve_fit
 from scipy.spatial import Delaunay
 from sklearn import metrics
 from sklearn.cluster import KMeans
-from sklearn.preprocessing import StandardScaler
 from tifffile import imread
 from torch.nn import functional as F
 from torch_geometric.loader import DataLoader
@@ -2135,9 +2129,9 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
     if (model_config['model'] == 'PDE_A') | (model_config['model'] == 'PDE_B'):
-        model = InteractionParticles(aggr_typer=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+        model = InteractionParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if model_config['model'] == 'GravityParticles':
-        model = GravityParticles(aggr_typer=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+        model = GravityParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
         p_mass = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         p_mass = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
         T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
@@ -2145,7 +2139,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
             T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
         T1 = torch.concatenate((T1[:, None], T1[:, None]), 1)
     if model_config['model'] == 'ElecParticles':
-        model = ElecParticles(aggr_typer=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+        model = ElecParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
         p_elec = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         for n in range(nparticle_types):
             p_elec[n] = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
@@ -2154,7 +2148,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
             T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
         T1 = torch.concatenate((T1[:, None], T1[:, None]), 1)
     if model_config['model'] == 'GravityParticles':
-        model = GravityParticles(aggr_typer=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+        model = GravityParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if bMesh:
 
         p = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
@@ -2700,13 +2694,13 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
         hnorm = torch.std(h)
         torch.save(hnorm, os.path.join(log_dir, 'hnorm.pt'))
         print(hnorm)
-        model = MeshLaplacian(aggr_typer=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+        model = MeshLaplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if model_config['model'] == 'GravityParticles':
-        model = GravityParticles(aggr_typer=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+        model = GravityParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if model_config['model'] == 'ElecParticles':
-        model = ElecParticles(aggr_typer=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+        model = ElecParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if (model_config['model'] == 'PDE_A') | (model_config['model'] == 'PDE_B'):
-        model = InteractionParticles(aggr_typer=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+        model = InteractionParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
         print(f'Training InteractionParticles')
 
     # if best_model == -1:
@@ -3853,7 +3847,7 @@ if __name__ == '__main__':
     # config_list = ['config_wave_testA']
 
     # Test plotting figures paper
-    config_list = ['config_wave_HR2'] # ['config_boids_16_HR1','config_boids_16_HR2'] #, 'config_boids_16_HR'] #['config_RD_RPS','config_RD_RPS_05','config_RD_RPS_025'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
+    config_list = ['config_arbitrary_3'] # ['config_boids_16_HR1','config_boids_16_HR2'] #, 'config_boids_16_HR'] #['config_RD_RPS','config_RD_RPS_05','config_RD_RPS_025'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3883,9 +3877,9 @@ if __name__ == '__main__':
 
         ratio = 1
         data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//20, ratio=ratio, scenario='none')
-        data_train(model_config,model_embedding)
-        # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
-        # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=10)
+        # data_train(model_config,model_embedding)
+        data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
+        data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=10)
 
         # data_train_shrofflab_celegans(model_config)
         # data_test_shrofflab_celegans(model_config)
