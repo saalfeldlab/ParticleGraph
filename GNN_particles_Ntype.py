@@ -3813,16 +3813,16 @@ if __name__ == '__main__':
 
         cmap = cc(model_config=model_config)
         aggr_type = model_config['aggr_type']
-        if model_config['boundary'] == 'no':  # change this for usual BC
-            def bc_pos(X):
-                return X
-            def bc_diff(D):
-                return D
-        else:
-            def bc_pos(X):
-                return torch.remainder(X, 1.0)
-            def bc_diff(D):
-                return torch.remainder(D - .5, 1.0) - .5
+        # if model_config['boundary'] == 'no':  # change this for usual BC
+        #     def bc_pos(X):
+        #         return X
+        #     def bc_diff(D):
+        #         return D
+        # else:
+        #     def bc_pos(X):
+        #         return torch.remainder(X, 1.0)
+        #     def bc_diff(D):
+        #         return torch.remainder(D - .5, 1.0) - .5
 
         ratio = 1
         data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//20, ratio=ratio, scenario='none')
