@@ -4297,7 +4297,7 @@ def data_plot_FIG5():
 
 def data_plot_FIG6():
 
-    config = 'config_wave_HR2'
+    config = 'config_wave_HR1'
     # model_config = load_model_config(id=config)
 
     # Load parameters from config file
@@ -4536,7 +4536,7 @@ def data_plot_FIG6():
 
     cmap = cc(model_config=model_config)
 
-    fig = plt.figure(figsize=(10, 10))
+    fig = plt.figure(figsize=(10, 9))
     plt.ion()
     ax = fig.add_subplot(3, 3, 1)
     print('1')
@@ -4629,6 +4629,7 @@ def data_plot_FIG6():
         cm_display.plot(ax=fig.gca(), cmap='Blues', include_values=True, values_format='d')
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
+    plt.text(0, -0.75, r"Accuracy: {:.3f}".format(Accuracy), fontsize=12)
 
     ax = fig.add_subplot(3, 3, 4)
     for m in range(model.a.shape[0]):
