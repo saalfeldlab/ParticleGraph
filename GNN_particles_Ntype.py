@@ -984,7 +984,7 @@ class MeshLaplacian(pyg.nn.MessagePassing):
         return aggr_out  # self.lin_node(aggr_out)
 
     def psi(self, r, p):
-        return r
+        return p * r
 
 
 def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_p=False, step=5, alpha=0.2, ratio=1,scenario='none', device=[]):
@@ -1239,8 +1239,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                     int)]
             T1 = torch.tensor(values, device=device)
             T1 = T1[:, None]
-            # plt.scatter(X1[:, 0].detach().cpu().numpy(), X1[:, 1].detach().cpu().numpy(), s=10,
-            #             c=T1[:, 0].detach().cpu().numpy())
+            # plt.scatter(X1[:, 0].detach().cpu().numpy(), X1[:, 1].detach().cpu().numpy(), s=10,c=T1[:, 0].detach().cpu().numpy())
 
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                                    H1.clone().detach(), A1.clone().detach()), 1)
@@ -2019,7 +2018,7 @@ def data_train(model_config, bSparse=False):
                 h = model.lin_phi(in_features.float())
                 h = h[:, 0]
                 f_list.append(h)
-                if n % 5 == 0:
+                if n % 100 == 0:
                     plt.plot(to_numpy(r),
                              to_numpy(h) * to_numpy(hnorm), linewidth=1,
                              color='k', alpha=0.05)
@@ -2162,7 +2161,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         c = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         for n in range(nparticle_types):
             c[n] = torch.tensor(model_config['c'][n])
-        model_mesh = MeshLaplacian(model_config=model_config, device=device)
+        model_mesh = MeshLaplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
 
     files = glob.glob(f"./{log_dir}/tmp_recons/*")
     for f in files:
@@ -2417,10 +2416,10 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
                     colors = torch.sum(x_[tri.simplices, 6], axis=1) / 3.0
                     if model_config['model'] == 'WaveMesh':
                         plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                      facecolors=to_numpy(colors), edgecolors='k', vmin=-5000, vmax=5000)
+                                      facecolors=to_numpy(colors), vmin=-1500, vmax=1500)
                     else:
                         plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                      facecolors=to_numpy(colors), edgecolors='k', vmin=0, vmax=5000)
+                                      facecolors=to_numpy(colors), vmin=0, vmax=5000)
                 else:
                     if ((k == 2) | (k == 4)) & (len(forced_embedding) > 0):
                         for n in range(nparticle_types):
@@ -2903,20 +2902,20 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=14)
             plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij}) [a.u.]$', fontsize=14)
         elif bMesh:
-            h_list = []
+            f_list = []
             for n in range(nparticles):
-                r0 = torch.tensor(np.linspace(4, 5, 1000)).to(device)
-                r1 = torch.tensor(np.linspace(-250, 250, 1000)).to(device)
+                r = torch.tensor(np.linspace(-250, 250, 1000)).to(device)
                 embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
-                in_features = torch.cat((r0[:, None], r1[:, None], embedding), dim=1)
-                with torch.no_grad():
-                    h = model.lin_edge(in_features.float())
+                in_features = torch.cat((r[:, None], embedding), dim=1)
+                h = model.lin_phi(in_features.float())
                 h = h[:, 0]
-                h_list.append(h)
-                if n % 5 == 0:
-                    plt.plot(to_numpy(r1), to_numpy(h) * to_numpy(hnorm), linewidth=1, color='k', alpha=0.05)
-            h_list = torch.stack(h_list)
-            coeff_norm = to_numpy(h_list)
+                f_list.append(h)
+                if n % 100 == 0:
+                    plt.plot(to_numpy(r),
+                             to_numpy(h) * to_numpy(hnorm), linewidth=1,
+                             color='k', alpha=0.05)
+            f_list = torch.stack(f_list)
+            coeff_norm = to_numpy(f_list)
             trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int), n_components=2,
                               random_state=42, transform_queue_size=0).fit(coeff_norm)
             proj_interaction = trans.transform(coeff_norm)
@@ -3848,7 +3847,7 @@ if __name__ == '__main__':
     # config_list = ['config_wave_testA']
 
     # Test plotting figures paper
-    config_list = ['config_boids_16'] # ['config_boids_16_HR1','config_boids_16_HR2'] #, 'config_boids_16_HR'] #['config_RD_RPS','config_RD_RPS_05','config_RD_RPS_025'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
+    config_list = ['config_wave_HR1'] # ['config_boids_16_HR1','config_boids_16_HR2'] #, 'config_boids_16_HR'] #['config_RD_RPS','config_RD_RPS_05','config_RD_RPS_025'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3877,10 +3876,10 @@ if __name__ == '__main__':
         cmap = cc(model_config=model_config)
 
         ratio = 1
-        data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//50, ratio=ratio, scenario='none', device=device)
+        # data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//50, ratio=ratio, scenario='none', device=device)
         # data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
-        # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=10)
+        data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=10)
 
         # data_train_shrofflab_celegans(model_config)
         # data_test_shrofflab_celegans(model_config)
