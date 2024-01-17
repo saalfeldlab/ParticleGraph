@@ -449,16 +449,16 @@ class PDE_B(pyg.nn.MessagePassing):
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         acc = self.propagate(edge_index, x=(x, x))
 
-        oldv = x[:, 3:5]
-        newv = oldv + acc * self.delta_t
-        p = self.p[to_numpy(x[:, 5]), :]
-        oldv_norm = torch.norm(oldv, dim=1)
-        newv_norm = torch.norm(newv, dim=1)
-        factor = (oldv_norm + p[:, 1] / 5E2 * (newv_norm - oldv_norm)) / newv_norm
-        newv *= factor[:, None].repeat(1, 2)
-        pred = (newv - oldv) / self.delta_t
+        # oldv = x[:, 3:5]
+        # newv = oldv + acc * self.delta_t
+        # p = self.p[to_numpy(x[:, 5]), :]
+        # oldv_norm = torch.norm(oldv, dim=1)
+        # newv_norm = torch.norm(newv, dim=1)
+        # factor = (oldv_norm + p[:, 1] / 5E2 * (newv_norm - oldv_norm)) / newv_norm
+        # newv *= factor[:, None].repeat(1, 2)
+        # pred = (newv - oldv) / self.delta_t
 
-        return pred
+        return acc
 
     def message(self, x_i, x_j):
         r = torch.sum(self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)  # distance squared
@@ -1251,8 +1251,6 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
             edge_index_mesh, edge_weight_mesh = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,normalization="None")  # "None", "sym", "rw"
 
-
-
         time.sleep(0.5)
 
         noise_current = 0 * torch.randn((nparticles, 2), device=device)
@@ -1439,6 +1437,9 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                     plt.close()
 
                 if 'color' in bStyle:
+
+                    sc=80
+
                     fig = plt.figure(figsize=(10, 10))
                     # plt.ion()
                     if bMesh:
@@ -1477,7 +1478,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                     else:
                         for n in range(nparticle_types):
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                            x[index_particles[n], 2].detach().cpu().numpy(), s=160, color=cmap.color(n))
+                                            x[index_particles[n], 2].detach().cpu().numpy(), s=sc, color=cmap.color(n))
 
                     if bMesh | (model_config['boundary'] == 'periodic'):
                         # plt.text(0.08, 0.92, f'frame: {it}',fontsize=8,color='w')
@@ -3847,7 +3848,7 @@ if __name__ == '__main__':
     # config_list = ['config_wave_testA']
 
     # Test plotting figures paper
-    config_list = ['config_boids_16_HR1'] # ['config_boids_16_HR1','config_boids_16_HR2'] #, 'config_boids_16_HR'] #['config_RD_RPS','config_RD_RPS_05','config_RD_RPS_025'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
+    config_list = ['config_boids_16'] # ['config_boids_16_HR1','config_boids_16_HR2'] #, 'config_boids_16_HR'] #['config_RD_RPS','config_RD_RPS_05','config_RD_RPS_025'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3876,10 +3877,10 @@ if __name__ == '__main__':
         cmap = cc(model_config=model_config)
 
         ratio = 1
-        # data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//20, ratio=ratio, scenario='none', device=device)
+        data_generate(model_config, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//50, ratio=ratio, scenario='none', device=device)
         # data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
-        data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=10)
+        # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=10)
 
         # data_train_shrofflab_celegans(model_config)
         # data_test_shrofflab_celegans(model_config)
