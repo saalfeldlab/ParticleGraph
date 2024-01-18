@@ -40,6 +40,113 @@ from src.utils import to_numpy
 from GNN_particles_Ntype import *
 
 
+class InteractionParticles_extract(pyg.nn.MessagePassing):
+    """Interaction Network as proposed in this paper:
+    https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
+
+    def __init__(self, model_config, device, aggr_type=[], bc_diff=[]):
+
+        super(InteractionParticles_extract, self).__init__(aggr=aggr_type)  # "Add" aggregation.
+
+        self.device = device
+        self.input_size = model_config['input_size']
+        self.output_size = model_config['output_size']
+        self.hidden_size = model_config['hidden_size']
+        self.nlayers = model_config['n_mp_layers']
+        self.nparticles = model_config['nparticles']
+        self.radius = model_config['radius']
+        self.data_augmentation = model_config['data_augmentation']
+        self.noise_level = model_config['noise_level']
+        self.embedding = model_config['embedding']
+        self.ndataset = model_config['nrun'] - 1
+        self.upgrade_type = model_config['upgrade_type']
+        self.prediction = model_config['prediction']
+        self.upgrade_type = model_config['upgrade_type']
+        self.nlayers_update = model_config['nlayers_update']
+        self.hidden_size_update = model_config['hidden_size_update']
+        self.sigma = model_config['sigma']
+        self.bc_diff = bc_diff
+
+        self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
+                            hidden_size=self.hidden_size, device=self.device)
+
+        self.a = nn.Parameter(
+            torch.tensor(np.ones((self.ndataset, int(self.nparticles), self.embedding)), device=self.device,
+                         requires_grad=True, dtype=torch.float32))
+
+        if self.upgrade_type != 'none':
+            self.lin_update = MLP(input_size=self.output_size + self.embedding + 2, output_size=self.output_size,
+                                  nlayers=self.nlayers_update, hidden_size=self.hidden_size_update, device=self.device)
+
+    def forward(self, data, data_id, step, vnorm, cos_phi, sin_phi):
+
+        self.data_id = data_id
+        self.vnorm = vnorm
+        self.step = step
+        self.cos_phi = cos_phi
+        self.sin_phi = sin_phi
+        x, edge_index = data.x, data.edge_index
+        edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+
+        pred = self.propagate(edge_index, x=(x, x))
+
+        return pred, self.in_features, self.lin_edge_out
+
+    def message(self, x_i, x_j):
+
+        r = torch.sqrt(torch.sum(self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)) / self.radius  # squared distance
+        r = r[:, None]
+
+        delta_pos = self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) / self.radius
+        x_i_vx = x_i[:, 3:4] / self.vnorm[4]
+        x_i_vy = x_i[:, 4:5] / self.vnorm[4]
+        x_j_vx = x_j[:, 3:4] / self.vnorm[4]
+        x_j_vy = x_j[:, 4:5] / self.vnorm[4]
+
+        if (self.data_augmentation) & (self.step == 1):
+            new_x = self.cos_phi * delta_pos[:, 0] + self.sin_phi * delta_pos[:, 1]
+            new_y = -self.sin_phi * delta_pos[:, 0] + self.cos_phi * delta_pos[:, 1]
+            delta_pos[:, 0] = new_x
+            delta_pos[:, 1] = new_y
+            new_vx = self.cos_phi * x_i_vx + self.sin_phi * x_i_vy
+            new_vy = -self.sin_phi * x_i_vx + self.cos_phi * x_i_vy
+            x_i_vx = new_vx
+            x_i_vy = new_vy
+            new_vx = self.cos_phi * x_j_vx + self.sin_phi * x_j_vy
+            new_vy = -self.sin_phi * x_j_vx + self.cos_phi * x_j_vy
+            x_j_vx = new_vx
+            x_j_vy = new_vy
+
+        embedding = self.a[self.data_id, to_numpy(x_i[:, 0]), :]
+
+        if self.prediction == '2nd_derivative':
+            in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding), dim=-1)
+        else:
+            if self.prediction == 'first_derivative_L':
+                in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding), dim=-1)
+            if self.prediction == 'first_derivative':
+                in_features = torch.cat((delta_pos, r, embedding), dim=-1)
+
+        out = self.lin_edge(in_features)
+
+        self.in_features = in_features
+        self.lin_edge_out = out
+
+        return out
+
+    def update(self, aggr_out):
+
+        return aggr_out  # self.lin_node(aggr_out)
+
+    def psi(self, r, p):
+
+        if (len(p) == 3):  # PDE_B
+            cohesion = p[0] * 0.5E-5 * r
+            separation = -p[2] * 1E-8 / r
+            return (cohesion + separation) * p[1] / 500  #
+        else: # PDE_A
+            return r * (p[0] * torch.exp(-r ** (2 * p[1]) / (2 * self.sigma ** 2)) - p[2] * torch.exp(-r ** (2 * p[3]) / (2 * self.sigma ** 2)))
+
 class PDE_B_extract(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -56,18 +163,12 @@ class PDE_B_extract(pyg.nn.MessagePassing):
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         acc = self.propagate(edge_index, x=(x, x))
 
-        oldv = x[:, 3:5]
-        newv = oldv + acc * self.delta_t
-        p = self.p[to_numpy(x[:, 5]), :]
-        oldv_norm = torch.norm(oldv, dim=1)
-        newv_norm = torch.norm(newv, dim=1)
-        factor = (oldv_norm + p[:, 1] / 5E2 * (newv_norm - oldv_norm)) / newv_norm
-        newv *= factor[:, None].repeat(1, 2)
-        pred = (newv - oldv) / self.delta_t
+        sum = self.cohesion + self.alignment + self.separation
 
-        return pred, self.cohesion, self.alignment, self.separation, self.in_features
+        return acc, sum, self.cohesion, self.alignment, self.separation, self.diffx, self.diffv, self.r, self.type
 
     def message(self, x_i, x_j):
+
         r = torch.sum(self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)  # distance squared
 
         pp = self.p[to_numpy(x_i[:, 5]), :]
@@ -80,19 +181,10 @@ class PDE_B_extract(pyg.nn.MessagePassing):
         self.alignment = alignment
         self.separation = separation
 
-        radius: 0.04
-        vnorm= torch.tensor(0.0002, device='cuda:0', dtype=torch.float64)
-
-        r = torch.sqrt(torch.sum(self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)) / radius  # squared distance
-        r = r[:, None]
-
-        delta_pos = self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) / radius
-        x_i_vx = x_i[:, 3:4] / vnorm
-        x_i_vy = x_i[:, 4:5] / vnorm
-        x_j_vx = x_j[:, 3:4] / vnorm
-        x_j_vy = x_j[:, 4:5] / vnorm
-
-        self.in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy), dim=-1)
+        self.r = r
+        self.diffx = self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3])
+        self.diffv = self.bc_diff(x_j[:, 3:5] - x_i[:, 3:5])
+        self .type = x_i[:, 5]
 
         return (separation + alignment + cohesion)
 
@@ -107,6 +199,17 @@ def func_pow(x, a, b):
 
 def func_lin(x, a, b):
     return a * x + b
+
+def func_boids(x, a, b, c):
+
+    xdiff = x[:, 0:2]
+    vdiff = x[:, 2:4]
+    r = np.concatenate((x[:,4:5],x[:,4:5]),axis=1)
+
+    sum = a * xdiff + b * vdiff - c * xdiff / r
+    sum = np.sqrt(sum[:,0]**2 + sum[:,1]**2)
+
+    return sum
 
 
 def data_plot_FIG2():
@@ -3635,7 +3738,7 @@ def data_plot_FIG5sup():
 def data_plot_FIG5():
 
 
-    config = 'config_boids_16_HR1'
+    config = 'config_boids_16_HR2'
     # model_config = load_model_config(id=config)
 
     # Load parameters from config file
@@ -3725,44 +3828,26 @@ def data_plot_FIG5():
     print('Load normalizations ...')
     time.sleep(1)
 
-    if False:  # analyse tmp_recons
-        x = torch.load(f'{log_dir}/x_list.pt')
-        y = torch.load(f'{log_dir}/y_list.pt')
-        for k in np.arange(0, len(x) - 1, 4):
-            distance = torch.sum(bc_diff(x[k][:, None, 1:3] - x[k][None, :, 1:3]) ** 2, axis=2)
-            t = torch.Tensor([radius ** 2])  # threshold
-            adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
-            edge_index = adj_t.nonzero().t().contiguous()
-            dataset = data.Data(x=x, edge_index=edge_index)
-            distance = np.sqrt(to_numpy(distance[edge_index[0, :], edge_index[1, :]]))
-            deg = degree(dataset.edge_index[0], dataset.num_nodes)
-            deg_list.append(to_numpy(deg))
-            distance_list.append([np.mean(distance), np.std(distance)])
-            x_stat.append(to_numpy(torch.concatenate((torch.mean(x[k][:, 3:5], axis=0), torch.std(x[k][:, 3:5], axis=0)), axis=-1)))
-            y_stat.append(to_numpy(torch.concatenate((torch.mean(y[k], axis=0), torch.std(y[k], axis=0)), axis=-1)))
+    for run in trange(NGraphs):
+        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
+        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
+        if run == 0:
+            for k in np.arange(0, len(x) - 1, 4):
+                distance = torch.sum(bc_diff(x[k][:, None, 1:3] - x[k][None, :, 1:3]) ** 2, axis=2)
+                t = torch.Tensor([radius ** 2])  # threshold
+                adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                edge_index = adj_t.nonzero().t().contiguous()
+                dataset = data.Data(x=x, edge_index=edge_index)
+                distance = np.sqrt(to_numpy(distance[edge_index[0, :], edge_index[1, :]]))
+                deg = degree(dataset.edge_index[0], dataset.num_nodes)
+                deg_list.append(to_numpy(deg))
+                distance_list.append([np.mean(distance), np.std(distance)])
+                x_stat.append(to_numpy(torch.concatenate((torch.mean(x[k][:, 3:5], axis=0), torch.std(x[k][:, 3:5], axis=0)),
+                                                axis=-1)))
+                y_stat.append(to_numpy(torch.concatenate((torch.mean(y[k], axis=0), torch.std(y[k], axis=0)),
+                                                axis=-1)))
         x_list.append(torch.stack(x))
         y_list.append(torch.stack(y))
-    else:
-        for run in trange(NGraphs):
-            x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
-            y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
-            if run == 0:
-                for k in np.arange(0, len(x) - 1, 4):
-                    distance = torch.sum(bc_diff(x[k][:, None, 1:3] - x[k][None, :, 1:3]) ** 2, axis=2)
-                    t = torch.Tensor([radius ** 2])  # threshold
-                    adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                    edge_index = adj_t.nonzero().t().contiguous()
-                    dataset = data.Data(x=x, edge_index=edge_index)
-                    distance = np.sqrt(to_numpy(distance[edge_index[0, :], edge_index[1, :]]))
-                    deg = degree(dataset.edge_index[0], dataset.num_nodes)
-                    deg_list.append(to_numpy(deg))
-                    distance_list.append([np.mean(distance), np.std(distance)])
-                    x_stat.append(to_numpy(torch.concatenate((torch.mean(x[k][:, 3:5], axis=0), torch.std(x[k][:, 3:5], axis=0)),
-                                                    axis=-1)))
-                    y_stat.append(to_numpy(torch.concatenate((torch.mean(y[k], axis=0), torch.std(y[k], axis=0)),
-                                                    axis=-1)))
-            x_list.append(torch.stack(x))
-            y_list.append(torch.stack(y))
 
     x = torch.stack(x_list)
     x = torch.reshape(x, (x.shape[0] * x.shape[1] * x.shape[2], x.shape[3]))
@@ -3776,7 +3861,7 @@ def data_plot_FIG5():
     x_stat = np.array(x_stat)
     y_stat = np.array(y_stat)
 
-    model = InteractionParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+    model = InteractionParticles_extract(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
 
     # if best_model == -1:
     #     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
@@ -3834,16 +3919,6 @@ def data_plot_FIG5():
 
     cm = 1 / 2.54 * 3 / 2.3
 
-    # plt.subplots(frameon=False)
-    # matplotlib.use("pgf")
-    # matplotlib.rcParams.update({
-    #     "pgf.texsystem": "pdflatex",
-    #     'font.family': 'serif',
-    #     'text.usetex': True,
-    #     'pgf.rcfonts': False,
-    # })
-
-    # fig = plt.figure(figsize=(3*cm, 3*cm))
 
     fig = plt.figure(figsize=(10, 9))
     plt.ion()
@@ -3984,12 +4059,9 @@ def data_plot_FIG5():
     dataset = data.Data(x=x, edge_index=edge_index)
 
     with torch.no_grad():
-        y = model(dataset, data_id=0, step=2, vnorm=vnorm, cos_phi=0, sin_phi=0)  # acceleration estimation
+        y, in_features, lin_edge_out = model(dataset, data_id=0, step=2, vnorm=vnorm, cos_phi=0, sin_phi=0)  # acceleration estimation
     y = y * ynorm[4]
-
-    fig = plt.figure(figsize=(10, 9))
-    plt.ion()
-    plt.scatter(to_numpy(torch.norm(y0,dim=1)), to_numpy(torch.norm(y,dim=1)), s=1, color='k')
+    lin_edge_out = lin_edge_out * ynorm[4]
 
     print(f'PDE_B')
     p = torch.rand(nparticle_types, 3, device=device) * 100  # comprised between 10 and 50
@@ -4001,14 +4073,37 @@ def data_plot_FIG5():
     for n in range(nparticle_types):
         psi_output.append(model.psi(rr, torch.squeeze(p[n])))
         print(f'p{n}: {np.round(to_numpy(torch.squeeze(p[n])), 4)}')
-
     with torch.no_grad():
-        y_B, cohesion, alignment, separation, in_features = model_B(dataset)  # acceleration estimation
-    y_B = y_B * ynorm[4]
+        y_B, sum, cohesion, alignment, separation, diffx, diffv, r, type = model_B(dataset)  # acceleration estimation
 
     fig = plt.figure(figsize=(10, 9))
     plt.ion()
-    plt.scatter(to_numpy(torch.norm(y0,dim=1)), to_numpy(torch.norm(y_B,dim=1)), s=1, color='k')
+    plt.scatter(to_numpy(torch.norm(y_B,dim=1)), to_numpy(torch.norm(y,dim=1)), s=1, color='k')
+
+    fig = plt.figure(figsize=(10, 9))
+    plt.ion()
+    plt.scatter(to_numpy(torch.norm(sum, dim=1)), to_numpy(torch.norm(lin_edge_out, dim=1)), s=1, color='k')
+
+    fig = plt.figure(figsize=(10, 9))
+    plt.ion()
+    plt.scatter(to_numpy(sum[:,0]), to_numpy(lin_edge_out[:,0]), s=1, color='k')
+    plt.scatter(to_numpy(sum[:,1]), to_numpy(lin_edge_out[:,1]), s=1, color='k')
+
+    type = to_numpy(type)
+
+    pos =np.argwhere(type==0)
+    pos = pos[:,0].astype(int)
+
+    xdiff = to_numpy(diffx[pos,:])
+    vdiff = to_numpy(diffv[pos,:])
+    rdiff = to_numpy(r[pos])
+
+    x_data = np.concatenate((xdiff,vdiff,rdiff[:,None]),axis=1)
+
+    y_data = to_numpy(torch.norm(sum[pos,:], dim=1))
+    y_data = to_numpy(torch.norm(lin_edge_out[pos, :], dim=1))
+
+    lin_fit, lin_fitv = curve_fit(func_boids, x_data, y_data)
 
 
 
@@ -4022,7 +4117,11 @@ def data_plot_FIG5():
 
 
 
-    ax = fig.add_subplot(3, 3, 5)
+
+
+    fig = plt.figure(figsize=(10, 9))
+    plt.ion()
+
     print('5')
     acc_list = []
     for n in range(nparticles):
@@ -4032,15 +4131,12 @@ def data_plot_FIG5():
                                  0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
         with torch.no_grad():
             acc = model.lin_edge(in_features.float())
-        update_features = torch.cat((acc, acc * 0, embedding), dim=1)
-        with torch.no_grad():
-            acc = model.lin_update(update_features.float())
         acc = acc[:, 0]
         acc_list.append(acc)
         if n % 5 == 0:
             plt.plot(to_numpy(rr),
                      to_numpy(acc) * to_numpy(ynorm[4]),
-                     color=cmap.color(to_numpy(x[n, 5])), linewidth=1, alpha=0.25)
+                     color=cmap.color(new_labels[n]), linewidth=1, alpha=0.25)
     plt.xlim([0, 0.02])
     plt.ylim([-5E-5, 1E-5])
     plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=14)
@@ -4049,7 +4145,10 @@ def data_plot_FIG5():
     plt.yticks(fontsize=10)
     plt.text(0.005,0.25E-5,r'Model', fontsize=14)
 
-    ax = fig.add_subplot(3,3,6)
+
+
+    fig = plt.figure(figsize=(10, 9))
+    plt.ion()
     print('6')
     p = model_config['p']
     if len(p) > 0:
@@ -4097,6 +4196,9 @@ def data_plot_FIG5():
     print(f'RMSE: {np.round(np.mean(rmserr_list),4)}+\-{np.round(np.std(rmserr_list),4)} ')
 
     #############
+
+
+
 
     ax = fig.add_subplot(3, 3, 7)
     for n in range(nparticles):
@@ -4733,7 +4835,6 @@ if __name__ == '__main__':
     # data_plot_FIG4sup()
 
     # gravity model
-
     # data_plot_FIG3()
 
     # training Coloumb_3
@@ -4741,7 +4842,10 @@ if __name__ == '__main__':
 
     # data_plot_FIG5sup()
 
-    data_plot_FIG6()
+    # boids HR2
+    data_plot_FIG5()
+
+    # data_plot_FIG6()
 
 
 
