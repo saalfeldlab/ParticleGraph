@@ -4214,7 +4214,7 @@ def data_plot_FIG5():
 
 def data_plot_FIG6():
 
-    config = 'config_wave_HR2'
+    config = 'config_wave_HR3'
     # model_config = load_model_config(id=config)
 
     # Load parameters from config file
@@ -4658,9 +4658,9 @@ if __name__ == '__main__':
     # data_plot_FIG5sup()
 
     # boids HR2
-    data_plot_FIG5()
+    # data_plot_FIG5()
 
-    # data_plot_FIG6()
+    data_plot_FIG6()
 
 
 
