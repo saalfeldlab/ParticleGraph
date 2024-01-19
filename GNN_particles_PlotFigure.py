@@ -4044,9 +4044,7 @@ def data_plot_FIG5():
 
     ################## comparison of predictions ########################################
 
-
-
-    it = 990
+    it = 300
     x0 = x_list[0][it].clone().detach()
     x0_next = x_list[0][it + 1].clone().detach()
     y0 = y_list[0][it].clone().detach()
@@ -4076,325 +4074,139 @@ def data_plot_FIG5():
     with torch.no_grad():
         y_B, sum, cohesion, alignment, separation, diffx, diffv, r, type = model_B(dataset)  # acceleration estimation
 
-    fig = plt.figure(figsize=(10, 9))
-    plt.ion()
-    plt.scatter(to_numpy(torch.norm(y_B,dim=1)), to_numpy(torch.norm(y,dim=1)), s=1, color='k')
-
-    fig = plt.figure(figsize=(10, 9))
-    plt.ion()
-    plt.scatter(to_numpy(torch.norm(sum, dim=1)), to_numpy(torch.norm(lin_edge_out, dim=1)), s=1, color='k')
-
-    fig = plt.figure(figsize=(10, 9))
-    plt.ion()
-    plt.scatter(to_numpy(sum[:,0]), to_numpy(lin_edge_out[:,0]), s=1, color='k')
-    plt.scatter(to_numpy(sum[:,1]), to_numpy(lin_edge_out[:,1]), s=1, color='k')
-
     type = to_numpy(type)
 
-    pos =np.argwhere(type==0)
-    pos = pos[:,0].astype(int)
-
-    xdiff = to_numpy(diffx[pos,:])
-    vdiff = to_numpy(diffv[pos,:])
-    rdiff = to_numpy(r[pos])
-
-    x_data = np.concatenate((xdiff,vdiff,rdiff[:,None]),axis=1)
-
-    y_data = to_numpy(torch.norm(sum[pos,:], dim=1))
-    y_data = to_numpy(torch.norm(lin_edge_out[pos, :], dim=1))
-
-    lin_fit, lin_fitv = curve_fit(func_boids, x_data, y_data)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    fig = plt.figure(figsize=(10, 9))
-    plt.ion()
-
+    ax = fig.add_subplot(3, 3, 5)
     print('5')
-    acc_list = []
-    for n in range(nparticles):
-        embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
-        in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
-                                 rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
-                                 0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
-        with torch.no_grad():
-            acc = model.lin_edge(in_features.float())
-        acc = acc[:, 0]
-        acc_list.append(acc)
-        if n % 5 == 0:
-            plt.plot(to_numpy(rr),
-                     to_numpy(acc) * to_numpy(ynorm[4]),
-                     color=cmap.color(new_labels[n]), linewidth=1, alpha=0.25)
-    plt.xlim([0, 0.02])
-    plt.ylim([-5E-5, 1E-5])
-    plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=14)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, r_{ij}) [a.u.]$', fontsize=14)
-    plt.xticks(fontsize=10)
-    plt.yticks(fontsize=10)
-    plt.text(0.005,0.25E-5,r'Model', fontsize=14)
-
-
-
-    fig = plt.figure(figsize=(10, 9))
-    plt.ion()
+    for n in range(nparticle_types):
+        pos = np.argwhere(type == n)
+        pos = pos[:, 0].astype(int)
+        plt.scatter(to_numpy(r[pos]), to_numpy(torch.norm(lin_edge_out[pos,:], dim=1)), color=cmap.color(n), s=1)
+    plt.ylim([0,5E-5])
+    ax = fig.add_subplot(3, 3, 6)
     print('6')
-    p = model_config['p']
-    if len(p) > 0:
-        p = torch.tensor(p, device=device)
-    else:
-        p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt',map_location=device)
-    psi_output = []
     for n in range(nparticle_types):
-        psi_output.append(model.psi(rr, p[n]))
-    for n in range(nparticle_types - 1, -1, -1):
-        plt.plot(to_numpy(rr), np.array(psi_output[n].cpu()), linewidth=1, color=cmap.color(n))
+        pos = np.argwhere(type == n)
+        pos = pos[:, 0].astype(int)
+        plt.scatter(to_numpy(r[pos]), to_numpy(torch.norm(sum[pos,:], dim=1)), color=cmap.color(n), s=1,alpha=1)
+    plt.ylim([0,5E-5])
 
-    plt.xlim([0, 0.02])
-    plt.ylim([-5E-5, 1E-5])
-    plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=14)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, r_{ij}) [a.u.]$', fontsize=14)
-    plt.xticks(fontsize=10)
-    plt.yticks(fontsize=10)
-    plt.text(0.005,0.25E-5,r'True', fontsize=14)
+    cohesion_GT = np.zeros(nparticle_types)
+    alignment_GT = np.zeros(nparticle_types)
+    separation_GT = np.zeros(nparticle_types)
+    cohesion_fit = np.zeros(nparticle_types)
+    alignment_fit = np.zeros(nparticle_types)
+    separation_fit = np.zeros(nparticle_types)
 
-    plot_list = []
     for n in range(nparticle_types):
-        embedding = t[int(label_list[n])] * torch.ones((1000, model_config['embedding']), device=device)
-        in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
-                                 rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
-                                 0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
-        with torch.no_grad():
-            pred = model.lin_edge(in_features.float())
-        pred = pred[:, 0]
-        plot_list.append(pred * ynorm[4])
-    rmserr_list = []
+        pos =np.argwhere(type==n)
+        pos = pos[:,0].astype(int)
+        xdiff = to_numpy(diffx[pos,:])
+        vdiff = to_numpy(diffv[pos,:])
+        rdiff = to_numpy(r[pos])
+        x_data = np.concatenate((xdiff,vdiff,rdiff[:,None]),axis=1)
+        y_data = to_numpy(torch.norm(lin_edge_out[pos, :], dim=1))
+        lin_fit, lin_fitv = curve_fit(func_boids, x_data, y_data, method='dogbox')
+        cohesion_fit[n] = lin_fit[0]
+        alignment_fit[n] = lin_fit[1]
+        separation_fit[n] = lin_fit[2]
+
+    p00 = [np.mean(cohesion_fit), np.mean(alignment_fit), np.mean(separation_fit)]
+
     for n in range(nparticle_types):
-        min_norm = torch.min(plot_list[n])
-        max_norm = torch.max(plot_list[n])
-        if torch.min(plot_list[n]) < min_norm:
-            min_norm = torch.min(plot_list[n])
-        if torch.max(psi_output[n]) > max_norm:
-            max_norm = torch.max(psi_output[n])
-        plot_list[n] = (plot_list[n] - min_norm) / (max_norm - min_norm)
-        psi_output[n] = (psi_output[n] - min_norm) / (max_norm - min_norm)
-        rmserr = torch.sqrt(torch.mean((plot_list[n] - torch.squeeze(psi_output[n])) ** 2))
-        rmserr_list.append(rmserr.item())
-        print(f'sub-group {n}: RMSE: {rmserr.item()}')
-
-    print(f'RMSE: {np.round(np.mean(rmserr_list),4)}+\-{np.round(np.std(rmserr_list),4)} ')
-
-    #############
-
-
+        pos =np.argwhere(type==n)
+        pos = pos[:,0].astype(int)
+        xdiff = to_numpy(diffx[pos,:])
+        vdiff = to_numpy(diffv[pos,:])
+        rdiff = to_numpy(r[pos])
+        x_data = np.concatenate((xdiff,vdiff,rdiff[:,None]),axis=1)
+        y_data = to_numpy(torch.norm(lin_edge_out[pos, :], dim=1))
+        lin_fit, lin_fitv = curve_fit(func_boids, x_data, y_data, method='dogbox', p0=p00)
+        cohesion_fit[n] = lin_fit[0]
+        alignment_fit[n] = lin_fit[1]
+        separation_fit[n] = lin_fit[2]
 
 
     ax = fig.add_subplot(3, 3, 7)
-    for n in range(nparticles):
-        embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
-        in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
-                                 rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
-                                 0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
-        with torch.no_grad():
-            acc_first = model.lin_edge(in_features.float())
-        update_features = torch.cat((acc_first, acc_first * 0, embedding), dim=1)
-        with torch.no_grad():
-            acc = model.lin_update(update_features.float())
-
-        acc_first = acc_first[:,0]
-        acc = acc[:, 0]
-
-        if n % 5 == 0:
-            plt.plot(to_numpy(acc_first) * to_numpy(ynorm[4]),
-                     to_numpy(acc) * to_numpy(ynorm[4]),
-                     color=cmap.color(to_numpy(x[n, 5])), linewidth=1, alpha=0.25)
-
-
-
-    #############
-
-    plot_list = []
-    for n in range(nparticle_types):
-        embedding = t[int(label_list[n])] * torch.ones((1000, model_config['embedding']), device=device)
-        if model_config['prediction'] == '2nd_derivative':
-            in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
-                                     rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
-                                     0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
-        else:
-            in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
-                                     rr[:, None] / model_config['radius'], embedding), dim=1)
-        with torch.no_grad():
-            pred = model.lin_edge(in_features.float())
-        pred = pred[:, 0]
-        plot_list.append(pred * ynorm[4])
-
-    p = np.linspace(0.5, 5, nparticle_types)
-    popt_list = []
-    for n in range(nparticle_types):
-        popt, pcov = curve_fit(func_pow, to_numpy(rr), to_numpy(plot_list[n]))
-        popt_list.append(popt)
-    popt_list = np.array(popt_list)
-
-    ax = fig.add_subplot(3, 3, 7)
-    print('7')
-    plt.scatter(p, popt_list[:, 0], color='k')
-    x_data = p
-    y_data = popt_list[:, 0]
+    print('6')
+    x_data = np.abs(to_numpy(p[:,0])*0.5E-5)
+    y_data = np.abs(cohesion_fit)
     lin_fit, lin_fitv = curve_fit(func_lin, x_data, y_data)
-    plt.plot(p, func_lin(x_data, lin_fit[0], lin_fit[1]), color='r')
-    plt.xlabel(r'True mass $[a.u.]$', fontsize=14)
-    plt.ylabel(r'Predicted mass $[a.u.]$', fontsize=14)
-    plt.xlim([0, 5.5])
-    plt.ylim([0, 5.5])
-    plt.text(0.5, 5, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
+    plt.plot(x_data, func_lin(x_data, lin_fit[0],lin_fit[1]), color='r', linewidth=0.5)
+    for n in range(nparticle_types):
+        plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=50)
+    plt.xlabel(r'True cohesion coeff. $[a.u.]$', fontsize=14)
+    plt.ylabel(r'Predicted cohesion coeff. $[a.u.]$', fontsize=14)
+    plt.text(5E-5, 4.5E-4, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=12)
     residuals = y_data - func_lin(x_data, *lin_fit)
     ss_res = np.sum(residuals ** 2)
     ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
     r_squared = 1 - (ss_res / ss_tot)
-    plt.text(0.5, 4.5, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
+    plt.text(5E-5, 4E-4, f"$R^2$: {np.round(r_squared, 3)}", fontsize=12)
 
     ax = fig.add_subplot(3, 3, 8)
-    print('8')
-    plt.scatter(p, -popt_list[:, 1], color='k')
-    plt.xlim([0, 5.5])
-    plt.ylim([-4, 0])
-    plt.xlabel(r'True mass $[a.u.]$', fontsize=14)
-    plt.ylabel(r'Exponent fit $[a.u.]$', fontsize=14)
-    plt.text(0.5, -0.5, f"{np.round(np.mean(popt_list[:, 1]), 3)}+/-{np.round(np.std(popt_list[:, 1]), 3)}",
-             fontsize=10)
-
-    plot_list_2 = []
-    vv = torch.tensor(np.linspace(0, 2, 100)).to(device)
-    r_list = np.linspace(0.002, 0.01, 5)
-    for r_ in r_list:
-        rr_ = r_ * torch.tensor(np.ones((vv.shape[0], 1)), device=device)
-        for n in range(nparticle_types):
-            embedding = t[int(label_list[n])] * torch.ones((100, model_config['embedding']), device=device)
-            in_features = torch.cat((rr_ / model_config['radius'], 0 * rr_,
-                                     rr_ / model_config['radius'], vv[:, None], vv[:, None], vv[:, None], vv[:, None],
-                                     embedding), dim=1)
-            with torch.no_grad():
-                pred = model.lin_edge(in_features.float())
-            pred = pred[:, 0]
-            plot_list_2.append(pred * ynorm[4])
+    print('6')
+    x_data = np.abs(to_numpy(p[:,1])*5E-4)
+    y_data = alignment_fit
+    lin_fit, lin_fitv = curve_fit(func_lin, x_data, y_data)
+    plt.plot(x_data, func_lin(alignment_fit, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
+    for n in range(nparticle_types):
+        plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=50)
+    plt.xlabel(r'True alignment coeff. $[a.u.]$', fontsize=14)
+    plt.ylabel(r'Predicted alignment coeff. $[a.u.]$', fontsize=14)
+    plt.text(5e-3, 0.0425, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=12)
+    residuals = y_data - func_lin(x_data, *lin_fit)
+    ss_res = np.sum(residuals ** 2)
+    ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+    r_squared = 1 - (ss_res / ss_tot)
+    plt.text(5e-3, 0.038, f"$R^2$: {np.round(r_squared, 3)}", fontsize=12)
 
     ax = fig.add_subplot(3, 3, 9)
-    print('9')
-    for n in range(len(plot_list_2)):
-        plt.plot(to_numpy(vv), to_numpy(plot_list_2[n]), linewidth=1)
-    plt.xlabel(r'Normalized $\ensuremath{\mathbf{\dot{x}}}_i [a.u.]$', fontsize=14)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, r_{ij}, \ensuremath{\mathbf{\dot{x}}}_i) [a.u.]$', fontsize=14)
-    plt.xlim([0, 2])
-    plt.tight_layout()
+    x_data = np.abs(to_numpy(p[:,2])*1E-8)
+    y_data = separation_fit
+    lin_fit, lin_fitv = curve_fit(func_lin, x_data, y_data)
+    plt.plot(x_data, func_lin(separation_fit, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
+    for n in range(nparticle_types):
+        plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=50)
+    plt.xlabel(r'True alignment coeff. $[a.u.]$', fontsize=14)
+    plt.ylabel(r'Predicted alignment coeff. $[a.u.]$', fontsize=14)
+    plt.text(5e-8, 4.6E-7, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=12)
+    residuals = y_data - func_lin(x_data, *lin_fit)
+    ss_res = np.sum(residuals ** 2)
+    ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+    r_squared = 1 - (ss_res / ss_tot)
+    plt.text(5e-8, 4.2E-7, f"$R^2$: {np.round(r_squared, 3)}", fontsize=12)
 
-    plt.savefig('Fig3.pdf', format="pdf", dpi=300)
-    plt.savefig('Fig3.jpg', dpi=300)
-
-    plt.close()
-
-
-    t = torch.tensor(tt, device=device)
-    t = torch.reshape(t, (16, 2))
-
-    fig = plt.figure(figsize=(10, 10))
-    plt.ion()
-
-    ax = fig.add_subplot(2, 2, 1)
-    rr = torch.tensor(np.linspace(0.002, 0.005, 100)).to(device)
-    vv = torch.tensor(np.linspace(-1, 1, 100)).to(device)
-
-    tt = torch.zeros((1, 2), device=device)
-    tt[0,0] = torch.mean(t[:,0])
-    tt[0,1] = torch.mean(t[:,1])
-    tt = tt * torch.ones((10000, model_config['embedding']), device=device)
-
-    rr_, vv_ = torch.meshgrid(rr, vv, indexing='xy')
-    rr_ = torch.reshape(rr_, (rr_.shape[0] * rr_.shape[1], 1))
-    vv_ = torch.reshape(vv_, (vv_.shape[0] * vv_.shape[1], 1))
-
-    in_features = torch.cat((rr_ / model_config['radius'], 0 * rr_, rr_ / model_config['radius'], vv_, vv_, vv_, vv_, tt), dim=1)
-    with torch.no_grad():
-        pred = model.lin_edge(in_features.float())
-    pred = pred[:, 0]
-    pred=torch.reshape(pred,(100,100))
-    plt.imshow(to_numpy(pred), extent=[0.002, 0.01, -1, 1], aspect='auto', origin='lower', cmap='jet')
-
-
-    ax = fig.add_subplot(2, 2, 2)
-    vv = 0.5*torch.ones((10000,1), device=device)
-    tt = torch.zeros((1, 2), device=device)
-    tt[0,0] = torch.mean(t[0])
-    tt[0,1] = torch.mean(t[1])
-    tt = tt * torch.ones((10000, model_config['embedding']), device=device)
-    tt = tt.to(device)
-
-    tl = torch.linspace(torch.min(t[:,0]), torch.max(t[:,0]), 100)
-    tl = tl.to(torch.float64)
-    tl = tl.to(device)
-    rr_, tl_ = torch.meshgrid(rr, tl, indexing='xy')
-
-    rr_ = torch.reshape(rr_, (rr_.shape[0] * rr_.shape[1], 1))
-    tl_ = torch.reshape(tl_, (tl_.shape[0] * tl_.shape[1], 1))
-    tt[:,0:1] = tl_
-
-    in_features = torch.cat((rr_ / model_config['radius'], 0 * rr_, rr_ / model_config['radius'], vv_, vv_, vv_, vv_, tt), dim=1)
-    with torch.no_grad():
-        pred = model.lin_edge(in_features.float())
-    pred = pred[:, 0]
-    pred=torch.reshape(pred,(100,100))
-    plt.imshow(to_numpy(pred), extent=[0.002, 0.01, to_numpy(torch.min(t[:,0])), to_numpy(torch.max(t[:,0]))], aspect='auto', origin='lower', cmap='jet')
-
-
-    ax = fig.add_subplot(2, 2, 3)
-    vv = 0.5*torch.ones((10000,1), device=device)
-    tt = torch.zeros((1, 2), device=device)
-    tt[0,0] = torch.mean(t[0])
-    tt[0,1] = torch.mean(t[1])
-    tt = tt * torch.ones((10000, model_config['embedding']), device=device)
-    tt = tt.to(device)
-
-    tl = torch.linspace(torch.min(t[:,1]), torch.max(t[:,1]), 100)
-    tl = tl.to(torch.float64)
-    tl = tl.to(device)
-    rr_, tl_ = torch.meshgrid(rr, tl, indexing='xy')
-
-    rr_ = torch.reshape(rr_, (rr_.shape[0] * rr_.shape[1], 1))
-    tl_ = torch.reshape(tl_, (tl_.shape[0] * tl_.shape[1], 1))
-    tt[:,1:2] = tl_
-
-    in_features = torch.cat((rr_ / model_config['radius'], 0 * rr_, rr_ / model_config['radius'], vv_, vv_, vv_, vv_, tt), dim=1)
-    with torch.no_grad():
-        pred = model.lin_edge(in_features.float())
-    pred = pred[:, 0]
-    pred=torch.reshape(pred,(100,100))
-    plt.imshow(to_numpy(pred), extent=[0.002, 0.01, to_numpy(torch.min(t[:,0])), to_numpy(torch.max(t[:,0]))], aspect='auto', origin='lower', cmap='jet')
-
-    #### derivate
-
-
-    in_features = torch.cat((rr_ / model_config['radius'], 0 * rr_, rr_ / model_config['radius'], vv_, vv_, vv_, vv_, tt), dim=1)
-
-    in_features.requires_grad = True
-
-    with torch.no_grad():
-        pred = model.lin_edge(in_features.float())
-    pred = pred[:, 0]
-    pred=torch.reshape(pred,(100,100))
-    plt.imshow(to_numpy(pred), extent=[0.002, 0.01, to_numpy(torch.min(t[:,1])), to_numpy(torch.max(t[:,1]))], aspect='auto', origin='lower', cmap='jet')
-
+    #############
 
     plt.tight_layout()
+
+
+    if False:
+        # TO BE CORRECTED ###
+
+        fig = plt.figure(figsize=(10, 9))
+        plt.ion()
+        n = 14
+        b_cohesion = p[n, 0:1].repeat(1, 2) * 0.5E-5 * diffx
+        b_alignment = p[n, 1:2].repeat(1, 2) * 5E-4 * diffv
+        b_separation = - p[n, 2:3].repeat(1, 2) * 1E-8 * diffx / (r[:, None].repeat(1, 2))
+        b_sum = b_cohesion + b_alignment + b_separation
+        pos = np.argwhere(type == n)
+        pos = pos[:, 0].astype(int)
+        plt.scatter(to_numpy(r[pos]), to_numpy(torch.norm(lin_edge_out[pos, :], dim=1)), color=cmap.color(n), s=1)
+        plt.scatter(to_numpy(r[pos]), to_numpy(torch.norm(sum[pos, :], dim=1)), color='k', s=1, alpha=0.5)
+        plt.scatter(to_numpy(r[pos]), to_numpy(torch.norm(b_sum[pos, :], dim=1)), color='r', s=1, alpha=0.5)
+        pos = np.argwhere(type == n)
+        pos = pos[:, 0].astype(int)
+        xdiff = to_numpy(diffx[pos, :])
+        vdiff = to_numpy(diffv[pos, :])
+        rdiff = to_numpy(r[pos])
+        x_data = np.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
+        y_data = to_numpy(torch.norm(b_sum[pos, :], dim=1))
+        lin_fit, lin_fitv = curve_fit(func_boids, x_data, y_data, method='dogbox', p0=[50*1E-5, 50*5E-4, 50*1E-8])
+        fit_sum = func_boids(x_data, lin_fit[0], lin_fit[1], lin_fit[2])
+        plt.scatter(to_numpy(r[pos]), fit_sum, color='b', s=2)
 
 
 def data_plot_FIG6():
