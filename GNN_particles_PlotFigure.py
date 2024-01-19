@@ -3921,7 +3921,7 @@ def data_plot_FIG5():
 
 
     fig = plt.figure(figsize=(10, 9))
-    plt.ion()
+    # plt.ion()
     ax = fig.add_subplot(3, 3, 1)
     print('1')
     for m in range(model.a.shape[0]):
@@ -4658,9 +4658,10 @@ if __name__ == '__main__':
     # data_plot_FIG5sup()
 
     # boids HR2
-    # data_plot_FIG5()
+    data_plot_FIG5()
 
-    data_plot_FIG6()
+    # data_plot_FIG6()
+
 
 
 

@@ -297,7 +297,7 @@ class RD_RPS(pyg.nn.MessagePassing):
         v = x[:,7]
         w = x[:,8]
 
-        laplacian = self.beta * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
+        laplacian = self.beta * c * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
         laplacian_u = laplacian[:, 0]
         laplacian_v = laplacian[:, 1]
         laplacian_w = laplacian[:, 2]
@@ -986,6 +986,79 @@ class MeshLaplacian(pyg.nn.MessagePassing):
     def psi(self, r, p):
         return p * r
 
+class Mesh_RPS(pyg.nn.MessagePassing):
+    """Interaction Network as proposed in this paper:
+    https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
+
+    def __init__(self, aggr_type=[], model_config=[], device=[], bc_diff=[]):
+        super(Mesh_RPS, self).__init__(aggr=aggr_type)  # "Add" aggregation.
+
+        self.device = device
+        self.input_size = model_config['input_size']
+        self.output_size = model_config['output_size']
+        self.hidden_size = model_config['hidden_size']
+        self.nlayers = model_config['n_mp_layers']
+        self.nparticles = model_config['nparticles']
+        self.radius = model_config['radius']
+        self.data_augmentation = model_config['data_augmentation']
+        self.noise_level = model_config['noise_level']
+        self.embedding = model_config['embedding']
+        self.ndataset = model_config['nrun']-1
+        self.bc_diff = bc_diff
+
+        self.lin_phi = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
+                            hidden_size=self.hidden_size, device=self.device)
+
+        self.a = nn.Parameter(
+            torch.tensor(np.ones((int(self.ndataset), int(self.nparticles), self.embedding)), device=self.device,
+                         requires_grad=True, dtype=torch.float32))
+
+    def forward(self, data, data_id):
+
+        self.data_id = data_id
+        x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
+        # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+        # deg = pyg_utils.degree(edge_index[0], data.num_nodes)
+
+        laplacian = self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
+
+        u = x[:,6]
+        v = x[:,7]
+        w = x[:,8]
+
+        laplacian = self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
+        laplacian_u = laplacian[:, 0]
+        laplacian_v = laplacian[:, 1]
+        laplacian_w = laplacian[:, 2]
+
+        embedding = self.a[self.data_id, to_numpy(x[:, 0]), :]
+
+        input_phi = torch.cat((laplacian_u[:,None], laplacian_v[:,None], laplacian_w[:,None], u[:,None], v[:,None], w[:,None], embedding), dim=-1)
+
+        pred = self.lin_phi(input_phi)
+
+        return pred
+
+    def message(self, x_i, x_j, edge_attr):
+
+        # U column 6, V column 7
+
+        # L = edge_attr * (x_j[:, 6]-x_i[:, 6])
+
+        Lu = edge_attr * x_j[:, 6]
+        Lv = edge_attr * x_j[:, 7]
+        Lw = edge_attr * x_j[:, 8]
+
+        Laplace = torch.cat((Lu[:, None], Lv[:, None], Lw[:, None]), axis=1)
+
+        return Laplace
+
+    def update(self, aggr_out):
+        return aggr_out  # self.lin_node(aggr_out)
+
+    def psi(self, r, p):
+        return p * r
+
 
 def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_p=False, step=5, alpha=0.2, ratio=1,scenario='none', device=[]):
     print('')
@@ -1564,7 +1637,7 @@ def data_train(model_config, bSparse=False):
     data_augmentation = model_config['data_augmentation']
     embedding = model_config['embedding']
     batch_size = model_config['batch_size']
-    bMesh = (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh')
+    bMesh = 'Mesh' in model_config['model']
     bRegul = 'regul' in model_config['sparsity']
     bReplace = 'replace' in model_config['sparsity']
     kmeans_input = model_config['kmeans_input']
@@ -1656,6 +1729,9 @@ def data_train(model_config, bSparse=False):
         model = MeshLaplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if (model_config['model'] == 'WaveMesh'):
         model = MeshLaplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+    if (model_config['model'] == 'RD_RPS_Mesh'):
+        model = Mesh_RPS(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+
 
     # net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_17.pt"
     # state_dict = torch.load(net,map_location=device)
@@ -1711,7 +1787,6 @@ def data_train(model_config, bSparse=False):
         for run in trange(0, NGraphs):
             h = torch.load(f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt',map_location=device)
             h_list.append(torch.stack(h))
-        # hnorm = torch.load(f'./log/try_{ntry}/hnorm.pt', map_location=device).to(device)
         x = x_list[0][0].clone().detach()
         index_particles = []
         for n in range(model_config['nparticle_types']):
@@ -3847,7 +3922,7 @@ if __name__ == '__main__':
     # config_list = ['config_wave_testA']
 
     # Test plotting figures paper
-    config_list = ['config_wave_HR3'] # ['config_boids_16_HR1','config_boids_16_HR2'] #, 'config_boids_16_HR'] #['config_RD_RPS','config_RD_RPS_05','config_RD_RPS_025'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
+    config_list = ['config_RD_RPS2'] # ['config_boids_16_HR1','config_boids_16_HR2'] #, 'config_boids_16_HR'] #['config_RD_RPS','config_RD_RPS_05','config_RD_RPS_025'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3876,10 +3951,10 @@ if __name__ == '__main__':
         cmap = cc(model_config=model_config)
 
         ratio = 1
-        # data_generate(model_config, device=device, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=20)  #model_config['nframes']//100, ratio=ratio, scenario='none', )
-        # data_train(model_config,model_embedding)
+        # data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//50, ratio=ratio, scenario='none' )
+        data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
-        data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=100)
+        # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=100)
 
         # data_train_shrofflab_celegans(model_config)
         # data_test_shrofflab_celegans(model_config)
