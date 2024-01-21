@@ -1701,7 +1701,7 @@ def data_train(model_config, bSparse=False):
     x_list = []
     y_list = []
     print('Load data ...')
-    for run in trange(NGraphs):
+    for run in trange(NGraphs):   ##############to be changed
         x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
         y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(torch.stack(x))
@@ -2096,10 +2096,16 @@ def data_train(model_config, bSparse=False):
         elif bMesh:
             f_list = []
             for n in range(nparticles):
-                r = torch.tensor(np.linspace(-250, 250, 100)).to(device)
                 embedding = model.a[0, n, :] * torch.ones((100, model_config['embedding']), device=device)
-                in_features = torch.cat((r[:,None], embedding), dim=1)
-                h = model.lin_phi(in_features.float())
+                if model_config['model'] == 'RD_RPS_Mesh':
+                    u = torch.tensor(np.linspace(0, 1, 100)).to(device)
+                    u = u[:, None]
+                    in_features = torch.cat((u,u,u,u,u,u, embedding), dim=1)
+                    r = u
+                else:
+                    r = torch.tensor(np.linspace(-250, 250, 100)).to(device)
+                    in_features = torch.cat((r[:,None], embedding), dim=1)
+                h=model.lin_phi(in_features.float())
                 h = h[:, 0]
                 f_list.append(h)
                 if n % 100 == 0:
@@ -3931,7 +3937,7 @@ if __name__ == '__main__':
     # config_list = ['config_wave_testA']
 
     # Test plotting figures paper
-    config_list = ['config_gravity_16_HR_continuous']   # ['config_boids_16_HR1','config_boids_16_HR2'] #, 'config_boids_16_HR'] #['config_RD_RPS','config_RD_RPS_05','config_RD_RPS_025'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
+    config_list = ['config_RD_RPS2']  # ['config_gravity_16_HR_continuous'] # ['config_boids_16_HR1','config_boids_16_HR2'] #, 'config_boids_16_HR'] #['config_RD_RPS','config_RD_RPS_05','config_RD_RPS_025'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)

@@ -2649,7 +2649,7 @@ def data_plot_FIG3():
     plt.text(0, -0.75, r"Accuracy: {:.3f}".format(F1), fontsize=12)
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
-    torch.save(torch.tensor(new_labels, device=device), os.path.join(log_dir, f'labels_{best_model}.pt'))
+    torch.save(torch.tensor(new_labels, device=device), os.path.join(log_dir, f'labels_20.pt'))
 
     ax = fig.add_subplot(3, 3, 4)
     print('4')
@@ -2657,7 +2657,7 @@ def data_plot_FIG3():
         for n in range(model.a.shape[1]):
             plt.scatter(to_numpy(model.a[m][n, 0]),
                         to_numpy(model.a[m][n, 1]),
-                        color=cmap.color(new_labels[n]), s=1)
+                        color=cmap.color(new_labels[n]), s=4)
     plt.xlabel(r'Embedding $\ensuremath{\mathbf{a}}_{i0} [a.u.]$', fontsize=14)
     plt.ylabel(r'Embedding $\ensuremath{\mathbf{a}}_{i1} [a.u.]$', fontsize=14)
     plt.xticks(fontsize=10)
@@ -2758,11 +2758,12 @@ def data_plot_FIG3():
 
     ax = fig.add_subplot(3, 3, 7)
     print('7')
-    plt.scatter(p, popt_list[:, 0], color='k')
     x_data = p
     y_data = popt_list[:, 0]
     lin_fit, lin_fitv = curve_fit(func_lin, x_data, y_data)
-    plt.plot(p, func_lin(x_data, lin_fit[0], lin_fit[1]), color='r')
+    plt.plot(p, func_lin(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
+    plt.scatter(p, popt_list[:, 0], color='k')
+
     plt.xlabel(r'True mass $[a.u.]$', fontsize=14)
     plt.ylabel(r'Predicted mass $[a.u.]$', fontsize=14)
     plt.xlim([0, 5.5])
@@ -2902,7 +2903,6 @@ def data_plot_FIG3():
     pred = pred[:, 0]
     pred=torch.reshape(pred,(100,100))
     plt.imshow(to_numpy(pred), extent=[0.002, 0.01, to_numpy(torch.min(t[:,1])), to_numpy(torch.max(t[:,1]))], aspect='auto', origin='lower', cmap='jet')
-
 
     plt.tight_layout()
 
@@ -4650,7 +4650,7 @@ if __name__ == '__main__':
     # data_plot_FIG4sup()
 
     # gravity model
-    # data_plot_FIG3()
+    data_plot_FIG3()
 
     # training Coloumb_3
     # data_plot_FIG4()
@@ -4658,7 +4658,7 @@ if __name__ == '__main__':
     # data_plot_FIG5sup()
 
     # boids HR2
-    data_plot_FIG5()
+    # data_plot_FIG5()
 
     # data_plot_FIG6()
 
