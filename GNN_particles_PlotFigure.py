@@ -8,6 +8,7 @@ from shutil import copyfile
 
 import matplotlib.pyplot as plt
 import matplotlib
+import matplotlib.cm as cmplt
 import networkx as nx
 import torch
 import torch.nn as nn
@@ -2541,8 +2542,8 @@ def data_plot_FIG3():
         new_labels[kmeans.labels_ == label_list[n]] = n
         plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1],
                     color=cmap.color(n), s=0.1)
-        plt.xlabel(r'UMAP 0', fontsize=14)
-        plt.ylabel(r'UMAP 1', fontsize=14)
+    plt.xlabel(r'UMAP 0', fontsize=14)
+    plt.ylabel(r'UMAP 1', fontsize=14)
     torch.save(torch.tensor(new_labels, device=device), os.path.join(log_dir, f'labels_20.pt'))
     model_a_ = model.a.clone().detach()
     model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
@@ -2768,6 +2769,301 @@ def data_plot_FIG3():
 
     plt.savefig('Fig3.pdf', format="pdf", dpi=300)
     plt.savefig('Fig3.jpg', dpi=300)
+
+    plt.close()
+
+def data_plot_FIG3_continous():
+
+
+    config = 'config_gravity_16_HR_continuous'
+
+    with open(f'./config/{config}.yaml', 'r') as file:
+        model_config = yaml.safe_load(file)
+    model_config['dataset']=config[7:]
+
+    def bc_pos(X):
+        return X
+    def bc_diff(D):
+        return D
+
+    for key, value in model_config.items():
+        print(key, ":", value)
+        if ('E-' in str(value)) | ('E+' in str(value)):
+            value = float(value)
+            model_config[key] = value
+
+    cmap = cc(model_config=model_config)
+    aggr_type = model_config['aggr_type']
+    if model_config['boundary'] == 'no':  # change this for usual BC
+        def bc_pos(X):
+            return X
+
+
+        def bc_diff(D):
+            return D
+    else:
+        def bc_pos(X):
+            return torch.remainder(X, 1.0)
+
+
+        def bc_diff(D):
+            return torch.remainder(D - .5, 1.0) - .5
+    ratio = 1
+
+    model = []
+    radius = model_config['radius']
+    min_radius = model_config['min_radius']
+    nparticle_types = model_config['nparticle_types']
+    nparticles = model_config['nparticles']
+    dataset_name = model_config['dataset']
+    nframes = model_config['nframes']
+    bMesh = (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh')
+    nrun = model_config['nrun']
+    kmeans_input = model_config['kmeans_input']
+    aggr_type = model_config['aggr_type']
+
+    index_particles = []
+    np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
+    for n in range(model_config['nparticle_types']):
+        index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
+
+    l_dir = os.path.join('.', 'log')
+    log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
+    print('log_dir: {}'.format(log_dir))
+
+    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
+    NGraphs = len(graph_files)
+    print('Graph files N: ', NGraphs - 1)
+    time.sleep(0.5)
+
+    x_list = []
+    y_list = []
+    x_stat = []
+    y_stat = []
+    distance_list = []
+    deg_list = []
+    print('Load normalizations ...')
+    time.sleep(1)
+
+    for run in trange(NGraphs):
+        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
+        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
+        if run == 0:
+            for k in np.arange(0, len(x) - 1, 4):
+                distance = torch.sum(bc_diff(x[k][:, None, 1:3] - x[k][None, :, 1:3]) ** 2, axis=2)
+                t = torch.Tensor([radius ** 2])  # threshold
+                adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                edge_index = adj_t.nonzero().t().contiguous()
+                dataset = data.Data(x=x, edge_index=edge_index)
+                distance = np.sqrt(to_numpy(distance[edge_index[0, :], edge_index[1, :]]))
+                deg = degree(dataset.edge_index[0], dataset.num_nodes)
+                deg_list.append(to_numpy(deg))
+                distance_list.append([np.mean(distance), np.std(distance)])
+                x_stat.append(to_numpy(torch.concatenate((torch.mean(x[k][:, 3:5], axis=0), torch.std(x[k][:, 3:5], axis=0)),
+                                                axis=-1)))
+                y_stat.append(to_numpy(torch.concatenate((torch.mean(y[k], axis=0), torch.std(y[k], axis=0)),
+                                                axis=-1)))
+        x_list.append(torch.stack(x))
+        y_list.append(torch.stack(y))
+
+    x = torch.stack(x_list)
+    x = torch.reshape(x, (x.shape[0] * x.shape[1] * x.shape[2], x.shape[3]))
+    y = torch.stack(y_list)
+    y = torch.reshape(y, (y.shape[0] * y.shape[1] * y.shape[2], y.shape[3]))
+    vnorm = norm_velocity(x, device)
+    ynorm = norm_acceleration(y, device)
+    print(vnorm, ynorm)
+    print(vnorm[4], ynorm[4])
+
+    x_stat = np.array(x_stat)
+    y_stat = np.array(y_stat)
+
+    model = GravityParticles(model_config=model_config, device=device, bc_diff=bc_diff)
+
+    net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
+    state_dict = torch.load(net, map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
+
+    lra = 1E-3
+    lr = 1E-3
+
+    table = PrettyTable(["Modules", "Parameters"])
+    total_params = 0
+    it = 0
+    for name, parameter in model.named_parameters():
+        if not parameter.requires_grad:
+            continue
+        if it == 0:
+            optimizer = torch.optim.Adam([model.a], lr=lra)
+        else:
+            optimizer.add_param_group({'params': parameter, 'lr': lr})
+        it += 1
+        param = parameter.numel()
+        table.add_row([name, param])
+        total_params += param
+    print(table)
+    print(f"Total Trainable Params: {total_params}")
+    print(f'Learning rates: {lr}, {lra}')
+    print('')
+    print(f'network: {net}')
+    # optimizer = torch.optim.Adam(model.parameters(), lr=lr) #, weight_decay=weight_decay)
+    model.eval()
+    best_loss = np.inf
+
+    print('')
+    time.sleep(0.5)
+    print('Plotting ...')
+
+    rr = torch.tensor(np.linspace(min_radius, radius, 1000)).to(device)
+    embedding = []
+    for n in range(model.a.shape[0]):
+        embedding.append(model.a[n])
+    embedding = to_numpy(torch.stack(embedding))
+    embedding = np.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
+    embedding_ = torch.tensor(embedding, device=device)
+
+    plt.rcParams['text.usetex'] = True
+    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+
+    cm = 1 / 2.54 * 3 / 2.3
+
+    # plt.subplots(frameon=False)
+    # matplotlib.use("pgf")
+    # matplotlib.rcParams.update({
+    #     "pgf.texsystem": "pdflatex",
+    #     'font.family': 'serif',
+    #     'text.usetex': True,
+    #     'pgf.rcfonts': False,
+    # })
+
+    # fig = plt.figure(figsize=(3*cm, 3*cm))
+
+    colors = cmplt.jet(np.linspace(0, 1, nparticles))
+
+    fig = plt.figure(figsize=(6.5, 9))
+    plt.ion()
+    ax = fig.add_subplot(3, 2, 1)
+    colors = cmplt.rainbow(np.linspace(0, 1, nparticles))
+    print('1')
+
+    plt.scatter(embedding[:, 0],embedding[:, 1], s=0.1, c=colors, alpha=0.5)
+    plt.xlabel(r'Embedding $\ensuremath{\mathbf{a}}_{i0} [a.u.]$',fontsize=14)
+    plt.ylabel(r'Embedding $\ensuremath{\mathbf{a}}_{i1} [a.u.]$',fontsize=14)
+    plt.xticks(fontsize=10)
+    plt.yticks(fontsize=10)
+
+    acc_list = []
+    for n in range(nparticles):
+        embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
+        in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                 rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
+                                 0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
+        with torch.no_grad():
+            acc = model.lin_edge(in_features.float())
+        acc = acc[:, 0]
+        acc_list.append(acc)
+    acc_list = torch.stack(acc_list)
+    coeff_norm = to_numpy(acc_list)
+    trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int), n_components=2,
+                      random_state=42, transform_queue_size=0).fit(coeff_norm)
+    proj_interaction = trans.transform(coeff_norm)
+    proj_interaction = np.squeeze(proj_interaction)
+
+    ax = fig.add_subplot(3, 2, 2)
+    print('2')
+    plt.scatter(proj_interaction[:, 0], proj_interaction[:, 1], s=0.1, c=colors, alpha=0.5)
+    plt.xlabel(r'UMAP 0', fontsize=14)
+    plt.ylabel(r'UMAP 1', fontsize=14)
+    plt.xticks(fontsize=10)
+    plt.yticks(fontsize=10)
+
+    ax = fig.add_subplot(3, 2, 3)
+    print('3')
+    acc_list = []
+    for n in range(nparticles):
+        embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
+        in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                 rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
+                                 0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
+        acc = model.lin_edge(in_features.float())
+        acc = acc[:, 0]
+        acc_list.append(acc)
+        plt.plot(to_numpy(rr),
+                 to_numpy(acc) * to_numpy(ynorm[4]),
+                 color=colors[n], linewidth=1, alpha=0.25)
+    plt.xlim([0, 0.02])
+    plt.ylim([0, 0.5E6])
+    plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=14)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, r_{ij}) [a.u.]$', fontsize=14)
+    plt.xticks(fontsize=10)
+    plt.yticks(fontsize=10)
+    plt.text(0.0075,0.4E6,r'Model', fontsize=14)
+
+    ax = fig.add_subplot(3,2,4)
+    print('6')
+    p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt',map_location=device)
+    psi_output = []
+    for n in range(nparticles):
+        psi_output.append(model.psi(rr, p[n]))
+        plt.plot(to_numpy(rr), np.array(psi_output[n].cpu()), linewidth=1, color=colors[n])
+    plt.xlim([0, 0.02])
+    plt.ylim([0, 0.5E6])
+    plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=14)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, r_{ij}) [a.u.]$', fontsize=14)
+    plt.xticks(fontsize=10)
+    plt.yticks(fontsize=10)
+    plt.text(0.0075,0.4E6,r'True', fontsize=14)
+
+
+    ax = fig.add_subplot(3, 2, 5)
+    print('5')
+    plot_list = []
+    for n in range(nparticles):
+        embedding = embedding_[n] * torch.ones((1000, model_config['embedding']), device=device)
+        in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                     rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
+                                     0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
+        with torch.no_grad():
+            pred = model.lin_edge(in_features.float())
+        pred = pred[:, 0]
+        plot_list.append(pred * ynorm[4])
+    p = np.linspace(0.5, 5, nparticles)
+    popt_list = []
+    for n in range(nparticles):
+        popt, pcov = curve_fit(func_pow, to_numpy(rr), to_numpy(plot_list[n]))
+        popt_list.append(popt)
+    popt_list = np.array(popt_list)
+
+    x_data = p
+    y_data = np.clip(popt_list[:, 0],0, 5)
+    lin_fit, lin_fitv = curve_fit(func_lin, x_data, y_data)
+    plt.scatter(p, popt_list[:, 0], color=colors, s=1)
+    plt.xlabel(r'True mass $[a.u.]$', fontsize=14)
+    plt.ylabel(r'Predicted mass $[a.u.]$', fontsize=14)
+    plt.xlim([0, 5.5])
+    plt.ylim([0, 5.5])
+    plt.text(0.5, 4.5, f"N: {nparticles}", fontsize=10)
+    plt.text(0.5, 4.0, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
+    residuals = y_data - func_lin(x_data, *lin_fit)
+    ss_res = np.sum(residuals ** 2)
+    ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+    r_squared = 1 - (ss_res / ss_tot)
+    plt.text(0.5, 3.5, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
+
+    ax = fig.add_subplot(3, 2, 6)
+    print('8')
+    plt.scatter(p, -popt_list[:, 1], color='k', s=1)
+    plt.xlim([0, 5.5])
+    plt.ylim([-4, 0])
+    plt.xlabel(r'True mass $[a.u.]$', fontsize=14)
+    plt.ylabel(r'Exponent fit $[a.u.]$', fontsize=14)
+    plt.text(0.5, -0.5, f"{np.round(np.mean(-popt_list[:, 1]), 3)}+/-{np.round(np.std(popt_list[:, 1]), 3)}",
+             fontsize=10)
+
+    plt.tight_layout()
+
+    plt.savefig('Fig3_continous.pdf', format="pdf", dpi=300)
+    plt.savefig('Fig3_continuous.jpg', dpi=300)
 
     plt.close()
 
@@ -4483,9 +4779,11 @@ if __name__ == '__main__':
 
     # gravity model
     # data_plot_FIG3()
+    # gravity model continuous
+    data_plot_FIG3_continous()
 
     # training Coloumb_3
-    data_plot_FIG4()
+    # data_plot_FIG4()
 
     # data_plot_FIG5sup()
 
