@@ -215,7 +215,6 @@ def func_boids(x, a, b, c):
 def data_plot_FIG2():
 
     config = 'config_arbitrary_3'
-    # model_config = load_model_config(id=config)
 
     # Load parameters from config file
     with open(f'./config/{config}.yaml', 'r') as file:
@@ -274,7 +273,6 @@ def data_plot_FIG2():
     print('Graph files N: ', NGraphs - 1)
     time.sleep(0.5)
 
-
     x_list = []
     y_list = []
     x_stat = []
@@ -317,14 +315,8 @@ def data_plot_FIG2():
     x_stat = np.array(x_stat)
     y_stat = np.array(y_stat)
 
-
     model = InteractionParticles(model_config=model_config, device=device, aggr_type = model_config['aggr_type'], bc_diff=bc_diff)
     print(f'Training InteractionParticles')
-
-    # if best_model == -1:
-    #     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
-    # else:
-    #     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_{best_model}.pt"
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
     state_dict = torch.load(net, map_location=device)
@@ -352,14 +344,11 @@ def data_plot_FIG2():
     print(f'Learning rates: {lr}, {lra}')
     print('')
     print(f'network: {net}')
-    # optimizer = torch.optim.Adam(model.parameters(), lr=lr) #, weight_decay=weight_decay)
     model.eval()
-    best_loss = np.inf
 
     print('')
     time.sleep(0.5)
     print('Plotting ...')
-
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_0.pt"
     state_dict = torch.load(net, map_location=device)
@@ -501,7 +490,7 @@ def data_plot_FIG2():
     plt.text(0, -0.75, r"Accuracy: {:.3f}".format(F1), fontsize=12)
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
-    torch.save(torch.tensor(new_labels, device=device), os.path.join(log_dir, f'labels_{best_model}.pt'))
+    torch.save(torch.tensor(new_labels, device=device), os.path.join(log_dir, f'labels_20.pt'))
 
     ####
 
@@ -522,13 +511,12 @@ def data_plot_FIG2():
 
     ax = fig.add_subplot(3, 4, 5)
     print('5')
-    if (embedding.shape[1] > 1):
-        for m in range(model.a.shape[0]):
-            for n in range(nparticle_types):
-                plt.scatter(embedding_particle[n + m * nparticle_types][:, 0],
-                            embedding_particle[n + m * nparticle_types][:, 1], color=cmap.color(n), s=0.1)
-        plt.xlabel(r'Embedding $\ensuremath{\mathbf{a}}_{i0} [a.u.]$',fontsize=14)
-        plt.ylabel(r'Embedding $\ensuremath{\mathbf{a}}_{i1} [a.u.]$',fontsize=14)
+    for m in range(model.a.shape[0]):
+        for n in range(nparticle_types):
+            plt.scatter(embedding_particle[n + m * nparticle_types][:, 0],
+                        embedding_particle[n + m * nparticle_types][:, 1], color=cmap.color(n), s=6)
+    plt.xlabel(r'Embedding $\ensuremath{\mathbf{a}}_{i0} [a.u.]$',fontsize=14)
+    plt.ylabel(r'Embedding $\ensuremath{\mathbf{a}}_{i1} [a.u.]$',fontsize=14)
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
 
@@ -620,10 +608,7 @@ def data_plot_FIG2():
     else:
         cm_display.plot(ax=fig.gca(), cmap='Blues', include_values=True, values_format='d')
     Accuracy = metrics.accuracy_score(to_numpy(T1), new_labels)
-    Precision = metrics.precision_score(to_numpy(T1), new_labels, average='micro')
-    Recall = metrics.recall_score(to_numpy(T1), new_labels, average='micro')
-    F1 = metrics.f1_score(to_numpy(T1), new_labels, average='micro')
-    plt.text(0, -0.75, r"Accuracy: {:.3f}".format(F1), fontsize=12)
+    plt.text(0, -0.75, r"Accuracy: {:.3f}".format(Accuracy), fontsize=12)
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
 
@@ -633,7 +618,7 @@ def data_plot_FIG2():
         for n in range(model.a.shape[1]):
             plt.scatter(to_numpy(model.a[m][n, 0]),
                         to_numpy(model.a[m][n, 1]),
-                        color=cmap.color(new_labels[n]), s=1)
+                        color=cmap.color(new_labels[n]), s=6)
     plt.xlabel(r'Embedding $\ensuremath{\mathbf{a}}_{i0} [a.u.]$', fontsize=14)
     plt.ylabel(r'Embedding $\ensuremath{\mathbf{a}}_{i1} [a.u.]$', fontsize=14)
     plt.xticks(fontsize=10)
@@ -775,9 +760,9 @@ def data_plot_FIG2sup():
     log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
     print('log_dir: {}'.format(log_dir))
 
-    if os.path.isfile(os.path.join(log_dir, f'labels_{best_model}.pt')):
+    if os.path.isfile(os.path.join(log_dir, f'labels_20.pt')):
         print('Use learned labels')
-        labels = torch.load(os.path.join(log_dir, f'labels_{best_model}.pt'))
+        labels = torch.load(os.path.join(log_dir, f'labels_20.pt'))
     else:
         labels = T1
         print('Use ground truth labels')
@@ -815,7 +800,7 @@ def data_plot_FIG2sup():
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
     NGraphs = int(len(graph_files))
 
-    net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_{best_model}.pt"
+    net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_20.pt"
 
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
@@ -928,9 +913,9 @@ def data_plot_FIG2sup():
     log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
     print('log_dir: {}'.format(log_dir))
 
-    if os.path.isfile(os.path.join(log_dir, f'labels_{best_model}.pt')):
+    if os.path.isfile(os.path.join(log_dir, f'labels_20.pt')):
         print('Use learned labels')
-        labels = torch.load(os.path.join(log_dir, f'labels_{best_model}.pt'))
+        labels = torch.load(os.path.join(log_dir, f'labels_20.pt'))
     else:
         labels = T1
         print('Use ground truth labels')
@@ -952,7 +937,7 @@ def data_plot_FIG2sup():
 
     model = InteractionParticles(model_config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_diff=bc_diff)
 
-    net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_{best_model}.pt"
+    net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_20.pt"
 
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
@@ -1051,7 +1036,7 @@ def data_plot_FIG2sup():
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
     NGraphs = int(len(graph_files))
 
-    net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_{best_model}.pt"
+    net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_20.pt"
 
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
@@ -1390,7 +1375,7 @@ def data_plot_FIG3sup():
     # if best_model == -1:
     #     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     # else:
-    #     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_{best_model}.pt"
+    #     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_20.pt"
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
     state_dict = torch.load(net, map_location=device)
@@ -1831,9 +1816,9 @@ def data_plot_FIG4sup():
     log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
     print('log_dir: {}'.format(log_dir))
 
-    if os.path.isfile(os.path.join(log_dir, f'labels_{best_model}.pt')):
+    if os.path.isfile(os.path.join(log_dir, f'labels_20.pt')):
         print('Use learned labels')
-        labels = torch.load(os.path.join(log_dir, f'labels_{best_model}.pt'))
+        labels = torch.load(os.path.join(log_dir, f'labels_20.pt'))
     else:
         labels = T1
         print('Use ground truth labels')
@@ -1871,7 +1856,7 @@ def data_plot_FIG4sup():
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
     NGraphs = int(len(graph_files))
 
-    net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_{best_model}.pt"
+    net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_20.pt"
 
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
@@ -1984,9 +1969,9 @@ def data_plot_FIG4sup():
     log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
     print('log_dir: {}'.format(log_dir))
 
-    if os.path.isfile(os.path.join(log_dir, f'labels_{best_model}.pt')):
+    if os.path.isfile(os.path.join(log_dir, f'labels_20.pt')):
         print('Use learned labels')
-        labels = torch.load(os.path.join(log_dir, f'labels_{best_model}.pt'))
+        labels = torch.load(os.path.join(log_dir, f'labels_20.pt'))
     else:
         labels = T1
         print('Use ground truth labels')
@@ -2008,7 +1993,7 @@ def data_plot_FIG4sup():
 
     model = InteractionParticles(model_config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_diff=bc_diff)
 
-    net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_{best_model}.pt"
+    net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_20.pt"
 
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
@@ -2107,7 +2092,7 @@ def data_plot_FIG4sup():
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
     NGraphs = int(len(graph_files))
 
-    net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_{best_model}.pt"
+    net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_20.pt"
 
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
@@ -2484,7 +2469,7 @@ def data_plot_FIG3():
     # if best_model == -1:
     #     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     # else:
-    #     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_{best_model}.pt"
+    #     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_20.pt"
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
     state_dict = torch.load(net, map_location=device)
@@ -3022,7 +3007,7 @@ def data_plot_FIG4():
     # if best_model == -1:
     #     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     # else:
-    #     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_{best_model}.pt"
+    #     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_20.pt"
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
     state_dict = torch.load(net, map_location=device)
@@ -3199,7 +3184,7 @@ def data_plot_FIG4():
     plt.text(0, -0.75, r"Accuracy: {:.3f}".format(F1), fontsize=12)
     plt.xticks(fontsize=10)
     plt.yticks(fontsize=10)
-    torch.save(torch.tensor(new_labels, device=device), os.path.join(log_dir, f'labels_{best_model}.pt'))
+    torch.save(torch.tensor(new_labels, device=device), os.path.join(log_dir, f'labels_20.pt'))
 
     ax = fig.add_subplot(3, 3, 4)
     print('4')
@@ -3412,9 +3397,9 @@ def data_plot_FIG5sup():
     log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
     print('log_dir: {}'.format(log_dir))
 
-    if os.path.isfile(os.path.join(log_dir, f'labels_{best_model}.pt')):
+    if os.path.isfile(os.path.join(log_dir, f'labels_20.pt')):
         print('Use learned labels')
-        labels = torch.load(os.path.join(log_dir, f'labels_{best_model}.pt'))
+        labels = torch.load(os.path.join(log_dir, f'labels_20.pt'))
     else:
         labels = T1
         print('Use ground truth labels')
@@ -3450,7 +3435,7 @@ def data_plot_FIG5sup():
 
     model = GravityParticles(model_config=model_config, device=device, bc_diff=bc_diff)
 
-    net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_{best_model}.pt"
+    net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_20.pt"
 
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
@@ -3608,9 +3593,9 @@ def data_plot_FIG5sup():
     log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
     print('log_dir: {}'.format(log_dir))
 
-    if os.path.isfile(os.path.join(log_dir, f'labels_{best_model}.pt')):
+    if os.path.isfile(os.path.join(log_dir, f'labels_20.pt')):
         print('Use learned labels')
-        labels = torch.load(os.path.join(log_dir, f'labels_{best_model}.pt'))
+        labels = torch.load(os.path.join(log_dir, f'labels_20.pt'))
     else:
         labels = T1
         print('Use ground truth labels')
@@ -3630,7 +3615,7 @@ def data_plot_FIG5sup():
 
     model = ElecParticles(model_config=model_config, device=device, bc_diff=bc_diff)
 
-    net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_{best_model}.pt"
+    net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_20.pt"
 
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
@@ -3866,7 +3851,7 @@ def data_plot_FIG5():
     # if best_model == -1:
     #     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     # else:
-    #     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_{best_model}.pt"
+    #     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_20.pt"
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
     state_dict = torch.load(net, map_location=device)
@@ -4210,7 +4195,6 @@ def data_plot_FIG5():
         lin_fit, lin_fitv = curve_fit(func_boids, x_data, y_data, method='dogbox', p0=[50*1E-5, 50*5E-4, 50*1E-8])
         fit_sum = func_boids(x_data, lin_fit[0], lin_fit[1], lin_fit[2])
         plt.scatter(to_numpy(r[pos]), fit_sum, color='b', s=2)
-
 
 def data_plot_FIG6():
 
