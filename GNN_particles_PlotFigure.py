@@ -4145,8 +4145,8 @@ def data_plot_FIG5():
         cm_display.plot(ax=fig.gca(), cmap='Blues', include_values=True, values_format='d')
     Accuracy = metrics.accuracy_score(to_numpy(T1), new_labels)
     plt.text(0, -1, r"Accuracy: {:.3f}".format(Accuracy), fontsize=12)
-    plt.xticks(fontsize=10)
-    plt.yticks(fontsize=10)
+    plt.xticks(fontsize=8)
+    plt.yticks(fontsize=8)
     torch.save(torch.tensor(new_labels, device=device), os.path.join(log_dir, f'labels_20.pt'))
 
     ax = fig.add_subplot(3, 3, 4)
@@ -4207,6 +4207,8 @@ def data_plot_FIG5():
         pos = pos[:, 0].astype(int)
         plt.scatter(to_numpy(r[pos]), to_numpy(torch.norm(lin_edge_out[pos,:], dim=1)), color=cmap.color(n), s=1)
     plt.ylim([0,5E-5])
+    plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=14)
+    plt.ylabel(r'$\left| \left| f(\ensuremath{\mathbf{a}}_i, x_j-x_i, \dot{x}_i, \dot{x}_j, r_{ij}) \right| \right|[a.u.]$', fontsize=12)
     ax = fig.add_subplot(3, 3, 6)
     print('6')
     for n in range(nparticle_types):
@@ -4214,6 +4216,8 @@ def data_plot_FIG5():
         pos = pos[:, 0].astype(int)
         plt.scatter(to_numpy(r[pos]), to_numpy(torch.norm(sum[pos,:], dim=1)), color=cmap.color(n), s=1,alpha=1)
     plt.ylim([0,5E-5])
+    plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=14)
+    plt.ylabel(r'$\left| \left| f(\ensuremath{\mathbf{a}}_i, x_j-x_i, \dot{x}_i, \dot{x}_j, r_{ij}) \right| \right|[a.u.]$', fontsize=12)
 
     cohesion_GT = np.zeros(nparticle_types)
     alignment_GT = np.zeros(nparticle_types)
@@ -4261,12 +4265,12 @@ def data_plot_FIG5():
         plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=30)
     plt.xlabel(r'True cohesion coeff. $[a.u.]$', fontsize=14)
     plt.ylabel(r'Predicted cohesion coeff. $[a.u.]$', fontsize=14)
-    plt.text(5E-5, 4.5E-4, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=12)
+    plt.text(4E-5, 4.5E-4, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=12)
     residuals = y_data - func_lin(x_data, *lin_fit)
     ss_res = np.sum(residuals ** 2)
     ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
     r_squared = 1 - (ss_res / ss_tot)
-    plt.text(5E-5, 4E-4, f"$R^2$: {np.round(r_squared, 3)}", fontsize=12)
+    plt.text(4E-5, 4E-4, f"$R^2$: {np.round(r_squared, 3)}", fontsize=12)
 
     ax = fig.add_subplot(3, 3, 8)
     print('6')
@@ -4278,7 +4282,7 @@ def data_plot_FIG5():
         plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=30)
     plt.xlabel(r'True alignment coeff. $[a.u.]$', fontsize=14)
     plt.ylabel(r'Predicted alignment coeff. $[a.u.]$', fontsize=14)
-    plt.text(5e-3, 0.0425, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=12)
+    plt.text(5e-3, 0.042, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=12)
     residuals = y_data - func_lin(x_data, *lin_fit)
     ss_res = np.sum(residuals ** 2)
     ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
@@ -4294,12 +4298,12 @@ def data_plot_FIG5():
         plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=30)
     plt.xlabel(r'True alignment coeff. $[a.u.]$', fontsize=14)
     plt.ylabel(r'Predicted alignment coeff. $[a.u.]$', fontsize=14)
-    plt.text(5e-8, 4.6E-7, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=12)
+    plt.text(5e-8, 4.4E-7, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=12)
     residuals = y_data - func_lin(x_data, *lin_fit)
     ss_res = np.sum(residuals ** 2)
     ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
     r_squared = 1 - (ss_res / ss_tot)
-    plt.text(5e-8, 4E-7, f"$R^2$: {np.round(r_squared, 3)}", fontsize=12)
+    plt.text(5e-8, 3.9E-7, f"$R^2$: {np.round(r_squared, 3)}", fontsize=12)
 
     #############
 
@@ -4677,7 +4681,7 @@ def data_plot_FIG6():
         for n in range(model.a.shape[1]):
             plt.scatter(to_numpy(model.a[m][n, 0]),
                         to_numpy(model.a[m][n, 1]),
-                        color=cmap.color(new_labels[n]), s=1)
+                        color=cmap.color(new_labels[n]), s=5)
     plt.xlabel(r'Embedding 0', fontsize=14)
     plt.ylabel(r'Embedding 1', fontsize=14)
     plt.xticks(fontsize=10)
@@ -5108,11 +5112,11 @@ if __name__ == '__main__':
     # data_plot_FIG5sup()
 
     # boids HR2
-    # data_plot_FIG5()
+    #data_plot_FIG5()
 
-    # data_plot_FIG6()
+    data_plot_FIG6()
 
-    data_plot_FIG7()
+    # data_plot_FIG7()
 
 
 
