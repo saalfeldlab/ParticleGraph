@@ -2349,11 +2349,8 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
     y_recons = []
     x_list = []
     y_list = []
-    for run in range(2):
-        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
-        x_list.append(torch.stack(x))
-        y_list.append(torch.stack(y))
+    x_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_0.pt', map_location=device))
+    y_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_0.pt', map_location=device))
 
     x = x_list[0][0].clone().detach()
     x00 = x_list[0][0].clone().detach()
@@ -2402,15 +2399,15 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
             x[:, 6:7] += pred * hnorm * delta_t
         elif model_config['model'] == 'WaveMesh':
             with torch.no_grad():
-                pred = model_mesh(dataset_mesh, data_id=0, )
+                pred = model_mesh(dataset_mesh, data_id=0)
             x[:, 7:8] += pred * hnorm * delta_t
             x[:, 6:7] += x[:, 7:8] * delta_t
         elif (model_config['model'] == 'RD_RPS_Mesh'):
             mask = to_numpy(torch.argwhere((x[:, 1] > 0.02) & (x[:, 1] < 0.98) & (x[:, 2] > 0.02) & (x[:, 2] < 0.98))).astype(int)
             mask = mask[:, 0:1]
             with torch.no_grad():
-                pred = model_mesh(dataset_mesh)
-                x[mask,6:9] += pred[mask] * delta_t
+                pred = model_mesh(dataset_mesh,data_id=0)
+                x[mask,6:9] += pred[mask] * hnorm * delta_t
         else:
             distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
             t = torch.Tensor([radius ** 2])  # threshold
@@ -2439,7 +2436,8 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         if bMesh:
             mask = to_numpy(torch.argwhere((x[:, 1] < 0.025) | (x[:, 1] > 0.975) | (x[:, 2] < 0.025) | (x[:, 2] > 0.975))).astype(int)
             mask = mask[:, 0:1]
-            x[mask, 6:8] = 0
+            if model_config['model'] == 'WaveMesh':
+                x[mask, 6:8] = 0
             rmserr = torch.sqrt(torch.mean(torch.sum((x[:, 6:7] - x0_next[:, 6:7]) ** 2, axis=1)))
             rmserr_list.append(rmserr.item())
         else:
@@ -2483,8 +2481,8 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
 
                 if (k == 0) & (bMesh):
                     plt.scatter(to_numpy(x0_next[:, 6]), to_numpy(x[:, 6]), s=1, alpha=0.25, c='k')
-                    plt.xlabel('True temperature [a.u.]', fontsize="14")
-                    plt.ylabel('Model temperature [a.u]', fontsize="14")
+                    plt.xlabel('True [a.u.]', fontsize="14")
+                    plt.ylabel('Model [a.u]', fontsize="14")
                 elif model_config['model'] == 'GravityParticles':
                     for n in range(nparticle_types):
                         g = to_numpy(p_mass[to_numpy(T1[index_particles[n], 0])]) * 10 * sc
@@ -2508,7 +2506,10 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
                     if model_config['model'] == 'WaveMesh':
                         plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                       facecolors=to_numpy(colors), vmin=-1500, vmax=1500)
-                    else:
+                    elif model_config['model'] == 'RD_RPS_Mesh':
+                        H1_IM = torch.reshape(x_[:,6:9], (100, 100, 3))
+                        plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=1)
+                    elif model_config['model'] == 'DiffMesh':
                         plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                       facecolors=to_numpy(colors), vmin=0, vmax=5000)
                 else:
@@ -2520,6 +2521,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
                     else:
                         plt.scatter(x_[:, 1].detach().cpu(), x_[:, 2].detach().cpu(),
                                     s=sc, color=cmap.color(to_numpy(labels)))
+
                 if (k > 2) & (bMesh == False):
                     for n in range(nparticles):
                         plt.arrow(x=x_[n, 1].detach().cpu().item(), y=x_[n, 2].detach().cpu().item(),
@@ -2527,19 +2529,22 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
                                   dy=x_[n, 4].detach().cpu().item() * model_config['arrow_length'], color='k')
                 if k < 3:
                     if (k == 0) & (bMesh):
-                        plt.xlim([-5000, 5000])
-                        plt.ylim([-5000, 5000])
+                        plt.xlim([-1.3, 1.3])
+                        plt.ylim([-1.3, 1.3])
                     elif (model_config['boundary'] == 'no'):
                         plt.xlim([-1.3, 1.3])
                         plt.ylim([-1.3, 1.3])
-                    else:
+                    elif not(model_config['model']=='RD_RPS_Mesh'):
                         plt.xlim([0, 1])
                         plt.ylim([0, 1])
                 else:
-                    if bMesh | ('Boids' in model_config['description']) | (model_config['boundary'] == 'periodic'):
+                    if model_config['model'] == 'RD_RPS_Mesh':
+                        plt.xlim([40, 60])
+                        plt.ylim([40, 60])
+                    elif bMesh | ('Boids' in model_config['description']) | (model_config['boundary'] == 'periodic'):
                         plt.xlim([0.3, 0.7])
                         plt.ylim([0.3, 0.7])
-                    else:
+                    elif not(model_config['model']=='RD_RPS_Mesh'):
                         plt.xlim([-0.25, 0.25])
                         plt.ylim([-0.25, 0.25])
                 plt.xticks([])

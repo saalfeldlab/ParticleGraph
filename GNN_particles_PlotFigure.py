@@ -5001,7 +5001,7 @@ def data_plot_FIG7():
         for n in range(model.a.shape[1]):
             plt.scatter(to_numpy(model.a[m][n, 0]),
                         to_numpy(model.a[m][n, 1]),
-                        color=cmap.color(new_labels[n]), s=1)
+                        color=cmap.color(new_labels[n]), s=6)
     plt.xlabel(r'Embedding 0', fontsize=14)
     plt.ylabel(r'Embedding 1', fontsize=14)
     plt.xticks(fontsize=10)
@@ -5065,8 +5065,8 @@ def data_plot_FIG7():
 
     plt.tight_layout()
 
-    plt.savefig('Fig6.pdf', format="pdf", dpi=300)
-    plt.savefig('Fig6.jpg', dpi=300)
+    plt.savefig('Fig7.pdf', format="pdf", dpi=300)
+    plt.savefig('Fig7.jpg', dpi=300)
 
     plt.close()
 
