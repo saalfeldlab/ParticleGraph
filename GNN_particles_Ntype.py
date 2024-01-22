@@ -2192,7 +2192,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
     nparticles = model_config['nparticles']
     dataset_name = model_config['dataset']
     nframes = model_config['nframes']
-    bMesh = (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh')
+    bMesh = 'Mesh' in model_config['model']
     delta_t = model_config['delta_t']
     aggr_type = model_config['aggr_type']
 
@@ -2240,18 +2240,19 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
     if model_config['model'] == 'GravityParticles':
         model = GravityParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if bMesh:
-
         p = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         if len(model_config['p']) > 0:
             for n in range(nparticle_types):
                 p[n] = torch.tensor(model_config['p'][n])
         model = PDE_G(aggr_type=aggr_type, p=torch.squeeze(p), delta_t=model_config['delta_t'],
                       clamp=model_config['clamp'], pred_limit=model_config['pred_limit'])
-
         c = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         for n in range(nparticle_types):
             c[n] = torch.tensor(model_config['c'][n])
-        model_mesh = MeshLaplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+        if (model_config['model'] == 'WaveMesh'):
+            model_mesh = MeshLaplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+        if (model_config['model'] == 'RD_RPS_Mesh'):
+            model_mesh = Mesh_RPS(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
 
     files = glob.glob(f"./{log_dir}/tmp_recons/*")
     for f in files:
@@ -2386,7 +2387,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         x0_next = x_list[0][it + 1].clone().detach()
         y0 = y_list[0][it].clone().detach()
 
-        if model_config['model'] == 'DiffMesh':
+        if bMesh:
             x[:, 1:5] = x0[:, 1:5].clone().detach()
             dataset = data.Data(x=x, pos=x[:, 1:3])
             transform_0 = T.Compose([T.Delaunay()])
@@ -2394,21 +2395,22 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
             mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
             edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face)
             dataset_mesh = data.Data(x=x, edge_index=edge_index, edge_attr=edge_weight, device=device)
+
+        if model_config['model'] == 'DiffMesh':
             with torch.no_grad():
                 pred = model_mesh(dataset_mesh, data_id=0, )
             x[:, 6:7] += pred * hnorm * delta_t
         elif model_config['model'] == 'WaveMesh':
-            x[:, 1:5] = x0[:, 1:5].clone().detach()
-            dataset = data.Data(x=x, pos=x[:, 1:3])
-            transform_0 = T.Compose([T.Delaunay()])
-            dataset_face = transform_0(dataset).face
-            mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
-            edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face)
-            dataset_mesh = data.Data(x=x, edge_index=edge_index, edge_attr=edge_weight, device=device)
             with torch.no_grad():
                 pred = model_mesh(dataset_mesh, data_id=0, )
             x[:, 7:8] += pred * hnorm * delta_t
             x[:, 6:7] += x[:, 7:8] * delta_t
+        elif (model_config['model'] == 'RD_RPS_Mesh'):
+            mask = to_numpy(torch.argwhere((x[:, 1] > 0.02) & (x[:, 1] < 0.98) & (x[:, 2] > 0.02) & (x[:, 2] < 0.98))).astype(int)
+            mask = mask[:, 0:1]
+            with torch.no_grad():
+                pred = model_mesh(dataset_mesh)
+                x[mask,6:9] += pred[mask] * delta_t
         else:
             distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
             t = torch.Tensor([radius ** 2])  # threshold
@@ -2435,8 +2437,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
             y_recons.append(y.clone().detach())
 
         if bMesh:
-            mask = to_numpy(torch.argwhere((x[:, 1] < 0.025) | (x[:, 1] > 0.975) | (x[:, 2] < 0.025) | (
-                    x[:, 2] > 0.975))).astype(int)
+            mask = to_numpy(torch.argwhere((x[:, 1] < 0.025) | (x[:, 1] > 0.975) | (x[:, 2] < 0.025) | (x[:, 2] > 0.975))).astype(int)
             mask = mask[:, 0:1]
             x[mask, 6:8] = 0
             rmserr = torch.sqrt(torch.mean(torch.sum((x[:, 6:7] - x0_next[:, 6:7]) ** 2, axis=1)))
@@ -3924,7 +3925,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # config_list=['config_CElegans_32']
@@ -3937,7 +3938,7 @@ if __name__ == '__main__':
     # config_list = ['config_wave_testA']
 
     # Test plotting figures paper
-    config_list = ['config_RD_RPS4'] #['config_RD_RPS4']  # ['config_gravity_16_HR_continuous'] # ['config_boids_16_HR1','config_boids_16_HR2'] #, 'config_boids_16_HR'] #['config_RD_RPS','config_RD_RPS_05','config_RD_RPS_025'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
+    config_list = ['config_RD_RPS2'] #['config_RD_RPS4']  # ['config_gravity_16_HR_continuous'] # ['config_boids_16_HR1','config_boids_16_HR2'] #, 'config_boids_16_HR'] #['config_RD_RPS','config_RD_RPS_05','config_RD_RPS_025'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3966,10 +3967,10 @@ if __name__ == '__main__':
         cmap = cc(model_config=model_config)
 
         ratio = 1
-        # data_generate(model_config, device=device, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//20, ratio=ratio, scenario='none' )
-        data_train(model_config,model_embedding)
+        # data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=20) #model_config['nframes']//200, ratio=ratio, scenario='none' )
+        # data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
-        # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=100)
+        data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=100)
 
         # data_train_shrofflab_celegans(model_config)
         # data_test_shrofflab_celegans(model_config)
