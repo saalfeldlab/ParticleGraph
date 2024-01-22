@@ -3937,7 +3937,7 @@ if __name__ == '__main__':
     # config_list = ['config_wave_testA']
 
     # Test plotting figures paper
-    config_list = ['config_gravity_16_HR_continuous'] #['config_RD_RPS4']  # ['config_gravity_16_HR_continuous'] # ['config_boids_16_HR1','config_boids_16_HR2'] #, 'config_boids_16_HR'] #['config_RD_RPS','config_RD_RPS_05','config_RD_RPS_025'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
+    config_list = ['config_RD_RPS3'] #['config_RD_RPS4']  # ['config_gravity_16_HR_continuous'] # ['config_boids_16_HR1','config_boids_16_HR2'] #, 'config_boids_16_HR'] #['config_RD_RPS','config_RD_RPS_05','config_RD_RPS_025'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
 
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3966,8 +3966,8 @@ if __name__ == '__main__':
         cmap = cc(model_config=model_config)
 
         ratio = 1
-        data_generate(model_config, device=device, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//20, ratio=ratio, scenario='none' )
-        # data_train(model_config,model_embedding)
+        # data_generate(model_config, device=device, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//20, ratio=ratio, scenario='none' )
+        data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=100)
 
