@@ -3975,7 +3975,7 @@ if __name__ == '__main__':
         # data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False, step=20) #model_config['nframes']//200, ratio=ratio, scenario='none' )
         # data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
-        data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=100)
+        data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step=10)
 
         # data_train_shrofflab_celegans(model_config)
         # data_test_shrofflab_celegans(model_config)
