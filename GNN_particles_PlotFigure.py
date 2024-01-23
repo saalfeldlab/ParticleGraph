@@ -269,37 +269,51 @@ class Mesh_RPS_extract(pyg.nn.MessagePassing):
         return p * r
 
 
-
 class Mesh_RPS_learn(torch.nn.Module):
 
     def __init__(self):
-        super(Mesh_RPS_learn, self).__init__()  # "Add" aggregation.
+        super(Mesh_RPS_learn, self).__init__()
 
-        self.c = nn.Parameter(torch.zeros(1, requires_grad=True))
-        self.a = nn.Parameter(torch.zeros(1, requires_grad=True))
+        self.cc = nn.Parameter(torch.zeros(5, requires_grad=True))
+
         self.A = nn.Parameter(torch.zeros((3,3), requires_grad=True))
         self.B = nn.Parameter(torch.zeros((1, 3), requires_grad=True))
+        self.C = nn.Parameter(torch.zeros((3,3), requires_grad=True))
+        self.D = nn.Parameter(torch.zeros((1, 3), requires_grad=True))
+        self.E = nn.Parameter(torch.zeros((3,3), requires_grad=True))
+        self.F = nn.Parameter(torch.zeros((1, 3), requires_grad=True))
 
-    def forward(self, data, in_features):
+    def forward(self, in_features, type,list_index):
 
-        u = in_features[:,0]
-        v = in_features[:,1]
-        w = in_features[:,2]
+        u = in_features[:,3:4]
+        v = in_features[:,4:5]
+        w = in_features[:,5:6]
 
-        laplacian_u =  self.c * in_features[:, 3]
-        laplacian_v =  self.c * in_features[:, 4]
-        laplacian_w =  self.c * in_features[:, 5]
+        l = u.shape[0]
+        type = to_numpy(type)
 
-        a = self.a
-        p = u + v + w
+        laplacian_u =  self.cc[type,None] * in_features[:, 0:1]
+        laplacian_v =  self.cc[type,None] * in_features[:, 1:2]
+        laplacian_w =  self.cc[type,None] * in_features[:, 2:3]
 
-        du = laplacian_u + u*(1-p-a*v)
-        dv = laplacian_v + v*(1-p-a*w)
-        dw = laplacian_w + w*(1-p-a*u)
+        up= 0 * u
+        vp = 0 * u
+        wp = 0 * u
+
+        for k in list_index:
+            V = in_features[k:k+1,3:6]
+            Vp = torch.transpose(V,0,1)
+            up[k] = -torch.matmul(torch.matmul(V, self.A),Vp) + torch.matmul(self.B,Vp)
+            vp[k] = -torch.matmul(torch.matmul(V, self.C),Vp) + torch.matmul(self.D, Vp)
+            wp[k] = -torch.matmul(torch.matmul(V, self.E), Vp) + torch.matmul(self.F, Vp)
+
+        du = laplacian_u + up
+        dv = laplacian_v + vp
+        dw = laplacian_w + wp
 
         increment = torch.cat((du[:,None],dv[:,None],dw[:,None]),axis=1)
 
-        return increment
+        return increment.squeeze()
 
 
 def func_pow(x, a, b):
@@ -4877,6 +4891,7 @@ def data_plot_FIG7():
     nrun = model_config['nrun']
     kmeans_input = model_config['kmeans_input']
     aggr_type = model_config['aggr_type']
+    delta_t = model_config['delta_t']
 
     if model_config['boundary'] == 'no':  # change this for usual BC
         def bc_pos(X):
@@ -4932,7 +4947,7 @@ def data_plot_FIG7():
     model = Mesh_RPS_extract(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
 
     model_learn = Mesh_RPS_learn()
-    model_learn = model.to(device)
+    model_learn = model_learn.to(device)
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
     state_dict = torch.load(net, map_location=device)
@@ -5125,31 +5140,44 @@ def data_plot_FIG7():
         plt.yticks(fontsize=10)
 
 
-
-
     fig = plt.figure(figsize=(9.5, 9))
     plt.ion()
 
-    it = 5000
-    x0 = x_list[0][it].clone().detach()
-    x0_next = x_list[0][it + 1].clone().detach()
-    y0 = y_list[0][it].clone().detach()
+    optimizer = torch.optim.Adam(model_learn.parameters(), lr=1e-4)
 
-    x = x_list[0][it].clone().detach()
-    dataset = data.Data(x=x, pos=x[:, 1:3])
-    transform_0 = T.Compose([T.Delaunay()])
-    dataset_face = transform_0(dataset).face
-    mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
-    edge_index_mesh, edge_weight_mesh = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,normalization="None")
+    for epoch in trange(1000):
 
-    dataset_mesh = data.Data(x=x, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
+        mse_loss = 0
 
-    with torch.no_grad():
-        y, input_phi, embedding = model(dataset_mesh, data_id=0)  # acceleration estimation
-    y = y * ynorm[4]
+        it = np.random.randint(model_config['nframes'] - 1)
+        x = x_list[0][it].clone().detach()
+        dataset = data.Data(x=x, pos=x[:, 1:3])
+        transform_0 = T.Compose([T.Delaunay()])
+        dataset_face = transform_0(dataset).face
+        mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
+        edge_index_mesh, edge_weight_mesh = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,
+                                                                         normalization="None")
+        dataset_mesh = data.Data(x=x, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
 
+        with torch.no_grad():
+            y, input_phi, embedding = model(dataset_mesh, data_id=0)
+        y = y * hnorm
 
+        list_index=np.random.randint (0, x.shape[0], 1000)
 
+        y_pred = model_learn(input_phi, x[:,5], list_index)
+
+        mse_loss += F.mse_loss(y[list_index], y_pred[list_index])
+
+        optimizer.zero_grad()
+        mse_loss.backward()
+        optimizer.step()
+
+        if epoch%20==0:
+            loss = np.round(to_numpy(mse_loss/100/hnorm*1e6)*1e4)/1e4
+            print(f'Epoch {epoch}, loss {loss}')
+
+    plt.scatter(model_config['c'], to_numpy(model_learn.cc/hnorm/0.05))
 
 
     ax = fig.add_subplot(3, 3, 5)
