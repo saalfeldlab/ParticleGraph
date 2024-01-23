@@ -22,6 +22,7 @@ archive/*/*
 *.mp4
 *.avi
 *.ijm
+*.svg
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
