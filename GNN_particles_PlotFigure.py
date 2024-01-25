@@ -3984,7 +3984,7 @@ def data_plot_FIG5sup():
 def data_plot_FIG5():
 
 
-    config = 'config_boids_16_HR2'
+    config = 'config_boids_16_HR3'
     # model_config = load_model_config(id=config)
 
     # Load parameters from config file
@@ -4167,7 +4167,7 @@ def data_plot_FIG5():
 
 
     fig = plt.figure(figsize=(10, 9))
-    # plt.ion()
+    plt.ion()
     ax = fig.add_subplot(3, 3, 1)
     print('1')
     for m in range(model.a.shape[0]):
@@ -4377,7 +4377,7 @@ def data_plot_FIG5():
 
 
     ax = fig.add_subplot(3, 3, 7)
-    print('6')
+    print('7')
     x_data = np.abs(to_numpy(p[:,0])*0.5E-5)
     y_data = np.abs(cohesion_fit)
     lin_fit, lin_fitv = curve_fit(func_lin, x_data, y_data)
@@ -4394,11 +4394,11 @@ def data_plot_FIG5():
     plt.text(4E-5, 4E-4, f"$R^2$: {np.round(r_squared, 3)}", fontsize=12)
 
     ax = fig.add_subplot(3, 3, 8)
-    print('6')
+    print('8')
     x_data = np.abs(to_numpy(p[:,1])*5E-4)
     y_data = alignment_fit
     lin_fit, lin_fitv = curve_fit(func_lin, x_data, y_data)
-    plt.plot(x_data, func_lin(alignment_fit, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
+    plt.plot(x_data, func_lin(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
     for n in range(nparticle_types):
         plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=30)
     plt.xlabel(r'True alignment coeff. $[a.u.]$', fontsize=14)
@@ -4411,10 +4411,11 @@ def data_plot_FIG5():
     plt.text(5e-3, 0.038, f"$R^2$: {np.round(r_squared, 3)}", fontsize=12)
 
     ax = fig.add_subplot(3, 3, 9)
+    print('9')
     x_data = np.abs(to_numpy(p[:,2])*1E-8)
     y_data = separation_fit
     lin_fit, lin_fitv = curve_fit(func_lin, x_data, y_data)
-    plt.plot(x_data, func_lin(separation_fit, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
+    plt.plot(x_data, func_lin(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
     for n in range(nparticle_types):
         plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=30)
     plt.xlabel(r'True alignment coeff. $[a.u.]$', fontsize=14)
@@ -5284,11 +5285,11 @@ if __name__ == '__main__':
     # data_plot_FIG5sup()
 
     # boids HR2
-    # data_plot_FIG5()
+    data_plot_FIG5()
 
     # data_plot_FIG6()
 
-    data_plot_FIG7()
+    # data_plot_FIG7()
 
 
 
