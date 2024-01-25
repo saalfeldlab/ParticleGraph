@@ -4167,7 +4167,7 @@ def data_plot_FIG5():
 
 
     fig = plt.figure(figsize=(10, 9))
-    plt.ion()
+    # plt.ion()
     ax = fig.add_subplot(3, 3, 1)
     print('1')
     for m in range(model.a.shape[0]):
@@ -4418,8 +4418,8 @@ def data_plot_FIG5():
     plt.plot(x_data, func_lin(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
     for n in range(nparticle_types):
         plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=30)
-    plt.xlabel(r'True alignment coeff. $[a.u.]$', fontsize=14)
-    plt.ylabel(r'Predicted alignment coeff. $[a.u.]$', fontsize=14)
+    plt.xlabel(r'True separation coeff. $[a.u.]$', fontsize=14)
+    plt.ylabel(r'Predicted separation coeff. $[a.u.]$', fontsize=14)
     plt.text(5e-8, 4.4E-7, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=12)
     residuals = y_data - func_lin(x_data, *lin_fit)
     ss_res = np.sum(residuals ** 2)
