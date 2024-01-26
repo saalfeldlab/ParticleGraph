@@ -3984,7 +3984,7 @@ def data_plot_FIG5sup():
 def data_plot_FIG5():
 
 
-    config = 'config_boids_16_HR3'
+    config = 'config_boids_16_HR2'
     # model_config = load_model_config(id=config)
 
     # Load parameters from config file
