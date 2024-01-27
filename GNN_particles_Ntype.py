@@ -1648,12 +1648,6 @@ def data_train(model_config, bSparse=False):
     os.makedirs(os.path.join(log_dir, 'tmp_recons'), exist_ok=True)
     os.makedirs(log_dir, exist_ok=True)
 
-    # files = glob.glob(f"{log_dir}/tmp_training/*")
-    # for f in files:
-    #     os.remove(f)
-    # files = glob.glob(f"{log_dir}/tmp_recons/*")
-    # for f in files:
-    #     os.remove(f)
     copyfile(os.path.realpath(__file__), os.path.join(log_dir, 'training_code.py'))
     logging.basicConfig(filename=os.path.join(log_dir, 'training.log'),
                         format='%(asctime)s %(message)s',
@@ -1710,7 +1704,6 @@ def data_train(model_config, bSparse=False):
     if (model_config['model'] == 'RD_RPS_Mesh'):
         model = Mesh_RPS(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
 
-
     # net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_17.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
@@ -1757,8 +1750,6 @@ def data_train(model_config, bSparse=False):
     print(f'data_augmentation_loop: {data_augmentation_loop}')
     logger.info(f'data_augmentation_loop: {data_augmentation_loop}')
 
-    ##############################
-    ##############################
 
     if bMesh:
         h_list=[]
@@ -1813,11 +1804,6 @@ def data_train(model_config, bSparse=False):
                 it += 1
             print(f'Learning rates: {lr}, {lra}')
             logger.info(f'Learning rates: {lr}, {lra}')
-        # if epoch == Nepochs-2:
-        #     print('not training embedding ...')
-        #     logger.info('not training embedding ...')
-        #     model.a.requires_grad = False
-        #     regul_embedding = 0
 
         total_loss = 0
 
@@ -1876,16 +1862,6 @@ def data_train(model_config, bSparse=False):
                         if model.a.shape[0] > 2:
                             embedding = torch.reshape(embedding,
                                                       [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
-
-                        # dataset = data.Data(x=embedding, pos=embedding.detach())
-                        # transform_0 = T.Compose([T.Delaunay()])
-                        # dataset_face = transform_0(dataset).face
-                        # mesh_pos = torch.cat((embedding, torch.ones((embedding.shape[0], 1), device=device)), dim=1)
-                        # edges_embedding, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,normalization="None")  # "None", "sym", "rw"
-                        # dataset_embedding = data.Data(x=embedding, edge_index=edges_embedding)
-                        # pred = model_embedding(dataset_embedding)
-                        # loss_embedding += pred.norm(2)*1E4
-
                         radius_embedding = torch.std(embedding) / 2
 
                         distance = torch.sum((embedding[:, None, :] - embedding[None, :, :]) ** 2, axis=2)
@@ -1895,14 +1871,6 @@ def data_train(model_config, bSparse=False):
                         dataset_embedding = data.Data(x=embedding, edge_index=edges_embedding)
                         pred = model_embedding(dataset_embedding)
                         loss_embedding += pred.norm(2)
-
-                        # pos = dict(enumerate(np.array(embedding.detach().cpu()), 0))
-                        # vis = to_networkx(dataset_embedding, remove_self_loops=True, to_undirected=True)
-                        # fig = plt.figure(figsize=(12, 12))
-                        # plt.ion()
-                        # plt.scatter(embedding[:,0].detach().cpu().numpy(),embedding[:,1].detach().cpu().numpy(),s=1,alpha=0.05,c='k')
-                        # nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False, alpha=0.1)
-                        # pred = model_embedding(dataset_embedding)
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
@@ -1918,13 +1886,6 @@ def data_train(model_config, bSparse=False):
             loss.backward()
             optimizer.step()
             total_loss += loss.item()
-
-            # optimizer.zero_grad()
-            # t = torch.sum(model.a[run])
-            # loss = (pred - y_batch).norm(2) + t
-            # loss.backward()
-            # optimizer.step()
-            # total_loss += loss.item()
 
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()},
@@ -2086,7 +2047,6 @@ def data_train(model_config, bSparse=False):
             trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int),
                               n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
             proj_interaction = trans.transform(coeff_norm)
-            particle_types = to_numpy(x_list[0][0, :, 5].clone())
             ax = fig.add_subplot(2, 4, 4)
             for n in range(nparticle_types):
                 plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1], s=5)
@@ -2119,7 +2079,6 @@ def data_train(model_config, bSparse=False):
             sub_group = np.round(np.median(tmp))
             accuracy = len(np.argwhere(tmp == sub_group)) / len(tmp) * 100
             print(f'Sub-group {n} accuracy: {np.round(accuracy, 3)}')
-            #logger.info(f'Sub-group {n} accuracy: {np.round(accuracy, 3)}')
         for n in range(model_config['ninteractions']):
             plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
         plt.tight_layout()
