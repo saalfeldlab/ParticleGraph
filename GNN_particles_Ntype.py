@@ -1064,32 +1064,29 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
     print('')
     print('Generating data ...')
 
+
+    # create output folder, empty it if bErase=True, copy files into it
     dataset_name = model_config['dataset']
     folder = f'./graphs_data/graphs_particles_{dataset_name}/'
-
     if bErase:
         files = glob.glob(f"{folder}/*")
         for f in files:
             if (f[-8:] != 'tmp_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (
                     f != 'generation_code.py'):
                 os.remove(f)
-
     os.makedirs(folder, exist_ok=True)
     os.makedirs(f'./graphs_data/graphs_particles_{dataset_name}/tmp_data/', exist_ok=True)
-
     files = glob.glob(f'./graphs_data/graphs_particles_{dataset_name}/tmp_data/*')
     for f in files:
         os.remove(f)
-
     copyfile(os.path.realpath(__file__), os.path.join(folder, 'generation_code.py'))
-
     json_ = json.dumps(model_config)
     f = open(f"{folder}/model_config.json", "w")
     f.write(json_)
     f.close()
 
+    # load model parameters and create local varibales    
     model_config['nparticles'] = model_config['nparticles'] * ratio
-
     radius = model_config['radius']
     min_radius = model_config['min_radius']
     nparticle_types = model_config['nparticle_types']
@@ -1103,6 +1100,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
     delta_t = model_config['delta_t']
     aggr_type = model_config['aggr_type']
 
+    # create boundary functions for position and velocity respectively
     if model_config['boundary'] == 'no':  # change this for usual BC
         def bc_pos(X):
             return X
@@ -1232,11 +1230,13 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
         y_list = []
         h_list = []
 
+        # initialize particle and graph states
         if (model_config['model'] == 'WaveMesh') | (model_config['boundary'] == 'periodic'):
             X1 = torch.rand(nparticles, 2, device=device)
         else:
             X1 = torch.randn(nparticles, 2, device=device) * 0.5
         V1 = v_init * torch.randn((nparticles, 2), device=device)
+        V1 = torch.clamp(V1, min=-torch.std(V1), max=+torch.std(V1))
         T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
         for n in range(1, nparticle_types):
             T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
@@ -1245,16 +1245,16 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
         if model_config['p'] == 'continuous':
             T1 = torch.tensor(np.arange(nparticles), device=device)
             T1 = T1[:, None]
-        ####### TO BE CHANGED #############################
-        # h = torch.zeros((nparticles, 1), device=device)
         H1 = torch.zeros((nparticles, 2), device=device)
-
         A1 = torch.rand(nparticles, device=device)
         A1 = A1[:, None]
         A1 = A1 * cycle_length_distrib
         N1 = torch.arange(nparticles, device=device)
         N1 = N1[:, None]
+        noise_current = torch.zeros((nparticles, 2), device=device)
+        noise_prev_prev = torch.zeros((nparticles, 2), device=device)
 
+        # create differnet initial conditions
         if scenario == 'scenario A':
             X1[:, 0] = X1[:, 0] / nparticle_types
             for n in range(nparticle_types):
@@ -1333,17 +1333,13 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             edge_index_mesh, edge_weight_mesh = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,normalization="None")  # "None", "sym", "rw"
 
         time.sleep(0.5)
-
-        noise_current = 0 * torch.randn((nparticles, 2), device=device)
-        noise_prev_prev = 0 * torch.randn((nparticles, 2), device=device)
-
         for it in trange(model_config['start_frame'], nframes+1):
 
+            # calculate graph states at itme t and t+1 
             if (it > 0) & bDivision & (nparticles < 20000):
                 cycle_test = (torch.ones(nparticles, device=device) + 0.05 * torch.randn(nparticles, device=device))
-                cycle_test = cycle_test[:, None]
-                cycle_length_distrib = cycle_length[to_numpy(T1[:, 0]).astype(int)]
-                pos = torch.argwhere(A1 > cycle_test * cycle_length_distrib)
+                pos = torch.argwhere(A1 > cycle_test[:, None] * cycle_length_distrib)
+                # cell division
                 if len(pos) > 1:
                     n_add_nodes = len(pos)
                     pos = to_numpy(pos[:, 0].squeeze()).astype(int)
@@ -1374,102 +1370,85 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                         pos = torch.argwhere(T1 == n)
                         pos = to_numpy(pos[:, 0].squeeze()).astype(int)
                         index_particles.append(pos)
-            if it == 0:
-                V1 = torch.clamp(V1, min=-torch.std(V1), max=+torch.std(V1))
 
-            noise_prev_prev = noise_prev_prev.clone().detach()
-            noise_prev = noise_current.clone().detach()
-            noise_current = torch.randn((nparticles, 2), device=device) * noise_level
-
+            # append x_list
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                                    H1.clone().detach(), A1.clone().detach()), 1)
-            x_noise = x.clone().detach()
-
-            if (it >= 0) & (noise_level > 0):
-                x_noise = x.clone().detach()
-                x_noise[:, 1:3] = x[:, 1:3] + noise_current
-                x_noise[:, 3:5] = x[:, 3:5] + noise_current - noise_prev
             if (it >= 0):
-                x_list.append(x_noise.clone().detach())
-
+                # calculate noise
+                if (noise_level > 0):
+                    noise_prev_prev = noise_prev_prev.clone().detach()
+                    noise_prev = noise_current.clone().detach()
+                    noise_current = torch.randn((nparticles, 2), device=device) * noise_level
+                    x_with_noise[:, 1:3] = x[:, 1:3] + noise_current
+                    x_with_noise[:, 3:5] = x[:, 3:5] + noise_current - noise_prev
+                else:
+                    x_with_noise = x.clone().detach()
+                x_list.append(x_with_noise.clone().detach())
+            # create mesh dataset
             if bMesh:
-                dataset_mesh = data.Data(x=x_noise, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
-
-            distance = torch.sum(bc_diff(x_noise[:, None, 1:3] - x_noise[None, :, 1:3]) ** 2, axis=2)
+                dataset_mesh = data.Data(x=x_with_noise, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
+            # compute connectivity rule
+            distance = torch.sum(bc_diff(x_with_noise[:, None, 1:3] - x_with_noise[None, :, 1:3]) ** 2, axis=2)
             t = torch.Tensor([radius ** 2])  # threshold
             adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
             edge_index = adj_t.nonzero().t().contiguous()
-            dataset = data.Data(x=x_noise, pos=x_noise[:, 1:3], edge_index=edge_index)
-
+            dataset = data.Data(x=x_with_noise, pos=x_with_noise[:, 1:3], edge_index=edge_index)
+            # model prediction
             with torch.no_grad():
                 y = model(dataset)
-            if (it >= 0) & (noise_level == 0):
-                y_list.append(y.clone().detach())
-            if (it >= 0) & (noise_level > 0):
-                y_noise = y[:, 0:2] + noise_current - 2 * noise_prev + noise_prev_prev
-                y_list.append(y_noise.clone().detach())
-
-            if model_config['prediction'] == '2nd_derivative':
-                V1 += y[:, 0:2] * delta_t
-            else:
-                V1 = y[:, 0:2]
-
+            # append y_list
+            if (it >= 0):
+                if (noise_level == 0):
+                    y_list.append(y.clone().detach())
+                else:
+                    y_noise = y[:, 0:2] + noise_current - 2 * noise_prev + noise_prev_prev
+                    y_list.append(y_noise.clone().detach())
+            # Euler integration update
             if not (bMesh):
+                if model_config['prediction'] == '2nd_derivative':
+                    V1 += y[:, 0:2] * delta_t
+                else:
+                    V1 = y[:, 0:2]
                 X1 = bc_pos(X1 + V1 * delta_t)
+                A1 = A1 + 1
+            # append h_list
+            # Euler integration update for mesh
+            if it >= 0:
+                if model_config['model'] == 'DiffMesh':
+                        mask = to_numpy(torch.argwhere((X1[:, 0] > 0.1) & (X1[:, 0] < 0.9) & (X1[:, 1] > 0.1) & (X1[:, 1] < 0.9))).astype(int)
+                        mask = mask[:, 0:1]
+                        with torch.no_grad():
+                            pred = model_mesh(dataset_mesh)
+                            H1[mask, 1:2] = pred[mask]
+                        H1[mask, 0:1] += H1[mask, 1:2] * delta_t
+                        h_list.append(pred)
+                if model_config['model'] == 'WaveMesh':
+                        with torch.no_grad():
+                            pred = model_mesh(dataset_mesh)
+                            H1[:, 1:2] += pred[:] * delta_t
+                        H1[:, 0:1] += H1[:, 1:2] * delta_t
+                        h_list.append(pred)
+                if (model_config['model'] == 'RD_Gray_Scott_Mesh') | (model_config['model'] == 'RD_FitzHugh_Nagumo_Mesh') | (model_config['model'] == 'RD_RPS_Mesh'):
+                        mask = to_numpy(torch.argwhere((X1[:, 0] > 0.02) & (X1[:, 0] < 0.98) & (X1[:, 1] > 0.02) & (X1[:, 1] < 0.98))).astype(int)
+                        mask = mask[:, 0:1]
+                        with torch.no_grad():
+                            pred = model_mesh(dataset_mesh)
+                            H1[mask] += pred[mask] * delta_t
+                        h_list.append(pred)
 
-            A1 = A1 + 1
-
-            if model_config['model'] == 'DiffMesh':
-                if it >= 0:
-                    mask = to_numpy(torch.argwhere((X1[:, 0] > 0.1) & (X1[:, 0] < 0.9) & (X1[:, 1] > 0.1) & (X1[:, 1] < 0.9))).astype(int)
-                    mask = mask[:, 0:1]
-                    with torch.no_grad():
-                        pred = model_mesh(dataset_mesh)
-                        H1[mask, 1:2] = pred[mask]
-                    H1[mask, 0:1] += H1[mask, 1:2] * delta_t
-                    h_list.append(pred)
-
-            if model_config['model'] == 'WaveMesh':
-                if it >= 0:
-                    # mask = torch.argwhere ((X1[:,0]>0.005)&(X1[:,0]<0.995)&(X1[:,1]>0.005)&(X1[:,1]<0.995)).detach().cpu().numpy().astype(int)
-                    # mask = mask[:, 0:1]
-                    # invmask = torch.argwhere ((X1[:,0]<=0.025)|(X1[:,0]>=0.975)|(X1[:,1]<=0.025)|(X1[:,1]>=0.975)).detach().cpu().numpy().astype(int)
-                    # invmask = invmask[:, 0:1]
-                    with torch.no_grad():
-                        pred = model_mesh(dataset_mesh)
-                        H1[:, 1:2] += pred[:] * delta_t
-                    H1[:, 0:1] += H1[:, 1:2] * delta_t
-                    h_list.append(pred)
-
-            if (model_config['model'] == 'RD_Gray_Scott_Mesh') | (model_config['model'] == 'RD_FitzHugh_Nagumo_Mesh') | (model_config['model'] == 'RD_RPS_Mesh'):
-                if it >= 0:
-                    mask = to_numpy(torch.argwhere((X1[:, 0] > 0.02) & (X1[:, 0] < 0.98) & (X1[:, 1] > 0.02) & (X1[:, 1] < 0.98))).astype(int)
-                    mask = mask[:, 0:1]
-                    with torch.no_grad():
-                        pred = model_mesh(dataset_mesh)
-                        H1[mask] += pred[mask] * delta_t
-
-                    # if (model_config['model'] == 'RD_RPS_Mesh'):
-                    #
-                    #     H1=torch.clamp(H1,min=0,max=1)
-                    #     s = torch.sum(H1, axis=1)
-                    #     for k in range(3):
-                    #         H1[:, k] = H1[:, k] / s
-
-                    h_list.append(pred)
-
-
+            # output plots
             if bVisu & (run == 0) & (it % step == 0) & (it >= 0) :
 
                 if 'graph' in bStyle:
                     fig = plt.figure(figsize=(10, 10))
                     # plt.ion()
 
-                    distance2 = torch.sum((x_noise[:, None, 1:3] - x_noise[None, :, 1:3]) ** 2, axis=2)
+                    distance2 = torch.sum((x_with_noise[:, None, 1:3] - x_with_noise[None, :, 1:3]) ** 2, axis=2)
                     adj_t2 = ((distance2 < radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
                     edge_index2 = adj_t2.nonzero().t().contiguous()
                     dataset2 = data.Data(x=x, edge_index=edge_index2)
-                    pos = dict(enumerate(np.array(x_noise[:, 1:3].detach().cpu()), 0))
+                    pos = dict(enumerate(np.array(x_with_noise[:, 1:3].detach().cpu()), 0))
                     vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
                     nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=alpha)
 
@@ -1479,9 +1458,9 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                         x[index_particles[n], 2].detach().cpu().numpy(), s=40, color=cmap.color(n))
                     elif bMesh:
-                        pts = x_noise[:, 1:3].detach().cpu().numpy()
+                        pts = x_with_noise[:, 1:3].detach().cpu().numpy()
                         tri = Delaunay(pts)
-                        colors = torch.sum(x_noise[tri.simplices, 6], axis=1) / 3.0
+                        colors = torch.sum(x_with_noise[tri.simplices, 6], axis=1) / 3.0
                         if model_config['model'] == 'WaveMesh':
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                           facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=-2500, vmax=2500)
@@ -1524,9 +1503,9 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                     fig = plt.figure(figsize=(12, 12))
                     # plt.ion()
                     if bMesh:
-                        pts = x_noise[:, 1:3].detach().cpu().numpy()
+                        pts = x_with_noise[:, 1:3].detach().cpu().numpy()
                         tri = Delaunay(pts)
-                        colors = torch.sum(x_noise[tri.simplices, 6], axis=1) / 3.0
+                        colors = torch.sum(x_with_noise[tri.simplices, 6], axis=1) / 3.0
                         if model_config['model'] == 'DiffMesh':
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                           facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1000)
@@ -1536,14 +1515,14 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                         if (model_config['model'] == 'RD_Gray_Scott_Mesh'):
                             fig = plt.figure(figsize=(12, 6))
                             ax = fig.add_subplot(1, 2, 1)
-                            colors = torch.sum(x_noise[tri.simplices, 6], axis=1) / 3.0
+                            colors = torch.sum(x_with_noise[tri.simplices, 6], axis=1) / 3.0
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                           facecolors=colors.detach().cpu().numpy(),vmin=0,vmax=1)
                             plt.xticks([])
                             plt.yticks([])
                             plt.axis('off')
                             ax = fig.add_subplot(1, 2, 2)
-                            colors = torch.sum(x_noise[tri.simplices, 7], axis=1) / 3.0
+                            colors = torch.sum(x_with_noise[tri.simplices, 7], axis=1) / 3.0
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                           facecolors=colors.detach().cpu().numpy(),vmin=0,vmax=1)
                             plt.xticks([])
@@ -1585,9 +1564,9 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                 if 'bw' in bStyle:
                     fig = plt.figure(figsize=(12, 12))
                     if bMesh:
-                        pts = x_noise[:, 1:3].detach().cpu().numpy()
+                        pts = x_with_noise[:, 1:3].detach().cpu().numpy()
                         tri = Delaunay(pts)
-                        colors = torch.sum(x_noise[tri.simplices, 6], axis=1) / 3.0
+                        colors = torch.sum(x_with_noise[tri.simplices, 6], axis=1) / 3.0
                         if model_config['model'] == 'WaveMesh':
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                           facecolors='w', edgecolors='k', vmin=-2500, vmax=2500)
@@ -1595,7 +1574,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                           facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=0, vmax=2500)
 
-                        # plt.scatter(x_noise[:, 1].detach().cpu().numpy(),x_noise[:, 2].detach().cpu().numpy(), s=10, alpha=0.75,
+                        # plt.scatter(x_with_noise[:, 1].detach().cpu().numpy(),x_with_noise[:, 2].detach().cpu().numpy(), s=10, alpha=0.75,
                         #                 c=x[:, 6].detach().cpu().numpy(), cmap='gist_gray',vmin=-5000,vmax=5000)
                         # ax.set_facecolor([0.5,0.5,0.5])
                     else:
@@ -2455,14 +2434,14 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
                     if (model_config['model'] == 'RD_Gray_Scott_Mesh'):
                         fig = plt.figure(figsize=(12, 6))
                         ax = fig.add_subplot(1, 2, 1)
-                        colors = torch.sum(x_noise[tri.simplices, 6], axis=1) / 3.0
+                        colors = torch.sum(x_with_noise[tri.simplices, 6], axis=1) / 3.0
                         plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                       facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
                         plt.xticks([])
                         plt.yticks([])
                         plt.axis('off')
                         ax = fig.add_subplot(1, 2, 2)
-                        colors = torch.sum(x_noise[tri.simplices, 7], axis=1) / 3.0
+                        colors = torch.sum(x_with_noise[tri.simplices, 7], axis=1) / 3.0
                         plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                       facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
                         plt.xticks([])
@@ -4002,6 +3981,7 @@ if __name__ == '__main__':
     # Test plotting figures paper
     config_list = ['config_boids_16_HR7','config_boids_16_HR8','config_boids_16_HR9'] #'config_boids_16_HR4','config_boids_16_HR5','config_boids_16_HR6'] #['config_RD_RPS4']  # ['config_gravity_16_HR_continuous'] # ['config_boids_16_HR1','config_boids_16_HR2'] #, 'config_boids_16_HR'] #['config_RD_RPS','config_RD_RPS_05','config_RD_RPS_025'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
 
+    # Load a graph neural network model used to sparsify the particle embedding during training
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
     p = torch.ones(1, 4, device=device)
