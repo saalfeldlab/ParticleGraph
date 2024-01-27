@@ -1380,8 +1380,9 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                     noise_prev_prev = noise_prev_prev.clone().detach()
                     noise_prev = noise_current.clone().detach()
                     noise_current = torch.randn((nparticles, 2), device=device) * noise_level
-                    x_with_noise[:, 1:3] = x[:, 1:3] + noise_current
-                    x_with_noise[:, 3:5] = x[:, 3:5] + noise_current - noise_prev
+                    x_with_noise = x.clone().detach()
+                    x_with_noise[:, 1:3] += noise_current
+                    x_with_noise[:, 3:5] += noise_current - noise_prev
                 else:
                     x_with_noise = x.clone().detach()
                 x_list.append(x_with_noise.clone().detach())
@@ -3925,7 +3926,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # config_list=['config_CElegans_32']
@@ -3938,8 +3939,7 @@ if __name__ == '__main__':
     # config_list = ['config_wave_testA']
 
     # Test plotting figures paper
-    config_list = ['config_boids_16_HR7','config_boids_16_HR8','config_boids_16_HR9'] #'config_boids_16_HR4','config_boids_16_HR5','config_boids_16_HR6'] #['config_RD_RPS4']  # ['config_gravity_16_HR_continuous'] # ['config_boids_16_HR1','config_boids_16_HR2'] #, 'config_boids_16_HR'] #['config_RD_RPS','config_RD_RPS_05','config_RD_RPS_025'] #['config_RD_FitzHugh_Nagumo'] # ['config_arbitrary_3', 'config_gravity_16', 'config_Coulomb_3', 'config_boids_16'] # ['config_arbitrary_3'] # ['config_RD_FitzHugh_Nagumo'] # ,
-
+    config_list = ['config_arbitrary_3_test','config_gravity_16_test', 'config_wave_HR3_test']# ['config_boids_16_HR7','config_boids_16_HR8','config_boids_16_HR9']
     # Load a graph neural network model used to sparsify the particle embedding during training
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
