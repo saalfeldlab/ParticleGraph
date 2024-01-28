@@ -1374,17 +1374,15 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             # append x_list
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                                    H1.clone().detach(), A1.clone().detach()), 1)
+            x_with_noise = x.clone().detach()
             if (it >= 0):
                 # calculate noise
                 if (noise_level > 0):
                     noise_prev_prev = noise_prev_prev.clone().detach()
                     noise_prev = noise_current.clone().detach()
                     noise_current = torch.randn((nparticles, 2), device=device) * noise_level
-                    x_with_noise = x.clone().detach()
                     x_with_noise[:, 1:3] += noise_current
                     x_with_noise[:, 3:5] += noise_current - noise_prev
-                else:
-                    x_with_noise = x.clone().detach()
                 x_list.append(x_with_noise.clone().detach())
             # create mesh dataset
             if bMesh:
