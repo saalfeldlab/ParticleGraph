@@ -7,6 +7,22 @@ class PDE_embedding(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
+    """
+    Compute the displacement of particles according to an attraction kernel
+    The interaction function is defined by a MLP self.lin_edge
+    The parameters of the kernel are defined by p =[0, 1.65, 0, 1.35] and sigma=0.7.
+    
+
+    Inputs
+    ----------
+    data : a torch_geometric.data object
+
+    Returns
+    -------
+    pred : float
+        the displacements of the particles (dimension 2)
+    """
+
     def __init__(self, aggr_type=[], p=[], delta_t=[], prediction=[], sigma=[], bc_diff=[], device=[]):
         super(PDE_embedding, self).__init__(aggr='mean')  # "mean" aggregation.
 

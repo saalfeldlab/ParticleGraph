@@ -8,6 +8,20 @@ class PDE_B(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
+    """
+    Compute the acceleration of Boids as a function of their relative positions and relative positions.
+    The interaction function is defined by three parameters p = (p1, p2, p3)
+
+    Inputs
+    ----------
+    data : a torch_geometric.data object
+
+    Returns
+    -------
+    pred : float
+        the acceleration of the Boids (dimension 2)
+    """
+
     def __init__(self, aggr_type=[], p=[], delta_t=[], bc_diff=[]):
         super(PDE_B, self).__init__(aggr=aggr_type)  # "mean" aggregation.
 
@@ -19,15 +33,6 @@ class PDE_B(pyg.nn.MessagePassing):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         acc = self.propagate(edge_index, x=(x, x))
-
-        # oldv = x[:, 3:5]
-        # newv = oldv + acc * self.delta_t
-        # p = self.p[to_numpy(x[:, 5]), :]
-        # oldv_norm = torch.norm(oldv, dim=1)
-        # newv_norm = torch.norm(newv, dim=1)
-        # factor = (oldv_norm + p[:, 1] / 5E2 * (newv_norm - oldv_norm)) / newv_norm
-        # newv *= factor[:, None].repeat(1, 2)
-        # pred = (newv - oldv) / self.delta_t
 
         return acc
 

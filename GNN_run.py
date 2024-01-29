@@ -2229,7 +2229,6 @@ if __name__ == '__main__':
 
     print('')
     print('version 0.2.0 240111')
-    print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'

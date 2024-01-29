@@ -11,6 +11,21 @@ class InteractionParticles(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
+    """
+    Model learning the acceleration of particles as a function of their relative distance and relative velocities.
+    The interaction function is defined by a MLP self.lin_edge
+    The particle embedding is defined by a table self.a
+
+    Inputs
+    ----------
+    data : a torch_geometric.data object
+
+    Returns
+    -------
+    pred : float
+        the acceleration of the particles (dimension 2)
+    """
+
     def __init__(self, model_config, device, aggr_type=[], bc_diff=[]):
 
         super(InteractionParticles, self).__init__(aggr=aggr_type)  # "Add" aggregation.

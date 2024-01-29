@@ -10,6 +10,21 @@ class Mesh_RPS(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
+    """
+    Model learning the first derivative of a scalar field on a mesh.
+    The node embedding is defined by a table self.a
+    Note the Laplacian coeeficients are in data.edge_attr
+
+    Inputs
+    ----------
+    data : a torch_geometric.data object
+
+    Returns
+    -------
+    pred : float
+        the first derivative of a scalar field on a mesh (dimension 3).
+    """
+
     def __init__(self, aggr_type=[], model_config=[], device=[], bc_diff=[]):
         super(Mesh_RPS, self).__init__(aggr=aggr_type)  # "Add" aggregation.
 

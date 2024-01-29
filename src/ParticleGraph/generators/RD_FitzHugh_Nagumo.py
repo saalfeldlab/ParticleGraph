@@ -7,6 +7,20 @@ class RD_FitzHugh_Nagumo(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
+    """
+    Compute the reaction diffusion according to FitzHugh_Nagumo model.
+
+    Inputs
+    ----------
+    data : a torch_geometric.data object
+    Note the Laplacian coeeficients are in data.edge_attr
+
+    Returns
+    -------
+    increment : float
+        the first derivative of two scalar fields u and v
+    """
+
     def __init__(self, aggr_type=[], c=[], beta=[], bc_diff=[]):
         super(RD_FitzHugh_Nagumo, self).__init__(aggr='add')  # "mean" aggregation.
 

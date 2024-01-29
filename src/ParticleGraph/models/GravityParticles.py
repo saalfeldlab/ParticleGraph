@@ -11,6 +11,21 @@ class GravityParticles(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
+    """
+    Model learning the acceleration of particles as a function of their relative distance and masses.
+    The interaction function is defined by a MLP self.lin_edge
+    The particle embedding is defined by a table self.a
+
+    Inputs
+    ----------
+    data : a torch_geometric.data object
+
+    Returns
+    -------
+    pred : float
+        the acceleration of the particles (dimension 2)
+    """
+
     def __init__(self, aggr_type=[], model_config=[], device=[], bc_diff=[]):
 
         super(GravityParticles, self).__init__(aggr='add')  # "Add" aggregation.
