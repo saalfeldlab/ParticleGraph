@@ -3,6 +3,7 @@ import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
 from ParticleGraph.utils import to_numpy
 
+
 class PDE_A(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -25,9 +26,10 @@ class PDE_A(pyg.nn.MessagePassing):
     def message(self, x_i, x_j):
         r = torch.sum(self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)  # squared distance
         pp = self.p[to_numpy(x_i[:, 5]), :]
-        psi = pp[:, 0] * torch.exp(-r ** pp[:, 1] / (2 * self.sigma ** 2)) - pp[:, 2] * torch.exp(
-            -r ** pp[:, 3] / (2 * self.sigma ** 2))
+        psi = (pp[:, 0] * torch.exp(-r ** pp[:, 1] / (2 * self.sigma ** 2))
+               - pp[:, 2] * torch.exp(-r ** pp[:, 3] / (2 * self.sigma ** 2)))
         return psi[:, None] * self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3])
 
     def psi(self, r, p):
-        return r * (p[0] * torch.exp(-r ** (2 * p[1]) / (2 * self.sigma ** 2)) - p[2] * torch.exp(-r ** (2 * p[3]) / (2 * self.sigma ** 2)))
+        return r * (p[0] * torch.exp(-r ** (2 * p[1]) / (2 * self.sigma ** 2))
+                    - p[2] * torch.exp(-r ** (2 * p[3]) / (2 * self.sigma ** 2)))

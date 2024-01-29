@@ -1,7 +1,6 @@
-import torch_geometric.utils as pyg_utils
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
 import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
 from ParticleGraph.MLP import MLP
@@ -61,8 +60,8 @@ class ElecParticles(pyg.nn.MessagePassing):
             return acc
 
     def message(self, x_i, x_j):
-
-        r = torch.sqrt(torch.sum(self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)) / self.radius  # squared distance
+        # squared distance
+        r = torch.sqrt(torch.sum(self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)) / self.radius
         r = r[:, None]
 
         delta_pos = self.bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) / self.radius

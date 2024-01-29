@@ -1,10 +1,11 @@
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
 import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
 from ParticleGraph.MLP import MLP
 from ParticleGraph.utils import to_numpy
+
 
 class InteractionParticles(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
@@ -70,8 +71,8 @@ class InteractionParticles(pyg.nn.MessagePassing):
             return pred
 
     def message(self, x_i, x_j):
-
-        r = torch.sqrt(torch.sum(self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)) / self.radius  # squared distance
+        # squared distance
+        r = torch.sqrt(torch.sum(self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)) / self.radius
         r = r[:, None]
 
         delta_pos = self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) / self.radius
@@ -118,5 +119,6 @@ class InteractionParticles(pyg.nn.MessagePassing):
             cohesion = p[0] * 0.5E-5 * r
             separation = -p[2] * 1E-8 / r
             return (cohesion + separation) * p[1] / 500  #
-        else: # PDE_A
-            return r * (p[0] * torch.exp(-r ** (2 * p[1]) / (2 * self.sigma ** 2)) - p[2] * torch.exp(-r ** (2 * p[3]) / (2 * self.sigma ** 2)))
+        else:  # PDE_A
+            return r * (p[0] * torch.exp(-r ** (2 * p[1]) / (2 * self.sigma ** 2))
+                        - p[2] * torch.exp(-r ** (2 * p[3]) / (2 * self.sigma ** 2)))

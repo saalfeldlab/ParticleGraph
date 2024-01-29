@@ -2,6 +2,7 @@ import torch
 import torch_geometric as pyg
 from ParticleGraph.utils import to_numpy
 
+
 class RD_RPS(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -26,9 +27,9 @@ class RD_RPS(pyg.nn.MessagePassing):
         c = self.c[to_numpy(x[:, 5])]
         c = c[:, None]
 
-        u = x[:,6]
-        v = x[:,7]
-        w = x[:,8]
+        u = x[:, 6]
+        v = x[:, 7]
+        w = x[:, 8]
 
         laplacian = self.beta * c * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
         laplacian_u = laplacian[:, 0]
@@ -47,19 +48,18 @@ class RD_RPS(pyg.nn.MessagePassing):
         a = 0.6
         p = u + v + w
 
-        du = D * laplacian_u + u*(1-p-a*v)
-        dv = D * laplacian_v + v*(1-p-a*w)
-        dw = D * laplacian_w + w*(1-p-a*u)
+        du = D * laplacian_u + u * (1 - p - a * v)
+        dv = D * laplacian_v + v * (1 - p - a * w)
+        dw = D * laplacian_w + w * (1 - p - a * u)
 
         # U = U + 0.125 * dU
         # V = V + 0.125 * dV
 
-        increment = torch.cat((du[:,None],dv[:,None],dw[:,None]),axis=1)
+        increment = torch.cat((du[:, None], dv[:, None], dw[:, None]), axis=1)
 
         return increment
 
     def message(self, x_i, x_j, edge_attr):
-
         # U column 6, V column 7
 
         # L = edge_attr * (x_j[:, 6]-x_i[:, 6])
@@ -73,5 +73,4 @@ class RD_RPS(pyg.nn.MessagePassing):
         return Laplace
 
     def psi(self, I, p):
-
         return I

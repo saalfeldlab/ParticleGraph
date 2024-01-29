@@ -1,10 +1,10 @@
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
 import torch_geometric as pyg
-import torch_geometric.utils as pyg_utils
 from ParticleGraph.MLP import MLP
 from ParticleGraph.utils import to_numpy
+
 
 class MeshLaplacian(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
@@ -23,11 +23,11 @@ class MeshLaplacian(pyg.nn.MessagePassing):
         self.data_augmentation = model_config['data_augmentation']
         self.noise_level = model_config['noise_level']
         self.embedding = model_config['embedding']
-        self.ndataset = model_config['nrun']-1
+        self.ndataset = model_config['nrun'] - 1
         self.bc_diff = bc_diff
 
         self.lin_phi = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
-                            hidden_size=self.hidden_size, device=self.device)
+                           hidden_size=self.hidden_size, device=self.device)
 
         self.a = nn.Parameter(
             torch.tensor(np.ones((int(self.ndataset), int(self.nparticles), self.embedding)), device=self.device,
@@ -48,7 +48,6 @@ class MeshLaplacian(pyg.nn.MessagePassing):
         return pred
 
     def message(self, x_i, x_j, edge_attr):
-
         L = edge_attr * x_j[:, 6]
 
         return L[:, None]

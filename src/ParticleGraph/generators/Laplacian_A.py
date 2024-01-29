@@ -1,6 +1,7 @@
 import torch_geometric as pyg
 from ParticleGraph.utils import to_numpy
 
+
 class Laplacian_A(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -32,11 +33,9 @@ class Laplacian_A(pyg.nn.MessagePassing):
         return laplacian
 
     def message(self, x_i, x_j, edge_attr):
-
         L = edge_attr * x_j[:, 6]
 
         return L[:, None]
 
     def psi(self, I, p):
-
         return I

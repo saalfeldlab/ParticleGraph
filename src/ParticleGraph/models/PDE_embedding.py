@@ -1,10 +1,7 @@
 import torch
-import torch.nn as nn
-import numpy as np
 import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
-from ParticleGraph.MLP import MLP
-from ParticleGraph.utils import to_numpy
+
 
 class PDE_embedding(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
