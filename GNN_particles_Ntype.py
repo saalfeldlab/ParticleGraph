@@ -3937,7 +3937,7 @@ if __name__ == '__main__':
     # config_list = ['config_wave_testA']
 
     # Test plotting figures paper
-    config_list = ['config_gravity_16_test', 'config_wave_HR3_test']# ['config_boids_16_HR7','config_boids_16_HR8','config_boids_16_HR9']
+    config_list = ['config_boids_16_HR7'] # ,'config_boids_16_HR8','config_boids_16_HR9']# ['config_boids_16_HR7','config_boids_16_HR8','config_boids_16_HR9']
     # Load a graph neural network model used to sparsify the particle embedding during training
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3967,7 +3967,7 @@ if __name__ == '__main__':
 
         ratio = 1
         data_generate(model_config, device=device, bVisu=True, bStyle='bw', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//200, ratio=ratio, scenario='none' )
-        data_train(model_config,model_embedding)
+        # data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//200)
 
