@@ -381,9 +381,11 @@ class Mesh_RPS_learn(torch.nn.Module):
             vp[k] = -torch.matmul(torch.matmul(V, self.C),Vp) + torch.matmul(self.D, Vp)
             wp[k] = -torch.matmul(torch.matmul(V, self.E), Vp) + torch.matmul(self.F, Vp)
 
-        du = laplacian_u + up
-        dv = laplacian_v + vp
-        dw = laplacian_w + wp
+        D = 0.05
+
+        du = D * laplacian_u + up
+        dv = D * laplacian_v + vp
+        dw = D * laplacian_w + wp
 
         increment = torch.cat((du[:,None],dv[:,None],dw[:,None]),axis=1)
 
@@ -5338,7 +5340,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # arbitrary_3 training

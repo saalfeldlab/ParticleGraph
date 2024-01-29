@@ -1252,6 +1252,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
         N1 = torch.arange(nparticles, device=device)
         N1 = N1[:, None]
         noise_current = torch.zeros((nparticles, 2), device=device)
+        noise_prev = torch.zeros((nparticles, 2), device=device)
         noise_prev_prev = torch.zeros((nparticles, 2), device=device)
 
         # create differnet initial conditions
