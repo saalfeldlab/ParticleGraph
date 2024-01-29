@@ -31,6 +31,23 @@ os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
 from ParticleGraph.data_loaders import *
 from ParticleGraph.utils import to_numpy
+from ParticleGraph.generators.PDE_A import PDE_A
+from ParticleGraph.generators.PDE_B import PDE_B
+from ParticleGraph.generators.PDE_E import PDE_E
+from ParticleGraph.generators.PDE_G import PDE_G
+from ParticleGraph.generators.Laplacian_A import Laplacian_A
+from ParticleGraph.generators.RD_FitzHugh_Nagumo import RD_FitzHugh_Nagumo
+from ParticleGraph.generators.RD_Gray_Scott import RD_Gray_Scott
+from ParticleGraph.generators.RD_RPS import RD_RPS
+
+from ParticleGraph.models.ElecParticles import ElecParticles
+from ParticleGraph.models.GravityParticles import GravityParticles
+from ParticleGraph.models.InteractionCElegans import InteractionCElegans
+from ParticleGraph.models.InteractionParticles import InteractionParticles
+from ParticleGraph.models.MeshLaplacian import MeshLaplacian
+from ParticleGraph.models.Mesh_RPS import Mesh_RPS
+from ParticleGraph.models.PDE_embedding import PDE_embedding
+
 
 def func_pow(x, a, b):
     return a / (x**b)
