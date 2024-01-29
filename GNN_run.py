@@ -30,6 +30,7 @@ import os
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
 from ParticleGraph.data_loaders import *
+from ParticleGraph.config_manager import create_config_manager
 from ParticleGraph.utils import to_numpy
 from ParticleGraph.generators.PDE_A import PDE_A
 from ParticleGraph.generators.PDE_B import PDE_B
@@ -296,14 +297,12 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
         for n in range(1, nparticle_types):
             T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
         T1 = T1[:, None]
-        cycle_length_distrib = cycle_length[to_numpy(T1[:, 0]).astype(int)]
         if model_config['p'] == 'continuous':
             T1 = torch.tensor(np.arange(nparticles), device=device)
             T1 = T1[:, None]
         H1 = torch.zeros((nparticles, 2), device=device)
         A1 = torch.rand(nparticles, device=device)
         A1 = A1[:, None]
-        A1 = A1 * cycle_length_distrib
         N1 = torch.arange(nparticles, device=device)
         N1 = N1[:, None]
 
@@ -2236,6 +2235,8 @@ if __name__ == '__main__':
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
+    config_manager = create_config_manager(config_type='simulation')
+
     # config_list=['config_CElegans_32']
 
     # config_list = ['config_arbitrary_3'] #,'config_gravity_16','config_arbitrary_16']
@@ -2248,8 +2249,7 @@ if __name__ == '__main__':
     # Test plotting figures paper
     config_list = ['config_gravity_16'] # ,'config_boids_16_HR8','config_boids_16_HR9']# ['config_boids_16_HR7','config_boids_16_HR8','config_boids_16_HR9']
     # Load a graph neural network model used to sparsify the particle embedding during training
-    with open(f'./config/config_embedding.yaml', 'r') as file:
-        model_config_embedding = yaml.safe_load(file)
+    model_config_embedding = config_manager.load_and_validate_config('./config/config_embedding.yaml')
     p = torch.ones(1, 4, device=device)
     p[0] = torch.tensor(model_config_embedding['p'][0])
     model_embedding = PDE_embedding(aggr_type='mean', p=p, delta_t=model_config_embedding['delta_t'],
@@ -2262,8 +2262,7 @@ if __name__ == '__main__':
         # model_config = load_model_config(id=config)
 
         # Load parameters from config file
-        with open(f'./config/{config}.yaml', 'r') as file:
-            model_config = yaml.safe_load(file)
+        model_config = config_manager.load_and_validate_config(f'./config/{config}.yaml')
         model_config['dataset']=config[7:]
 
         for key, value in model_config.items():
