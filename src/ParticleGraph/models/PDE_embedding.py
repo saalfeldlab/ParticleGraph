@@ -11,8 +11,8 @@ class PDE_embedding(pyg.nn.MessagePassing):
     Compute the displacement of particles according to an attraction kernel
     The interaction function is defined by a MLP self.lin_edge
     The parameters of the kernel are defined by p =[0, 1.65, 0, 1.35] and sigma=0.7.
+    Note this function is used during training to 'sparsify' the particle embedding
     
-
     Inputs
     ----------
     data : a torch_geometric.data object
