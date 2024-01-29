@@ -3,8 +3,8 @@ import torch.nn as nn
 import numpy as np
 import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
-from ParticleGraph.Models.MLP import MLP
-from ParticleGraph.Utils.utils import to_numpy
+from ParticleGraph.MLP import MLP
+from ParticleGraph.utils import to_numpy
 
 class InteractionCElegans(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:

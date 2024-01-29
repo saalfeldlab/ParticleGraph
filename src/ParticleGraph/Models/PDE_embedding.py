@@ -3,14 +3,14 @@ import torch.nn as nn
 import numpy as np
 import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
-from ParticleGraph.Models.MLP import MLP
-from ParticleGraph.Utils.utils import to_numpy
+from ParticleGraph.MLP import MLP
+from ParticleGraph.utils import to_numpy
 
 class PDE_embedding(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, aggr_type=[], p=[], delta_t=[], prediction=[], sigma=[], bc_diff=[]):
+    def __init__(self, aggr_type=[], p=[], delta_t=[], prediction=[], sigma=[], bc_diff=[], device=[]):
         super(PDE_embedding, self).__init__(aggr='mean')  # "mean" aggregation.
 
         self.p = p
