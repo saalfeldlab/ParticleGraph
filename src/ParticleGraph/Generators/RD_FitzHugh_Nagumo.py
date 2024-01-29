@@ -1,3 +1,7 @@
+import torch
+import torch_geometric as pyg
+from ParticleGraph.utils import to_numpy
+
 class RD_FitzHugh_Nagumo(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -9,7 +13,7 @@ class RD_FitzHugh_Nagumo(pyg.nn.MessagePassing):
         self.beta = beta
         self.bc_diff = bc_diff
 
-    def forward(self, data):
+    def forward(self, data, device):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
         # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 

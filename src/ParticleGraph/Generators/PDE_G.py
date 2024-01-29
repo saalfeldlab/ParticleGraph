@@ -1,3 +1,8 @@
+import torch
+import torch_geometric as pyg
+import torch_geometric.utils as pyg_utils
+from ParticleGraph.utils import to_numpy
+
 class PDE_G(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
