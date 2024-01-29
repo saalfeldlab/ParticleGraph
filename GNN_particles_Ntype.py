@@ -1171,7 +1171,7 @@ def data_train(model_config, bSparse=False):
 
 
 def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_particles=0, prev_nparticles=0, new_nparticles=0,
-              prev_index_particles=0, best_model=0, step=5, bTest='', folder_out='tmp_recons', initial_map='',forced_embedding=[], forced_color=0):
+              prev_index_particles=0, best_model=0, step=5, bTest='', folder_out='tmp_recons', initial_map='',forced_embedding=[], forced_color=0,ratio=1):
 
     print('')
     print('Plot validation inference ... ')
@@ -3001,7 +3001,7 @@ if __name__ == '__main__':
     # config_list = ['config_wave_testA']
 
     # Test plotting figures paper
-    config_list = ['config_boids_16_HR7'] # ,'config_boids_16_HR8','config_boids_16_HR9']# ['config_boids_16_HR7','config_boids_16_HR8','config_boids_16_HR9']
+    config_list = ['config_gravity_16'] # ,'config_boids_16_HR8','config_boids_16_HR9']# ['config_boids_16_HR7','config_boids_16_HR8','config_boids_16_HR9']
     # Load a graph neural network model used to sparsify the particle embedding during training
     with open(f'./config/config_embedding.yaml', 'r') as file:
         model_config_embedding = yaml.safe_load(file)
@@ -3009,7 +3009,7 @@ if __name__ == '__main__':
     p[0] = torch.tensor(model_config_embedding['p'][0])
     model_embedding = PDE_embedding(aggr_type='mean', p=p, delta_t=model_config_embedding['delta_t'],
                                     sigma=model_config_embedding['sigma'],
-                                    prediction=model_config_embedding['prediction'])
+                                    prediction=model_config_embedding['prediction'], device=device)
     model_embedding.eval()
 
     for config in config_list:
@@ -3033,7 +3033,7 @@ if __name__ == '__main__':
         data_generate(model_config, device=device, bVisu=True, bStyle='bw', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//20, ratio=1, scenario='none' )
         data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
-        # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//200)
+        # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//200, ratio=1)
 
         # data_train_shrofflab_celegans(model_config)
         # data_test_shrofflab_celegans(model_config)
