@@ -11,3 +11,13 @@ Activate the environment:
 ```
 conda activate particle-graph
 ```
+
+Install the package by executing the following command from the root of this directory:
+```
+pip install -e .
+```
+
+Then, you should be able to import all the modules from the package in python:
+```python
+from ParticleGraph import *
+```
