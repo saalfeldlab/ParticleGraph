@@ -7,7 +7,7 @@ from shutil import copyfile
 import matplotlib.pyplot as plt
 import networkx as nx
 import torch.nn as nn
-import torch_geometric as pyg
+import numpy as np
 import torch_geometric.data as data
 import torch_geometric.transforms as T
 import torch_geometric.utils as pyg_utils
@@ -29,8 +29,8 @@ import os
 
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
-from data_loaders import *
-from src.utils import to_numpy
+from ParticleGraph.data_loaders import *
+from ParticleGraph.utils import to_numpy
 
 def func_pow(x, a, b):
     return a / (x**b)
