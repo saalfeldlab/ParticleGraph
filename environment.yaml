@@ -13,6 +13,8 @@ dependencies:
   - tqdm
   - PyYAML
   - tifffile
+  - astropy
+  - cerberus
   - pip
   - pip:
     - geomloss
