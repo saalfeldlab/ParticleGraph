@@ -3,7 +3,7 @@ input_size: 9
 output_size: 2
 hidden_size: 128
 n_mp_layers: 5
-noise_level: 1E-4
+noise_level: 0
 radius: 0.04
 min_radius: 0.001
 nparticles: 1792

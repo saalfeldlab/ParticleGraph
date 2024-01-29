@@ -1378,7 +1378,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             if (it >= 0):
                 # calculate noise
                 if (noise_level > 0):
-                    noise_prev_prev = noise_prev_prev.clone().detach()
+                    noise_prev_prev = noise_prev.clone().detach()
                     noise_prev = noise_current.clone().detach()
                     noise_current = torch.randn((nparticles, 2), device=device) * noise_level
                     x_with_noise[:, 1:3] += noise_current
@@ -3965,9 +3965,9 @@ if __name__ == '__main__':
 
         cmap = cc(model_config=model_config)
 
-        ratio = 1
-        data_generate(model_config, device=device, bVisu=True, bStyle='bw', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//200, ratio=ratio, scenario='none' )
-        # data_train(model_config,model_embedding)
+
+        data_generate(model_config, device=device, bVisu=True, bStyle='bw', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//20, ratio=1, scenario='none' )
+        data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//200)
 
