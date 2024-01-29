@@ -315,9 +315,6 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
         A1 = A1 * cycle_length_distrib
         N1 = torch.arange(nparticles, device=device)
         N1 = N1[:, None]
-        noise_current = torch.zeros((nparticles, 2), device=device)
-        noise_prev = torch.zeros((nparticles, 2), device=device)
-        noise_prev_prev = torch.zeros((nparticles, 2), device=device)
 
         # create differnet initial conditions
         if scenario == 'scenario A':
@@ -439,35 +436,24 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             # append x_list
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                                    H1.clone().detach(), A1.clone().detach()), 1)
-            x_with_noise = x.clone().detach()
             if (it >= 0):
-                # calculate noise
-                if (noise_level > 0):
-                    noise_prev_prev = noise_prev.clone().detach()
-                    noise_prev = noise_current.clone().detach()
-                    noise_current = torch.randn((nparticles, 2), device=device) * noise_level
-                    x_with_noise[:, 1:3] += noise_current
-                    x_with_noise[:, 3:5] += noise_current - noise_prev
-                x_list.append(x_with_noise.clone().detach())
+                x_list.append(x.clone().detach())
             # create mesh dataset
             if bMesh:
-                dataset_mesh = data.Data(x=x_with_noise, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
+                dataset_mesh = data.Data(x=x, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
             # compute connectivity rule
-            distance = torch.sum(bc_diff(x_with_noise[:, None, 1:3] - x_with_noise[None, :, 1:3]) ** 2, axis=2)
+            distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
             t = torch.Tensor([radius ** 2])  # threshold
             adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
             edge_index = adj_t.nonzero().t().contiguous()
-            dataset = data.Data(x=x_with_noise, pos=x_with_noise[:, 1:3], edge_index=edge_index)
+            dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
             # model prediction
             with torch.no_grad():
                 y = model(dataset)
             # append y_list
             if (it >= 0):
-                if (noise_level == 0):
-                    y_list.append(y.clone().detach())
-                else:
-                    y_noise = y[:, 0:2] + noise_current - 2 * noise_prev + noise_prev_prev
-                    y_list.append(y_noise.clone().detach())
+                y_list.append(y.clone().detach())
+
             # Euler integration update
             if not (bMesh):
                 if model_config['prediction'] == '2nd_derivative':
@@ -508,11 +494,11 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                     fig = plt.figure(figsize=(10, 10))
                     # plt.ion()
 
-                    distance2 = torch.sum((x_with_noise[:, None, 1:3] - x_with_noise[None, :, 1:3]) ** 2, axis=2)
+                    distance2 = torch.sum((x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
                     adj_t2 = ((distance2 < radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
                     edge_index2 = adj_t2.nonzero().t().contiguous()
                     dataset2 = data.Data(x=x, edge_index=edge_index2)
-                    pos = dict(enumerate(np.array(x_with_noise[:, 1:3].detach().cpu()), 0))
+                    pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
                     vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
                     nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=alpha)
 
@@ -522,9 +508,9 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                         x[index_particles[n], 2].detach().cpu().numpy(), s=40, color=cmap.color(n))
                     elif bMesh:
-                        pts = x_with_noise[:, 1:3].detach().cpu().numpy()
+                        pts = x[:, 1:3].detach().cpu().numpy()
                         tri = Delaunay(pts)
-                        colors = torch.sum(x_with_noise[tri.simplices, 6], axis=1) / 3.0
+                        colors = torch.sum(x[tri.simplices, 6], axis=1) / 3.0
                         if model_config['model'] == 'WaveMesh':
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                           facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=-2500, vmax=2500)
@@ -567,9 +553,9 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                     fig = plt.figure(figsize=(12, 12))
                     # plt.ion()
                     if bMesh:
-                        pts = x_with_noise[:, 1:3].detach().cpu().numpy()
+                        pts = x[:, 1:3].detach().cpu().numpy()
                         tri = Delaunay(pts)
-                        colors = torch.sum(x_with_noise[tri.simplices, 6], axis=1) / 3.0
+                        colors = torch.sum(x[tri.simplices, 6], axis=1) / 3.0
                         if model_config['model'] == 'DiffMesh':
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                           facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1000)
@@ -579,14 +565,14 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                         if (model_config['model'] == 'RD_Gray_Scott_Mesh'):
                             fig = plt.figure(figsize=(12, 6))
                             ax = fig.add_subplot(1, 2, 1)
-                            colors = torch.sum(x_with_noise[tri.simplices, 6], axis=1) / 3.0
+                            colors = torch.sum(x[tri.simplices, 6], axis=1) / 3.0
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                           facecolors=colors.detach().cpu().numpy(),vmin=0,vmax=1)
                             plt.xticks([])
                             plt.yticks([])
                             plt.axis('off')
                             ax = fig.add_subplot(1, 2, 2)
-                            colors = torch.sum(x_with_noise[tri.simplices, 7], axis=1) / 3.0
+                            colors = torch.sum(x[tri.simplices, 7], axis=1) / 3.0
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                           facecolors=colors.detach().cpu().numpy(),vmin=0,vmax=1)
                             plt.xticks([])
@@ -628,9 +614,9 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                 if 'bw' in bStyle:
                     fig = plt.figure(figsize=(12, 12))
                     if bMesh:
-                        pts = x_with_noise[:, 1:3].detach().cpu().numpy()
+                        pts = x[:, 1:3].detach().cpu().numpy()
                         tri = Delaunay(pts)
-                        colors = torch.sum(x_with_noise[tri.simplices, 6], axis=1) / 3.0
+                        colors = torch.sum(x[tri.simplices, 6], axis=1) / 3.0
                         if model_config['model'] == 'WaveMesh':
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                           facecolors='w', edgecolors='k', vmin=-2500, vmax=2500)
@@ -638,7 +624,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                           facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=0, vmax=2500)
 
-                        # plt.scatter(x_with_noise[:, 1].detach().cpu().numpy(),x_with_noise[:, 2].detach().cpu().numpy(), s=10, alpha=0.75,
+                        # plt.scatter(x[:, 1].detach().cpu().numpy(),x[:, 2].detach().cpu().numpy(), s=10, alpha=0.75,
                         #                 c=x[:, 6].detach().cpu().numpy(), cmap='gist_gray',vmin=-5000,vmax=5000)
                         # ax.set_facecolor([0.5,0.5,0.5])
                     else:
@@ -1457,14 +1443,14 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
                     if (model_config['model'] == 'RD_Gray_Scott_Mesh'):
                         fig = plt.figure(figsize=(12, 6))
                         ax = fig.add_subplot(1, 2, 1)
-                        colors = torch.sum(x_with_noise[tri.simplices, 6], axis=1) / 3.0
+                        colors = torch.sum(x[tri.simplices, 6], axis=1) / 3.0
                         plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                       facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
                         plt.xticks([])
                         plt.yticks([])
                         plt.axis('off')
                         ax = fig.add_subplot(1, 2, 2)
-                        colors = torch.sum(x_with_noise[tri.simplices, 7], axis=1) / 3.0
+                        colors = torch.sum(x[tri.simplices, 7], axis=1) / 3.0
                         plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                       facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
                         plt.xticks([])
@@ -3029,7 +3015,6 @@ if __name__ == '__main__':
                 model_config[key] = value
 
         cmap = cc(model_config=model_config)
-
 
         data_generate(model_config, device=device, bVisu=True, bStyle='bw', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//20, ratio=1, scenario='none' )
         data_train(model_config,model_embedding)
