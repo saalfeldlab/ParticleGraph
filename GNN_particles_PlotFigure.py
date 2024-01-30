@@ -350,42 +350,48 @@ class Mesh_RPS_learn(torch.nn.Module):
 
         self.cc = nn.Parameter(torch.zeros(5, requires_grad=True))
 
-        self.A = nn.Parameter(torch.zeros((3,3), requires_grad=True))
-        self.B = nn.Parameter(torch.zeros((1, 3), requires_grad=True))
-        self.C = nn.Parameter(torch.zeros((3,3), requires_grad=True))
-        self.D = nn.Parameter(torch.zeros((1, 3), requires_grad=True))
-        self.E = nn.Parameter(torch.zeros((3,3), requires_grad=True))
-        self.F = nn.Parameter(torch.zeros((1, 3), requires_grad=True))
+        self.A = nn.Parameter(torch.zeros((9, 1), requires_grad=True))
+        self.B = nn.Parameter(torch.zeros((9, 1), requires_grad=True))
+        self.C = nn.Parameter(torch.zeros((9, 1), requires_grad=True))
 
-    def forward(self, in_features, type,list_index):
+    def forward(self, in_features, type, list_index):
 
         u = in_features[:,3:4]
         v = in_features[:,4:5]
         w = in_features[:,5:6]
 
-        l = u.shape[0]
+        l = list_index.shape[0]
         type = to_numpy(type)
 
         laplacian_u =  self.cc[type,None] * in_features[:, 0:1]
         laplacian_v =  self.cc[type,None] * in_features[:, 1:2]
         laplacian_w =  self.cc[type,None] * in_features[:, 2:3]
 
-        up= 0 * u
-        vp = 0 * u
-        wp = 0 * u
 
-        for k in list_index:
-            V = in_features[k:k+1,3:6]
-            Vp = torch.transpose(V,0,1)
-            up[k] = -torch.matmul(torch.matmul(V, self.A),Vp) + torch.matmul(self.B,Vp)
-            vp[k] = -torch.matmul(torch.matmul(V, self.C),Vp) + torch.matmul(self.D, Vp)
-            wp[k] = -torch.matmul(torch.matmul(V, self.E), Vp) + torch.matmul(self.F, Vp)
+        uu = u*u
+        uv = u*v
+        uw = u*w
+        vv = v*v
+        vw = v*w
+        ww = w*w
+
+        uu = uu[list_index]
+        uv = uv[list_index]
+        uw = uw[list_index]
+        vv = vv[list_index]
+        vw = vw[list_index]
+        ww = ww[list_index]
+
+        u = u[list_index]
+        v = v[list_index]
+        w = w[list_index]
+
 
         D = 0.05
 
-        du = D * laplacian_u + up
-        dv = D * laplacian_v + vp
-        dw = D * laplacian_w + wp
+        du = D * laplacian_u[list_index] + self.A[0]*uu + self.A[1]*uv + self.A[2]*uw + self.A[3]*vv + self.A[4]*vw + self.A[5]*ww + self.A[6]*u + self.A[7]*v + self.A[8]*w
+        dv = D * laplacian_v[list_index] + self.B[0]*uu + self.B[1]*uv + self.B[2]*uw + self.B[3]*vv + self.B[4]*vw + self.B[5]*ww + self.B[6]*u + self.B[7]*v + self.B[8]*w
+        dw = D * laplacian_w[list_index] + self.C[0]*uu + self.C[1]*uv + self.C[2]*uw + self.C[3]*vv + self.C[4]*vw + self.C[5]*ww + self.C[6]*u + self.C[7]*v + self.C[8]*w
 
         increment = torch.cat((du[:,None],dv[:,None],dw[:,None]),axis=1)
 
@@ -408,6 +414,70 @@ def func_boids(x, a, b, c):
     sum = np.sqrt(sum[:,0]**2 + sum[:,1]**2)
 
     return sum
+
+def func_RD1 (x, a, b, c, d, e, f, g, h, i, cc):
+
+    u = x[:, 3]
+    v = x[:, 4]
+    w = x[:, 5]
+
+    laplacian_u = cc * x[:, 0]
+    laplacian_v = cc * x[:, 1]
+    laplacian_w = cc * x[:, 2]
+
+    uu = u * u
+    uv = u * v
+    uw = u * w
+    vv = v * v
+    vw = v * w
+    ww = w * w
+
+    du = 0.05 * laplacian_u + a * uu + b * uv + c * uw + d * vv + e * vw + f * ww + g * u + h * v + i * w
+
+    return du
+
+def func_RD2 (x, a, b, c, d, e, f, g, h, i, cc):
+
+    u = x[:, 3]
+    v = x[:, 4]
+    w = x[:, 5]
+
+    laplacian_u = cc * x[:, 0]
+    laplacian_v = cc * x[:, 1]
+    laplacian_w = cc * x[:, 2]
+
+    uu = u * u
+    uv = u * v
+    uw = u * w
+    vv = v * v
+    vw = v * w
+    ww = w * w
+
+    dv = 0.05 * laplacian_v + a * uu + b * uv + c * uw + d * vv + e * vw + f * ww + g * u + h * v + i * w
+
+    return dv
+
+def func_RD3 (x, a, b, c, d, e, f, g, h, i, cc):
+
+    u = x[:, 3]
+    v = x[:, 4]
+    w = x[:, 5]
+
+    laplacian_u = cc * x[:, 0]
+    laplacian_v = cc * x[:, 1]
+    laplacian_w = cc * x[:, 2]
+
+    uu = u * u
+    uv = u * v
+    uw = u * w
+    vv = v * v
+    vw = v * w
+    ww = w * w
+
+    dw = 0.05 * laplacian_w + a * uu + b * uv + c * uw + d * vv + e * vw + f * ww + g * u + h * v + i * w
+
+    return dw
+
 
 
 def data_plot_FIG2():
@@ -4780,7 +4850,7 @@ def data_plot_FIG6():
     cmap = cc(model_config=model_config)
 
     fig = plt.figure(figsize=(9.5, 9))
-    # plt.ion()
+    plt.ion()
     ax = fig.add_subplot(3, 3, 1)
     print('1')
 
@@ -5108,162 +5178,211 @@ def data_plot_FIG7():
     cmap = cc(model_config=model_config)
 
 
-    if False:
-
-        fig = plt.figure(figsize=(9.5, 9))
-        plt.ion()
-        ax = fig.add_subplot(3, 3, 1)
-        print('1')
-
-        for m in range(model.a.shape[0]):
-            for n in range(nparticle_types):
-                plt.scatter(embedding_particle[n + m * nparticle_types][:, 0],
-                            embedding_particle[n + m * nparticle_types][:, 1], color=cmap.color(n), s=1)
-        plt.xlabel(r'Embedding 0',fontsize=14)
-        plt.ylabel(r'Embedding 1',fontsize=14)
-        plt.xticks(fontsize=10)
-        plt.yticks(fontsize=10)
-
-        ax = fig.add_subplot(3, 3, 2)
-        with torch.no_grad():
-            f_list = []
-            for n in trange(nparticles):
-                embedding = model.a[0, n, :] * torch.ones((100, model_config['embedding']), device=device)
-                if model_config['model'] == 'RD_RPS_Mesh':
-                    u = torch.tensor(np.linspace(0, 1, 100)).to(device)
-                    u = u[:, None]
-                    in_features = torch.cat((u, u, u, u, u, u, embedding), dim=1)
-                    r = u
-                else:
-                    r = torch.tensor(np.linspace(-250, 250, 100)).to(device)
-                    in_features = torch.cat((r[:, None], embedding), dim=1)
-                h = model.lin_phi(in_features.float())
-                h = h[:, 0]
-                f_list.append(h)
-            f_list = torch.stack(f_list)
-            coeff_norm = to_numpy(f_list)
-
-        print('UMAP ...')
-        trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int), n_components=2,
-                          random_state=42, transform_queue_size=0).fit(coeff_norm)
-        proj_interaction = trans.transform(coeff_norm)
-        proj_interaction = np.squeeze(proj_interaction)
-
-        for n in range(nparticle_types):
-            plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1],
-                        color=cmap.color(n), s=0.1)
-            plt.xlabel(r'UMAP 0', fontsize=14)
-            plt.ylabel(r'UMAP 1', fontsize=14)
-
-        kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=1000, max_iter=10000,random_state=13)
-        if kmeans_input == 'plot':
-            kmeans.fit(proj_interaction)
-        if kmeans_input == 'embedding':
-            kmeans.fit(embedding_)
-        label_list = []
-        for n in range(nparticle_types):
-            tmp = kmeans.labels_[index_particles[n]]
-            sub_group = np.round(np.median(tmp))
-            label_list.append(sub_group)
-        label_list = np.array(label_list)
-        new_labels = 0* kmeans.labels_.copy()
-        for n in range(nparticle_types):
-            new_labels[kmeans.labels_ == label_list[n]] = n
-        Accuracy = metrics.accuracy_score(to_numpy(T1), new_labels)
-        print(' ')
-        print (f'Accuracy: {np.round(Accuracy,3)}')
-        torch.save(torch.tensor(new_labels, device=device), os.path.join(log_dir, f'labels_20.pt'))
-        model_a_ = model.a.clone().detach()
-        model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
-        t = []
-        for k in range(model_config['ninteractions']):
-            pos = np.argwhere(kmeans.labels_ == k).squeeze().astype(int)
-            temp = model_a_[pos, :].clone().detach()
-            print(torch.median(temp, axis=0).values)
-            model_a_[pos, :] = torch.median(temp, axis=0).values.repeat((len(pos), 1))
-            t.append(torch.median(temp, axis=0).values)
-        model_a_ = torch.reshape(model_a_, (model.a.shape[0], model.a.shape[1], model.a.shape[2]))
-        with torch.no_grad():
-            for n in range(model.a.shape[0]):
-                model.a[n] = model_a_[0]
-        embedding = []
-        for n in range(model.a.shape[0]):
-            embedding.append(model.a[n])
-        embedding = to_numpy(torch.stack(embedding))
-        embedding = np.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
-        embedding_particle = []
-        for m in range(model.a.shape[0]):
-            for n in range(nparticle_types):
-                embedding_particle.append(embedding[index_particles[n] + m * nparticles, :])
-        plt.xticks(fontsize=10)
-        plt.yticks(fontsize=10)
-        plt.tight_layout()
-
-        ax = fig.add_subplot(3, 3, 3)
-        print('3')
-        confusion_matrix = metrics.confusion_matrix(to_numpy(T1), new_labels)  # , normalize='true')
-        cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix=confusion_matrix)
-        if nparticle_types > 8:
-            cm_display.plot(ax=fig.gca(), cmap='Blues', include_values=False)
-        else:
-            cm_display.plot(ax=fig.gca(), cmap='Blues', include_values=True, values_format='d')
-        plt.xticks(fontsize=10)
-        plt.yticks(fontsize=10)
-        plt.text(0, -0.75, r"Accuracy: {:.3f}".format(Accuracy), fontsize=12)
-
-        ax = fig.add_subplot(3, 3, 4)
-        for m in range(model.a.shape[0]):
-            for n in range(model.a.shape[1]):
-                plt.scatter(to_numpy(model.a[m][n, 0]),
-                            to_numpy(model.a[m][n, 1]),
-                            color=cmap.color(new_labels[n]), s=6)
-        plt.xlabel(r'Embedding 0', fontsize=14)
-        plt.ylabel(r'Embedding 1', fontsize=14)
-        plt.xticks(fontsize=10)
-        plt.yticks(fontsize=10)
 
 
     fig = plt.figure(figsize=(9.5, 9))
     plt.ion()
+    ax = fig.add_subplot(3, 3, 1)
+    print('1')
 
-    optimizer = torch.optim.Adam(model_learn.parameters(), lr=1e-4)
+    for m in range(model.a.shape[0]):
+        for n in range(nparticle_types):
+            plt.scatter(embedding_particle[n + m * nparticle_types][:, 0],
+                        embedding_particle[n + m * nparticle_types][:, 1], color=cmap.color(n), s=1)
+    plt.xlabel(r'Embedding 0',fontsize=14)
+    plt.ylabel(r'Embedding 1',fontsize=14)
+    plt.xticks(fontsize=10)
+    plt.yticks(fontsize=10)
 
-    for epoch in trange(1000):
+    ax = fig.add_subplot(3, 3, 2)
+    with torch.no_grad():
+        f_list = []
+        for n in trange(nparticles):
+            embedding = model.a[0, n, :] * torch.ones((100, model_config['embedding']), device=device)
+            if model_config['model'] == 'RD_RPS_Mesh':
+                u = torch.tensor(np.linspace(0, 1, 100)).to(device)
+                u = u[:, None]
+                in_features = torch.cat((u, u, u, u, u, u, embedding), dim=1)
+                r = u
+            else:
+                r = torch.tensor(np.linspace(-250, 250, 100)).to(device)
+                in_features = torch.cat((r[:, None], embedding), dim=1)
+            h = model.lin_phi(in_features.float())
+            h = h[:, 0]
+            f_list.append(h)
+        f_list = torch.stack(f_list)
+        coeff_norm = to_numpy(f_list)
 
-        mse_loss = 0
+    print('UMAP ...')
+    trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int), n_components=2,
+                      random_state=42, transform_queue_size=0).fit(coeff_norm)
+    proj_interaction = trans.transform(coeff_norm)
+    proj_interaction = np.squeeze(proj_interaction)
 
-        it = np.random.randint(model_config['nframes'] - 1)
-        x = x_list[0][it].clone().detach()
-        dataset = data.Data(x=x, pos=x[:, 1:3])
-        transform_0 = T.Compose([T.Delaunay()])
-        dataset_face = transform_0(dataset).face
-        mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
-        edge_index_mesh, edge_weight_mesh = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,
-                                                                         normalization="None")
-        dataset_mesh = data.Data(x=x, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
+    for n in range(nparticle_types):
+        plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1],
+                    color=cmap.color(n), s=0.1)
+        plt.xlabel(r'UMAP 0', fontsize=14)
+        plt.ylabel(r'UMAP 1', fontsize=14)
 
-        with torch.no_grad():
-            y, input_phi, embedding = model(dataset_mesh, data_id=0)
-            # y_gen = model_mesh(dataset_mesh)
-            # plt.scatter(to_numpy(y[:,0]),to_numpy(y_gen[:,0]))
-        y = y * hnorm
+    kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=1000, max_iter=10000,random_state=13)
+    if kmeans_input == 'plot':
+        kmeans.fit(proj_interaction)
+    if kmeans_input == 'embedding':
+        kmeans.fit(embedding_)
+    label_list = []
+    for n in range(nparticle_types):
+        tmp = kmeans.labels_[index_particles[n]]
+        sub_group = np.round(np.median(tmp))
+        label_list.append(sub_group)
+    label_list = np.array(label_list)
+    new_labels = 0* kmeans.labels_.copy()
+    for n in range(nparticle_types):
+        new_labels[kmeans.labels_ == label_list[n]] = n
+    Accuracy = metrics.accuracy_score(to_numpy(T1), new_labels)
+    print(' ')
+    print (f'Accuracy: {np.round(Accuracy,3)}')
+    torch.save(torch.tensor(new_labels, device=device), os.path.join(log_dir, f'labels_20.pt'))
+    model_a_ = model.a.clone().detach()
+    model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
+    t = []
+    for k in range(model_config['ninteractions']):
+        pos = np.argwhere(kmeans.labels_ == k).squeeze().astype(int)
+        temp = model_a_[pos, :].clone().detach()
+        print(torch.median(temp, axis=0).values)
+        model_a_[pos, :] = torch.median(temp, axis=0).values.repeat((len(pos), 1))
+        t.append(torch.median(temp, axis=0).values)
+    model_a_ = torch.reshape(model_a_, (model.a.shape[0], model.a.shape[1], model.a.shape[2]))
+    with torch.no_grad():
+        for n in range(model.a.shape[0]):
+            model.a[n] = model_a_[0]
+    embedding = []
+    for n in range(model.a.shape[0]):
+        embedding.append(model.a[n])
+    embedding = to_numpy(torch.stack(embedding))
+    embedding = np.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
+    embedding_particle = []
+    for m in range(model.a.shape[0]):
+        for n in range(nparticle_types):
+            embedding_particle.append(embedding[index_particles[n] + m * nparticles, :])
+    plt.xticks(fontsize=10)
+    plt.yticks(fontsize=10)
+    plt.tight_layout()
 
-        list_index=np.random.randint (0, x.shape[0], 1000)
+    ax = fig.add_subplot(3, 3, 3)
+    print('3')
+    confusion_matrix = metrics.confusion_matrix(to_numpy(T1), new_labels)  # , normalize='true')
+    cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix=confusion_matrix)
+    if nparticle_types > 8:
+        cm_display.plot(ax=fig.gca(), cmap='Blues', include_values=False)
+    else:
+        cm_display.plot(ax=fig.gca(), cmap='Blues', include_values=True, values_format='d')
+    plt.xticks(fontsize=10)
+    plt.yticks(fontsize=10)
+    plt.text(0, -0.75, r"Accuracy: {:.3f}".format(Accuracy), fontsize=12)
 
-        y_pred = model_learn(input_phi, x[:,5], list_index)
+    ax = fig.add_subplot(3, 3, 4)
+    for m in range(model.a.shape[0]):
+        for n in range(model.a.shape[1]):
+            plt.scatter(to_numpy(model.a[m][n, 0]),
+                        to_numpy(model.a[m][n, 1]),
+                        color=cmap.color(new_labels[n]), s=6)
+    plt.xlabel(r'Embedding 0', fontsize=14)
+    plt.ylabel(r'Embedding 1', fontsize=14)
+    plt.xticks(fontsize=10)
+    plt.yticks(fontsize=10)
 
-        mse_loss += F.mse_loss(y[list_index], y_pred[list_index])
 
-        optimizer.zero_grad()
-        mse_loss.backward()
-        optimizer.step()
+    it =5000
+    it = np.random.randint(model_config['nframes'] - 1)
+    x = x_list[0][it].clone().detach()
+    dataset = data.Data(x=x, pos=x[:, 1:3])
+    transform_0 = T.Compose([T.Delaunay()])
+    dataset_face = transform_0(dataset).face
+    mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
+    edge_index_mesh, edge_weight_mesh = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,
+                                                                     normalization="None")
+    dataset_mesh = data.Data(x=x, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
+    with torch.no_grad():
+        y, input_phi, embedding = model(dataset_mesh, data_id=0)
+    y=y*hnorm
 
-        if epoch%20==0:
-            loss = np.round(to_numpy(mse_loss/100/hnorm*1e6)*1e4)/1e4
-            print(f'Epoch {epoch}, loss {loss}')
+    c = model_mesh.c[to_numpy(dataset_mesh.x[:, 5])]
 
-    plt.scatter(model_config['c'], to_numpy(model_learn.cc/hnorm/0.05))
+    u = input_phi[:, 3]
+    v = input_phi[:, 4]
+    w = input_phi[:, 5]
 
+    # laplacian = model_mesh.beta * c * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
+
+    laplacian_u = 1 * c * input_phi[:, 0]
+    laplacian_v = 1 * c * input_phi[:, 1]
+    laplacian_w = 1 * c * input_phi[:, 2]
+
+    D = 0.05
+    a = 0.6
+    p = u + v + w
+
+    du = D * laplacian_u + u * (1 - p - a * v)
+    dv = D * laplacian_v + v * (1 - p - a * w)
+    dw = D * laplacian_w + w * (1 - p - a * u)
+
+    increment = torch.cat((du[:, None], dv[:, None], dw[:, None]), axis=1)
+    increment = increment.squeeze()
+
+
+    fig = plt.figure(figsize=(9.5, 9))
+    plt.ion()
+    plt.scatter(to_numpy(increment[:, 0]), to_numpy(y[:, 0]),c='r',s=1)
+    plt.scatter(to_numpy(increment[:, 1]), to_numpy(y[:, 1]),c='g',s=1)
+    plt.scatter(to_numpy(increment[:, 2]), to_numpy(y[:, 2]),c='b',s=1)
+    plt.xlim([-0.25,0.25])
+    plt.ylim([-0.25,0.25])
+
+    lin_fit1 = np.zeros((5,10))
+    lin_fit2 = np.zeros((5, 10))
+    lin_fit3 = np.zeros((5, 10))
+
+
+    for n in trange(1,nparticle_types):
+
+        pos = index_particles[n]
+        u = to_numpy(input_phi[pos, 3])
+        v = to_numpy(input_phi[pos, 4])
+        w = to_numpy(input_phi[pos, 5])
+
+        laplacian_u = to_numpy(input_phi[pos, 0])
+        laplacian_v = to_numpy(input_phi[pos, 1])
+        laplacian_w = to_numpy(input_phi[pos, 2])
+
+        x_data = np.concatenate((laplacian_u[:,None],laplacian_v[:,None],laplacian_w[:,None],u[:,None],v[:,None],w[:,None]), axis=1)
+        y_data1 = to_numpy(y[pos,0:1])
+        lin_fit1[n], lin_fitv1 = curve_fit(func_RD1, np.squeeze(x_data), np.squeeze(y_data1), method='dogbox')
+        y_data2 = to_numpy(y[pos,1:2])
+        lin_fit2[n], lin_fitv2 = curve_fit(func_RD2, np.squeeze(x_data), np.squeeze(y_data2), method='dogbox')
+        y_data3 = to_numpy(y[pos,2:3])
+        lin_fit3[n], lin_fitv3 = curve_fit(func_RD3, np.squeeze(x_data), np.squeeze(y_data3), method='dogbox')
+
+        yy1 = func_RD1(x_data, lin_fit1[n,0], lin_fit1[n,1], lin_fit1[n,2], lin_fit1[n,3], lin_fit1[n,4], lin_fit1[n,5],lin_fit1[n,6], lin_fit1[n,7], lin_fit1[n,8], lin_fit1[n,9])
+        yy2 = func_RD2(x_data, lin_fit2[n,0], lin_fit2[n,1], lin_fit2[n,2], lin_fit2[n,3], lin_fit2[n,4], lin_fit2[n,5],
+                       lin_fit2[n,6], lin_fit2[n,7], lin_fit2[n,8], lin_fit2[n,9])
+        yy3 = func_RD3(x_data, lin_fit3[n,0], lin_fit3[n,1], lin_fit3[n,2], lin_fit3[n,3], lin_fit3[n,4], lin_fit3[n,5],
+                       lin_fit3[n,6], lin_fit3[n,7], lin_fit3[n,8], lin_fit3[n,9])
+
+
+        fig = plt.figure(figsize=(9.5, 9))
+        plt.ion()
+        plt.scatter(y_data2,yy2,c='r',s=1)
+
+        fig = plt.figure(figsize=(9.5, 9))
+        plt.ion()
+        plt.scatter(to_numpy(increment[pos, 0:1]), yy1,c='r',s=1)
+        plt.scatter(to_numpy(increment[pos, 1:2]), yy2, c='g', s=1)
+        plt.scatter(to_numpy(increment[pos, 2:3]), yy3, c='b', s=1)
+
+
+
+    c = model_mesh.c
 
     ax = fig.add_subplot(3, 3, 5)
     print('5')
@@ -5340,11 +5459,11 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # arbitrary_3 training
-    # data_plot_FIG2()
+    data_plot_FIG2()
     # print(' ')
     # print(' ')
     # arbitrary_3 inference
@@ -5373,7 +5492,7 @@ if __name__ == '__main__':
 
     # data_plot_FIG6()
 
-    data_plot_FIG7()
+    # data_plot_FIG7()
 
 
 
