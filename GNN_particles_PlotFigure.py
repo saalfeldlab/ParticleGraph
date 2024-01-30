@@ -194,6 +194,7 @@ class PDE_B_extract(pyg.nn.MessagePassing):
         separation = -p[2] * 1E-8 / r
         return (cohesion + separation)  # 5E-4 alignement
 
+
 class RD_RPS_extract(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -476,6 +477,7 @@ def func_RD3 (x, a, b, c, d, e, f, g, h, i, cc):
     dw = 0.05 * laplacian_w + a * uu + b * uv + c * uw + d * vv + e * vw + f * ww + g * u + h * v + i * w
 
     return dw
+
 
 
 def data_plot_FIG2():
@@ -4679,24 +4681,55 @@ def data_plot_FIG6():
 
     x_list = []
     y_list = []
+    x_stat = []
+    y_stat = []
+    distance_list = []
+    deg_list = []
     print('Load normalizations ...')
     time.sleep(1)
 
-    x_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_0.pt', map_location=device))
-    y_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_0.pt', map_location=device))
+    for run in trange(NGraphs):
+        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
+        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
+        if run == 0:
+            for k in np.arange(0, len(x) - 1, 4):
+                distance = torch.sum(bc_diff(x[k][:, None, 1:3] - x[k][None, :, 1:3]) ** 2, axis=2)
+                t = torch.Tensor([radius ** 2])  # threshold
+                adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                edge_index = adj_t.nonzero().t().contiguous()
+                dataset = data.Data(x=x, edge_index=edge_index)
+                distance = np.sqrt(to_numpy(distance[edge_index[0, :], edge_index[1, :]]))
+                deg = degree(dataset.edge_index[0], dataset.num_nodes)
+                deg_list.append(to_numpy(deg))
+                distance_list.append([np.mean(distance), np.std(distance)])
+                x_stat.append(to_numpy(torch.concatenate((torch.mean(x[k][:, 3:5], axis=0), torch.std(x[k][:, 3:5], axis=0)),
+                                                axis=-1)))
+                y_stat.append(to_numpy(torch.concatenate((torch.mean(y[k], axis=0), torch.std(y[k], axis=0)),
+                                                axis=-1)))
+        x_list.append(torch.stack(x))
+        y_list.append(torch.stack(y))
 
-    vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
-    ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
+    x = torch.stack(x_list)
+    x = torch.reshape(x, (x.shape[0] * x.shape[1] * x.shape[2], x.shape[3]))
+    y = torch.stack(y_list)
+    y = torch.reshape(y, (y.shape[0] * y.shape[1] * y.shape[2], y.shape[3]))
+    vnorm = norm_velocity(x, device)
+    ynorm = norm_acceleration(y, device)
+    print(vnorm, ynorm)
+    print(vnorm[4], ynorm[4])
 
     h_list = []
-    h_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/h_list_0.pt', map_location=device))
-    hnorm = torch.load(os.path.join(log_dir, 'hnorm.pt'), map_location=device)
-
-
+    for run in trange(NGraphs):
+        h = torch.load(f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt', map_location=device)
+        h_list.append(torch.stack(h))
+    h = torch.stack(h_list)
+    h = torch.reshape(h, (h.shape[0] * h.shape[1] * h.shape[2], h.shape[3]))
+    hnorm = torch.std(h)
+    torch.save(hnorm, os.path.join(log_dir, 'hnorm.pt'))
+    print(hnorm)
     model = MeshLaplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
-    print(net)
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
 
