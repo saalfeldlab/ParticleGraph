@@ -3,9 +3,10 @@ A collection of functions for loading data from various sources.
 """
 
 import os
+
 import numpy as np
-import torch
 import pandas as pd
+import torch
 
 
 def load_shrofflab_celegans(

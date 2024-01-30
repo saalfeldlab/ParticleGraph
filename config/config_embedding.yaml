@@ -6,7 +6,6 @@ n_mp_layers: 5
 noise_level: 0
 radius: 0.075
 min_radius: 0
-dataset: 'embedding'
 nparticles: 4800
 nparticle_types: 1
 ninteractions: 3
@@ -22,8 +21,6 @@ embedding: 2
 model: 'PDE_A'
 prediction: 'first_derivative_S'
 upgrade_type: 'none'
-nlayers_update: 3
-hidden_size_update: 64
 p: [[0, 1.65, 0, 1.35]]
 nrun: 2
 start_frame: 20

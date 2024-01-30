@@ -1,0 +1,21 @@
+name: particle-graph
+channels:
+  - conda-forge
+dependencies:
+  - pytorch
+  - umap-learn
+  - numpy
+  - scipy
+  - pandas
+  - matplotlib
+  - networkx
+  - prettytable
+  - tqdm
+  - PyYAML
+  - tifffile
+  - astropy
+  - cerberus
+  - pip
+  - pip:
+    - geomloss
+    - torch_geometric
