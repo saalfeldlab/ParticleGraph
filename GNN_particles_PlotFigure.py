@@ -39,6 +39,7 @@ os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 # from data_loaders import *
 from ParticleGraph.utils import to_numpy
 from GNN_particles_Ntype import *
+from ParticleGraph.MLP import MLP
 
 
 class InteractionParticles_extract(pyg.nn.MessagePassing):
