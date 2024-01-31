@@ -4801,7 +4801,7 @@ def data_plot_FIG6():
     cmap = cc(model_config=model_config)
 
     fig = plt.figure(figsize=(9.5, 9))
-    plt.ion()
+    # plt.ion()
     ax = fig.add_subplot(3, 3, 1)
     print('1')
 
@@ -4818,8 +4818,8 @@ def data_plot_FIG6():
     with torch.no_grad():
         f_list = []
         for n in trange(nparticles):
-            r = torch.tensor(np.linspace(-500, 500, 100)).to(device)
-            embedding = model.a[0, n, :] * torch.ones((100, model_config['embedding']), device=device)
+            r = torch.tensor(np.linspace(-150, 150, 1000)).to(device)
+            embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
             in_features = torch.cat((r[:, None], embedding), dim=1)
             h = model.lin_phi(in_features.float())
             h = h[:, 0]
@@ -4950,14 +4950,22 @@ def data_plot_FIG6():
 
     ax = fig.add_subplot(3, 3, 7)
     print('7')
-    x_data = c
+    x_data = np.array(c)
     y_data = to_numpy(hnorm) * popt_list[:, 0] * 100
     lin_fit, lin_fitv = curve_fit(func_lin, x_data, y_data)
-    plt.plot(c, func_lin(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
+    plt.plot(np.array(c), func_lin(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
     for n in range(nparticle_types):
         plt.scatter(c[n], to_numpy(hnorm) * popt_list[n, 0] * 100, color=cmap.color(n))
     plt.xlabel(r'True viscosity $[a.u.]$', fontsize=14)
     plt.ylabel(r'Predicted viscosity $[a.u.]$', fontsize=14)
+    plt.xlim([-0.1, 1.1])
+    plt.ylim([-0.1, 1.1])
+    plt.text(0, 1.0, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
+    residuals = y_data - func_lin(x_data, *lin_fit)
+    ss_res = np.sum(residuals ** 2)
+    ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+    r_squared = 1 - (ss_res / ss_tot)
+    plt.text(0, 0.9, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
 
     ax = fig.add_subplot(3, 3, 8)
     for k in range(model_config['nparticles']):
@@ -4966,6 +4974,7 @@ def data_plot_FIG6():
     plt.yticks(fontsize=10)
     plt.xlabel(r'$x_i [a.u.]$', fontsize=14)
     plt.ylabel(r'$y_i [a.u.]$', fontsize=14)
+    plt.text(0, 0.85, r"Model", fontsize=14)
 
     ax = fig.add_subplot(3, 3, 9)
     for n in range(nparticle_types):
@@ -4975,6 +4984,7 @@ def data_plot_FIG6():
     plt.yticks(fontsize=10)
     plt.xlabel(r'$x_i [a.u.]$', fontsize=14)
     plt.ylabel(r'$y_i [a.u.]$', fontsize=14)
+    plt.text(0.1, 0.85, r"True", fontsize=14)
 
     plt.tight_layout()
 
@@ -5136,11 +5146,8 @@ def data_plot_FIG7():
 
     cmap = cc(model_config=model_config)
 
-
-
-
     fig = plt.figure(figsize=(9.5, 9))
-    plt.ion()
+    # plt.ion()
     ax = fig.add_subplot(3, 3, 1)
     print('1')
 
@@ -5262,9 +5269,17 @@ def data_plot_FIG7():
     edge_index_mesh, edge_weight_mesh = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,
                                                                      normalization="None")
     dataset_mesh = data.Data(x=x, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
+
+    net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
+    state_dict = torch.load(net, map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
+
     with torch.no_grad():
         y, input_phi, embedding = model(dataset_mesh, data_id=0)
     y=y*hnorm
+
+
+    # RD_RPS_model :
 
     c = model_mesh.c[to_numpy(dataset_mesh.x[:, 5])]
 
@@ -5289,21 +5304,18 @@ def data_plot_FIG7():
     increment = torch.cat((du[:, None], dv[:, None], dw[:, None]), axis=1)
     increment = increment.squeeze()
 
-
-    fig = plt.figure(figsize=(9.5, 9))
-    plt.ion()
-    plt.scatter(to_numpy(increment[:, 0]), to_numpy(y[:, 0]),c='r',s=1)
-    plt.scatter(to_numpy(increment[:, 1]), to_numpy(y[:, 1]),c='g',s=1)
-    plt.scatter(to_numpy(increment[:, 2]), to_numpy(y[:, 2]),c='b',s=1)
-    plt.xlim([-0.25,0.25])
-    plt.ylim([-0.25,0.25])
+    # fig = plt.figure(figsize=(9.5, 9))
+    # plt.ion()
+    # plt.scatter(to_numpy(increment[:, 0]), to_numpy(y[:, 0]),c='r',s=1)
+    # plt.scatter(to_numpy(increment[:, 1]), to_numpy(y[:, 1]),c='g',s=1)
+    # plt.scatter(to_numpy(increment[:, 2]), to_numpy(y[:, 2]),c='b',s=1)
+    # plt.xlim([-0.25,0.25])
+    # plt.ylim([-0.25,0.25])
 
     lin_fit1 = np.zeros((5,10))
     lin_fit2 = np.zeros((5, 10))
     lin_fit3 = np.zeros((5, 10))
-
-
-    for n in trange(1,nparticle_types):
+    for n in trange(0,nparticle_types):
 
         pos = index_particles[n]
         u = to_numpy(input_phi[pos, 3])
@@ -5322,78 +5334,71 @@ def data_plot_FIG7():
         y_data3 = to_numpy(y[pos,2:3])
         lin_fit3[n], lin_fitv3 = curve_fit(func_RD3, np.squeeze(x_data), np.squeeze(y_data3), method='dogbox')
 
-        yy1 = func_RD1(x_data, lin_fit1[n,0], lin_fit1[n,1], lin_fit1[n,2], lin_fit1[n,3], lin_fit1[n,4], lin_fit1[n,5],lin_fit1[n,6], lin_fit1[n,7], lin_fit1[n,8], lin_fit1[n,9])
-        yy2 = func_RD2(x_data, lin_fit2[n,0], lin_fit2[n,1], lin_fit2[n,2], lin_fit2[n,3], lin_fit2[n,4], lin_fit2[n,5],
-                       lin_fit2[n,6], lin_fit2[n,7], lin_fit2[n,8], lin_fit2[n,9])
-        yy3 = func_RD3(x_data, lin_fit3[n,0], lin_fit3[n,1], lin_fit3[n,2], lin_fit3[n,3], lin_fit3[n,4], lin_fit3[n,5],
-                       lin_fit3[n,6], lin_fit3[n,7], lin_fit3[n,8], lin_fit3[n,9])
+        # yy1 = func_RD1(x_data, lin_fit1[n,0], lin_fit1[n,1], lin_fit1[n,2], lin_fit1[n,3], lin_fit1[n,4], lin_fit1[n,5],lin_fit1[n,6], lin_fit1[n,7], lin_fit1[n,8], lin_fit1[n,9])
+        # yy2 = func_RD2(x_data, lin_fit2[n,0], lin_fit2[n,1], lin_fit2[n,2], lin_fit2[n,3], lin_fit2[n,4], lin_fit2[n,5],
+        #                lin_fit2[n,6], lin_fit2[n,7], lin_fit2[n,8], lin_fit2[n,9])
+        # yy3 = func_RD3(x_data, lin_fit3[n,0], lin_fit3[n,1], lin_fit3[n,2], lin_fit3[n,3], lin_fit3[n,4], lin_fit3[n,5],
+        #                lin_fit3[n,6], lin_fit3[n,7], lin_fit3[n,8], lin_fit3[n,9])
 
+    #     du = 0.05 * laplacian_u + a * uu + b * uv + c * uw + d * vv + e * vw + f * ww + g * u + h * v + i * w
 
-        fig = plt.figure(figsize=(9.5, 9))
-        plt.ion()
-        plt.scatter(y_data2,yy2,c='r',s=1)
-
-        fig = plt.figure(figsize=(9.5, 9))
-        plt.ion()
-        plt.scatter(to_numpy(increment[pos, 0:1]), yy1,c='r',s=1)
-        plt.scatter(to_numpy(increment[pos, 1:2]), yy2, c='g', s=1)
-        plt.scatter(to_numpy(increment[pos, 2:3]), yy3, c='b', s=1)
-
-
-
-    c = model_mesh.c
-
-    ax = fig.add_subplot(3, 3, 5)
-    print('5')
-    with torch.no_grad():
-        t = to_numpy(model.a[0])
-    tmean = np.ones((model_config['nparticle_types'], model_config['embedding']))
-    u = torch.tensor(np.linspace(0, 1, 100)).to(device)
-    f_list = []
-    for n in range(model_config['nparticle_types']):
-        tmean[n] = np.mean(t[index_particles[n], :], axis=0)
-        embedding = torch.tensor(tmean[n], device=device) * torch.ones((100, model_config['embedding']),device=device)
-        u = torch.tensor(np.linspace(0, 1, 100)).to(device)
-        u = u[:, None]
-        in_features = torch.cat((u, u, u, u, u, u, embedding), dim=1)
-        h = model.lin_phi(in_features.float())
-        h = h[:, 0]
-        f_list.append(h)
-        plt.plot(to_numpy(u),to_numpy(h) * to_numpy(hnorm),linewidth=1)
-
-
-    plt.xlabel(r'$\Delta u_{i} [a.u.]$', fontsize=14)
-    plt.ylabel(r'$\Phi (\ensuremath{\mathbf{a}}_i, \Delta u_i) [a.u.]$', fontsize=14)
-    plt.xticks(fontsize=10)
-    plt.yticks(fontsize=10)
-    plt.text(-200, 2, r'Model', fontsize=14)
-    plt.xlim([-250,250])
-    plt.ylim([-3, 3])
-
-    popt_list = []
-    for n in range(nparticle_types):
-        popt, pcov = curve_fit(func_lin, to_numpy(u), to_numpy(f_list[n]))
-        popt_list.append(popt)
-    popt_list = np.array(popt_list)
-
-    ax = fig.add_subplot(3, 3, 6)
-    print('6')
-    c = model_config['c']
-    for n in range(nparticle_types):
-        plt.plot(to_numpy(u), 1E-2 * to_numpy(u*c[n]), linewidth=1, color=cmap.color(n))
-    plt.xlabel(r'$\Delta u_{i} [a.u.]$', fontsize=14)
-    plt.ylabel(r'$\Phi (\ensuremath{\mathbf{a}}_i, \Delta u_i) [a.u.]$', fontsize=14)
-    plt.text(-200, 2, r'True', fontsize=14)
-    plt.xlim([-250,250])
-    plt.ylim([-3, 3])
-
+    coeff1 = np.round(np.mean(lin_fit1[1:4,:], axis=0),2)
+    coeff2 = np.round(np.mean(lin_fit2[1:4,:], axis=0),2)
+    coeff3 = np.round(np.mean(lin_fit3[1:4,:], axis=0),2)
+    
     ax = fig.add_subplot(3, 3, 7)
+    print('7')
+    x_data = np.array(to_numpy(model_mesh.c))
+    x_data = x_data
+    y_data = x_data*0
     for n in range(nparticle_types):
-        plt.scatter(c[n], to_numpy(hnorm) * popt_list[n, 0] * 100, color=cmap.color(n))
+        y_data[n]= (lin_fit1[n,9]+lin_fit2[n,9]+lin_fit3[n,9])/3
+    lin_fit, lin_fitv = curve_fit(func_lin, x_data, y_data)
+    plt.plot(x_data, func_lin(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
+    
+    for n in range(nparticle_types):
+        plt.scatter(x_data[n], y_data[n], color=cmap.color(n),s=20)
+        
     plt.xlabel(r'True viscosity $[a.u.]$', fontsize=14)
     plt.ylabel(r'Predicted viscosity $[a.u.]$', fontsize=14)
+    plt.xlim([-0.1, 1.1])
+    plt.ylim([-0.1, 1.1])
+    plt.text(0, 1.0, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
+    residuals = y_data - func_lin(x_data, *lin_fit)
+    ss_res = np.sum(residuals ** 2)
+    ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+    r_squared = 1 - (ss_res / ss_tot)
+    plt.text(0, 0.9, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
+
+    # fig = plt.figure(figsize=(9.5, 9))
+    # plt.ion()
+    # plt.scatter(y_data2,yy2,c='r',s=1)
+
+    # fig = plt.figure(figsize=(9.5, 9))
+    # plt.ion()
+    # plt.scatter(to_numpy(increment[pos, 0:1]), yy1,c='r',s=1)
+    # plt.scatter(to_numpy(increment[pos, 1:2]), yy2, c='g', s=1)
+    # plt.scatter(to_numpy(increment[pos, 2:3]), yy3, c='b', s=1)
+    
+    
+    x_width = int(np.sqrt(nparticles))
+    xs = torch.linspace(0, 1, steps=x_width)
+    ys = torch.linspace(0, 1, steps=x_width)
+    x, y = torch.meshgrid(xs, ys, indexing='xy')
+    x = torch.reshape(x, (x_width ** 2, 1))
+    y = torch.reshape(y, (x_width ** 2, 1))
+    x_width = 1 / x_width / 8
 
     ax = fig.add_subplot(3, 3, 8)
+    for k in range(model_config['nparticles']):
+        plt.scatter(to_numpy(x[k]), to_numpy(y[k]), color=cmap.color(new_labels[k]), s=10)
+    plt.xticks(fontsize=10)
+    plt.yticks(fontsize=10)
+    plt.xlabel(r'$x_i [a.u.]$', fontsize=14)
+    plt.ylabel(r'$y_i [a.u.]$', fontsize=14)
+    plt.text(0.1, 0.85, r"Model", fontsize=14)
+
+    ax = fig.add_subplot(3, 3, 9)
     for n in range(nparticle_types):
         plt.scatter(to_numpy(x[index_particles[n]]),
                     to_numpy(y[index_particles[n]]), s=10, color=cmap.color(n))
@@ -5401,6 +5406,7 @@ def data_plot_FIG7():
     plt.yticks(fontsize=10)
     plt.xlabel(r'$x_i [a.u.]$', fontsize=14)
     plt.ylabel(r'$y_i [a.u.]$', fontsize=14)
+    plt.text(0.1, 0.85, r"True", fontsize=14)
 
     plt.tight_layout()
 
@@ -5418,7 +5424,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # arbitrary_3 training
@@ -5450,10 +5456,10 @@ if __name__ == '__main__':
     # data_plot_FIG5()
 
     # wave HR2 or HR3 (slit)
-    data_plot_FIG6()
+    # data_plot_FIG6()
 
     # RD_RPS2
-    # data_plot_FIG7()
+    data_plot_FIG7()
 
 
 

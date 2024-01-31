@@ -103,6 +103,8 @@ class cc:
         else:
             self.nmap = model_config['nparticle_types']
 
+        self.bMesh = 'Mesh' in model_config['model']
+
     def color(self, index):
 
         if self.model == 'ElecParticles':
@@ -116,6 +118,13 @@ class cc:
             elif index == 3:
                 index = (0.75, 0, 0)
             return (index)
+        elif self.bMesh:
+            if index == 0:
+                index = (0, 0, 0)
+            else:
+                color_map = plt.colormaps.get_cmap(self.model_config['cmap'])
+                index = color_map(index / self.nmap)
+                
         else:
             # color_map = plt.cm.get_cmap(self.model_config['cmap'])
             color_map = plt.colormaps.get_cmap(self.model_config['cmap'])
