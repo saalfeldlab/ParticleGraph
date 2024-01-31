@@ -5147,7 +5147,7 @@ def data_plot_FIG7():
     cmap = cc(model_config=model_config)
 
     fig = plt.figure(figsize=(9.5, 9))
-    # plt.ion()
+    plt.ion()
     ax = fig.add_subplot(3, 3, 1)
     print('1')
 
@@ -5270,47 +5270,36 @@ def data_plot_FIG7():
                                                                      normalization="None")
     dataset_mesh = data.Data(x=x, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
 
-    net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
-    state_dict = torch.load(net, map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
-
     with torch.no_grad():
         y, input_phi, embedding = model(dataset_mesh, data_id=0)
     y=y*hnorm
 
 
     # RD_RPS_model :
-
     c = model_mesh.c[to_numpy(dataset_mesh.x[:, 5])]
-
     u = input_phi[:, 3]
     v = input_phi[:, 4]
     w = input_phi[:, 5]
-
     # laplacian = model_mesh.beta * c * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
-
     laplacian_u = 1 * c * input_phi[:, 0]
     laplacian_v = 1 * c * input_phi[:, 1]
     laplacian_w = 1 * c * input_phi[:, 2]
-
     D = 0.05
     a = 0.6
     p = u + v + w
-
     du = D * laplacian_u + u * (1 - p - a * v)
     dv = D * laplacian_v + v * (1 - p - a * w)
     dw = D * laplacian_w + w * (1 - p - a * u)
-
     increment = torch.cat((du[:, None], dv[:, None], dw[:, None]), axis=1)
     increment = increment.squeeze()
 
-    # fig = plt.figure(figsize=(9.5, 9))
-    # plt.ion()
-    # plt.scatter(to_numpy(increment[:, 0]), to_numpy(y[:, 0]),c='r',s=1)
-    # plt.scatter(to_numpy(increment[:, 1]), to_numpy(y[:, 1]),c='g',s=1)
-    # plt.scatter(to_numpy(increment[:, 2]), to_numpy(y[:, 2]),c='b',s=1)
-    # plt.xlim([-0.25,0.25])
-    # plt.ylim([-0.25,0.25])
+    fig = plt.figure(figsize=(9.5, 9))
+    plt.ion()
+    plt.scatter(to_numpy(increment[pos, 0]), yy1[:, 0],c='r',s=1)
+    plt.scatter(to_numpy(increment[:, 1]), to_numpy(y[:, 1]),c='g',s=1)
+    plt.scatter(to_numpy(increment[:, 2]), to_numpy(y[:, 2]),c='b',s=1)
+    plt.xlim([-0.25,0.25])
+    plt.ylim([-0.25,0.25])
 
     lin_fit1 = np.zeros((5,10))
     lin_fit2 = np.zeros((5, 10))
