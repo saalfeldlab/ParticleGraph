@@ -30,7 +30,7 @@ import os
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
 from ParticleGraph.data_loaders import *
-from ParticleGraph.config_manager import create_config_manager
+from ParticleGraph.config_manager import create_config_manager, ConfigManager
 from ParticleGraph.utils import to_numpy
 from ParticleGraph.generators.PDE_A import PDE_A
 from ParticleGraph.generators.PDE_B import PDE_B
@@ -2977,7 +2977,9 @@ if __name__ == '__main__':
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
-    config_manager = create_config_manager(config_type='simulation')
+    # config_manager = create_config_manager(config_type='simulation')
+
+    config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
 
     # config_list=['config_CElegans_32']
 
