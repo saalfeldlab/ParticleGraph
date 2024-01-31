@@ -5439,10 +5439,12 @@ if __name__ == '__main__':
     # data_plot_FIG5sup()
 
     # boids HR2
-    # data_plot_FIG5()
+    data_plot_FIG5()
 
-    data_plot_FIG6()
+    # wave HR2 or HR3 (slit)
+    # data_plot_FIG6()
 
+    # RD_RPS2
     # data_plot_FIG7()
 
 
