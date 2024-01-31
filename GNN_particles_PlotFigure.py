@@ -4129,7 +4129,7 @@ def data_plot_FIG5sup():
 
 def data_plot_FIG5():
 
-    for config_number in range(7,10):
+    for config_number in range(2,3):
 
         config = f'config_boids_16_HR{config_number}'
         # model_config = load_model_config(id=config)
