@@ -551,6 +551,7 @@ def data_plot_FIG2():
     time.sleep(0.5)
     print('Plotting ...')
 
+
     net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_0.pt"
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
@@ -587,15 +588,16 @@ def data_plot_FIG2():
     plt.ion()
     ax = fig.add_subplot(3, 4, 1)
     print('1')
-    plt.text(-0.25, 1.1, f'a)', ha='left', va='top', transform=ax.transAxes, fontsize=14)
-    plt.title(r'Particle embedding $\ensuremath{\mathbf{a}}_{i}$', fontsize=14)
+    plt.text(-0.25, 1.1, f'a)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'Particle embedding', fontsize=12)
     if (embedding.shape[1] > 1):
         for m in range(model.a.shape[0]):
             for n in range(nparticle_types):
                 plt.scatter(embedding_particle[n + m * nparticle_types][:, 0],
                             embedding_particle[n + m * nparticle_types][:, 1], color=cmap.color(n), s=0.1)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0} [a.u.]$',fontsize=12)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1} [a.u.]$',fontsize=12)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$',fontsize=12)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$',fontsize=12)
+    plt.text(.05, .98, f'e: 0 it: 200', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     plt.text(.05, .9, f'N: {nparticles}', ha='left', va='top', transform=ax.transAxes ,fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
@@ -603,8 +605,8 @@ def data_plot_FIG2():
 
     ax = fig.add_subplot(3, 4, 2)
     print('2 UMAP ...')
-    plt.text(-0.25, 1.1, f'b)', ha='left', va='top', transform=ax.transAxes, fontsize=14)
-    plt.title(r'Plots of $f(\ensuremath{\mathbf{a}}_i, r_{ij})$ (model)', fontsize=14)
+    plt.text(-0.25, 1.1, f'b)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'Interaction functions (model)', fontsize=12)
     acc_list = []
     for n in range(nparticles):
         embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
@@ -623,18 +625,19 @@ def data_plot_FIG2():
     trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int), n_components=2, transform_queue_size=0).fit(coeff_norm)
     proj_interaction = trans.transform(coeff_norm)
     proj_interaction = np.squeeze(proj_interaction)
-    plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij}) [a.u.]$', fontsize=12)
+    plt.xlabel(r'$r_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.ylim([-0.04,0.03])
     plt.text(.05, .9, f'N: {nparticles//50}', ha='left', va='top', transform=ax.transAxes ,fontsize=12)
+    plt.text(.05, .98, f'e: 0 it: 200', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     plt.tight_layout()
 
     ax = fig.add_subplot(3, 4, 3)
     print('3')
-    plt.text(-0.25, 1.1, f'c)', ha='left', va='top', transform=ax.transAxes, fontsize=14)
-    plt.title(r'UMAP of plots', fontsize=14)
+    plt.text(-0.25, 1.1, f'c)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'UMAP of $f(\ensuremath{\mathbf{a}}_i, r_{ij}$)', fontsize=12)
     kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=1000, max_iter=10000,
                     random_state=13)
     if kmeans_input == 'plot':
@@ -681,12 +684,13 @@ def data_plot_FIG2():
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.text(.05, .9, f'N: {nparticles}', ha='left', va='top', transform=ax.transAxes ,fontsize=12)
+    plt.text(.05, .98, f'e: 0 it: 200', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     plt.tight_layout()
 
     ax = fig.add_subplot(3, 4, 4)
     print('4')
-    plt.text(-0.25, 1.1, f'd)', ha='left', va='top', transform=ax.transAxes, fontsize=14)
-    plt.title(r'Confusion matrix', fontsize=14)
+    plt.text(-0.25, 1.1, f'd)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'Particle classification', fontsize=12)
     T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
     for n in range(1, nparticle_types):
         T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
@@ -724,23 +728,23 @@ def data_plot_FIG2():
 
     ax = fig.add_subplot(3, 4, 5)
     print('5')
-    plt.text(-0.25, 1.1, f'e)', ha='left', va='top', transform=ax.transAxes, fontsize=14)
-    plt.title(r'Particle embedding $\ensuremath{\mathbf{a}}_{i}$', fontsize=14)
+    plt.text(-0.25, 1.1, f'e)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'Particle embedding', fontsize=12)
     for m in range(model.a.shape[0]):
         for n in range(nparticle_types):
             plt.scatter(embedding_particle[n + m * nparticle_types][:, 0],
                         embedding_particle[n + m * nparticle_types][:, 1], color=cmap.color(n), s=6)
-    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0} [a.u.]$',fontsize=12)
-    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1} [a.u.]$',fontsize=12)
+    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$',fontsize=12)
+    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$',fontsize=12)
     plt.text(.05, .9, f'N: {nparticles}', ha='left', va='top', transform=ax.transAxes ,fontsize=12)
+    plt.text(.05, .98, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
-    plt.text(.05, .9, f'N: {nparticles//50}', ha='left', va='top', transform=ax.transAxes ,fontsize=12)
 
     ax = fig.add_subplot(3, 4, 6)
     print('6')
-    plt.text(-0.25, 1.1, f'f)', ha='left', va='top', transform=ax.transAxes, fontsize=14)
-    plt.title(r'Plots of $f(\ensuremath{\mathbf{a}}_i, r_{ij})$ (model)', fontsize=14)
+    plt.text(-0.25, 1.1, f'f)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'Interaction functions (model)', fontsize=12)
     acc_list = []
     for n in range(nparticles):
         embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
@@ -759,17 +763,18 @@ def data_plot_FIG2():
     trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int), n_components=2, transform_queue_size=0).fit(coeff_norm)
     proj_interaction = trans.transform(coeff_norm)
     proj_interaction = np.squeeze(proj_interaction)
-    plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij}) [a.u.]$', fontsize=12)
+    plt.xlabel(r'$r_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.ylim([-0.04,0.03])
     plt.text(.05, .9, f'N: {nparticles//50}', ha='left', va='top', transform=ax.transAxes ,fontsize=12)
+    plt.text(.05, .98, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=12)
 
     ax = fig.add_subplot(3, 4, 7)
     print('7')
-    plt.text(-0.25, 1.1, f'g)', ha='left', va='top', transform=ax.transAxes, fontsize=14)
-    plt.title(r'UMAP of plots', fontsize=14)
+    plt.text(-0.25, 1.1, f'g)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'UMAP of $f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
     kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=1000, max_iter=10000,
                     random_state=13)
     if kmeans_input == 'plot':
@@ -816,11 +821,12 @@ def data_plot_FIG2():
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.text(.05, .9, f'N: {nparticles}', ha='left', va='top', transform=ax.transAxes ,fontsize=12)
+    plt.text(.05, .98, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=12)
 
     ax = fig.add_subplot(3, 4, 8)
     print('8')
-    plt.text(-0.25, 1.1, f'h)', ha='left', va='top', transform=ax.transAxes, fontsize=14)
-    plt.title(r'Confusion matrix', fontsize=14)
+    plt.text(-0.25, 1.1, f'h)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'Particle classification', fontsize=12)
     T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
     for n in range(1, nparticle_types):
         T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
@@ -840,23 +846,24 @@ def data_plot_FIG2():
 
     ax = fig.add_subplot(3, 4, 9)
     print('9')
-    plt.text(-0.25, 1.1, f'i)', ha='left', va='top', transform=ax.transAxes, fontsize=14)
-    plt.title(r'Particle embedding $\ensuremath{\mathbf{a}}_{i}$', fontsize=14)
+    plt.text(-0.25, 1.1, f'i)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'Clustered particle embedding', fontsize=12)
     for m in range(model.a.shape[0]):
         for n in range(model.a.shape[1]):
             plt.scatter(to_numpy(model.a[m][n, 0]),
                         to_numpy(model.a[m][n, 1]),
                         color=cmap.color(new_labels[n]), s=6)
-    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0} [a.u.]$', fontsize=12)
-    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1} [a.u.]$', fontsize=12)
+    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=12)
+    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
-    plt.text(.05, .9, f'N: {nparticles}', ha='left', va='top', transform=ax.transAxes ,fontsize=12)
+    plt.text(.05, .98, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+
 
     ax = fig.add_subplot(3, 4, 10)
     print('10')
-    plt.text(-0.25, 1.1, f'j)', ha='left', va='top', transform=ax.transAxes, fontsize=14)
-    plt.title(r'Plots of $f(\ensuremath{\mathbf{a}}_i, r_{ij})$ (model)', fontsize=14)
+    plt.text(-0.25, 1.1, f'j)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'Interaction functions (model)', fontsize=12)
     acc_list = []
     for n in range(nparticles):
         embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
@@ -870,17 +877,18 @@ def data_plot_FIG2():
             plt.plot(to_numpy(rr),
                      to_numpy(acc) * to_numpy(ynorm[4]),
                      color=cmap.color(to_numpy(x[n, 5])), linewidth=1)
-    plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij}) [a.u.]$', fontsize=12)
+    plt.xlabel(r'$r_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.ylim([-0.04,0.03])
-    plt.text(.05, .9, f'N: {nparticles//50}', ha='left', va='top', transform=ax.transAxes ,fontsize=12)
+    plt.text(.05, .98, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+
 
     ax = fig.add_subplot(3,4,11)
     print('11')
-    plt.text(-0.25, 1.1, f'k)', ha='left', va='top', transform=ax.transAxes, fontsize=14)
-    plt.title(r'Plots of $f(\ensuremath{\mathbf{a}}_i, r_{ij})$ (true)', fontsize=14)
+    plt.text(-0.25, 1.1, f'k)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'Interaction functions (true)', fontsize=12)
     p = model_config['p']
     if len(p) > 0:
         p = torch.tensor(p, device=device)
@@ -892,12 +900,11 @@ def data_plot_FIG2():
         psi_output.append(model.psi(rr, p[n]))
     for n in range(nparticle_types - 1, -1, -1):
         plt.plot(to_numpy(rr), np.array(psi_output[n].cpu()), color=cmap.color(n), linewidth=1)
-    plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij}) [a.u.]$', fontsize=12)
+    plt.xlabel(r'$r_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.ylim([-0.04,0.03])
-    plt.text(.05, .9, f'N: {nparticles//50}', ha='left', va='top', transform=ax.transAxes ,fontsize=12)
 
 
     plt.tight_layout()
@@ -1676,8 +1683,8 @@ def data_plot_FIG3sup():
             for n in range(nparticle_types):
                 plt.scatter(embedding_particle[n + m * nparticle_types][:, 0],
                             embedding_particle[n + m * nparticle_types][:, 1], color=cmap.color(n), s=0.1)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0} [a.u.]$',fontsize=12)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1} [a.u.]$',fontsize=12)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$',fontsize=12)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$',fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
 
@@ -1701,8 +1708,8 @@ def data_plot_FIG3sup():
     trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int), n_components=2, transform_queue_size=0).fit(coeff_norm)
     proj_interaction = trans.transform(coeff_norm)
     proj_interaction = np.squeeze(proj_interaction)
-    plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij}) [a.u.]$', fontsize=12)
+    plt.xlabel(r'$r_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.ylim([-0.1,0.1])
@@ -1801,8 +1808,8 @@ def data_plot_FIG3sup():
             for n in range(nparticle_types):
                 plt.scatter(embedding_particle[n + m * nparticle_types][:, 0],
                             embedding_particle[n + m * nparticle_types][:, 1], color=cmap.color(n), s=0.1)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0} [a.u.]$',fontsize=12)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1} [a.u.]$',fontsize=12)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$',fontsize=12)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$',fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
 
@@ -1826,8 +1833,8 @@ def data_plot_FIG3sup():
     trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int), n_components=2, transform_queue_size=0).fit(coeff_norm)
     proj_interaction = trans.transform(coeff_norm)
     proj_interaction = np.squeeze(proj_interaction)
-    plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij}) [a.u.]$', fontsize=12)
+    plt.xlabel(r'$r_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.ylim([-0.1,0.1])
@@ -1907,8 +1914,8 @@ def data_plot_FIG3sup():
             plt.scatter(to_numpy(model.a[m][n, 0]),
                         to_numpy(model.a[m][n, 1]),
                         color=cmap.color(new_labels[n]), s=1)
-    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0} [a.u.]$', fontsize=12)
-    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1} [a.u.]$', fontsize=12)
+    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=12)
+    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
 
@@ -1927,8 +1934,8 @@ def data_plot_FIG3sup():
             plt.plot(to_numpy(rr),
                      to_numpy(acc) * to_numpy(ynorm[4]),
                      color=cmap.color(to_numpy(x[n, 5])), linewidth=1)
-    plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij}) [a.u.]$', fontsize=12)
+    plt.xlabel(r'$r_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.text(0,0.075,r'Model', fontsize=12)
@@ -1946,8 +1953,8 @@ def data_plot_FIG3sup():
         psi_output.append(model.psi(rr, p[n]))
     for n in range(nparticle_types - 1, -1, -1):
         plt.plot(to_numpy(rr), np.array(psi_output[n].cpu()), color=cmap.color(n), linewidth=1)
-    plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij}) [a.u.]$', fontsize=12)
+    plt.xlabel(r'$r_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.ylim([-0.1,0.1])
@@ -2731,8 +2738,8 @@ def data_plot_FIG3():
             for n in range(nparticle_types):
                 plt.scatter(embedding_particle[n + m * nparticle_types][:, 0],
                             embedding_particle[n + m * nparticle_types][:, 1], color=cmap.color(n), s=0.1)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0} [a.u.]$',fontsize=12)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1} [a.u.]$',fontsize=12)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$',fontsize=12)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$',fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     acc_list = []
@@ -2828,8 +2835,8 @@ def data_plot_FIG3():
             plt.scatter(to_numpy(model.a[m][n, 0]),
                         to_numpy(model.a[m][n, 1]),
                         color=cmap.color(new_labels[n]), s=5)
-    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0} [a.u.]$', fontsize=12)
-    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1} [a.u.]$', fontsize=12)
+    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=12)
+    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
 
@@ -2849,8 +2856,8 @@ def data_plot_FIG3():
                  color=cmap.color(to_numpy(x[n, 5])), linewidth=1, alpha=0.25)
     plt.xlim([0, 0.02])
     plt.ylim([0, 0.5E6])
-    plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, r_{ij}) [a.u.]$', fontsize=12)
+    plt.xlabel(r'$r_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, r_{ij})$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.text(0.0075,0.4E6,r'Model', fontsize=12)
@@ -2870,8 +2877,8 @@ def data_plot_FIG3():
 
     plt.xlim([0, 0.02])
     plt.ylim([0, 0.5E6])
-    plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, r_{ij}) [a.u.]$', fontsize=12)
+    plt.xlabel(r'$r_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, r_{ij})$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.text(0.0075,0.4E6,r'True', fontsize=12)
@@ -2991,9 +2998,9 @@ def data_plot_FIG3():
     pred = pred[:, 0]
     pred=torch.reshape(pred,(100,100))
     plt.imshow(to_numpy(pred), extent=[0.002, 0.01, -1, 1], aspect='auto', origin='lower', cmap='Blues')
-    plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=12)
-    plt.ylabel(r'Normalized $\dot{x}_{i} [a.u.]$', fontsize=12)
-    plt.title(r'$f(\ensuremath{\bar{\mathbf{a}}}_j,\dot{x}_{i}, r_{ij}) [a.u.]$', fontsize=12)
+    plt.xlabel(r'$r_{ij}$', fontsize=12)
+    plt.ylabel(r'Normalized $\dot{x}_{i}$', fontsize=12)
+    plt.title(r'$f(\ensuremath{\bar{\mathbf{a}}}_j,\dot{x}_{i}, r_{ij})$', fontsize=12)
 
     plt.tight_layout()
 
@@ -3177,8 +3184,8 @@ def data_plot_FIG3_continous():
     print('1')
 
     plt.scatter(embedding[:, 0],embedding[:, 1], s=0.1, c=colors, alpha=0.5)
-    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0} [a.u.]$',fontsize=12)
-    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1} [a.u.]$',fontsize=12)
+    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$',fontsize=12)
+    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$',fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
 
@@ -3222,8 +3229,8 @@ def data_plot_FIG3_continous():
                  color=colors[n], linewidth=1, alpha=0.25)
     plt.xlim([0, 0.02])
     plt.ylim([0, 0.5E6])
-    plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, r_{ij}) [a.u.]$', fontsize=12)
+    plt.xlabel(r'$r_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, r_{ij})$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.text(0.0075,0.4E6,r'Model', fontsize=12)
@@ -3237,8 +3244,8 @@ def data_plot_FIG3_continous():
         plt.plot(to_numpy(rr), np.array(psi_output[n].cpu()), linewidth=1, color=colors[n])
     plt.xlim([0, 0.02])
     plt.ylim([0, 0.5E6])
-    plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, r_{ij}) [a.u.]$', fontsize=12)
+    plt.xlabel(r'$r_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, r_{ij})$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.text(0.0075,0.4E6,r'True', fontsize=12)
@@ -3430,8 +3437,8 @@ def data_plot_FIG4():
             for n in range(nparticle_types):
                 plt.scatter(embedding_particle[n + m * nparticle_types][:, 0],
                             embedding_particle[n + m * nparticle_types][:, 1], color=cmap.color(n), s=0.1)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0} [a.u.]$',fontsize=12)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1} [a.u.]$',fontsize=12)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$',fontsize=12)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$',fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
 
@@ -3535,8 +3542,8 @@ def data_plot_FIG4():
             plt.scatter(to_numpy(model.a[m][n, 0]),
                         to_numpy(model.a[m][n, 1]),
                         color=cmap.color(new_labels[n]), s=5)
-    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0} [a.u.]$', fontsize=12)
-    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1} [a.u.]$', fontsize=12)
+    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=12)
+    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
 
@@ -3560,8 +3567,8 @@ def data_plot_FIG4():
             plt.plot(to_numpy(rr),
                      to_numpy(acc) * to_numpy(ynorm[4]),
                      linewidth=1)
-    plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, r_{ij}) [a.u.]$', fontsize=12)
+    plt.xlabel(r'$r_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, r_{ij})$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.text(0.0075,0.35E6,r'Model', fontsize=12)
@@ -3582,8 +3589,8 @@ def data_plot_FIG4():
             plt.plot(to_numpy(rr), np.array(temp.cpu()), linewidth=1)
     plt.xlim([0, 0.02])
     plt.ylim([-0.5E6, 0.5E6])
-    plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, r_{ij}) [a.u.]$', fontsize=12)
+    plt.xlabel(r'$r_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, r_{ij})$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.text(0.0075,0.35E6,r'True', fontsize=12)
@@ -3630,8 +3637,8 @@ def data_plot_FIG4():
     y_data = popt_list[:, 0]
     lin_fit, lin_fitv = curve_fit(func_lin, x_data, y_data)
     plt.plot(ptrue_list, func_lin(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
-    plt.xlabel(r'True $q_i q_j [a.u.]$', fontsize=12)
-    plt.ylabel(r'Predicted $q_i q_j [a.u.]$', fontsize=12)
+    plt.xlabel(r'True $q_i q_j$', fontsize=12)
+    plt.ylabel(r'Predicted $q_i q_j$', fontsize=12)
     plt.text(-2, 4, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=12)
     residuals = y_data - func_lin(x_data, *lin_fit)
     ss_res = np.sum(residuals ** 2)
@@ -3642,7 +3649,7 @@ def data_plot_FIG4():
     ax = fig.add_subplot(3,3,8)
     plt.scatter(ptrue_list, popt_list[:, 1], color='k')
     plt.ylim([-4, 0])
-    plt.xlabel(r'True $q_i q_j [a.u.]$', fontsize=12)
+    plt.xlabel(r'True $q_i q_j$', fontsize=12)
     plt.ylabel(r'Exponent fit $[a.u.]$', fontsize=12)
     plt.text(-2, -0.5, f"{np.round(-np.mean(-popt_list[:, 1]), 3)}+/-{np.round(np.std(popt_list[:, 1]), 3)}",
              fontsize=12)
@@ -3670,9 +3677,9 @@ def data_plot_FIG4():
     pred = pred[:, 0]
     pred=torch.reshape(pred,(100,100))
     plt.imshow(to_numpy(pred), extent=[0.002, 0.01, -1, 1], aspect='auto', origin='lower', cmap='Blues')
-    plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=12)
-    plt.ylabel(r'Normalized $\dot{x}_{i} [a.u.]$', fontsize=12)
-    plt.title(r'$f(\ensuremath{\bar{\mathbf{a}}}_i,\ensuremath{\bar{\mathbf{a}}}_j,\dot{x}_{i}, r_{ij}) [a.u.]$', fontsize=12)
+    plt.xlabel(r'$r_{ij}$', fontsize=12)
+    plt.ylabel(r'Normalized $\dot{x}_{i}$', fontsize=12)
+    plt.title(r'$f(\ensuremath{\bar{\mathbf{a}}}_i,\ensuremath{\bar{\mathbf{a}}}_j,\dot{x}_{i}, r_{ij})$', fontsize=12)
 
     plt.tight_layout()
 
@@ -4253,8 +4260,8 @@ def data_plot_FIG5():
             for n in range(nparticle_types):
                 plt.scatter(embedding_particle[n + m * nparticle_types][:, 0],
                             embedding_particle[n + m * nparticle_types][:, 1], color=cmap.color(n), s=4)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0} [a.u.]$',fontsize=12)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1} [a.u.]$',fontsize=12)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$',fontsize=12)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$',fontsize=12)
         plt.xticks(fontsize=10.0)
         plt.yticks(fontsize=10.0)
 
@@ -4356,8 +4363,8 @@ def data_plot_FIG5():
                 plt.scatter(to_numpy(model.a[m][n, 0]),
                             to_numpy(model.a[m][n, 1]),
                             color=cmap.color(new_labels[n]), s=4)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0} [a.u.]$', fontsize=12)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1} [a.u.]$', fontsize=12)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=12)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=12)
         plt.xticks(fontsize=10.0)
         plt.yticks(fontsize=10.0)
 
@@ -4407,7 +4414,7 @@ def data_plot_FIG5():
             pos = pos[:, 0].astype(int)
             plt.scatter(to_numpy(r[pos]), to_numpy(torch.norm(lin_edge_out[pos,:], dim=1)), color=cmap.color(n), s=1)
         plt.ylim([0,5E-5])
-        plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=12)
+        plt.xlabel(r'$r_{ij}$', fontsize=12)
         plt.ylabel(r'$\left| \left| f(\ensuremath{\mathbf{a}}_i, x_j-x_i, \dot{x}_i, \dot{x}_j, r_{ij}) \right| \right|[a.u.]$', fontsize=12)
         ax = fig.add_subplot(3, 3, 6)
         print('6')
@@ -4416,7 +4423,7 @@ def data_plot_FIG5():
             pos = pos[:, 0].astype(int)
             plt.scatter(to_numpy(r[pos]), to_numpy(torch.norm(sum[pos,:], dim=1)), color=cmap.color(n), s=1,alpha=1)
         plt.ylim([0,5E-5])
-        plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=12)
+        plt.xlabel(r'$r_{ij}$', fontsize=12)
         plt.ylabel(r'$\left| \left| f(\ensuremath{\mathbf{a}}_i, x_j-x_i, \dot{x}_i, \dot{x}_j, r_{ij}) \right| \right|[a.u.]$', fontsize=12)
 
         cohesion_GT = np.zeros(nparticle_types)
@@ -4883,8 +4890,8 @@ def data_plot_FIG6():
         f_list.append(h)
         plt.plot(to_numpy(u),to_numpy(h) * to_numpy(hnorm),linewidth=1)
 
-    plt.xlabel(r'$\Delta u_{i} [a.u.]$', fontsize=12)
-    plt.ylabel(r'$\Phi (\ensuremath{\mathbf{a}}_i, \Delta u_i) [a.u.]$', fontsize=12)
+    plt.xlabel(r'$\Delta u_{i}$', fontsize=12)
+    plt.ylabel(r'$\Phi (\ensuremath{\mathbf{a}}_i, \Delta u_i)$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.text(-200, 2, r'Model', fontsize=12)
@@ -4902,8 +4909,8 @@ def data_plot_FIG6():
     c = model_config['c']
     for n in range(nparticle_types):
         plt.plot(to_numpy(u), 1E-2 * to_numpy(u*c[n]), linewidth=1, color=cmap.color(n))
-    plt.xlabel(r'$\Delta u_{i} [a.u.]$', fontsize=12)
-    plt.ylabel(r'$\Phi (\ensuremath{\mathbf{a}}_i, \Delta u_i) [a.u.]$', fontsize=12)
+    plt.xlabel(r'$\Delta u_{i}$', fontsize=12)
+    plt.ylabel(r'$\Phi (\ensuremath{\mathbf{a}}_i, \Delta u_i)$', fontsize=12)
     plt.text(-200, 2, r'True', fontsize=12)
     plt.xlim([-250,250])
     plt.ylim([-3, 3])
@@ -4932,8 +4939,8 @@ def data_plot_FIG6():
         plt.scatter(to_numpy(x[k]), to_numpy(y[k]), color=cmap.color(new_labels[k]), s=10)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
-    plt.xlabel(r'$x_i [a.u.]$', fontsize=12)
-    plt.ylabel(r'$y_i [a.u.]$', fontsize=12)
+    plt.xlabel(r'$x_i$', fontsize=12)
+    plt.ylabel(r'$y_i$', fontsize=12)
     plt.text(0, 0.85, r"Model", fontsize=12)
 
     ax = fig.add_subplot(3, 3, 9)
@@ -4942,8 +4949,8 @@ def data_plot_FIG6():
                     to_numpy(y[index_particles[n]]), s=10, color=cmap.color(n))
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
-    plt.xlabel(r'$x_i [a.u.]$', fontsize=12)
-    plt.ylabel(r'$y_i [a.u.]$', fontsize=12)
+    plt.xlabel(r'$x_i$', fontsize=12)
+    plt.ylabel(r'$y_i$', fontsize=12)
     plt.text(0.1, 0.85, r"True", fontsize=12)
 
     plt.tight_layout()
@@ -5342,8 +5349,8 @@ def data_plot_FIG7():
         plt.scatter(to_numpy(x[k]), to_numpy(y[k]), color=cmap.color(new_labels[k]), s=10)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
-    plt.xlabel(r'$x_i [a.u.]$', fontsize=12)
-    plt.ylabel(r'$y_i [a.u.]$', fontsize=12)
+    plt.xlabel(r'$x_i$', fontsize=12)
+    plt.ylabel(r'$y_i$', fontsize=12)
     plt.text(0.1, 0.85, r"Model", fontsize=12)
 
     ax = fig.add_subplot(3, 3, 9)
@@ -5352,8 +5359,8 @@ def data_plot_FIG7():
                     to_numpy(y[index_particles[n]]), s=10, color=cmap.color(n))
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
-    plt.xlabel(r'$x_i [a.u.]$', fontsize=12)
-    plt.ylabel(r'$y_i [a.u.]$', fontsize=12)
+    plt.xlabel(r'$x_i$', fontsize=12)
+    plt.ylabel(r'$y_i$', fontsize=12)
     plt.text(0.1, 0.85, r"True", fontsize=12)
 
     plt.tight_layout()

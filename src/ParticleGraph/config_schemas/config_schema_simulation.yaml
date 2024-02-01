@@ -74,6 +74,13 @@ embedding:
 upgrade_type:
   type: string
   default: 'none'
+  
+nlayers_update:
+  type: integer
+  default: 3
+hidden_size_update:
+    type: integer
+    default: 64
 
 # Simulation parameters
 p:
