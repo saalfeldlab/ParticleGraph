@@ -605,28 +605,32 @@ def data_plot_FIG2():
 
     ax = fig.add_subplot(3, 4, 2)
     print('2 UMAP ...')
-    plt.text(-0.25, 1.1, f'b)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-    plt.title(r'Interaction functions (model)', fontsize=12)
-    acc_list = []
-    for n in range(nparticles):
-        embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
-        in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
-                                 rr[:, None] / model_config['radius'], embedding), dim=1)
-        with torch.no_grad():
-            acc = model.lin_edge(in_features.float())
-        acc = acc[:, 0]
-        acc_list.append(acc)
-        if (n % (nparticles // 50) == 0):
-            plt.plot(to_numpy(rr),
-                     to_numpy(acc) * to_numpy(ynorm[4]),
-                     color=cmap.color(to_numpy(x[n, 5])), linewidth=1)
-    acc_list = torch.stack(acc_list)
-    coeff_norm = to_numpy(acc_list)
-    trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int), n_components=2, transform_queue_size=0).fit(coeff_norm)
-    proj_interaction = trans.transform(coeff_norm)
-    proj_interaction = np.squeeze(proj_interaction)
-    plt.xlabel(r'$r_{ij}$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
+    plt.text(-0.25, 1.1, f'b)', ha='left', va='top', transform=ax.transAxes, fontsize=14)
+    plt.title(r'Plots of $f(\ensuremath{\mathbf{a}}_i, r_{ij})$ (model)', fontsize=14)
+    if os.path.exists(os.path.join(log_dir, f'proj_interaction_20_1.npy')):
+        proj_interaction = np.load(os.path.join(log_dir, f'proj_interaction_20_1.npy'))
+    else:
+        acc_list = []
+        for n in range(nparticles):
+            embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
+            in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                     rr[:, None] / model_config['radius'], embedding), dim=1)
+            with torch.no_grad():
+                acc = model.lin_edge(in_features.float())
+            acc = acc[:, 0]
+            acc_list.append(acc)
+            if (n % (nparticles // 50) == 0):
+                plt.plot(to_numpy(rr),
+                         to_numpy(acc) * to_numpy(ynorm[4]),
+                         color=cmap.color(to_numpy(x[n, 5])), linewidth=1)
+        acc_list = torch.stack(acc_list)
+        coeff_norm = to_numpy(acc_list)
+        trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int), n_components=2, transform_queue_size=0).fit(coeff_norm)
+        proj_interaction = trans.transform(coeff_norm)
+        proj_interaction = np.squeeze(proj_interaction)
+        np.save(os.path.join(log_dir, f'proj_interaction_20_1.npy'), proj_interaction)
+    plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij}) [a.u.]$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.ylim([-0.04,0.03])
@@ -745,24 +749,28 @@ def data_plot_FIG2():
     print('6')
     plt.text(-0.25, 1.1, f'f)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     plt.title(r'Interaction functions (model)', fontsize=12)
-    acc_list = []
-    for n in range(nparticles):
-        embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
-        in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
-                                 rr[:, None] / model_config['radius'], embedding), dim=1)
-        with torch.no_grad():
-            acc = model.lin_edge(in_features.float())
-        acc = acc[:, 0]
-        acc_list.append(acc)
-        if (n % (nparticles // 50) == 0):
-            plt.plot(to_numpy(rr),
-                     to_numpy(acc) * to_numpy(ynorm[4]),
-                     color=cmap.color(to_numpy(x[n, 5])), linewidth=1)
-    acc_list = torch.stack(acc_list)
-    coeff_norm = to_numpy(acc_list)
-    trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int), n_components=2, transform_queue_size=0).fit(coeff_norm)
-    proj_interaction = trans.transform(coeff_norm)
-    proj_interaction = np.squeeze(proj_interaction)
+    if os.path.exists(os.path.join(log_dir, f'proj_interaction_20_2.npy')):
+        proj_interaction = np.load(os.path.join(log_dir, f'proj_interaction_20_2.npy'))
+    else:
+        acc_list = []
+        for n in range(nparticles):
+            embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
+            in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                     rr[:, None] / model_config['radius'], embedding), dim=1)
+            with torch.no_grad():
+                acc = model.lin_edge(in_features.float())
+            acc = acc[:, 0]
+            acc_list.append(acc)
+            if (n % (nparticles // 50) == 0):
+                plt.plot(to_numpy(rr),
+                         to_numpy(acc) * to_numpy(ynorm[4]),
+                         color=cmap.color(to_numpy(x[n, 5])), linewidth=1)
+        acc_list = torch.stack(acc_list)
+        coeff_norm = to_numpy(acc_list)
+        trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int), n_components=2, transform_queue_size=0).fit(coeff_norm)
+        proj_interaction = trans.transform(coeff_norm)
+        proj_interaction = np.squeeze(proj_interaction)
+        np.save(os.path.join(log_dir, f'proj_interaction_20_2.npy'), proj_interaction)
     plt.xlabel(r'$r_{ij}$', fontsize=12)
     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
     plt.xticks(fontsize=10.0)
