@@ -3046,9 +3046,8 @@ if __name__ == '__main__':
 
     for config in config_list:
 
-        # model_config = load_model_config(id=config)
-
         # Load parameters from config file
+        # model_config = load_model_config(id=config)
         model_config = config_manager.load_and_validate_config(f'./config/{config}.yaml')
         model_config['dataset']=config[7:]
 

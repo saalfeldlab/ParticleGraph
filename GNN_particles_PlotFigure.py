@@ -1,13 +1,14 @@
 import matplotlib.cm as cmplt
 import torch_geometric as pyg
 import os
-import scipy.cluster.hierarchy as hcluster
+from ParticleGraph.MLP import MLP
+
 
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
 # from data_loaders import *
 from GNN_particles_Ntype import *
-from ParticleGraph.MLP import MLP
+from ParticleGraph.embedding_cluster import *
 
 
 class InteractionParticles_extract(pyg.nn.MessagePassing):
@@ -365,24 +366,6 @@ class Mesh_RPS_learn(torch.nn.Module):
         return increment.squeeze()
 
 
-class Embedding_cluster:
-    def __init__(self, model_config):
-        self.model_config = model_config
-
-    def get(self, data, method):
-        if method == 'kmeans':
-            kmeans = KMeans(init="random", n_clusters=self.model_config['ninteractions'], n_init=1000, max_iter=10000,
-                            random_state=13)
-            k = kmeans.fit(data)
-            clusters= k.labels_
-            nclusters = self.model_config['ninteractions']
-        if method == 'distance':
-            thresh = 1.5
-            clusters = hcluster.fclusterdata(data, thresh, criterion="distance") - 1
-            nclusters = len(np.unique(clusters))
-
-        return clusters, nclusters
-
 def func_pow(x, a, b):
     return a / (x**b)
 
@@ -472,7 +455,7 @@ def data_plot_FIG2():
     with open(f'./config/{config}.yaml', 'r') as file:
         model_config = yaml.safe_load(file)
     model_config['dataset']=config[7:]
-    embedding_cluster = Embedding_cluster(model_config)
+    embedding_cluster = EmbeddingCluster(model_config)
 
     for key, value in model_config.items():
         print(key, ":", value)
@@ -774,7 +757,6 @@ def data_plot_FIG2():
     plt.ylim([-0.04,0.03])
     plt.text(.05, .86, f'N: {nparticles//50}', ha='left', va='top', transform=ax.transAxes ,fontsize=12)
     plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-
 
     ax = fig.add_subplot(3, 4, 7)
     print('7')

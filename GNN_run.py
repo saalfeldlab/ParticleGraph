@@ -30,7 +30,7 @@ import os
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
 from ParticleGraph.data_loaders import *
-from ParticleGraph.config_manager import create_config_manager
+from ParticleGraph.config_manager import create_config_manager, ConfigManager
 from ParticleGraph.utils import to_numpy
 from ParticleGraph.generators.PDE_A import PDE_A
 from ParticleGraph.generators.PDE_B import PDE_B
@@ -2234,20 +2234,12 @@ if __name__ == '__main__':
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
-    config_manager = create_config_manager(config_type='simulation')
+    # config_manager = create_config_manager(config_type='simulation')
+    config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
 
-    # config_list=['config_CElegans_32']
-
-    # config_list = ['config_arbitrary_3'] #,'config_gravity_16','config_arbitrary_16']
-    # config_list = ['config_arbitrary_16_HR','config_gravity_16_001']
-    # config_list = ['config_gravity_16_001_HR','config_gravity_16_001']
-    # config_list = ['config_Coulomb_3_HR']
-    # config_list = ['config_boids_16_HR']
-    # config_list = ['config_wave_testA']
-
-    # Test plotting figures paper
-    config_list = ['config_gravity_16'] # ,'config_boids_16_HR8','config_boids_16_HR9']# ['config_boids_16_HR7','config_boids_16_HR8','config_boids_16_HR9']
+    config_list = ['config_arbitrary_3_test'] # ,'config_boids_16_HR8','config_boids_16_HR9']# ['config_boids_16_HR7','config_boids_16_HR8','config_boids_16_HR9']
     # Load a graph neural network model used to sparsify the particle embedding during training
+
     model_config_embedding = config_manager.load_and_validate_config('./config/config_embedding.yaml')
     p = torch.ones(1, 4, device=device)
     p[0] = torch.tensor(model_config_embedding['p'][0])
@@ -2258,9 +2250,8 @@ if __name__ == '__main__':
 
     for config in config_list:
 
-        # model_config = load_model_config(id=config)
-
         # Load parameters from config file
+        # model_config = load_model_config(id=config)
         model_config = config_manager.load_and_validate_config(f'./config/{config}.yaml')
         model_config['dataset']=config[7:]
 
@@ -2272,7 +2263,7 @@ if __name__ == '__main__':
 
         cmap = cc(model_config=model_config)
         data_generate(model_config, device=device, bVisu=True, bStyle='bw', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//20, ratio=1, scenario='none' )
-        data_train(model_config,model_embedding)
+        # data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//200, ratio=1)
 
