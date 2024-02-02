@@ -1,5 +1,4 @@
 from torch_geometric.data import Data
-from collections.abc import Iterable
 
 class GraphTimeSeries:
     """
@@ -24,10 +23,10 @@ class GraphTimeSeries:
         return len(self._data)
 
     def get_feature_names(self):
-        return self._feature_index.keys()
+        return list(self._feature_index.keys())
 
     def get_indices_for(self, feature_name):
-        if isinstance(feature_name, Iterable):
-            return [self._feature_index[feature] for feature in feature_name]
-        else:
+        if isinstance(feature_name, str):
             return self._feature_index[feature_name]
+        else:
+            return [self._feature_index[name] for name in feature_name]
