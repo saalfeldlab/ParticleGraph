@@ -43,10 +43,12 @@ class PDE_G(pyg.nn.MessagePassing):
     def message(self, x_i, x_j, mass_j):
         r = torch.sqrt(torch.sum(self.bc_diff(x_j - x_i) ** 2, axis=1))
         r = torch.clamp(r, min=self.clamp)
-        r = torch.concatenate((r[:, None], r[:, None]), -1)
+        distance_ij = torch.concatenate((r[:, None], r[:, None]), -1)
 
-        m = torch.concatenate((mass_j, mass_j), -1)
-        acc = m * self.bc_diff(x_j - x_i) / r ** 3
+        direction_ij = self.bc_diff(x_j - x_i) / distance_ij
+        mass = torch.concatenate((mass_j, mass_j), -1)
+        
+        acc = mass * direction_ij / (distance_ij ** 2)
 
         return torch.clamp(acc, max=self.pred_limit)
 
