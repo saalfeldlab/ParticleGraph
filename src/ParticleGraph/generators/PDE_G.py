@@ -33,7 +33,10 @@ class PDE_G(pyg.nn.MessagePassing):
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        acc = self.propagate(edge_index, x=x)
+
+        p = self.p[to_numpy(x[:, 5])]
+
+        acc = self.propagate(edge_index, x=x, p=type)
         return acc
 
     def message(self, x_i, x_j):
@@ -41,7 +44,7 @@ class PDE_G(pyg.nn.MessagePassing):
         r = torch.clamp(r, min=self.clamp)
         r = torch.concatenate((r[:, None], r[:, None]), -1)
 
-        p = self.p[to_numpy(x_j[:, 5])]
+        p = p_j
         p = p.squeeze()
         p = torch.concatenate((p[:, None], p[:, None]), -1)
 
