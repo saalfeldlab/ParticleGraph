@@ -35,7 +35,7 @@ class PDE_B(pyg.nn.MessagePassing):
         particle_type = to_numpy(x[:, 5])
         parameters = self.p[particle_type, :]
         velocity = x[:, 3:5]
-        acc = self.propagate(edge_index, pos=x[:,1:3], x=x, parameters=parameters, velocity=velocity)
+        acc = self.propagate(edge_index, pos=x[:,1:3], parameters=parameters, velocity=velocity)
 
         return acc
 
