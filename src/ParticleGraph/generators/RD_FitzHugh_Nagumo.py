@@ -38,7 +38,7 @@ class RD_FitzHugh_Nagumo(pyg.nn.MessagePassing):
 
         u = data.x[:, 6]
         v = data.x[:, 7]
-        laplace_u = c * self.beta * self.propagate(data.edge_index, u=u, edge_attr=data.edge_attr)
+        laplace_u = c * self.beta * self.propagate(data.edge_index, u=u, discrete_laplacian=data.edge_attr)
 
         # This is equivalent to the nonlinear reaction diffusion equation:
         #   du = a1 * laplace_u + a3 * (v - v^3 - u * v + noise)
@@ -49,8 +49,8 @@ class RD_FitzHugh_Nagumo(pyg.nn.MessagePassing):
         d_uv = 0.125 * torch.cat((d_u[:, None], d_v[:, None]), axis=1)
         return d_uv
 
-    def message(self, u_i, u_j, edge_attr):
-        return edge_attr * u_j
+    def message(self, u_i, u_j, discrete_laplacian):
+        return discrete_laplacian * u_j
 
     def psi(self, I, p):
         return I

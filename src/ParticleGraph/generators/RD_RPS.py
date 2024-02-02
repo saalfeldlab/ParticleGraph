@@ -37,7 +37,7 @@ class RD_RPS(pyg.nn.MessagePassing):
         c = c[:, None]
 
         uvw = data.x[:, 6:9]
-        laplace_uvw = self.beta * c * self.propagate(data.edge_index, uvw=uvw, edge_attr=data.edge_attr)
+        laplace_uvw = self.beta * c * self.propagate(data.edge_index, uvw=uvw, discrete_laplacian=data.edge_attr)
         p = torch.sum(uvw, axis=1)
 
         # This is equivalent to the nonlinear reaction diffusion equation:
@@ -48,8 +48,8 @@ class RD_RPS(pyg.nn.MessagePassing):
 
         return d_uvw
 
-    def message(self, uvw_i, uvw_j, edge_attr):
-        return edge_attr * uvw_j
+    def message(self, uvw_i, uvw_j, discrete_laplacian):
+        return discrete_laplacian * uvw_j
 
     def psi(self, I, p):
         return I
