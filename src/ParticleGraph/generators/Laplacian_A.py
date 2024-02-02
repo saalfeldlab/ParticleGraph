@@ -34,14 +34,15 @@ class Laplacian_A(pyg.nn.MessagePassing):
         c = self.c[type]
         c = c[:, None]
 
-        x = x[:, 6:7]
+        u = x[:, 6:7]
 
-        laplacian = self.beta * c * self.propagate(edge_index, x=x, edge_attr=edge_attr)
+        laplacian_u = self.propagate(edge_index, u=x, edge_attr=edge_attr)
+        dd_u = self.beta * c * laplacian_u
 
-        return laplacian
+        return dd_u
 
-    def message(self, x_j, edge_attr):
-        L = edge_attr * x_j
+    def message(self, u_j, edge_attr):
+        L = edge_attr * u_j
 
         return L[:, None]
 
