@@ -34,24 +34,20 @@ class PDE_E(pyg.nn.MessagePassing):
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        acc = self.propagate(edge_index, x=(x, x))
+
+        charge = self.p[to_numpy(x[:, 5])]
+
+        acc = self.propagate(edge_index, x=x[:,1:3], charge=charge[:, None])
         return acc
 
-    def message(self, x_i, x_j):
-        r = torch.sqrt(torch.sum(self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1))
-        # r = torch.clamp(r, min=self.clamp)
-        r = torch.concatenate((r[:, None], r[:, None]), -1)
+    def message(self, x_i, x_j, charge_i, charge_j):
+        r = torch.sqrt(torch.sum(self.bc_diff(x_j - x_i) ** 2, axis=1))
+        distance_ij = torch.concatenate((r[:, None], r[:, None]), -1)
+        direction_ij = self.bc_diff(x_j - x_i) / distance_ij
 
-        p1 = self.p[to_numpy(x_i[:, 5])]
-        p1 = p1.squeeze()
-        p1 = torch.concatenate((p1[:, None], p1[:, None]), -1)
-
-        p2 = self.p[to_numpy(x_j[:, 5])]
-        p2 = p2.squeeze()
-        p2 = torch.concatenate((p2[:, None], p2[:, None]), -1)
-
-        acc = p1 * p2 * self.bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) / r ** 3
-        # acc = torch.clamp(acc, max=self.pred_limit)
+        charge_i = torch.concatenate((charge_i, charge_i), -1)
+        charge_j = torch.concatenate((charge_j, charge_j), -1)
+        acc = charge_i * charge_j * direction_ij / (distance_ij ** 2)
 
         return acc
 
