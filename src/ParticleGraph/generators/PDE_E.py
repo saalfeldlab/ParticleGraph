@@ -37,7 +37,7 @@ class PDE_E(pyg.nn.MessagePassing):
 
         charge = self.p[to_numpy(x[:, 5])]
 
-        acc = self.propagate(edge_index, x=x[:,1:3], charge=charge[:, None])
+        acc = self.propagate(edge_index, pos=x[:,1:3], charge=charge[:, None])
         return acc
 
     def message(self, pos_i, pos_j, charge_i, charge_j):
