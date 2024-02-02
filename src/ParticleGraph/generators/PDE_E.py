@@ -34,8 +34,8 @@ class PDE_E(pyg.nn.MessagePassing):
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-
-        charge = self.p[to_numpy(x[:, 5])]
+        particle_type = to_numpy(x[:, 5])
+        charge = self.p[particle_type]
 
         acc = self.propagate(edge_index, pos=x[:,1:3], charge=charge[:, None])
         return acc
