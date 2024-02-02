@@ -32,8 +32,8 @@ class PDE_B(pyg.nn.MessagePassing):
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        particle_type = x[:, 5]
-        parameters = self.p[to_numpy(particle_type), :]
+        particle_type = to_numpy(x[:, 5])
+        parameters = self.p[particle_type, :]
         velocity = x[:, 3:5]
         acc = self.propagate(edge_index, pos=x[:,1:3], x=x, parameters=parameters, velocity=velocity)
 
