@@ -37,20 +37,19 @@ class PDE_G(pyg.nn.MessagePassing):
 
         mass = self.p[to_numpy(x[:, 5])]
 
-        acc = self.propagate(edge_index, pos=x[:,1:3], mass=mass[:,None])
-        return acc
+        dd_pos = self.propagate(edge_index, pos=x[:,1:3], mass=mass[:,None])
+        return dd_pos
 
     def message(self, pos_i, pos_j, mass_j):
-        r = torch.sqrt(torch.sum(self.bc_diff(pos_j - pos_i) ** 2, axis=1))
-        r = torch.clamp(r, min=self.clamp)
-        distance_ij = torch.concatenate((r[:, None], r[:, None]), -1)
+        distance_ij = torch.sqrt(torch.sum(self.bc_diff(pos_j - pos_i) ** 2, axis=1))
+        distance_ij = torch.clamp(distance_ij, min=self.clamp)
 
-        direction_ij = self.bc_diff(pos_j - pos_i) / distance_ij
+        direction_ij = self.bc_diff(pos_j - pos_i) / distance_ij[:,None]
         mass = torch.concatenate((mass_j, mass_j), -1)
         
-        acc = mass * direction_ij / (distance_ij ** 2)
+        dd_pos = mass * direction_ij / (distance_ij[:,None] ** 2)
 
-        return torch.clamp(acc, max=self.pred_limit)
+        return torch.clamp(dd_pos, max=self.pred_limit)
 
     def psi(self, r, p):
         r_ = torch.clamp(r, min=self.clamp)

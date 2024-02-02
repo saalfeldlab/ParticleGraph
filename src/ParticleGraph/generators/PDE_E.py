@@ -34,11 +34,11 @@ class PDE_E(pyg.nn.MessagePassing):
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+        particle_type = to_numpy(x[:, 5])
+        charge = self.p[particle_type]
 
-        charge = self.p[to_numpy(x[:, 5])]
-
-        acc = self.propagate(edge_index, pos=x[:,1:3], charge=charge[:, None])
-        return acc
+        dd_pos = self.propagate(edge_index, pos=x[:,1:3], charge=charge[:, None])
+        return dd_pos
 
     def message(self, pos_i, pos_j, charge_i, charge_j):
         distance_ij = torch.sqrt(torch.sum(self.bc_diff(pos_j - pos_i) ** 2, axis=1))
@@ -46,10 +46,10 @@ class PDE_E(pyg.nn.MessagePassing):
 
         charge_i = torch.concatenate((charge_i, charge_i), -1)
         charge_j = torch.concatenate((charge_j, charge_j), -1)
-        acc = -charge_i * charge_j * direction_ij / (distance_ij ** 2)
+        dd_pos = -charge_i * charge_j * direction_ij / (distance_ij ** 2)
 
-        return acc
+        return dd_pos
 
     def psi(self, r, p1, p2):
-        acc = p1 * p2 / r ** 2
-        return -acc  # Elec particles
+        dd_pos = p1 * p2 / r ** 2
+        return -dd_pos  # Elec particles
