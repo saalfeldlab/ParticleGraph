@@ -32,22 +32,23 @@ class PDE_B(pyg.nn.MessagePassing):
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        acc = self.propagate(edge_index, x=(x, x))
+        particle_type = x[:, 5]
+        parameters = self.p[to_numpy(particle_type), :]
+        velocity = x[:, 3:5]
+        acc = self.propagate(edge_index, pos=x[:,1:3], x=x, parameters=parameters, velocity=velocity)
 
         return acc
 
-    def message(self, x_i, x_j):
-        r = torch.sum(self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)  # distance squared
+    def message(self, pos_i, pos_j, parameters_i, velocity_i, velocity_j):
+        distance_squared = torch.sum(self.bc_diff(pos_j - pos_i) ** 2, axis=1)  # distance squared
 
-        pp = self.p[to_numpy(x_i[:, 5]), :]
+        cohesion = parameters_i[:,0:1].repeat(1, 2) * 0.5E-5 * self.bc_diff(pos_j - pos_i)
 
-        cohesion = pp[:, 0:1].repeat(1, 2) * 0.5E-5 * self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3])
+        alignment = parameters_i[:, 1:2].repeat(1, 2) * 5E-4 * self.bc_diff(velocity_j - velocity_i)
 
-        alignment = pp[:, 1:2].repeat(1, 2) * 5E-4 * self.bc_diff(x_j[:, 3:5] - x_i[:, 3:5])
-
-        separation = (pp[:, 2:3].repeat(1, 2) * 1E-8 * self.bc_diff(x_i[:, 1:3] - x_j[:, 1:3])
-                      / r[:, None].repeat(1, 2))
-
+        separation = (parameters_i[:, 2:3].repeat(1, 2) * 1E-8 * self.bc_diff(pos_i - pos_j)
+                      / distance_squared[:, None].repeat(1, 2))
+        
         return (separation + alignment + cohesion)
 
     def psi(self, r, p):
