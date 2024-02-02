@@ -42,12 +42,11 @@ class PDE_B(pyg.nn.MessagePassing):
     def message(self, pos_i, pos_j, parameters_i, velocity_i, velocity_j):
         distance_squared = torch.sum(self.bc_diff(pos_j - pos_i) ** 2, axis=1)  # distance squared
 
-        cohesion = parameters_i[:,0:1].repeat(1, 2) * 0.5E-5 * self.bc_diff(pos_j - pos_i)
+        cohesion = parameters_i[:,0,None] * 0.5E-5 * self.bc_diff(pos_j - pos_i)
 
-        alignment = parameters_i[:, 1:2].repeat(1, 2) * 5E-4 * self.bc_diff(velocity_j - velocity_i)
+        alignment = parameters_i[:,1,None] * 5E-4 * self.bc_diff(velocity_j - velocity_i)
 
-        separation = (parameters_i[:, 2:3].repeat(1, 2) * 1E-8 * self.bc_diff(pos_i - pos_j)
-                      / distance_squared[:, None].repeat(1, 2))
+        separation = - parameters_i[:,2,None] * 1E-8 * self.bc_diff(pos_j - pos_i) / distance_squared[:, None]
         
         return (separation + alignment + cohesion)
 
