@@ -51,5 +51,5 @@ class PDE_E(pyg.nn.MessagePassing):
         return dd_pos
 
     def psi(self, r, p1, p2):
-        acc = p1 * p2 / r ** 2
-        return -acc  # Elec particles
+        dd_pos = p1 * p2 / r ** 2
+        return -dd_pos  # Elec particles
