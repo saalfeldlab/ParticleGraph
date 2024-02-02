@@ -679,6 +679,7 @@ def data_train(model_config, bSparse=False):
     bReplace = 'replace' in model_config['sparsity']
     kmeans_input = model_config['kmeans_input']
     aggr_type = model_config['aggr_type']
+    bVisuEmbedding = False
 
     if model_config['boundary'] == 'no':  # change this for usual BC
         def bc_pos(X):
@@ -945,6 +946,38 @@ def data_train(model_config, bSparse=False):
             loss.backward()
             optimizer.step()
             total_loss += loss.item()
+
+            if bVisuEmbedding:
+                fig = plt.figure(figsize=(8, 8))
+                embedding = []
+                for n in range(model.a.shape[0]):
+                    embedding.append(model.a[n])
+                embedding = to_numpy(torch.stack(embedding))
+                embedding = np.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
+                embedding_ = embedding
+                embedding_particle = []
+                for m in range(model.a.shape[0]):
+                    for n in range(nparticle_types):
+                        embedding_particle.append(embedding[index_particles[n] + m * nparticles, :])
+                if (embedding.shape[1] > 2):
+                    ax = fig.add_subplot(2, 4, 2, projection='3d')
+                    for n in range(nparticle_types):
+                        ax.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], embedding_particle[n][:, 2],
+                                   color=cmap.color(n), s=1)
+                else:
+                    if (embedding.shape[1] > 1):
+                        for m in range(model.a.shape[0]):
+                            for n in range(nparticle_types):
+                                plt.scatter(embedding_particle[n + m * nparticle_types][:, 0],
+                                            embedding_particle[n + m * nparticle_types][:, 1], color=cmap.color(n), s=3)
+                        plt.xlabel('Embedding 0', fontsize=12)
+                        plt.ylabel('Embedding 1', fontsize=12)
+                    else:
+                        for n in range(nparticle_types):
+                            plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5, color=cmap.color(n))
+                plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{N}.tif")
+
+
 
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()},
@@ -3027,7 +3060,7 @@ if __name__ == '__main__':
 
         cmap = cc(model_config=model_config)
 
-        # data_generate(model_config, device=device, bVisu=True, bStyle='bw', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//20, ratio=1, scenario='none' )
+        data_generate(model_config, device=device, bVisu=True, bStyle='bw', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//20, ratio=1, scenario='none' )
         data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//200, ratio=1)
