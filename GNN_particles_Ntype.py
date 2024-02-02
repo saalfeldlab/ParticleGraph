@@ -48,7 +48,7 @@ from ParticleGraph.models.InteractionParticles import InteractionParticles
 from ParticleGraph.models.MeshLaplacian import MeshLaplacian
 from ParticleGraph.models.Mesh_RPS import Mesh_RPS
 from ParticleGraph.models.PDE_embedding import PDE_embedding
-
+from ParticleGraph.embedding_cluster import *
 
 def func_pow(x, a, b):
     return a / (x**b)
@@ -681,6 +681,8 @@ def data_train(model_config, bSparse=False):
     aggr_type = model_config['aggr_type']
     bVisuEmbedding = False
 
+    embedding_cluster = EmbeddingCluster(model_config)
+
     if model_config['boundary'] == 'no':  # change this for usual BC
         def bc_pos(X):
             return X
@@ -848,7 +850,6 @@ def data_train(model_config, bSparse=False):
             batch_size = 8
             print(f'batch_size: {batch_size}')
             logger.info(f'batch_size: {batch_size}')
-
         if epoch == 3 * Nepochs // 4:
             lra = 1E-3
             lr = 5E-4
@@ -976,8 +977,6 @@ def data_train(model_config, bSparse=False):
                         for n in range(nparticle_types):
                             plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5, color=cmap.color(n))
                 plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{N}.tif")
-
-
 
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()},
@@ -1149,6 +1148,9 @@ def data_train(model_config, bSparse=False):
             for n in range(nparticle_types):
                 plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
                 pos = np.argwhere(kmeans.labels_ == n).squeeze().astype(int)
+
+        # save UMAP projection
+        np.save(f'./{log_dir}/models/umap_projection_{epoch}.npy', proj_interaction)
 
         ax = fig.add_subplot(1, 4, 4)
         for n in range(nparticle_types):

@@ -48,6 +48,7 @@ from ParticleGraph.models.InteractionParticles import InteractionParticles
 from ParticleGraph.models.MeshLaplacian import MeshLaplacian
 from ParticleGraph.models.Mesh_RPS import Mesh_RPS
 from ParticleGraph.models.PDE_embedding import PDE_embedding
+from ParticleGraph.embedding_cluster import *
 
 
 def func_pow(x, a, b):
@@ -629,6 +630,7 @@ def data_train(model_config, bSparse=False):
     bReplace = 'replace' in model_config['sparsity']
     kmeans_input = model_config['kmeans_input']
     aggr_type = model_config['aggr_type']
+    embedding_cluster = EmbeddingCluster(model_config)
 
     if model_config['boundary'] == 'no':  # change this for usual BC
         def bc_pos(X):
@@ -1066,23 +1068,19 @@ def data_train(model_config, bSparse=False):
             for n in range(nparticle_types):
                 plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
                 pos = np.argwhere(kmeans.labels_ == n).squeeze().astype(int)
-
         ax = fig.add_subplot(1, 4, 4)
         for n in range(nparticle_types):
             plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1],
                         color=cmap.color(n), s=5, alpha=0.75)
         plt.xlabel('UMAP 0', fontsize=12)
         plt.ylabel('UMAP 1', fontsize=12)
+
         kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=5000, max_iter=10000,
                         random_state=13)
-
         if kmeans_input == 'plot':
             kmeans.fit(proj_interaction)
         if kmeans_input == 'embedding':
             kmeans.fit(embedding_)
-
-        print(f'kmeans.inertia_: {np.round(kmeans.inertia_, 3)}')
-
         for n in range(nparticle_types):
             tmp = kmeans.labels_[index_particles[n]]
             sub_group = np.round(np.median(tmp))
@@ -2262,8 +2260,8 @@ if __name__ == '__main__':
                 model_config[key] = value
 
         cmap = cc(model_config=model_config)
-        data_generate(model_config, device=device, bVisu=True, bStyle='bw', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//20, ratio=1, scenario='none' )
-        # data_train(model_config,model_embedding)
+        # data_generate(model_config, device=device, bVisu=True, bStyle='bw', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//20, ratio=1, scenario='none' )
+        data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//200, ratio=1)
 
