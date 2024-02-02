@@ -33,7 +33,7 @@ class RD_FitzHugh_Nagumo(pyg.nn.MessagePassing):
         self.a3 = 5E-3
 
     def forward(self, data, device):
-        c = self.c[to_numpy(x[:, 5])]
+        c = self.c[to_numpy(data.x[:, 5])]
         c = c[:, None]
 
         u = data.x[:, 6]
