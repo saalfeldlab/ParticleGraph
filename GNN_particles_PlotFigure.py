@@ -2507,7 +2507,7 @@ def data_plot_FIG4sup():
 def data_plot_FIG3():
 
 
-    config = 'config_gravity_16'
+    config = 'config_gravity_16_test'
 
     with open(f'./config/{config}.yaml', 'r') as file:
         model_config = yaml.safe_load(file)
@@ -2676,7 +2676,7 @@ def data_plot_FIG3():
 
     # fig = plt.figure(figsize=(3*cm, 3*cm))
 
-    fig = plt.figure(figsize=(13, 9.6))
+    fig = plt.figure(figsize=(10.5, 9.6))
     plt.ion()
     ax = fig.add_subplot(3, 3, 1)
     print('1')
@@ -2790,7 +2790,7 @@ def data_plot_FIG3():
 
     ax = fig.add_subplot(3, 3, 4)
     print('4')
-    plt.text(-0.25, 1.1, f'd)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.text(-0.75, 1.1, f'd)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     plt.title(r'Clustered particle embedding', fontsize=12)
 
     for n in range(nparticle_types):
@@ -2804,7 +2804,7 @@ def data_plot_FIG3():
 
     ax = fig.add_subplot(3, 3, 5)
     print('5')
-    plt.text(-0.25, 1.1, f'e)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.text(-0.25, 1.1, f'e)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
     plt.title(r'Interaction functions (model)', fontsize=12)
     acc_list = []
     for n in range(nparticle_types):
@@ -2825,6 +2825,7 @@ def data_plot_FIG3():
     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, r_{ij})$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
+    plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=12)
 
     ax = fig.add_subplot(3,3,6)
     print('6')
@@ -2852,7 +2853,8 @@ def data_plot_FIG3():
 
     plot_list = []
     for n in range(nparticle_types):
-        embedding = t[int(label_list[n])] * torch.ones((1000, model_config['embedding']), device=device)
+        pos = np.argwhere(new_labels == n).squeeze().astype(int)
+        embedding = model.a[0, pos[0], :] * torch.ones((1000, model_config['embedding']), device=device)
         if model_config['prediction'] == '2nd_derivative':
             in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
                                      rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
@@ -2873,12 +2875,13 @@ def data_plot_FIG3():
 
     ax = fig.add_subplot(3, 3, 7)
     print('7')
+    plt.text(-0.25, 1.1, f'g)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     x_data = p
     y_data = popt_list[:, 0]
     lin_fit, lin_fitv = curve_fit(func_lin, x_data, y_data)
     plt.plot(p, func_lin(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
     plt.scatter(p, popt_list[:, 0], color='k')
-
+    plt.title(r'Reconstructed masses', fontsize=12)
     plt.xlabel(r'True mass $[a.u.]$', fontsize=12)
     plt.ylabel(r'Predicted mass $[a.u.]$', fontsize=12)
     plt.xlim([0, 5.5])
@@ -2892,9 +2895,11 @@ def data_plot_FIG3():
 
     ax = fig.add_subplot(3, 3, 8)
     print('8')
+    plt.text(-0.25, 1.1, f'h)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     plt.scatter(p, -popt_list[:, 1], color='k')
     plt.xlim([0, 5.5])
     plt.ylim([-4, 0])
+    plt.title(r'Reconstructed exponent', fontsize=12)
     plt.xlabel(r'True mass $[a.u.]$', fontsize=12)
     plt.ylabel(r'Exponent fit $[a.u.]$', fontsize=12)
     plt.text(0.5, -0.5, f"{np.round(np.mean(-popt_list[:, 1]), 3)}+/-{np.round(np.std(popt_list[:, 1]), 3)}",
@@ -2917,7 +2922,7 @@ def data_plot_FIG3():
 
     ax = fig.add_subplot(3, 3, 9)
     print('9')
-
+    plt.text(-0.25, 1.1, f'i)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     t = torch.tensor(tt, device=device)
     t = torch.reshape(t, (16, 2))
     rr = torch.tensor(np.linspace(0.002, 0.005, 100)).to(device)
