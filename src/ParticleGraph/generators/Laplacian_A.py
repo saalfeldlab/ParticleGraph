@@ -30,24 +30,18 @@ class Laplacian_A(pyg.nn.MessagePassing):
     def forward(self, data):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
 
-        c = self.c[to_numpy(x[:, 5])]
+        type = to_numpy(x[:, 5])
+        c = self.c[type]
         c = c[:, None]
 
-        laplacian = self.beta * c * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
+        x = x[:, 6:7]
 
-        # laplacian = self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
-        # laplacian[2178]
-        # g = edge_index.detach().cpu().numpy()
-        # xx = x.detach().cpu().numpy()
-        # ll = edge_attr.detach().cpu().numpy()
-        # pos = np.argwhere(g[0, :] == 2178)
-        # pos = np.squeeze(pos)
-        # np.sum(ll[pos] * xx[g[1, pos], 6])
+        laplacian = self.beta * c * self.propagate(edge_index, x=x, edge_attr=edge_attr)
 
         return laplacian
 
-    def message(self, x_i, x_j, edge_attr):
-        L = edge_attr * x_j[:, 6]
+    def message(self, x_j, edge_attr):
+        L = edge_attr * x_j
 
         return L[:, None]
 
