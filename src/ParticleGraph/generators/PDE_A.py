@@ -35,16 +35,21 @@ class PDE_A(pyg.nn.MessagePassing):
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        speed = self.propagate(edge_index, x=(x, x))
+
+        particle_type = to_numpy(x[:, 5])
+        parameters = self.p[particle_type,:]
+
+        speed = self.propagate(edge_index, x=x[:, 1:3], parameters=parameters, sigma=self.sigma)
 
         return speed
 
-    def message(self, x_i, x_j):
-        r = torch.sum(self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)  # squared distance
-        pp = self.p[to_numpy(x_i[:, 5]), :]
-        psi = (pp[:, 0] * torch.exp(-r ** pp[:, 1] / (2 * self.sigma ** 2))
-               - pp[:, 2] * torch.exp(-r ** pp[:, 3] / (2 * self.sigma ** 2)))
-        return psi[:, None] * self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3])
+    def message(self, x_i, x_j, parameters_i, sigma):
+        distance_squared = torch.sum(self.bc_diff(x_j - x_i) ** 2, axis=1)  # squared distance
+
+        psi = (parameters_i[:, 0] * torch.exp(-distance_squared ** parameters_i[:, 1] / (2 * sigma ** 2))
+               - parameters_i[:, 2] * torch.exp(-distance_squared ** parameters_i[:, 3] / (2 * sigma ** 2)))
+
+        return psi[:, None] * self.bc_diff(x_j - x_i)
 
     def psi(self, r, p):
         return r * (p[0] * torch.exp(-r ** (2 * p[1]) / (2 * self.sigma ** 2))

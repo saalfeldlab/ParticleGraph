@@ -12,8 +12,8 @@ ninteractions: 3
 kmeans_input: 'plot'
 nframes: 1000
 sigma: 0.005
-delta_t: 3E-5
-v_init: 1E-4
+delta_t: 3.0E-5
+v_init: 1.0E-4
 aggr_type: 'add'
 boundary: 'periodic' # periodic   'no'  # no boundary condition
 data_augmentation: True
@@ -25,7 +25,7 @@ p: [[2], [1], [-1]]
 upgrade_type: 'none'
 nrun: 2
 clamp: 0
-pred_limit: 1E+10
+pred_limit: 1.0E+10
 start_frame: 0
 arrow_length: 10
 cmap: 'tab10'
