@@ -48,7 +48,7 @@ class RD_FitzHugh_Nagumo(pyg.nn.MessagePassing):
         d_u = self.a3 * laplace_u + self.a4 * (v - v ** 3 - u * v + torch.randn(4225, device=device))
         d_v = (self.a1 * u + self.a2 * v)
 
-        d_uv = 0.125 * torch.cat((d_u[:, None], d_v[:, None]), axis=1)
+        d_uv = self.a5 * torch.column_stack((d_u, d_v))
         return d_uv
 
     def message(self, u_i, u_j, discrete_laplacian):

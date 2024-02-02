@@ -48,7 +48,7 @@ class RD_Gray_Scott(pyg.nn.MessagePassing):
         d_u = Du * laplace_uv[:, 0] - uxv2 + F * (1 - uv[:, 0])
         d_v = Dv * laplace_uv[:, 1] + uxv2 - (F + k) * uv[:, 1]
 
-        d_uv = self.beta * torch.cat((d_u[:, None], d_v[:, None]), axis=1)
+        d_uv = self.beta * torch.column_stack((d_u, d_v))
         return d_uv
 
     def message(self, uv_i, uv_j, discrete_laplacian):
