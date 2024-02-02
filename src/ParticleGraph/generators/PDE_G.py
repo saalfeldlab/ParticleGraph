@@ -37,16 +37,16 @@ class PDE_G(pyg.nn.MessagePassing):
 
         mass = self.p[to_numpy(x[:, 5])]
 
-        acc = self.propagate(edge_index, x=x, mass=mass[:,None])
+        acc = self.propagate(edge_index, x=x[:,1:3], mass=mass[:,None])
         return acc
 
     def message(self, x_i, x_j, mass_j):
-        r = torch.sqrt(torch.sum(self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1))
+        r = torch.sqrt(torch.sum(self.bc_diff(x_j - x_i) ** 2, axis=1))
         r = torch.clamp(r, min=self.clamp)
         r = torch.concatenate((r[:, None], r[:, None]), -1)
 
         m = torch.concatenate((mass_j, mass_j), -1)
-        acc = m * self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) / r ** 3
+        acc = m * self.bc_diff(x_j - x_i) / r ** 3
 
         return torch.clamp(acc, max=self.pred_limit)
 
