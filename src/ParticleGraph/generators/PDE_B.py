@@ -29,6 +29,12 @@ class PDE_B(pyg.nn.MessagePassing):
         self.delta_t = delta_t
         self.bc_diff = bc_diff
 
+        self.a1 = 0.5E-5
+        self.a2 = 5E-4
+        self.a3 = 1E-8
+        self.a4 = 0.5E-5
+        self.a5 = 1E-8
+
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
@@ -42,15 +48,13 @@ class PDE_B(pyg.nn.MessagePassing):
     def message(self, pos_i, pos_j, parameters_i, velocity_i, velocity_j):
         distance_squared = torch.sum(self.bc_diff(pos_j - pos_i) ** 2, axis=1)  # distance squared
 
-        cohesion = parameters_i[:,0,None] * 0.5E-5 * self.bc_diff(pos_j - pos_i)
-
-        alignment = parameters_i[:,1,None] * 5E-4 * self.bc_diff(velocity_j - velocity_i)
-
-        separation = - parameters_i[:,2,None] * 1E-8 * self.bc_diff(pos_j - pos_i) / distance_squared[:, None]
+        cohesion = parameters_i[:,0,None] * self.a1 * self.bc_diff(pos_j - pos_i)
+        alignment = parameters_i[:,1,None] * self.a2 * self.bc_diff(velocity_j - velocity_i)
+        separation = - parameters_i[:,2,None] * self.a3 * self.bc_diff(pos_j - pos_i) / distance_squared[:, None]
         
         return (separation + alignment + cohesion)
 
     def psi(self, r, p):
-        cohesion = p[0] * 0.5E-5 * r
-        separation = -p[2] * 1E-8 / r
+        cohesion = p[0] * self.a4 * r
+        separation = -p[2] * self.a5 / r
         return (cohesion + separation)  # 5E-4 alignement
