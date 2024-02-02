@@ -2,6 +2,7 @@ import torch
 import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
 from ParticleGraph.utils import to_numpy
+import matplotlib.pyplot as plt
 
 
 class PDE_G(pyg.nn.MessagePassing):
@@ -34,21 +35,21 @@ class PDE_G(pyg.nn.MessagePassing):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
-        p = self.p[to_numpy(x[:, 5])]
+        mass = self.p[to_numpy(x[:, 5])]
 
-        acc = self.propagate(edge_index, x=x, p=type)
+        acc = self.propagate(edge_index, x=x, mass=mass[:,None])
         return acc
 
-    def message(self, x_i, x_j):
+    def message(self, x_i, x_j, mass_j):
         r = torch.sqrt(torch.sum(self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1))
         r = torch.clamp(r, min=self.clamp)
         r = torch.concatenate((r[:, None], r[:, None]), -1)
 
-        p = p_j
-        p = p.squeeze()
-        p = torch.concatenate((p[:, None], p[:, None]), -1)
+        m = mass_j
+        m = m.squeeze()
+        m = torch.concatenate((m[:, None], m[:, None]), -1)
 
-        acc = p * self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) / r ** 3
+        acc = m * self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) / r ** 3
 
         return torch.clamp(acc, max=self.pred_limit)
 
