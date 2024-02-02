@@ -40,8 +40,11 @@ class RD_Gray_Scott(pyg.nn.MessagePassing):
 
         uv = data.x[:, 6:8]
         laplace_uv = c * self.beta * self.propagate(data.edge_index, uv=uv, edge_attr=data.edge_attr)
-
         uxv2 = torch.prod(uv, axis=1) ** 2
+
+        # This is equivalent to the nonlinear reaction diffusion equation:
+        #   du = Du * laplace_u - (u * v)^2 + F * (1 - u)
+        #   dv = Dv * laplace_v + (u * v)^2 - (F + k) * v
         d_u = Du * laplace_uv[:, 0] - uxv2 + F * (1 - uv[:, 0])
         d_v = Dv * laplace_uv[:, 1] + uxv2 - (F + k) * uv[:, 1]
 
