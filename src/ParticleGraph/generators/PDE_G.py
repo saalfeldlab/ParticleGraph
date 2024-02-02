@@ -45,10 +45,7 @@ class PDE_G(pyg.nn.MessagePassing):
         r = torch.clamp(r, min=self.clamp)
         r = torch.concatenate((r[:, None], r[:, None]), -1)
 
-        m = mass_j
-        m = m.squeeze()
-        m = torch.concatenate((m[:, None], m[:, None]), -1)
-
+        m = torch.concatenate((mass_j, mass_j), -1)
         acc = m * self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) / r ** 3
 
         return torch.clamp(acc, max=self.pred_limit)
