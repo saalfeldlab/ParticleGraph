@@ -35,9 +35,9 @@ class PDE_B(pyg.nn.MessagePassing):
         particle_type = to_numpy(x[:, 5])
         parameters = self.p[particle_type, :]
         velocity = x[:, 3:5]
-        acc = self.propagate(edge_index, pos=x[:,1:3], parameters=parameters, velocity=velocity)
+        dd_pos = self.propagate(edge_index, pos=x[:,1:3], parameters=parameters, velocity=velocity)
 
-        return acc
+        return dd_pos
 
     def message(self, pos_i, pos_j, parameters_i, velocity_i, velocity_j):
         distance_squared = torch.sum(self.bc_diff(pos_j - pos_i) ** 2, axis=1)  # distance squared
