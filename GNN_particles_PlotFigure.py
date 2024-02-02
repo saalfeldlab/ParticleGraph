@@ -2507,11 +2507,13 @@ def data_plot_FIG4sup():
 def data_plot_FIG3():
 
 
-    config = 'config_gravity_16_test'
+    config = 'config_gravity_16'
 
     with open(f'./config/{config}.yaml', 'r') as file:
         model_config = yaml.safe_load(file)
     model_config['dataset']=config[7:]
+
+    embedding_cluster = EmbeddingCluster(model_config)
 
     def bc_pos(X):
         return X
@@ -2674,10 +2676,12 @@ def data_plot_FIG3():
 
     # fig = plt.figure(figsize=(3*cm, 3*cm))
 
-    fig = plt.figure(figsize=(10, 9))
+    fig = plt.figure(figsize=(13, 9.6))
     plt.ion()
     ax = fig.add_subplot(3, 3, 1)
     print('1')
+    plt.text(-0.25, 1.1, f'a)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'Particle embedding', fontsize=12)
     if (embedding.shape[1] > 1):
         for m in range(model.a.shape[0]):
             for n in range(nparticle_types):
@@ -2685,63 +2689,69 @@ def data_plot_FIG3():
                             embedding_particle[n + m * nparticle_types][:, 1], color=cmap.color(n), s=0.1)
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$',fontsize=12)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$',fontsize=12)
+    plt.text(.05, .94, f'e: 0 it: 200', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.text(.05, .86, f'N: {nparticles}', ha='left', va='top', transform=ax.transAxes ,fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
-    acc_list = []
-    for n in range(nparticles):
-        embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
-        in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
-                                 rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
-                                 0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
-        with torch.no_grad():
-            acc = model.lin_edge(in_features.float())
-        acc = acc[:, 0]
-        acc_list.append(acc)
-    acc_list = torch.stack(acc_list)
-    coeff_norm = to_numpy(acc_list)
-    trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int), n_components=2, transform_queue_size=0).fit(coeff_norm)
-    proj_interaction = trans.transform(coeff_norm)
-    proj_interaction = np.squeeze(proj_interaction)
+    plt.tight_layout()
 
     ax = fig.add_subplot(3, 3, 2)
     print('2')
-    kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=1000, max_iter=10000,
-                    random_state=13)
-    if kmeans_input == 'plot':
-        kmeans.fit(proj_interaction)
-    if kmeans_input == 'embedding':
-        kmeans.fit(embedding_)
+    plt.text(-0.25, 1.1, f'b)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'UMAP of $f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
+
+    if os.path.exists(os.path.join(log_dir, f'proj_interaction_20.npy')):
+        proj_interaction = np.load(os.path.join(log_dir, f'proj_interaction_20.npy'))
+    else:
+        acc_list = []
+        for n in range(nparticles):
+            embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
+            in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                     rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
+                                     0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
+            with torch.no_grad():
+                acc = model.lin_edge(in_features.float())
+            acc = acc[:, 0]
+            acc_list.append(acc)
+        acc_list = torch.stack(acc_list)
+        coeff_norm = to_numpy(acc_list)
+        trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int), n_components=2, transform_queue_size=0).fit(coeff_norm)
+        proj_interaction = trans.transform(coeff_norm)
+        proj_interaction = np.squeeze(proj_interaction)
+        np.save(os.path.join(log_dir, f'proj_interaction_20.npy'), proj_interaction)
+
+    labels, nclusters = embedding_cluster.get(proj_interaction,'distance')
     label_list = []
     for n in range(nparticle_types):
-        tmp = kmeans.labels_[index_particles[n]]
+        tmp = labels[index_particles[n]]
         sub_group = np.round(np.median(tmp))
         label_list.append(sub_group)
-        accuracy = len(np.argwhere(tmp == sub_group)) / len(tmp) * 100
-        print(f'Sub-group {n} accuracy: {np.round(accuracy, 3)}')
     label_list = np.array(label_list)
-    new_labels = kmeans.labels_.copy()
+    new_labels = labels.copy()
     for n in range(nparticle_types):
-        new_labels[kmeans.labels_ == label_list[n]] = n
+        new_labels[labels == label_list[n]] = n
         plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1],
                     color=cmap.color(n), s=0.1)
-    plt.xlabel(r'UMAP 0', fontsize=12)
-    plt.ylabel(r'UMAP 1', fontsize=12)
-    torch.save(torch.tensor(new_labels, device=device), os.path.join(log_dir, f'labels_20.pt'))
+        plt.xlabel(r'UMAP 0', fontsize=12)
+        plt.ylabel(r'UMAP 1', fontsize=12)
     model_a_ = model.a.clone().detach()
     model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
     t = []
     tt = []
-    for k in range(model_config['ninteractions']):
-        pos = np.argwhere(kmeans.labels_ == k).squeeze().astype(int)
+    # fig = plt.figure(figsize=(8, 8))
+    for k in range(nclusters):
+        pos = np.argwhere(new_labels == k).squeeze().astype(int)
         temp = model_a_[pos, :].clone().detach()
-        print(torch.median(temp, axis=0).values)
+        # plt.scatter(to_numpy(temp[:, 0]), to_numpy(temp[:, 1]))
+        # mtemp = torch.median(temp, axis=0).values
+        # plt.plot(to_numpy(mtemp[0]), to_numpy(mtemp[1]), '+', color='black', markersize=10)
         model_a_[pos, :] = torch.median(temp, axis=0).values.repeat((len(pos), 1))
         t.append(torch.median(temp, axis=0).values)
         tt = np.append(tt, torch.median(temp, axis=0).values.cpu().numpy())
-    model_a_ = torch.reshape(model_a_, (model.a.shape[0], model.a.shape[1], model.a.shape[2]))
+    print(t)
     with torch.no_grad():
         for n in range(model.a.shape[0]):
-            model.a[n] = model_a_[0]
+            model.a[n] = model_a_
     embedding = []
     for n in range(model.a.shape[0]):
         embedding.append(model.a[n])
@@ -2753,9 +2763,12 @@ def data_plot_FIG3():
             embedding_particle.append(embedding[index_particles[n] + m * nparticles, :])
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
-    plt.tight_layout()
+    plt.text(.05, .86, f'N: {nparticles}', ha='left', va='top', transform=ax.transAxes ,fontsize=12)
+    plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=12)
 
     ax = fig.add_subplot(3, 3, 3)
+    plt.text(-0.25, 1.1, f'c)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'Particle classification', fontsize=12)
     print('3')
     T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
     for n in range(1, nparticle_types):
@@ -2771,25 +2784,32 @@ def data_plot_FIG3():
     # plt.text(0, -0.75, r"Accuracy: {:.3f}".format(Accuracy), fontsize=12)
     plt.xticks(fontsize=8)
     plt.yticks(fontsize=8)
+    plt.xlabel(r'Predicted label', fontsize=12)
+    plt.ylabel(r'True label', fontsize=12)
     torch.save(torch.tensor(new_labels, device=device), os.path.join(log_dir, f'labels_20.pt'))
 
     ax = fig.add_subplot(3, 3, 4)
     print('4')
-    for m in range(model.a.shape[0]):
-        for n in range(model.a.shape[1]):
-            plt.scatter(to_numpy(model.a[m][n, 0]),
-                        to_numpy(model.a[m][n, 1]),
-                        color=cmap.color(new_labels[n]), s=5)
+    plt.text(-0.25, 1.1, f'd)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'Clustered particle embedding', fontsize=12)
+
+    for n in range(nparticle_types):
+        pos = np.argwhere(new_labels == n).squeeze().astype(int)
+        plt.scatter(embedding[pos[0], 0], embedding[pos[0], 1], color=cmap.color(n), s=6)
     plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=12)
     plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
+    plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=12)
 
     ax = fig.add_subplot(3, 3, 5)
     print('5')
+    plt.text(-0.25, 1.1, f'e)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'Interaction functions (model)', fontsize=12)
     acc_list = []
-    for n in range(nparticles):
-        embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
+    for n in range(nparticle_types):
+        pos = np.argwhere(new_labels == n).squeeze().astype(int)
+        embedding = model.a[0, pos[0], :] * torch.ones((1000, model_config['embedding']), device=device)
         in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
                                  rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
                                  0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
@@ -2798,27 +2818,29 @@ def data_plot_FIG3():
         acc_list.append(acc)
         plt.plot(to_numpy(rr),
                  to_numpy(acc) * to_numpy(ynorm[4]),
-                 color=cmap.color(to_numpy(x[n, 5])), linewidth=1, alpha=0.25)
+                 color=cmap.color(n), linewidth=1, alpha=1)
     plt.xlim([0, 0.02])
     plt.ylim([0, 0.5E6])
     plt.xlabel(r'$r_{ij}$', fontsize=12)
     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, r_{ij})$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
-    plt.text(0.0075,0.4E6,r'Model', fontsize=12)
 
     ax = fig.add_subplot(3,3,6)
     print('6')
+    plt.text(-0.25, 1.1, f'f)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'Interaction functions (true)', fontsize=12)
     p = model_config['p']
     if len(p) > 0:
         p = torch.tensor(p, device=device)
     else:
         p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt',map_location=device)
-    psi_output = []
-    for n in range(nparticle_types):
-        psi_output.append(model.psi(rr, p[n]))
+    if len(p) > 0:
+        p = torch.tensor(p, device=device)
+    else:
+        p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
     for n in range(nparticle_types - 1, -1, -1):
-        plt.plot(to_numpy(rr), np.array(psi_output[n].cpu()), linewidth=1, color=cmap.color(n))
+        plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n])), color=cmap.color(n), linewidth=1)
 
     plt.xlim([0, 0.02])
     plt.ylim([0, 0.5E6])
@@ -2826,34 +2848,7 @@ def data_plot_FIG3():
     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, r_{ij})$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
-    plt.text(0.0075,0.4E6,r'True', fontsize=12)
 
-    plot_list = []
-    for n in range(nparticle_types):
-        embedding = t[int(label_list[n])] * torch.ones((1000, model_config['embedding']), device=device)
-        in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
-                                 rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
-                                 0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
-        with torch.no_grad():
-            pred = model.lin_edge(in_features.float())
-        pred = pred[:, 0]
-        plot_list.append(pred * ynorm[4])
-    rmserr_list = []
-    for n in range(nparticle_types):
-        min_norm = torch.min(plot_list[n])
-        max_norm = torch.max(plot_list[n])
-        if torch.min(plot_list[n]) < min_norm:
-            min_norm = torch.min(plot_list[n])
-        if torch.max(psi_output[n]) > max_norm:
-            max_norm = torch.max(psi_output[n])
-        plot_list[n] = (plot_list[n] - min_norm) / (max_norm - min_norm)
-        psi_output[n] = (psi_output[n] - min_norm) / (max_norm - min_norm)
-        rmserr = torch.sqrt(torch.mean((plot_list[n] - torch.squeeze(psi_output[n])) ** 2))
-        rmserr_list.append(rmserr.item())
-        print(f'sub-group {n}: RMSE: {rmserr.item()}')
-    print(f'RMSE: {np.round(np.mean(rmserr_list),4)}+\-{np.round(np.std(rmserr_list),4)} ')
-
-    #############
 
     plot_list = []
     for n in range(nparticle_types):
@@ -5328,7 +5323,7 @@ if __name__ == '__main__':
     print(f'device {device}')
 
     # arbitrary_3 training
-    data_plot_FIG2()
+    # data_plot_FIG2()
     # print(' ')
     # print(' ')
     # arbitrary_3 inference
@@ -5343,7 +5338,7 @@ if __name__ == '__main__':
     # data_plot_FIG4sup()
 
     # gravity model
-    # data_plot_FIG3()
+    data_plot_FIG3()
     # gravity model continuous
     # data_plot_FIG3_continous()
 
