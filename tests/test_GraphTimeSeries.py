@@ -34,3 +34,8 @@ def test_shifted_time_series():
 
     assert time_series.get_time_for(0) == 10
     assert time_series.get_time_for(2) == 12
+
+
+def test_time_series_iteration(time_series):
+    for i, data in enumerate(time_series):
+        assert time_series[i] == data

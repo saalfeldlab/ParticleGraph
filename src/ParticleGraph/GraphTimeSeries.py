@@ -35,6 +35,9 @@ class GraphTimeSeries:
     def __len__(self):
         return len(self._data)
 
+    def __iter__(self):
+        return iter(self._data)
+
     def get_feature_names(self):
         return list(self._feature_index.keys())
 
