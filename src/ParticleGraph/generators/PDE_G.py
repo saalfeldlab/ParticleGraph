@@ -33,7 +33,7 @@ class PDE_G(pyg.nn.MessagePassing):
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        acc = self.propagate(edge_index, x=(x, x))
+        acc = self.propagate(edge_index, x=x)
         return acc
 
     def message(self, x_i, x_j):

@@ -3024,20 +3024,9 @@ if __name__ == '__main__':
     # config_manager = create_config_manager(config_type='simulation')
 
     config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
-
-    # config_list=['config_CElegans_32']
-
-    # config_list = ['config_arbitrary_3'] #,'config_gravity_16','config_arbitrary_16']
-    # config_list = ['config_arbitrary_16_HR','config_gravity_16_001']
-    # config_list = ['config_gravity_16_001_HR','config_gravity_16_001']
-    # config_list = ['config_Coulomb_3_HR']
-    # config_list = ['config_boids_16_HR']
-    # config_list = ['config_wave_testA']
-
-    # Test plotting figures paper
     config_list = ['config_gravity_16_test'] # ,'config_boids_16_HR8','config_boids_16_HR9']# ['config_boids_16_HR7','config_boids_16_HR8','config_boids_16_HR9']
 
-    
+
     # Load a graph neural network model used to sparsify the particle embedding during training
     model_config_embedding = config_manager.load_and_validate_config('./config/config_embedding.yaml')
     p = torch.ones(1, 4, device=device)
@@ -3062,9 +3051,9 @@ if __name__ == '__main__':
 
         cmap = cc(model_config=model_config)
 
+
         data_generate(model_config, device=device, bVisu=False, bStyle='bw', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//20, ratio=1, scenario='none' )
         # data_train(model_config,model_embedding)
-
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//200, ratio=1)
 
