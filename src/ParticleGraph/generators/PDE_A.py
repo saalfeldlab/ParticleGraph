@@ -39,17 +39,17 @@ class PDE_A(pyg.nn.MessagePassing):
         particle_type = to_numpy(x[:, 5])
         parameters = self.p[particle_type,:]
 
-        speed = self.propagate(edge_index, x=x[:, 1:3], parameters=parameters, sigma=self.sigma)
+        speed = self.propagate(edge_index, pos=x[:, 1:3], parameters=parameters, sigma=self.sigma)
 
         return speed
 
-    def message(self, x_i, x_j, parameters_i, sigma):
-        distance_squared = torch.sum(self.bc_diff(x_j - x_i) ** 2, axis=1)  # squared distance
+    def message(self, pos_i, pos_j, parameters_i, sigma):
+        distance_squared = torch.sum(self.bc_diff(pos_j - pos_i) ** 2, axis=1)  # squared distance
 
         psi = (parameters_i[:, 0] * torch.exp(-distance_squared ** parameters_i[:, 1] / (2 * sigma ** 2))
                - parameters_i[:, 2] * torch.exp(-distance_squared ** parameters_i[:, 3] / (2 * sigma ** 2)))
 
-        return psi[:, None] * self.bc_diff(x_j - x_i)
+        return psi[:, None] * self.bc_diff(pos_j - pos_i)
 
     def psi(self, r, p):
         return r * (p[0] * torch.exp(-r ** (2 * p[1]) / (2 * self.sigma ** 2))

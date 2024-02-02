@@ -37,13 +37,13 @@ class PDE_E(pyg.nn.MessagePassing):
 
         charge = self.p[to_numpy(x[:, 5])]
 
-        acc = self.propagate(edge_index, x=x[:,1:3], charge=charge[:, None])
+        acc = self.propagate(edge_index, pos=x[:,1:3], charge=charge[:, None])
         return acc
 
-    def message(self, x_i, x_j, charge_i, charge_j):
-        r = torch.sqrt(torch.sum(self.bc_diff(x_j - x_i) ** 2, axis=1))
+    def message(self, pos_i, pos_j, charge_i, charge_j):
+        r = torch.sqrt(torch.sum(self.bc_diff(pos_j - pos_i) ** 2, axis=1))
         distance_ij = torch.concatenate((r[:, None], r[:, None]), -1)
-        direction_ij = self.bc_diff(x_j - x_i) / distance_ij
+        direction_ij = self.bc_diff(pos_j - pos_i) / distance_ij
 
         charge_i = torch.concatenate((charge_i, charge_i), -1)
         charge_j = torch.concatenate((charge_j, charge_j), -1)
