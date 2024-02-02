@@ -47,7 +47,7 @@ class PDE_E(pyg.nn.MessagePassing):
 
         charge_i = torch.concatenate((charge_i, charge_i), -1)
         charge_j = torch.concatenate((charge_j, charge_j), -1)
-        acc = charge_i * charge_j * direction_ij / (distance_ij ** 2)
+        acc = -charge_i * charge_j * direction_ij / (distance_ij ** 2)
 
         return acc
 
