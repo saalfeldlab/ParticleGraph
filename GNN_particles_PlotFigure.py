@@ -449,7 +449,7 @@ def func_RD3 (x, a, b, c, d, e, f, g, h, i, cc):
 
 def data_plot_FIG2():
 
-    config = 'config_arbitrary_3b'
+    config = 'config_arbitrary_3c'
 
     # Load parameters from config file
     with open(f'./config/{config}.yaml', 'r') as file:
