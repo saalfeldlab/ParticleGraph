@@ -114,11 +114,8 @@ class InteractionParticles(pyg.nn.MessagePassing):
 
         if self.prediction == '2nd_derivative':
             in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding), dim=-1)
-        else:
-            if self.prediction == 'first_derivative_L':
-                in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding), dim=-1)
-            if self.prediction == 'first_derivative':
-                in_features = torch.cat((delta_pos, r, embedding), dim=-1)
+        if self.prediction == 'first_derivative':
+            in_features = torch.cat((delta_pos, r, embedding), dim=-1)
 
         out = self.lin_edge(in_features)
 
