@@ -1205,7 +1205,7 @@ def data_train(model_config, bSparse=False):
         model_a_ = torch.reshape(model_a_, (model.a.shape[0], model.a.shape[1], model.a.shape[2]))
         for n in range(new_labels.shape[0]):
             pos = np.argwhere(new_labels == n).squeeze().astype(int)
-            plt.scatter(to_numpy(model_a_[pos[0], 0]), to_numpy(model_a_[pos[0], 1]), color=cmap.color(n), s=6)
+            plt.scatter(to_numpy(model_a_[0,pos[0], 0]), to_numpy(model_a_[0,pos[0], 1]), color=cmap.color(n), s=6)
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=12)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=12)
         plt.xticks(fontsize=10.0)
