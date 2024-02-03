@@ -40,17 +40,25 @@ class PDE_B(pyg.nn.MessagePassing):
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         particle_type = to_numpy(x[:, 5])
         parameters = self.p[particle_type, :]
-        velocity = x[:, 3:5]
-        dd_pos = self.propagate(edge_index, pos=x[:,1:3], parameters=parameters, velocity=velocity)
+        d_pos = x[:, 3:5]
+        dd_pos = self.propagate(edge_index, pos=x[:,1:3], parameters=parameters, d_pos=d_pos)
 
         return dd_pos
 
-    def message(self, pos_i, pos_j, parameters_i, velocity_i, velocity_j):
+    def message(self, pos_i, pos_j, parameters_i, d_pos_i, d_pos_j):
         distance_squared = torch.sum(self.bc_diff(pos_j - pos_i) ** 2, axis=1)  # distance squared
 
+<<<<<<< Updated upstream
         cohesion = parameters_i[:,0,None] * self.a1 * self.bc_diff(pos_j - pos_i)
         alignment = parameters_i[:,1,None] * self.a2 * self.bc_diff(velocity_j - velocity_i)
         separation = - parameters_i[:,2,None] * self.a3 * self.bc_diff(pos_j - pos_i) / distance_squared[:, None]
+=======
+        cohesion = parameters_i[:,0,None] * 0.5E-5 * self.bc_diff(pos_j - pos_i)
+
+        alignment = parameters_i[:,1,None] * 5E-4 * self.bc_diff(d_pos_j - d_pos_i)
+
+        separation = - parameters_i[:,2,None] * 1E-8 * self.bc_diff(pos_j - pos_i) / distance_squared[:, None]
+>>>>>>> Stashed changes
         
         return (separation + alignment + cohesion)
 
