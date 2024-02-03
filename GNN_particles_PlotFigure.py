@@ -4576,6 +4576,7 @@ def data_plot_FIG6():
         for n in range(model_config['nparticle_types']):
             index = np.argwhere(to_numpy(x[:, 5]) == n)
             index_particles.append(index.squeeze())
+        T1 = x[:, 5:6].clone().detach()
 
     rr = torch.tensor(np.linspace(min_radius, radius, 1000)).to(device)
     embedding = []
@@ -4592,26 +4593,26 @@ def data_plot_FIG6():
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
-    if bMesh:
-        X1 = torch.rand(nparticles, 2, device=device)
-        x_width = int(np.sqrt(nparticles))
-        xs = torch.linspace(0, 1, steps=x_width)
-        ys = torch.linspace(0, 1, steps=x_width)
-        x, y = torch.meshgrid(xs, ys, indexing='xy')
-        x = torch.reshape(x, (x_width ** 2, 1))
-        y = torch.reshape(y, (x_width ** 2, 1))
-        x_width = 1 / x_width / 8
-        X1[0:nparticles, 0:1] = x[0:nparticles]
-        X1[0:nparticles, 1:2] = y[0:nparticles]
-        X1 = X1 + torch.randn(nparticles, 2, device=device) * x_width
-        X1_ = torch.clamp(X1, min=0, max=1)
-
-        particle_type_map = model_config['particle_type_map']
-        i0 = imread(f'graphs_data/{particle_type_map}')
-
-        values = i0[(to_numpy(X1_[:, 0]) * 255).astype(int), (to_numpy(X1_[:, 1]) * 255).astype(int)]
-        T1 = torch.tensor(values, device=device)
-        T1 = T1[:, None]
+    # if bMesh:
+    #     X1 = torch.rand(nparticles, 2, device=device)
+    #     x_width = int(np.sqrt(nparticles))
+    #     xs = torch.linspace(0, 1, steps=x_width)
+    #     ys = torch.linspace(0, 1, steps=x_width)
+    #     x, y = torch.meshgrid(xs, ys, indexing='xy')
+    #     x = torch.reshape(x, (x_width ** 2, 1))
+    #     y = torch.reshape(y, (x_width ** 2, 1))
+    #     x_width = 1 / x_width / 8
+    #     X1[0:nparticles, 0:1] = x[0:nparticles]
+    #     X1[0:nparticles, 1:2] = y[0:nparticles]
+    #     X1 = X1 + torch.randn(nparticles, 2, device=device) * x_width
+    #     X1_ = torch.clamp(X1, min=0, max=1)
+    #
+    #     particle_type_map = model_config['particle_type_map']
+    #     i0 = imread(f'graphs_data/{particle_type_map}')
+    #
+    #     values = i0[(to_numpy(X1_[:, 0]) * 255).astype(int), (to_numpy(X1_[:, 1]) * 255).astype(int)]
+    #     T1 = torch.tensor(values, device=device)
+    #     T1 = T1[:, None]
 
     cmap = cc(model_config=model_config)
 

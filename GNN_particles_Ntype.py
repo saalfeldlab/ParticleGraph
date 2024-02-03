@@ -699,6 +699,11 @@ def data_train(model_config, bSparse=False):
     for n in range(model_config['nparticle_types']):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
+    T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
+    for n in range(1, nparticle_types):
+        T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
+    T1 = T1[:, None]
+
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
     print('log_dir: {}'.format(log_dir))
@@ -754,6 +759,7 @@ def data_train(model_config, bSparse=False):
         torch.save(hnorm, os.path.join(log_dir, 'hnorm.pt'))
         print(torch.mean(h), torch.std(h))
         logger.info(f'hnorm : {to_numpy(hnorm)}')
+
 
     if model_config['model'] == 'GravityParticles':
         model = GravityParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
@@ -827,6 +833,9 @@ def data_train(model_config, bSparse=False):
             index_particles.append(index.squeeze())
         logger.info(hnorm)
         batch_size = 1
+        particle_type_map = model_config['particle_type_map']
+        T1 = x[:, 5:6].clone().detach()
+
 
     x = x_list[1][0].clone().detach()
 
@@ -998,16 +1007,15 @@ def data_train(model_config, bSparse=False):
 
         list_loss.append(total_loss / (N + 1) / nparticles / batch_size)
 
-        fig = plt.figure(figsize=(18, 4))
+        fig = plt.figure(figsize=(22, 4))
         plt.ion()
-        ax = fig.add_subplot(1, 5, 1)
+        ax = fig.add_subplot(1, 6, 1)
         plt.plot(list_loss, color='k')
         plt.ylim([0, 0.010])
         plt.xlim([0, Nepochs])
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
-
-        ax = fig.add_subplot(1, 5, 2)
+        ax = fig.add_subplot(1, 6, 2)
         embedding = []
         for n in range(model.a.shape[0]):
             embedding.append(model.a[n])
@@ -1035,7 +1043,7 @@ def data_train(model_config, bSparse=False):
                 for n in range(nparticle_types):
                     plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5, color=cmap.color(n))
 
-        ax = fig.add_subplot(1, 5, 3)
+        ax = fig.add_subplot(1, 6, 3)
         if model_config['model'] == 'ElecParticles':
             acc_list = []
             for m in range(model.a.shape[0]):
@@ -1154,7 +1162,7 @@ def data_train(model_config, bSparse=False):
         # save UMAP projection
         np.save(f'./{log_dir}/tmp_training/umap_projection_{epoch}.npy', proj_interaction)
 
-        ax = fig.add_subplot(1, 5, 4)
+        ax = fig.add_subplot(1, 6, 4)
         if model_config['kmeans_input'] == 'plot':
             labels, nclusters = embedding_cluster.get(proj_interaction, 'distance')
         if model_config['kmeans_input'] == 'embedding':
@@ -1172,7 +1180,7 @@ def data_train(model_config, bSparse=False):
         plt.ylabel('UMAP 1', fontsize=12)
         plt.text(0., 1.1, f'Nclusters: {nclusters}', ha='left', va='top', transform=ax.transAxes)
 
-        ax = fig.add_subplot(1, 5, 5)
+        ax = fig.add_subplot(1, 6, 5)
         new_labels = labels.copy()
         for n in range(nparticle_types):
             new_labels[labels == label_list[n]] = n
@@ -1180,29 +1188,30 @@ def data_train(model_config, bSparse=False):
             plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1],
                         color=cmap.color(n), s=0.1)
 
-        T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
-        for n in range(1, nparticle_types):
-            T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
-        T1 = T1[:, None]
         Accuracy = metrics.accuracy_score(to_numpy(T1), new_labels)
         plt.text(0, 1.1, f'Accuracy: {np.round(Accuracy,3)}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
         print (f'Accuracy: {np.round(Accuracy,3)}')
         logger.info(f'Accuracy: {np.round(Accuracy,3)}')
 
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
-        plt.close()
+        ax = fig.add_subplot(1, 6, 6)
+        plt.title(r'Clustered particle embedding', fontsize=12)
+
+        for n in range(new_labels.shape[0]):
+            pos = np.argwhere(new_labels == n).squeeze().astype(int)
+            plt.scatter(embedding[pos[0], 0], embedding[pos[0], 1], color=cmap.color(n), s=6)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=12)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=12)
+        plt.xticks(fontsize=10.0)
+        plt.yticks(fontsize=10.0)
 
         if (epoch == 1 * Nepochs // 4) | (epoch == 2 * Nepochs // 4) | (epoch == 3 * Nepochs // 4):
 
             model_a_ = model.a.clone().detach()
             model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
-            embedding_center = []
             for n in range(nclusters):
                 pos = np.argwhere(labels == n).squeeze().astype(int)
                 median_center = model_a_[pos, :]
                 median_center = torch.median(median_center, axis=0).values
-                embedding_center.append(median_center.clone().detach())
                 model_a_[pos, :] = torch.median(median_center, axis=0).values
             model_a_ = torch.reshape(model_a_, (model.a.shape[0], model.a.shape[1], model.a.shape[2]))
 
@@ -1213,6 +1222,12 @@ def data_train(model_config, bSparse=False):
                         model.a[n] = model_a_[0].clone().detach()
                 print(f'regul_embedding: replaced')
                 logger.info(f'regul_embedding: replaced')
+                plt.text(0, 1.1, f'Replaced', ha='left', va='top', transform=ax.transAxes,
+                         fontsize=10)
+
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
+        plt.close()
 
 
 def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_particles=0, prev_nparticles=0, new_nparticles=0,
