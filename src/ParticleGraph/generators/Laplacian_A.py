@@ -30,8 +30,8 @@ class Laplacian_A(pyg.nn.MessagePassing):
     def forward(self, data):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
 
-        type = to_numpy(x[:, 5])
-        c = self.c[type]
+        particle_type = to_numpy(x[:, 5])
+        c = self.c[particle_type]
         c = c[:, None]
 
         u = x[:, 6:7]
