@@ -2,6 +2,7 @@ import matplotlib.cm as cmplt
 import torch_geometric as pyg
 import os
 from ParticleGraph.MLP import MLP
+import imageio
 
 
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
@@ -571,7 +572,7 @@ def data_plot_FIG2():
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
-    fig = plt.figure(figsize=(13, 9.6))
+    fig = plt.figure(figsize=(12.5, 9.6))
     plt.ion()
     ax = fig.add_subplot(3, 4, 1)
     print('1')
@@ -584,7 +585,7 @@ def data_plot_FIG2():
                             embedding_particle[n + m * nparticle_types][:, 1], color=cmap.color(n), s=0.1)
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$',fontsize=12)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$',fontsize=12)
-    plt.text(.05, .94, f'e: 0 it: 200', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.text(.05, .94, f'e: 1 it: $5.10^4$', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     plt.text(.05, .86, f'N: {nparticles}', ha='left', va='top', transform=ax.transAxes ,fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
@@ -622,14 +623,14 @@ def data_plot_FIG2():
     plt.yticks(fontsize=10.0)
     plt.ylim([-0.04,0.03])
     plt.text(.05, .86, f'N: {nparticles//50}', ha='left', va='top', transform=ax.transAxes ,fontsize=12)
-    plt.text(.05, .94, f'e: 0 it: 200', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.text(.05, .94, f'e: 1 it: $5.10^4$', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     plt.tight_layout()
 
     ax = fig.add_subplot(3, 4, 3)
     print('3')
     plt.text(-0.25, 1.1, f'c)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     plt.title(r'UMAP of $f(\ensuremath{\mathbf{a}}_i, r_{ij}$)', fontsize=12)
-    labels, nclusters = embedding_cluster.get(proj_interaction,'distance')
+    labels, nclusters = embedding_cluster.get(proj_interaction,'distance', thresh=1.5)
     label_list = []
     for n in range(nparticle_types):
         tmp = labels[index_particles[n]]
@@ -668,7 +669,7 @@ def data_plot_FIG2():
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.text(.05, .86, f'N: {nparticles}', ha='left', va='top', transform=ax.transAxes ,fontsize=12)
-    plt.text(.05, .94, f'e: 0 it: 200', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.text(.05, .94, f'e: 1 it: $5.10^4$', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     plt.tight_layout()
 
     ax = fig.add_subplot(3, 4, 4)
@@ -882,6 +883,22 @@ def data_plot_FIG2():
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.ylim([-0.04,0.03])
+
+    # find last image file in logdir
+    files = glob.glob(os.path.join(log_dir, 'tmp_recons/Fig*.tif'))
+    files.sort(key=os.path.getmtime)
+    if len(files) > 0:
+        last_file = files[-1]
+        # load image file with imageio
+        image = imageio.imread(last_file)
+        ax = fig.add_subplot(3,4,12)
+        print('12')
+        plt.text(-0.25, 1.1, f'i)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+        plt.title(r'Rollout inference (frame 250)', fontsize=12)
+        plt.imshow(image[50:-50,50:-50])
+        # rmove xtick
+        plt.xticks([])
+        plt.yticks([])
 
     plt.tight_layout()
     # plt.savefig('Fig2.pdf', format="pdf", dpi=300)
