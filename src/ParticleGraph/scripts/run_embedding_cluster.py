@@ -5,7 +5,8 @@ from ParticleGraph.utils import to_numpy
 
 if __name__ == '__main__':
 
-    model_config = {'ninteractions': 3, 'nparticles': 4800, 'nparticle_types': 3, 'cmap': 'tab10', 'model':'PDE_A'}
+    # model_config = {'ninteractions': 3, 'nparticles': 4800, 'nparticle_types': 3, 'cmap': 'tab10', 'model':'PDE_A'}
+    model_config = {'ninteractions': 16, 'nparticles': 960, 'nparticle_types': 16, 'cmap': 'tab20', 'model':'GravityParticles'}
 
     cmap = cc(model_config=model_config)
 
@@ -18,29 +19,30 @@ if __name__ == '__main__':
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
 
-    N = 100
-    data = np.random.randn(3 * N, 2)
-    data[:N] += 5
-    data[-N:] += 10
-    data[-1:] -= 20
+    # N = 100
+    # data = np.random.randn(3 * N, 2)
+    # data[:N] += 5
+    # data[-N:] += 10
+    # data[-1:] -= 20
+    #
+    # # clustering
+    # thresh = 1.5
+    # clusters, nclusters = embedding_cluster.get(data, method="distance")
+    #
+    # # plotting
+    # plt.scatter(*np.transpose(data), c=clusters,s=5)
+    # plt.axis("equal")
+    # title = "threshold: %f, number of clusters: %d" % (thresh, len(set(clusters)))
+    # plt.title(title)
+    # plt.show()
 
-    # clustering
-    thresh = 1.5
-    clusters, nclusters = embedding_cluster.get(data, method="distance")
+    for epoch in range(11):
 
-    # plotting
-    plt.scatter(*np.transpose(data), c=clusters,s=5)
-    plt.axis("equal")
-    title = "threshold: %f, number of clusters: %d" % (thresh, len(set(clusters)))
-    plt.title(title)
-    plt.show()
-
-    for epoch in range(20):
-
-        proj_interaction = np.load(f'/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/log/try_arbitrary_3b/tmp_training/umap_projection_{epoch}.npy')
+        proj_interaction = np.load(f'/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/log/try_gravity_16c/tmp_training/umap_projection_{epoch}.npy')
 
         fig = plt.figure(figsize=(10, 3))
         ax = fig.add_subplot(1, 4, 1)
+        plt.text(0, 1.1, f'Epoch: {epoch}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
         # plt.ion()
         labels, nclusters = embedding_cluster.get(proj_interaction,'distance')
         label_list = []
@@ -71,11 +73,11 @@ if __name__ == '__main__':
         confusion_matrix = metrics.confusion_matrix(to_numpy(T1), new_labels)  # , normalize='true')
         cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix=confusion_matrix)
         Accuracy = metrics.accuracy_score(to_numpy(T1), new_labels)
-        plt.text(0, 1.1, f'Accuracy: {Accuracy}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
-        cm_display.plot(ax=fig.gca(), cmap='Blues', include_values=True, values_format='d', colorbar=False)
+        plt.text(0, 1.1, f'Accuracy: {np.round(Accuracy,3)}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
+        cm_display.plot(ax=fig.gca(), cmap='Blues', include_values=False, values_format='d', colorbar=False)
 
         ax = fig.add_subplot(1, 4, 4)
-        t = np.zeros((nclusters, 2))
+        t = np.zeros((nparticle_types, 2))
         for n in range(nparticle_types):
             pos = np.argwhere(new_labels == n).squeeze().astype(int)
             temp = proj_interaction[pos, :]

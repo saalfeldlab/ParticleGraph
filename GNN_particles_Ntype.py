@@ -1155,7 +1155,10 @@ def data_train(model_config, bSparse=False):
         np.save(f'./{log_dir}/tmp_training/umap_projection_{epoch}.npy', proj_interaction)
 
         ax = fig.add_subplot(1, 5, 4)
-        labels, nclusters = embedding_cluster.get(proj_interaction, 'distance')
+        if model_config['kmeans_input'] == 'plot':
+            labels, nclusters = embedding_cluster.get(proj_interaction, 'distance')
+        if model_config['kmeans_input'] == 'embedding':
+            labels, nclusters = embedding_cluster.get(embedding_, 'distance')
         for n in range(nclusters):
             pos = np.argwhere(labels == n)
             plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=5)

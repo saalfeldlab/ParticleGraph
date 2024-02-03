@@ -18,7 +18,7 @@ class EmbeddingCluster:
             clusters= k.labels_
             nclusters = self.model_config['ninteractions']
         if method == 'distance':
-            thresh = 1.5
+            thresh = 2.5
             clusters = hcluster.fclusterdata(data, thresh, criterion="distance") - 1
             nclusters = len(np.unique(clusters))
 
