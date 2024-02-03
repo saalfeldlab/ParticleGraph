@@ -85,7 +85,6 @@ class InteractionParticles(pyg.nn.MessagePassing):
     def message(self, pos_i, pos_j, d_pos_i, d_pos_j, particle_id_i, particle_id_j):
         # squared distance
         r = torch.sqrt(torch.sum(self.bc_diff(pos_j - pos_i) ** 2, axis=1)) / self.radius
-        r = r[:, None]
         delta_pos = self.bc_diff(pos_j - pos_i) / self.radius
         dpos_x_i = d_pos_i[:, 0] / self.vnorm
         dpos_y_i = d_pos_i[:, 1] / self.vnorm
@@ -109,9 +108,9 @@ class InteractionParticles(pyg.nn.MessagePassing):
         embedding = self.a[self.data_id, to_numpy(particle_id_i), :].squeeze()
 
         if self.prediction == '2nd_derivative':
-            in_features = torch.cat((delta_pos, r, dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None], dpos_y_j[:, None], embedding), dim=-1)
+            in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None], dpos_y_j[:, None], embedding), dim=-1)
         if self.prediction == 'first_derivative':
-            in_features = torch.cat((delta_pos, r, embedding), dim=-1)
+            in_features = torch.cat((delta_pos, r[:, None], embedding), dim=-1)
 
         out = self.lin_edge(in_features)
 
