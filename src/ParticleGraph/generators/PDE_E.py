@@ -34,27 +34,22 @@ class PDE_E(pyg.nn.MessagePassing):
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        acc = self.propagate(edge_index, x=(x, x))
-        return acc
+        particle_type = to_numpy(x[:, 5])
+        charge = self.p[particle_type]
 
-    def message(self, x_i, x_j):
-        r = torch.sqrt(torch.sum(self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1))
-        # r = torch.clamp(r, min=self.clamp)
-        r = torch.concatenate((r[:, None], r[:, None]), -1)
+        dd_pos = self.propagate(edge_index, pos=x[:,1:3], charge=charge[:, None])
+        return dd_pos
 
-        p1 = self.p[to_numpy(x_i[:, 5])]
-        p1 = p1.squeeze()
-        p1 = torch.concatenate((p1[:, None], p1[:, None]), -1)
+    def message(self, pos_i, pos_j, charge_i, charge_j):
+        distance_ij = torch.sqrt(torch.sum(self.bc_diff(pos_j - pos_i) ** 2, axis=1))
+        direction_ij = self.bc_diff(pos_j - pos_i) / distance_ij[:,None]
 
-        p2 = self.p[to_numpy(x_j[:, 5])]
-        p2 = p2.squeeze()
-        p2 = torch.concatenate((p2[:, None], p2[:, None]), -1)
+        charge_i = torch.concatenate((charge_i, charge_i), -1)
+        charge_j = torch.concatenate((charge_j, charge_j), -1)
+        dd_pos = -charge_i * charge_j * direction_ij / (distance_ij ** 2)
 
-        acc = p1 * p2 * self.bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) / r ** 3
-        # acc = torch.clamp(acc, max=self.pred_limit)
-
-        return acc
+        return dd_pos
 
     def psi(self, r, p1, p2):
-        acc = p1 * p2 / r ** 2
-        return -acc  # Elec particles
+        dd_pos = p1 * p2 / r ** 2
+        return -dd_pos  # Elec particles
