@@ -5,8 +5,8 @@ from ParticleGraph.utils import to_numpy
 
 if __name__ == '__main__':
 
-    # model_config = {'ninteractions': 3, 'nparticles': 4800, 'nparticle_types': 3, 'cmap': 'tab10', 'model':'PDE_A'}
-    model_config = {'ninteractions': 16, 'nparticles': 960, 'nparticle_types': 16, 'cmap': 'tab20', 'model':'GravityParticles'}
+    model_config = {'ninteractions': 3, 'nparticles': 4800, 'nparticle_types': 3, 'cmap': 'tab10', 'model':'PDE_A'}
+    # model_config = {'ninteractions': 16, 'nparticles': 960, 'nparticle_types': 16, 'cmap': 'tab20', 'model':'GravityParticles'}
 
     cmap = cc(model_config=model_config)
 
@@ -36,9 +36,11 @@ if __name__ == '__main__':
     # plt.title(title)
     # plt.show()
 
-    for epoch in range(11):
+    for epoch in range(1):
 
-        proj_interaction = np.load(f'/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/log/try_gravity_16c/tmp_training/umap_projection_{epoch}.npy')
+        # proj_interaction = np.load(f'/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/log/try_gravity_16c/tmp_training/umap_projection_{epoch}.npy')
+        proj_interaction = np.load(
+            f'/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/log/try_arbitrary_3c/tmp_training/umap_projection_{epoch}.npy')
 
         fig = plt.figure(figsize=(10, 3))
         ax = fig.add_subplot(1, 4, 1)

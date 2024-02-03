@@ -10,7 +10,7 @@ class EmbeddingCluster:
     def __init__(self, model_config):
         self.model_config = model_config
 
-    def get(self, data, method):
+    def get(self, data, method,thresh=2.5):
         if method == 'kmeans':
             kmeans = KMeans(init="random", n_clusters=self.model_config['ninteractions'], n_init=1000, max_iter=10000,
                             random_state=13)
@@ -18,7 +18,6 @@ class EmbeddingCluster:
             clusters= k.labels_
             nclusters = self.model_config['ninteractions']
         if method == 'distance':
-            thresh = 2.5
             clusters = hcluster.fclusterdata(data, thresh, criterion="distance") - 1
             nclusters = len(np.unique(clusters))
 
