@@ -45,8 +45,8 @@ class RD_Gray_Scott(pyg.nn.MessagePassing):
         # This is equivalent to the nonlinear reaction diffusion equation:
         #   du = Du * laplace_u - (u * v)^2 + F * (1 - u)
         #   dv = Dv * laplace_v + (u * v)^2 - (F + k) * v
-        d_u = Du * laplace_uv[:, 0] - uxv2 + F * (1 - uv[:, 0])
-        d_v = Dv * laplace_uv[:, 1] + uxv2 - (F + k) * uv[:, 1]
+        d_u = self.Du * laplace_uv[:, 0] - uxv2 + F * (1 - uv[:, 0])
+        d_v = self.Dv * laplace_uv[:, 1] + uxv2 - (F + k) * uv[:, 1]
 
         d_uv = self.beta * torch.column_stack((d_u, d_v))
         return d_uv
