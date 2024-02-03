@@ -1195,35 +1195,31 @@ def data_train(model_config, bSparse=False):
 
         ax = fig.add_subplot(1, 6, 6)
         plt.title(r'Clustered particle embedding', fontsize=12)
-
+        model_a_ = model.a.clone().detach()
+        model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
+        for n in range(nclusters):
+            pos = np.argwhere(labels == n).squeeze().astype(int)
+            median_center = model_a_[pos, :]
+            median_center = torch.median(median_center, axis=0).values
+            model_a_[pos, :] = torch.median(median_center, axis=0).values
+        model_a_ = torch.reshape(model_a_, (model.a.shape[0], model.a.shape[1], model.a.shape[2]))
         for n in range(new_labels.shape[0]):
             pos = np.argwhere(new_labels == n).squeeze().astype(int)
-            plt.scatter(embedding[pos[0], 0], embedding[pos[0], 1], color=cmap.color(n), s=6)
+            plt.scatter(to_numpy(model_a_[pos[0], 0]), to_numpy(model_a_[pos[0], 1]), color=cmap.color(n), s=6)
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=12)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=12)
         plt.xticks(fontsize=10.0)
         plt.yticks(fontsize=10.0)
 
-        if (epoch == 1 * Nepochs // 4) | (epoch == 2 * Nepochs // 4) | (epoch == 3 * Nepochs // 4):
-
-            model_a_ = model.a.clone().detach()
-            model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
-            for n in range(nclusters):
-                pos = np.argwhere(labels == n).squeeze().astype(int)
-                median_center = model_a_[pos, :]
-                median_center = torch.median(median_center, axis=0).values
-                model_a_[pos, :] = torch.median(median_center, axis=0).values
-            model_a_ = torch.reshape(model_a_, (model.a.shape[0], model.a.shape[1], model.a.shape[2]))
-
-            # Constrain embedding with UMAP of plots clustering
-            if bReplace:
-                with torch.no_grad():
-                    for n in range(model.a.shape[0]):
-                        model.a[n] = model_a_[0].clone().detach()
-                print(f'regul_embedding: replaced')
-                logger.info(f'regul_embedding: replaced')
-                plt.text(0, 1.1, f'Replaced', ha='left', va='top', transform=ax.transAxes,
-                         fontsize=10)
+        if (bReplace) & ((epoch == 1 * Nepochs // 4) | (epoch == 2 * Nepochs // 4) | (epoch == 3 * Nepochs // 4)):
+            # Constrain embedding
+            with torch.no_grad():
+                for n in range(model.a.shape[0]):
+                    model.a[n] = model_a_[0].clone().detach()
+            print(f'regul_embedding: replaced')
+            logger.info(f'regul_embedding: replaced')
+            plt.text(0, 1.1, f'Replaced', ha='left', va='top', transform=ax.transAxes,
+                     fontsize=10)
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
