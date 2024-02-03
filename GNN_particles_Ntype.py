@@ -870,7 +870,7 @@ def data_train(model_config, bSparse=False):
 
         total_loss = 0
 
-        for N in trange(0, nframes * data_augmentation_loop // batch_size):
+        for N in trange(nframes * data_augmentation_loop // batch_size):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -998,16 +998,16 @@ def data_train(model_config, bSparse=False):
 
         list_loss.append(total_loss / (N + 1) / nparticles / batch_size)
 
-        fig = plt.figure(figsize=(16, 4))
+        fig = plt.figure(figsize=(18, 4))
         plt.ion()
-        ax = fig.add_subplot(1, 4, 1)
+        ax = fig.add_subplot(1, 5, 1)
         plt.plot(list_loss, color='k')
         plt.ylim([0, 0.010])
         plt.xlim([0, Nepochs])
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
 
-        ax = fig.add_subplot(1, 4, 2)
+        ax = fig.add_subplot(1, 5, 2)
         embedding = []
         for n in range(model.a.shape[0]):
             embedding.append(model.a[n])
@@ -1035,7 +1035,7 @@ def data_train(model_config, bSparse=False):
                 for n in range(nparticle_types):
                     plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5, color=cmap.color(n))
 
-        ax = fig.add_subplot(1, 4, 3)
+        ax = fig.add_subplot(1, 5, 3)
         if model_config['model'] == 'ElecParticles':
             acc_list = []
             for m in range(model.a.shape[0]):
@@ -1154,29 +1154,38 @@ def data_train(model_config, bSparse=False):
         # save UMAP projection
         np.save(f'./{log_dir}/tmp_training/umap_projection_{epoch}.npy', proj_interaction)
 
-        ax = fig.add_subplot(1, 4, 4)
+        ax = fig.add_subplot(1, 5, 4)
+        labels, nclusters = embedding_cluster.get(proj_interaction, 'distance')
+        for n in range(nclusters):
+            pos = np.argwhere(labels == n)
+            plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=5)
+        label_list = []
         for n in range(nparticle_types):
-            plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1],
-                        color=cmap.color(n), s=5, alpha=0.75)
+            tmp = labels[index_particles[n]]
+            label_list.append(np.round(np.median(tmp)))
+        label_list = np.array(label_list)
+
         plt.xlabel('UMAP 0', fontsize=12)
         plt.ylabel('UMAP 1', fontsize=12)
-        kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=5000, max_iter=10000,
-                        random_state=13)
+        plt.text(0., 1.1, f'Nclusters: {nclusters}', ha='left', va='top', transform=ax.transAxes)
 
-        if kmeans_input == 'plot':
-            kmeans.fit(proj_interaction)
-        if kmeans_input == 'embedding':
-            kmeans.fit(embedding_)
-
-        print(f'kmeans.inertia_: {np.round(kmeans.inertia_, 3)}')
-
+        ax = fig.add_subplot(1, 5, 5)
+        new_labels = labels.copy()
         for n in range(nparticle_types):
-            tmp = kmeans.labels_[index_particles[n]]
-            sub_group = np.round(np.median(tmp))
-            accuracy = len(np.argwhere(tmp == sub_group)) / len(tmp) * 100
-            print(f'Sub-group {n} accuracy: {np.round(accuracy, 3)}')
-        for n in range(model_config['ninteractions']):
-            plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
+            new_labels[labels == label_list[n]] = n
+            pos = np.argwhere(labels == label_list[n])
+            plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1],
+                        color=cmap.color(n), s=0.1)
+
+        T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
+        for n in range(1, nparticle_types):
+            T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
+        T1 = T1[:, None]
+        Accuracy = metrics.accuracy_score(to_numpy(T1), new_labels)
+        plt.text(0, 1.1, f'Accuracy: {np.round(Accuracy,3)}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
+        print (f'Accuracy: {np.round(Accuracy,3)}')
+        logger.info(f'Accuracy: {np.round(Accuracy,3)}')
+
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
         plt.close()
@@ -1186,8 +1195,8 @@ def data_train(model_config, bSparse=False):
             model_a_ = model.a.clone().detach()
             model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
             embedding_center = []
-            for k in range(model_config['ninteractions']):
-                pos = np.argwhere(kmeans.labels_ == k).squeeze().astype(int)
+            for n in range(nclusters):
+                pos = np.argwhere(labels == n).squeeze().astype(int)
                 median_center = model_a_[pos, :]
                 median_center = torch.median(median_center, axis=0).values
                 embedding_center.append(median_center.clone().detach())
@@ -3052,10 +3061,9 @@ if __name__ == '__main__':
                 value = float(value)
                 model_config[key] = value
 
-        cmap = cc(model_config=model_config)
+        cmap = cc(model_config=model_config)  # create colormap for given model_config
 
-
-        data_generate(model_config, device=device, bVisu=True, bStyle='bw', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//20, ratio=1, scenario='none' )
+        # data_generate(model_config, device=device, bVisu=True, bStyle='bw', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//20, ratio=1, scenario='none' )
         data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//200, ratio=1)

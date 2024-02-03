@@ -35,40 +35,57 @@ if __name__ == '__main__':
     plt.title(title)
     plt.show()
 
-    proj_interaction = np.load('/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/log/try_arbitrary_3b/tmp_training/umap_projection_0.npy')
+    for epoch in range(20):
 
-    fig = plt.figure(figsize=(8, 4))
-    ax = fig.add_subplot(1, 2, 1)
-    plt.ion()
+        proj_interaction = np.load(f'/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/log/try_arbitrary_3b/tmp_training/umap_projection_{epoch}.npy')
 
-    labels, nclusters = embedding_cluster.get(proj_interaction,'distance')
-    label_list = []
+        fig = plt.figure(figsize=(10, 3))
+        ax = fig.add_subplot(1, 4, 1)
+        # plt.ion()
+        labels, nclusters = embedding_cluster.get(proj_interaction,'distance')
+        label_list = []
+        for n in range(nclusters):
+            pos = np.argwhere(labels == n)
+            plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=5)
+            print(pos.shape)
+        for n in range(nparticle_types):
+            tmp = labels[index_particles[n]]
+            label_list.append(np.round(np.median(tmp)))
+        label_list = np.array(label_list)
+        new_labels = labels.copy()
+        ax = fig.add_subplot(1, 4, 2)
+        for n in range(nparticle_types):
+            new_labels[labels == label_list[n]] = n
+            pos = np.argwhere(labels == label_list[n])
+            plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1],
+                        color=cmap.color(n), s=0.1)
+        plt.xlabel(r'UMAP 0', fontsize=12)
+        plt.ylabel(r'UMAP 1', fontsize=12)
+        plt.text(0., 1.1, f'Nclusters: {nclusters}', ha='left', va='top', transform=ax.transAxes)
 
-    for n in range(nparticle_types):
-        tmp = labels[index_particles[n]]
-        sub_group = np.round(np.median(tmp))
-        label_list.append(sub_group)
-    label_list = np.array(label_list)
-    new_labels = labels.copy()
-    for n in range(nparticle_types):
-        new_labels[labels == label_list[n]] = n
-        pos = np.argwhere(labels == label_list[n])
-        plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1],
-                    color=cmap.color(n), s=0.1)
-    plt.xlabel(r'UMAP 0', fontsize=12)
-    plt.ylabel(r'UMAP 1', fontsize=12)
-    plt.text(0.05, 0.9, f'Nclusters: {nclusters}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
+        ax = fig.add_subplot(1, 4, 3)
+        T1 = torch.zeros(int(nparticles / nparticle_types))
+        for n in range(1, nparticle_types):
+            T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types))), 0)
+        T1 = T1[:, None]
+        confusion_matrix = metrics.confusion_matrix(to_numpy(T1), new_labels)  # , normalize='true')
+        cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix=confusion_matrix)
+        Accuracy = metrics.accuracy_score(to_numpy(T1), new_labels)
+        plt.text(0, 1.1, f'Accuracy: {Accuracy}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
+        cm_display.plot(ax=fig.gca(), cmap='Blues', include_values=True, values_format='d', colorbar=False)
 
-    T1 = torch.zeros(int(nparticles / nparticle_types))
-    for n in range(1, nparticle_types):
-        T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types))), 0)
-    T1 = T1[:, None]
-    confusion_matrix = metrics.confusion_matrix(to_numpy(T1), new_labels)  # , normalize='true')
-    cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix=confusion_matrix)
-    Accuracy = metrics.accuracy_score(to_numpy(T1), new_labels)
-    plt.text(0.05, 0.8, f'Accuracy: {Accuracy}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
+        ax = fig.add_subplot(1, 4, 4)
+        t = np.zeros((nclusters, 2))
+        for n in range(nparticle_types):
+            pos = np.argwhere(new_labels == n).squeeze().astype(int)
+            temp = proj_interaction[pos, :]
+            print(np.median(temp, axis=0))
+            t[n,:] = np.median(temp, axis=0)
+            plt.scatter(t[n, 0], t[n, 1],color=cmap.color(n), s=10)
+        plt.tight_layout()
 
-    ax = fig.add_subplot(1, 2, 2)
-    cm_display.plot(ax=fig.gca(), cmap='Blues', include_values=True, values_format='d', colorbar=False)
+        plt.show()
+
+
 
 
