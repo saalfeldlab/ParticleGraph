@@ -737,10 +737,12 @@ def data_train(model_config, bSparse=False):
     y = torch.reshape(y, (y.shape[0] * y.shape[1] * y.shape[2], y.shape[3]))
     vnorm = norm_velocity(x, device)
     ynorm = norm_acceleration(y, device)
+    vnorm = vnorm[4]
+    ynorm = ynorm[4]
     torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
     torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
     print(to_numpy(vnorm), to_numpy(ynorm))
-    logger.info(f'vnorm ynorm: {to_numpy(vnorm[4])} {to_numpy(ynorm[4])}')
+    logger.info(f'vnorm ynorm: {to_numpy(vnorm)} {to_numpy(ynorm)}')
     if bMesh:
         h_list = []
         for run in trange(NGraphs):
@@ -901,9 +903,9 @@ def data_train(model_config, bSparse=False):
                     dataset_batch.append(dataset)
                     y = y_list[run][k].clone().detach()
                     if model_config['prediction'] == '2nd_derivative':
-                        y = y / ynorm[4]
+                        y = y / ynorm
                     else:
-                        y = y / vnorm[4]
+                        y = y / vnorm
                     if data_augmentation:
                         new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
                         new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
@@ -940,7 +942,7 @@ def data_train(model_config, bSparse=False):
                 if bMesh:
                     pred = model(batch, data_id=run - 1)
                 else:
-                    pred = model(batch, data_id=run - 1, step=1, vnorm=vnorm, cos_phi=cos_phi, sin_phi=sin_phi)
+                    pred = model(batch, data_id=run - 1, training=True, vnorm=vnorm, phi=phi)
 
             loss = (pred - y_batch).norm(2) + loss_embedding
 
@@ -1050,7 +1052,7 @@ def data_train(model_config, bSparse=False):
                         acc_list.append(acc)
                         if n % 5 == 0:
                             plt.plot(to_numpy(rr),
-                                     to_numpy(acc) * to_numpy(ynorm[4]) / model_config['delta_t'],
+                                     to_numpy(acc) * to_numpy(ynorm) / model_config['delta_t'],
                                      linewidth=1,
                                      color=cmap.color(k), alpha=0.25)
             acc_list = torch.stack(acc_list)
@@ -1074,7 +1076,7 @@ def data_train(model_config, bSparse=False):
                 acc_list.append(acc)
 
                 plt.plot(rr.detach().cpu().numpy(),
-                         acc.detach().cpu().numpy() * ynorm[4].detach().cpu().numpy() / model_config['delta_t'],
+                         acc.detach().cpu().numpy() * ynorm.detach().cpu().numpy() / model_config['delta_t'],
                          color=cmap.color(x[n, 5].detach().cpu().numpy()), linewidth=1, alpha=0.25)
             acc_list = torch.stack(acc_list)
             plt.yscale('log')
@@ -1103,7 +1105,7 @@ def data_train(model_config, bSparse=False):
                 acc_list.append(acc)
                 if n % 5 == 0:
                     plt.plot(to_numpy(rr),
-                             to_numpy(acc) * to_numpy(ynorm[4]) / model_config['delta_t'],
+                             to_numpy(acc) * to_numpy(ynorm) / model_config['delta_t'],
                              color=cmap.color(to_numpy(x[n, 5])), linewidth=1, alpha=0.25)
             plt.xlabel('Distance [a.u]', fontsize=12)
             plt.ylabel('MLP [a.u]', fontsize=12)
@@ -1444,10 +1446,10 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
                 y = model(dataset, data_id=0, step=2, vnorm=vnorm, cos_phi=0, sin_phi=0)  # acceleration estimation
 
             if model_config['prediction'] == '2nd_derivative':
-                y = y * ynorm[4] * delta_t
+                y = y * ynorm * delta_t
                 x[:, 3:5] = x[:, 3:5] + y  # speed update
             else:
-                y = y * vnorm[4]
+                y = y * vnorm
                 x[:, 3:5] = y
 
             x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t )  # position update
@@ -1820,8 +1822,9 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
     y = torch.reshape(y, (y.shape[0] * y.shape[1] * y.shape[2], y.shape[3]))
     vnorm = norm_velocity(x, device)
     ynorm = norm_acceleration(y, device)
+    vnorm = vnorm[4]
+    ynorm = ynorm[4]
     print(vnorm, ynorm)
-    print(vnorm[4], ynorm[4])
 
     x_stat = np.array(x_stat)
     y_stat = np.array(y_stat)
@@ -2020,7 +2023,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
                         acc_list.append(acc)
                         if n % 5 == 0:
                             plt.plot(to_numpy(rr),
-                                     to_numpy(acc) * to_numpy(ynorm[4]),
+                                     to_numpy(acc) * to_numpy(ynorm),
                                      linewidth=1,
                                      color=cmap.color(k), alpha=0.25)
             acc_list = torch.stack(acc_list)
@@ -2045,7 +2048,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
                 acc = acc[:, 0]
                 acc_list.append(acc)
                 plt.plot(to_numpy(rr),
-                         to_numpy(acc) * to_numpy(ynorm[4]),
+                         to_numpy(acc) * to_numpy(ynorm),
                          color=cmap.color(to_numpy(x[n, 5])), linewidth=1, alpha=0.25)
             acc_list = torch.stack(acc_list)
             # plt.yscale('log')
@@ -2076,7 +2079,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
                 acc_list.append(acc)
                 if n % 5 == 0:
                     plt.plot(to_numpy(rr),
-                             to_numpy(acc) * to_numpy(ynorm[4]),
+                             to_numpy(acc) * to_numpy(ynorm),
                              color=cmap.color(to_numpy(x[n, 5])), linewidth=0.1, alpha=0.25)
             acc_list = torch.stack(acc_list)
             coeff_norm = to_numpy(acc_list)
@@ -2210,7 +2213,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
                 acc = model.lin_edge(in_features.float())
                 acc = acc[:, 0]
                 plt.plot(to_numpy(rr),
-                         to_numpy(acc) * to_numpy(ynorm[4]),
+                         to_numpy(acc) * to_numpy(ynorm),
                          linewidth=1)
         plt.xlim([0, 0.02])
         plt.ylim([-0.5E6, 0.5E6])
@@ -2227,7 +2230,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             acc = acc[:, 0]
             acc_list.append(acc)
             plt.plot(to_numpy(rr),
-                     to_numpy(acc) * to_numpy(ynorm[4]) ,
+                     to_numpy(acc) * to_numpy(ynorm) ,
                      color=cmap.color(to_numpy(x[n, 5])), linewidth=1, alpha=0.25)
         acc_list = torch.stack(acc_list)
         # plt.yscale('log')
@@ -2255,7 +2258,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             acc_list.append(acc)
             if n % 5 == 0:
                 plt.plot(to_numpy(rr),
-                         to_numpy(acc) * to_numpy(ynorm[4]) ,
+                         to_numpy(acc) * to_numpy(ynorm) ,
                          color=cmap.color(to_numpy(x[n, 5])), linewidth=0.1, alpha=0.25)
         plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=14)
         plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij}) [a.u.]$', fontsize=14)
@@ -2275,7 +2278,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             acc_list.append(acc)
             if n % 5 == 0:
                 plt.plot(to_numpy(rr),
-                         to_numpy(acc) * to_numpy(ynorm[4]) ,
+                         to_numpy(acc) * to_numpy(ynorm) ,
                          color=cmap.color(to_numpy(x[n, 5])), linewidth=1, alpha=0.25)
     elif bMesh:
         for n in range(nparticles):
@@ -2386,7 +2389,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
                 with torch.no_grad():
                     pred = model.lin_edge(in_features.float())
                 pred = pred[:, 0]
-                plot_list_pairwise.append(pred * ynorm[4])
+                plot_list_pairwise.append(pred * ynorm)
 
         p = [2, 1, -1]
         popt_list = []
@@ -2448,7 +2451,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             with torch.no_grad():
                 pred = model.lin_edge(in_features.float())
             pred = pred[:, 0]
-            plot_list.append(pred * ynorm[4] )
+            plot_list.append(pred * ynorm )
 
     if model_config['model'] == 'GravityParticles':
         p = np.linspace(0.5, 5, nparticle_types)
@@ -2470,7 +2473,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             with torch.no_grad():
                 pred = model.lin_edge(in_features.float())
             pred = pred[:, 0]
-            plot_list_2.append(pred * ynorm[4] )
+            plot_list_2.append(pred * ynorm )
 
         fig = plt.figure(figsize=(16, 4))
         plt.ion()
@@ -3024,7 +3027,7 @@ if __name__ == '__main__':
     # config_manager = create_config_manager(config_type='simulation')
 
     config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
-    config_list = ['config_arbitrary_3b'] # ,'config_boids_16_HR8','config_boids_16_HR9']# ['config_boids_16_HR7','config_boids_16_HR8','config_boids_16_HR9']
+    config_list = ['config_arbitrary_3c'] # ,'config_boids_16_HR8','config_boids_16_HR9']# ['config_boids_16_HR7','config_boids_16_HR8','config_boids_16_HR9']
 
 
     # Load a graph neural network model used to sparsify the particle embedding during training

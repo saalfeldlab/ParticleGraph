@@ -69,10 +69,10 @@ class InteractionParticles_extract(pyg.nn.MessagePassing):
         r = r[:, None]
 
         delta_pos = self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) / self.radius
-        x_i_vx = x_i[:, 3:4] / self.vnorm[4]
-        x_i_vy = x_i[:, 4:5] / self.vnorm[4]
-        x_j_vx = x_j[:, 3:4] / self.vnorm[4]
-        x_j_vy = x_j[:, 4:5] / self.vnorm[4]
+        x_i_vx = x_i[:, 3:4] / self.vnorm
+        x_i_vy = x_i[:, 4:5] / self.vnorm
+        x_j_vx = x_j[:, 3:4] / self.vnorm
+        x_j_vy = x_j[:, 4:5] / self.vnorm
 
         if (self.data_augmentation) & (self.step == 1):
             new_x = self.cos_phi * delta_pos[:, 0] + self.sin_phi * delta_pos[:, 1]
@@ -449,7 +449,7 @@ def func_RD3 (x, a, b, c, d, e, f, g, h, i, cc):
 
 def data_plot_FIG2():
 
-    config = 'config_arbitrary_3'
+    config = 'config_arbitrary_3b'
 
     # Load parameters from config file
     with open(f'./config/{config}.yaml', 'r') as file:
@@ -605,7 +605,7 @@ def data_plot_FIG2():
         acc_list.append(acc)
         if (n % (nparticles // 50) == 0):
             plt.plot(to_numpy(rr),
-                     to_numpy(acc) * to_numpy(ynorm[4]),
+                     to_numpy(acc) * to_numpy(ynorm),
                      color=cmap.color(to_numpy(x[n, 5])), linewidth=1)
     acc_list = torch.stack(acc_list)
     coeff_norm = to_numpy(acc_list)
@@ -739,7 +739,7 @@ def data_plot_FIG2():
         acc_list.append(acc)
         if (n % (nparticles // 50) == 0):
             plt.plot(to_numpy(rr),
-                     to_numpy(acc) * to_numpy(ynorm[4]),
+                     to_numpy(acc) * to_numpy(ynorm),
                      color=cmap.color(to_numpy(x[n, 5])), linewidth=1)
     acc_list = torch.stack(acc_list)
     coeff_norm = to_numpy(acc_list)
@@ -857,7 +857,7 @@ def data_plot_FIG2():
         acc = acc[:, 0]
         acc_list.append(acc)
         plt.plot(to_numpy(rr),
-                     to_numpy(acc) * to_numpy(ynorm[4]),
+                     to_numpy(acc) * to_numpy(ynorm),
                      color=cmap.color(n), linewidth=1)
     plt.xlabel(r'$r_{ij}$', fontsize=12)
     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
@@ -1035,10 +1035,10 @@ def data_plot_FIG2sup():
             y = model(dataset, data_id=0, step=2, vnorm=vnorm, cos_phi=0, sin_phi=0)  # acceleration estimation
 
         if model_config['prediction'] == '2nd_derivative':
-            y = y * ynorm[4] * delta_t
+            y = y * ynorm * delta_t
             x[:, 3:5] = x[:, 3:5] + y  # speed update
         else:
-            y = y * vnorm[4]
+            y = y * vnorm
             x[:, 3:5] = y
 
         x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t )  # position update
@@ -1171,10 +1171,10 @@ def data_plot_FIG2sup():
             y = model(dataset, data_id=0, step=2, vnorm=vnorm, cos_phi=0, sin_phi=0)  # acceleration estimation
 
         if model_config['prediction'] == '2nd_derivative':
-            y = y * ynorm[4] * delta_t
+            y = y * ynorm * delta_t
             x[:, 3:5] = x[:, 3:5] + y  # speed update
         else:
-            y = y * vnorm[4]
+            y = y * vnorm
             x[:, 3:5] = y
 
         x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t )  # position update
@@ -1309,10 +1309,10 @@ def data_plot_FIG2sup():
             y = model(dataset, data_id=0, step=2, vnorm=vnorm, cos_phi=0, sin_phi=0)  # acceleration estimation
 
         if model_config['prediction'] == '2nd_derivative':
-            y = y * ynorm[4] * delta_t
+            y = y * ynorm * delta_t
             x[:, 3:5] = x[:, 3:5] + y  # speed update
         else:
-            y = y * vnorm[4]
+            y = y * vnorm
             x[:, 3:5] = y
 
         x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t )  # position update
@@ -1401,10 +1401,10 @@ def data_plot_FIG2sup():
             y = model(dataset, data_id=0, step=2, vnorm=vnorm, cos_phi=0, sin_phi=0)  # acceleration estimation
 
         if model_config['prediction'] == '2nd_derivative':
-            y = y * ynorm[4] * delta_t
+            y = y * ynorm * delta_t
             x[:, 3:5] = x[:, 3:5] + y  # speed update
         else:
-            y = y * vnorm[4]
+            y = y * vnorm
             x[:, 3:5] = y
 
         x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t )  # position update
@@ -1549,7 +1549,7 @@ def data_plot_FIG3sup():
     vnorm = norm_velocity(x, device)
     ynorm = norm_acceleration(y, device)
     print(vnorm, ynorm)
-    print(vnorm[4], ynorm[4])
+    print(vnorm, ynorm)
 
     x_stat = np.array(x_stat)
     y_stat = np.array(y_stat)
@@ -1646,7 +1646,7 @@ def data_plot_FIG3sup():
         acc_list.append(acc)
         if (n % (nparticles // 50) == 0):
             plt.plot(to_numpy(rr),
-                     to_numpy(acc) * to_numpy(ynorm[4]),
+                     to_numpy(acc) * to_numpy(ynorm),
                      color=cmap.color(to_numpy(x[n, 5])), linewidth=1)
     acc_list = torch.stack(acc_list)
     coeff_norm = to_numpy(acc_list)
@@ -1771,7 +1771,7 @@ def data_plot_FIG3sup():
         acc_list.append(acc)
         if (n % (nparticles // 50) == 0):
             plt.plot(to_numpy(rr),
-                     to_numpy(acc) * to_numpy(ynorm[4]),
+                     to_numpy(acc) * to_numpy(ynorm),
                      color=cmap.color(to_numpy(x[n, 5])), linewidth=1)
     acc_list = torch.stack(acc_list)
     coeff_norm = to_numpy(acc_list)
@@ -1877,7 +1877,7 @@ def data_plot_FIG3sup():
         acc_list.append(acc)
         if (n % (nparticles // 50) == 0):
             plt.plot(to_numpy(rr),
-                     to_numpy(acc) * to_numpy(ynorm[4]),
+                     to_numpy(acc) * to_numpy(ynorm),
                      color=cmap.color(to_numpy(x[n, 5])), linewidth=1)
     plt.xlabel(r'$r_{ij}$', fontsize=12)
     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
@@ -1924,7 +1924,7 @@ def data_plot_FIG3sup():
         with torch.no_grad():
             pred = model.lin_edge(in_features.float())
         pred = pred[:, 0]
-        plot_list.append(pred * ynorm[4])
+        plot_list.append(pred * ynorm)
 
     rmserr_list = []
     for n in range(nparticle_types):
@@ -2089,10 +2089,10 @@ def data_plot_FIG4sup():
             y = model(dataset, data_id=0, step=2, vnorm=vnorm, cos_phi=0, sin_phi=0)  # acceleration estimation
 
         if model_config['prediction'] == '2nd_derivative':
-            y = y * ynorm[4] * delta_t
+            y = y * ynorm * delta_t
             x[:, 3:5] = x[:, 3:5] + y  # speed update
         else:
-            y = y * vnorm[4]
+            y = y * vnorm
             x[:, 3:5] = y
 
         x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t )  # position update
@@ -2225,10 +2225,10 @@ def data_plot_FIG4sup():
             y = model(dataset, data_id=0, step=2, vnorm=vnorm, cos_phi=0, sin_phi=0)  # acceleration estimation
 
         if model_config['prediction'] == '2nd_derivative':
-            y = y * ynorm[4] * delta_t
+            y = y * ynorm * delta_t
             x[:, 3:5] = x[:, 3:5] + y  # speed update
         else:
-            y = y * vnorm[4]
+            y = y * vnorm
             x[:, 3:5] = y
 
         x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t )  # position update
@@ -2363,10 +2363,10 @@ def data_plot_FIG4sup():
             y = model(dataset, data_id=0, step=2, vnorm=vnorm, cos_phi=0, sin_phi=0)  # acceleration estimation
 
         if model_config['prediction'] == '2nd_derivative':
-            y = y * ynorm[4] * delta_t
+            y = y * ynorm * delta_t
             x[:, 3:5] = x[:, 3:5] + y  # speed update
         else:
-            y = y * vnorm[4]
+            y = y * vnorm
             x[:, 3:5] = y
 
         x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t )  # position update
@@ -2455,10 +2455,10 @@ def data_plot_FIG4sup():
             y = model(dataset, data_id=0, step=2, vnorm=vnorm, cos_phi=0, sin_phi=0)  # acceleration estimation
 
         if model_config['prediction'] == '2nd_derivative':
-            y = y * ynorm[4] * delta_t
+            y = y * ynorm * delta_t
             x[:, 3:5] = x[:, 3:5] + y  # speed update
         else:
-            y = y * vnorm[4]
+            y = y * vnorm
             x[:, 3:5] = y
 
         x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t )  # position update
@@ -2607,7 +2607,7 @@ def data_plot_FIG3():
     vnorm = norm_velocity(x, device)
     ynorm = norm_acceleration(y, device)
     print(vnorm, ynorm)
-    print(vnorm[4], ynorm[4])
+    print(vnorm, ynorm)
 
     x_stat = np.array(x_stat)
     y_stat = np.array(y_stat)
@@ -2817,7 +2817,7 @@ def data_plot_FIG3():
         acc = acc[:, 0]
         acc_list.append(acc)
         plt.plot(to_numpy(rr),
-                 to_numpy(acc) * to_numpy(ynorm[4]),
+                 to_numpy(acc) * to_numpy(ynorm),
                  color=cmap.color(n), linewidth=1, alpha=1)
     plt.xlim([0, 0.02])
     plt.ylim([0, 0.5E6])
@@ -2865,7 +2865,7 @@ def data_plot_FIG3():
         with torch.no_grad():
             pred = model.lin_edge(in_features.float())
         pred = pred[:, 0]
-        plot_list.append(pred * ynorm[4])
+        plot_list.append(pred * ynorm)
     p = np.linspace(0.5, 5, nparticle_types)
     popt_list = []
     for n in range(nparticle_types):
@@ -2918,7 +2918,7 @@ def data_plot_FIG3():
             with torch.no_grad():
                 pred = model.lin_edge(in_features.float())
             pred = pred[:, 0]
-            plot_list_2.append(pred * ynorm[4])
+            plot_list_2.append(pred * ynorm)
 
     ax = fig.add_subplot(3, 3, 9)
     print('9')
@@ -3055,7 +3055,7 @@ def data_plot_FIG3_continous():
     vnorm = norm_velocity(x, device)
     ynorm = norm_acceleration(y, device)
     print(vnorm, ynorm)
-    print(vnorm[4], ynorm[4])
+    print(vnorm, ynorm)
 
     x_stat = np.array(x_stat)
     y_stat = np.array(y_stat)
@@ -3170,7 +3170,7 @@ def data_plot_FIG3_continous():
         acc = acc[:, 0]
         acc_list.append(acc)
         plt.plot(to_numpy(rr),
-                 to_numpy(acc) * to_numpy(ynorm[4]),
+                 to_numpy(acc) * to_numpy(ynorm),
                  color=colors[n], linewidth=1, alpha=0.25)
     plt.xlim([0, 0.02])
     plt.ylim([0, 0.5E6])
@@ -3207,7 +3207,7 @@ def data_plot_FIG3_continous():
         with torch.no_grad():
             pred = model.lin_edge(in_features.float())
         pred = pred[:, 0]
-        plot_list.append(pred * ynorm[4])
+        plot_list.append(pred * ynorm)
     p = np.linspace(0.5, 5, nparticles)
     popt_list = []
     for n in range(nparticles):
@@ -3401,7 +3401,7 @@ def data_plot_FIG4():
                 acc_list.append(acc)
                 # if n % 5 == 0:
                 #     plt.plot(to_numpy(rr),
-                #              to_numpy(acc) * to_numpy(ynorm[4]),
+                #              to_numpy(acc) * to_numpy(ynorm),
                 #              linewidth=1,
                 #              color=cmap.color(k), alpha=0.25)
     acc_list = torch.stack(acc_list)
@@ -3510,7 +3510,7 @@ def data_plot_FIG4():
             acc = model.lin_edge(in_features.float())
             acc = acc[:, 0]
             plt.plot(to_numpy(rr),
-                     to_numpy(acc) * to_numpy(ynorm[4]),
+                     to_numpy(acc) * to_numpy(ynorm),
                      linewidth=1)
     plt.xlabel(r'$r_{ij}$', fontsize=12)
     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, r_{ij})$', fontsize=12)
@@ -3555,7 +3555,7 @@ def data_plot_FIG4():
             with torch.no_grad():
                 pred = model.lin_edge(in_features.float())
             pred = pred[:, 0]
-            plot_list_pairwise.append(pred * ynorm[4])
+            plot_list_pairwise.append(pred * ynorm)
     p = [2, 1, -1]
     popt_list = []
     ptrue_list = []
@@ -3776,10 +3776,10 @@ def data_plot_FIG5sup():
             y = model(dataset, data_id=0, step=2, vnorm=vnorm, cos_phi=0, sin_phi=0)  # acceleration estimation
 
         if model_config['prediction'] == '2nd_derivative':
-            y = y * ynorm[4] * delta_t
+            y = y * ynorm * delta_t
             x[:, 3:5] = x[:, 3:5] + y  # speed update
         else:
-            y = y * vnorm[4]
+            y = y * vnorm
             x[:, 3:5] = y
 
         x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t )  # position update
@@ -3955,10 +3955,10 @@ def data_plot_FIG5sup():
             y = model(dataset, data_id=0, step=2, vnorm=vnorm, cos_phi=0, sin_phi=0)  # acceleration estimation
 
         if model_config['prediction'] == '2nd_derivative':
-            y = y * ynorm[4] * delta_t
+            y = y * ynorm * delta_t
             x[:, 3:5] = x[:, 3:5] + y  # speed update
         else:
-            y = y * vnorm[4]
+            y = y * vnorm
             x[:, 3:5] = y
 
         x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t )  # position update
@@ -4134,7 +4134,7 @@ def data_plot_FIG5():
         vnorm = norm_velocity(x, device)
         ynorm = norm_acceleration(y, device)
         print(vnorm, ynorm)
-        print(vnorm[4], ynorm[4])
+        print(vnorm, ynorm)
 
         x_stat = np.array(x_stat)
         y_stat = np.array(y_stat)
@@ -4334,8 +4334,8 @@ def data_plot_FIG5():
 
         with torch.no_grad():
             y, in_features, lin_edge_out = model(dataset, data_id=0, step=2, vnorm=vnorm, cos_phi=0, sin_phi=0)  # acceleration estimation
-        y = y * ynorm[4]
-        lin_edge_out = lin_edge_out * ynorm[4]
+        y = y * ynorm
+        lin_edge_out = lin_edge_out * ynorm
 
         print(f'PDE_B')
         p = torch.rand(nparticle_types, 3, device=device) * 100  # comprised between 10 and 50
@@ -4467,32 +4467,6 @@ def data_plot_FIG5():
         plt.close()
 
 
-    if False:
-        # TO BE CORRECTED ###
-
-        fig = plt.figure(figsize=(10, 9))
-        plt.ion()
-        n = 14
-        b_cohesion = p[n, 0:1].repeat(1, 2) * 0.5E-5 * diffx
-        b_alignment = p[n, 1:2].repeat(1, 2) * 5E-4 * diffv
-        b_separation = - p[n, 2:3].repeat(1, 2) * 1E-8 * diffx / (r[:, None].repeat(1, 2))
-        b_sum = b_cohesion + b_alignment + b_separation
-        pos = np.argwhere(type == n)
-        pos = pos[:, 0].astype(int)
-        plt.scatter(to_numpy(r[pos]), to_numpy(torch.norm(lin_edge_out[pos, :], dim=1)), color=cmap.color(n), s=1)
-        plt.scatter(to_numpy(r[pos]), to_numpy(torch.norm(sum[pos, :], dim=1)), color='k', s=1, alpha=0.5)
-        plt.scatter(to_numpy(r[pos]), to_numpy(torch.norm(b_sum[pos, :], dim=1)), color='r', s=1, alpha=0.5)
-        pos = np.argwhere(type == n)
-        pos = pos[:, 0].astype(int)
-        xdiff = to_numpy(diffx[pos, :])
-        vdiff = to_numpy(diffv[pos, :])
-        rdiff = to_numpy(r[pos])
-        x_data = np.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
-        y_data = to_numpy(torch.norm(b_sum[pos, :], dim=1))
-        lin_fit, lin_fitv = curve_fit(func_boids, x_data, y_data, method='dogbox', p0=[50*1E-5, 50*5E-4, 50*1E-8])
-        fit_sum = func_boids(x_data, lin_fit[0], lin_fit[1], lin_fit[2])
-        plt.scatter(to_numpy(r[pos]), fit_sum, color='b', s=2)
-
 def data_plot_FIG6():
 
     config = 'config_wave_HR3'
@@ -4546,92 +4520,20 @@ def data_plot_FIG6():
     print('Graph files N: ', NGraphs - 1)
     time.sleep(0.5)
 
-    # arr = np.arange(0, NGraphs)
-    # x_list=[]
-    # y_list=[]
-    # for run in arr:
-    #     x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
-    #     y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
-    #     x_list.append(torch.stack(x))
-    #     y_list.append(torch.stack(y))
-    # x = torch.stack(x_list)
-    # x = torch.reshape(x,(x.shape[0] * x.shape[1] * x.shape[2], x.shape[3]))
-    # y = torch.stack(y_list)
-    # y = torch.reshape(y,(y.shape[0]*y.shape[1]*y.shape[2],y.shape[3]))
-    # vnorm = norm_velocity(x, device)
-    # ynorm = norm_acceleration(y, device)
-    # torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
-    # torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
-    # print (vnorm,ynorm)
+    x_list = []
+    y_list = []
+    print('Load normalizations ...')
+    time.sleep(1)
 
-    if True:
+    x_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_0.pt', map_location=device))
+    y_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_0.pt', map_location=device))
 
-        x_list = []
-        y_list = []
-        print('Load normalizations ...')
-        time.sleep(1)
+    vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
+    ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
 
-        x_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_0.pt', map_location=device))
-        y_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_0.pt', map_location=device))
-
-        vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
-        ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
-
-        h_list = []
-        h_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/h_list_0.pt', map_location=device))
-        hnorm = torch.load(os.path.join(log_dir, 'hnorm.pt'), map_location=device)
-
-    else:
-        x_list = []
-        y_list = []
-        x_stat = []
-        y_stat = []
-        distance_list = []
-        deg_list = []
-        print('Load normalizations ...')
-        time.sleep(1)
-
-        for run in trange(NGraphs):
-            x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
-            y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
-            if run == 0:
-                for k in np.arange(0, len(x) - 1, 4):
-                    distance = torch.sum(bc_diff(x[k][:, None, 1:3] - x[k][None, :, 1:3]) ** 2, axis=2)
-                    t = torch.Tensor([radius ** 2])  # threshold
-                    adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                    edge_index = adj_t.nonzero().t().contiguous()
-                    dataset = data.Data(x=x, edge_index=edge_index)
-                    distance = np.sqrt(to_numpy(distance[edge_index[0, :], edge_index[1, :]]))
-                    deg = degree(dataset.edge_index[0], dataset.num_nodes)
-                    deg_list.append(to_numpy(deg))
-                    distance_list.append([np.mean(distance), np.std(distance)])
-                    x_stat.append(to_numpy(torch.concatenate((torch.mean(x[k][:, 3:5], axis=0), torch.std(x[k][:, 3:5], axis=0)),
-                                                    axis=-1)))
-                    y_stat.append(to_numpy(torch.concatenate((torch.mean(y[k], axis=0), torch.std(y[k], axis=0)),
-                                                    axis=-1)))
-            x_list.append(torch.stack(x))
-            y_list.append(torch.stack(y))
-
-        x = torch.stack(x_list)
-        x = torch.reshape(x, (x.shape[0] * x.shape[1] * x.shape[2], x.shape[3]))
-        y = torch.stack(y_list)
-        y = torch.reshape(y, (y.shape[0] * y.shape[1] * y.shape[2], y.shape[3]))
-        vnorm = norm_velocity(x, device)
-        ynorm = norm_acceleration(y, device)
-        print(vnorm, ynorm)
-        print(vnorm[4], ynorm[4])
-
-        h_list = []
-        for run in trange(NGraphs):
-            h = torch.load(f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt', map_location=device)
-            h_list.append(torch.stack(h))
-        h = torch.stack(h_list)
-        h = torch.reshape(h, (h.shape[0] * h.shape[1] * h.shape[2], h.shape[3]))
-        hnorm = torch.std(h)
-        torch.save(hnorm, os.path.join(log_dir, 'hnorm.pt'))
-        print(hnorm)
-
-
+    h_list = []
+    h_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/h_list_0.pt', map_location=device))
+    hnorm = torch.load(os.path.join(log_dir, 'hnorm.pt'), map_location=device)
 
 
     model = MeshLaplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
@@ -5328,7 +5230,7 @@ if __name__ == '__main__':
     print(f'device {device}')
 
     # arbitrary_3 training
-    # data_plot_FIG2()
+    data_plot_FIG2()
     # print(' ')
     # print(' ')
     # arbitrary_3 inference
@@ -5343,7 +5245,7 @@ if __name__ == '__main__':
     # data_plot_FIG4sup()
 
     # gravity model
-    data_plot_FIG3()
+    # data_plot_FIG3()
     # gravity model continuous
     # data_plot_FIG3_continous()
 
