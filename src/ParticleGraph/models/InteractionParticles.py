@@ -60,60 +60,56 @@ class InteractionParticles(pyg.nn.MessagePassing):
             self.lin_update = MLP(input_size=self.output_size + self.embedding + 2, output_size=self.output_size,
                                   nlayers=self.nlayers_update, hidden_size=self.hidden_size_update, device=self.device)
 
-    def forward(self, data, data_id, step, vnorm, cos_phi, sin_phi):
+    def forward(self, data, data_id, training, vnorm, phi):
 
         self.data_id = data_id
         self.vnorm = vnorm
-        self.step = step
-        self.cos_phi = cos_phi
-        self.sin_phi = sin_phi
+        self.cos_phi = torch.cos(phi)
+        self.sin_phi = torch.sin(phi)
+        self.training = training
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
-        pred = self.propagate(edge_index, x=(x, x))
+        pos = x[:, 1:3]
+        d_pos = x[:, 3:5]
+        particle_id = x[:, 0:1]
+
+        pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id)
 
         if self.upgrade_type == 'linear':
-            embedding = self.a[self.data_id, to_numpy(x[:, 0]), :]
+            embedding = self.a[self.data_id, particle_id, :]
             pred = self.lin_update(torch.cat((pred, x[:, 3:5], embedding), dim=-1))
 
-        if step == 2:  # test, if degree = 0 acc =0
-            deg = pyg_utils.degree(edge_index[0], data.num_nodes)
-            deg = (deg > 0)
-            deg = (deg > 0).type(torch.float32)
-            deg = torch.concatenate((deg[:, None], deg[:, None]), axis=1)
-            return deg * pred
-        else:
-            return pred
+        return pred
 
-    def message(self, x_i, x_j):
+    def message(self, pos_i, pos_j, d_pos_i, d_pos_j, particle_id_i, particle_id_j):
         # squared distance
-        r = torch.sqrt(torch.sum(self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)) / self.radius
+        r = torch.sqrt(torch.sum(self.bc_diff(pos_j - pos_i) ** 2, axis=1)) / self.radius
         r = r[:, None]
+        delta_pos = self.bc_diff(pos_j - pos_i) / self.radius
+        dpos_x_i = d_pos_i[:, 0] / self.vnorm
+        dpos_y_i = d_pos_i[:, 1] / self.vnorm
+        dpos_x_j = d_pos_j[:, 0] / self.vnorm
+        dpos_y_j = d_pos_j[:, 1] / self.vnorm
 
-        delta_pos = self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) / self.radius
-        x_i_vx = x_i[:, 3:4] / self.vnorm[4]
-        x_i_vy = x_i[:, 4:5] / self.vnorm[4]
-        x_j_vx = x_j[:, 3:4] / self.vnorm[4]
-        x_j_vy = x_j[:, 4:5] / self.vnorm[4]
+        if (self.data_augmentation) & (self.training == True):
+            new_delta_pos_x = self.cos_phi * delta_pos[:, 0] + self.sin_phi * delta_pos[:, 1]
+            new_delta_pos_y = -self.sin_phi * delta_pos[:, 0] + self.cos_phi * delta_pos[:, 1]
+            delta_pos[:, 0] = new_delta_pos_x
+            delta_pos[:, 1] = new_delta_pos_y
+            new_dpos_x_i = self.cos_phi * dpos_x_i + self.sin_phi * dpos_y_i
+            new_dpos_y_i = -self.sin_phi * dpos_x_i + self.cos_phi * dpos_y_i
+            dpos_x_i = new_dpos_x_i
+            dpos_y_i = new_dpos_y_i
+            new_dpos_x_j = self.cos_phi * dpos_x_j + self.sin_phi * dpos_y_j
+            new_dpos_y_j = -self.sin_phi * dpos_x_j + self.cos_phi * dpos_y_j
+            dpos_x_j = new_dpos_x_j
+            dpos_y_j = new_dpos_y_j
 
-        if (self.data_augmentation) & (self.step == 1):
-            new_x = self.cos_phi * delta_pos[:, 0] + self.sin_phi * delta_pos[:, 1]
-            new_y = -self.sin_phi * delta_pos[:, 0] + self.cos_phi * delta_pos[:, 1]
-            delta_pos[:, 0] = new_x
-            delta_pos[:, 1] = new_y
-            new_vx = self.cos_phi * x_i_vx + self.sin_phi * x_i_vy
-            new_vy = -self.sin_phi * x_i_vx + self.cos_phi * x_i_vy
-            x_i_vx = new_vx
-            x_i_vy = new_vy
-            new_vx = self.cos_phi * x_j_vx + self.sin_phi * x_j_vy
-            new_vy = -self.sin_phi * x_j_vx + self.cos_phi * x_j_vy
-            x_j_vx = new_vx
-            x_j_vy = new_vy
-
-        embedding = self.a[self.data_id, to_numpy(x_i[:, 0]), :]
+        embedding = self.a[self.data_id, to_numpy(particle_id_i), :].squeeze()
 
         if self.prediction == '2nd_derivative':
-            in_features = torch.cat((delta_pos, r, x_i_vx, x_i_vy, x_j_vx, x_j_vy, embedding), dim=-1)
+            in_features = torch.cat((delta_pos, r, dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None], dpos_y_j[:, None], embedding), dim=-1)
         if self.prediction == 'first_derivative':
             in_features = torch.cat((delta_pos, r, embedding), dim=-1)
 
