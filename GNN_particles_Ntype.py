@@ -1152,7 +1152,7 @@ def data_train(model_config, bSparse=False):
                 pos = np.argwhere(kmeans.labels_ == n).squeeze().astype(int)
 
         # save UMAP projection
-        np.save(f'./{log_dir}/training/umap_projection_{epoch}.npy', proj_interaction)
+        np.save(f'./{log_dir}/tmp_training/umap_projection_{epoch}.npy', proj_interaction)
 
         ax = fig.add_subplot(1, 4, 4)
         for n in range(nparticle_types):
