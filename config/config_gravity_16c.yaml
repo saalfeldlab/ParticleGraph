@@ -31,4 +31,4 @@ arrow_length: 10
 cmap: 'tab20'
 arrow_length: 1
 description: 'Gravity'
-sparsity: 'regul_replace'
+sparsity: 'replace'
