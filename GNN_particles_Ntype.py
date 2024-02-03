@@ -3024,7 +3024,7 @@ if __name__ == '__main__':
     # config_manager = create_config_manager(config_type='simulation')
 
     config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
-    config_list = ['config_gravity_16'] # ,'config_boids_16_HR8','config_boids_16_HR9']# ['config_boids_16_HR7','config_boids_16_HR8','config_boids_16_HR9']
+    config_list = ['config_arbitrary_3b'] # ,'config_boids_16_HR8','config_boids_16_HR9']# ['config_boids_16_HR7','config_boids_16_HR8','config_boids_16_HR9']
 
 
     # Load a graph neural network model used to sparsify the particle embedding during training
