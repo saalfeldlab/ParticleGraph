@@ -22,7 +22,7 @@ embedding: 2
 model: 'GravityParticles'
 prediction: '2nd_derivative'
 upgrade_type: 'none'
-p: 'continuous'
+p: [-1]
 nrun: 2
 clamp: 0
 pred_limit: 1E+9

@@ -239,7 +239,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             print(f'p{n}: {np.round(to_numpy(torch.squeeze(p[n])), 4)}')
         torch.save(torch.squeeze(p), f'graphs_data/graphs_particles_{dataset_name}/p.pt')
     if model_config['model'] == 'GravityParticles':
-        if model_config['p'] == 'continuous':
+        if model_config['p'] == -1:
             p = np.linspace(0.5, 5, nparticles)
             p = torch.tensor(p, device=device)
             print ('p: continous ')
