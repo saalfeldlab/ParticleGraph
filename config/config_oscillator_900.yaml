@@ -6,7 +6,7 @@ n_mp_layers: 5
 noise_level: 0
 radius: 0.05
 min_radius: 0.002
-nparticles: 400
+nparticles: 900
 nparticle_types: 5
 ninteractions: 5
 kmeans_input: 'plot'

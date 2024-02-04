@@ -24,37 +24,36 @@ class PDE_O(pyg.nn.MessagePassing):
         the speed of the particles (dimension 2)
     """
 
-    def __init__(self, aggr_type=[], bc_diff=[], p=[], beta=[]):
+    def __init__(self, aggr_type=[], bc_diff=[], p=[], beta=[], rr=[]):
         super(PDE_O, self).__init__(aggr=aggr_type)  # "mean" aggregation.
 
         self.bc_diff = bc_diff
         self.p = p
         self.beta = beta
+        self.rr = rr
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
-        particle_type = to_numpy(x[:, 5])
-        p = self.p[particle_type]
-        p = p[:, None]
+        # particle_type = to_numpy(x[:, 5])
+        # p = self.p[particle_type]
+        # p = p[:, None]
 
-        pos = x[:, 1:3]
-        pos_0 = x[:,6:8]
-        w = self.beta * p
+        degree = pyg_utils.degree(edge_index[0], x.size(0), dtype=x.dtype)
 
-        d_pos = torch.zeros_like(pos)
-        d_pos[:,0:1] = -w.repeat(1,1)*self.bc_diff(pos[:,1:2] - pos_0[:,1:2])
-        d_pos[:,1:2] = w.repeat(1,1)*self.bc_diff(pos[:,0:1] - pos_0[:,0:1])
+        theta = data.x[:,8:9]
+        d_theta0 = data.x[:,10:11]
 
-        # d_pos_p = self.propagate(edge_index, d_pos=d_pos)
-        # d_pos = d_pos + d_pos_p
+        d_theta = self.propagate(edge_index, theta=theta)
 
-        return d_pos
+        d_theta = d_theta0 +  5e-4 * d_theta
+        return d_theta
 
-    def message(self, d_pos_j):
+    def message(self, theta_i, theta_j):
 
-        return d_pos_j
+
+        return torch.sin(theta_j - theta_i)
 
     def psi(self, r, p):
         return r * p

@@ -259,7 +259,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
         if len(model_config['p']) > 0:
             for n in range(nparticle_types):
                 p[n] = torch.tensor(model_config['p'][n])
-        model = PDE_O(aggr_type=aggr_type, p=torch.squeeze(p), bc_diff=bc_diff, beta=model_config['beta'], a=0.01)
+        model = PDE_O(aggr_type=aggr_type, p=torch.squeeze(p), bc_diff=bc_diff, beta=model_config['beta'])
 
     torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model.pt')
 
@@ -325,8 +325,8 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
 
         if (bMesh) | (model_config['model'] == 'PDE_O'):
             x_width = int(np.sqrt(nparticles))
-            xs = torch.linspace(0, 1, steps=x_width)
-            ys = torch.linspace(0, 1, steps=x_width)
+            xs = torch.linspace(1/x_width/2, 1-1/x_width/2, steps=x_width)
+            ys = torch.linspace(1/x_width/2, 1-1/x_width/2, steps=x_width)
             x, y = torch.meshgrid(xs, ys, indexing='xy')
             x = torch.reshape(x, (x_width ** 2, 1))
             y = torch.reshape(y, (x_width ** 2, 1))
@@ -353,12 +353,14 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                 H1[:, 0] = torch.tensor(values / 255 * 5000, device=device)
             if model_config['model'] == 'PDE_O':
 
-                H1 = torch.zeros_like(X1)
+                H1 = torch.zeros((nparticles, 5), device=device)
                 H1[0:nparticles, 0:1] = x[0:nparticles]
                 H1[0:nparticles, 1:2] = y[0:nparticles]
-                phi = 0 * torch.randn(nparticles, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
-                X1[:,0] =H1[:,0] + 3*x_width * torch.cos(phi)
-                X1[:,1] = H1[:, 1] + 3*x_width * torch.sin(phi)
+                H1[0:nparticles, 2:3] = torch.randn(nparticles, 1, device=device) * 2 * np.pi /10    # theta
+                H1[0:nparticles, 3:4] = torch.ones(nparticles, 1, device=device) * np.pi/200    # d_theta
+                H1[0:nparticles, 4:5] = H1[0:nparticles, 3:4]                                   # d_theta0
+                X1[:,0] = H1[:,0] + 3*x_width * torch.cos(H1[:, 2])
+                X1[:,1] = H1[:,1] + 3*x_width * torch.sin(H1[:, 2])
 
 
             i0 = imread(f'graphs_data/{particle_type_map}')
@@ -440,14 +442,19 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
 
             # Euler integration update
             if not (bMesh):
-                if model_config['prediction'] == '2nd_derivative':
-                    V1 += y[:, 0:2] * delta_t
-                else:
-                    V1 = y[:, 0:2]
-                X1 = bc_pos(X1 + V1 * delta_t)
+
                 if model_config['model'] == 'PDE_O':
-                    distance= torch.sqrt(torch.sum(bc_diff(X1-H1) ** 2, axis=1))
-                    X1 = bc_pos(H1 + bc_diff(X1-H1)/(distance[:,None]+1e-8)*3*x_width)
+                    H1[:, 2] = H1[:, 2] + y.squeeze() * delta_t
+                    X1[:, 0] = H1[:, 0] + 3 * x_width * torch.cos(H1[:, 2])
+                    X1[:, 1] = H1[:, 1] + 3 * x_width * torch.sin(H1[:, 2])
+                    X1 = bc_pos(X1)
+                else:
+                    if model_config['prediction'] == '2nd_derivative':
+                        V1 += y[:, 0:2] * delta_t
+                    else:
+                        V1 = y[:, 0:2]
+                    X1 = bc_pos(X1 + V1 * delta_t)
+
                 A1 = A1 + 1
             # append h_list
             # Euler integration update for mesh
@@ -535,13 +542,11 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
 
                 if 'color' in bStyle:
 
-                    sc=80
-
                     fig = plt.figure(figsize=(12, 12))
                     # plt.ion()
                     if model_config['model'] == 'PDE_O':
-                        plt.scatter(H1[:, 0].detach().cpu().numpy(), H1[:, 1].detach().cpu().numpy(), s=1)
-                        plt.scatter(X1[:, 0].detach().cpu().numpy(), X1[:, 1].detach().cpu().numpy(), s=5, c='r')
+                        plt.scatter(H1[:, 0].detach().cpu().numpy(), H1[:, 1].detach().cpu().numpy(), s=2, c='b')
+                        plt.scatter(X1[:, 0].detach().cpu().numpy(), X1[:, 1].detach().cpu().numpy(), s=20, c='r', alpha=0.75)
                         plt.xlim([0, 1])
                         plt.ylim([0, 1])
                     else:
@@ -3033,7 +3038,7 @@ if __name__ == '__main__':
     # config_manager = create_config_manager(config_type='simulation')
 
     config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
-    config_list =['config_oscillator_400'] #  ['config_gravity_16_HR_continuous_c'] # ['config_Coulomb_3b'] # ['config_boids_16_HR2b'] # ['config_Coulomb_3b'] #[''] # ['config_arbitrary_3c'] #
+    config_list =['config_oscillator_900'] #  ['config_gravity_16_HR_continuous_c'] # ['config_Coulomb_3b'] # ['config_boids_16_HR2b'] # ['config_Coulomb_3b'] #[''] # ['config_arbitrary_3c'] #
 
 
     # Load a graph neural network model used to sparsify the particle embedding during training
@@ -3059,7 +3064,7 @@ if __name__ == '__main__':
 
         cmap = cc(model_config=model_config)  # create colormap for given model_config
 
-        data_generate(model_config, device=device, bVisu=False, bStyle='color', alpha=1, bErase=True, bLoad_p=False, step=5) #model_config['nframes']//20)
+        data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, bLoad_p=False, step=5) #model_config['nframes']//20)
         # data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//20, ratio=1)
