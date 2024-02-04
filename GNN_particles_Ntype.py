@@ -1207,12 +1207,11 @@ def data_train(model_config, bSparse=False):
 
         ax = fig.add_subplot(1, 6, 5)
         new_labels = labels.copy()
-        for n in range(nparticle_types):
-            new_labels[labels == label_list[n]] = n
-            pos = np.argwhere(labels == label_list[n])
-            plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1],
-                        color=cmap.color(n), s=0.1)
-
+        # for n in range(nparticle_types):
+        #     new_labels[labels == label_list[n]] = n
+        #     pos = np.argwhere(labels == label_list[n])
+        #     plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1],
+        #                 color=cmap.color(n), s=0.1)
         Accuracy = metrics.accuracy_score(to_numpy(T1), new_labels)
         plt.text(0, 1.1, f'Accuracy: {np.round(Accuracy,3)}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
         print (f'Accuracy: {np.round(Accuracy,3)}')
@@ -1228,9 +1227,9 @@ def data_train(model_config, bSparse=False):
             median_center = torch.median(median_center, axis=0).values
             model_a_[pos, :] = torch.median(median_center, axis=0).values
         model_a_ = torch.reshape(model_a_, (model.a.shape[0], model.a.shape[1], model.a.shape[2]))
-        for n in np.unique(new_labels):
-            pos = np.argwhere(new_labels == n).squeeze().astype(int)
-            plt.scatter(to_numpy(model_a_[0,pos[0], 0]), to_numpy(model_a_[0,pos[0], 1]), color=cmap.color(n), s=6)
+        # for n in np.unique(new_labels):
+        #     pos = np.argwhere(new_labels == n).squeeze().astype(int)
+        #     plt.scatter(to_numpy(model_a_[0,pos[0], 0]), to_numpy(model_a_[0,pos[0], 1]), color=cmap.color(n), s=6)
         plt.xlabel('ai0', fontsize=12)
         plt.ylabel('ai1', fontsize=12)
         plt.xticks(fontsize=10.0)
@@ -3075,7 +3074,7 @@ if __name__ == '__main__':
     # config_manager = create_config_manager(config_type='simulation')
 
     config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
-    config_list = ['config_gravity_16c_HR_continuous'] # ['config_boids_16_HR2b'] # ['config_Coulomb_3b'] #['config_oscillator_400'] # ['config_gravity_16c_HR_continuous'] # ['config_arbitrary_3c'] #
+    config_list = ['config_Coulomb_3b'] # ['config_boids_16_HR2b'] # ['config_Coulomb_3b'] #['config_oscillator_400'] # ['config_gravity_16c_HR_continuous'] # ['config_arbitrary_3c'] #
 
 
     # Load a graph neural network model used to sparsify the particle embedding during training
