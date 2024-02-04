@@ -19,7 +19,7 @@ boundary: 'no'  # periodic   'no'  # no boundary condition
 data_augmentation: True
 batch_size: 8
 embedding: 2
-model: 'GravityParticles'
+model: 'PDE_G'
 prediction: '2nd_derivative'
 upgrade_type: 'none'
 p: [-1]
