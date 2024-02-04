@@ -31,7 +31,7 @@ os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
 from ParticleGraph.data_loaders import *
 from ParticleGraph.config_manager import create_config_manager, ConfigManager
-from ParticleGraph.utils import to_numpy
+from ParticleGraph.utils import to_numpy, cc
 from ParticleGraph.generators.PDE_A import PDE_A
 from ParticleGraph.generators.PDE_B import PDE_B
 from ParticleGraph.generators.PDE_E import PDE_E
@@ -92,46 +92,6 @@ def norm_acceleration(yy, device):
     ay01, ay99 = normalize99(nay)
 
     return torch.tensor([ax01, ax99, ay01, ay99, ax, ay], device=device)
-
-
-class cc:
-
-    def __init__(self, model_config):
-        self.model_config = model_config
-        self.model = model_config['model']
-        if model_config['cmap'] == 'tab10':
-            self.nmap = 8
-        else:
-            self.nmap = model_config['nparticle_types']
-
-        self.bMesh = 'Mesh' in model_config['model']
-
-    def color(self, index):
-
-        if self.model == 'ElecParticles':
-
-            if index == 0:
-                index = (0, 0, 1)
-            elif index == 1:
-                index = (0, 0.5, 0.75)
-            elif index == 2:
-                index = (1, 0, 0)
-            elif index == 3:
-                index = (0.75, 0, 0)
-            return (index)
-        elif self.bMesh:
-            if index == 0:
-                index = (0, 0, 0)
-            else:
-                color_map = plt.colormaps.get_cmap(self.model_config['cmap'])
-                index = color_map(index / self.nmap)
-                
-        else:
-            # color_map = plt.cm.get_cmap(self.model_config['cmap'])
-            color_map = plt.colormaps.get_cmap(self.model_config['cmap'])
-            index = color_map(index / self.nmap)
-
-        return index
 
 
 def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_p=False, step=5, alpha=0.2, ratio=1,scenario='none', device=[]):
