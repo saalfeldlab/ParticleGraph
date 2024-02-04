@@ -3069,13 +3069,13 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # config_manager = create_config_manager(config_type='simulation')
 
     config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
-    config_list = ['config_boids_16_HR2b'] # ['config_Coulomb_3b'] #['config_oscillator_400'] # ['config_gravity_16c_HR_continuous'] # ['config_arbitrary_3c'] #
+    config_list = ['config_gravity_16c_HR_continuous'] # ['config_boids_16_HR2b'] # ['config_Coulomb_3b'] #['config_oscillator_400'] # ['config_gravity_16c_HR_continuous'] # ['config_arbitrary_3c'] #
 
 
     # Load a graph neural network model used to sparsify the particle embedding during training

@@ -35,7 +35,8 @@ class PDE_G(pyg.nn.MessagePassing):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
-        mass = self.p[to_numpy(x[:, 5])]
+        particle_type = to_numpy(x[:, 5])
+        mass = self.p[particle_type]
 
         dd_pos = self.propagate(edge_index, pos=x[:,1:3], mass=mass[:,None])
         return dd_pos
@@ -45,9 +46,8 @@ class PDE_G(pyg.nn.MessagePassing):
         distance_ij = torch.clamp(distance_ij, min=self.clamp)
 
         direction_ij = self.bc_diff(pos_j - pos_i) / distance_ij[:,None]
-        mass = torch.concatenate((mass_j, mass_j), -1)
-        
-        dd_pos = mass * direction_ij / (distance_ij[:,None] ** 2)
+
+        dd_pos = mass_j * direction_ij / (distance_ij[:,None] ** 2)
 
         return torch.clamp(dd_pos, max=self.pred_limit)
 
