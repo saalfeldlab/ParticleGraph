@@ -198,7 +198,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             psi_output.append(model.psi(rr, torch.squeeze(p[n])))
             print(f'p{n}: {np.round(to_numpy(torch.squeeze(p[n])), 4)}')
         torch.save(torch.squeeze(p), f'graphs_data/graphs_particles_{dataset_name}/p.pt')
-    if model_config['model'] == 'GravityParticles':
+    if model_config['model'] == 'PDE_G':
         if model_config['p'][0] == -1:
             p = np.linspace(0.5, 5, nparticles)
             p = torch.tensor(p, device=device)
@@ -215,7 +215,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             psi_output.append(model.psi(rr, torch.squeeze(p[n])))
             print(f'p{n}: {np.round(to_numpy(torch.squeeze(p[n])), 4)}')
         torch.save(torch.squeeze(p), f'graphs_data/graphs_particles_{dataset_name}/p.pt')
-    if model_config['model'] == 'ElecParticles':
+    if model_config['model'] == 'PDE_E':
         p = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         if len(model_config['p']) > 0:
             for n in range(nparticle_types):
@@ -496,7 +496,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                     vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
                     nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,alpha=alpha)
 
-                    if model_config['model'] == 'GravityParticles':
+                    if model_config['model'] == 'PDE_G':
                         for n in range(nparticle_types):
                             g = p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 7.5
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
@@ -511,7 +511,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                         else:
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                           facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=0, vmax=2500)
-                    elif model_config['model'] == 'ElecParticles':
+                    elif model_config['model'] == 'PDE_E':
                         for n in range(nparticle_types):
                             g = 40
                             if model_config['p'][n][0] <= 0:
@@ -545,6 +545,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                     fig = plt.figure(figsize=(12, 12))
                     # plt.ion()
                     if model_config['model'] == 'PDE_O':
+                        # plt.scatter(H1[:, 0].detach().cpu().numpy(), H1[:, 1].detach().cpu().numpy(), s=80, c=np.sin(to_numpy(H1[:, 2])),vmin=-1,vmax=1)
                         plt.scatter(H1[:, 0].detach().cpu().numpy(), H1[:, 1].detach().cpu().numpy(), s=2, c='b')
                         plt.scatter(X1[:, 0].detach().cpu().numpy(), X1[:, 1].detach().cpu().numpy(), s=20, c='r', alpha=0.75)
                         plt.xlim([0, 1])
@@ -750,9 +751,9 @@ def data_train(model_config, bSparse=False):
         logger.info(f'hnorm : {to_numpy(hnorm)}')
 
 
-    if model_config['model'] == 'GravityParticles':
+    if model_config['model'] == 'PDE_G':
         model = GravityParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
-    if model_config['model'] == 'ElecParticles':
+    if model_config['model'] == 'PDE_E':
         model = ElecParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if (model_config['model'] == 'PDE_A') | (model_config['model'] == 'PDE_B'):
         model = InteractionParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
@@ -1033,7 +1034,7 @@ def data_train(model_config, bSparse=False):
                     plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5, color=cmap.color(n))
 
         ax = fig.add_subplot(1, 6, 3)
-        if model_config['model'] == 'ElecParticles':
+        if model_config['model'] == 'PDE_E':
             acc_list = []
             for m in range(model.a.shape[0]):
                 for k in range(nparticle_types):
@@ -1060,7 +1061,7 @@ def data_train(model_config, bSparse=False):
             trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int),
                               n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
             proj_interaction = trans.transform(coeff_norm)
-        elif model_config['model'] == 'GravityParticles':
+        elif model_config['model'] == 'PDE_G':
             acc_list = []
             for n in range(nparticles):
                 rr = torch.tensor(np.linspace(0, radius * 1.3, 1000)).to(device)
@@ -1255,7 +1256,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
 
     if (model_config['model'] == 'PDE_A') | (model_config['model'] == 'PDE_B'):
         model = InteractionParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
-    if model_config['model'] == 'GravityParticles':
+    if model_config['model'] == 'PDE_G':
         model = GravityParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
         p_mass = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         p_mass = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
@@ -1263,7 +1264,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         for n in range(1, nparticle_types):
             T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
         T1 = torch.concatenate((T1[:, None], T1[:, None]), 1)
-    if model_config['model'] == 'ElecParticles':
+    if model_config['model'] == 'PDE_E':
         model = ElecParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
         p_elec = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         for n in range(nparticle_types):
@@ -1272,8 +1273,6 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         for n in range(1, nparticle_types):
             T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
         T1 = torch.concatenate((T1[:, None], T1[:, None]), 1)
-    if model_config['model'] == 'GravityParticles':
-        model = GravityParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if bMesh:
         p = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         if len(model_config['p']) > 0:
@@ -1585,12 +1584,12 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
                         plt.scatter(to_numpy(x0_next[:, 6]), to_numpy(x[:, 6]), s=1, alpha=0.25, c='k')
                         plt.xlabel('True [a.u.]', fontsize="14")
                         plt.ylabel('Model [a.u]', fontsize="14")
-                    elif model_config['model'] == 'GravityParticles':
+                    elif model_config['model'] == 'PDE_G':
                         for n in range(nparticle_types):
                             g = to_numpy(p_mass[to_numpy(T1[index_particles[n], 0])]) * 10 * sc
                             plt.scatter(x_[index_particles[n], 1].detach().cpu(), x_[index_particles[n], 2].detach().cpu(),
                                         s=g, alpha=0.75, color=cmap.color(n))  # , facecolors='none', edgecolors='k')
-                    elif model_config['model'] == 'ElecParticles':
+                    elif model_config['model'] == 'PDE_E':
                         for n in range(nparticle_types):
                             g = np.abs(to_numpy(p_elec[to_numpy(T1[index_particles[n], 0])]) * 20) * sc
                             if model_config['p'][n][0] <= 0:
@@ -1894,9 +1893,9 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
         torch.save(hnorm, os.path.join(log_dir, 'hnorm.pt'))
         print(hnorm)
         model = MeshLaplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
-    if model_config['model'] == 'GravityParticles':
+    if model_config['model'] == 'PDE_G':
         model = GravityParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
-    if model_config['model'] == 'ElecParticles':
+    if model_config['model'] == 'PDE_E':
         model = ElecParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if (model_config['model'] == 'PDE_A') | (model_config['model'] == 'PDE_B'):
         model = InteractionParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
@@ -2019,7 +2018,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
 
     ax = fig.add_subplot(2, 4, 2)
     with torch.no_grad():
-        if model_config['model'] == 'ElecParticles':
+        if model_config['model'] == 'PDE_E':
             acc_list = []
             for m in range(model.a.shape[0]):
                 for k in range(nparticle_types):
@@ -2047,7 +2046,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
                               random_state=42, transform_queue_size=0).fit(coeff_norm)
             proj_interaction = trans.transform(coeff_norm)
             proj_interaction = np.squeeze(proj_interaction)
-        elif model_config['model'] == 'GravityParticles':
+        elif model_config['model'] == 'PDE_G':
             acc_list = []
             for n in range(nparticles):
                 embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
@@ -2207,7 +2206,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
     plt.yticks(fontsize=10)
 
     ax = fig.add_subplot(2, 4, 6)
-    if model_config['model'] == 'ElecParticles':
+    if model_config['model'] == 'PDE_E':
         t = to_numpy(model.a)
         tmean = np.ones((model_config['nparticle_types'], model_config['embedding']))
         for n in range(model_config['nparticle_types']):
@@ -2230,7 +2229,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
         plt.ylim([-0.5E6, 0.5E6])
         plt.xlabel('Distance [a.u]', fontsize=12)
         plt.ylabel('MLP [a.u]', fontsize=12)
-    elif model_config['model'] == 'GravityParticles':
+    elif model_config['model'] == 'PDE_G':
         acc_list = []
         for n in range(nparticles):
             embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
@@ -2323,7 +2322,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             plt.plot(to_numpy(rr), np.array(psi_output[n].cpu()), color=cmap.color(n), linewidth=1)
         plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=14)
         plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij}) [a.u.]$', fontsize=14)
-    if model_config['model'] == 'GravityParticles':
+    if model_config['model'] == 'PDE_G':
         p = model_config['p']
         if len(p) > 0:
             p = torch.tensor(p, device=device)
@@ -2340,7 +2339,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
         plt.ylim([0, 0.5E6])
         plt.xlabel('Distance [a.u]', fontsize=12)
         plt.ylabel('MLP [a.u]', fontsize=12)
-    if model_config['model'] == 'ElecParticles':
+    if model_config['model'] == 'PDE_E':
         p = model_config['p']
         if len(p) > 0:
             p = torch.tensor(p, device=device)
@@ -2385,7 +2384,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
 
     # Post analysis of interaction function plots
 
-    if model_config['model'] == 'ElecParticles':
+    if model_config['model'] == 'PDE_E':
 
         plot_list_pairwise = []
         for m in range(nparticle_types):
@@ -2464,7 +2463,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             pred = pred[:, 0]
             plot_list.append(pred * ynorm )
 
-    if model_config['model'] == 'GravityParticles':
+    if model_config['model'] == 'PDE_G':
         p = np.linspace(0.5, 5, nparticle_types)
         popt_list = []
         for n in range(nparticle_types):
@@ -2525,7 +2524,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
         fig.savefig(os.path.join(log_dir, 'gravity_result.png'), dpi=300)
         plt.close()
 
-    if model_config['model'] != 'ElecParticles':
+    if model_config['model'] != 'PDE_E':
         rmserr_list = []
         for n in range(nparticle_types):
             min_norm = torch.min(plot_list[n])

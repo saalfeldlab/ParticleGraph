@@ -19,7 +19,7 @@ boundary: 'periodic' # periodic   'no'  # no boundary condition
 data_augmentation: True
 batch_size: 8
 embedding: 2
-model: 'ElecParticles'
+model: 'PDE_E'
 prediction: '2nd_derivative'
 p: [[2], [1], [-1]]
 upgrade_type: 'none'
