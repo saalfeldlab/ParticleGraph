@@ -356,7 +356,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                 H1 = torch.zeros((nparticles, 5), device=device)
                 H1[0:nparticles, 0:1] = x[0:nparticles]
                 H1[0:nparticles, 1:2] = y[0:nparticles]
-                H1[0:nparticles, 2:3] = torch.randn(nparticles, 1, device=device) * 2 * np.pi /10    # theta
+                H1[0:nparticles, 2:3] = torch.randn(nparticles, 1, device=device) * 2 * np.pi    # theta
                 H1[0:nparticles, 3:4] = torch.ones(nparticles, 1, device=device) * np.pi/200    # d_theta
                 H1[0:nparticles, 4:5] = H1[0:nparticles, 3:4]                                   # d_theta0
                 X1[:,0] = H1[:,0] + 3*x_width * torch.cos(H1[:, 2])
@@ -3038,7 +3038,7 @@ if __name__ == '__main__':
     # config_manager = create_config_manager(config_type='simulation')
 
     config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
-    config_list =['config_gravity_16_HR_continuous_c'] #  ['config_Coulomb_3b'] # ['config_oscillator_900'] #  ['config_Coulomb_3b'] # ['config_boids_16_HR2b'] # ['config_Coulomb_3b'] #[''] # ['config_arbitrary_3c'] #
+    config_list = ['config_oscillator_900'] #  ['config_gravity_16_HR_continuous_c'] #  ['config_Coulomb_3b'] # ['config_Coulomb_3b'] # ['config_boids_16_HR2b'] # ['config_Coulomb_3b'] #[''] # ['config_arbitrary_3c'] #
 
 
     # Load a graph neural network model used to sparsify the particle embedding during training
@@ -3064,8 +3064,8 @@ if __name__ == '__main__':
 
         cmap = cc(model_config=model_config)  # create colormap for given model_config
 
-        data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, bLoad_p=False, step=5) #model_config['nframes']//20)
-        data_train(model_config,model_embedding)
+        data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, bLoad_p=False, step=10) #model_config['nframes']//20)
+        # data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//20, ratio=1)
 

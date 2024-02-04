@@ -47,7 +47,7 @@ class PDE_O(pyg.nn.MessagePassing):
 
         d_theta = self.propagate(edge_index, theta=theta)
 
-        d_theta = d_theta0 +  5e-4 * d_theta
+        d_theta = d_theta0 +  1e-3 * d_theta
         return d_theta
 
     def message(self, theta_i, theta_j):

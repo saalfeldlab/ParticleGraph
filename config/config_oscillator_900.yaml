@@ -10,9 +10,9 @@ nparticles: 900
 nparticle_types: 5
 ninteractions: 5
 kmeans_input: 'plot'
-nframes: 5000
+nframes: 10000
 sigma: 0.005
-delta_t: 1
+delta_t: 2
 v_init: 5.0E-5
 aggr_type: 'mean'
 boundary: 'periodic'  # periodic   'no'  # no boundary condition
