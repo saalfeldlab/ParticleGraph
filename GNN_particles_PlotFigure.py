@@ -885,17 +885,17 @@ def data_plot_FIG2():
     plt.ylim([-0.04,0.03])
 
     # find last image file in logdir
+    ax = fig.add_subplot(3, 4, 12)
     files = glob.glob(os.path.join(log_dir, 'tmp_recons/Fig*.tif'))
     files.sort(key=os.path.getmtime)
     if len(files) > 0:
         last_file = files[-1]
         # load image file with imageio
         image = imageio.imread(last_file)
-        ax = fig.add_subplot(3,4,12)
         print('12')
-        plt.text(-0.25, 1.1, f'i)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+        plt.text(-0.25, 1.1, f'l)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
         plt.title(r'Rollout inference (frame 250)', fontsize=12)
-        plt.imshow(image[50:-50,50:-50])
+        plt.imshow(image)
         # rmove xtick
         plt.xticks([])
         plt.yticks([])
@@ -2524,7 +2524,7 @@ def data_plot_FIG4sup():
 def data_plot_FIG3():
 
 
-    config = 'config_gravity_16_test'
+    config = 'config_gravity_16c'
 
     with open(f'./config/{config}.yaml', 'r') as file:
         model_config = yaml.safe_load(file)
@@ -2589,45 +2589,13 @@ def data_plot_FIG3():
 
     x_list = []
     y_list = []
-    x_stat = []
-    y_stat = []
-    distance_list = []
-    deg_list = []
     print('Load normalizations ...')
     time.sleep(1)
-
-    for run in trange(NGraphs):
-        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
-        if run == 0:
-            for k in np.arange(0, len(x) - 1, 4):
-                distance = torch.sum(bc_diff(x[k][:, None, 1:3] - x[k][None, :, 1:3]) ** 2, axis=2)
-                t = torch.Tensor([radius ** 2])  # threshold
-                adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                edge_index = adj_t.nonzero().t().contiguous()
-                dataset = data.Data(x=x, edge_index=edge_index)
-                distance = np.sqrt(to_numpy(distance[edge_index[0, :], edge_index[1, :]]))
-                deg = degree(dataset.edge_index[0], dataset.num_nodes)
-                deg_list.append(to_numpy(deg))
-                distance_list.append([np.mean(distance), np.std(distance)])
-                x_stat.append(to_numpy(torch.concatenate((torch.mean(x[k][:, 3:5], axis=0), torch.std(x[k][:, 3:5], axis=0)),
-                                                axis=-1)))
-                y_stat.append(to_numpy(torch.concatenate((torch.mean(y[k], axis=0), torch.std(y[k], axis=0)),
-                                                axis=-1)))
-        x_list.append(torch.stack(x))
-        y_list.append(torch.stack(y))
-
-    x = torch.stack(x_list)
-    x = torch.reshape(x, (x.shape[0] * x.shape[1] * x.shape[2], x.shape[3]))
-    y = torch.stack(y_list)
-    y = torch.reshape(y, (y.shape[0] * y.shape[1] * y.shape[2], y.shape[3]))
-    vnorm = norm_velocity(x, device)
-    ynorm = norm_acceleration(y, device)
-    print(vnorm, ynorm)
-    print(vnorm, ynorm)
-
-    x_stat = np.array(x_stat)
-    y_stat = np.array(y_stat)
+    x_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_0.pt', map_location=device))
+    y_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_0.pt', map_location=device))
+    vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
+    ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
+    x = x_list[0][0].clone().detach()
 
     model = GravityParticles(model_config=model_config, device=device, bc_diff=bc_diff)
 
@@ -2706,7 +2674,7 @@ def data_plot_FIG3():
                             embedding_particle[n + m * nparticle_types][:, 1], color=cmap.color(n), s=0.1)
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$',fontsize=12)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$',fontsize=12)
-    plt.text(.05, .94, f'e: 0 it: 200', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     plt.text(.05, .86, f'N: {nparticles}', ha='left', va='top', transform=ax.transAxes ,fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
@@ -2798,7 +2766,6 @@ def data_plot_FIG3():
     else:
         cm_display.plot(ax=fig.gca(), cmap='Blues', include_values=True, values_format='d')
     Accuracy = metrics.accuracy_score(to_numpy(T1), new_labels)
-    # plt.text(0, -0.75, r"Accuracy: {:.3f}".format(Accuracy), fontsize=12)
     plt.xticks(fontsize=8)
     plt.yticks(fontsize=8)
     plt.xlabel(r'Predicted label', fontsize=12)
@@ -2807,7 +2774,7 @@ def data_plot_FIG3():
 
     ax = fig.add_subplot(3, 3, 4)
     print('4')
-    plt.text(-0.75, 1.1, f'd)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.text(-0.25, 1.1, f'd)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     plt.title(r'Clustered particle embedding', fontsize=12)
 
     for n in range(nparticle_types):
@@ -2844,28 +2811,29 @@ def data_plot_FIG3():
     plt.yticks(fontsize=10.0)
     plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=12)
 
-    ax = fig.add_subplot(3,3,6)
-    print('6')
-    plt.text(-0.25, 1.1, f'f)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-    plt.title(r'Interaction functions (true)', fontsize=12)
-    p = model_config['p']
-    if len(p) > 0:
-        p = torch.tensor(p, device=device)
-    else:
-        p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt',map_location=device)
-    if len(p) > 0:
-        p = torch.tensor(p, device=device)
-    else:
-        p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
-    for n in range(nparticle_types - 1, -1, -1):
-        plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n])), color=cmap.color(n), linewidth=1)
+    if True:
+        ax = fig.add_subplot(3,3,6)
+        print('6')
+        plt.text(-0.25, 1.1, f'f)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+        plt.title(r'Interaction functions (true)', fontsize=12)
+        p = model_config['p']
+        if len(p) > 0:
+            p = torch.tensor(p, device=device)
+        else:
+            p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt',map_location=device)
+        if len(p) > 0:
+            p = torch.tensor(p, device=device)
+        else:
+            p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
+        for n in range(nparticle_types - 1, -1, -1):
+            plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n])), color=cmap.color(n), linewidth=1)
 
-    plt.xlim([0, 0.02])
-    plt.ylim([0, 0.5E6])
-    plt.xlabel(r'$r_{ij}$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, r_{ij})$', fontsize=12)
-    plt.xticks(fontsize=10.0)
-    plt.yticks(fontsize=10.0)
+        plt.xlim([0, 0.02])
+        plt.ylim([0, 0.5E6])
+        plt.xlabel(r'$r_{ij}$', fontsize=12)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, r_{ij})$', fontsize=12)
+        plt.xticks(fontsize=10.0)
+        plt.yticks(fontsize=10.0)
 
 
     plot_list = []
@@ -2937,32 +2905,50 @@ def data_plot_FIG3():
             pred = pred[:, 0]
             plot_list_2.append(pred * ynorm)
 
+    if False:
+        ax = fig.add_subplot(3, 3, 6)
+        print('6')
+        plt.text(-0.25, 1.1, f'f)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+        t = torch.tensor(tt, device=device)
+        t = torch.reshape(t, (16, 2))
+        rr = torch.tensor(np.linspace(0.002, 0.005, 100)).to(device)
+        vv = torch.tensor(np.linspace(-1, 1, 100)).to(device)
+
+        tt = torch.zeros((1, 2), device=device)
+        tt[0,0] = torch.mean(t[:,0])
+        tt[0,1] = torch.mean(t[:,1])
+        tt = tt * torch.ones((10000, model_config['embedding']), device=device)
+
+        rr_, vv_ = torch.meshgrid(rr, vv, indexing='xy')
+        rr_ = torch.reshape(rr_, (rr_.shape[0] * rr_.shape[1], 1))
+        vv_ = torch.reshape(vv_, (vv_.shape[0] * vv_.shape[1], 1))
+
+        in_features = torch.cat((rr_ / model_config['radius'], 0 * rr_, rr_ / model_config['radius'], vv_, vv_, vv_, vv_, tt), dim=1)
+        with torch.no_grad():
+            pred = model.lin_edge(in_features.float())
+        pred = pred[:, 0]
+        pred=torch.reshape(pred,(100,100))
+        plt.imshow(to_numpy(pred), extent=[0.002, 0.01, -1, 1], aspect='auto', origin='lower', cmap='Blues')
+        plt.colorbar()
+        plt.xlabel(r'$r_{ij}$', fontsize=12)
+        plt.ylabel(r'Normalized $\dot{x}_{i}$', fontsize=12)
+        plt.title(r'$f(\ensuremath{\bar{\mathbf{a}}}_j,\dot{x}_{i}, r_{ij})$', fontsize=12)
+
+    # find last image file in logdir
     ax = fig.add_subplot(3, 3, 9)
-    print('9')
-    plt.text(-0.25, 1.1, f'i)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-    t = torch.tensor(tt, device=device)
-    t = torch.reshape(t, (16, 2))
-    rr = torch.tensor(np.linspace(0.002, 0.005, 100)).to(device)
-    vv = torch.tensor(np.linspace(-1, 1, 100)).to(device)
-
-    tt = torch.zeros((1, 2), device=device)
-    tt[0,0] = torch.mean(t[:,0])
-    tt[0,1] = torch.mean(t[:,1])
-    tt = tt * torch.ones((10000, model_config['embedding']), device=device)
-
-    rr_, vv_ = torch.meshgrid(rr, vv, indexing='xy')
-    rr_ = torch.reshape(rr_, (rr_.shape[0] * rr_.shape[1], 1))
-    vv_ = torch.reshape(vv_, (vv_.shape[0] * vv_.shape[1], 1))
-
-    in_features = torch.cat((rr_ / model_config['radius'], 0 * rr_, rr_ / model_config['radius'], vv_, vv_, vv_, vv_, tt), dim=1)
-    with torch.no_grad():
-        pred = model.lin_edge(in_features.float())
-    pred = pred[:, 0]
-    pred=torch.reshape(pred,(100,100))
-    plt.imshow(to_numpy(pred), extent=[0.002, 0.01, -1, 1], aspect='auto', origin='lower', cmap='Blues')
-    plt.xlabel(r'$r_{ij}$', fontsize=12)
-    plt.ylabel(r'Normalized $\dot{x}_{i}$', fontsize=12)
-    plt.title(r'$f(\ensuremath{\bar{\mathbf{a}}}_j,\dot{x}_{i}, r_{ij})$', fontsize=12)
+    files = glob.glob(os.path.join(log_dir, 'tmp_recons/Fig*.tif'))
+    files.sort(key=os.path.getmtime)
+    if len(files) > 0:
+        last_file = files[-1]
+        # load image file with imageio
+        image = imageio.imread(last_file)
+        print('12')
+        plt.text(-0.25, 1.1, f'l)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+        plt.title(r'Rollout inference (frame 1000)', fontsize=12)
+        plt.imshow(image)
+        # rmove xtick
+        plt.xticks([])
+        plt.yticks([])
 
     plt.tight_layout()
 
@@ -5248,7 +5234,7 @@ if __name__ == '__main__':
     print(f'device {device}')
 
     # arbitrary_3 training
-    data_plot_FIG2()
+    # data_plot_FIG2()
     # print(' ')
     # print(' ')
     # arbitrary_3 inference
@@ -5263,7 +5249,7 @@ if __name__ == '__main__':
     # data_plot_FIG4sup()
 
     # gravity model
-    # data_plot_FIG3()
+    data_plot_FIG3()
     # gravity model continuous
     # data_plot_FIG3_continous()
 

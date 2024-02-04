@@ -608,8 +608,8 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                     else:
                         # plt.text(-1.25, 1.5, f'frame: {it}')
                         # plt.text(-1.25, 1.4, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
-                        plt.xlim([-0.5, 0.5])
-                        plt.ylim([-0.5, 0.5])
+                        plt.xlim([-4, 4])
+                        plt.ylim([-4, 4])
 
                     plt.xticks([])
                     plt.yticks([])
@@ -1543,17 +1543,17 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
                     # plt.text(0, 1.03, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
                     plt.xlim([0, 1])
                     plt.ylim([0, 1])
-                else:
+                # else:
                     # plt.text(-1.25, 1.5, f'frame: {it}')
                     # plt.text(-1.25, 1.4, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
-                    plt.xlim([-0.5, 0.5])
-                    plt.ylim([-0.5, 0.5])
+                    # plt.xlim([-0.5, 0.5])
+                    # plt.ylim([-0.5, 0.5])
 
                 # plt.xlim([0, 1])
                 # plt.ylim([0, 1])
 
-                plt.xticks([])
-                plt.yticks([])
+                # plt.xticks([])
+                # plt.yticks([])
 
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_recons/Fig_{dataset_name}_{it}.tif", dpi=300)
@@ -3044,7 +3044,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # config_manager = create_config_manager(config_type='simulation')
@@ -3077,10 +3077,10 @@ if __name__ == '__main__':
 
         cmap = cc(model_config=model_config)  # create colormap for given model_config
 
-        # data_generate(model_config, device=device, bVisu=True, bStyle='bw', alpha=0.2, bErase=True, bLoad_p=False, step=model_config['nframes']//20, ratio=1, scenario='none' )
-        data_train(model_config,model_embedding)
+        data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, bLoad_p=False, step=model_config['nframes']//20, ratio=1, scenario='none' )
+        # data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
-        # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//200, ratio=1)
+        # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//20, ratio=1)
 
         # data_train_shrofflab_celegans(model_config)
         # data_test_shrofflab_celegans(model_config)
