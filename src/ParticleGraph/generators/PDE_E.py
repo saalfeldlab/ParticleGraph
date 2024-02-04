@@ -44,9 +44,7 @@ class PDE_E(pyg.nn.MessagePassing):
         distance_ij = torch.sqrt(torch.sum(self.bc_diff(pos_j - pos_i) ** 2, axis=1))
         direction_ij = self.bc_diff(pos_j - pos_i) / distance_ij[:,None]
 
-        charge_i = torch.concatenate((charge_i, charge_i), -1)
-        charge_j = torch.concatenate((charge_j, charge_j), -1)
-        dd_pos = -charge_i * charge_j * direction_ij / (distance_ij ** 2)
+        dd_pos = - charge_i * charge_j * direction_ij / (distance_ij[:,None] ** 2)
 
         return dd_pos
 
