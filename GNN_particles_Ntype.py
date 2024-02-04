@@ -239,7 +239,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             print(f'p{n}: {np.round(to_numpy(torch.squeeze(p[n])), 4)}')
         torch.save(torch.squeeze(p), f'graphs_data/graphs_particles_{dataset_name}/p.pt')
     if model_config['model'] == 'GravityParticles':
-        if model_config['p'] == -1:
+        if model_config['p'][0] == -1:
             p = np.linspace(0.5, 5, nparticles)
             p = torch.tensor(p, device=device)
             print ('p: continous ')
@@ -489,10 +489,6 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                 if model_config['model'] == 'PDE_O':
                     distance= torch.sqrt(torch.sum(bc_diff(X1-H1) ** 2, axis=1))
                     X1 = bc_pos(H1 + bc_diff(X1-H1)/(distance[:,None]+1e-8)*3*x_width)
-
-
-
-                    A1 = y[:, 4:5]
                 A1 = A1 + 1
             # append h_list
             # Euler integration update for mesh
@@ -590,7 +586,6 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                         plt.xlim([0, 1])
                         plt.ylim([0, 1])
                     else:
-
                         if bMesh:
                             pts = x[:, 1:3].detach().cpu().numpy()
                             tri = Delaunay(pts)
@@ -3107,7 +3102,7 @@ if __name__ == '__main__':
 
         cmap = cc(model_config=model_config)  # create colormap for given model_config
 
-        data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, bLoad_p=False, step=5) #model_config['nframes']//20)
+        data_generate(model_config, device=device, bVisu=False, bStyle='color', alpha=1, bErase=True, bLoad_p=False, step=5) #model_config['nframes']//20)
         data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//20, ratio=1)
