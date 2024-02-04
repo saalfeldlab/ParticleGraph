@@ -22,11 +22,10 @@ class PDE_B(pyg.nn.MessagePassing):
         the acceleration of the Boids (dimension 2)
     """
 
-    def __init__(self, aggr_type=[], p=[], delta_t=[], bc_diff=[]):
+    def __init__(self, aggr_type=[], p=[], bc_diff=[]):
         super(PDE_B, self).__init__(aggr=aggr_type)  # "mean" aggregation.
 
         self.p = p
-        self.delta_t = delta_t
         self.bc_diff = bc_diff
 
         self.a1 = 0.5E-5

@@ -124,11 +124,10 @@ class PDE_B_extract(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, aggr_type=[], p=[], delta_t=[], bc_diff=[]):
+    def __init__(self, aggr_type=[], p=[], bc_diff=[]):
         super(PDE_B_extract, self).__init__(aggr=aggr_type)  # "mean" aggregation.
 
         self.p = p
-        self.delta_t = delta_t
         self.bc_diff = bc_diff
 
     def forward(self, data):
@@ -4346,7 +4345,7 @@ def data_plot_FIG5():
         if len(model_config['p']) > 0:
             for n in range(nparticle_types):
                 p[n] = torch.tensor(model_config['p'][n])
-        model_B = PDE_B_extract(aggr_type=aggr_type, p=torch.squeeze(p), delta_t=model_config['delta_t'], bc_diff=bc_diff)
+        model_B = PDE_B_extract(aggr_type=aggr_type, p=torch.squeeze(p), bc_diff=bc_diff)
         psi_output = []
         for n in range(nparticle_types):
             psi_output.append(model.psi(rr, torch.squeeze(p[n])))

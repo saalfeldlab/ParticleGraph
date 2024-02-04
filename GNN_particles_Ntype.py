@@ -175,9 +175,9 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                 for n in range(nparticle_types):
                     p[n] = torch.tensor(model_config['p'][n])
         if nparticle_types == 1:
-            model = PDE_A(aggr_type=aggr_type, p=p, delta_t=model_config['delta_t'], sigma=model_config['sigma'], bc_diff=bc_diff)
+            model = PDE_A(aggr_type=aggr_type, p=p, sigma=model_config['sigma'], bc_diff=bc_diff)
         else:
-            model = PDE_A(aggr_type=aggr_type, p=torch.squeeze(p), delta_t=model_config['delta_t'], sigma=model_config['sigma'], bc_diff=bc_diff)
+            model = PDE_A(aggr_type=aggr_type, p=torch.squeeze(p), sigma=model_config['sigma'], bc_diff=bc_diff)
         psi_output = []
         for n in range(nparticle_types):
             psi_output.append(model.psi(rr, torch.squeeze(p[n])))
@@ -190,9 +190,9 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             for n in range(nparticle_types):
                 p[n] = torch.tensor(model_config['p'][n])
         if nparticle_types == 1:
-            model = PDE_A(aggr_type=aggr_type, p=p, delta_t=model_config['delta_t'], bc_diff=bc_diff)
+            model = PDE_A(aggr_type=aggr_type, p=p, bc_diff=bc_diff)
         else:
-            model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), delta_t=model_config['delta_t'], bc_diff=bc_diff)
+            model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), bc_diff=bc_diff)
         psi_output = []
         for n in range(nparticle_types):
             psi_output.append(model.psi(rr, torch.squeeze(p[n])))
@@ -209,8 +209,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             if len(model_config['p']) > 0:
                 for n in range(nparticle_types):
                     p[n] = torch.tensor(model_config['p'][n])
-        model = PDE_G(aggr_type=aggr_type, p=torch.squeeze(p), delta_t=model_config['delta_t'],
-                      clamp=model_config['clamp'], pred_limit=model_config['pred_limit'], bc_diff=bc_diff)
+        model = PDE_G(aggr_type=aggr_type, p=torch.squeeze(p), clamp=model_config['clamp'], pred_limit=model_config['pred_limit'], bc_diff=bc_diff)
         psi_output = []
         for n in range(nparticle_types):
             psi_output.append(model.psi(rr, torch.squeeze(p[n])))
@@ -223,7 +222,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                 p[n] = torch.tensor(model_config['p'][n])
                 print(f'p{n}: {np.round(to_numpy(torch.squeeze(p[n])), 4)}')
                 torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
-        model = PDE_E(aggr_type=aggr_type, p=torch.squeeze(p), delta_t=model_config['delta_t'],
+        model = PDE_E(aggr_type=aggr_type, p=torch.squeeze(p), 
                       clamp=model_config['clamp'], pred_limit=model_config['pred_limit'],
                       prediction=model_config['prediction'], bc_diff=bc_diff)
         psi_output = []
@@ -236,7 +235,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
         if len(model_config['p']) > 0:
             for n in range(nparticle_types):
                 p[n] = torch.tensor(model_config['p'][n])
-        model = PDE_G(aggr_type=aggr_type, p=torch.squeeze(p), delta_t=model_config['delta_t'],
+        model = PDE_G(aggr_type=aggr_type, p=torch.squeeze(p), 
                       clamp=model_config['clamp'], pred_limit=model_config['pred_limit'], bc_diff=bc_diff)
         c = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         for n in range(nparticle_types):
@@ -260,7 +259,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
         if len(model_config['p']) > 0:
             for n in range(nparticle_types):
                 p[n] = torch.tensor(model_config['p'][n])
-        model = PDE_O(aggr_type=aggr_type, p=torch.squeeze(p), bc_diff=bc_diff, beta=model_config['beta'])
+        model = PDE_O(aggr_type=aggr_type, p=torch.squeeze(p), bc_diff=bc_diff, beta=model_config['beta'], a=0.01)
 
     torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model.pt')
 
@@ -1275,7 +1274,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         if len(model_config['p']) > 0:
             for n in range(nparticle_types):
                 p[n] = torch.tensor(model_config['p'][n])
-        model = PDE_G(aggr_type=aggr_type, p=torch.squeeze(p), delta_t=model_config['delta_t'],
+        model = PDE_G(aggr_type=aggr_type, p=torch.squeeze(p), 
                       clamp=model_config['clamp'], pred_limit=model_config['pred_limit'])
         c = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         for n in range(nparticle_types):
@@ -3034,15 +3033,14 @@ if __name__ == '__main__':
     # config_manager = create_config_manager(config_type='simulation')
 
     config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
-    config_list = ['config_gravity_16_HR_continuous_c'] # ['config_Coulomb_3b'] # ['config_boids_16_HR2b'] # ['config_Coulomb_3b'] #['config_oscillator_400'] # [''] # ['config_arbitrary_3c'] #
+    config_list =['config_oscillator_400'] #  ['config_gravity_16_HR_continuous_c'] # ['config_Coulomb_3b'] # ['config_boids_16_HR2b'] # ['config_Coulomb_3b'] #[''] # ['config_arbitrary_3c'] #
 
 
     # Load a graph neural network model used to sparsify the particle embedding during training
     model_config_embedding = config_manager.load_and_validate_config('./config/config_embedding.yaml')
     p = torch.ones(1, 4, device=device)
     p[0] = torch.tensor(model_config_embedding['p'][0])
-    model_embedding = PDE_embedding(aggr_type='mean', p=p, delta_t=model_config_embedding['delta_t'],
-                                    sigma=model_config_embedding['sigma'],
+    model_embedding = PDE_embedding(aggr_type='mean', p=p, sigma=model_config_embedding['sigma'],
                                     prediction=model_config_embedding['prediction'], device=device)
     model_embedding.eval()
 
@@ -3061,8 +3059,8 @@ if __name__ == '__main__':
 
         cmap = cc(model_config=model_config)  # create colormap for given model_config
 
-        data_generate(model_config, device=device, bVisu=False, bStyle='color', alpha=1, bErase=True, bLoad_p=False, step=50) #model_config['nframes']//20)
-        data_train(model_config,model_embedding)
+        data_generate(model_config, device=device, bVisu=False, bStyle='color', alpha=1, bErase=True, bLoad_p=False, step=5) #model_config['nframes']//20)
+        # data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//20, ratio=1)
 
