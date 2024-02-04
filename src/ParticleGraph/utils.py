@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import matplotlib.pyplot as plt
 
 
 def to_numpy(tensor: torch.Tensor) -> np.ndarray:
@@ -17,9 +18,6 @@ def to_numpy(tensor: torch.Tensor) -> np.ndarray:
 
 class cc:
 
-     """
-    Convert index to color.
-    """
 
     def __init__(self, model_config):
         self.model_config = model_config
@@ -43,7 +41,7 @@ class cc:
                 index = (1, 0, 0)
             elif index == 3:
                 index = (0.75, 0, 0)
-            else
+            else:
                 index = (0, 0, 0)
             return (index)
         elif self.bMesh:
