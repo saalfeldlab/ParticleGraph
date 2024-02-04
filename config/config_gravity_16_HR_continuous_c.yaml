@@ -7,8 +7,8 @@ noise_level: 0
 radius: 0.3
 min_radius: 0.002
 nparticles: 960
-nparticle_types: 16
-ninteractions: 16
+nparticle_types: 960
+ninteractions: 960
 kmeans_input: 'plot'
 nframes: 2250
 sigma: 0.005

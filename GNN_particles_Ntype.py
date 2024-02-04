@@ -3074,7 +3074,7 @@ if __name__ == '__main__':
     # config_manager = create_config_manager(config_type='simulation')
 
     config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
-    config_list = ['config_Coulomb_3b'] # ['config_boids_16_HR2b'] # ['config_Coulomb_3b'] #['config_oscillator_400'] # ['config_gravity_16c_HR_continuous'] # ['config_arbitrary_3c'] #
+    config_list = ['config_gravity_16_HR_continuous_c'] # ['config_Coulomb_3b'] # ['config_boids_16_HR2b'] # ['config_Coulomb_3b'] #['config_oscillator_400'] # [''] # ['config_arbitrary_3c'] #
 
 
     # Load a graph neural network model used to sparsify the particle embedding during training
