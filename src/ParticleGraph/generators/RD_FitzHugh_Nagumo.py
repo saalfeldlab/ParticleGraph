@@ -35,7 +35,8 @@ class RD_FitzHugh_Nagumo(pyg.nn.MessagePassing):
         self.a5 = 0.125
 
     def forward(self, data, device):
-        c = self.c[to_numpy(data.x[:, 5])]
+        particle_type = to_numpy(x[:, 5])
+        c = self.c[particle_type]
         c = c[:, None]
 
         u = data.x[:, 6]

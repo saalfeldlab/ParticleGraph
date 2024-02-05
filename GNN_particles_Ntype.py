@@ -364,12 +364,10 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
 
 
             i0 = imread(f'graphs_data/{particle_type_map}')
-            values = i0[
-                (to_numpy(X1_[:, 0]) * 255).astype(int), (to_numpy(X1_[:, 1]) * 255).astype(
-                    int)]
+            values = i0[(to_numpy(x[:, 0]) * 255).astype(int), (to_numpy(y[:, 0]) * 255).astype(int)]
             T1 = torch.tensor(values, device=device)
             T1 = T1[:, None]
-            # plt.scatter(X1[:, 0].detach().cpu().numpy(), X1[:, 1].detach().cpu().numpy(), s=10,c=T1[:, 0].detach().cpu().numpy())
+            # plt.scatter(to_numpy(x[:, 0]), to_numpy(y[:, 0]), s=10,c=to_numpy(T1[:, 0]))
 
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                                    H1.clone().detach(), A1.clone().detach()), 1)
@@ -445,6 +443,8 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
 
                 if model_config['model'] == 'PDE_O':
                     H1[:, 2] = H1[:, 2] + y.squeeze() * delta_t
+                    # pos= torch.argwhere(H1[:, 0] > 0.9)
+                    # H1[pos, 2] = 0
                     X1[:, 0] = H1[:, 0] + 3 * x_width * torch.cos(H1[:, 2])
                     X1[:, 1] = H1[:, 1] + 3 * x_width * torch.sin(H1[:, 2])
                     X1 = bc_pos(X1)
@@ -542,14 +542,30 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
 
                 if 'color' in bStyle:
 
-                    fig = plt.figure(figsize=(12, 12))
+
                     # plt.ion()
                     if model_config['model'] == 'PDE_O':
-                        # plt.scatter(H1[:, 0].detach().cpu().numpy(), H1[:, 1].detach().cpu().numpy(), s=80, c=np.sin(to_numpy(H1[:, 2])),vmin=-1,vmax=1)
-                        plt.scatter(H1[:, 0].detach().cpu().numpy(), H1[:, 1].detach().cpu().numpy(), s=2, c='b')
-                        plt.scatter(X1[:, 0].detach().cpu().numpy(), X1[:, 1].detach().cpu().numpy(), s=20, c='r', alpha=0.75)
+                        fig = plt.figure(figsize=(12, 12))
+                        plt.style.use('dark_background')
+                        plt.scatter(H1[:, 0].detach().cpu().numpy(), H1[:, 1].detach().cpu().numpy(), s=500, c=np.sin(to_numpy(H1[:, 2])),vmin=-1,vmax=1, cmap='viridis')
                         plt.xlim([0, 1])
                         plt.ylim([0, 1])
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/tmp_data/Lut_Fig_{it}.jpg", dpi=75)
+                        plt.close()
+                        fig = plt.figure(figsize=(12, 12))
+                        plt.style.use('default')
+                        plt.scatter(H1[:, 0].detach().cpu().numpy(), H1[:, 1].detach().cpu().numpy(), s=1, c='b')
+                        plt.scatter(X1[:, 0].detach().cpu().numpy(), X1[:, 1].detach().cpu().numpy(), s=10, c='r', alpha=0.75)
+                        plt.xlim([0, 1])
+                        plt.ylim([0, 1])
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/tmp_data/Rot_Fig{it}.jpg", dpi=75)
+                        plt.close()
                     else:
                         if bMesh:
                             pts = x[:, 1:3].detach().cpu().numpy()
@@ -601,13 +617,11 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                             plt.xlim([-4, 4])
                             plt.ylim([-4, 4])
 
-                    plt.xticks([])
-                    plt.yticks([])
+
                     # plt.xlim([0, 1])
                     # plt.ylim([0, 1])
 
-                    plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/tmp_data/Fig_color_{it}.jpg", dpi=100)
+
                     plt.close()
 
                 if 'bw' in bStyle:

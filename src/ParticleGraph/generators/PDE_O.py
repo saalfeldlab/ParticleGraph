@@ -36,16 +36,14 @@ class PDE_O(pyg.nn.MessagePassing):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
-        # particle_type = to_numpy(x[:, 5])
-        # p = self.p[particle_type]
-        # p = p[:, None]
-
-        degree = pyg_utils.degree(edge_index[0], x.size(0), dtype=x.dtype)
+        particle_type = to_numpy(x[:, 5])
+        p = self.p[particle_type]
+        p = p[:, None]
 
         theta = data.x[:,8:9]
         d_theta0 = data.x[:,10:11]
 
-        d_theta = self.propagate(edge_index, theta=theta)
+        d_theta = p * self.propagate(edge_index, theta=theta)
 
         d_theta = d_theta0 +  1e-3 * d_theta
         return d_theta

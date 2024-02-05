@@ -35,7 +35,8 @@ class RD_Gray_Scott(pyg.nn.MessagePassing):
         F = torch.tensor(0.0283, device=device)
         k = torch.tensor(0.0475, device=device)
 
-        c = self.c[to_numpy(data.x[:, 5])]
+        particle_type = to_numpy(x[:, 5])
+        c = self.c[particle_type]
         c = c[:, None]
 
         uv = data.x[:, 6:8]

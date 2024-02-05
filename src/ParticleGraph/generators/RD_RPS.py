@@ -33,7 +33,8 @@ class RD_RPS(pyg.nn.MessagePassing):
         self.a = 0.6
 
     def forward(self, data):
-        c = self.c[to_numpy(data.x[:, 5])]
+        particle_type = to_numpy(x[:, 5])
+        c = self.c[particle_type]
         c = c[:, None]
 
         uvw = data.x[:, 6:9]
