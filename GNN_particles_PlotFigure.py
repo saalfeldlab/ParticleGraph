@@ -4457,7 +4457,6 @@ def data_plot_FIG5():
     plt.savefig(f'Fig5.jpg', dpi=300)
     plt.close()
 
-
 def data_plot_FIG6():
 
     config = 'config_wave_HR3'

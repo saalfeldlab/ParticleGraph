@@ -36,15 +36,15 @@ class Laplacian_A(pyg.nn.MessagePassing):
 
         u = x[:, 6:7]
 
-        laplacian_u = self.propagate(edge_index, u=x, edge_attr=edge_attr)
+        laplacian_u = self.propagate(edge_index, u=u, edge_attr=edge_attr)
         dd_u = self.beta * c * laplacian_u
 
         return dd_u
 
     def message(self, u_j, edge_attr):
-        L = edge_attr * u_j
+        L = edge_attr[:,None] * u_j
 
-        return L[:, None]
+        return L
 
     def psi(self, I, p):
         return I

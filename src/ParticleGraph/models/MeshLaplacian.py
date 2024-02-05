@@ -54,18 +54,21 @@ class MeshLaplacian(pyg.nn.MessagePassing):
         # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         # deg = pyg_utils.degree(edge_index[0], data.num_nodes)
 
-        laplacian = self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
+        u = x[:, 6:7]
 
-        embedding = self.a[self.data_id, to_numpy(x[:, 0]), :]
+        laplacian = self.propagate(edge_index, u=u, edge_attr=edge_attr)
+
+        particle_id = to_numpy(x[:, 0:1])
+        embedding = self.a[self.data_id, particle_id, :]
 
         pred = self.lin_phi(torch.cat((laplacian, embedding), dim=-1))
 
         return pred
 
-    def message(self, x_i, x_j, edge_attr):
-        L = edge_attr * x_j[:, 6]
+    def message(self, u_j, edge_attr):
+        L = edge_attr[:,None] * u_j
 
-        return L[:, None]
+        return L
 
     def update(self, aggr_out):
         return aggr_out  # self.lin_node(aggr_out)
