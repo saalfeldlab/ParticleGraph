@@ -563,6 +563,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                         plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/tmp_data/Rot_Fig{it}.jpg", dpi=75)
                         plt.close()
                     else:
+                        fig = plt.figure(figsize=(12, 12))
                         if bMesh:
                             pts = x[:, 1:3].detach().cpu().numpy()
                             tri = Delaunay(pts)
@@ -603,22 +604,20 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
 
                         if bMesh | (model_config['boundary'] == 'periodic'):
                             # plt.text(0.08, 0.92, f'frame: {it}',fontsize=8,color='w')
-                            gg=0
-                            # plt.text(0, 1.03, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
-                            # plt.xlim([0, 1])
-                            # plt.ylim([0, 1])
+                            plt.xlim([0, 1])
+                            plt.ylim([0, 1])
                         else:
                             # plt.text(-1.25, 1.5, f'frame: {it}')
                             # plt.text(-1.25, 1.4, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
                             plt.xlim([-4, 4])
                             plt.ylim([-4, 4])
 
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/tmp_data/Fig{it}.jpg", dpi=75)
+                        plt.close()
 
-                    # plt.xlim([0, 1])
-                    # plt.ylim([0, 1])
-
-
-                    plt.close()
 
                 if 'bw' in bStyle:
                     fig = plt.figure(figsize=(12, 12))
@@ -1552,6 +1551,9 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
 
                 # plt.xticks([])
                 # plt.yticks([])
+
+                # plt.xlim([-4, 4])
+                # plt.ylim([-4, 4])
 
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_recons/Fig_{dataset_name}_{it}.tif", dpi=300)
@@ -3048,7 +3050,7 @@ if __name__ == '__main__':
     # config_manager = create_config_manager(config_type='simulation')
 
     config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
-    config_list = ['config_gravity_16'] # ['config_arbitrary_3'] # ['config_oscillator_900'] #  ['config_gravity_16_HR_continuous_c'] #  ['config_Coulomb_3b'] # ['config_Coulomb_3b'] # ['config_boids_16_HR2b'] # ['config_Coulomb_3b'] #[''] # ['config_arbitrary_3c'] #
+    config_list = ['config_Coulomb_3b'] # ['config_gravity_16'] # ['config_arbitrary_3'] # ['config_oscillator_900'] #  ['config_gravity_16_HR_continuous_c'] ['config_boids_16_HR2b'] # ['config_Coulomb_3b'] #[''] # ['config_arbitrary_3c'] #
 
 
     # Load a graph neural network model used to sparsify the particle embedding during training

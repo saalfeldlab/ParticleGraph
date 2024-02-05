@@ -31,7 +31,7 @@ class cc:
 
     def color(self, index):
 
-        if self.model == 'ElecParticles':
+        if self.model == 'PDE_E':
 
             if index == 0:
                 index = (0, 0, 1)
