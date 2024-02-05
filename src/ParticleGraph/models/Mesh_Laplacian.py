@@ -6,7 +6,7 @@ from ParticleGraph.MLP import MLP
 from ParticleGraph.utils import to_numpy
 
 
-class MeshLaplacian(pyg.nn.MessagePassing):
+class Mesh_Laplacian(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
@@ -26,18 +26,15 @@ class MeshLaplacian(pyg.nn.MessagePassing):
     """
 
     def __init__(self, aggr_type=[], model_config=[], device=[], bc_diff=[]):
-        super(MeshLaplacian, self).__init__(aggr=aggr_type)  # "Add" aggregation.
+        super(Mesh_Laplacian, self).__init__(aggr=aggr_type)  # "Add" aggregation.
 
         self.device = device
         self.input_size = model_config['input_size']
         self.output_size = model_config['output_size']
         self.hidden_size = model_config['hidden_size']
         self.nlayers = model_config['n_mp_layers']
-        self.nparticles = model_config['nparticles']
-        self.radius = model_config['radius']
-        self.data_augmentation = model_config['data_augmentation']
-        self.noise_level = model_config['noise_level']
         self.embedding = model_config['embedding']
+        self.nparticles = model_config['nparticles']
         self.ndataset = model_config['nrun'] - 1
         self.bc_diff = bc_diff
 
@@ -56,17 +53,17 @@ class MeshLaplacian(pyg.nn.MessagePassing):
 
         u = x[:, 6:7]
 
-        laplacian = self.propagate(edge_index, u=u, edge_attr=edge_attr)
+        laplacian = self.propagate(edge_index, u=u, discrete_laplacian=edge_attr)
 
-        particle_id = to_numpy(x[:, 0:1])
+        particle_id = to_numpy(x[:, 0])
         embedding = self.a[self.data_id, particle_id, :]
 
         pred = self.lin_phi(torch.cat((laplacian, embedding), dim=-1))
 
         return pred
 
-    def message(self, u_j, edge_attr):
-        L = edge_attr[:,None] * u_j
+    def message(self, u_j, discrete_laplacian):
+        L = discrete_laplacian[:,None] * u_j
 
         return L
 

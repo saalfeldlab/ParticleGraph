@@ -7,13 +7,13 @@ from ParticleGraph.MLP import MLP
 from ParticleGraph.utils import to_numpy
 
 
-class InteractionCElegans(pyg.nn.MessagePassing):
+class Interaction_CElegans(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
     def __init__(self, model_config, device, aggr_type=[], bc_diff=[]):
 
-        super(InteractionCElegans, self).__init__(aggr='mean')  # "Add" aggregation.
+        super(Interaction_CElegans, self).__init__(aggr='mean')  # "Add" aggregation.
 
         self.device = device
         self.input_size = model_config['input_size']

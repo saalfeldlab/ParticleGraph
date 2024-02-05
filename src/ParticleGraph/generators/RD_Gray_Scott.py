@@ -32,6 +32,7 @@ class RD_Gray_Scott(pyg.nn.MessagePassing):
         self.Dv = 1E-2
 
     def forward(self, data, device):
+        
         F = torch.tensor(0.0283, device=device)
         k = torch.tensor(0.0475, device=device)
 

@@ -42,9 +42,9 @@ from ParticleGraph.generators.RD_FitzHugh_Nagumo import RD_FitzHugh_Nagumo
 from ParticleGraph.generators.RD_Gray_Scott import RD_Gray_Scott
 from ParticleGraph.generators.RD_RPS import RD_RPS
 
-from ParticleGraph.models.InteractionCElegans import InteractionCElegans
-from ParticleGraph.models.InteractionParticles import InteractionParticles
-from ParticleGraph.models.MeshLaplacian import MeshLaplacian
+from ParticleGraph.models.Interaction_CElegans import Interaction_CElegans
+from ParticleGraph.models.Interaction_Particles import Interaction_Particles
+from ParticleGraph.models.Mesh_Laplacian import Mesh_Laplacian
 from ParticleGraph.models.Mesh_RPS import Mesh_RPS
 from ParticleGraph.models.PDE_embedding import PDE_embedding
 from ParticleGraph.embedding_cluster import *
@@ -62,7 +62,7 @@ def normalize99(Y, lower=1, upper=99):
     X = Y.copy()
     x01 = np.percentile(X, lower)
     x99 = np.percentile(X, upper)
-    X = (X - x01) / (x99 - x01)
+    X = (X - x01) / (x99 - x01 + 1e-10)
     return x01, x99
 
 
@@ -758,15 +758,15 @@ def data_train(model_config, bSparse=False):
         logger.info(f'hnorm : {to_numpy(hnorm)}')
 
     if model_config['model'] == 'PDE_G':
-        model = InteractionParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if model_config['model'] == 'PDE_E':
-        model = InteractionParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if (model_config['model'] == 'PDE_A') | (model_config['model'] == 'PDE_B'):
-        model = InteractionParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if (model_config['model'] == 'DiffMesh'):
-        model = MeshLaplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+        model = Mesh_Laplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if (model_config['model'] == 'WaveMesh'):
-        model = MeshLaplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+        model = Mesh_Laplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if (model_config['model'] == 'RD_RPS_Mesh'):
         model = Mesh_RPS(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
 
@@ -819,7 +819,7 @@ def data_train(model_config, bSparse=False):
 
     if bMesh:
         h_list=[]
-        for run in trange(0, NGraphs):
+        for run in range(0, NGraphs):
             h = torch.load(f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt',map_location=device)
             h_list.append(torch.stack(h))
         x = x_list[0][0].clone().detach()
@@ -1263,9 +1263,9 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
     if (model_config['model'] == 'PDE_A') | (model_config['model'] == 'PDE_B'):
-        model = InteractionParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if model_config['model'] == 'PDE_G':
-        model = InteractionParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
         p_mass = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         p_mass = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
         T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
@@ -1273,7 +1273,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
             T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
         T1 = torch.concatenate((T1[:, None], T1[:, None]), 1)
     if model_config['model'] == 'PDE_E':
-        model = InteractionParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
         p_elec = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         for n in range(nparticle_types):
             p_elec[n] = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
@@ -1292,7 +1292,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         for n in range(nparticle_types):
             c[n] = torch.tensor(model_config['c'][n])
         if (model_config['model'] == 'WaveMesh'):
-            model_mesh = MeshLaplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+            model_mesh = Mesh_Laplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
         if (model_config['model'] == 'RD_RPS_Mesh'):
             model_mesh = Mesh_RPS(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
 
@@ -1903,14 +1903,14 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
         hnorm = torch.std(h)
         torch.save(hnorm, os.path.join(log_dir, 'hnorm.pt'))
         print(hnorm)
-        model = MeshLaplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+        model = Mesh_Laplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if model_config['model'] == 'PDE_G':
         model = GravityParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if model_config['model'] == 'PDE_E':
         model = ElecParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if (model_config['model'] == 'PDE_A') | (model_config['model'] == 'PDE_B'):
-        model = InteractionParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
-        print(f'Training InteractionParticles')
+        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+        print(f'Training Interaction_Particles')
 
     # if best_model == -1:
     #     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
@@ -3048,7 +3048,7 @@ if __name__ == '__main__':
     # config_manager = create_config_manager(config_type='simulation')
 
     config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
-    config_list = ['config_wave_HR3b'] # ['config_Coulomb_3b'] # ['config_gravity_16'] # ['config_arbitrary_3'] # ['config_oscillator_900'] #  ['config_gravity_16_HR_continuous_c'] ['config_boids_16_HR2b'] # ['config_Coulomb_3b'] #[''] # ['config_arbitrary_3c'] #
+    config_list = ['config_RD_RPS2b'] # ['config_wave_HR3b'] #['config_RD_RPS2b'] # ['config_wave_HR3b'] #['config_wave_HR3b'] #  ['config_RD_RPS2b'] #['config_Coulomb_3b'] # ['config_gravity_16'] # ['config_arbitrary_3'] # ['config_oscillator_900'] #  ['config_gravity_16_HR_continuous'] ['config_boids_16_HR']
 
     # Load a graph neural network model used to sparsify the particle embedding during training
     model_config_embedding = config_manager.load_and_validate_config('./config/config_embedding.yaml')
@@ -3073,7 +3073,7 @@ if __name__ == '__main__':
 
         cmap = cc(model_config=model_config)  # create colormap for given model_config
 
-        data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, bLoad_p=False, step=model_config['nframes']//50)
+        # data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, bLoad_p=False, step=model_config['nframes']//50)
         data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//50, ratio=1)

@@ -7,7 +7,7 @@ from ParticleGraph.MLP import MLP
 from ParticleGraph.utils import to_numpy
 
 
-class InteractionParticles(pyg.nn.MessagePassing):
+class Interaction_Particles(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
@@ -28,7 +28,7 @@ class InteractionParticles(pyg.nn.MessagePassing):
 
     def __init__(self, model_config, device, aggr_type=[], bc_diff=[]):
 
-        super(InteractionParticles, self).__init__(aggr=aggr_type)  # "Add" aggregation.
+        super(Interaction_Particles, self).__init__(aggr=aggr_type)  # "Add" aggregation.
 
         self.device = device
         self.input_size = model_config['input_size']

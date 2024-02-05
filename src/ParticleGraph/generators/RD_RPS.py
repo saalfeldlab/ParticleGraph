@@ -33,7 +33,8 @@ class RD_RPS(pyg.nn.MessagePassing):
         self.a = 0.6
 
     def forward(self, data):
-        particle_type = to_numpy(x[:, 5])
+        
+        particle_type = to_numpy(data.x[:, 5])
         c = self.c[particle_type]
         c = c[:, None]
 
@@ -45,12 +46,12 @@ class RD_RPS(pyg.nn.MessagePassing):
         #   du = D * laplace_u + u * (1 - p - a * v)
         #   dv = D * laplace_v + v * (1 - p - a * w)
         #   dw = D * laplace_w + w * (1 - p - a * u)
-        d_uvw = self.D * laplace_uvw + uvw * (1 - p - self.a * uvw[:, [1, 2, 0]])
+        d_uvw = self.D * laplace_uvw + uvw * (1 - p[:,None] - self.a * uvw[:, [1, 2, 0]])
 
         return d_uvw
 
-    def message(self, uvw_i, uvw_j, discrete_laplacian):
-        return discrete_laplacian * uvw_j
+    def message(self, uvw_j, discrete_laplacian):
+        return discrete_laplacian[:,None] * uvw_j
 
     def psi(self, I, p):
         return I

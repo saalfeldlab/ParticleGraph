@@ -33,11 +33,8 @@ class Mesh_RPS(pyg.nn.MessagePassing):
         self.output_size = model_config['output_size']
         self.hidden_size = model_config['hidden_size']
         self.nlayers = model_config['n_mp_layers']
-        self.nparticles = model_config['nparticles']
-        self.radius = model_config['radius']
-        self.data_augmentation = model_config['data_augmentation']
-        self.noise_level = model_config['noise_level']
         self.embedding = model_config['embedding']
+        self.nparticles = model_config['nparticles']
         self.ndataset = model_config['nrun'] - 1
         self.bc_diff = bc_diff
 
@@ -51,39 +48,22 @@ class Mesh_RPS(pyg.nn.MessagePassing):
     def forward(self, data, data_id):
         self.data_id = data_id
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
-        # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        # deg = pyg_utils.degree(edge_index[0], data.num_nodes)
 
-        laplacian = self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
+        uvw = data.x[:, 6:9]
 
-        u = x[:, 6]
-        v = x[:, 7]
-        w = x[:, 8]
+        laplacian_uvw = self.propagate(edge_index, uvw=uvw, discrete_laplacian=edge_attr)
 
-        laplacian = self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
-        laplacian_u = laplacian[:, 0]
-        laplacian_v = laplacian[:, 1]
-        laplacian_w = laplacian[:, 2]
+        particle_id = to_numpy(x[:, 0])
+        embedding = self.a[self.data_id, particle_id, :]
 
-        embedding = self.a[self.data_id, to_numpy(x[:, 0]), :]
-
-        input_phi = torch.cat((laplacian_u[:, None], laplacian_v[:, None], laplacian_w[:, None], u[:, None], v[:, None],
-                               w[:, None], embedding), dim=-1)
+        input_phi = torch.cat((laplacian_uvw, uvw, embedding), dim=-1)
 
         pred = self.lin_phi(input_phi)
 
         return pred
 
-    def message(self, x_i, x_j, edge_attr):
-        # U column 6, V column 7
-
-        # L = edge_attr * (x_j[:, 6]-x_i[:, 6])
-
-        Lu = edge_attr * x_j[:, 6]
-        Lv = edge_attr * x_j[:, 7]
-        Lw = edge_attr * x_j[:, 8]
-
-        Laplace = torch.cat((Lu[:, None], Lv[:, None], Lw[:, None]), axis=1)
+    def message(self, uvw_j, discrete_laplacian):
+        return discrete_laplacian[:,None] * uvw_j
 
         return Laplace
 
