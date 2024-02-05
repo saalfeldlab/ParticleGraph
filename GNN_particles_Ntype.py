@@ -765,9 +765,9 @@ def data_train(model_config, bSparse=False):
         logger.info(f'hnorm : {to_numpy(hnorm)}')
 
     if model_config['model'] == 'PDE_G':
-        model = GravityParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+        model = InteractionParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if model_config['model'] == 'PDE_E':
-        model = ElecParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+        model = InteractionParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if (model_config['model'] == 'PDE_A') | (model_config['model'] == 'PDE_B'):
         model = InteractionParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if (model_config['model'] == 'DiffMesh'):
@@ -1272,7 +1272,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
     if (model_config['model'] == 'PDE_A') | (model_config['model'] == 'PDE_B'):
         model = InteractionParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
     if model_config['model'] == 'PDE_G':
-        model = GravityParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+        model = InteractionParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
         p_mass = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         p_mass = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
         T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
@@ -1280,7 +1280,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
             T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
         T1 = torch.concatenate((T1[:, None], T1[:, None]), 1)
     if model_config['model'] == 'PDE_E':
-        model = ElecParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+        model = InteractionParticles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
         p_elec = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         for n in range(nparticle_types):
             p_elec[n] = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
@@ -3052,7 +3052,7 @@ if __name__ == '__main__':
     # config_manager = create_config_manager(config_type='simulation')
 
     config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
-    config_list = ['config_oscillator_900'] #  ['config_gravity_16_HR_continuous_c'] #  ['config_Coulomb_3b'] # ['config_Coulomb_3b'] # ['config_boids_16_HR2b'] # ['config_Coulomb_3b'] #[''] # ['config_arbitrary_3c'] #
+    config_list = ['config_arbitrary_3'] # ['config_oscillator_900'] #  ['config_gravity_16_HR_continuous_c'] #  ['config_Coulomb_3b'] # ['config_Coulomb_3b'] # ['config_boids_16_HR2b'] # ['config_Coulomb_3b'] #[''] # ['config_arbitrary_3c'] #
 
 
     # Load a graph neural network model used to sparsify the particle embedding during training
@@ -3078,10 +3078,10 @@ if __name__ == '__main__':
 
         cmap = cc(model_config=model_config)  # create colormap for given model_config
 
-        data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, bLoad_p=False, step=10) #model_config['nframes']//20)
+        data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, bLoad_p=False, step=model_config['nframes']//50)
         # data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
-        # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//20, ratio=1)
+        data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//50, ratio=1)
 
 
         # data_train_shrofflab_celegans(model_config)

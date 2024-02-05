@@ -450,7 +450,7 @@ def func_RD3 (x, a, b, c, d, e, f, g, h, i, cc):
 
 def data_plot_FIG2():
 
-    config = 'config_arbitrary_3c'
+    config = 'config_arbitrary_3'
 
     # Load parameters from config file
     with open(f'./config/{config}.yaml', 'r') as file:
@@ -2597,7 +2597,7 @@ def data_plot_FIG3():
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     x = x_list[0][0].clone().detach()
 
-    model = GravityParticles(model_config=model_config, device=device, bc_diff=bc_diff)
+    model = InteractionParticles(model_config=model_config, device=device, bc_diff=bc_diff)
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
     state_dict = torch.load(net, map_location=device)
@@ -3322,7 +3322,7 @@ def data_plot_FIG4():
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
 
-    model = ElecParticles(model_config=model_config, device=device,bc_diff = bc_diff)
+    model = InteractionParticles(model_config=model_config, device=device,bc_diff = bc_diff)
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
     state_dict = torch.load(net, map_location=device)
@@ -5234,7 +5234,7 @@ if __name__ == '__main__':
     print(f'device {device}')
 
     # arbitrary_3 training
-    # data_plot_FIG2()
+    data_plot_FIG2()
     # print(' ')
     # print(' ')
     # arbitrary_3 inference
@@ -5249,7 +5249,7 @@ if __name__ == '__main__':
     # data_plot_FIG4sup()
 
     # gravity model
-    data_plot_FIG3()
+    # data_plot_FIG3()
     # gravity model continuous
     # data_plot_FIG3_continous()
 

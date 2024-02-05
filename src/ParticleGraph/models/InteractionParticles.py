@@ -48,6 +48,7 @@ class InteractionParticles(pyg.nn.MessagePassing):
         self.hidden_size_update = model_config['hidden_size_update']
         self.sigma = model_config['sigma']
         self.bc_diff = bc_diff
+        self.model = model_config['model']
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
@@ -105,12 +106,21 @@ class InteractionParticles(pyg.nn.MessagePassing):
             dpos_x_j = new_dpos_x_j
             dpos_y_j = new_dpos_y_j
 
-        embedding = self.a[self.data_id, to_numpy(particle_id_i), :].squeeze()
+        embedding_i = self.a[self.data_id, to_numpy(particle_id_i), :].squeeze()
+        embedding_j = self.a[self.data_id, to_numpy(particle_id_j), :].squeeze()
 
-        if self.prediction == '2nd_derivative':
-            in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None], dpos_y_j[:, None], embedding), dim=-1)
-        if self.prediction == 'first_derivative':
-            in_features = torch.cat((delta_pos, r[:, None], embedding), dim=-1)
+        if self.model == 'PDE_A':
+            in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
+        if self.model == 'PDE_B':
+            in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None], dpos_y_j[:, None], embedding_i), dim=-1)
+        if self.model == 'PDE_G':
+            in_features = torch.cat(
+            (delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None], dpos_y_j[:, None], embedding_j),
+            dim=-1)
+        if self.model == 'PDE_E':
+            in_features = torch.cat(
+            (delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None], dpos_y_j[:, None], embedding_i, embedding_j), dim=-1)
+
 
         out = self.lin_edge(in_features)
 
