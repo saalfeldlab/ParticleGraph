@@ -200,15 +200,11 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
         torch.save(torch.squeeze(p), f'graphs_data/graphs_particles_{dataset_name}/p.pt')
     if model_config['model'] == 'PDE_G':
         if model_config['p'][0] == -1:
-            p = np.linspace(0.5, 5, nparticles)
-            p = torch.tensor(p, device=device)
-            print ('p: continous ')
-        else:
             p = np.linspace(0.5, 5, nparticle_types)
             p = torch.tensor(p, device=device)
-            if len(model_config['p']) > 0:
-                for n in range(nparticle_types):
-                    p[n] = torch.tensor(model_config['p'][n])
+        if len(model_config['p']) > 1:
+            for n in range(nparticle_types):
+                p[n] = torch.tensor(model_config['p'][n])
         model = PDE_G(aggr_type=aggr_type, p=torch.squeeze(p), clamp=model_config['clamp'], pred_limit=model_config['pred_limit'], bc_diff=bc_diff)
         psi_output = []
         for n in range(len(p)):
@@ -3052,7 +3048,7 @@ if __name__ == '__main__':
     # config_manager = create_config_manager(config_type='simulation')
 
     config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
-    config_list = ['config_arbitrary_3'] # ['config_oscillator_900'] #  ['config_gravity_16_HR_continuous_c'] #  ['config_Coulomb_3b'] # ['config_Coulomb_3b'] # ['config_boids_16_HR2b'] # ['config_Coulomb_3b'] #[''] # ['config_arbitrary_3c'] #
+    config_list = ['config_gravity_16'] # ['config_arbitrary_3'] # ['config_oscillator_900'] #  ['config_gravity_16_HR_continuous_c'] #  ['config_Coulomb_3b'] # ['config_Coulomb_3b'] # ['config_boids_16_HR2b'] # ['config_Coulomb_3b'] #[''] # ['config_arbitrary_3c'] #
 
 
     # Load a graph neural network model used to sparsify the particle embedding during training

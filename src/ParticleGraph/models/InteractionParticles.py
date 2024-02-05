@@ -130,12 +130,19 @@ class InteractionParticles(pyg.nn.MessagePassing):
 
         return aggr_out  # self.lin_node(aggr_out)
 
-    def psi(self, r, p):
+    def psi(self, r, p1, p2):
 
-        if (len(p) == 3):  # PDE_B
-            cohesion = p[0] * 0.5E-5 * r
-            separation = -p[2] * 1E-8 / r
-            return (cohesion + separation) * p[1] / 500  #
-        else:  # PDE_A
-            return r * (p[0] * torch.exp(-r ** (2 * p[1]) / (2 * self.sigma ** 2))
-                        - p[2] * torch.exp(-r ** (2 * p[3]) / (2 * self.sigma ** 2)))
+        if self.model == 'PDE_A':
+            return r * (p1[0] * torch.exp(-r ** (2 * p1[1]) / (2 * self.sigma ** 2))
+                        - p1[2] * torch.exp(-r ** (2 * p1[3]) / (2 * self.sigma ** 2)))
+        if self.model == 'PDE_B':
+            cohesion = p1[0] * 0.5E-5 * r
+            separation = -p1[2] * 1E-8 / r
+            return (cohesion + separation) * p1[1] / 500
+        if self.model == 'PDE_G':
+            psi = p1 / r ** 2
+            return psi[:, None]
+        if self.model == 'PDE_E':
+            acc = p1 * p2 / r ** 2
+            return -acc  # Elec particles
+

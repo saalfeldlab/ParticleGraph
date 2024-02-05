@@ -877,7 +877,7 @@ def data_plot_FIG2():
     else:
         p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
     for n in range(nparticle_types - 1, -1, -1):
-        plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n])), color=cmap.color(n), linewidth=1)
+        plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n), linewidth=1)
     plt.xlabel(r'$r_{ij}$', fontsize=12)
     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
     plt.xticks(fontsize=10.0)
@@ -2524,7 +2524,7 @@ def data_plot_FIG4sup():
 def data_plot_FIG3():
 
 
-    config = 'config_gravity_16c'
+    config = 'config_gravity_16'
 
     with open(f'./config/{config}.yaml', 'r') as file:
         model_config = yaml.safe_load(file)
@@ -2597,7 +2597,7 @@ def data_plot_FIG3():
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     x = x_list[0][0].clone().detach()
 
-    model = InteractionParticles(model_config=model_config, device=device, bc_diff=bc_diff)
+    model = InteractionParticles(model_config=model_config, device=device, bc_diff=bc_diff, aggr_type=aggr_type)
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
     state_dict = torch.load(net, map_location=device)
@@ -2816,17 +2816,9 @@ def data_plot_FIG3():
         print('6')
         plt.text(-0.25, 1.1, f'f)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
         plt.title(r'Interaction functions (true)', fontsize=12)
-        p = model_config['p']
-        if len(p) > 0:
-            p = torch.tensor(p, device=device)
-        else:
-            p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt',map_location=device)
-        if len(p) > 0:
-            p = torch.tensor(p, device=device)
-        else:
-            p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
+        p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
         for n in range(nparticle_types - 1, -1, -1):
-            plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n])), color=cmap.color(n), linewidth=1)
+            plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n), linewidth=1)
 
         plt.xlim([0, 0.02])
         plt.ylim([0, 0.5E6])
@@ -2949,7 +2941,8 @@ def data_plot_FIG3():
         # rmove xtick
         plt.xticks([])
         plt.yticks([])
-
+    plt.xlim([-4, 4])
+    plt.ylim([-4, 4])
     plt.tight_layout()
 
     plt.savefig('Fig3.pdf', format="pdf", dpi=300)
@@ -5234,7 +5227,7 @@ if __name__ == '__main__':
     print(f'device {device}')
 
     # arbitrary_3 training
-    data_plot_FIG2()
+    # data_plot_FIG2()
     # print(' ')
     # print(' ')
     # arbitrary_3 inference
@@ -5249,7 +5242,7 @@ if __name__ == '__main__':
     # data_plot_FIG4sup()
 
     # gravity model
-    # data_plot_FIG3()
+    data_plot_FIG3()
     # gravity model continuous
     # data_plot_FIG3_continous()
 

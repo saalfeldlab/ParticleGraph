@@ -23,6 +23,8 @@ model: 'PDE_E'
 prediction: '2nd_derivative'
 p: [[2], [1], [-1]]
 upgrade_type: 'none'
+nlayers_update: 3
+hidden_size_update: 64
 nrun: 2
 clamp: 0
 pred_limit: 1.0E+10
