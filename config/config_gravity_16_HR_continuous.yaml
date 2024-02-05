@@ -22,6 +22,8 @@ embedding: 2
 model: 'PDE_G'
 prediction: '2nd_derivative'
 upgrade_type: 'none'
+nlayers_update: 3
+hidden_size_update: 64
 p: [-1]
 nrun: 2
 clamp: 0

@@ -2827,7 +2827,6 @@ def data_plot_FIG3():
         plt.xticks(fontsize=10.0)
         plt.yticks(fontsize=10.0)
 
-
     plot_list = []
     for n in range(nparticle_types):
         pos = np.argwhere(new_labels == n).squeeze().astype(int)
@@ -2957,6 +2956,8 @@ def data_plot_FIG3_continous():
         model_config = yaml.safe_load(file)
     model_config['dataset']=config[7:]
 
+    embedding_cluster = EmbeddingCluster(model_config)
+
     def bc_pos(X):
         return X
     def bc_diff(D):
@@ -3014,51 +3015,20 @@ def data_plot_FIG3_continous():
 
     x_list = []
     y_list = []
-    x_stat = []
-    y_stat = []
-    distance_list = []
-    deg_list = []
     print('Load normalizations ...')
     time.sleep(1)
+    x_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_0.pt', map_location=device))
+    y_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_0.pt', map_location=device))
+    vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
+    ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
+    x = x_list[0][0].clone().detach()
 
-    for run in trange(NGraphs):
-        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
-        if run == 0:
-            for k in np.arange(0, len(x) - 1, 4):
-                distance = torch.sum(bc_diff(x[k][:, None, 1:3] - x[k][None, :, 1:3]) ** 2, axis=2)
-                t = torch.Tensor([radius ** 2])  # threshold
-                adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                edge_index = adj_t.nonzero().t().contiguous()
-                dataset = data.Data(x=x, edge_index=edge_index)
-                distance = np.sqrt(to_numpy(distance[edge_index[0, :], edge_index[1, :]]))
-                deg = degree(dataset.edge_index[0], dataset.num_nodes)
-                deg_list.append(to_numpy(deg))
-                distance_list.append([np.mean(distance), np.std(distance)])
-                x_stat.append(to_numpy(torch.concatenate((torch.mean(x[k][:, 3:5], axis=0), torch.std(x[k][:, 3:5], axis=0)),
-                                                axis=-1)))
-                y_stat.append(to_numpy(torch.concatenate((torch.mean(y[k], axis=0), torch.std(y[k], axis=0)),
-                                                axis=-1)))
-        x_list.append(torch.stack(x))
-        y_list.append(torch.stack(y))
-
-    x = torch.stack(x_list)
-    x = torch.reshape(x, (x.shape[0] * x.shape[1] * x.shape[2], x.shape[3]))
-    y = torch.stack(y_list)
-    y = torch.reshape(y, (y.shape[0] * y.shape[1] * y.shape[2], y.shape[3]))
-    vnorm = norm_velocity(x, device)
-    ynorm = norm_acceleration(y, device)
-    print(vnorm, ynorm)
-    print(vnorm, ynorm)
-
-    x_stat = np.array(x_stat)
-    y_stat = np.array(y_stat)
-
-    model = GravityParticles(model_config=model_config, device=device, bc_diff=bc_diff)
+    model = InteractionParticles(model_config=model_config, device=device, bc_diff=bc_diff, aggr_type=aggr_type)
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
+
 
     lra = 1E-3
     lr = 1E-3
@@ -3116,44 +3086,56 @@ def data_plot_FIG3_continous():
 
     colors = cmplt.jet(np.linspace(0, 1, nparticles))
 
-    fig = plt.figure(figsize=(6.5, 8.2))
-    plt.ion()
-    ax = fig.add_subplot(3, 2, 1)
+    fig = plt.figure(figsize=(15, 10))
+    # plt.ion()
+    ax = fig.add_subplot(2, 3, 1)
     colors = cmplt.rainbow(np.linspace(0, 1, nparticles))
     print('1')
-
+    plt.text(-0.25, 1.1, f'a)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'Particle embedding', fontsize=12)
     plt.scatter(embedding[:, 0],embedding[:, 1], s=0.1, c=colors, alpha=0.5)
     plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$',fontsize=12)
     plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$',fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
+    plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
+    plt.text(.05, .86, f'N: {nparticles}', ha='left', va='top', transform=ax.transAxes ,fontsize=10)
 
-    acc_list = []
-    for n in range(nparticles):
-        embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
-        in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
-                                 rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
-                                 0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
-        with torch.no_grad():
-            acc = model.lin_edge(in_features.float())
-        acc = acc[:, 0]
-        acc_list.append(acc)
-    acc_list = torch.stack(acc_list)
-    coeff_norm = to_numpy(acc_list)
-    trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int), n_components=2, transform_queue_size=0).fit(coeff_norm)
-    proj_interaction = trans.transform(coeff_norm)
-    proj_interaction = np.squeeze(proj_interaction)
-
-    ax = fig.add_subplot(3, 2, 2)
-    print('2')
-    plt.scatter(proj_interaction[:, 0], proj_interaction[:, 1], s=0.1, c=colors, alpha=0.5)
+    ax = fig.add_subplot(2, 3, 2)
+    print('2 UMAP ...')
+    plt.text(-0.25, 1.1, f'b)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'UMAP of $f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
+    if os.path.exists(os.path.join(log_dir, f'proj_interaction_20.npy')):
+        proj_interaction = np.load(os.path.join(log_dir, f'proj_interaction_20.npy'))
+    else:
+        acc_list = []
+        for n in range(nparticles):
+            embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
+            in_features = torch.cat((rr[:, None] / model_config['radius'], 0 * rr[:, None],
+                                     rr[:, None] / model_config['radius'], 0 * rr[:, None], 0 * rr[:, None],
+                                     0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
+            with torch.no_grad():
+                acc = model.lin_edge(in_features.float())
+            acc = acc[:, 0]
+            acc_list.append(acc)
+        acc_list = torch.stack(acc_list)
+        coeff_norm = to_numpy(acc_list)
+        trans = umap.UMAP(n_neighbors=30, n_components=2, transform_queue_size=0).fit(coeff_norm)
+        proj_interaction = trans.transform(coeff_norm)
+        proj_interaction = np.squeeze(proj_interaction)
+        np.save(os.path.join(log_dir, f'proj_interaction_20.npy'), proj_interaction)
+    plt.scatter(proj_interaction[:, 0], proj_interaction[:, 1], s=0.1, c=colors, alpha=1)
     plt.xlabel(r'UMAP 0', fontsize=12)
     plt.ylabel(r'UMAP 1', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
+    plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
+    plt.text(.05, .86, f'N: {nparticles}', ha='left', va='top', transform=ax.transAxes ,fontsize=10)
 
-    ax = fig.add_subplot(3, 2, 3)
+    ax = fig.add_subplot(2, 3, 3)
     print('3')
+    plt.text(-0.25, 1.1, f'c)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'Interaction functions (model)', fontsize=12)
     acc_list = []
     for n in range(nparticles):
         embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
@@ -3172,14 +3154,18 @@ def data_plot_FIG3_continous():
     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, r_{ij})$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
-    plt.text(0.0075,0.4E6,r'Model', fontsize=12)
+    plt.text(.2, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
+    plt.text(.2, .86, f'N: {nparticles}', ha='left', va='top', transform=ax.transAxes ,fontsize=10)
 
-    ax = fig.add_subplot(3,2,4)
+
+    ax = fig.add_subplot(2,3,6)
     print('6')
+    plt.text(-0.25, 1.1, f'f)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'Interaction functions (true)', fontsize=12)
     p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt',map_location=device)
     psi_output = []
     for n in range(nparticles):
-        psi_output.append(model.psi(rr, p[n]))
+        psi_output.append(model.psi(rr, p[n], p[n]))
         plt.plot(to_numpy(rr), np.array(psi_output[n].cpu()), linewidth=1, color=colors[n])
     plt.xlim([0, 0.02])
     plt.ylim([0, 0.5E6])
@@ -3187,11 +3173,11 @@ def data_plot_FIG3_continous():
     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, r_{ij})$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
-    plt.text(0.0075,0.4E6,r'True', fontsize=12)
 
-
-    ax = fig.add_subplot(3, 2, 5)
-    print('5')
+    ax = fig.add_subplot(2, 3, 4)
+    print('4')
+    plt.text(-0.25, 1.1, f'd)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'Reconstructed masses', fontsize=12)
     plot_list = []
     for n in range(nparticles):
         embedding = embedding_[n] * torch.ones((1000, model_config['embedding']), device=device)
@@ -3225,8 +3211,10 @@ def data_plot_FIG3_continous():
     r_squared = 1 - (ss_res / ss_tot)
     plt.text(0.5, 3.5, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
 
-    ax = fig.add_subplot(3, 2, 6)
-    print('8')
+    ax = fig.add_subplot(2,3,5)
+    print('5')
+    plt.text(-0.25, 1.1, f'd)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'Reconstructed exponent', fontsize=12)
     plt.scatter(p, -popt_list[:, 1], color='k', s=1)
     plt.xlim([0, 5.5])
     plt.ylim([-4, 0])
@@ -3237,7 +3225,7 @@ def data_plot_FIG3_continous():
 
     plt.tight_layout()
 
-    plt.savefig('Fig3_continous.pdf', format="pdf", dpi=300)
+    # plt.savefig('Fig3_continous.pdf', format="pdf", dpi=300)
     plt.savefig('Fig3_continuous.jpg', dpi=300)
 
     plt.close()
@@ -3370,7 +3358,7 @@ def data_plot_FIG4():
 
 
     fig = plt.figure(figsize=(10, 9))
-    plt.ion()
+    # plt.ion()
     ax = fig.add_subplot(3, 3, 1)
     print('1')
     plt.text(-0.25, 1.1, f'a)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
@@ -5269,12 +5257,12 @@ if __name__ == '__main__':
     # data_plot_FIG4sup()
 
     # gravity model
-    data_plot_FIG3()
+    # data_plot_FIG3()
     # gravity model continuous
-    # data_plot_FIG3_continous()
+    data_plot_FIG3_continous()
 
     # training Coloumb_3
-    data_plot_FIG4()
+    # data_plot_FIG4()
 
     # data_plot_FIG5sup()
 
