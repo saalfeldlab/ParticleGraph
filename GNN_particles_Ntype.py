@@ -42,8 +42,6 @@ from ParticleGraph.generators.RD_FitzHugh_Nagumo import RD_FitzHugh_Nagumo
 from ParticleGraph.generators.RD_Gray_Scott import RD_Gray_Scott
 from ParticleGraph.generators.RD_RPS import RD_RPS
 
-from ParticleGraph.models.ElecParticles import ElecParticles
-from ParticleGraph.models.GravityParticles import GravityParticles
 from ParticleGraph.models.InteractionCElegans import InteractionCElegans
 from ParticleGraph.models.InteractionParticles import InteractionParticles
 from ParticleGraph.models.MeshLaplacian import MeshLaplacian
