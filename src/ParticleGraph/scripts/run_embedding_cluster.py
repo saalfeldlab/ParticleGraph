@@ -1,14 +1,17 @@
 # TODO: IN PROGRESS
 from ParticleGraph.embedding_cluster import *
-from GNN_particles_Ntype import cc
+# from GNN_particles_Ntype import cc
 from ParticleGraph.utils import to_numpy
+from tqdm import trange
 
 if __name__ == '__main__':
 
-    model_config = {'ninteractions': 3, 'nparticles': 4800, 'nparticle_types': 3, 'cmap': 'tab10', 'model':'PDE_A'}
+    # model_config = {'ninteractions': 3, 'nparticles': 4800, 'nparticle_types': 3, 'cmap': 'tab10', 'model':'PDE_A'}
     # model_config = {'ninteractions': 16, 'nparticles': 960, 'nparticle_types': 16, 'cmap': 'tab20', 'model':'GravityParticles'}
+    model_config = {'ninteractions': 5, 'nparticles': 10000, 'nparticle_types': 5, 'cmap': 'tab20',
+                    'model': 'RD_RPS_Mesh'}
 
-    cmap = cc(model_config=model_config)
+    # cmap = cc(model_config=model_config)
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -36,33 +39,43 @@ if __name__ == '__main__':
     # plt.title(title)
     # plt.show()
 
-    for epoch in range(1):
+    for epoch in range(20,21):
 
         # proj_interaction = np.load(f'/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/log/try_gravity_16c/tmp_training/umap_projection_{epoch}.npy')
-        proj_interaction = np.load(
-            f'/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/log/try_arbitrary_3c/tmp_training/umap_projection_{epoch}.npy')
+        # proj_interaction = np.load(
+        #     f'/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/log/try_arbitrary_3c/tmp_training/umap_projection_{epoch}.npy')
+        proj_interaction = np.load(f'/home/allierc@hhmi.org/Desktop/Py/ParticleGraph/log/try_RD_RPS2b/tmp_training/umap_projection_{epoch}.npy')
 
         fig = plt.figure(figsize=(10, 3))
         ax = fig.add_subplot(1, 4, 1)
         plt.text(0, 1.1, f'Epoch: {epoch}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
-        # plt.ion()
-        labels, nclusters = embedding_cluster.get(proj_interaction,'distance')
+        plt.ion()
+        # for thresh in trange(1,20):
+        #     labels, nclusters = embedding_cluster.get(proj_interaction,'distance',thresh=thresh)
+        #     plt.scatter(thresh, nclusters, s=10,c='k')
+
+        ax = fig.add_subplot(1, 4, 2)
+        for n in range(nparticle_types):
+            plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1], s=1)
+
+
+        ax = fig.add_subplot(1, 4, 2)
+        labels, nclusters = embedding_cluster.get(proj_interaction, 'distance', thresh=5)
         label_list = []
         for n in range(nclusters):
             pos = np.argwhere(labels == n)
-            plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=5)
+            plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], s=1)
             print(pos.shape)
         for n in range(nparticle_types):
             tmp = labels[index_particles[n]]
             label_list.append(np.round(np.median(tmp)))
         label_list = np.array(label_list)
         new_labels = labels.copy()
-        ax = fig.add_subplot(1, 4, 2)
+        ax = fig.add_subplot(1, 4, 3)
         for n in range(nparticle_types):
             new_labels[labels == label_list[n]] = n
             pos = np.argwhere(labels == label_list[n])
-            plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1],
-                        color=cmap.color(n), s=0.1)
+            plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], s=0.1)
         plt.xlabel(r'UMAP 0', fontsize=12)
         plt.ylabel(r'UMAP 1', fontsize=12)
         plt.text(0., 1.1, f'Nclusters: {nclusters}', ha='left', va='top', transform=ax.transAxes)
@@ -85,7 +98,7 @@ if __name__ == '__main__':
             temp = proj_interaction[pos, :]
             print(np.median(temp, axis=0))
             t[n,:] = np.median(temp, axis=0)
-            plt.scatter(t[n, 0], t[n, 1],color=cmap.color(n), s=10)
+            plt.scatter(t[n, 0], t[n, 1], s=10)
         plt.tight_layout()
 
         plt.show()

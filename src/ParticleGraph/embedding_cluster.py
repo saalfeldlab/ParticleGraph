@@ -20,6 +20,9 @@ class EmbeddingCluster:
         if method == 'distance':
             clusters = hcluster.fclusterdata(data, thresh, criterion="distance") - 1
             nclusters = len(np.unique(clusters))
+        if method == 'distance':
+            clusters = hcluster.fclusterdata(data, thresh, criterion="distance") - 1
+            nclusters = len(np.unique(clusters))
 
         return clusters, nclusters
 

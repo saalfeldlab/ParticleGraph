@@ -4966,7 +4966,7 @@ def data_plot_FIG7():
     cmap = cc(model_config=model_config)
 
     fig = plt.figure(figsize=(10.5, 9.6))
-    # plt.ion()
+    plt.ion()
     ax = fig.add_subplot(3, 3, 1)
     print('1')
     plt.text(-0.25, 1.1, f'a)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
