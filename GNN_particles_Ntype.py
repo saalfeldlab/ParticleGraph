@@ -370,7 +370,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             transform_0 = T.Compose([T.Delaunay()])
             dataset_face = transform_0(dataset).face
             mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
-            edge_index_mesh, edge_weight_mesh = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,normalization="None")  # "None", "sym", "rw"
+            edge_index_mesh, edge_weight_mesh = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face, normalization="None")  # "None", "sym", "rw"
 
         time.sleep(0.5)
         for it in trange(model_config['start_frame'], nframes+1):
@@ -601,9 +601,10 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                                                 x[index_particles[n], 2].detach().cpu().numpy(), s=25, color=cmap.color(n))
 
                         if bMesh | (model_config['boundary'] == 'periodic'):
+                            g=1
                             # plt.text(0.08, 0.92, f'frame: {it}',fontsize=8,color='w')
-                            plt.xlim([0, 1])
-                            plt.ylim([0, 1])
+                            # plt.xlim([0, 1])
+                            # plt.ylim([0, 1])
                         else:
                             # plt.text(-1.25, 1.5, f'frame: {it}')
                             # plt.text(-1.25, 1.4, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
@@ -615,7 +616,6 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                         plt.tight_layout()
                         plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/tmp_data/Fig{it}.jpg", dpi=75)
                         plt.close()
-
 
                 if 'bw' in bStyle:
                     fig = plt.figure(figsize=(12, 12))
@@ -3042,7 +3042,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # config_manager = create_config_manager(config_type='simulation')
