@@ -875,7 +875,11 @@ def data_train(model_config, bSparse=False):
 
         total_loss = 0
 
-        for N in trange(nframes * data_augmentation_loop // batch_size):
+        Niter = nframes * data_augmentation_loop // batch_size
+        if (bMesh) & (batch_size==1):
+            Niter = Niter // 4
+
+        for N in trange(Niter):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -1132,12 +1136,12 @@ def data_train(model_config, bSparse=False):
                         in_features = torch.cat((u,u,u,u,u,u, embedding), dim=1)
                         r = u
                     else:
-                        r = torch.tensor(np.linspace(-250, 250, 100)).to(device)
+                        r = torch.tensor(np.linspace(-150, 150, 100)).to(device)
                         in_features = torch.cat((r[:,None], embedding), dim=1)
                     h=model.lin_phi(in_features.float())
                     h = h[:, 0]
                     f_list.append(h)
-                    if n % 100 == 0:
+                    if n % 24 == 0:
                         plt.plot(to_numpy(r),
                                  to_numpy(h) * to_numpy(hnorm), linewidth=1,
                                  color='k', alpha=0.05)
@@ -1146,16 +1150,6 @@ def data_train(model_config, bSparse=False):
                 trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int),
                                   n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
                 proj_interaction = trans.transform(coeff_norm)
-                ax = fig.add_subplot(2, 4, 4)
-                for n in range(nparticle_types):
-                    plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1], s=5)
-                plt.xlabel('UMAP 0', fontsize=12)
-                plt.ylabel('UMAP 1', fontsize=12)
-                kmeans = KMeans(init="random", n_clusters=nparticle_types, n_init=1000, max_iter=10000, random_state=13)
-                kmeans.fit(proj_interaction)
-                for n in range(nparticle_types):
-                    plt.plot(kmeans.cluster_centers_[n, 0], kmeans.cluster_centers_[n, 1], '+', color='k', markersize=12)
-                    pos = np.argwhere(kmeans.labels_ == n).squeeze().astype(int)
 
             # save UMAP projection
             np.save(f'./{log_dir}/tmp_training/umap_projection_{epoch}.npy', proj_interaction)
@@ -1164,7 +1158,7 @@ def data_train(model_config, bSparse=False):
             if model_config['kmeans_input'] == 'plot':
                 labels, nclusters = embedding_cluster.get(proj_interaction, 'distance')
             if model_config['kmeans_input'] == 'embedding':
-                labels, nclusters = embedding_cluster.get(embedding_, 'distance')
+                labels, nclusters = embedding_cluster.get(embedding_, 'distance',thresh=1.5)
             for n in range(nclusters):
                 pos = np.argwhere(labels == n)
                 plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=5)
@@ -1180,11 +1174,11 @@ def data_train(model_config, bSparse=False):
 
             ax = fig.add_subplot(1, 6, 5)
             new_labels = labels.copy()
-            # for n in range(nparticle_types):
-            #     new_labels[labels == label_list[n]] = n
-            #     pos = np.argwhere(labels == label_list[n])
-            #     plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1],
-            #                 color=cmap.color(n), s=0.1)
+            for n in range(nparticle_types):
+                new_labels[labels == label_list[n]] = n
+                pos = np.argwhere(labels == label_list[n])
+                plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1],
+                            color=cmap.color(n), s=0.1)
             Accuracy = metrics.accuracy_score(to_numpy(T1), new_labels)
             plt.text(0, 1.1, f'Accuracy: {np.round(Accuracy,3)}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
             print (f'Accuracy: {np.round(Accuracy,3)}')
@@ -1200,9 +1194,9 @@ def data_train(model_config, bSparse=False):
                 median_center = torch.median(median_center, axis=0).values
                 model_a_[pos, :] = torch.median(median_center, axis=0).values
             model_a_ = torch.reshape(model_a_, (model.a.shape[0], model.a.shape[1], model.a.shape[2]))
-            # for n in np.unique(new_labels):
-            #     pos = np.argwhere(new_labels == n).squeeze().astype(int)
-            #     plt.scatter(to_numpy(model_a_[0,pos[0], 0]), to_numpy(model_a_[0,pos[0], 1]), color=cmap.color(n), s=6)
+            for n in np.unique(new_labels):
+                pos = np.argwhere(new_labels == n).squeeze().astype(int)
+                plt.scatter(to_numpy(model_a_[0,pos[0], 0]), to_numpy(model_a_[0,pos[0], 1]), color=cmap.color(n), s=6)
             plt.xlabel('ai0', fontsize=12)
             plt.ylabel('ai1', fontsize=12)
             plt.xticks(fontsize=10.0)
@@ -3048,7 +3042,7 @@ if __name__ == '__main__':
     # config_manager = create_config_manager(config_type='simulation')
 
     config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
-    config_list = ['config_RD_RPS2b'] # ['config_wave_HR3b'] #['config_RD_RPS2b'] # ['config_wave_HR3b'] #['config_wave_HR3b'] #  ['config_RD_RPS2b'] #['config_Coulomb_3b'] # ['config_gravity_16'] # ['config_arbitrary_3'] # ['config_oscillator_900'] #  ['config_gravity_16_HR_continuous'] ['config_boids_16_HR']
+    config_list = ['config_wave_HR3c'] # ['config_RD_RPS2b'] # ['config_RD_RPS2b'] # ['config_wave_HR3b'] #['config_wave_HR3b'] #  ['config_RD_RPS2b'] #['config_Coulomb_3b'] # ['config_gravity_16'] # ['config_arbitrary_3'] # ['config_oscillator_900'] #  ['config_gravity_16_HR_continuous'] ['config_boids_16_HR']
 
     # Load a graph neural network model used to sparsify the particle embedding during training
     model_config_embedding = config_manager.load_and_validate_config('./config/config_embedding.yaml')
