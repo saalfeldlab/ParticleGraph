@@ -762,6 +762,7 @@ def data_train(model_config, bSparse=False):
         print(f'hnorm: {to_numpy(hnorm)}')
         torch.save(hnorm, os.path.join(log_dir, 'hnorm.pt'))
         logger.info(f'hnorm : {to_numpy(hnorm)}')
+    print('')
 
     if model_config['model'] == 'PDE_G':
         model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
@@ -1176,7 +1177,7 @@ def data_train(model_config, bSparse=False):
             if model_config['kmeans_input'] == 'embedding':
                 labels, nclusters = embedding_cluster.get(embedding_, 'distance',thresh=1.5)
             if model_config['kmeans_input'] == 'both':
-                new_projection = np.concatenate ((proj_interaction,embedding_), dim=-1)
+                new_projection = np.concatenate ((proj_interaction,embedding_), axis=-1)
                 labels, nclusters = embedding_cluster.get(new_projection, 'distance')
                 
             for n in range(nclusters):
@@ -1205,18 +1206,19 @@ def data_train(model_config, bSparse=False):
             logger.info(f'Accuracy: {np.round(Accuracy,3)}')
 
             ax = fig.add_subplot(1, 6, 6)
-            plt.title(r'Clustered particle embedding', fontsize=12)
             model_a_ = model.a.clone().detach()
             model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
             for n in range(nclusters):
                 pos = np.argwhere(labels == n).squeeze().astype(int)
                 median_center = model_a_[pos, :]
                 median_center = torch.median(median_center, axis=0).values
-                model_a_[pos, :] = torch.median(median_center, axis=0).values
+                plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=20, c='r')
+                model_a_[pos, :] = median_center
+                plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=20, c='k')
             model_a_ = torch.reshape(model_a_, (model.a.shape[0], model.a.shape[1], model.a.shape[2]))
             for n in np.unique(new_labels):
                 pos = np.argwhere(new_labels == n).squeeze().astype(int)
-                plt.scatter(to_numpy(model_a_[0,pos[0], 0]), to_numpy(model_a_[0,pos[0], 1]), color=cmap.color(n), s=6)
+                plt.scatter(to_numpy(model_a_[0,pos, 0]), to_numpy(model_a_[0,pos, 1]), color='k', s=6)
             plt.xlabel('ai0', fontsize=12)
             plt.ylabel('ai1', fontsize=12)
             plt.xticks(fontsize=10.0)
@@ -3056,13 +3058,13 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # config_manager = create_config_manager(config_type='simulation')
 
     config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
-    config_list = ['config_RD_RPS2c'] # ['config_wave_HR3c'] # #['config_Coulomb_3b'] # ['config_gravity_16'] # ['config_arbitrary_3'] # ['config_oscillator_900'] #  ['config_gravity_16_HR_continuous'] ['config_boids_16_HR']
+    config_list = ['config_wave_HR3c'] # ['config_RD_RPS2c'] # ['config_wave_HR3c'] # #['config_Coulomb_3b'] # ['config_gravity_16'] # ['config_arbitrary_3'] # ['config_oscillator_900'] #  ['config_gravity_16_HR_continuous'] ['config_boids_16_HR']
 
     # Load a graph neural network model used to sparsify the particle embedding during training
     model_config_embedding = config_manager.load_and_validate_config('./config/config_embedding.yaml')
