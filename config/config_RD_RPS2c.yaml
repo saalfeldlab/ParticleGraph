@@ -9,7 +9,7 @@ min_radius: 0
 nparticles: 10000 
 nparticle_types: 5
 ninteractions: 5
-kmeans_input: 'both'
+kmeans_input: 'plot'
 nframes: 10000
 sigma: 0.005 
 delta_t: 0.1
@@ -34,5 +34,5 @@ start_frame: 0
 cmap: 'tab10'
 arrow_length: 10
 description: 'Wave equation 5 coefficients'
-sparsity: 'none'
+sparsity: 'replace'
 

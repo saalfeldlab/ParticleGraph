@@ -4455,7 +4455,7 @@ def data_plot_FIG5():
 
 def data_plot_FIG6():
 
-    config = 'config_wave_HR3b'
+    config = 'config_wave_HR3c'
     # model_config = load_model_config(id=config)
 
     # Load parameters from config file
@@ -4526,7 +4526,7 @@ def data_plot_FIG6():
 
     model = Mesh_Laplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
 
-    net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
+    net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_5.pt"
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
 
@@ -4645,11 +4645,12 @@ def data_plot_FIG6():
             h = model.lin_phi(in_features.float())
             h = h[:, 0]
             f_list.append(h)
+            if n % 24 == 0:
+                plt.plot(to_numpy(r),
+                         to_numpy(h) * to_numpy(hnorm), linewidth=1,
+                         color='k', alpha=0.05)
         f_list = torch.stack(f_list)
         coeff_norm = to_numpy(f_list)
-        trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int), n_components=2, transform_queue_size=0).fit(coeff_norm)
-        proj_interaction = trans.transform(coeff_norm)
-        proj_interaction = np.squeeze(proj_interaction)
         np.save(os.path.join(log_dir, f'proj_interaction_20.npy'), proj_interaction)
     
     labels, nclusters = embedding_cluster.get(proj_interaction,'distance')
@@ -4677,7 +4678,10 @@ def data_plot_FIG6():
         # plt.scatter(to_numpy(temp[:, 0]), to_numpy(temp[:, 1]))
         # mtemp = torch.median(temp, axis=0).values
         # plt.plot(to_numpy(mtemp[0]), to_numpy(mtemp[1]), '+', color='black', markersize=10)
-        model_a_[pos, :] = torch.median(temp, axis=0).values.repeat((len(pos), 1))
+        if len(temp)>0:
+            model_a_[pos, :] = torch.median(temp, axis=0).values.repeat((len(pos), 1))
+        else: 
+            temp = torch.ones((1,2),device=device)
         t.append(torch.median(temp, axis=0).values)
         tt = np.append(tt, torch.median(temp, axis=0).values.cpu().numpy())
     print(t)
@@ -4784,6 +4788,14 @@ def data_plot_FIG6():
     r_squared = 1 - (ss_res / ss_tot)
     plt.text(0, 0.9, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
 
+    x_width = int(np.sqrt(nparticles))
+    xs = torch.linspace(0, 1, steps=x_width)
+    ys = torch.linspace(0, 1, steps=x_width)
+    x, y = torch.meshgrid(xs, ys, indexing='xy')
+    x = torch.reshape(x, (x_width ** 2, 1))
+    y = torch.reshape(y, (x_width ** 2, 1))
+    x_width = 1 / x_width / 8
+
     ax = fig.add_subplot(3, 3, 8)
     for k in range(model_config['nparticles']):
         plt.scatter(to_numpy(x[k]), to_numpy(y[k]), color=cmap.color(new_labels[k]), s=10)
@@ -4812,7 +4824,7 @@ def data_plot_FIG6():
 
 def data_plot_FIG7():
 
-    config = 'config_RD_RPS2b'
+    config = 'config_RD_RPS2c'
     # model_config = load_model_config(id=config)
 
     # Load parameters from config file
@@ -4890,7 +4902,7 @@ def data_plot_FIG7():
     model_learn = Mesh_RPS_learn()
     model_learn = model_learn.to(device)
 
-    net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
+    net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_2.pt"
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
 
@@ -4995,6 +5007,8 @@ def data_plot_FIG7():
     if os.path.exists(os.path.join(log_dir, f'proj_interaction_20.npy')):
         proj_interaction = np.load(os.path.join(log_dir, f'proj_interaction_20.npy'))
     else:
+        fig = plt.figure(figsize=(8, 8))
+        plt.ion()
         with torch.no_grad():
             f_list = []
             for n in trange(nparticles):
@@ -5006,8 +5020,26 @@ def data_plot_FIG7():
                 h = model.lin_phi(in_features.float())
                 h = h[:, 0]
                 f_list.append(h)
+                if n % 24 == 0:
+                    plt.plot(to_numpy(r),
+                             to_numpy(h) * to_numpy(hnorm), linewidth=1,
+                             color='k', alpha=0.05)
             f_list = torch.stack(f_list)
             coeff_norm = to_numpy(f_list)
+            
+        n_neighbors_list = [200, 500, 1000]
+
+        for n_neighbors in n_neighbors_list:
+            fig = plt.figure(figsize=(8, 8))
+            plt.ion()
+            plt.title(f'n_neighbors: {n_neighbors}')
+            trans = umap.UMAP(n_neighbors=n_neighbors, n_components=2, transform_queue_size=0).fit(coeff_norm)
+            proj_interaction = trans.transform(coeff_norm)
+            proj_interaction = np.squeeze(proj_interaction)
+            plt.scatter(proj_interaction[:, 0], proj_interaction[:, 1], s=0.1,c='k')
+            plt.xlabel(r'UMAP 0', fontsize=12)
+            plt.ylabel(r'UMAP 1', fontsize=12)
+            
         trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int), n_components=2, transform_queue_size=0).fit(coeff_norm)
         proj_interaction = trans.transform(coeff_norm)
         proj_interaction = np.squeeze(proj_interaction)
@@ -5214,7 +5246,6 @@ def data_plot_FIG7():
     plt.yticks(fontsize=10.0)
     plt.xlabel(r'$x_i$', fontsize=12)
     plt.ylabel(r'$y_i$', fontsize=12)
-    plt.text(0.1, 0.85, r"Model", fontsize=12)
 
     ax = fig.add_subplot(3, 3, 9)
     print('8')
@@ -5225,7 +5256,6 @@ def data_plot_FIG7():
     plt.yticks(fontsize=10.0)
     plt.xlabel(r'$x_i$', fontsize=12)
     plt.ylabel(r'$y_i$', fontsize=12)
-    plt.text(0.1, 0.85, r"True", fontsize=12)
 
     plt.tight_layout()
 
@@ -5275,10 +5305,10 @@ if __name__ == '__main__':
     # data_plot_FIG5()
 
     # wave HR2 or HR3 (slit)
-    # data_plot_FIG6()
+    data_plot_FIG6()
 
     # RD_RPS2
-    data_plot_FIG7()
+    # data_plot_FIG7()
 
 
 

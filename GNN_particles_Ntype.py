@@ -1140,14 +1140,11 @@ def data_train(model_config, bSparse=False):
                 for n in range(nparticles):
                     embedding = model.a[0, n, :] * torch.ones((100, model_config['embedding']), device=device)
                     if model_config['model'] == 'RD_RPS_Mesh':
+                        embedding = model.a[0, n, :] * torch.ones((100, model_config['embedding']), device=device)
                         u = torch.tensor(np.linspace(0, 1, 100)).to(device)
-                        v = torch.tensor(np.linspace(1, 0, 100)).to(device)
-                        w = u + v / 2
                         u = u[:, None]
-                        v = v[:, None]
-                        w = w[:, None]
-                        in_features = torch.cat((10 * u, 10 * v, 10 * w, u, v, w, embedding), dim=1)
                         r = u
+                        in_features = torch.cat((u, u, u, u, u, u, embedding), dim=1)
                     else:
                         r = torch.tensor(np.linspace(-150, 150, 100)).to(device)
                         in_features = torch.cat((r[:, None], embedding), dim=1)
@@ -1161,7 +1158,7 @@ def data_train(model_config, bSparse=False):
                 f_list = torch.stack(f_list)
                 coeff_norm = to_numpy(f_list)
                 if bMesh:
-                    trans = umap.UMAP(n_neighbors=30,
+                    trans = umap.UMAP(n_neighbors=500,
                                       n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
                 else:
                     trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int),
@@ -1182,7 +1179,8 @@ def data_train(model_config, bSparse=False):
                 
             for n in range(nclusters):
                 pos = np.argwhere(labels == n)
-                plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=5)
+                if len(pos) > 0:
+                    plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=5)
             label_list = []
             for n in range(nparticle_types):
                 tmp = labels[index_particles[n]]
@@ -1198,8 +1196,9 @@ def data_train(model_config, bSparse=False):
             for n in range(nparticle_types):
                 new_labels[labels == label_list[n]] = n
                 pos = np.argwhere(labels == label_list[n])
-                plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1],
-                            color=cmap.color(n), s=0.1)
+                if len(pos)>0:
+                    plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1],
+                                color=cmap.color(n), s=0.1)
             Accuracy = metrics.accuracy_score(to_numpy(T1), new_labels)
             plt.text(0, 1.1, f'Accuracy: {np.round(Accuracy,3)}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
             print (f'Accuracy: {np.round(Accuracy,3)}')
@@ -1210,11 +1209,12 @@ def data_train(model_config, bSparse=False):
             model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
             for n in range(nclusters):
                 pos = np.argwhere(labels == n).squeeze().astype(int)
-                median_center = model_a_[pos, :]
-                median_center = torch.median(median_center, axis=0).values
-                plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=20, c='r')
-                model_a_[pos, :] = median_center
-                plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=20, c='k')
+                if len(pos) > 0:
+                    median_center = model_a_[pos, :]
+                    median_center = torch.median(median_center, axis=0).values
+                    plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=20, c='r')
+                    model_a_[pos, :] = median_center
+                    plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=20, c='k')
             model_a_ = torch.reshape(model_a_, (model.a.shape[0], model.a.shape[1], model.a.shape[2]))
             for n in np.unique(new_labels):
                 pos = np.argwhere(new_labels == n).squeeze().astype(int)
@@ -3064,7 +3064,7 @@ if __name__ == '__main__':
     # config_manager = create_config_manager(config_type='simulation')
 
     config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
-    config_list = ['config_wave_HR3c'] # ['config_RD_RPS2c'] # ['config_wave_HR3c'] # #['config_Coulomb_3b'] # ['config_gravity_16'] # ['config_arbitrary_3'] # ['config_oscillator_900'] #  ['config_gravity_16_HR_continuous'] ['config_boids_16_HR']
+    config_list = ['config_wave_HR3d'] # ['config_wave_HR3c'] #  # ['config_wave_HR3c'] # #['config_Coulomb_3b'] # ['config_gravity_16'] # ['config_arbitrary_3'] # ['config_oscillator_900'] #  ['config_gravity_16_HR_continuous'] ['config_boids_16_HR']
 
     # Load a graph neural network model used to sparsify the particle embedding during training
     model_config_embedding = config_manager.load_and_validate_config('./config/config_embedding.yaml')
