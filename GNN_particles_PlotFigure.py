@@ -4526,7 +4526,7 @@ def data_plot_FIG6():
 
     model = Mesh_Laplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
 
-    net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_5.pt"
+    net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
 
@@ -4637,7 +4637,11 @@ def data_plot_FIG6():
     if os.path.exists(os.path.join(log_dir, f'proj_interaction_20.npy')):
         proj_interaction = np.load(os.path.join(log_dir, f'proj_interaction_20.npy'))
     else:
-        f_list = []
+
+    fig = plt.figure(figsize=(10.5, 9.6))
+    f_list = []
+    popt_list = []
+    with torch.no_grad():
         for n in trange(nparticles):
             r = torch.tensor(np.linspace(-150, 150, 1000)).to(device)
             embedding = model.a[0, n, :] * torch.ones((1000, model_config['embedding']), device=device)
@@ -4645,15 +4649,60 @@ def data_plot_FIG6():
             h = model.lin_phi(in_features.float())
             h = h[:, 0]
             f_list.append(h)
-            if n % 24 == 0:
-                plt.plot(to_numpy(r),
-                         to_numpy(h) * to_numpy(hnorm), linewidth=1,
-                         color='k', alpha=0.05)
-        f_list = torch.stack(f_list)
-        coeff_norm = to_numpy(f_list)
-        np.save(os.path.join(log_dir, f'proj_interaction_20.npy'), proj_interaction)
-    
-    labels, nclusters = embedding_cluster.get(proj_interaction,'distance')
+            popt, pcov = curve_fit(func_lin, to_numpy(r), to_numpy(h))
+            popt_list.append(popt)
+            if n%12 == 0:
+                type = to_numpy(T1[n])
+                plt.scatter(to_numpy(r),to_numpy(h), c=cmap.color(type),s=0.01, alpha=0.1)
+                
+    f_list = torch.stack(f_list)
+    coeff_norm = to_numpy(f_list)
+    popt_list = np.array(popt_list)
+
+    # coeff_norm = torch.cat((coeff_norm,embedding),axis=1)
+    trans = umap.UMAP(n_neighbors=500,
+                          n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
+    proj_interaction = trans.transform(coeff_norm)
+    np.save(os.path.join(log_dir, f'proj_interaction_20.npy'), proj_interaction)
+
+    new_projection = np.concatenate((proj_interaction, popt_list[:,0:1]), axis=-1)
+    labels, nclusters = embedding_cluster.get(new_projection, 'distance')
+
+
+    fig = plt.figure(figsize=(10.5, 9.6))
+    plt.ion()
+    plt.hist(popt_list[:,0], 100)
+    for n in range(nparticle_types):
+        tmp = popt_list[index_particles[n],0]*to_numpy(hnorm)*100
+        c = model_config['c'][n]
+
+        print (f'type {n}  c:{c}   fit: {np.mean(tmp)}+/-{np.std(tmp)}')
+
+
+
+
+    labels, nclusters = embedding_cluster.get(popt_list[:,0:1], 'distance')
+
+
+    fig = plt.figure(figsize=(10.5, 9.6))
+    plt.ion()
+    for n in range(nparticle_types):
+        plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1],
+                    color=cmap.color(n), s=0.1)
+        plt.xlabel(r'UMAP 0', fontsize=12)
+        plt.ylabel(r'UMAP 1', fontsize=12)
+
+    fig = plt.figure(figsize=(10.5, 9.6))
+    plt.ion()
+    for n in range(nclusters):
+        pos = np.argwhere(labels == n).squeeze().astype(int)
+        if len(pos)>0:
+            plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1],
+                        color=cmap.color(n), s=0.1)
+            plt.xlabel(r'UMAP 0', fontsize=12)
+            plt.ylabel(r'UMAP 1', fontsize=12)
+
+    # labels, nclusters = embedding_cluster.get(proj_interaction,'distance')
     label_list = []
     for n in range(nparticle_types):
         tmp = labels[index_particles[n]]
@@ -4701,8 +4750,6 @@ def data_plot_FIG6():
     plt.yticks(fontsize=10.0)
     plt.text(.05, .86, f'N: {nparticles}', ha='left', va='top', transform=ax.transAxes ,fontsize=10)
     plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
-    
-    
 
     ax = fig.add_subplot(3, 3, 3)
     print('3')
@@ -4796,7 +4843,15 @@ def data_plot_FIG6():
     y = torch.reshape(y, (x_width ** 2, 1))
     x_width = 1 / x_width / 8
 
+    x_width = int(np.sqrt(nparticles))
+    xs = torch.linspace(1 / x_width / 2, 1 - 1 / x_width / 2, steps=x_width)
+    ys = torch.linspace(1 / x_width / 2, 1 - 1 / x_width / 2, steps=x_width)
+    x, y = torch.meshgrid(xs, ys, indexing='xy')
+    x = torch.reshape(x, (x_width ** 2, 1))
+    y = torch.reshape(y, (x_width ** 2, 1))
+
     ax = fig.add_subplot(3, 3, 8)
+    print('8')
     for k in range(model_config['nparticles']):
         plt.scatter(to_numpy(x[k]), to_numpy(y[k]), color=cmap.color(new_labels[k]), s=10)
     plt.xticks(fontsize=10.0)
@@ -4806,6 +4861,7 @@ def data_plot_FIG6():
     plt.text(0, 0.85, r"Model", fontsize=12)
 
     ax = fig.add_subplot(3, 3, 9)
+    print('9')
     for n in range(nparticle_types):
         plt.scatter(to_numpy(x[index_particles[n]]),
                     to_numpy(y[index_particles[n]]), s=10, color=cmap.color(n))
@@ -4817,7 +4873,7 @@ def data_plot_FIG6():
 
     plt.tight_layout()
 
-    plt.savefig('Fig6.pdf', format="pdf", dpi=300)
+    # plt.savefig('Fig6.pdf', format="pdf", dpi=300)
     plt.savefig('Fig6.jpg', dpi=300)
 
     plt.close()
@@ -4902,7 +4958,7 @@ def data_plot_FIG7():
     model_learn = Mesh_RPS_learn()
     model_learn = model_learn.to(device)
 
-    net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_2.pt"
+    net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
 
@@ -5273,7 +5329,7 @@ if __name__ == '__main__':
     print('use of https://github.com/gpeyre/.../ml_10_particle_system.ipynb')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # arbitrary_3 training
