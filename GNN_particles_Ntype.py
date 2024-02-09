@@ -1196,7 +1196,7 @@ def data_train(model_config, bSparse=False):
             for n in range(nparticle_types):
                 new_labels[labels == label_list[n]] = n
                 pos = np.argwhere(labels == label_list[n])
-                if len(pos)>0:
+                if pos.size > 0:
                     plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1],
                                 color=cmap.color(n), s=0.1)
             Accuracy = metrics.accuracy_score(to_numpy(T1), new_labels)
@@ -1209,7 +1209,7 @@ def data_train(model_config, bSparse=False):
             model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
             for n in range(nclusters):
                 pos = np.argwhere(labels == n).squeeze().astype(int)
-                if len(pos) > 0:
+                if pos.size > 0:
                     median_center = model_a_[pos, :]
                     median_center = torch.median(median_center, axis=0).values
                     plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=20, c='r')
@@ -3058,13 +3058,13 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # config_manager = create_config_manager(config_type='simulation')
 
     config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
-    config_list = ['config_wave_HR3c'] # ['config_wave_HR3c'] #  # ['config_wave_HR3c'] # #['config_Coulomb_3b'] # ['config_gravity_16'] # ['config_arbitrary_3'] # ['config_oscillator_900'] #  ['config_gravity_16_HR_continuous'] ['config_boids_16_HR']
+    config_list = ['config_RD_RPS2c'] # # #['config_Coulomb_3b'] # ['config_gravity_16'] # ['config_arbitrary_3'] # ['config_oscillator_900'] #  ['config_gravity_16_HR_continuous'] ['config_boids_16_HR']
 
     # Load a graph neural network model used to sparsify the particle embedding during training
     model_config_embedding = config_manager.load_and_validate_config('./config/config_embedding.yaml')
