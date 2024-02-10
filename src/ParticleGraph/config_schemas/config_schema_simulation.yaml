@@ -127,6 +127,7 @@ v_init:
 
 boundary:
   type: string
+  allowed: ['periodic', 'no']
   default: 'periodic'
 
 particle_value_map:
