@@ -17,5 +17,6 @@ dependencies:
   - cerberus
   - pip
   - pip:
+    - gputil
     - geomloss
     - torch_geometric
