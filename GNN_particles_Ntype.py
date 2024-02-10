@@ -32,7 +32,7 @@ os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 from ParticleGraph.data_loaders import *
 from ParticleGraph.utils import set_device
 from ParticleGraph.config_manager import create_config_manager, ConfigManager
-from ParticleGraph.utils import to_numpy
+from ParticleGraph.utils import to_numpy, set_device, func_pow, func_lin, normalize99, norm_velocity
 from ParticleGraph.generators.PDE_A import PDE_A
 from ParticleGraph.generators.PDE_B import PDE_B
 from ParticleGraph.generators.PDE_E import PDE_E
@@ -50,48 +50,6 @@ from ParticleGraph.models.MeshLaplacian import MeshLaplacian
 from ParticleGraph.models.Mesh_RPS import Mesh_RPS
 from ParticleGraph.models.PDE_embedding import PDE_embedding
 from ParticleGraph.embedding_cluster import *
-
-def func_pow(x, a, b):
-    return a / (x**b)
-
-
-def func_lin(x, a, b):
-    return a * x + b
-
-
-def normalize99(Y, lower=1, upper=99):
-    """ normalize image so 0.0 is 1st percentile and 1.0 is 99th percentile """
-    X = Y.copy()
-    x01 = np.percentile(X, lower)
-    x99 = np.percentile(X, upper)
-    X = (X - x01) / (x99 - x01)
-    return x01, x99
-
-
-def norm_velocity(xx, device):
-    mvx = torch.mean(xx[:, 3])
-    mvy = torch.mean(xx[:, 4])
-    vx = torch.std(xx[:, 3])
-    vy = torch.std(xx[:, 4])
-    nvx = np.array(xx[:, 3].detach().cpu())
-    vx01, vx99 = normalize99(nvx)
-    nvy = np.array(xx[:, 4].detach().cpu())
-    vy01, vy99 = normalize99(nvy)
-
-    return torch.tensor([vx01, vx99, vy01, vy99, vx, vy], device=device)
-
-
-def norm_acceleration(yy, device):
-    max = torch.mean(yy[:, 0])
-    may = torch.mean(yy[:, 1])
-    ax = torch.std(yy[:, 0])
-    ay = torch.std(yy[:, 1])
-    nax = np.array(yy[:, 0].detach().cpu())
-    ax01, ax99 = normalize99(nax)
-    nay = np.array(yy[:, 1].detach().cpu())
-    ay01, ay99 = normalize99(nay)
-
-    return torch.tensor([ax01, ax99, ay01, ay99, ax, ay], device=device)
 
 
 class cc:
