@@ -31,13 +31,6 @@ def set_device(device=None):
     return device
 
 
-def func_pow(x, a, b):
-    return a / (x**b)
-
-def func_lin(x, a, b):
-    return a * x + b
-
-
 def normalize99(Y, lower=1, upper=99):
     """ normalize image so 0.0 is 1st percentile and 1.0 is 99th percentile """
     X = Y.copy()

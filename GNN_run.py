@@ -30,7 +30,8 @@ import os
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
 from ParticleGraph.data_loaders import *
-from ParticleGraph.utils import func_pow, func_lin, normalize99, norm_velocity, set_device
+from ParticleGraph.utils import normalize99, norm_velocity, set_device
+from ParticleGraph.fitting_models import linear_model, power_model
 from ParticleGraph.config_manager import create_config_manager, ConfigManager
 from ParticleGraph.utils import to_numpy
 from ParticleGraph.generators.PDE_A import PDE_A
@@ -2046,11 +2047,11 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
         for m in range(nparticle_types):
             for n in range(nparticle_types):
                 if plot_list_pairwise[nn][10] < 0:
-                    popt, pocv = curve_fit(func_pow, to_numpy(rr),
+                    popt, pocv = curve_fit(power_model, to_numpy(rr),
                                            -to_numpy(plot_list_pairwise[nn]), bounds=([0, 1.5], [5., 2.5]))
                     popt[0] = -popt[0]
                 else:
-                    popt, pocv = curve_fit(func_pow, to_numpy(rr),
+                    popt, pocv = curve_fit(power_model, to_numpy(rr),
                                            to_numpy(plot_list_pairwise[nn]), bounds=([0, 1.5], [5., 2.5]))
                 nn += 1
                 popt_list.append(popt)
@@ -2064,12 +2065,12 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
         plt.scatter(ptrue_list, popt_list[:, 0], color='k')
         x_data = ptrue_list
         y_data = popt_list[:, 0]
-        lin_fit, lin_fitv = curve_fit(func_lin, x_data, y_data)
-        plt.plot(ptrue_list, func_lin(x_data, lin_fit[0], lin_fit[1]), color='r')
+        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+        plt.plot(ptrue_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r')
         plt.xlabel('True q_i.q_j [a.u.]', fontsize=12)
         plt.ylabel('Predicted q_i.q_j [a.u.]', fontsize=12)
         plt.text(-2, 4, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
-        residuals = y_data - func_lin(x_data, *lin_fit)
+        residuals = y_data - linear_model(x_data, *lin_fit)
         ss_res = np.sum(residuals ** 2)
         ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
         r_squared = 1 - (ss_res / ss_tot)
@@ -2105,7 +2106,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
         p = np.linspace(0.5, 5, nparticle_types)
         popt_list = []
         for n in range(nparticle_types):
-            popt, pcov = curve_fit(func_pow, to_numpy(rr), to_numpy(plot_list[n]))
+            popt, pcov = curve_fit(power_model, to_numpy(rr), to_numpy(plot_list[n]))
             popt_list.append(popt)
         popt_list = np.array(popt_list)
 
@@ -2138,14 +2139,14 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
         plt.scatter(p, popt_list[:, 0], color='k')
         x_data = p
         y_data = popt_list[:, 0]
-        lin_fit, lin_fitv = curve_fit(func_lin, x_data, y_data)
-        plt.plot(p, func_lin(x_data, lin_fit[0], lin_fit[1]), color='r')
+        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+        plt.plot(p, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r')
         plt.xlabel('True mass [a.u.]', fontsize=12)
         plt.ylabel('Predicted mass [a.u.]', fontsize=12)
         plt.xlim([0, 5.5])
         plt.ylim([0, 5.5])
         plt.text(0.5, 5, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
-        residuals = y_data - func_lin(x_data, *lin_fit)
+        residuals = y_data - linear_model(x_data, *lin_fit)
         ss_res = np.sum(residuals ** 2)
         ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
         r_squared = 1 - (ss_res / ss_tot)
