@@ -2526,7 +2526,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             rmserr_list.append(rmserr.item())
             print(f'sub-group {n}: RMSE: {rmserr.item()}')
 
-        print(f'RMSE: {np.mean(rmserr_list)}+\-{np.std(rmserr_list)} ')
+        print(f'RMSE: {np.mean(rmserr_list)}+/-{np.std(rmserr_list)} ')
 
 
 def data_train_shrofflab_celegans(model_config):
