@@ -28,38 +28,31 @@ class RD_Gray_Scott(pyg.nn.MessagePassing):
         self.beta = beta
         self.bc_diff = bc_diff
 
+        self.Du = 5E-2
+        self.Dv = 1E-2
+
     def forward(self, data, device):
-        x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
-        # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-
-        c = self.c[to_numpy(x[:, 5])]
-        c = c[:, None]
-
-        laplacian = c * self.beta * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
-
-        Du = 5E-2
-        Dv = 1E-2
         F = torch.tensor(0.0283, device=device)
         k = torch.tensor(0.0475, device=device)
 
-        dU = Du * laplacian[:, 0] - x[:, 6] * x[:, 7] ** 2 + F * (1 - x[:, 6])
-        dV = Dv * laplacian[:, 1] + x[:, 6] * x[:, 7] ** 2 - (F + k) * x[:, 7]
+        c = self.c[to_numpy(data.x[:, 5])]
+        c = c[:, None]
 
-        pred = self.beta * torch.cat((dU[:, None], dV[:, None]), axis=1)
+        uv = data.x[:, 6:8]
+        laplace_uv = c * self.beta * self.propagate(data.edge_index, uv=uv, discrete_laplacian=data.edge_attr)
+        uxv2 = torch.prod(uv, axis=1) ** 2
 
-        return pred
+        # This is equivalent to the nonlinear reaction diffusion equation:
+        #   du = Du * laplace_u - (u * v)^2 + F * (1 - u)
+        #   dv = Dv * laplace_v + (u * v)^2 - (F + k) * v
+        d_u = self.Du * laplace_uv[:, 0] - uxv2 + F * (1 - uv[:, 0])
+        d_v = self.Dv * laplace_uv[:, 1] + uxv2 - (F + k) * uv[:, 1]
 
-    def message(self, x_i, x_j, edge_attr):
-        # U column 6, V column 7
+        d_uv = self.beta * torch.column_stack((d_u, d_v))
+        return d_uv
 
-        # L = edge_attr * (x_j[:, 6]-x_i[:, 6])
-
-        L1 = edge_attr * x_j[:, 6]
-        L2 = edge_attr * x_j[:, 7]
-
-        L = torch.cat((L1[:, None], L2[:, None]), axis=1)
-
-        return L
+    def message(self, uv_i, uv_j, discrete_laplacian):
+        return discrete_laplacian * uv_j
 
     def psi(self, I, p):
         return I

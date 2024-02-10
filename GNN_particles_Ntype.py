@@ -2526,7 +2526,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             rmserr_list.append(rmserr.item())
             print(f'sub-group {n}: RMSE: {rmserr.item()}')
 
-        print(f'RMSE: {np.mean(rmserr_list)}+\-{np.std(rmserr_list)} ')
+        print(f'RMSE: {np.mean(rmserr_list)}+/-{np.std(rmserr_list)} ')
 
 
 def data_train_shrofflab_celegans(model_config):
@@ -3021,10 +3021,8 @@ if __name__ == '__main__':
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
-    # config_manager = create_config_manager(config_type='simulation')
-
-    config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
-    config_list = ['config_gravity_16'] # ,'config_boids_16_HR8','config_boids_16_HR9']# ['config_boids_16_HR7','config_boids_16_HR8','config_boids_16_HR9']
+    config_manager = create_config_manager(config_type='simulation')
+    config_list = ['config_arbitrary_3b'] # ,'config_boids_16_HR8','config_boids_16_HR9']# ['config_boids_16_HR7','config_boids_16_HR8','config_boids_16_HR9']
 
 
     # Load a graph neural network model used to sparsify the particle embedding during training
