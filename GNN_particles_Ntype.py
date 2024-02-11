@@ -1248,7 +1248,7 @@ def data_train(model_config, bSparse=False):
                 logger.info(f'regul_embedding: replaced')
                 plt.text(0, 1.1, f'Replaced', ha='left', va='top', transform=ax.transAxes,
                          fontsize=10)
-                if model_config('fix_cluster_embedding'):
+                if model_config['fix_cluster_embedding']:
                     lra = 0
                     lr = 1E-3
                     it = 0
