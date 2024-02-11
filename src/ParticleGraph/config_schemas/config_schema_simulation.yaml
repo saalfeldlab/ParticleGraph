@@ -39,6 +39,10 @@ sparsity:
   type: string
   default: 'none'
 
+loss_weight:
+  type: boolean
+  default: False
+
 # Model parameters
 model:
   type: string
