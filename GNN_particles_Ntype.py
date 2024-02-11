@@ -1367,7 +1367,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         print('Use learned labels')
         labels = torch.load(os.path.join(log_dir, f'labels_{best_model}.pt'))
     else:
-        labels = T1
+        # labels = T1
         print('Use ground truth labels')
 
     # nparticles larger than initially
@@ -1576,8 +1576,8 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
                     # plt.text(0.08, 0.92, f'frame: {it}',fontsize=8,color='w')
                     gg = 0
                     # plt.text(0, 1.03, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
-                    plt.xlim([0, 1])
-                    plt.ylim([0, 1])
+                    # plt.xlim([0, 1])
+                    # plt.ylim([0, 1])
                 # else:
                     # plt.text(-1.25, 1.5, f'frame: {it}')
                     # plt.text(-1.25, 1.4, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
@@ -3088,7 +3088,7 @@ if __name__ == '__main__':
     # config_manager = create_config_manager(config_type='simulation')
 
     config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
-    config_list = ['config_wave_HR3d']  # ['config_arbitrary_16_HR1b'] #['config_wave_HR3c'] #['config_RD_RPS2c'] # # #['config_Coulomb_3b'] # ['config_gravity_16'] # ['config_arbitrary_3'] # ['config_oscillator_900'] #  ['config_gravity_16_HR_continuous'] ['config_boids_16_HR']
+    config_list = ['config_wave_HR3d'] #['config_RD_RPS2c'] #  # ['config_arbitrary_16_HR1b'] #['config_wave_HR3c'] # # #['config_Coulomb_3b'] # ['config_gravity_16'] # ['config_arbitrary_3'] # ['config_oscillator_900'] #  ['config_gravity_16_HR_continuous'] ['config_boids_16_HR']
 
     # Load a graph neural network model used to sparsify the particle embedding during training
     model_config_embedding = config_manager.load_and_validate_config('./config/config_embedding.yaml')
@@ -3114,7 +3114,7 @@ if __name__ == '__main__':
         cmap = cc(model_config=model_config)  # create colormap for given model_config
 
         data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, bLoad_p=False, step=model_config['nframes']//50)
-        data_train(model_config,model_embedding)
+        # data_train(model_config,model_embedding)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//50, ratio=1)
 
