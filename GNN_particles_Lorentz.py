@@ -7,12 +7,10 @@ from shutil import copyfile
 import matplotlib.pyplot as plt
 import networkx as nx
 import torch.nn as nn
-import torch_geometric as pyg
 import torch_geometric.data as data
 import torch_geometric.transforms as T
 import torch_geometric.utils as pyg_utils
 import umap
-import yaml  # need to install pyyaml
 from prettytable import PrettyTable
 from scipy.optimize import curve_fit
 from scipy.spatial import Delaunay
@@ -27,19 +25,8 @@ from tqdm import trange
 from matplotlib import rc
 import os
 
-from ParticleGraph.MLP import MLP
-from ParticleGraph.generators.Laplacian_A import Laplacian_A
-from ParticleGraph.generators.PDE_A import PDE_A
-from ParticleGraph.generators.PDE_B import PDE_B
-from ParticleGraph.generators.PDE_E import PDE_E
-from ParticleGraph.generators.PDE_G import PDE_G
-from ParticleGraph.generators.RD_FitzHugh_Nagumo import RD_FitzHugh_Nagumo
-from ParticleGraph.generators.RD_Gray_Scott import RD_Gray_Scott
-from ParticleGraph.generators.RD_RPS import RD_RPS
-from ParticleGraph.models.ElecParticles import ElecParticles
-from ParticleGraph.models.GravityParticles import GravityParticles
-from ParticleGraph.models.InteractionParticles import InteractionParticles
-from ParticleGraph.models.MeshLaplacian import MeshLaplacian
+from ParticleGraph.generators import Laplacian_A, PDE_A, PDE_B, PDE_E, PDE_G, RD_FitzHugh_Nagumo, RD_Gray_Scott, RD_RPS
+from ParticleGraph.models import ElecParticles, GravityParticles, InteractionParticles, MeshLaplacian
 
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
@@ -2634,6 +2621,3 @@ if __name__ == '__main__':
 
     plt.ion()
     plt.scatter(to_numpy(future_sample), to_numpy(pred))
-
-
-
