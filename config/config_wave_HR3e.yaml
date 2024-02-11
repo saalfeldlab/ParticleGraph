@@ -36,4 +36,5 @@ arrow_length: 10
 description: 'Wave equation 5 coefficients'
 sparsity: 'replace'
 fix_cluster_embedding: True
+loss_weight: True
 
