@@ -1191,7 +1191,8 @@ def data_train(model_config, bSparse=False):
 
             for n in range(nclusters):
                 pos = np.argwhere(labels == n)
-                if len(pos) > 0:
+                pos = np.array(pos)
+                if pos.size > 0:
                     plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=5)
             label_list = []
             for n in range(nparticle_types):
@@ -1208,7 +1209,8 @@ def data_train(model_config, bSparse=False):
             for n in range(nparticle_types):
                 new_labels[labels == label_list[n]] = n
                 pos = np.argwhere(labels == label_list[n])
-                if pos!=[]:
+                pos = np.array(pos)
+                if pos.size>0:
                     plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1],
                                 color=cmap.color(n), s=0.1)
             Accuracy = metrics.accuracy_score(to_numpy(T1), new_labels)
@@ -1222,7 +1224,8 @@ def data_train(model_config, bSparse=False):
             model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
             for n in range(nclusters):
                 pos = np.argwhere(labels == n).squeeze().astype(int)
-                if pos!=[]:
+                pos = np.array(pos)
+                if pos.size > 0:
                     median_center = model_a_[pos, :]
                     median_center = torch.median(median_center, axis=0).values
                     plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=20, c='r')
@@ -1231,7 +1234,9 @@ def data_train(model_config, bSparse=False):
             model_a_ = torch.reshape(model_a_, (model.a.shape[0], model.a.shape[1], model.a.shape[2]))
             for n in np.unique(new_labels):
                 pos = np.argwhere(new_labels == n).squeeze().astype(int)
-                plt.scatter(to_numpy(model_a_[0, pos, 0]), to_numpy(model_a_[0, pos, 1]), color='k', s=6)
+                pos = np.array(pos)
+                if pos.size>0:
+                    plt.scatter(to_numpy(model_a_[0, pos, 0]), to_numpy(model_a_[0, pos, 1]), color='k', s=6)
             plt.xlabel('ai0', fontsize=12)
             plt.ylabel('ai1', fontsize=12)
             plt.xticks(fontsize=10.0)
