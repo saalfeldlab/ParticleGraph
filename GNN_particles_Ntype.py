@@ -6,6 +6,7 @@ from shutil import copyfile
 
 import matplotlib.pyplot as plt
 import networkx as nx
+import torch
 import torch.nn as nn
 import numpy as np
 import torch_geometric.data as data
@@ -893,8 +894,9 @@ def data_train(model_config, bSparse=False):
             print(f'Learning rates: {lr}, {lra}')
             logger.info(f'Learning rates: {lr}, {lra}')
 
-        total_loss = 0
+        error_weight = torch.ones((batch_size * nparticles, 1),device=device, requires_grad=False)
 
+        total_loss = 0
         data_augmentation_loop = 5  ###################################
 
         Niter = nframes * data_augmentation_loop // batch_size
@@ -955,7 +957,14 @@ def data_train(model_config, bSparse=False):
                 else:
                     pred = model(batch, data_id=run - 1, training=True, vnorm=vnorm, phi=phi)
 
-            loss = (pred - y_batch).norm(2)
+            loss = ((pred - y_batch) * error_weight).norm(2)
+
+            if epoch > 1 * Nepochs // 4:
+                with torch.no_grad():
+                    error_weight = torch.abs(pred - y_batch).reshape((batch_size, nparticles, 1))
+                    error_weight = torch.mean(error_weight, axis=0)
+                    error_weight = 1 + error_weight / torch.std(error_weight)
+                    error_weight = error_weight.repeat(batch_size, 1, 1).reshape((batch_size * nparticles, 1)).clone().detach()
 
             loss.backward()
             optimizer.step()
@@ -3113,7 +3122,7 @@ if __name__ == '__main__':
         cmap = cc(model_config=model_config)  # create colormap for given model_config
 
         # data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, bLoad_p=False, step=model_config['nframes']//50)
-        data_train(model_config, model_embedding)
+        data_train(model_config)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//50, ratio=1)
 
