@@ -897,7 +897,6 @@ def data_train(model_config, bSparse=False):
         error_weight = torch.ones((batch_size * nparticles, 1),device=device, requires_grad=False)
 
         total_loss = 0
-        data_augmentation_loop = 5  ###################################
 
         Niter = nframes * data_augmentation_loop // batch_size
         if (bMesh) & (batch_size == 1):
