@@ -285,7 +285,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
         N1 = torch.arange(nparticles, device=device)
         N1 = N1[:, None]
 
-        # create differnet initial conditions
+        # create different initial conditions
         if scenario == 'scenario A':
             X1[:, 0] = X1[:, 0] / nparticle_types
             for n in range(nparticle_types):
@@ -777,13 +777,13 @@ def data_train(model_config, bSparse=False):
     if (model_config['model'] == 'RD_RPS_Mesh'):
         model = Mesh_RPS(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
 
-    # net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_17.pt"
+    # net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_5.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
+    # optimizer.load_state_dict(state_dict['optimizer_state_dict'])
 
     lra = 1E-3
     lr = 1E-3
-
     table = PrettyTable(["Modules", "Parameters"])
     total_params = 0
     it = 0
@@ -802,6 +802,7 @@ def data_train(model_config, bSparse=False):
     logger.info(f"Total Trainable Params: {total_params}")
     logger.info(f'Learning rates: {lr}, {lra}')
 
+
     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     print(f'network: {net}')
     logger.info(f'network: {net}')
@@ -812,7 +813,6 @@ def data_train(model_config, bSparse=False):
     min_radius = 0.002
     model.train()
 
-    model.train()
     best_loss = np.inf
     list_loss = []
 
@@ -836,7 +836,6 @@ def data_train(model_config, bSparse=False):
             index_particles.append(index.squeeze())
         logger.info(hnorm)
         batch_size = 1
-        particle_type_map = model_config['particle_type_map']
         T1 = x[:, 5:6].clone().detach()
 
 
@@ -997,8 +996,8 @@ def data_train(model_config, bSparse=False):
                 plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{N}.tif")
 
         torch.save({'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict()},
-                   os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs_{epoch}.pt'))
+                    'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs_{epoch}.pt'))
+
 
         if (total_loss / nparticles / batch_size / (N + 1) < best_loss):
             best_loss = total_loss / (N + 1) / nparticles / batch_size
@@ -1051,9 +1050,8 @@ def data_train(model_config, bSparse=False):
                 for n in range(nparticle_types):
                     plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5, color=cmap.color(n))
 
+        ax = fig.add_subplot(1, 6, 3)
         if model_config['ninteractions']<100:  # cluster embedding
-
-            ax = fig.add_subplot(1, 6, 3)
             if model_config['model'] == 'PDE_E':
                 acc_list = []
                 for m in range(model.a.shape[0]):
@@ -1137,6 +1135,7 @@ def data_train(model_config, bSparse=False):
                 proj_interaction = trans.transform(coeff_norm)
             elif bMesh:
                 f_list = []
+                popt_list = []
                 for n in range(nparticles):
                     embedding = model.a[0, n, :] * torch.ones((100, model_config['embedding']), device=device)
                     if model_config['model'] == 'RD_RPS_Mesh':
@@ -1145,11 +1144,15 @@ def data_train(model_config, bSparse=False):
                         u = u[:, None]
                         r = u
                         in_features = torch.cat((u, u, u, u, u, u, embedding), dim=1)
+                        h = model.lin_phi(in_features.float())
+                        h = h[:, 0]
                     else:
                         r = torch.tensor(np.linspace(-150, 150, 100)).to(device)
                         in_features = torch.cat((r[:, None], embedding), dim=1)
-                    h = model.lin_phi(in_features.float())
-                    h = h[:, 0]
+                        h = model.lin_phi(in_features.float())
+                        popt, pcov = curve_fit(func_lin, to_numpy(r.squeeze()), to_numpy(h.squeeze()))
+                        popt_list.append(popt)
+                        h = h[:, 0]
                     f_list.append(h)
                     if n % 24 == 0:
                         plt.plot(to_numpy(r),
@@ -1157,26 +1160,48 @@ def data_train(model_config, bSparse=False):
                                  color='k', alpha=0.05)
                 f_list = torch.stack(f_list)
                 coeff_norm = to_numpy(f_list)
-                if bMesh:
+                popt_list = np.array(popt_list)
+
+                if model_config['model'] == 'RD_RPS_Mesh':
                     trans = umap.UMAP(n_neighbors=500,
                                       n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
+                    proj_interaction = trans.transform(coeff_norm)
                 else:
-                    trans = umap.UMAP(n_neighbors=np.round(nparticles / model_config['ninteractions']).astype(int),
-                                      n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
-                proj_interaction = trans.transform(coeff_norm)
+                    proj_interaction = popt_list
+                    proj_interaction[:,1] = proj_interaction[:,0]
 
             # save UMAP projection
             np.save(f'./{log_dir}/tmp_training/umap_projection_{epoch}.npy', proj_interaction)
 
             ax = fig.add_subplot(1, 6, 4)
-            if model_config['kmeans_input'] == 'plot':
-                labels, nclusters = embedding_cluster.get(proj_interaction, 'distance')
-            if model_config['kmeans_input'] == 'embedding':
-                labels, nclusters = embedding_cluster.get(embedding_, 'distance',thresh=1.5)
-            if model_config['kmeans_input'] == 'both':
-                new_projection = np.concatenate ((proj_interaction,embedding_), axis=-1)
-                labels, nclusters = embedding_cluster.get(new_projection, 'distance')
-                
+            if model_config['model'] == 'WaveMesh':
+                silhouette_avg_list=[]
+                silhouette_max=0
+                for n_clusters in range(2,10):
+                    clusterer = KMeans(n_clusters=n_clusters, random_state=10)
+                    cluster_labels = clusterer.fit_predict(proj_interaction)
+                    silhouette_avg=silhouette_score(proj_interaction, cluster_labels)
+                    silhouette_avg_list.append(silhouette_avg)
+                    if silhouette_avg>silhouette_max:
+                        silhouette_max=silhouette_avg
+                        nclusters=n_clusters
+                    print(f'n_clusters: {n_clusters}   silhouette_avg"{silhouette_avg}')
+                    logger.info(f'n_clusters: {n_clusters}   silhouette_avg"{silhouette_avg}')
+                logger.info(f'nclusters: {nclusters}')
+                kmeans = KMeans(n_clusters=nclusters, random_state=10)
+                k = kmeans.fit(proj_interaction)
+                labels = k.labels_
+            else:
+                if model_config['kmeans_input'] == 'plot':
+                    labels, nclusters = embedding_cluster.get(proj_interaction, 'distance')
+                if model_config['kmeans_input'] == 'embedding':
+                    labels, nclusters = embedding_cluster.get(embedding_, 'distance',thresh=1.5)
+                if model_config['kmeans_input'] == 'both':
+                    new_projection = np.concatenate ((proj_interaction,embedding_), axis=-1)
+                    labels, nclusters = embedding_cluster.get(new_projection, 'distance')
+
+
+
             for n in range(nclusters):
                 pos = np.argwhere(labels == n)
                 if len(pos) > 0:
@@ -1187,8 +1212,8 @@ def data_train(model_config, bSparse=False):
                 label_list.append(np.round(np.median(tmp)))
             label_list = np.array(label_list)
 
-            plt.xlabel('UMAP 0', fontsize=12)
-            plt.ylabel('UMAP 1', fontsize=12)
+            plt.xlabel('proj 0', fontsize=12)
+            plt.ylabel('proj 1', fontsize=12)
             plt.text(0., 1.1, f'Nclusters: {nclusters}', ha='left', va='top', transform=ax.transAxes)
 
             ax = fig.add_subplot(1, 6, 5)
@@ -3057,13 +3082,13 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # config_manager = create_config_manager(config_type='simulation')
 
     config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
-    config_list = ['config_arbitrary_16_HR1b'] #['config_wave_HR3c'] #['config_RD_RPS2c'] # # #['config_Coulomb_3b'] # ['config_gravity_16'] # ['config_arbitrary_3'] # ['config_oscillator_900'] #  ['config_gravity_16_HR_continuous'] ['config_boids_16_HR']
+    config_list = ['config_wave_HR3d']  # ['config_arbitrary_16_HR1b'] #['config_wave_HR3c'] #['config_RD_RPS2c'] # # #['config_Coulomb_3b'] # ['config_gravity_16'] # ['config_arbitrary_3'] # ['config_oscillator_900'] #  ['config_gravity_16_HR_continuous'] ['config_boids_16_HR']
 
     # Load a graph neural network model used to sparsify the particle embedding during training
     model_config_embedding = config_manager.load_and_validate_config('./config/config_embedding.yaml')
