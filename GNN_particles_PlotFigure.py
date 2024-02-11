@@ -4456,7 +4456,7 @@ def data_plot_FIG5():
 
 def data_plot_FIG6():
 
-    config = 'config_wave_HR3c'
+    config = 'config_wave_HR3d'
     # model_config = load_model_config(id=config)
 
     # Load parameters from config file
@@ -5395,10 +5395,10 @@ if __name__ == '__main__':
     # data_plot_FIG5()
 
     # wave HR2 or HR3 (slit)
-    # data_plot_FIG6()
+    data_plot_FIG6()
 
     # RD_RPS2
-    data_plot_FIG7()
+    # data_plot_FIG7()
 
 
 
