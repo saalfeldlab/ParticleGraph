@@ -794,9 +794,9 @@ def data_train(model_config, bSparse=False):
     if (model_config['model'] == 'RD_RPS_Mesh'):
         model = Mesh_RPS(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
 
-    net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_20.pt"
-    state_dict = torch.load(net,map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
+    # net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_20.pt"
+    # state_dict = torch.load(net,map_location=device)
+    # model.load_state_dict(state_dict['model_state_dict'])
     # optimizer.load_state_dict(state_dict['optimizer_state_dict'])
 
     lra = 1E-3
@@ -3134,7 +3134,7 @@ if __name__ == '__main__':
 
         cmap = cc(model_config=model_config)  # create colormap for given model_config
 
-        data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, bLoad_p=False, step=model_config['nframes']//50)
+        # data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, bLoad_p=False, step=model_config['nframes']//50)
         data_train(model_config)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, cluster_method=model_config['cluster_method'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//50, ratio=1)
