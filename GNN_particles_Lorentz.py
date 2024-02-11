@@ -31,7 +31,7 @@ from ParticleGraph.models import ElecParticles, GravityParticles, InteractionPar
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
 from ParticleGraph.data_loaders import *
-from ParticleGraph.utils import to_numpy, set_device, normalize99, norm_velocity
+from ParticleGraph.utils import to_numpy, set_device, normalize99, norm_velocity, norm_acceleration
 from ParticleGraph.fitting_models import linear_model, power_model
 
 

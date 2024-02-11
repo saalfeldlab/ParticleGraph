@@ -31,7 +31,7 @@ os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
 from ParticleGraph.data_loaders import *
 from ParticleGraph.config_manager import create_config_manager
-from ParticleGraph.utils import to_numpy, set_device, norm_velocity
+from ParticleGraph.utils import to_numpy, set_device, norm_velocity, norm_acceleration
 from ParticleGraph.fitting_models import linear_model, power_model
 from ParticleGraph.generators import PDE_A, PDE_B, PDE_E, PDE_G, Laplacian_A, RD_FitzHugh_Nagumo, RD_Gray_Scott, RD_RPS
 from ParticleGraph.models import ElecParticles, GravityParticles, InteractionCElegans, InteractionParticles, MeshLaplacian, Mesh_RPS, PDE_embedding
