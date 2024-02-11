@@ -34,5 +34,5 @@ start_frame: 0
 cmap: 'tab10'
 arrow_length: 10
 description: 'Wave equation 5 coefficients'
-sparsity: 'none'
+sparsity: 'replace'
 
