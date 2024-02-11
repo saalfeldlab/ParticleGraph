@@ -39,6 +39,10 @@ sparsity:
   type: string
   default: 'none'
 
+fix_cluster_embedding:
+  type: boolean
+  default: False
+
 loss_weight:
   type: boolean
   default: False

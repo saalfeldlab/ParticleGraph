@@ -877,10 +877,9 @@ def data_train(model_config, bSparse=False):
             batch_size = 8
             print(f'batch_size: {batch_size}')
             logger.info(f'batch_size: {batch_size}')
-        if epoch == 3 * Nepochs // 4:
+        if epoch == 3 * Nepochs // 4 + 2:
             lra = 1E-3
             lr = 5E-4
-            table = PrettyTable(["Modules", "Parameters"])
             it = 0
             for name, parameter in model.named_parameters():
                 if not parameter.requires_grad:
@@ -957,7 +956,7 @@ def data_train(model_config, bSparse=False):
 
             loss = ((pred - y_batch) * error_weight).norm(2)
 
-            if epoch > 1 * Nepochs // 4:
+            if model_config['loss_weight'] & (epoch > 1 * Nepochs // 4):
                 with torch.no_grad():
                     error_weight = torch.abs(pred - y_batch).reshape((batch_size, nparticles, 1))
                     error_weight = torch.mean(error_weight, axis=0)
@@ -1249,6 +1248,34 @@ def data_train(model_config, bSparse=False):
                 logger.info(f'regul_embedding: replaced')
                 plt.text(0, 1.1, f'Replaced', ha='left', va='top', transform=ax.transAxes,
                          fontsize=10)
+                if model_config('fix_cluster_embedding')
+                    lra = 0
+                    lr = 1E-3
+                    it = 0
+                    for name, parameter in model.named_parameters():
+                        if not parameter.requires_grad:
+                            continue
+                        if it == 0:
+                            optimizer = torch.optim.Adam([model.a], lr=lra)
+                        else:
+                            optimizer.add_param_group({'params': parameter, 'lr': lr})
+                        it += 1
+                    print(f'Learning rates: {lr}, {lra}')
+                    logger.info(f'Learning rates: {lr}, {lra}')
+            else:
+                lra = 1E-3
+                lr = 1E-3
+                it = 0
+                for name, parameter in model.named_parameters():
+                    if not parameter.requires_grad:
+                        continue
+                    if it == 0:
+                        optimizer = torch.optim.Adam([model.a], lr=lra)
+                    else:
+                        optimizer.add_param_group({'params': parameter, 'lr': lr})
+                    it += 1
+                print(f'Learning rates: {lr}, {lra}')
+                logger.info(f'Learning rates: {lr}, {lra}')
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
@@ -3083,13 +3110,13 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # config_manager = create_config_manager(config_type='simulation')
 
     config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
-    config_list = ['config_wave_HR3d'] #['config_arbitrary_16_HR1b']  # ['config_RD_RPS2c'] #  # ['config_wave_HR3c'] # # #['config_Coulomb_3b'] # ['config_gravity_16'] # ['config_arbitrary_3'] # ['config_oscillator_900'] #  ['config_gravity_16_HR_continuous'] ['config_boids_16_HR']
+    config_list = ['config_wave_HR3e'] #['config_arbitrary_16_HR1b']  # ['config_RD_RPS2c'] #  # ['config_wave_HR3c'] # # #['config_Coulomb_3b'] # ['config_gravity_16'] # ['config_arbitrary_3'] # ['config_oscillator_900'] #  ['config_gravity_16_HR_continuous'] ['config_boids_16_HR']
 
 
     for config in config_list:
@@ -3107,7 +3134,7 @@ if __name__ == '__main__':
 
         cmap = cc(model_config=model_config)  # create colormap for given model_config
 
-        # data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, bLoad_p=False, step=model_config['nframes']//50)
+        data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, bLoad_p=False, step=model_config['nframes']//50)
         data_train(model_config)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, cluster_method=model_config['cluster_method'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//50, ratio=1)
