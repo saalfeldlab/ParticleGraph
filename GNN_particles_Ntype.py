@@ -382,8 +382,8 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                 cycle_test = (torch.ones(nparticles, device=device) + 0.05 * torch.randn(nparticles, device=device))
                 pos = torch.argwhere(A1 > cycle_test[:, None] * cycle_length_distrib)
                 # cell division
-                if len(pos) > 1:
-                    n_add_nodes = len(pos)
+                if pos!=[] > 1:
+                    n_add_nodes = pos!=[]
                     pos = to_numpy(pos[:, 0].squeeze()).astype(int)
                     nparticles = nparticles + n_add_nodes
                     N1 = torch.arange(nparticles, device=device)
@@ -883,8 +883,6 @@ def data_train(model_config, bSparse=False):
 
         total_loss = 0
 
-        data_augmentation_loop = 5 ###################################
-
         Niter = nframes * data_augmentation_loop // batch_size
         if (bMesh) & (batch_size==1):
             Niter = Niter // 4
@@ -1208,7 +1206,7 @@ def data_train(model_config, bSparse=False):
 
             for n in range(nclusters):
                 pos = np.argwhere(labels == n)
-                if len(pos) > 0:
+                if pos!=[] > 0:
                     plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=5)
             label_list = []
             for n in range(nparticle_types):
@@ -1225,7 +1223,7 @@ def data_train(model_config, bSparse=False):
             for n in range(nparticle_types):
                 new_labels[labels == label_list[n]] = n
                 pos = np.argwhere(labels == label_list[n])
-                if pos.size > 0:
+                if pos!=[] > 0:
                     plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1],
                                 color=cmap.color(n), s=0.1)
             Accuracy = metrics.accuracy_score(to_numpy(T1), new_labels)
@@ -1238,7 +1236,7 @@ def data_train(model_config, bSparse=False):
             model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
             for n in range(nclusters):
                 pos = np.argwhere(labels == n).squeeze().astype(int)
-                if pos.size > 0:
+                if pos!=[] > 0:
                     median_center = model_a_[pos, :]
                     median_center = torch.median(median_center, axis=0).values
                     plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=20, c='r')
@@ -2215,7 +2213,7 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
         pos = np.argwhere(kmeans.labels_ == k).squeeze().astype(int)
         temp = model_a_[pos, :].clone().detach()
         print(torch.median(temp, axis=0).values)
-        model_a_[pos, :] = torch.median(temp, axis=0).values.repeat((len(pos), 1))
+        model_a_[pos, :] = torch.median(temp, axis=0).values.repeat((pos!=[], 1))
         t.append(torch.median(temp, axis=0).values)
     model_a_ = torch.reshape(model_a_, (model.a.shape[0], model.a.shape[1], model.a.shape[2]))
     with torch.no_grad():
