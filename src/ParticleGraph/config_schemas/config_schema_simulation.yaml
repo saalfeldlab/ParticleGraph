@@ -11,9 +11,9 @@ noise_level:
   type: number
   default: 0
 
-kmeans_input:
+cluster_method:
   type: string
-  default: 'plot'
+  default: 'distance_plot'
 
 data_augmentation:
   type: boolean
@@ -22,6 +22,7 @@ data_augmentation:
 batch_size:
   type: integer
   default: 1
+
 nrun:
   type: integer
   default: 2

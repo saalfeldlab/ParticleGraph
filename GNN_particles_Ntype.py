@@ -901,6 +901,8 @@ def data_train(model_config, bSparse=False):
         if (bMesh) & (batch_size == 1):
             Niter = Niter // 4
 
+        Niter = 2000 ########################
+
         for N in trange(Niter):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
@@ -1173,29 +1175,12 @@ def data_train(model_config, bSparse=False):
                 else:
                     proj_interaction = popt_list
                     proj_interaction[:, 1] = proj_interaction[:, 0]
-
-            # save UMAP projection
+            # save projections
             np.save(f'./{log_dir}/tmp_training/umap_projection_{epoch}.npy', proj_interaction)
 
             ax = fig.add_subplot(1, 6, 4)
             if model_config['cluster_method'] =='kmeans_auto':
-                silhouette_avg_list = []
-                silhouette_max = 0
-                for n_clusters in range(2, 10):
-                    clusterer = KMeans(n_clusters=n_clusters, random_state=10)
-                    cluster_labels = clusterer.fit_predict(proj_interaction)
-                    silhouette_avg = silhouette_score(proj_interaction, cluster_labels)
-                    silhouette_avg_list.append(silhouette_avg)
-                    if silhouette_avg > silhouette_max:
-                        silhouette_max = silhouette_avg
-                        nclusters = n_clusters
-                    print(f'n_clusters: {n_clusters}   silhouette_avg"{silhouette_avg}')
-                    logger.info(f'n_clusters: {n_clusters}   silhouette_avg"{silhouette_avg}')
-                logger.info(f'nclusters: {nclusters}')
-                kmeans = KMeans(n_clusters=nclusters, random_state=10)
-                k = kmeans.fit(proj_interaction)
-                labels = k.labels_
-
+                labels, nclusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
             if model_config['cluster_method'] == 'distance_plot':
                 labels, nclusters = embedding_cluster.get(proj_interaction, 'distance')
             if model_config['cluster_method'] == 'distance_embedding':
