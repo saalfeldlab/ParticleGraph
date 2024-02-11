@@ -15,14 +15,15 @@ def to_numpy(tensor: torch.Tensor) -> np.ndarray:
     """
     return tensor.detach().cpu().numpy()
 
+
 def set_device(device=None):
     if device is None or device == 'auto':
         if torch.cuda.is_available():
             # Get the list of available GPUs and their free memory
-            GPUs = GPUtil.getGPUs()
-            if GPUs:
+            gpus = GPUtil.getGPUs()
+            if gpus:
                 # Find the GPU with the maximum free memory
-                device_id = max(range(len(GPUs)), key=lambda x: GPUs[x].memoryFree)
+                device_id = max(range(len(gpus)), key=lambda x: gpus[x].memoryFree)
                 device = f'cuda:{device_id}'
             else:
                 device = 'cpu'
@@ -31,34 +32,36 @@ def set_device(device=None):
     return device
 
 
-def normalize99(Y, lower=1, upper=99):
-    """ normalize image so 0.0 is 1st percentile and 1.0 is 99th percentile """
-    X = Y.copy()
-    x01 = np.percentile(X, lower)
-    x99 = np.percentile(X, upper)
-    X = (X - x01) / (x99 - x01)
-    return x01, x99
+def symmetric_cutoff(x, percent=1):
+    """
+    Get min and max value of x if a certain percentage of the data is cut off from both ends.
+
+    Args:
+        x (np.ndarray): The data.
+        percent (float): The percentage of data to cut off from both ends.
+    """
+    x_lower = np.percentile(x, percent)
+    x_upper = np.percentile(x, 100 - percent)
+    return x_lower, x_upper
+
 
 def norm_velocity(xx, device):
-    mvx = torch.mean(xx[:, 3])
-    mvy = torch.mean(xx[:, 4])
     vx = torch.std(xx[:, 3])
     vy = torch.std(xx[:, 4])
     nvx = np.array(xx[:, 3].detach().cpu())
-    vx01, vx99 = normalize99(nvx)
+    vx01, vx99 = symmetric_cutoff(nvx, percent=1)
     nvy = np.array(xx[:, 4].detach().cpu())
-    vy01, vy99 = normalize99(nvy)
+    vy01, vy99 = symmetric_cutoff(nvy, percent=1)
 
     return torch.tensor([vx01, vx99, vy01, vy99, vx, vy], device=device)
 
+
 def norm_acceleration(yy, device):
-    max = torch.mean(yy[:, 0])
-    may = torch.mean(yy[:, 1])
     ax = torch.std(yy[:, 0])
     ay = torch.std(yy[:, 1])
     nax = np.array(yy[:, 0].detach().cpu())
-    ax01, ax99 = normalize99(nax)
+    ax01, ax99 = symmetric_cutoff(nax, percent=1)
     nay = np.array(yy[:, 1].detach().cpu())
-    ay01, ay99 = normalize99(nay)
+    ay01, ay99 = symmetric_cutoff(nay, percent=1)
 
     return torch.tensor([ax01, ax99, ay01, ay99, ax, ay], device=device)
