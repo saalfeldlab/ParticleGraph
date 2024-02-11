@@ -22,16 +22,15 @@ class EmbeddingCluster:
             silhouette_avg_list = []
             silhouette_max = 0
             for n_clusters in range(2, 10):
-                clusterer = KMeans(n_clusters=n_clusters, random_state=10, n_init=1000)
+                clusterer = KMeans(n_clusters=n_clusters, random_state=10, n_init='auto')
                 cluster_labels = clusterer.fit_predict(data)
                 silhouette_avg = silhouette_score(data, cluster_labels)
                 silhouette_avg_list.append(silhouette_avg)
-                print(silhouette_avg)
                 if silhouette_avg > silhouette_max:
                     silhouette_max = silhouette_avg
                     nclusters = n_clusters
-            kmeans = KMeans(n_clusters=nclusters, random_state=10, n_init=1000)
-            k = kmeans.fit(proj_interaction)
+            kmeans = KMeans(n_clusters=nclusters, random_state=10, n_init='auto')
+            k = kmeans.fit(data)
             clusters = k.labels_
 
         if method == 'distance':

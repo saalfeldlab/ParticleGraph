@@ -493,7 +493,7 @@ def data_plot_FIG2():
     nframes = model_config['nframes']
     bMesh = (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh')
     nrun = model_config['nrun']
-    kmeans_input = model_config['kmeans_input']
+    cluster_method = model_config['cluster_method']
     aggr_type = model_config['aggr_type']
 
     index_particles = []
@@ -1514,7 +1514,7 @@ def data_plot_FIG3sup():
     nframes = model_config['nframes']
     bMesh = (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh')
     nrun = model_config['nrun']
-    kmeans_input = model_config['kmeans_input']
+    cluster_method = model_config['cluster_method']
     aggr_type = model_config['aggr_type']
 
     index_particles = []
@@ -1682,9 +1682,9 @@ def data_plot_FIG3sup():
     print('3')
     kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=1000, max_iter=10000,
                     random_state=13)
-    if kmeans_input == 'plot':
+    if cluster_method == 'plot':
         kmeans.fit(proj_interaction)
-    if kmeans_input == 'embedding':
+    if cluster_method == 'embedding':
         kmeans.fit(embedding_)
     label_list = []
     for n in range(nparticle_types):
@@ -1804,9 +1804,9 @@ def data_plot_FIG3sup():
     print('7')
     kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=1000, max_iter=10000,
                     random_state=13)
-    if kmeans_input == 'plot':
+    if cluster_method == 'plot':
         kmeans.fit(proj_interaction)
-    if kmeans_input == 'embedding':
+    if cluster_method == 'embedding':
         kmeans.fit(embedding_)
     label_list = []
     for n in range(nparticle_types):
@@ -2566,7 +2566,7 @@ def data_plot_FIG3():
     nframes = model_config['nframes']
     bMesh = (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh')
     nrun = model_config['nrun']
-    kmeans_input = model_config['kmeans_input']
+    cluster_method = model_config['cluster_method']
     aggr_type = model_config['aggr_type']
 
     index_particles = []
@@ -2993,7 +2993,7 @@ def data_plot_FIG3_continous():
     nframes = model_config['nframes']
     bMesh = (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh')
     nrun = model_config['nrun']
-    kmeans_input = model_config['kmeans_input']
+    cluster_method = model_config['cluster_method']
     aggr_type = model_config['aggr_type']
 
     index_particles = []
@@ -3272,7 +3272,7 @@ def data_plot_FIG4():
     nframes = model_config['nframes']
     bMesh = (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh')
     nrun = model_config['nrun']
-    kmeans_input = model_config['kmeans_input']
+    cluster_method = model_config['cluster_method']
     aggr_type = model_config['aggr_type']
 
     index_particles = []
@@ -4070,7 +4070,7 @@ def data_plot_FIG5():
     nframes = model_config['nframes']
     bMesh = (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh')
     nrun = model_config['nrun']
-    kmeans_input = model_config['kmeans_input']
+    cluster_method = model_config['cluster_method']
     aggr_type = model_config['aggr_type']
 
     index_particles = []
@@ -4472,7 +4472,7 @@ def data_plot_FIG6():
     nframes = model_config['nframes']
     bMesh = (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh')
     nrun = model_config['nrun']
-    kmeans_input = model_config['kmeans_input']
+    cluster_method = model_config['cluster_method']
     aggr_type = model_config['aggr_type']
 
     embedding_cluster = EmbeddingCluster(model_config)
@@ -4873,7 +4873,7 @@ def data_plot_FIG7():
     nframes = model_config['nframes']
     bMesh = 'Mesh' in model_config['model']
     nrun = model_config['nrun']
-    kmeans_input = model_config['kmeans_input']
+    cluster_method = model_config['cluster_method']
     aggr_type = model_config['aggr_type']
     delta_t = model_config['delta_t']
 
