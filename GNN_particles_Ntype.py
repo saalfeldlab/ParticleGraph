@@ -749,7 +749,7 @@ def data_train(model_config, bSparse=False):
     x_list = []
     y_list = []
     print('Load data ...')
-    for run in trange(NGraphs):  ##############to be changed
+    for run in trange(NGraphs):
         x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
         y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(torch.stack(x))
@@ -900,8 +900,6 @@ def data_train(model_config, bSparse=False):
         Niter = nframes * data_augmentation_loop // batch_size
         if (bMesh) & (batch_size == 1):
             Niter = Niter // 4
-
-        Niter = 2000 ########################
 
         for N in trange(Niter):
 
@@ -3085,7 +3083,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    device = 'cpu' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # config_manager = create_config_manager(config_type='simulation')
