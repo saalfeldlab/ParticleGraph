@@ -18,27 +18,14 @@ from tqdm import trange
 import os
 import scipy.spatial
 
-from ParticleGraph.fitting_models import linear_model
-
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
 from ParticleGraph.data_loaders import *
-from ParticleGraph.utils import set_device, norm_velocity, norm_acceleration
 from ParticleGraph.config_manager import create_config_manager
-from ParticleGraph.utils import to_numpy, cc
-from ParticleGraph.generators.PDE_A import PDE_A
-from ParticleGraph.generators.PDE_B import PDE_B
-from ParticleGraph.generators.PDE_E import PDE_E
-from ParticleGraph.generators.PDE_G import PDE_G
-from ParticleGraph.generators.PDE_O import PDE_O
-from ParticleGraph.generators.Laplacian_A import Laplacian_A
-from ParticleGraph.generators.RD_FitzHugh_Nagumo import RD_FitzHugh_Nagumo
-from ParticleGraph.generators.RD_Gray_Scott import RD_Gray_Scott
-from ParticleGraph.generators.RD_RPS import RD_RPS
-
-from ParticleGraph.models.Interaction_Particles import Interaction_Particles
-from ParticleGraph.models.Mesh_Laplacian import Mesh_Laplacian
-from ParticleGraph.models.Mesh_RPS import Mesh_RPS
+from ParticleGraph.utils import to_numpy, cc, set_device, norm_velocity, norm_acceleration
+from ParticleGraph.fitting_models import linear_model
+from ParticleGraph.generators import PDE_A, PDE_B, PDE_E, PDE_G, Laplacian_A, RD_FitzHugh_Nagumo, RD_Gray_Scott, RD_RPS
+from ParticleGraph.models import Interaction_Particles, Mesh_Laplacian, Mesh_RPS
 from ParticleGraph.embedding_cluster import *
 
 
