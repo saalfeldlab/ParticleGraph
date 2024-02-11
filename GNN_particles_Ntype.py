@@ -27,8 +27,7 @@ from torch_geometric.utils.convert import to_networkx
 from tqdm import trange
 from matplotlib import rc
 import os
-from sklearn.cluster import KMeans
-from sklearn.metrics import silhouette_samples, silhouette_score
+
 
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
@@ -694,7 +693,7 @@ def data_train(model_config, bSparse=False):
     bMesh = 'Mesh' in model_config['model']
     bRegul = 'regul' in model_config['sparsity']
     bReplace = 'replace' in model_config['sparsity']
-    kmeans_input = model_config['kmeans_input']
+    cluster_method = model_config['cluster_method']
     aggr_type = model_config['aggr_type']
     bVisuEmbedding = False
 
@@ -1179,7 +1178,7 @@ def data_train(model_config, bSparse=False):
             np.save(f'./{log_dir}/tmp_training/umap_projection_{epoch}.npy', proj_interaction)
 
             ax = fig.add_subplot(1, 6, 4)
-            if model_config['model'] == 'WaveMesh':
+            if model_config['cluster_method'] =='kmeans_auto':
                 silhouette_avg_list = []
                 silhouette_max = 0
                 for n_clusters in range(2, 10):
@@ -1196,14 +1195,14 @@ def data_train(model_config, bSparse=False):
                 kmeans = KMeans(n_clusters=nclusters, random_state=10)
                 k = kmeans.fit(proj_interaction)
                 labels = k.labels_
-            else:
-                if model_config['kmeans_input'] == 'plot':
-                    labels, nclusters = embedding_cluster.get(proj_interaction, 'distance')
-                if model_config['kmeans_input'] == 'embedding':
-                    labels, nclusters = embedding_cluster.get(embedding_, 'distance', thresh=1.5)
-                if model_config['kmeans_input'] == 'both':
-                    new_projection = np.concatenate((proj_interaction, embedding_), axis=-1)
-                    labels, nclusters = embedding_cluster.get(new_projection, 'distance')
+
+            if model_config['cluster_method'] == 'distance_plot':
+                labels, nclusters = embedding_cluster.get(proj_interaction, 'distance')
+            if model_config['cluster_method'] == 'distance_embedding':
+                labels, nclusters = embedding_cluster.get(embedding_, 'distance', thresh=1.5)
+            if model_config['cluster_method'] == 'distance_both':
+                new_projection = np.concatenate((proj_interaction, embedding_), axis=-1)
+                labels, nclusters = embedding_cluster.get(new_projection, 'distance')
 
             for n in range(nclusters):
                 pos = np.argwhere(labels == n)
@@ -1772,7 +1771,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
     torch.save(y_recons, f'{log_dir}/y_list.pt')
 
 
-def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
+def data_plot(model_config, epoch, bPrint, best_model=0, cluster_method='plot'):
     model = []
     radius = model_config['radius']
     min_radius = model_config['min_radius']
@@ -2200,9 +2199,9 @@ def data_plot(model_config, epoch, bPrint, best_model=0, kmeans_input='plot'):
             plt.ylabel(r'UMAP 1', fontsize=14)
     kmeans = KMeans(init="random", n_clusters=model_config['ninteractions'], n_init=1000, max_iter=10000,
                     random_state=13)
-    if kmeans_input == 'plot':
+    if cluster_method == 'plot':
         kmeans.fit(proj_interaction)
-    if kmeans_input == 'embedding':
+    if cluster_method == 'embedding':
         kmeans.fit(embedding_)
     label_list = []
     for n in range(nparticle_types):
@@ -3096,7 +3095,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cpu' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # config_manager = create_config_manager(config_type='simulation')
@@ -3122,7 +3121,7 @@ if __name__ == '__main__':
 
         # data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, bLoad_p=False, step=model_config['nframes']//50)
         data_train(model_config)
-        # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, kmeans_input=model_config['kmeans_input'])
+        # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, cluster_method=model_config['cluster_method'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//50, ratio=1)
 
         # data_train_shrofflab_celegans(model_config)

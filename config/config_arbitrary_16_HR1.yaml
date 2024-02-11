@@ -9,7 +9,7 @@ min_radius: 0
 nparticles: 4800
 nparticle_types: 16
 ninteractions: 16
-kmeans_input: 'plot'
+cluster_method: 'distance_plot'
 nframes: 500
 sigma: 0.005
 delta_t: 0.05

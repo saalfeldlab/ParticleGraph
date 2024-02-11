@@ -9,7 +9,7 @@ min_radius: 0
 nparticles: 10000 
 nparticle_types: 5
 ninteractions: 5
-kmeans_input: 'plot'
+cluster_method: 'kmeans_auto'
 nframes: 4000
 sigma: 0.005 
 delta_t: 0.5
