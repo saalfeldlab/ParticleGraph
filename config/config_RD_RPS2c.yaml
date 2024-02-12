@@ -7,8 +7,8 @@ noise_level: 0
 radius: 0.3
 min_radius: 0
 nparticles: 10000 
-nparticle_types: 5
-ninteractions: 5
+nparticle_types: 4
+ninteractions: 4
 cluster_method: 'distance_plot'
 nframes: 10000
 sigma: 0.005 
@@ -25,7 +25,7 @@ upgrade_type: 'none'
 p: [0.2,1.4,2.6,3.8,5.0]
 c: [0,0.6,0.8,1,0.7]
 particle_value_map: 'pattern_10.tif'
-particle_type_map: 'pattern_8.tif'
+particle_type_map: 'pattern_17.tif'
 beta: 1
 nrun: 2
 clamp: 0
@@ -34,5 +34,5 @@ start_frame: 0
 cmap: 'tab10'
 arrow_length: 10
 description: 'Wave equation 5 coefficients'
-sparsity: 'replace'
+sparsity: 'none'
 
