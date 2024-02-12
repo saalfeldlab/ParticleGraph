@@ -336,8 +336,9 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             x_width = 1 / x_width / 8
             X1[0:nparticles, 0:1] = x[0:nparticles]
             X1[0:nparticles, 1:2] = y[0:nparticles]
+            mask_generator = (x>torch.min(x)) & (x<torch.max(x)) & (y>torch.min(y)) & (y<torch.max(y))
             X1 = X1 + torch.randn(nparticles, 2, device=device) * x_width
-
+            
             i0 = imread(f'graphs_data/{particle_value_map}')
             values = i0[(to_numpy(X1[:, 0]) * 255).astype(int), (to_numpy(X1[:, 1]) * 255).astype(int)]
 
@@ -382,13 +383,13 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             # pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
             # dataset = data.Data(x=x, edge_index=edge_index_mesh)
             # vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-            # nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False, alpha=0.5)
+            # nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=10, with_labels=False, alpha=1)
 
             pos = to_numpy(x[:, 1:3])
             tri = scipy.spatial.Delaunay(pos, qhull_options='QJ')
             face = torch.from_numpy(tri.simplices)
             face_longest_edge = np.zeros((face.shape[0], 1))
-            
+
             print('Removal of skinny faces ...')
             for k in trange(face.shape[0]):
                 # compute edge distances
@@ -398,15 +399,12 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                 a = np.sqrt(np.sum((x1 - x2) ** 2))
                 b = np.sqrt(np.sum((x2 - x3) ** 2))
                 c = np.sqrt(np.sum((x3 - x1) ** 2))
-                
                 A = np.max([a, b]) / np.min([a, b]) 
                 B = np.max([a, c]) / np.min([a, c]) 
-                C = np.max([c, b]) / np.min([c, b]) 
-
+                C = np.max([c, b]) / np.min([c, b])
                 face_longest_edge[k] = np.max([A, B, C])
 
-            # edge_threshold = np.percentile(face_longest_edge, 96)
-            face_kept = np.argwhere(face_longest_edge < 1.8)
+            face_kept = np.argwhere(face_longest_edge < 5)
             face_kept = face_kept[:, 0]
             face = face[face_kept, :]
             face = face.t().contiguous()
@@ -418,7 +416,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             # pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
             # dataset = data.Data(x=x, edge_index=edge_index_mesh)
             # vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-            # nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=4, with_labels=False, alpha=1, edge_color='r')
+            # nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=10, with_labels=False, alpha=1, edge_color='r')
 
             # deg = pyg_utils.degree(edge_index_mesh[0], mesh_pos.shape[0])
             # plt.ion()
@@ -531,8 +529,9 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                 # mask = mask[:, 0:1]
                 with torch.no_grad():
                     pred = model_mesh(dataset_mesh)
-                    H1 += pred * delta_t
+                    H1[mask_generator.squeeze(),:] += pred[mask_generator.squeeze(),:] * delta_t
                     # fig = plt.figure(figsize=(12, 12))
+                    # plt.ion()
                     # H1_IM = torch.reshape(pred, (100, 100, 3))
                     # plt.ion()
                     # plt.imshow(H1_IM.detach().cpu().numpy()*5)
@@ -715,7 +714,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
     model_config['nparticles'] = int(model_config['nparticles'] / ratio)
 
 
-def data_train(model_config, bSparse=False):
+def data_train(model_config):
     print('')
 
     model = []
@@ -833,10 +832,10 @@ def data_train(model_config, bSparse=False):
     if (model_config['model'] == 'RD_RPS_Mesh'):
         model = Mesh_RPS(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
 
-    # net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_20.pt"
+    # net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_6.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
-    # optimizer.load_state_dict(state_dict['optimizer_state_dict'])
+
 
     lra = 1E-3
     lr = 1E-3
@@ -857,6 +856,7 @@ def data_train(model_config, bSparse=False):
     logger.info(table)
     logger.info(f"Total Trainable Params: {total_params}")
     logger.info(f'Learning rates: {lr}, {lra}')
+
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     print(f'network: {net}')
@@ -902,12 +902,14 @@ def data_train(model_config, bSparse=False):
         edge_index, edge_weight = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,
                                                                normalization="None")  # "None", "sym", "rw"
 
+    # optimizer.load_state_dict(state_dict['optimizer_state_dict'])
+
     print('Start training ...')
     print(f'   {nframes * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info("Start training ...")
     time.sleep(0.5)
 
-    for epoch in range(Nepochs + 1):
+    for epoch in range(7,Nepochs + 1):
 
         if epoch == 1:
             min_radius = model_config['min_radius']
@@ -2305,13 +2307,13 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # config_manager = create_config_manager(config_type='simulation')
 
     config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
-    config_list = ['config_RD_RPS2c'] # ['config_wave_HR3d']
+    config_list =  ['config_wave_HR3d'] # ['config_RD_RPS2c'] #
 
 
     for config in config_list:
@@ -2329,7 +2331,7 @@ if __name__ == '__main__':
 
         cmap = cc(model_config=model_config)  # create colormap for given model_config
 
-        data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, bLoad_p=False, step=model_config['nframes']//50)
+        data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, bLoad_p=False, step=model_config['nframes']//200)
         data_train(model_config)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, cluster_method=model_config['cluster_method'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//50, ratio=1)
