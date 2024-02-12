@@ -27,7 +27,7 @@ from torch_geometric.utils.convert import to_networkx
 from tqdm import trange
 from matplotlib import rc
 import os
-
+import scipy.spatial
 
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
@@ -337,7 +337,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             X1[0:nparticles, 0:1] = x[0:nparticles]
             X1[0:nparticles, 1:2] = y[0:nparticles]
             X1 = X1 + torch.randn(nparticles, 2, device=device) * x_width
-            X1_ = torch.clamp(X1, min=0, max=1)
+            X1_ = X1 # torch.clamp(X1, min=0, max=1)
 
             i0 = imread(f'graphs_data/{particle_value_map}')
             values = i0[(to_numpy(X1_[:, 0]) * 255).astype(int), (to_numpy(X1_[:, 1]) * 255).astype(int)]
@@ -368,17 +368,38 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             values = i0[(to_numpy(x[:, 0]) * 255).astype(int), (to_numpy(y[:, 0]) * 255).astype(int)]
             T1 = torch.tensor(values, device=device)
             T1 = T1[:, None]
-            # plt.scatter(to_numpy(x[:, 0]), to_numpy(y[:, 0]), s=10,c=to_numpy(T1[:, 0]))
+            # plt.ion()
+            # plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=10, c=to_numpy(T1[:, 0]))
 
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                                    H1.clone().detach(), A1.clone().detach()), 1)
 
-            dataset = data.Data(x=x, pos=x[:, 1:3])
-            transform_0 = T.Compose([T.Delaunay()])
-            dataset_face = transform_0(dataset).face
+            # dataset = data.Data(x=x, pos=x[:, 1:3])
+            # transform_0 = T.Compose([T.Delaunay()])
+            # dataset_face = transform_0(dataset).face
+
+            pos = to_numpy(x[:, 1:3])
+            tri = scipy.spatial.Delaunay(pos, qhull_options='QJ')
+            face = torch.from_numpy(tri.simplices)
+            face_longest_edge = np.zeros((face.shape[0], 1))
+            for k in trange(face.shape[0]):
+                # compute edge distances
+                x1 = pos[face[k, 0], :]
+                x2 = pos[face[k, 1], :]
+                x3 = pos[face[k, 2], :]
+                a = np.sqrt(np.sum((x1 - x2) ** 2))
+                b = np.sqrt(np.sum((x2 - x3) ** 2))
+                c = np.sqrt(np.sum((x3 - x1) ** 2))
+                face_longest_edge[k] = np.max([a, b, c])
+            edge_threshold = np.percentile(face_longest_edge, 90)
+            face_kept = np.argwhere(face_longest_edge < edge_threshold)
+            face_kept = face_kept[:, 0]
+            face = face[face_kept, :]
+            face = face.t().contiguous()
+            face = face.to(device,torch.long)
             mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
-            edge_index_mesh, edge_weight_mesh = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,
-                                                                             normalization="None")  # "None", "sym", "rw"
+            # mesh_pos = mesh_pos.to(device,torch.long)
+            edge_index_mesh, edge_weight_mesh = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=face, normalization="None")  # "None", "sym", "rw"
 
         time.sleep(0.5)
         for it in trange(model_config['start_frame'], nframes + 1):
@@ -481,15 +502,18 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                 h_list.append(pred)
             if (model_config['model'] == 'RD_Gray_Scott_Mesh') | (
                     model_config['model'] == 'RD_FitzHugh_Nagumo_Mesh') | (model_config['model'] == 'RD_RPS_Mesh'):
-                mask = to_numpy(torch.argwhere(
-                    (X1[:, 0] > 0.02) & (X1[:, 0] < 0.98) & (X1[:, 1] > 0.02) & (X1[:, 1] < 0.98))).astype(int)
-                mask = mask[:, 0:1]
+                # mask = to_numpy(torch.argwhere(
+                #     (X1[:, 0] > 0.02) & (X1[:, 0] < 0.98) & (X1[:, 1] > 0.02) & (X1[:, 1] < 0.98))).astype(int)
+                # mask = mask[:, 0:1]
                 with torch.no_grad():
                     pred = model_mesh(dataset_mesh)
-                    H1[mask] += pred[mask] * delta_t
-                new_pred = torch.zeros_like(pred)
-                new_pred[mask] = pred[mask]
-                h_list.append(new_pred)
+                    H1 += pred * delta_t
+                    # fig = plt.figure(figsize=(12, 12))
+                    # H1_IM = torch.reshape(pred, (30, 30, 3))
+                    # plt.ion()
+                    # plt.imshow(H1_IM.detach().cpu().numpy())
+
+                h_list.append(pred)
 
             # output plots
             if bVisu & (run == 0) & (it % step == 0) & (it >= 0):
@@ -609,7 +633,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                                 plt.axis('off')
                             if (model_config['model'] == 'RD_RPS_Mesh'):
                                 fig = plt.figure(figsize=(12, 12))
-                                H1_IM = torch.reshape(H1, (100, 100, 3))
+                                H1_IM = torch.reshape(H1, (30, 30, 3))
                                 plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=1)
                                 plt.xticks([])
                                 plt.yticks([])
@@ -621,12 +645,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
 
                         if bMesh | (model_config['boundary'] == 'periodic'):
                             g = 1
-                            # plt.text(0.08, 0.92, f'frame: {it}',fontsize=8,color='w')
-                            # plt.xlim([0, 1])
-                            # plt.ylim([0, 1])
                         else:
-                            # plt.text(-1.25, 1.5, f'frame: {it}')
-                            # plt.text(-1.25, 1.4, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
                             plt.xlim([-4, 4])
                             plt.ylim([-4, 4])
 
@@ -648,10 +667,6 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                         else:
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                           facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=0, vmax=2500)
-
-                        # plt.scatter(x[:, 1].detach().cpu().numpy(),x[:, 2].detach().cpu().numpy(), s=10, alpha=0.75,
-                        #                 c=x[:, 6].detach().cpu().numpy(), cmap='gist_gray',vmin=-5000,vmax=5000)
-                        # ax.set_facecolor([0.5,0.5,0.5])
                     else:
                         for n in range(nparticle_types):
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
@@ -3116,7 +3131,7 @@ if __name__ == '__main__':
     # config_manager = create_config_manager(config_type='simulation')
 
     config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
-    config_list = ['config_wave_HR3d'] #['config_arbitrary_16_HR1b']  # ['config_RD_RPS2c'] #  # ['config_wave_HR3c'] # # #['config_Coulomb_3b'] # ['config_gravity_16'] # ['config_arbitrary_3'] # ['config_oscillator_900'] #  ['config_gravity_16_HR_continuous'] ['config_boids_16_HR']
+    config_list = ['config_wave_HR3d'] #['config_wave_HR3d'] #['config_arbitrary_16_HR1b']  # ['config_RD_RPS2c'] #  # ['config_wave_HR3c'] # # #['config_Coulomb_3b'] # ['config_gravity_16'] # ['config_arbitrary_3'] # ['config_oscillator_900'] #  ['config_gravity_16_HR_continuous'] ['config_boids_16_HR']
 
 
     for config in config_list:
@@ -3134,7 +3149,7 @@ if __name__ == '__main__':
 
         cmap = cc(model_config=model_config)  # create colormap for given model_config
 
-        # data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, bLoad_p=False, step=model_config['nframes']//50)
+        data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, bLoad_p=False, step=model_config['nframes']//50)
         data_train(model_config)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, cluster_method=model_config['cluster_method'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//50, ratio=1)
