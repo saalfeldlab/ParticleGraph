@@ -633,7 +633,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                                 plt.axis('off')
                             if (model_config['model'] == 'RD_RPS_Mesh'):
                                 fig = plt.figure(figsize=(12, 12))
-                                H1_IM = torch.reshape(H1, (30, 30, 3))
+                                H1_IM = torch.reshape(H1, (100, 100, 3))
                                 plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=1)
                                 plt.xticks([])
                                 plt.yticks([])
