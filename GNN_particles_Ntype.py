@@ -95,8 +95,7 @@ def norm_acceleration(yy, device):
     return torch.tensor([ax01, ax99, ay01, ay99, ax, ay], device=device)
 
 
-def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_p=False, step=5, alpha=0.2, ratio=1,
-                  scenario='none', device=[]):
+def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=[]):
     print('')
     print('Generating data ...')
 
@@ -115,12 +114,9 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
     for f in files:
         os.remove(f)
     copyfile(os.path.realpath(__file__), os.path.join(folder, 'generation_code.py'))
-    json_ = json.dumps(model_config)
-    f = open(f"{folder}/model_config.json", "w")
-    f.write(json_)
-    f.close()
 
-    # load model parameters and create local varibales    
+
+    # load model parameters and create local varibales
     model_config['nparticles'] = model_config['nparticles'] * ratio
     radius = model_config['radius']
     min_radius = model_config['min_radius']
@@ -134,6 +130,11 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
     bDivision = 'division_cycle' in model_config
     delta_t = model_config['delta_t']
     aggr_type = model_config['aggr_type']
+
+    index_particles = []
+    np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
+    for n in range(model_config['nparticle_types']):
+        index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
     # create boundary functions for position and velocity respectively
     if model_config['boundary'] == 'no':  # change this for usual BC
@@ -149,34 +150,24 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
         def bc_diff(D):
             return torch.remainder(D - .5, 1.0) - .5
 
-    cycle_length = torch.clamp(torch.abs(
-        torch.ones(nparticle_types, 1, device=device) * 400 + torch.randn(nparticle_types, 1, device=device) * 150),
-        min=100, max=700)
+    cycle_length = torch.clamp(torch.abs(torch.ones(nparticle_types, 1, device=device) * 400 + torch.randn(nparticle_types, 1, device=device) * 150),min=100, max=700)
     if bDivision:
         for n in range(model_config['nparticle_types']):
             print(f'cell cycle duration: {to_numpy(cycle_length[n])}')
         torch.save(torch.squeeze(cycle_length), f'graphs_data/graphs_particles_{dataset_name}/cycle_length.pt')
 
-    rr = torch.tensor(np.linspace(0, radius * 2, 1000))
-    rr = rr.to(device)
+    rr = torch.tensor(np.linspace(0, radius * 2, 1000), device=device)
     if bMesh | (model_config['model'] == 'PDE_O'):
         particle_value_map = model_config['particle_value_map']
         particle_type_map = model_config['particle_type_map']
 
-    index_particles = []
-    np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
-    for n in range(model_config['nparticle_types']):
-        index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
     if model_config['model'] == 'PDE_A':
         print(f'Generate PDE_A')
-        if bLoad_p:
-            p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
-        else:
-            p = torch.ones(nparticle_types, 4, device=device) + torch.rand(nparticle_types, 4, device=device)
-            if len(model_config['p']) > 0:
-                for n in range(nparticle_types):
-                    p[n] = torch.tensor(model_config['p'][n])
+        p = torch.ones(nparticle_types, 4, device=device) + torch.rand(nparticle_types, 4, device=device)
+        if len(model_config['p']) > 0:
+            for n in range(nparticle_types):
+                p[n] = torch.tensor(model_config['p'][n])
         if nparticle_types == 1:
             model = PDE_A(aggr_type=aggr_type, p=p, sigma=model_config['sigma'], bc_diff=bc_diff)
         else:
@@ -336,6 +327,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             x_width = 1 / x_width / 8
             X1[0:nparticles, 0:1] = x[0:nparticles]
             X1[0:nparticles, 1:2] = y[0:nparticles]
+
             mask_mesh = (x>torch.min(x)) & (x<torch.max(x)) & (y>torch.min(y)) & (y<torch.max(y))
             X1 = X1 + torch.randn(nparticles, 2, device=device) * x_width
             
@@ -719,18 +711,14 @@ def data_train(model_config):
     model = []
     Nepochs = model_config['Nepochs']
     radius = model_config['radius']
-    min_radius = model_config['min_radius']
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
     dataset_name = model_config['dataset']
     nframes = model_config['nframes']
     data_augmentation = model_config['data_augmentation']
-    embedding = model_config['embedding']
     batch_size = model_config['batch_size']
     bMesh = 'Mesh' in model_config['model']
-    bRegul = 'regul' in model_config['sparsity']
     bReplace = 'replace' in model_config['sparsity']
-    cluster_method = model_config['cluster_method']
     aggr_type = model_config['aggr_type']
     bVisuEmbedding = False
 
@@ -753,11 +741,6 @@ def data_train(model_config):
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
     for n in range(model_config['nparticle_types']):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
-
-    T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
-    for n in range(1, nparticle_types):
-        T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
-    T1 = T1[:, None]
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
@@ -855,28 +838,16 @@ def data_train(model_config):
     logger.info(f"Total Trainable Params: {total_params}")
     logger.info(f'Learning rates: {lr}, {lra}')
 
-
     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     print(f'network: {net}')
+    print(f'batch_size: {batch_size}')
+    print('')
     logger.info(f'network: {net}')
     logger.info(f'N epochs: {Nepochs}')
-    print(f'batch_size: {batch_size}')
     logger.info(f'batch_size: {batch_size}')
-    print('')
-    min_radius = 0.002
-    model.train()
-
-    best_loss = np.inf
-    list_loss = []
-
-    if 'data_augmentation_loop' in model_config:
-        data_augmentation_loop = model_config['data_augmentation_loop']
-    else:
-        data_augmentation_loop = 200
-    print(f'data_augmentation_loop: {data_augmentation_loop}')
-    logger.info(f'data_augmentation_loop: {data_augmentation_loop}')
 
     x = x_list[1][0].clone().detach()
+    T1 = x[:, 5:6].clone().detach()
 
     if bMesh:
         h_list = []
@@ -889,7 +860,6 @@ def data_train(model_config):
             index_particles.append(index.squeeze())
         logger.info(hnorm)
         batch_size = 1
-        T1 = x[:, 5:6].clone().detach()
 
         dataset = data.Data(x=x, pos=x[:, 1:3])
         transform_0 = T.Compose([T.Delaunay()])
@@ -908,24 +878,32 @@ def data_train(model_config):
         mask_mesh = mask_mesh.to(device)
         # plt.ion()
         # plt.scatter(to_numpy(x), to_numpy(y), s=10, c=to_numpy(mask_mesh)*2)
+        # plt.scatter(to_numpy(x), to_numpy(y), s=10, c=to_numpy(T1) * 2)
 
     # optimizer.load_state_dict(state_dict['optimizer_state_dict'])
 
-    print('Start training ...')
-    print(f'   {nframes * data_augmentation_loop // batch_size} iterations per epoch')
-    logger.info("Start training ...")
+    data_augmentation_loop = 200
+    print("Start training ...")
+    print(f'{nframes * data_augmentation_loop // batch_size} iterations per epoch')
+    logger.info(f'{nframes * data_augmentation_loop // batch_size} iterations per epoch')
+
+    model.train()
+
+    list_loss = []
     time.sleep(0.5)
 
     for epoch in range(Nepochs + 1):
 
-        if epoch == 1:
+        if epoch == 0:
+            min_radius = 0.002
+        elif epoch == 1:
             min_radius = model_config['min_radius']
             logger.info(f'min_radius: {min_radius}')
-        if (epoch == 2) & (batch_size == 1):
+        elif (epoch == 2) & (batch_size == 1):
             batch_size = 8
             print(f'batch_size: {batch_size}')
             logger.info(f'batch_size: {batch_size}')
-        if epoch == 3 * Nepochs // 4 + 2:
+        elif epoch == 3 * Nepochs // 4 + 2:
             lra = 1E-3
             lr = 5E-4
             it = 0
@@ -1049,21 +1027,11 @@ def data_train(model_config):
                             plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5, color=cmap.color(n))
                 plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{N}.tif")
 
-        torch.save({'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict()},
-                   os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs_{epoch}.pt'))
 
-        if (total_loss / nparticles / batch_size / (N + 1) < best_loss):
-            best_loss = total_loss / (N + 1) / nparticles / batch_size
-            torch.save({'model_state_dict': model.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict()},
-                       os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs.pt'))
-            print("Epoch {}. Loss: {:.6f} saving model  ".format(epoch, total_loss / (N + 1) / nparticles / batch_size))
-            logger.info(
-                "Epoch {}. Loss: {:.6f} saving model  ".format(epoch, total_loss / (N + 1) / nparticles / batch_size))
-        else:
-            print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / nparticles / batch_size))
-            logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / nparticles / batch_size))
+        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / nparticles / batch_size))
+        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / nparticles / batch_size))
+        torch.save({'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs_{epoch}.pt'))
 
         list_loss.append(total_loss / (N + 1) / nparticles / batch_size)
 
@@ -1333,10 +1301,7 @@ def data_train(model_config):
         plt.close()
 
 
-def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_particles=0, prev_nparticles=0,
-              new_nparticles=0,
-              prev_index_particles=0, best_model=0, step=5, bTest='', folder_out='tmp_recons', initial_map='',
-              forced_embedding=[], forced_color=0, ratio=1):
+def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_particles=0, prev_nparticles=0, new_nparticles=0, prev_index_particles=0, best_model=0, step=5, bTest='', folder_out='tmp_recons', initial_map='', forced_embedding=[], forced_color=0, ratio=1):
     print('')
     print('Plot validation inference ... ')
 
@@ -1868,7 +1833,7 @@ if __name__ == '__main__':
 
         cmap = cc(model_config=model_config)  # create colormap for given model_config
 
-        # data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, bLoad_p=False, step=model_config['nframes']//200)
+        # data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, step=model_config['nframes']//200)
         data_train(model_config)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, cluster_method=model_config['cluster_method'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//50, ratio=1)
