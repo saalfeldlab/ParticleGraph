@@ -1,5 +1,7 @@
 import torch_geometric as pyg
 from ParticleGraph.utils import to_numpy
+import torch_geometric.utils as pyg_utils
+import matplotlib.pyplot as plt
 
 
 class Laplacian_A(pyg.nn.MessagePassing):
@@ -40,6 +42,11 @@ class Laplacian_A(pyg.nn.MessagePassing):
         dd_u = self.beta * c * laplacian_u
 
         return dd_u
+
+        pos = to_numpy(data.x)
+        deg = pyg_utils.degree(edge_index[0], data.num_nodes)
+        plt.ion()
+        plt.scatter(pos[:,1],pos[:,2], s=20, c=to_numpy(deg),vmin=7,vmax=10)
 
     def message(self, u_j, edge_attr):
         L = edge_attr[:,None] * u_j

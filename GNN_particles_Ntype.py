@@ -337,10 +337,9 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             X1[0:nparticles, 0:1] = x[0:nparticles]
             X1[0:nparticles, 1:2] = y[0:nparticles]
             X1 = X1 + torch.randn(nparticles, 2, device=device) * x_width
-            X1_ = X1 # torch.clamp(X1, min=0, max=1)
 
             i0 = imread(f'graphs_data/{particle_value_map}')
-            values = i0[(to_numpy(X1[:, 0]) * 255).astype(int), (to_numpy(X1_[:, 1]) * 255).astype(int)]
+            values = i0[(to_numpy(X1[:, 0]) * 255).astype(int), (to_numpy(X1[:, 1]) * 255).astype(int)]
 
             if (model_config['model'] == 'RD_Gray_Scott_Mesh'):
                 H1[:, 0] -= 0.5 * torch.tensor(values / 255, device=device)
@@ -377,11 +376,19 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
             # dataset = data.Data(x=x, pos=x[:, 1:3])
             # transform_0 = T.Compose([T.Delaunay()])
             # dataset_face = transform_0(dataset).face
+            # mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
+            # edge_index_mesh, edge_weight_mesh = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face, normalization="None")
+            # plt.ion()
+            # pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
+            # dataset = data.Data(x=x, edge_index=edge_index_mesh)
+            # vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
+            # nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False, alpha=0.5)
 
             pos = to_numpy(x[:, 1:3])
             tri = scipy.spatial.Delaunay(pos, qhull_options='QJ')
             face = torch.from_numpy(tri.simplices)
             face_longest_edge = np.zeros((face.shape[0], 1))
+            
             print('Removal of skinny faces ...')
             for k in trange(face.shape[0]):
                 # compute edge distances
@@ -391,16 +398,32 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                 a = np.sqrt(np.sum((x1 - x2) ** 2))
                 b = np.sqrt(np.sum((x2 - x3) ** 2))
                 c = np.sqrt(np.sum((x3 - x1) ** 2))
-                face_longest_edge[k] = np.max([a, b, c])
-            edge_threshold = np.percentile(face_longest_edge, 90)
-            face_kept = np.argwhere(face_longest_edge < edge_threshold)
+                
+                A = np.max([a, b]) / np.min([a, b]) 
+                B = np.max([a, c]) / np.min([a, c]) 
+                C = np.max([c, b]) / np.min([c, b]) 
+
+                face_longest_edge[k] = np.max([A, B, C])
+
+            # edge_threshold = np.percentile(face_longest_edge, 96)
+            face_kept = np.argwhere(face_longest_edge < 1.8)
             face_kept = face_kept[:, 0]
             face = face[face_kept, :]
             face = face.t().contiguous()
             face = face.to(device,torch.long)
+
             mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
-            # mesh_pos = mesh_pos.to(device,torch.long)
-            edge_index_mesh, edge_weight_mesh = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=face, normalization="None")  # "None", "sym", "rw"
+            edge_index_mesh, edge_weight_mesh = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=face, normalization="None")
+
+            # pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
+            # dataset = data.Data(x=x, edge_index=edge_index_mesh)
+            # vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
+            # nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=4, with_labels=False, alpha=1, edge_color='r')
+
+            # deg = pyg_utils.degree(edge_index_mesh[0], mesh_pos.shape[0])
+            # plt.ion()
+            # plt.hist(to_numpy(deg),100)
+            # plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=10, c=to_numpy(deg))
 
         time.sleep(0.5)
         for it in trange(model_config['start_frame'], nframes + 1):
@@ -510,9 +533,9 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, bLoad_
                     pred = model_mesh(dataset_mesh)
                     H1 += pred * delta_t
                     # fig = plt.figure(figsize=(12, 12))
-                    # H1_IM = torch.reshape(pred, (30, 30, 3))
+                    # H1_IM = torch.reshape(pred, (100, 100, 3))
                     # plt.ion()
-                    # plt.imshow(H1_IM.detach().cpu().numpy())
+                    # plt.imshow(H1_IM.detach().cpu().numpy()*5)
 
                 h_list.append(pred)
 
@@ -1963,8 +1986,6 @@ def data_train_shrofflab_celegans(model_config):
     model.train()
     best_loss = np.inf
     list_loss = []
-    embedding_center = []
-    regul_embedding = 0
 
     print('Start training ...')
     logger.info("Start training ...")
@@ -2002,7 +2023,6 @@ def data_train_shrofflab_celegans(model_config):
             print('not training embedding ...')
             logger.info('not training embedding ...')
             model.a.requires_grad = False
-            regul_embedding = 0
 
         total_loss = 0
 
@@ -2068,12 +2088,6 @@ def data_train_shrofflab_celegans(model_config):
 
                 total_loss += loss.item()
 
-            # optimizer.zero_grad()
-            # t = torch.sum(model.a[run])
-            # loss = (pred - y_batch).norm(2) + t
-            # loss.backward()
-            # optimizer.step()
-            # total_loss += loss.item()
 
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()},
@@ -2291,13 +2305,13 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # config_manager = create_config_manager(config_type='simulation')
 
     config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
-    config_list = ['config_wave_HR3d'] #  ['config_wave_HR3d'] #['config_wave_HR3d'] #['config_arbitrary_16_HR1b']  #  # ['config_wave_HR3c'] # # #['config_Coulomb_3b'] # ['config_gravity_16'] # ['config_arbitrary_3'] # ['config_oscillator_900'] #  ['config_gravity_16_HR_continuous'] ['config_boids_16_HR']
+    config_list = ['config_RD_RPS2c'] # ['config_wave_HR3d']
 
 
     for config in config_list:
