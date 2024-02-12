@@ -4596,8 +4596,8 @@ def data_plot_FIG6():
     #     X1 = X1 + torch.randn(nparticles, 2, device=device) * x_width
     #     X1_ = torch.clamp(X1, min=0, max=1)
     #
-    #     particle_type_map = model_config['particle_type_map']
-    #     i0 = imread(f'graphs_data/{particle_type_map}')
+    #     node_type_map = model_config['node_type_map']
+    #     i0 = imread(f'graphs_data/{node_type_map}')
     #
     #     values = i0[(to_numpy(X1_[:, 0]) * 255).astype(int), (to_numpy(X1_[:, 1]) * 255).astype(int)]
     #     T1 = torch.tensor(values, device=device)
@@ -4999,8 +4999,8 @@ def data_plot_FIG7():
     X1 = X1 + torch.randn(nparticles, 2, device=device) * x_width
     X1_ = torch.clamp(X1, min=0, max=1)
 
-    particle_type_map = model_config['particle_type_map']
-    i0 = imread(f'graphs_data/{particle_type_map}')
+    node_type_map = model_config['node_type_map']
+    i0 = imread(f'graphs_data/{node_type_map}')
 
     values = i0[(to_numpy(X1_[:, 0]) * 255).astype(int), (to_numpy(X1_[:, 1]) * 255).astype(int)]
     T1 = torch.tensor(values, device=device)

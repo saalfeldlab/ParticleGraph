@@ -119,6 +119,14 @@ nparticle_types:
 ninteractions:
   type: integer
   default: 5
+  
+nnodes:
+  type: integer
+  default: 900
+  
+nnode_types:
+  type: integer
+  default: 4
 
 nframes:
   type: integer
@@ -139,10 +147,10 @@ boundary:
   type: string
   default: 'periodic'
 
-particle_value_map:
+node_value_map:
   type: string
 
-particle_type_map:
+node_type_map:
   type: string
 
 beta:
