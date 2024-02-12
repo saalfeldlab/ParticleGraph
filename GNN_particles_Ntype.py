@@ -876,12 +876,13 @@ def data_train(model_config):
     print(f'data_augmentation_loop: {data_augmentation_loop}')
     logger.info(f'data_augmentation_loop: {data_augmentation_loop}')
 
+    x = x_list[1][0].clone().detach()
+
     if bMesh:
         h_list = []
         for run in range(0, NGraphs):
             h = torch.load(f'graphs_data/graphs_particles_{dataset_name}/h_list_{run}.pt', map_location=device)
             h_list.append(torch.stack(h))
-        x = x_list[0][0].clone().detach()
         index_particles = []
         for n in range(model_config['nparticle_types']):
             index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
@@ -890,9 +891,6 @@ def data_train(model_config):
         batch_size = 1
         T1 = x[:, 5:6].clone().detach()
 
-    x = x_list[1][0].clone().detach()
-
-    if bMesh:
         dataset = data.Data(x=x, pos=x[:, 1:3])
         transform_0 = T.Compose([T.Delaunay()])
         dataset_face = transform_0(dataset).face
@@ -907,8 +905,9 @@ def data_train(model_config):
         x = torch.reshape(x, (x_width ** 2, 1))
         y = torch.reshape(y, (x_width ** 2, 1))
         mask_mesh = (x > torch.min(x)) & (x < torch.max(x)) & (y > torch.min(y)) & (y < torch.max(y))
-        
-        
+        mask_mesh = mask_mesh.to(device)
+        # plt.ion()
+        # plt.scatter(to_numpy(x), to_numpy(y), s=10, c=to_numpy(mask_mesh)*2)
 
     # optimizer.load_state_dict(state_dict['optimizer_state_dict'])
 
@@ -917,7 +916,7 @@ def data_train(model_config):
     logger.info("Start training ...")
     time.sleep(0.5)
 
-    for epoch in range(7,Nepochs + 1):
+    for epoch in range(Nepochs + 1):
 
         if epoch == 1:
             min_radius = model_config['min_radius']
@@ -1869,8 +1868,8 @@ if __name__ == '__main__':
 
         cmap = cc(model_config=model_config)  # create colormap for given model_config
 
-        data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, bLoad_p=False, step=model_config['nframes']//200)
-        # data_train(model_config)
+        # data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, bLoad_p=False, step=model_config['nframes']//200)
+        data_train(model_config)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, cluster_method=model_config['cluster_method'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//50, ratio=1)
 
