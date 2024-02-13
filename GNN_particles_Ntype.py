@@ -557,7 +557,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
                     distance = torch.sum(bc_diff(x[:, None, 1:3] - x_mesh[None, :, 1:3]) ** 2, axis=2)
                     distance = distance < 0.0005
                     distance = torch.sum(distance, axis=0)
-                    H1_mesh = torch.abs(H1_mesh*1.025 - 10*distance[:,None])
+                    H1_mesh = torch.abs(H1_mesh*1.025 - 20*distance[:,None])
                     H1_mesh = torch.clamp(H1_mesh, min=0, max=5000)
 
                     # fig = plt.figure(figsize=(12, 12))
