@@ -115,7 +115,6 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
         os.remove(f)
     copyfile(os.path.realpath(__file__), os.path.join(folder, 'generation_code.py'))
 
-
     # load model parameters and create local varibales
     model_config['nparticles'] = model_config['nparticles'] * ratio
     radius = model_config['radius']
@@ -367,7 +366,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
                 for k in range(3):
                     H1_mesh[:, k] = H1_mesh[:, k] / s
             elif (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh') | (model_config['model'] == 'Maze'):
-                H1_mesh = torch.rand((nnodes, 1), device=device)
+                H1_mesh = torch.rand((nnodes, 2), device=device)
                 H1_mesh[:, 0] = torch.tensor(values / 255 * 5000, device=device)
             if model_config['model'] == 'PDE_O':
                 H1_mesh = torch.zeros((nparticles, 5), device=device)
@@ -388,8 +387,8 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
             N1_mesh = N1_mesh[:, None]
             V1_mesh = torch.zeros((nnodes, 2), device=device)
             #
-            # plt.ion()
-            # plt.scatter(to_numpy(X1_mesh[:, 0]), to_numpy(X1_mesh[:, 1]), s=10, c=to_numpy(T1_mesh[:, 0]))
+            plt.ion()
+            plt.scatter(to_numpy(X1_mesh[:, 0]), to_numpy(X1_mesh[:, 1]), s=10, c=to_numpy(T1_mesh[:, 0]))
 
             x_mesh = torch.concatenate((N1_mesh.clone().detach(), X1_mesh.clone().detach(), V1_mesh.clone().detach(), T1_mesh.clone().detach(), H1_mesh.clone().detach()), 1)
 
@@ -438,6 +437,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
             if model_config['model'] != 'Maze':
                 X1 = X1_mesh
                 H1 = H1_mesh
+                T1 = T1_mesh
 
 
             # pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
@@ -573,7 +573,6 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
 
                 y_mesh_list.append(pred)
 
-
             if model_config['model'] == 'WaveMesh':
                 with torch.no_grad():
                     pred = model_mesh(dataset_mesh)
@@ -581,6 +580,16 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
                 H1_mesh[:, 0:1] += H1_mesh[:, 1:2] * delta_t
                 H1 = H1_mesh
                 y_mesh_list.append(pred)
+
+                fig = plt.figure(figsize=(12, 12))
+                plt.ion()
+                H1_IM = torch.reshape(pred, (100, 100, 1))
+                plt.ion()
+                plt.imshow(H1_IM.detach().cpu().numpy()*5)
+
+                plt.ion()
+                plt.scatter(to_numpy(X1_mesh[:, 0]), to_numpy(X1_mesh[:, 1]), s=10, c=to_numpy(T1_mesh[:, 0]))
+                
             if (model_config['model'] == 'RD_Gray_Scott_Mesh') | (
                     model_config['model'] == 'RD_FitzHugh_Nagumo_Mesh') | (model_config['model'] == 'RD_RPS_Mesh'):
                 # mask = to_numpy(torch.argwhere(
@@ -769,10 +778,6 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
                         plt.tight_layout()
                         plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/tmp_data/Fig_{it}.jpg", dpi=100)
                         plt.close()
-
-
-
-
 
                 if 'bw' in bStyle:
                     fig = plt.figure(figsize=(12, 12))
@@ -1905,7 +1910,7 @@ if __name__ == '__main__':
     # config_manager = create_config_manager(config_type='simulation')
 
     config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
-    config_list = ['config_arbitrary_3_test'] # ['config_maze'] # ['config_RD_RPS2c'] # ['config_wave_HR3d'] #
+    config_list = ['config_wave_HR3e'] # ['config_arbitrary_3_test'] # ['config_maze'] # ['config_RD_RPS2c'] # ['config_wave_HR3d'] #
 
 
     for config in config_list:
@@ -1923,8 +1928,8 @@ if __name__ == '__main__':
 
         cmap = cc(model_config=model_config)  # create colormap for given model_config
 
-        # data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, step=model_config['nframes']//20)
-        data_train(model_config)
+        data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, step=model_config['nframes']//100)
+        # data_train(model_config)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, cluster_method=model_config['cluster_method'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//50, ratio=1)
 
