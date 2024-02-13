@@ -558,28 +558,6 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
                 new_pred[mask] = pred[mask]
                 y_mesh_list.append(new_pred)
 
-            if model_config['model']=='Maze':
-                x_mesh_list.append(x_mesh.clone().detach())
-                with torch.no_grad():
-                    pred = model_mesh(dataset_mesh)
-                    H1_mesh[mask_mesh.squeeze(), :] += pred[mask_mesh.squeeze(), :] * delta_t
-                    distance = torch.sum(bc_diff(x[:, None, 1:3] - x_mesh[None, :, 1:3]) ** 2, axis=2)
-                    distance = distance < 0.0005
-                    distance = torch.sum(distance, axis=0)
-                    H1_mesh = torch.relu(H1_mesh*1.025 - 30*distance[:,None])
-                    H1_mesh = torch.clamp(H1_mesh, min=0, max=5000)
-
-                    # fig = plt.figure(figsize=(12, 12))
-                    # plt.ion()
-                    # H1_IM = torch.reshape(distance, (300, 300))
-                    # plt.ion()
-                    # plt.imshow(H1_IM.detach().cpu().numpy()*5)
-                    # for n in range(nparticle_types):
-                    #     plt.scatter(x[index_particles[n], 1].detach().cpu().numpy()*300,
-                    #                 x[index_particles[n], 2].detach().cpu().numpy()*300, s=10, color='w')
-
-                y_mesh_list.append(pred)
-
             if model_config['model'] == 'WaveMesh':
 
                 with torch.no_grad():
@@ -612,6 +590,28 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
                     # plt.ion()
                     # plt.imshow(H1_IM.detach().cpu().numpy()*5)
 
+
+                y_mesh_list.append(pred)
+
+            if model_config['model'] == 'Maze':
+                x_mesh_list.append(x_mesh.clone().detach())
+                with torch.no_grad():
+                    pred = model_mesh(dataset_mesh)
+                    H1_mesh[mask_mesh.squeeze(), :] += pred[mask_mesh.squeeze(), :] * delta_t
+                    distance = torch.sum(bc_diff(x[:, None, 1:3] - x_mesh[None, :, 1:3]) ** 2, axis=2)
+                    distance = distance < 0.0005
+                    distance = torch.sum(distance, axis=0)
+                    H1_mesh = torch.relu(H1_mesh*1.01 - 30*distance[:,None])
+                    H1_mesh = torch.clamp(H1_mesh, min=0, max=5000)
+
+                    # fig = plt.figure(figsize=(12, 12))
+                    # plt.ion()
+                    # H1_IM = torch.reshape(distance, (300, 300))
+                    # plt.ion()
+                    # plt.imshow(H1_IM.detach().cpu().numpy()*5)
+                    # for n in range(nparticle_types):
+                    #     plt.scatter(x[index_particles[n], 1].detach().cpu().numpy()*300,
+                    #                 x[index_particles[n], 2].detach().cpu().numpy()*300, s=10, color='w')
 
                 y_mesh_list.append(pred)
 
@@ -707,9 +707,9 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
                     elif model_config['model'] == 'Maze':
 
                         fig = plt.figure(figsize=(12,6))
+                        # plt.ion()
                         ax = fig.add_subplot(1, 2, 1)
-                        H1_IM = torch.reshape(H1_mesh, (300, 300))
-                        plt.ion()
+                        H1_IM = torch.reshape(H1_mesh[:,0], (300, 300))
                         plt.imshow(H1_IM.detach().cpu().numpy(),vmin=0, vmax=5000, cmap='viridis')
                         for n in range(nparticle_types):
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy()*300,
@@ -720,7 +720,6 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
                         plt.yticks([])
                         ax = fig.add_subplot(1, 2, 2)
                         H1_IM = torch.reshape(distance, (300, 300))
-                        plt.ion()
                         plt.imshow(H1_IM.detach().cpu().numpy()*30,vmin=0,vmax=500)
                         for n in range(nparticle_types):
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy() * 300,
@@ -913,9 +912,6 @@ def data_train(model_config):
         print(f'hnorm: {to_numpy(hnorm)}')
         logger.info(f'hnorm: {to_numpy(hnorm)}')
         time.sleep(0.5)
-        print(f'hnorm: {to_numpy(hnorm)}')
-        torch.save(hnorm, os.path.join(log_dir, 'hnorm.pt'))
-        logger.info(f'hnorm : {to_numpy(hnorm)}')
 
         batch_size = 1
 
@@ -926,6 +922,8 @@ def data_train(model_config):
         edge_index_mesh = mesh_data['edge_index']
         edge_weight_mesh = mesh_data['edge_weight']
         # face = mesh_data['face']
+
+        mask_mesh = mask_mesh.repeat(batch_size,1)
 
     print('')
 
@@ -1005,6 +1003,7 @@ def data_train(model_config):
             logger.info(f'min_radius: {min_radius}')
         elif (epoch == 2) & (batch_size == 1):
             batch_size = 8
+            mask_mesh = mask_mesh.repeat(batch_size, 1)
             print(f'batch_size: {batch_size}')
             logger.info(f'batch_size: {batch_size}')
         elif epoch == 3 * Nepochs // 4 + 2:
@@ -1913,13 +1912,13 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # config_manager = create_config_manager(config_type='simulation')
 
     config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
-    config_list = ['config_wave_HR3e'] # ['config_arbitrary_3_test'] # ['config_maze'] # ['config_RD_RPS2c'] # ['config_wave_HR3d'] #
+    config_list =  ['config_RD_RPS2d'] # ['config_maze'] #  ['config_wave_HR3e'] # ['config_arbitrary_3_test'] # ['config_wave_HR3d'] #
 
 
     for config in config_list:
@@ -1937,7 +1936,7 @@ if __name__ == '__main__':
 
         cmap = cc(model_config=model_config)  # create colormap for given model_config
 
-        # data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, step=model_config['nframes']//100)
+        #data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, step=model_config['nframes']//100)
         data_train(model_config)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, cluster_method=model_config['cluster_method'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//50, ratio=1)
