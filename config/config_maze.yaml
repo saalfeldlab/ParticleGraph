@@ -9,7 +9,7 @@ min_radius: 0.001
 nparticles: 1792
 nparticle_types: 16
 ninteractions: 16
-nnodes: 10000
+nnodes: 90000
 nnode_types: 4
 cluster_method: 'distance_plot'
 nframes: 16000
