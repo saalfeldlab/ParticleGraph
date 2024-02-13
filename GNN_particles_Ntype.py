@@ -1899,13 +1899,13 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # config_manager = create_config_manager(config_type='simulation')
 
     config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
-    config_list = ['config_maze'] # ['config_RD_RPS2c'] # ['config_wave_HR3d'] #
+    config_list = ['config_arbitrary_3_test'] # ['config_maze'] # ['config_RD_RPS2c'] # ['config_wave_HR3d'] #
 
 
     for config in config_list:
@@ -1923,8 +1923,8 @@ if __name__ == '__main__':
 
         cmap = cc(model_config=model_config)  # create colormap for given model_config
 
-        data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, step=model_config['nframes']//1000)
-        # data_train(model_config)
+        # data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, step=model_config['nframes']//20)
+        data_train(model_config)
         # data_plot(model_config, epoch=-1, bPrint=True, best_model=4, cluster_method=model_config['cluster_method'])
         # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//50, ratio=1)
 
