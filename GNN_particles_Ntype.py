@@ -560,11 +560,14 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
                     H1_mesh = torch.abs(H1_mesh*1.025 - 30*distance[:,None])
                     H1_mesh = torch.clamp(H1_mesh, min=0, max=5000)
 
-                    # fig = plt.figure(figsize=(12, 12))
-                    # plt.ion()
-                    # H1_IM = torch.reshape(H1_mesh, (100, 100))
-                    # plt.ion()
-                    # plt.imshow(H1_IM.detach().cpu().numpy()*5)
+                    fig = plt.figure(figsize=(12, 12))
+                    plt.ion()
+                    H1_IM = torch.reshape(distance, (300, 300))
+                    plt.ion()
+                    plt.imshow(H1_IM.detach().cpu().numpy()*5)
+                    for n in range(nparticle_types):
+                        plt.scatter(x[index_particles[n], 1].detach().cpu().numpy()*300,
+                                    x[index_particles[n], 2].detach().cpu().numpy()*300, s=10, color='w')
 
 
 
@@ -687,16 +690,27 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
 
                     elif model_config['model'] == 'Maze':
 
-                        fig = plt.figure(figsize=(12, 12))
-                        pts = x_mesh[:, 1:3].detach().cpu().numpy()
-                        tri = Delaunay(pts)
-                        colors = torch.sum(x_mesh[tri.simplices, 6], axis=1) / 3.0
-                        plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                      facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=5000)
+                        fig = plt.figure(figsize=(12,6))
+                        ax = fig.add_subplot(1, 2, 1)
+                        H1_IM = torch.reshape(H1_mesh, (300, 300))
+                        plt.ion()
+                        plt.imshow(H1_IM.detach().cpu().numpy(),vmin=0, vmax=5000, cmap='viridis')
                         for n in range(nparticle_types):
-                            plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                        x[index_particles[n], 2].detach().cpu().numpy(), s=10, color='w')
-                            
+                            plt.scatter(x[index_particles[n], 1].detach().cpu().numpy()*300,
+                                        x[index_particles[n], 2].detach().cpu().numpy()*300, s=1, color='w')
+                        plt.xlim([0, 300])
+                        plt.ylim([0, 300])
+                        plt.xticks([])
+                        plt.yticks([])
+                        ax = fig.add_subplot(1, 2, 2)
+                        H1_IM = torch.reshape(distance, (300, 300))
+                        plt.ion()
+                        plt.imshow(H1_IM.detach().cpu().numpy()*30,vmin=0,vmax=500)
+                        for n in range(nparticle_types):
+                            plt.scatter(x[index_particles[n], 1].detach().cpu().numpy() * 300,
+                                        x[index_particles[n], 2].detach().cpu().numpy() * 300, s=1, color='w')
+                        plt.xlim([0, 300])
+                        plt.ylim([0, 300])
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
@@ -1885,7 +1899,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
     # config_manager = create_config_manager(config_type='simulation')
