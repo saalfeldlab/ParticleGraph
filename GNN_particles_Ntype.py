@@ -19,7 +19,7 @@ import os
 import scipy.spatial
 
 from ParticleGraph.generators.utils import choose_model
-from ParticleGraph.train_utils import choose_training_model
+from ParticleGraph.train_utils import choose_training_model, constant_batch_size, increasing_batch_size
 
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
@@ -531,26 +531,18 @@ def data_train(model_config):
     dataset_name = model_config['dataset']
     nframes = model_config['nframes']
     data_augmentation = model_config['data_augmentation']
-    batch_size = model_config['batch_size']
+    target_batch_size = model_config['batch_size']
     bMesh = 'Mesh' in model_config['model']
     bReplace = 'replace' in model_config['sparsity']
-    aggr_type = model_config['aggr_type']
     bVisuEmbedding = False
 
     embedding_cluster = EmbeddingCluster(model_config)
 
-    if model_config['boundary'] == 'no':  # change this for usual BC
-        def bc_pos(X):
-            return X
-
-        def bc_dpos(D):
-            return D
+    if model_config['small_init_batch_size']:
+        get_batch_size = constant_batch_size(target_batch_size)
     else:
-        def bc_pos(X):
-            return torch.remainder(X, 1.0)
-
-        def bc_dpos(D):
-            return torch.remainder(D - .5, 1.0) - .5
+        get_batch_size = increasing_batch_size(target_batch_size)
+    batch_size = get_batch_size(0)
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
@@ -611,7 +603,6 @@ def data_train(model_config):
         logger.info(f'hnorm: {to_numpy(hnorm)}')
         time.sleep(0.5)
 
-        batch_size = 1
 
         mesh_data = torch.load(f'graphs_data/graphs_particles_{dataset_name}/mesh_data_1.pt',map_location=device)
 
@@ -621,12 +612,11 @@ def data_train(model_config):
         edge_weight_mesh = mesh_data['edge_weight']
         # face = mesh_data['face']
 
-        mask_mesh = mask_mesh.repeat(batch_size,1)
+        mask_mesh = mask_mesh.repeat(batch_size, 1)
 
     print('')
 
-    model, model_mesh, bc_pos, bc_dpos = choose_training_model(model_config, device)
-
+    model, bc_pos, bc_dpos = choose_training_model(model_config, device)
 
     # net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_6.pt"
     # state_dict = torch.load(net,map_location=device)
@@ -654,11 +644,11 @@ def data_train(model_config):
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     print(f'network: {net}')
-    print(f'batch_size: {batch_size}')
+    print(f'initial batch_size: {batch_size}')
     print('')
     logger.info(f'network: {net}')
     logger.info(f'N epochs: {Nepochs}')
-    logger.info(f'batch_size: {batch_size}')
+    logger.info(f'initial batch_size: {batch_size}')
 
     x = x_list[1][0].clone().detach()
     T1 = x[:, 5:6].clone().detach()
@@ -679,14 +669,16 @@ def data_train(model_config):
 
     for epoch in range(Nepochs + 1):
 
+        old_batch_size = batch_size
+        batch_size = get_batch_size(epoch)
         if epoch == 0:
             min_radius = 0.002
         elif epoch == 1:
             min_radius = model_config['min_radius']
             logger.info(f'min_radius: {min_radius}')
-        elif (epoch == 2) & (batch_size == 1):
-            batch_size = 8
-            mask_mesh = mask_mesh.repeat(batch_size, 1)
+        elif epoch == 2:
+            repeat_factor = batch_size // old_batch_size
+            mask_mesh = mask_mesh.repeat(repeat_factor, 1)
             print(f'batch_size: {batch_size}')
             logger.info(f'batch_size: {batch_size}')
         elif epoch == 3 * Nepochs // 4 + 2:

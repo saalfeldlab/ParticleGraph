@@ -1,16 +1,44 @@
+from ParticleGraph.models import Interaction_Particles, Mesh_Laplacian, Mesh_RPS
+from ParticleGraph.utils import choose_boundary_values
+
+
 def choose_training_model(model_config, device):
+    model_name = model_config['model']
+    n_particle_types = model_config['nparticle_types']
+    aggr_type = model_config['aggr_type']
+    has_mesh = 'Mesh' in model_config['model']
+    n_node_types = model_config['nnode_types']
 
-    if model_config['model'] == 'PDE_G':
-        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
-    if model_config['model'] == 'PDE_E':
-        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
-    if (model_config['model'] == 'PDE_A') | (model_config['model'] == 'PDE_B'):
-        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
-    if (model_config['model'] == 'DiffMesh'):
-        model = Mesh_Laplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
-    if (model_config['model'] == 'WaveMesh'):
-        model = Mesh_Laplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
-    if (model_config['model'] == 'RD_RPS_Mesh'):
-        model = Mesh_RPS(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
+    bc_pos, bc_dpos = choose_boundary_values(model_config['boundary'])
 
-    return model, mesh, bc_pos, bc_dpos
+    match model_name:
+        case 'PDE_A' | 'PDE_B':
+            model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
+        case 'PDE_E':
+            model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
+        case 'PDE_G':
+            model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
+        case 'DiffMesh':
+            model = Mesh_Laplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
+        case 'WaveMesh':
+            model = Mesh_Laplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
+        case 'RD_RPS_Mesh':
+            model = Mesh_RPS(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
+        case _:
+            raise ValueError(f'Unknown model {model_name}')
+
+    return model, bc_pos, bc_dpos
+
+
+def constant_batch_size(batch_size):
+    def get_batch_size(epoch):
+        return batch_size
+
+    return get_batch_size
+
+
+def increasing_batch_size(batch_size):
+    def get_batch_size(epoch):
+        return 1 if epoch < 2 else batch_size
+
+    return get_batch_size

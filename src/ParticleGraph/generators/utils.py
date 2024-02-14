@@ -36,8 +36,7 @@ def choose_model(model_config, device):
             case 'RD_RPS_Mesh':
                 mesh = RD_RPS(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'], bc_dpos=bc_dpos)
             case 'DiffMesh' | 'WaveMesh':
-                mesh = Laplacian_A(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'],
-                                   bc_dpos=bc_dpos)
+                mesh = Laplacian_A(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'], bc_dpos=bc_dpos)
             case _:
                 raise ValueError(f'Unknown model {model_name}')
     else:
@@ -92,8 +91,7 @@ def choose_model(model_config, device):
                 c = initialize_random_values(n_node_types, device)
                 for n in range(n_node_types):
                     c[n] = torch.tensor(model_config['c'][n])
-                mesh = Laplacian_A(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'],
-                                   bc_dpos=bc_dpos)
+                mesh = Laplacian_A(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'], bc_dpos=bc_dpos)
             case _:
                 raise ValueError(f'Unknown model {model_name}')
 
