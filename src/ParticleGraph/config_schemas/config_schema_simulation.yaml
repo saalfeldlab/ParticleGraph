@@ -96,6 +96,10 @@ aggr_type:
   type: string
   required: True
 
+mesh_aggr_type:
+  type: string
+  default: 'add'
+
 embedding:
   type: integer
   default: 2
