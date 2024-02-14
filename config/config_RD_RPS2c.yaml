@@ -9,6 +9,7 @@ min_radius: 0
 nparticles: 10000 
 nparticle_types: 4
 nnodes: 10000
+nnode_types: 4
 ninteractions: 4
 cluster_method: 'distance_plot'
 nframes: 10000
