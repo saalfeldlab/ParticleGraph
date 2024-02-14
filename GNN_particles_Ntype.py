@@ -18,6 +18,7 @@ from tqdm import trange
 import os
 import scipy.spatial
 
+from ParticleGraph.generators.particle_initialization import init_particles
 from ParticleGraph.generators.utils import choose_model, choose_mesh_model
 from ParticleGraph.train_utils import choose_training_model, constant_batch_size, increasing_batch_size, \
     set_trainable_parameters
@@ -28,8 +29,6 @@ from ParticleGraph.data_loaders import *
 from ParticleGraph.config_manager import create_config_manager
 from ParticleGraph.utils import to_numpy, CustomColorMap, set_device, norm_velocity, norm_acceleration
 from ParticleGraph.fitting_models import linear_model
-from ParticleGraph.generators import PDE_A, PDE_B, PDE_E, PDE_G, Laplacian_A, RD_FitzHugh_Nagumo, RD_Gray_Scott, RD_RPS
-from ParticleGraph.models import Interaction_Particles, Mesh_Laplacian, Mesh_RPS
 from ParticleGraph.embedding_cluster import *
 
 
@@ -73,11 +72,6 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
     for n in range(model_config['nparticle_types']):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
-    cycle_length = torch.clamp(torch.abs(torch.ones(nparticle_types, 1, device=device) * 400 + torch.randn(nparticle_types, 1, device=device) * 150),min=100, max=700)
-    if bDivision:
-        for n in range(model_config['nparticle_types']):
-            print(f'cell cycle duration: {to_numpy(cycle_length[n])}')
-        torch.save(torch.squeeze(cycle_length), f'graphs_data/graphs_particles_{dataset_name}/cycle_length.pt')
 
     rr = torch.tensor(np.linspace(0, radius * 2, 1000), device=device)
     if has_mesh | (model_config['model'] == 'PDE_O') | (model_config['model'] == 'Maze'):
@@ -102,26 +96,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
         y_mesh_list = []
 
         # initialize particle and graph states
-        if (model_config['boundary'] == 'periodic'):
-            X1 = torch.rand(nparticles, 2, device=device)
-        else:
-            X1 = torch.randn(nparticles, 2, device=device) * 0.5
-        V1 = v_init * torch.randn((nparticles, 2), device=device)
-        V1 = torch.clamp(V1, min=-torch.std(V1), max=+torch.std(V1))
-        T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
-        for n in range(1, nparticle_types):
-            T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
-        T1 = T1[:, None]
-        if model_config['p'] == 'continuous':
-            T1 = torch.tensor(np.arange(nparticles), device=device)
-            T1 = T1[:, None]
-        H1 = torch.zeros((nparticles, 2), device=device)
-        cycle_length_distrib = cycle_length[to_numpy(T1[:, 0]).astype(int)]
-        A1 = torch.rand(nparticles, device=device)
-        A1 = A1[:, None]
-        A1 = A1 * cycle_length_distrib
-        N1 = torch.arange(nparticles, device=device)
-        N1 = N1[:, None]
+        X1, V1, T1, H1, A1, N1 = init_particles(model_config, device=device)
 
         # create different initial conditions
         if scenario == 'scenario A':
