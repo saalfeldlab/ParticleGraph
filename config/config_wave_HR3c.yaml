@@ -26,8 +26,8 @@ prediction: '2nd_derivative'
 upgrade_type: 'none'
 p: [0.2,1.4,2.6,3.8,5.0]
 c: [0,0.6,0.8,1,0.4]
-particle_value_map: 'pattern_10.tif'
-particle_type_map: 'pattern_19.tif'
+node_value_map: 'pattern_10.tif'
+node_type_map: 'pattern_19.tif'
 beta: 1.E-2 
 nrun: 2
 clamp: 0
