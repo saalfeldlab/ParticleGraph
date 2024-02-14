@@ -7,10 +7,7 @@ from ParticleGraph.utils import choose_boundary_values
 
 def choose_training_model(model_config, device):
     model_name = model_config['model']
-    n_particle_types = model_config['nparticle_types']
     aggr_type = model_config['aggr_type']
-    has_mesh = 'Mesh' in model_config['model']
-    n_node_types = model_config['nnode_types']
 
     bc_pos, bc_dpos = choose_boundary_values(model_config['boundary'])
 
@@ -50,10 +47,11 @@ def increasing_batch_size(batch_size):
 def set_trainable_parameters(model, lr_embedding, lr):
     trainable_params = [param for _, param in model.named_parameters() if param.requires_grad]
     n_total_params = sum(p.numel() for p in trainable_params) + torch.numel(model.a)
-    _, *parameters = trainable_params
 
     embedding = model.a
     optimizer = torch.optim.Adam([embedding], lr=lr_embedding)
+
+    _, *parameters = trainable_params
     for parameter in parameters:
         optimizer.add_param_group({'params': parameter, 'lr': lr})
 

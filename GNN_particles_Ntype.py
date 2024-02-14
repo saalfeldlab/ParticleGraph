@@ -1061,7 +1061,7 @@ def data_train(model_config):
 
 def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_particles=0, prev_nparticles=0, new_nparticles=0, prev_index_particles=0, best_model=0, step=5, bTest='', folder_out='tmp_recons', initial_map='', forced_embedding=[], forced_color=0, ratio=1):
     print('')
-    print('Plot validation inference ... ')
+    print('Plot roll-out inference ... ')
 
     model = []
     radius = model_config['radius']
@@ -1074,19 +1074,6 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
     delta_t = model_config['delta_t']
     aggr_type = model_config['aggr_type']
 
-    if model_config['boundary'] == 'no':  # change this for usual BC
-        def bc_pos(X):
-            return X
-
-        def bc_dpos(D):
-            return D
-    else:
-        def bc_pos(X):
-            return torch.remainder(X, 1.0)
-
-        def bc_dpos(D):
-            return torch.remainder(D - .5, 1.0) - .5
-
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
     print('log_dir: {}'.format(log_dir))
@@ -1096,25 +1083,8 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
     for n in range(model_config['nparticle_types']):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
-    if (model_config['model'] == 'PDE_A') | (model_config['model'] == 'PDE_B'):
-        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
-    if model_config['model'] == 'PDE_G':
-        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
-        p_mass = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
-        p_mass = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
-        T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
-        for n in range(1, nparticle_types):
-            T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
-        T1 = torch.concatenate((T1[:, None], T1[:, None]), 1)
-    if model_config['model'] == 'PDE_E':
-        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
-        p_elec = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
-        for n in range(nparticle_types):
-            p_elec[n] = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
-        T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
-        for n in range(1, nparticle_types):
-            T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
-        T1 = torch.concatenate((T1[:, None], T1[:, None]), 1)
+    model, bc_pos, bc_dpos = choose_training_model(model_config, device)
+
     if bMesh:
         p = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         if len(model_config['p']) > 0:
