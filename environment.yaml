@@ -16,8 +16,8 @@ dependencies:
   - astropy
   - cerberus
   - pydantic
+  - gputil
   - pip
   - pip:
-    - gputil
     - geomloss
     - torch_geometric
