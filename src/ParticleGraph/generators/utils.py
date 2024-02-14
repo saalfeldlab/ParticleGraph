@@ -63,10 +63,7 @@ def choose_model(model_config, device):
                 if len(model_config['p']) > 0:
                     for n in range(n_particle_types):
                         p[n] = torch.tensor(model_config['p'][n])
-                if n_particle_types == 1:
-                    model = PDE_A(aggr_type=aggr_type, p=p, bc_dpos=bc_dpos)
-                else:
-                    model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
+                model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
             case 'PDE_G':
                 if model_config['p'][0] == -1:
                     p = np.linspace(0.5, 5, n_particle_types)
