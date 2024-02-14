@@ -156,7 +156,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
                                            H1_mesh.clone().detach()), 1)
                 dataset_mesh = data.Data(x=x_mesh, edge_index=mesh_data['edge_index'], edge_attr=mesh_data['edge_weight'], device=device)
             # compute connectivity rule
-            distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+            distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
             t = torch.Tensor([radius ** 2])  # threshold
             adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
             edge_index = adj_t.nonzero().t().contiguous()
@@ -226,9 +226,9 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
                 with torch.no_grad():
                     pred = mesh_model(dataset_mesh)
                     H1_mesh[mesh_data['mask'].squeeze(), :] += pred[mesh_data['mask'].squeeze(), :] * delta_t
-                    distance = torch.sum(bc_dpos(x[:, None, 1:3] - x_mesh[None, :, 1:3]) ** 2, axis=2)
+                    distance = torch.sum(bc_dpos(x[:, None, 1:3] - x_mesh[None, :, 1:3]) ** 2, dim=2)
                     distance = distance < 0.0005
-                    distance = torch.sum(distance, axis=0)
+                    distance = torch.sum(distance, dim=0)
                     H1_mesh = torch.relu(H1_mesh*1.01 - 30*distance[:,None])
                     H1_mesh = torch.clamp(H1_mesh, min=0, max=5000)
 
@@ -240,7 +240,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
                 if 'graph' in bStyle:
                     fig = plt.figure(figsize=(10, 10))
 
-                    distance2 = torch.sum((x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+                    distance2 = torch.sum((x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
                     adj_t2 = ((distance2 < radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
                     edge_index2 = adj_t2.nonzero().t().contiguous()
                     dataset2 = data.Data(x=x, edge_index=edge_index2)
@@ -256,7 +256,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
                     elif has_mesh:
                         pts = x[:, 1:3].detach().cpu().numpy()
                         tri = Delaunay(pts)
-                        colors = torch.sum(x[tri.simplices, 6], axis=1) / 3.0
+                        colors = torch.sum(x[tri.simplices, 6], dim=1) / 3.0
                         if model_config['model'] == 'WaveMesh':
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                           facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=-2500,
@@ -351,7 +351,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
                         if has_mesh:
                             pts = x[:, 1:3].detach().cpu().numpy()
                             tri = Delaunay(pts)
-                            colors = torch.sum(x[tri.simplices, 6], axis=1) / 3.0
+                            colors = torch.sum(x[tri.simplices, 6], dim=1) / 3.0
                             if model_config['model'] == 'DiffMesh':
                                 plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                               facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1000)
@@ -361,14 +361,14 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
                             if (model_config['model'] == 'RD_Gray_Scott_Mesh'):
                                 fig = plt.figure(figsize=(12, 6))
                                 ax = fig.add_subplot(1, 2, 1)
-                                colors = torch.sum(x[tri.simplices, 6], axis=1) / 3.0
+                                colors = torch.sum(x[tri.simplices, 6], dim=1) / 3.0
                                 plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                               facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
                                 plt.xticks([])
                                 plt.yticks([])
                                 plt.axis('off')
                                 ax = fig.add_subplot(1, 2, 2)
-                                colors = torch.sum(x[tri.simplices, 7], axis=1) / 3.0
+                                colors = torch.sum(x[tri.simplices, 7], dim=1) / 3.0
                                 plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                               facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
                                 plt.xticks([])
@@ -594,7 +594,7 @@ def data_train(model_config):
                     else:
                         y_batch = torch.cat((y_batch, y), axis=0)
                 else:
-                    distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+                    distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
                     adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
                     t = torch.Tensor([radius ** 2])
                     edges = adj_t.nonzero().t().contiguous()
@@ -949,7 +949,6 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
     print('')
     print('Plot roll-out inference ... ')
 
-    model = []
     radius = model_config['radius']
     min_radius = model_config['min_radius']
     nparticle_types = model_config['nparticle_types']
@@ -958,7 +957,6 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
     nframes = model_config['nframes']
     has_mesh = 'Mesh' in model_config['model']
     delta_t = model_config['delta_t']
-    aggr_type = model_config['aggr_type']
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
@@ -1010,7 +1008,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         print('Use ground truth labels')
 
     # nparticles larger than initially
-    if ratio > 1:  # nparticles larger than initially
+    if ratio > 1:
 
         prev_index_particles = index_particles
 
@@ -1031,8 +1029,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
                     new_embedding = embedding[prev_index_particles[n].astype(int), :]
                     new_labels = labels[prev_index_particles[n].astype(int)]
                 else:
-                    new_embedding = torch.cat((new_embedding, embedding[prev_index_particles[n].astype(int), :]),
-                                              axis=0)
+                    new_embedding = torch.cat((new_embedding, embedding[prev_index_particles[n].astype(int), :]), axis=0)
                     new_labels = torch.cat((new_labels, labels[prev_index_particles[n].astype(int)]), axis=0)
 
         model.a = nn.Parameter(
@@ -1040,8 +1037,6 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
                          requires_grad=False))
         model.a.requires_grad = False
         model.a[0] = new_embedding
-        labels = new_labels
-        nparticles = new_nparticles
         model_config['nparticles'] = new_nparticles
 
         index_particles = []
@@ -1070,14 +1065,12 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
     y_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_0.pt', map_location=device))
 
     x = x_list[0][0].clone().detach()
-    x00 = x_list[0][0].clone().detach()
 
     if has_mesh:
         hnorm = torch.load(f'./log/try_{dataset_name}/hnorm.pt', map_location=device).to(device)
 
         mesh_data = torch.load(f'graphs_data/graphs_particles_{dataset_name}/mesh_data_0.pt',map_location=device)
         mask_mesh = mesh_data['mask_mesh']
-        # mesh_pos = mesh_data['mesh_pos']
         edge_index_mesh = mesh_data['edge_index']
         edge_weight_mesh = mesh_data['edge_weight']
 
@@ -1088,11 +1081,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         print('')
     time.sleep(0.5)
 
-    rmserr_list = []
-    discrepency_list = []
-
     x = x_list[0][0].clone().detach()
-    T1 = x[:, 5:6].clone().detach()
     index_particles = []
     for n in range(model_config['nparticle_types']):
         index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
@@ -1102,8 +1091,6 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
     for it in trange(nframes - 1):
 
         x0 = x_list[0][it].clone().detach()
-        x0_next = x_list[0][it + 1].clone().detach()
-        y0 = y_list[0][it].clone().detach()
 
         if has_mesh:
             x[:, 1:5] = x0[:, 1:5].clone().detach()
@@ -1118,12 +1105,12 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
                 pred = mesh_model(dataset_mesh, data_id=0)
             x[mask_mesh.squeeze(), 7:8] += pred[mask_mesh.squeeze()] * hnorm * delta_t
             x[mask_mesh.squeeze(), 6:7] += x[mask_mesh.squeeze(), 7:8] * delta_t
-        elif (model_config['model'] == 'RD_RPS_Mesh'):
+        elif model_config['model'] == 'RD_RPS_Mesh':
             with torch.no_grad():
                 pred = mesh_model(dataset_mesh, data_id=0)
                 x[mask_mesh.squeeze(), 6:9] += pred[mask_mesh.squeeze()] * hnorm * delta_t
         else:
-            distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+            distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
             t = torch.Tensor([radius ** 2])  # threshold
             adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
 
@@ -1150,7 +1137,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
             if has_mesh:
                 pts = x[:, 1:3].detach().cpu().numpy()
                 tri = Delaunay(pts)
-                colors = torch.sum(x[tri.simplices, 6], axis=1) / 3.0
+                colors = torch.sum(x[tri.simplices, 6], dim=1) / 3.0
                 if model_config['model'] == 'DiffMesh':
                     plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                   facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1000)
@@ -1160,14 +1147,14 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
                 if (model_config['model'] == 'RD_Gray_Scott_Mesh'):
                     fig = plt.figure(figsize=(12, 6))
                     ax = fig.add_subplot(1, 2, 1)
-                    colors = torch.sum(x[tri.simplices, 6], axis=1) / 3.0
+                    colors = torch.sum(x[tri.simplices, 6], dim=1) / 3.0
                     plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                   facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
                     plt.xticks([])
                     plt.yticks([])
                     plt.axis('off')
                     ax = fig.add_subplot(1, 2, 2)
-                    colors = torch.sum(x[tri.simplices, 7], axis=1) / 3.0
+                    colors = torch.sum(x[tri.simplices, 7], dim=1) / 3.0
                     plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                   facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
                     plt.xticks([])

@@ -75,7 +75,7 @@ def init_mesh(model_config, device):
         features_mesh = torch.zeros((nnodes, 2), device=device) + torch.rand((nnodes, 2), device=device) * 0.1
     elif model_config['model'] == 'RD_RPS_Mesh':
         features_mesh = torch.rand((nnodes, 3), device=device)
-        s = torch.sum(features_mesh, axis=1)
+        s = torch.sum(features_mesh, dim=1)
         for k in range(3):
             features_mesh[:, k] = features_mesh[:, k] / s
     elif (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh') | (
