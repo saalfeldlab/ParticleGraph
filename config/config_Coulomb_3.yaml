@@ -9,7 +9,7 @@ min_radius: 0.001
 nparticles: 960
 nparticle_types: 3
 ninteractions: 3
-kmeans_input: 'plot'
+cluster_method: 'distance_plot'
 nframes: 1000
 sigma: 0.005
 delta_t: 3.0E-5
@@ -19,15 +19,17 @@ boundary: 'periodic' # periodic   'no'  # no boundary condition
 data_augmentation: True
 batch_size: 8
 embedding: 2
-model: 'ElecParticles'
+model: 'PDE_E'
 prediction: '2nd_derivative'
 p: [[2], [1], [-1]]
 upgrade_type: 'none'
+nlayers_update: 3
+hidden_size_update: 64
 nrun: 2
 clamp: 0
 pred_limit: 1.0E+10
 start_frame: 0
 arrow_length: 10
 cmap: 'tab10'
-description: 'Periodic PDE_E is a second derivative simulation, acceleration is function of electrostatic law qiqj/r2 interaction is type-type dependent best_model:22'
-sparsity: 'regul_replace'
+description: 'Periodic PDE_E is a second derivative simulation, acceleration is function of electrostatic law qiqj/r2 interaction is type-type dependent'
+sparsity: 'replace'

@@ -22,11 +22,10 @@ class PDE_B(pyg.nn.MessagePassing):
         the acceleration of the Boids (dimension 2)
     """
 
-    def __init__(self, aggr_type=[], p=[], delta_t=[], bc_diff=[]):
+    def __init__(self, aggr_type=[], p=[], bc_diff=[]):
         super(PDE_B, self).__init__(aggr=aggr_type)  # "mean" aggregation.
 
         self.p = p
-        self.delta_t = delta_t
         self.bc_diff = bc_diff
 
         self.a1 = 0.5E-5
@@ -49,7 +48,7 @@ class PDE_B(pyg.nn.MessagePassing):
         distance_squared = torch.sum(self.bc_diff(pos_j - pos_i) ** 2, axis=1)  # distance squared
 
         cohesion = parameters_i[:,0,None] * self.a1 * self.bc_diff(pos_j - pos_i)
-        alignment = parameters_i[:,1,None] * self.a2 * self.bc_diff(velocity_j - velocity_i)
+        alignment = parameters_i[:,1,None] * self.a2 * self.bc_diff(d_pos_j - d_pos_i)
         separation = - parameters_i[:,2,None] * self.a3 * self.bc_diff(pos_j - pos_i) / distance_squared[:, None]
 
         return (separation + alignment + cohesion)

@@ -9,7 +9,7 @@ min_radius: 0.002
 nparticles: 960
 nparticle_types: 16
 ninteractions: 16
-kmeans_input: 'plot'
+cluster_method: 'distance_plot'
 nframes: 1000
 sigma: 0.005
 delta_t: 3.0E-5
@@ -19,10 +19,12 @@ boundary: 'no'  # periodic   'no'  # no boundary condition
 data_augmentation: True
 batch_size: 8
 embedding: 2
-model: 'GravityParticles'
+model: 'PDE_G'
 prediction: '2nd_derivative'
 upgrade_type: 'none'
-p: []
+nlayers_update: 3
+hidden_size_update: 64
+p: [-1]
 nrun: 2
 clamp: 0
 pred_limit: 1.0E+9
@@ -31,4 +33,4 @@ arrow_length: 10
 cmap: 'tab20'
 arrow_length: 1
 description: 'Gravity'
-sparsity: 'regul_replace'
+sparsity: 'replace'

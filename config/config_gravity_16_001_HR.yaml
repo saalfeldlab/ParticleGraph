@@ -9,7 +9,7 @@ min_radius: 0.001
 nparticles: 960
 nparticle_types: 16
 ninteractions: 16
-kmeans_input: 'embedding'
+cluster_method: 'distance_embedding'
 nframes: 2000
 sigma: 0.005
 delta_t: 2.5E-10

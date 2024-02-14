@@ -11,6 +11,7 @@ dataset: 'CElegans_32'
 nparticles: 4800
 nparticle_types: 3
 ninteractions: 3
+cluster_method: 'distance_plot'
 nframes: 250
 sigma: 0.005
 delta_t: 0.1

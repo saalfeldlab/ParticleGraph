@@ -11,9 +11,9 @@ noise_level:
   type: number
   default: 0
 
-kmeans_input:
+cluster_method:
   type: string
-  default: 'plot'
+  default: 'distance_plot'
 
 data_augmentation:
   type: boolean
@@ -22,6 +22,7 @@ data_augmentation:
 batch_size:
   type: integer
   default: 1
+
 nrun:
   type: integer
   default: 2
@@ -37,6 +38,14 @@ pred_limit:
 sparsity:
   type: string
   default: 'none'
+
+fix_cluster_embedding:
+  type: boolean
+  default: False
+
+loss_weight:
+  type: boolean
+  default: False
 
 # Model parameters
 model:
@@ -78,6 +87,7 @@ upgrade_type:
 nlayers_update:
   type: integer
   default: 3
+
 hidden_size_update:
     type: integer
     default: 64
@@ -109,6 +119,14 @@ nparticle_types:
 ninteractions:
   type: integer
   default: 5
+  
+nnodes:
+  type: integer
+  default: 900
+  
+nnode_types:
+  type: integer
+  default: 4
 
 nframes:
   type: integer
@@ -130,10 +148,10 @@ boundary:
   allowed: ['periodic', 'no']
   default: 'periodic'
 
-particle_value_map:
+node_value_map:
   type: string
 
-particle_type_map:
+node_type_map:
   type: string
 
 beta:
