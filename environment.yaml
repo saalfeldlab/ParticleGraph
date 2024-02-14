@@ -15,6 +15,7 @@ dependencies:
   - tifffile
   - astropy
   - cerberus
+  - pydantic
   - pip
   - pip:
     - gputil
