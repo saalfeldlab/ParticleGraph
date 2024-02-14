@@ -4456,7 +4456,7 @@ def data_plot_FIG5():
 
 def data_plot_FIG6():
 
-    config = 'config_wave_HR3e'
+    config = 'config_wave_HR3f'
     # model_config = load_model_config(id=config)
 
     # Load parameters from config file
@@ -4520,10 +4520,9 @@ def data_plot_FIG6():
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
 
-    h_list = []
-    h_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/h_list_0.pt', map_location=device))
+    y_mesh_list = []
+    y_mesh_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_mesh_list_0.pt', map_location=device))
     hnorm = torch.load(os.path.join(log_dir, 'hnorm.pt'), map_location=device)
-
 
     model = Mesh_Laplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
 
@@ -4655,8 +4654,7 @@ def data_plot_FIG6():
             f_list.append(h)
             popt, pcov = curve_fit(func_lin, to_numpy(r), to_numpy(h))
             popt_list.append(popt)
-
-            if n%12 == 0:
+            if n%48 == 0:
                 type = to_numpy(T1[n])
                 if type !=0:
                     plt.scatter(to_numpy(r),to_numpy(h) * to_numpy(hnorm) *100, c=cmap.color(type),s=0.01, alpha=0.1)
@@ -4669,33 +4667,27 @@ def data_plot_FIG6():
     coeff_norm = to_numpy(f_list)
     popt_list = np.array(popt_list)
 
-    if os.path.exists(os.path.join(log_dir, f'proj_interaction_20.npy')):
-        proj_interaction = np.load(os.path.join(log_dir, f'proj_interaction_20.npy'))
-    else:
-        trans = umap.UMAP(n_neighbors=500,
-                              n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
-        proj_interaction = trans.transform(coeff_norm)
-        np.save(os.path.join(log_dir, f'proj_interaction_20.npy'), proj_interaction)
+    proj_interaction = popt_list
+    proj_interaction[:, 1] = proj_interaction[:, 0]
 
-    # ax = fig.add_subplot(3, 3, 3)
+
+    labels, nclusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
+
+
     # plt.hist(popt_list[:,0], 100)
     new_labels=np.zeros(nparticles)
-    viscosity = np.zeros(nparticle_types)
-    for n in range(1,nparticle_types):
-        tmp = popt_list[index_particles[n],0]*to_numpy(hnorm)*100
-        c = model_config['c'][n]
-        pos = np.argwhere(np.abs(popt_list[:,0]*to_numpy(hnorm)*100 - np.mean(tmp)) / np.std(tmp) < 10).squeeze()
-        new_labels[pos] = n
-        ppos = T1[index_particles[n][0]].repeat(len(pos))
-        # plt.scatter(to_numpy(ppos), popt_list[pos,0]*to_numpy(hnorm)*100, color=cmap.color(n), s=10,alpha=0.1)
-        viscosity[n] = np.mean(tmp)
-        print (f'type {n}  c:{c}   fit: {np.mean(tmp)}+/-{np.std(tmp)}   N={len(pos)}')
-    torch.save(torch.tensor(new_labels, device=device), os.path.join(log_dir, f'labels_20.pt'))
+
+    label_list = []
+    for n in range(nparticle_types):
+        tmp = labels[index_particles[n]]
+        label_list.append(np.round(np.median(tmp)))
+    label_list = np.array(label_list)
+    new_labels = labels.copy()
+    for n in range(nparticle_types):
+        new_labels[labels == label_list[n]] = n
     Accuracy = metrics.accuracy_score(to_numpy(T1), new_labels)
-    print(f'Accuracy: {Accuracy}')
-    pos = np.argwhere(new_labels==0).squeeze()
-    ppos = T1[index_particles[0][0]].repeat(len(pos))
-    # plt.scatter(to_numpy(ppos), popt_list[pos, 0] * to_numpy(hnorm) * 100, color=cmap.color(0), s=10, alpha=0.1)
+
+
 
     ax = fig.add_subplot(3, 3, 3)
     print('3')
@@ -4709,8 +4701,6 @@ def data_plot_FIG6():
         cm_display.plot(ax=fig.gca(), cmap='Blues', include_values=True, values_format='d', colorbar=False)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
-
-    labels, nclusters = embedding_cluster.get(popt_list, 'distance')
 
     model_a_ = model.a.clone().detach()
     model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
@@ -4762,6 +4752,7 @@ def data_plot_FIG6():
 
     u = torch.tensor(np.linspace(-150, 150, 1000)).to(device)
     f_list = []
+    popt_list = []
     for n in range(nparticle_types):
         pos = np.argwhere(new_labels == n).squeeze().astype(int)
         embedding = model.a[0, pos[0], :] * torch.ones((1000, model_config['embedding']), device=device)
@@ -4770,6 +4761,11 @@ def data_plot_FIG6():
         h = h[:, 0]
         f_list.append(h)
         plt.plot(to_numpy(u), to_numpy(h) * to_numpy(hnorm) *100, linewidth=1, c=cmap.color(n))
+
+        popt, pcov = curve_fit(func_lin, to_numpy(u), to_numpy(h) * to_numpy(hnorm) *100)
+        popt_list.append(popt)
+    popt_list = np.array(popt_list)
+        
     plt.xlabel(r'$\Delta u_{i}$', fontsize=12)
     plt.ylabel(r'$\Phi (\ensuremath{\mathbf{a}}_i, \Delta u_i)$', fontsize=12)
     plt.xticks(fontsize=10.0)
@@ -4780,7 +4776,7 @@ def data_plot_FIG6():
     plt.text(-0.25, 1.1, f'f)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     plt.title(r'Reconstructed viscosity', fontsize=12)
     x_data = np.array(model_config['c'])
-    y_data = viscosity
+    y_data = popt_list[:,0]
     lin_fit, lin_fitv = curve_fit(func_lin, x_data, y_data)
     plt.plot(x_data, func_lin(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
     for n in range(nparticle_types):
@@ -4795,7 +4791,6 @@ def data_plot_FIG6():
     ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
     r_squared = 1 - (ss_res / ss_tot)
     plt.text(0, 0.9, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
-
 
     x_width = int(np.sqrt(nparticles))
     xs = torch.linspace(1 / x_width / 2, 1 - 1 / x_width / 2, steps=x_width)
@@ -4813,7 +4808,7 @@ def data_plot_FIG6():
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.xlabel(r'$x_i$', fontsize=12)
-    plt.ylabel(r'$y_i$', fontsize=12)\
+    plt.ylabel(r'$y_i$', fontsize=12)
 
     ax = fig.add_subplot(3, 3, 8)
     print('8')
@@ -4826,36 +4821,37 @@ def data_plot_FIG6():
     plt.yticks(fontsize=10.0)
     plt.xlabel(r'$x_i$', fontsize=12)
     plt.ylabel(r'$y_i$', fontsize=12)
-    plt.text(0.1, 0.85, r"True", fontsize=12)
 
-    # find last image file in logdir
-    ax = fig.add_subplot(3, 3, 9)
-    plt.text(-0.25, 1.1, f'g)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-    plt.title(r'Viscosity map', fontsize=12)
-    print('9')
-    files = glob.glob(os.path.join(log_dir, 'tmp_recons/Fig*.tif'))
-    files.sort(key=os.path.getmtime)
-    if len(files) > 0:
-        last_file = files[-1]
-        # load image file with imageio
-        image = imageio.imread(last_file)
-        print('12')
-        plt.text(-0.25, 1.1, f'i)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-        plt.title(r'Rollout inference (frame 1200)', fontsize=12)
-        plt.imshow(image)
-        # rmove xtick
-        plt.xticks([])
-        plt.yticks([])
+    # # find last image file in logdir
+    # ax = fig.add_subplot(3, 3, 9)
+    # plt.text(-0.25, 1.1, f'g)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    # plt.title(r'Viscosity map', fontsize=12)
+    # print('9')
+    # files = glob.glob(os.path.join(log_dir, 'tmp_recons/Fig*.tif'))
+    # files.sort(key=os.path.getmtime)
+    # if len(files) > 0:
+    #     last_file = files[-1]
+    #     # load image file with imageio
+    #     image = imageio.imread(last_file)
+    #     plt.text(-0.25, 1.1, f'i)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    #     plt.title(r'Rollout inference (frame 1200)', fontsize=12)
+    #     plt.imshow(image)
+    #     # rmove xtick
+    #     plt.xticks([])
+    #     plt.yticks([])
+
     plt.tight_layout()
-
-    # plt.savefig('Fig6.pdf', format="pdf", dpi=300)
     plt.savefig('Fig6.jpg', dpi=300)
+
+    torch.save({'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict()},
+               os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs_21.pt'))
 
     plt.close()
 
 def data_plot_FIG7():
 
-    config = 'config_RD_RPS2c'
+    config = 'config_RD_RPS2d'
     # model_config = load_model_config(id=config)
 
     # Load parameters from config file
@@ -4918,8 +4914,8 @@ def data_plot_FIG7():
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
 
-    h_list = []
-    h_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/h_list_0.pt', map_location=device))
+    y_mesh_list = []
+    y_mesh_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_mesh_list_0.pt', map_location=device))
     hnorm = torch.load(os.path.join(log_dir, 'hnorm.pt'), map_location=device)
 
     c = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
@@ -5189,21 +5185,22 @@ def data_plot_FIG7():
         plt.xlim([-0.25, 0.25])
         plt.ylim([-0.25, 0.25])
 
-
-
-
-
-
     it =5000
-    it = np.random.randint(model_config['nframes'] - 1)
-    x = x_list[0][it].clone().detach()
-    dataset = data.Data(x=x, pos=x[:, 1:3])
-    transform_0 = T.Compose([T.Delaunay()])
-    dataset_face = transform_0(dataset).face
-    mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
-    edge_index_mesh, edge_weight_mesh = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face,
-                                                                     normalization="None")
+
+    mesh_data = torch.load(f'graphs_data/graphs_particles_{dataset_name}/mesh_data_0.pt', map_location=device)
+
+    mask_mesh = mesh_data['mask_mesh']
+    edge_index_mesh = mesh_data['edge_index']
+    edge_weight_mesh = mesh_data['edge_weight']
+
+    x = x_list[0][0].clone().detach()
+    T1 = x[:, 5:6].clone().detach()
+    index_particles = []
+    for n in range(model_config['nparticle_types']):
+        index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
+        index_particles.append(index.squeeze())
     dataset_mesh = data.Data(x=x, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
+    
     with torch.no_grad():
         y, input_phi, embedding = model(dataset_mesh, data_id=0)
     y=y*hnorm
@@ -5228,9 +5225,9 @@ def data_plot_FIG7():
 
     fig = plt.figure(figsize=(9.5, 9))
     plt.ion()
-    plt.scatter(to_numpy(increment[pos, 0]), to_numpy(y[pos, 0]),c='r',s=1)
-    plt.scatter(to_numpy(increment[pos, 1]), to_numpy(y[pos, 1]),c='g',s=1)
-    plt.scatter(to_numpy(increment[pos, 2]), to_numpy(y[pos, 2]),c='b',s=1)
+    plt.scatter(to_numpy(increment[:, 0]), to_numpy(y[:, 0]),c='r',s=1)
+    plt.scatter(to_numpy(increment[:, 1]), to_numpy(y[:, 1]),c='g',s=1)
+    plt.scatter(to_numpy(increment[:, 2]), to_numpy(y[:, 2]),c='b',s=1)
     plt.xlim([-0.25,0.25])
     plt.ylim([-0.25,0.25])
 
@@ -5253,37 +5250,39 @@ def data_plot_FIG7():
         y_data2 = to_numpy(increment[pos,0:1])
         lin_fit1, lin_fitv = curve_fit(func_RD1, np.squeeze(x_data), np.squeeze(y_data1), method='dogbox')
         lin_fit2, lin_fitv = curve_fit(func_RD1, np.squeeze(x_data), np.squeeze(y_data2), method='dogbox')
+        
+        yy1 = func_RD1(x_data, lin_fit1[0], lin_fit1[1], lin_fit1[2], lin_fit1[3], lin_fit1[4], lin_fit1[5],lin_fit1[6], lin_fit1[7], lin_fit1[8], lin_fit1[9])
+        yy2 = func_RD2(x_data, lin_fit2[0], lin_fit2[1], lin_fit2[2], lin_fit2[3], lin_fit2[4], lin_fit2[5],lin_fit2[6], lin_fit2[7], lin_fit2[8], lin_fit2[9])
 
-        fig = plt.figure(figsize=(9.5, 9))
-        plt.ion()
-        plt.scatter(y_data2,y_data1)
-
-        fig = plt.figure(figsize=(9.5, 9))
-        plt.scatter(y_data2, y_data1,c='r',s=1)
-
-        func_RD1()
-
-
-
-        plt.ion()
-
-
+        plt.scatter(y_data2, y_data1, c='k', s=1)
+        plt.scatter(y_data2,yy2,c='k',s=1)
+        plt.scatter(y_data1,yy1,c='r',s=1)
+        plt.xlim([-0.25, 0.25])
+        plt.ylim([-0.25, 0.25])
+        
+        
+        # 
+        # fig = plt.figure(figsize=(9.5, 9))
+        # plt.scatter(y_data2,y_data1)
+        # 
+        # fig = plt.figure(figsize=(9.5, 9))
+        # plt.scatter(y_data2, y_data1,c='r',s=1)
+        # 
+        # plt.ion()
         y_data2 = to_numpy(y[pos,1:2])
         lin_fit2[n], lin_fitv2 = curve_fit(func_RD2, np.squeeze(x_data), np.squeeze(y_data2), method='dogbox')
         y_data3 = to_numpy(y[pos,2:3])
-        lin_fit3[n], lin_fitv3 = curve_fit(func_RD3, np.squeeze(x_data), np.squeeze(y_data3), method='dogbox')
+        lin_fit3[n], lin_fitv3 = curve_fit(func_RD3, np.squeeze(x_data), np.squeeze(y_data3))
 
-        # yy1 = func_RD1(x_data, lin_fit1[n,0], lin_fit1[n,1], lin_fit1[n,2], lin_fit1[n,3], lin_fit1[n,4], lin_fit1[n,5],lin_fit1[n,6], lin_fit1[n,7], lin_fit1[n,8], lin_fit1[n,9])
-        # yy2 = func_RD2(x_data, lin_fit2[n,0], lin_fit2[n,1], lin_fit2[n,2], lin_fit2[n,3], lin_fit2[n,4], lin_fit2[n,5],
-        #                lin_fit2[n,6], lin_fit2[n,7], lin_fit2[n,8], lin_fit2[n,9])
+
         # yy3 = func_RD3(x_data, lin_fit3[n,0], lin_fit3[n,1], lin_fit3[n,2], lin_fit3[n,3], lin_fit3[n,4], lin_fit3[n,5],
         #                lin_fit3[n,6], lin_fit3[n,7], lin_fit3[n,8], lin_fit3[n,9])
 
-    #     du = 0.05 * laplacian_u + a * uu + b * uv + c * uw + d * vv + e * vw + f * ww + g * u + h * v + i * w
+    #     du =  a * uu + b * uv + c * uw + d * vv + e * vw + f * ww + g * u + h * v + i * w + cc *c * 0.05 * laplacian_u
 
-    coeff1 = np.round(np.mean(lin_fit1[1:4,:], axis=0),2)
-    coeff2 = np.round(np.mean(lin_fit2[1:4,:], axis=0),2)
-    coeff3 = np.round(np.mean(lin_fit3[1:4,:], axis=0),2)
+    coeff1 = np.round(np.mean(lin_fit1, axis=0),2)
+    coeff2 = np.round(np.mean(lin_fit2, axis=0),2)
+    coeff3 = np.round(np.mean(lin_fit3, axis=0),2)
 
     ax = fig.add_subplot(3, 3, 5)
     print('5')
@@ -5348,8 +5347,6 @@ def data_plot_FIG7():
     plt.ylabel(r'$y_i$', fontsize=12)
 
     plt.tight_layout()
-
-    # plt.savefig('Fig7.pdf', format="pdf", dpi=300)
     plt.savefig('Fig7.jpg', dpi=300)
 
     plt.close()
@@ -5366,39 +5363,39 @@ if __name__ == '__main__':
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
-    # arbitrary_3 training
-    # data_plot_FIG2()
-    # print(' ')
-    # print(' ')
-    # arbitrary_3 inference
-    # data_plot_FIG2sup()
-    # print(' ')
-    # print(' ')
-    # arbitrary_16 training
-    # data_plot_FIG3sup()
-    # print(' ')
-    # print(' ')
-    # arbitrary_3 inference
-    # data_plot_FIG4sup()
-
-    # gravity model
-    # data_plot_FIG3()
-    # gravity model continuous
-    # data_plot_FIG3_continous()
-
-    # training Coloumb_3
-    # data_plot_FIG4()
-
-    # data_plot_FIG5sup()
-
-    # boids HR2
-    # data_plot_FIG5()
-
-    # wave HR2 or HR3 (slit)
-    data_plot_FIG6()
+    # # arbitrary_3 training
+    # # data_plot_FIG2()
+    # # print(' ')
+    # # print(' ')
+    # # arbitrary_3 inference
+    # # data_plot_FIG2sup()
+    # # print(' ')
+    # # print(' ')
+    # # arbitrary_16 training
+    # # data_plot_FIG3sup()
+    # # print(' ')
+    # # print(' ')
+    # # arbitrary_3 inference
+    # # data_plot_FIG4sup()
+    #
+    # # gravity model
+    # # data_plot_FIG3()
+    # # gravity model continuous
+    # # data_plot_FIG3_continous()
+    #
+    # # training Coloumb_3
+    # # data_plot_FIG4()
+    #
+    # # data_plot_FIG5sup()
+    #
+    # # boids HR2
+    # # data_plot_FIG5()
+    #
+    # # wave HR2 or HR3 (slit)
+    # data_plot_FIG6()
 
     # RD_RPS2
-    # data_plot_FIG7()
+    data_plot_FIG7()
 
 
 
