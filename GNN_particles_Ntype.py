@@ -19,7 +19,8 @@ import os
 import scipy.spatial
 
 from ParticleGraph.generators.utils import choose_model
-from ParticleGraph.train_utils import choose_training_model, constant_batch_size, increasing_batch_size
+from ParticleGraph.train_utils import choose_training_model, constant_batch_size, increasing_batch_size, \
+    set_trainable_parameters
 
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
@@ -622,25 +623,11 @@ def data_train(model_config):
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
 
-    lra = 1E-3
-    lr = 1E-3
-    table = PrettyTable(["Modules", "Parameters"])
-    total_params = 0
-    it = 0
-    for name, parameter in model.named_parameters():
-        if not parameter.requires_grad:
-            continue
-        if it == 0:
-            optimizer = torch.optim.Adam([model.a], lr=lra)
-        else:
-            optimizer.add_param_group({'params': parameter, 'lr': lr})
-        it += 1
-        param = parameter.numel()
-        table.add_row([name, param])
-        total_params += param
-    logger.info(table)
-    logger.info(f"Total Trainable Params: {total_params}")
-    logger.info(f'Learning rates: {lr}, {lra}')
+    lr_embedding = model_config['learning_rate_embedding_start']
+    lr = model_config['learning_rate_start']
+    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+    logger.info(f"Total Trainable Params: {n_total_params}")
+    logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     print(f'network: {net}')
@@ -673,6 +660,7 @@ def data_train(model_config):
         batch_size = get_batch_size(epoch)
         if epoch == 0:
             min_radius = 0.002
+            logger.info(f'min_radius: {min_radius}')
         elif epoch == 1:
             min_radius = model_config['min_radius']
             logger.info(f'min_radius: {min_radius}')
@@ -682,19 +670,11 @@ def data_train(model_config):
             print(f'batch_size: {batch_size}')
             logger.info(f'batch_size: {batch_size}')
         elif epoch == 3 * Nepochs // 4 + 2:
-            lra = 1E-3
-            lr = 5E-4
-            it = 0
-            for name, parameter in model.named_parameters():
-                if not parameter.requires_grad:
-                    continue
-                if it == 0:
-                    optimizer = torch.optim.Adam([model.a], lr=lra)
-                else:
-                    optimizer.add_param_group({'params': parameter, 'lr': lr})
-                it += 1
-            print(f'Learning rates: {lr}, {lra}')
-            logger.info(f'Learning rates: {lr}, {lra}')
+            lr_embedding = model_config['learning_rate_embedding_end']
+            lr = model_config['learning_rate_end']
+            optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+            logger.info(f"Total Trainable Params: {n_total_params}")
+            logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
         error_weight = torch.ones((batch_size * nparticles, 1),device=device, requires_grad=False)
 
@@ -1046,33 +1026,33 @@ def data_train(model_config):
                 plt.text(0, 1.1, f'Replaced', ha='left', va='top', transform=ax.transAxes,
                          fontsize=10)
                 if model_config['fix_cluster_embedding']:
-                    lra = 0
+                    lr_embedding = 0
                     lr = 1E-3
                     it = 0
                     for name, parameter in model.named_parameters():
                         if not parameter.requires_grad:
                             continue
                         if it == 0:
-                            optimizer = torch.optim.Adam([model.a], lr=lra)
+                            optimizer = torch.optim.Adam([model.a], lr=lr_embedding)
                         else:
                             optimizer.add_param_group({'params': parameter, 'lr': lr})
                         it += 1
-                    print(f'Learning rates: {lr}, {lra}')
-                    logger.info(f'Learning rates: {lr}, {lra}')
+                    print(f'Learning rates: {lr}, {lr_embedding}')
+                    logger.info(f'Learning rates: {lr}, {lr_embedding}')
             else:
-                lra = 1E-3
+                lr_embedding = 1E-3
                 lr = 1E-3
                 it = 0
                 for name, parameter in model.named_parameters():
                     if not parameter.requires_grad:
                         continue
                     if it == 0:
-                        optimizer = torch.optim.Adam([model.a], lr=lra)
+                        optimizer = torch.optim.Adam([model.a], lr=lr_embedding)
                     else:
                         optimizer.add_param_group({'params': parameter, 'lr': lr})
                     it += 1
-                print(f'Learning rates: {lr}, {lra}')
-                logger.info(f'Learning rates: {lr}, {lra}')
+                print(f'Learning rates: {lr}, {lr_embedding}')
+                logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")

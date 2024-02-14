@@ -51,6 +51,22 @@ loss_weight:
   type: boolean
   default: False
 
+learning_rate_start:
+  type: number
+  default: 0.001
+
+learning_rate_end:
+  type: number
+  default: 0.005
+
+learning_rate_embedding_start:
+  type: number
+  default: 0.001
+
+learning_rate_embedding_end:
+  type: number
+  default: 0.0005
+
 # Model parameters
 model:
   type: string

@@ -1,3 +1,6 @@
+import torch
+from prettytable import PrettyTable
+
 from ParticleGraph.models import Interaction_Particles, Mesh_Laplacian, Mesh_RPS
 from ParticleGraph.utils import choose_boundary_values
 
@@ -42,3 +45,16 @@ def increasing_batch_size(batch_size):
         return 1 if epoch < 2 else batch_size
 
     return get_batch_size
+
+
+def set_trainable_parameters(model, lr_embedding, lr):
+    trainable_params = [param for _, param in model.named_parameters() if param.requires_grad]
+    n_total_params = sum(p.numel() for p in trainable_params) + torch.numel(model.a)
+    _, *parameters = trainable_params
+
+    embedding = model.a
+    optimizer = torch.optim.Adam([embedding], lr=lr_embedding)
+    for parameter in parameters:
+        optimizer.add_param_group({'params': parameter, 'lr': lr})
+
+    return optimizer, n_total_params
