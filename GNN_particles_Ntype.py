@@ -18,6 +18,8 @@ from tqdm import trange
 import os
 import scipy.spatial
 
+from ParticleGraph.generators.utils import choose_model
+
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
 from ParticleGraph.data_loaders import *
@@ -62,28 +64,12 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
     bMesh = 'Mesh' in model_config['model']
     bDivision = 'division_cycle' in model_config
     delta_t = model_config['delta_t']
-    aggr_type = model_config['aggr_type']
-    nnode_types = model_config['nnode_types']
     nnodes = model_config['nnodes']
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
     for n in range(model_config['nparticle_types']):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
-
-    # create boundary functions for position and velocity respectively
-    if model_config['boundary'] == 'no':  # change this for usual BC
-        def bc_pos(X):
-            return X
-
-        def bc_diff(D):
-            return D
-    else:
-        def bc_pos(X):
-            return torch.remainder(X, 1.0)
-
-        def bc_diff(D):
-            return torch.remainder(D - .5, 1.0) - .5
 
     cycle_length = torch.clamp(torch.abs(torch.ones(nparticle_types, 1, device=device) * 400 + torch.randn(nparticle_types, 1, device=device) * 150),min=100, max=700)
     if bDivision:
@@ -96,116 +82,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
         node_value_map = model_config['node_value_map']
         node_type_map = model_config['node_type_map']
 
-
-    if model_config['model'] == 'PDE_A':
-        print(f'Generate PDE_A')
-        p = torch.ones(nparticle_types, 4, device=device) + torch.rand(nparticle_types, 4, device=device)
-        if len(model_config['p']) > 0:
-            for n in range(nparticle_types):
-                p[n] = torch.tensor(model_config['p'][n])
-        if nparticle_types == 1:
-            model = PDE_A(aggr_type=aggr_type, p=p, sigma=model_config['sigma'], bc_diff=bc_diff)
-        else:
-            model = PDE_A(aggr_type=aggr_type, p=torch.squeeze(p), sigma=model_config['sigma'], bc_diff=bc_diff)
-        psi_output = []
-        for n in range(nparticle_types):
-            psi_output.append(model.psi(rr, torch.squeeze(p[n])))
-            print(f'p{n}: {np.round(to_numpy(torch.squeeze(p[n])), 4)}')
-        torch.save(torch.squeeze(p), f'graphs_data/graphs_particles_{dataset_name}/p.pt')
-    if model_config['model'] == 'PDE_B':
-        print(f'Generate PDE_B')
-        p = torch.rand(nparticle_types, 3, device=device) * 100  # comprised between 10 and 50
-        if len(model_config['p']) > 0:
-            for n in range(nparticle_types):
-                p[n] = torch.tensor(model_config['p'][n])
-        if nparticle_types == 1:
-            model = PDE_A(aggr_type=aggr_type, p=p, bc_diff=bc_diff)
-        else:
-            model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), bc_diff=bc_diff)
-        psi_output = []
-        for n in range(nparticle_types):
-            psi_output.append(model.psi(rr, torch.squeeze(p[n])))
-            print(f'p{n}: {np.round(to_numpy(torch.squeeze(p[n])), 4)}')
-        torch.save(torch.squeeze(p), f'graphs_data/graphs_particles_{dataset_name}/p.pt')
-    if model_config['model'] == 'PDE_G':
-        if model_config['p'][0] == -1:
-            p = np.linspace(0.5, 5, nparticle_types)
-            p = torch.tensor(p, device=device)
-        if len(model_config['p']) > 1:
-            for n in range(nparticle_types):
-                p[n] = torch.tensor(model_config['p'][n])
-        model = PDE_G(aggr_type=aggr_type, p=torch.squeeze(p), clamp=model_config['clamp'],
-                      pred_limit=model_config['pred_limit'], bc_diff=bc_diff)
-        psi_output = []
-        for n in range(len(p)):
-            psi_output.append(model.psi(rr, torch.squeeze(p[n])))
-            print(f'p{n}: {np.round(to_numpy(torch.squeeze(p[n])), 4)}')
-        torch.save(torch.squeeze(p), f'graphs_data/graphs_particles_{dataset_name}/p.pt')
-    if model_config['model'] == 'PDE_E':
-        p = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
-        if len(model_config['p']) > 0:
-            for n in range(nparticle_types):
-                p[n] = torch.tensor(model_config['p'][n])
-                print(f'p{n}: {np.round(to_numpy(torch.squeeze(p[n])), 4)}')
-                torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
-        model = PDE_E(aggr_type=aggr_type, p=torch.squeeze(p),
-                      clamp=model_config['clamp'], pred_limit=model_config['pred_limit'],
-                      prediction=model_config['prediction'], bc_diff=bc_diff)
-        psi_output = []
-        for n in range(nparticle_types):
-            for m in range(nparticle_types):
-                psi_output.append(model.psi(rr, torch.squeeze(p[n]), torch.squeeze(p[m])))
-        torch.save(torch.squeeze(p), f'graphs_data/graphs_particles_{dataset_name}/p.pt')
-    if bMesh:
-        p = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
-        if len(model_config['p']) > 0:
-            for n in range(nparticle_types):
-                p[n] = torch.tensor(model_config['p'][n])
-        model = PDE_G(aggr_type=aggr_type, p=torch.squeeze(p),
-                      clamp=model_config['clamp'], pred_limit=model_config['pred_limit'], bc_diff=bc_diff)
-        c = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
-        for n in range(nparticle_types):
-            c[n] = torch.tensor(model_config['c'][n])
-
-        if (model_config['model'] == 'RD_Gray_Scott_Mesh'):
-            model_mesh = RD_Gray_Scott(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'],
-                                       bc_diff=bc_diff)
-        elif (model_config['model'] == 'RD_FitzHugh_Nagumo_Mesh'):
-            model_mesh = RD_FitzHugh_Nagumo(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'],
-                                            bc_diff=bc_diff)
-        elif (model_config['model'] == 'RD_RPS_Mesh'):
-            model_mesh = RD_RPS(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'], bc_diff=bc_diff)
-        elif (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
-            model_mesh = Laplacian_A(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'],
-                                     bc_diff=bc_diff)
-        psi_output = []
-        for n in range(nparticle_types):
-            psi_output.append(model.psi(rr, torch.squeeze(p[n])))
-            print(f'p{n}: {np.round(to_numpy(torch.squeeze(p[n])), 4)}')
-            torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
-    if model_config['model'] == 'PDE_O':
-        p = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
-        if len(model_config['p']) > 0:
-            for n in range(nparticle_types):
-                p[n] = torch.tensor(model_config['p'][n])
-        model = PDE_O(aggr_type=aggr_type, p=torch.squeeze(p), bc_diff=bc_diff, beta=model_config['beta'])
-    if model_config['model'] == 'Maze':
-        print(f'Generate PDE_B')
-        p = torch.rand(nparticle_types, 3, device=device) * 100  # comprised between 10 and 50
-        for n in range(nparticle_types):
-            p[n] = torch.tensor(model_config['p'][n])
-        model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), bc_diff=bc_diff)
-        psi_output = []
-        for n in range(nparticle_types):
-            psi_output.append(model.psi(rr, torch.squeeze(p[n])))
-            print(f'p{n}: {np.round(to_numpy(torch.squeeze(p[n])), 4)}')
-        torch.save(torch.squeeze(p), f'graphs_data/graphs_particles_{dataset_name}/p.pt')
-        c = torch.ones(nnode_types, 1, device=device) + torch.rand(nnode_types, 1, device=device)
-        for n in range(nnode_types):
-            c[n] = torch.tensor(model_config['c'][n])
-
-        model_mesh = Laplacian_A(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'],
-                                 bc_diff=bc_diff)
+    model, model_mesh, bc_pos, bc_diff = choose_model(model_config, device=device)
 
     torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model.pt')
 
