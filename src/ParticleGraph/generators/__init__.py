@@ -8,6 +8,7 @@ from .PDE_Z import PDE_Z
 from .RD_FitzHugh_Nagumo import RD_FitzHugh_Nagumo
 from .RD_Gray_Scott import RD_Gray_Scott
 from .RD_RPS import RD_RPS
-from .utils import choose_model
+from .utils import choose_model, choose_mesh_model
 
-__all__ = [Laplacian_A, PDE_A, PDE_B, PDE_E, PDE_G, PDE_O, PDE_Z, RD_FitzHugh_Nagumo, RD_Gray_Scott, RD_RPS, choose_model]
+__all__ = [Laplacian_A, PDE_A, PDE_B, PDE_E, PDE_G, PDE_O, PDE_Z, RD_FitzHugh_Nagumo, RD_Gray_Scott, RD_RPS,
+           choose_model, choose_mesh_model]
