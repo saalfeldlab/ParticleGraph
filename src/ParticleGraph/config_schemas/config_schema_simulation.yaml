@@ -19,6 +19,10 @@ data_augmentation:
   type: boolean
   default: True
 
+small_init_batch_size:
+  type: boolean
+  default: True
+
 batch_size:
   type: integer
   default: 1
