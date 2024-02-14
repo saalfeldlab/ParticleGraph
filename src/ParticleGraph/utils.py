@@ -21,10 +21,10 @@ def set_device(device=None):
     if device is None or device == 'auto':
         if torch.cuda.is_available():
             # Get the list of available GPUs and their free memory
-            GPUs = GPUtil.getGPUs()
-            if GPUs:
+            gpus = GPUtil.getGPUs()
+            if gpus:
                 # Find the GPU with the maximum free memory
-                device_id = max(range(len(GPUs)), key=lambda x: GPUs[x].memoryFree)
+                device_id = max(range(len(gpus)), key=lambda x: gpus[x].memoryFree)
                 device = f'cuda:{device_id}'
             else:
                 device = 'cpu'
@@ -64,7 +64,7 @@ def norm_acceleration(yy, device):
     return torch.tensor([ax01, ax99, ay01, ay99, ax, ay], device=device)
 
 
-class cc:
+class CustomColorMap:
     def __init__(self, model_config):
         self.model_config = model_config
         self.model = model_config['model']
@@ -78,28 +78,25 @@ class cc:
     def color(self, index):
 
         if self.model == 'PDE_E':
-
-            if index == 0:
-                index = (0, 0, 1)
-            elif index == 1:
-                index = (0, 0.5, 0.75)
-            elif index == 2:
-                index = (1, 0, 0)
-            elif index == 3:
-                index = (0.75, 0, 0)
-            else:
-                index = (0, 0, 0)
-            return (index)
+            match index:
+                case 0:
+                    color = (0, 0, 1)
+                case 1:
+                    color = (0, 0.5, 0.75)
+                case 2:
+                    color = (1, 0, 0)
+                case 3:
+                    color = (0.75, 0, 0)
+                case _:
+                    color = (0, 0, 0)
         elif self.bMesh:
             if index == 0:
-                index = (0, 0, 0)
+                color = (0, 0, 0)
             else:
                 color_map = plt.colormaps.get_cmap(self.model_config['cmap'])
-                index = color_map(index / self.nmap)
-
+                color = color_map(index / self.nmap)
         else:
-            # color_map = plt.cm.get_cmap(self.model_config['cmap'])
             color_map = plt.colormaps.get_cmap(self.model_config['cmap'])
-            index = color_map(index / self.nmap)
+            color = color_map(index / self.nmap)
 
-        return index
+        return color

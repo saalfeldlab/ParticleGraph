@@ -22,7 +22,7 @@ os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
 from ParticleGraph.data_loaders import *
 from ParticleGraph.config_manager import create_config_manager
-from ParticleGraph.utils import to_numpy, cc, set_device, norm_velocity, norm_acceleration
+from ParticleGraph.utils import to_numpy, CustomColorMap, set_device, norm_velocity, norm_acceleration
 from ParticleGraph.fitting_models import linear_model
 from ParticleGraph.generators import PDE_A, PDE_B, PDE_E, PDE_G, Laplacian_A, RD_FitzHugh_Nagumo, RD_Gray_Scott, RD_RPS
 from ParticleGraph.models import Interaction_Particles, Mesh_Laplacian, Mesh_RPS
@@ -1831,7 +1831,7 @@ if __name__ == '__main__':
                 value = float(value)
                 model_config[key] = value
 
-        cmap = cc(model_config=model_config)  # create colormap for given model_config
+        cmap = CustomColorMap(model_config=model_config)  # create colormap for given model_config
 
         data_generate(model_config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, step=model_config['nframes']//100)
         data_train(model_config)
