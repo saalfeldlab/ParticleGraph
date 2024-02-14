@@ -73,7 +73,13 @@ class ConfigManager(ABC):
         with open(path, 'r') as file:
             return yaml.safe_load(file)
     
-
+    @staticmethod
+    def load_config(config_file):
+        register_yaml_constructors()
+        with open(config_file, 'r') as file:
+            config = yaml.safe_load(file)
+        return config
+        
 class ConfigManagerSimulation(ConfigManager):
     def __init__(self):
         with path('ParticleGraph.config_schemas', 'config_schema_simulation.yaml') as config_path:
