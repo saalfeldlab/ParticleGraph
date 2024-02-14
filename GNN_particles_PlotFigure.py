@@ -1,11 +1,10 @@
 import matplotlib.cm as cmplt
-import numpy as np
-import torch
 import torch_geometric as pyg
 import os
 from ParticleGraph.MLP import MLP
 import imageio
 
+from ParticleGraph.fitting_models import func_pow, func_boids, func_RD1, func_RD2, func_RD3
 
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
@@ -367,87 +366,6 @@ class Mesh_RPS_learn(torch.nn.Module):
         increment = torch.cat((du[:,None],dv[:,None],dw[:,None]),axis=1)
 
         return increment.squeeze()
-
-
-def func_pow(x, a, b):
-    return a / (x**b)
-
-def func_lin(x, a, b):
-    return a * x + b
-
-def func_boids(x, a, b, c):
-
-    xdiff = x[:, 0:2]
-    vdiff = x[:, 2:4]
-    r = np.concatenate((x[:,4:5],x[:,4:5]),axis=1)
-
-    sum = a * xdiff + b * vdiff - c * xdiff / r
-    sum = np.sqrt(sum[:,0]**2 + sum[:,1]**2)
-
-    return sum
-
-def func_RD1 (x, a, b, c, d, e, f, g, h, i, cc):
-
-    u = x[:, 3]
-    v = x[:, 4]
-    w = x[:, 5]
-
-    laplacian_u = cc * x[:, 0]
-    laplacian_v = cc * x[:, 1]
-    laplacian_w = cc * x[:, 2]
-
-    uu = u * u
-    uv = u * v
-    uw = u * w
-    vv = v * v
-    vw = v * w
-    ww = w * w
-
-    du = 0.05 * laplacian_u + a * uu + b * uv + c * uw + d * vv + e * vw + f * ww + g * u + h * v + i * w
-
-    return du
-
-def func_RD2 (x, a, b, c, d, e, f, g, h, i, cc):
-
-    u = x[:, 3]
-    v = x[:, 4]
-    w = x[:, 5]
-
-    laplacian_u = cc * x[:, 0]
-    laplacian_v = cc * x[:, 1]
-    laplacian_w = cc * x[:, 2]
-
-    uu = u * u
-    uv = u * v
-    uw = u * w
-    vv = v * v
-    vw = v * w
-    ww = w * w
-
-    dv = 0.05 * laplacian_v + a * uu + b * uv + c * uw + d * vv + e * vw + f * ww + g * u + h * v + i * w
-
-    return dv
-
-def func_RD3 (x, a, b, c, d, e, f, g, h, i, cc):
-
-    u = x[:, 3]
-    v = x[:, 4]
-    w = x[:, 5]
-
-    laplacian_u = cc * x[:, 0]
-    laplacian_v = cc * x[:, 1]
-    laplacian_w = cc * x[:, 2]
-
-    uu = u * u
-    uv = u * v
-    uw = u * w
-    vv = v * v
-    vw = v * w
-    ww = w * w
-
-    dw = 0.05 * laplacian_w + a * uu + b * uv + c * uw + d * vv + e * vw + f * ww + g * u + h * v + i * w
-
-    return dw
 
 
 def data_plot_FIG2():
@@ -5251,8 +5169,8 @@ def data_plot_FIG7():
         lin_fit1, lin_fitv = curve_fit(func_RD1, np.squeeze(x_data), np.squeeze(y_data1), method='dogbox')
         lin_fit2, lin_fitv = curve_fit(func_RD1, np.squeeze(x_data), np.squeeze(y_data2), method='dogbox')
         
-        yy1 = func_RD1(x_data, lin_fit1[0], lin_fit1[1], lin_fit1[2], lin_fit1[3], lin_fit1[4], lin_fit1[5],lin_fit1[6], lin_fit1[7], lin_fit1[8], lin_fit1[9])
-        yy2 = func_RD2(x_data, lin_fit2[0], lin_fit2[1], lin_fit2[2], lin_fit2[3], lin_fit2[4], lin_fit2[5],lin_fit2[6], lin_fit2[7], lin_fit2[8], lin_fit2[9])
+        yy1 = func_RD1(x_data, lin_fit1[0], lin_fit1[1], lin_fit1[2], lin_fit1[3], lin_fit1[4], lin_fit1[5], lin_fit1[6], lin_fit1[7], lin_fit1[8], lin_fit1[9])
+        yy2 = func_RD2(x_data, lin_fit2[0], lin_fit2[1], lin_fit2[2], lin_fit2[3], lin_fit2[4], lin_fit2[5], lin_fit2[6], lin_fit2[7], lin_fit2[8], lin_fit2[9])
 
         plt.scatter(y_data2, y_data1, c='k', s=1)
         plt.scatter(y_data2,yy2,c='k',s=1)

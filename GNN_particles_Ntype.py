@@ -1,33 +1,24 @@
 import glob
-import json
 import logging
 import time
 from shutil import copyfile
 
-import matplotlib.pyplot as plt
 import networkx as nx
-import torch
 import torch.nn as nn
-import numpy as np
 import torch_geometric.data as data
-import torch_geometric.transforms as T
 import torch_geometric.utils as pyg_utils
 import umap
-import yaml  # need to install pyyaml
 from prettytable import PrettyTable
 from scipy.optimize import curve_fit
 from scipy.spatial import Delaunay
-from sklearn import metrics
-from sklearn.cluster import KMeans
 from tifffile import imread
-from torch.nn import functional as F
 from torch_geometric.loader import DataLoader
-from torch_geometric.utils import degree
 from torch_geometric.utils.convert import to_networkx
 from tqdm import trange
-from matplotlib import rc
 import os
 import scipy.spatial
+
+from ParticleGraph.fitting_models import func_lin
 
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
@@ -49,16 +40,6 @@ from ParticleGraph.models.Interaction_Particles import Interaction_Particles
 from ParticleGraph.models.Mesh_Laplacian import Mesh_Laplacian
 from ParticleGraph.models.Mesh_RPS import Mesh_RPS
 from ParticleGraph.embedding_cluster import *
-
-
-def func_pow(x, a, b):
-    return a / (x ** b)
-
-
-def func_lin(x, a, b):
-    return a * x + b
-
-
 
 
 def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=[]):
