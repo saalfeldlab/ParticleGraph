@@ -14,10 +14,10 @@ def boids_model(x, a, b, c):
     vdiff = x[:, 2:4]
     r = np.concatenate((x[:, 4:5], x[:, 4:5]), axis=1)
 
-    sum = a * xdiff + b * vdiff - c * xdiff / r
-    sum = np.sqrt(sum[:, 0] ** 2 + sum[:, 1] ** 2)
+    total = a * xdiff + b * vdiff - c * xdiff / r
+    total = np.sqrt(total[:, 0] ** 2 + total[:, 1] ** 2)
 
-    return sum
+    return total
 
 
 def _aux_reaction_diffusion(x, a, b, c, d, e, f, g, h, i, cc, idx):
