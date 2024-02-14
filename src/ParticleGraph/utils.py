@@ -74,10 +74,13 @@ def choose_boundary_values(bc_name):
     def shifted_periodic(x):
         return torch.remainder(x - 0.5, 1.0) - 0.5  # in [-0.5, 0.5)
 
-    if bc_name == 'no':
-        return identity, identity
-    else:
-        return periodic, shifted_periodic
+    match bc_name:
+        case 'no':
+            return identity, identity
+        case 'periodic':
+            return periodic, shifted_periodic
+        case _:
+            raise ValueError(f'Unknown boundary condition {bc_name}')
 
 
 class CustomColorMap:
