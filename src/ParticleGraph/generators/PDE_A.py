@@ -24,12 +24,12 @@ class PDE_A(pyg.nn.MessagePassing):
         the speed of the particles (dimension 2)
     """
 
-    def __init__(self, aggr_type=[], p=[], sigma=[], bc_diff=[]):
+    def __init__(self, aggr_type=[], p=[], sigma=[], bc_dpos=[]):
         super(PDE_A, self).__init__(aggr=aggr_type)  # "mean" aggregation.
 
         self.p = p
         self.sigma = sigma
-        self.bc_diff = bc_diff
+        self.bc_dpos = bc_dpos
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
@@ -40,10 +40,10 @@ class PDE_A(pyg.nn.MessagePassing):
         return d_pos
 
     def message(self, pos_i, pos_j, parameters_i, sigma):
-        distance_squared = torch.sum(self.bc_diff(pos_j - pos_i) ** 2, axis=1)  # squared distance
+        distance_squared = torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, axis=1)  # squared distance
         psi = (parameters_i[:, 0] * torch.exp(-distance_squared ** parameters_i[:, 1] / (2 * sigma ** 2))
                - parameters_i[:, 2] * torch.exp(-distance_squared ** parameters_i[:, 3] / (2 * sigma ** 2)))
-        d_pos = psi[:, None] * self.bc_diff(pos_j - pos_i)
+        d_pos = psi[:, None] * self.bc_dpos(pos_j - pos_i)
         return d_pos
 
     def psi(self, r, p):

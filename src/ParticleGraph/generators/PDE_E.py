@@ -21,14 +21,14 @@ class PDE_E(pyg.nn.MessagePassing):
         the acceleration of the particles (dimension 2)
     """
 
-    def __init__(self, aggr_type=[], p=[], clamp=[], pred_limit=[], prediction=[], bc_diff=[]):
+    def __init__(self, aggr_type=[], p=[], clamp=[], pred_limit=[], prediction=[], bc_dpos=[]):
         super(PDE_E, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.p = p
         self.clamp = clamp
         self.pred_limit = pred_limit
         self.prediction = prediction
-        self.bc_diff = bc_diff
+        self.bc_dpos = bc_dpos
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
@@ -39,8 +39,8 @@ class PDE_E(pyg.nn.MessagePassing):
         return dd_pos
 
     def message(self, pos_i, pos_j, charge_i, charge_j):
-        distance_ij = torch.sqrt(torch.sum(self.bc_diff(pos_j - pos_i) ** 2, axis=1))
-        direction_ij = self.bc_diff(pos_j - pos_i) / distance_ij[:,None]
+        distance_ij = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, axis=1))
+        direction_ij = self.bc_dpos(pos_j - pos_i) / distance_ij[:,None]
         dd_pos = - charge_i * charge_j * direction_ij / (distance_ij[:,None] ** 2)
         return dd_pos
 

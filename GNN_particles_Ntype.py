@@ -6,17 +6,19 @@ from shutil import copyfile
 import networkx as nx
 import torch.nn as nn
 import torch_geometric.data as data
-import torch_geometric.utils as pyg_utils
 import umap
 from prettytable import PrettyTable
 from scipy.optimize import curve_fit
 from scipy.spatial import Delaunay
-from tifffile import imread
 from torch_geometric.loader import DataLoader
 from torch_geometric.utils.convert import to_networkx
 from tqdm import trange
 import os
-import scipy.spatial
+
+from ParticleGraph.generators.particle_initialization import init_particles, init_mesh
+from ParticleGraph.generators.utils import choose_model, choose_mesh_model
+from ParticleGraph.train_utils import choose_training_model, constant_batch_size, increasing_batch_size, \
+    set_trainable_parameters
 
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
@@ -24,8 +26,6 @@ from ParticleGraph.data_loaders import *
 from ParticleGraph.config_manager import create_config_manager
 from ParticleGraph.utils import to_numpy, CustomColorMap, set_device, norm_velocity, norm_acceleration
 from ParticleGraph.fitting_models import linear_model
-from ParticleGraph.generators import PDE_A, PDE_B, PDE_E, PDE_G, Laplacian_A, RD_FitzHugh_Nagumo, RD_Gray_Scott, RD_RPS
-from ParticleGraph.models import Interaction_Particles, Mesh_Laplacian, Mesh_RPS
 from ParticleGraph.embedding_cluster import *
 
 
@@ -59,11 +59,9 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
     nframes = model_config['nframes']
     noise_level = model_config['noise_level']
     v_init = model_config['v_init']
-    bMesh = 'Mesh' in model_config['model']
+    has_mesh = 'Mesh' in model_config['model']
     bDivision = 'division_cycle' in model_config
     delta_t = model_config['delta_t']
-    aggr_type = model_config['aggr_type']
-    nnode_types = model_config['nnode_types']
     nnodes = model_config['nnodes']
 
     index_particles = []
@@ -71,141 +69,13 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
     for n in range(model_config['nparticle_types']):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
-    # create boundary functions for position and velocity respectively
-    if model_config['boundary'] == 'no':  # change this for usual BC
-        def bc_pos(X):
-            return X
-
-        def bc_diff(D):
-            return D
+    model, bc_pos, bc_dpos = choose_model(model_config, device=device)
+    has_mesh = 'Mesh' in model_config['model']
+    if has_mesh:
+        mesh_model = choose_mesh_model(model_config, device=device)
     else:
-        def bc_pos(X):
-            return torch.remainder(X, 1.0)
+        mesh_model = None
 
-        def bc_diff(D):
-            return torch.remainder(D - .5, 1.0) - .5
-
-    cycle_length = torch.clamp(torch.abs(torch.ones(nparticle_types, 1, device=device) * 400 + torch.randn(nparticle_types, 1, device=device) * 150),min=100, max=700)
-    if bDivision:
-        for n in range(model_config['nparticle_types']):
-            print(f'cell cycle duration: {to_numpy(cycle_length[n])}')
-        torch.save(torch.squeeze(cycle_length), f'graphs_data/graphs_particles_{dataset_name}/cycle_length.pt')
-
-    rr = torch.tensor(np.linspace(0, radius * 2, 1000), device=device)
-    if bMesh | (model_config['model'] == 'PDE_O') | (model_config['model'] == 'Maze'):
-        node_value_map = model_config['node_value_map']
-        node_type_map = model_config['node_type_map']
-
-
-    if model_config['model'] == 'PDE_A':
-        print(f'Generate PDE_A')
-        p = torch.ones(nparticle_types, 4, device=device) + torch.rand(nparticle_types, 4, device=device)
-        if len(model_config['p']) > 0:
-            for n in range(nparticle_types):
-                p[n] = torch.tensor(model_config['p'][n])
-        if nparticle_types == 1:
-            model = PDE_A(aggr_type=aggr_type, p=p, sigma=model_config['sigma'], bc_diff=bc_diff)
-        else:
-            model = PDE_A(aggr_type=aggr_type, p=torch.squeeze(p), sigma=model_config['sigma'], bc_diff=bc_diff)
-        psi_output = []
-        for n in range(nparticle_types):
-            psi_output.append(model.psi(rr, torch.squeeze(p[n])))
-            print(f'p{n}: {np.round(to_numpy(torch.squeeze(p[n])), 4)}')
-        torch.save(torch.squeeze(p), f'graphs_data/graphs_particles_{dataset_name}/p.pt')
-    if model_config['model'] == 'PDE_B':
-        print(f'Generate PDE_B')
-        p = torch.rand(nparticle_types, 3, device=device) * 100  # comprised between 10 and 50
-        if len(model_config['p']) > 0:
-            for n in range(nparticle_types):
-                p[n] = torch.tensor(model_config['p'][n])
-        if nparticle_types == 1:
-            model = PDE_A(aggr_type=aggr_type, p=p, bc_diff=bc_diff)
-        else:
-            model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), bc_diff=bc_diff)
-        psi_output = []
-        for n in range(nparticle_types):
-            psi_output.append(model.psi(rr, torch.squeeze(p[n])))
-            print(f'p{n}: {np.round(to_numpy(torch.squeeze(p[n])), 4)}')
-        torch.save(torch.squeeze(p), f'graphs_data/graphs_particles_{dataset_name}/p.pt')
-    if model_config['model'] == 'PDE_G':
-        if model_config['p'][0] == -1:
-            p = np.linspace(0.5, 5, nparticle_types)
-            p = torch.tensor(p, device=device)
-        if len(model_config['p']) > 1:
-            for n in range(nparticle_types):
-                p[n] = torch.tensor(model_config['p'][n])
-        model = PDE_G(aggr_type=aggr_type, p=torch.squeeze(p), clamp=model_config['clamp'],
-                      pred_limit=model_config['pred_limit'], bc_diff=bc_diff)
-        psi_output = []
-        for n in range(len(p)):
-            psi_output.append(model.psi(rr, torch.squeeze(p[n])))
-            print(f'p{n}: {np.round(to_numpy(torch.squeeze(p[n])), 4)}')
-        torch.save(torch.squeeze(p), f'graphs_data/graphs_particles_{dataset_name}/p.pt')
-    if model_config['model'] == 'PDE_E':
-        p = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
-        if len(model_config['p']) > 0:
-            for n in range(nparticle_types):
-                p[n] = torch.tensor(model_config['p'][n])
-                print(f'p{n}: {np.round(to_numpy(torch.squeeze(p[n])), 4)}')
-                torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
-        model = PDE_E(aggr_type=aggr_type, p=torch.squeeze(p),
-                      clamp=model_config['clamp'], pred_limit=model_config['pred_limit'],
-                      prediction=model_config['prediction'], bc_diff=bc_diff)
-        psi_output = []
-        for n in range(nparticle_types):
-            for m in range(nparticle_types):
-                psi_output.append(model.psi(rr, torch.squeeze(p[n]), torch.squeeze(p[m])))
-        torch.save(torch.squeeze(p), f'graphs_data/graphs_particles_{dataset_name}/p.pt')
-    if bMesh:
-        p = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
-        if len(model_config['p']) > 0:
-            for n in range(nparticle_types):
-                p[n] = torch.tensor(model_config['p'][n])
-        model = PDE_G(aggr_type=aggr_type, p=torch.squeeze(p),
-                      clamp=model_config['clamp'], pred_limit=model_config['pred_limit'], bc_diff=bc_diff)
-        c = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
-        for n in range(nparticle_types):
-            c[n] = torch.tensor(model_config['c'][n])
-
-        if (model_config['model'] == 'RD_Gray_Scott_Mesh'):
-            model_mesh = RD_Gray_Scott(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'],
-                                       bc_diff=bc_diff)
-        elif (model_config['model'] == 'RD_FitzHugh_Nagumo_Mesh'):
-            model_mesh = RD_FitzHugh_Nagumo(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'],
-                                            bc_diff=bc_diff)
-        elif (model_config['model'] == 'RD_RPS_Mesh'):
-            model_mesh = RD_RPS(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'], bc_diff=bc_diff)
-        elif (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh'):
-            model_mesh = Laplacian_A(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'],
-                                     bc_diff=bc_diff)
-        psi_output = []
-        for n in range(nparticle_types):
-            psi_output.append(model.psi(rr, torch.squeeze(p[n])))
-            print(f'p{n}: {np.round(to_numpy(torch.squeeze(p[n])), 4)}')
-            torch.save(torch.squeeze(p[n]), f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
-    if model_config['model'] == 'PDE_O':
-        p = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
-        if len(model_config['p']) > 0:
-            for n in range(nparticle_types):
-                p[n] = torch.tensor(model_config['p'][n])
-        model = PDE_O(aggr_type=aggr_type, p=torch.squeeze(p), bc_diff=bc_diff, beta=model_config['beta'])
-    if model_config['model'] == 'Maze':
-        print(f'Generate PDE_B')
-        p = torch.rand(nparticle_types, 3, device=device) * 100  # comprised between 10 and 50
-        for n in range(nparticle_types):
-            p[n] = torch.tensor(model_config['p'][n])
-        model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), bc_diff=bc_diff)
-        psi_output = []
-        for n in range(nparticle_types):
-            psi_output.append(model.psi(rr, torch.squeeze(p[n])))
-            print(f'p{n}: {np.round(to_numpy(torch.squeeze(p[n])), 4)}')
-        torch.save(torch.squeeze(p), f'graphs_data/graphs_particles_{dataset_name}/p.pt')
-        c = torch.ones(nnode_types, 1, device=device) + torch.rand(nnode_types, 1, device=device)
-        for n in range(nnode_types):
-            c[n] = torch.tensor(model_config['c'][n])
-
-        model_mesh = Laplacian_A(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'],
-                                 bc_diff=bc_diff)
 
     torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model.pt')
 
@@ -217,183 +87,24 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
         y_mesh_list = []
 
         # initialize particle and graph states
-        if (model_config['boundary'] == 'periodic'):
-            X1 = torch.rand(nparticles, 2, device=device)
-        else:
-            X1 = torch.randn(nparticles, 2, device=device) * 0.5
-        V1 = v_init * torch.randn((nparticles, 2), device=device)
-        V1 = torch.clamp(V1, min=-torch.std(V1), max=+torch.std(V1))
-        T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
-        for n in range(1, nparticle_types):
-            T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
-        T1 = T1[:, None]
-        if model_config['p'] == 'continuous':
-            T1 = torch.tensor(np.arange(nparticles), device=device)
-            T1 = T1[:, None]
-        H1 = torch.zeros((nparticles, 2), device=device)
-        cycle_length_distrib = cycle_length[to_numpy(T1[:, 0]).astype(int)]
-        A1 = torch.rand(nparticles, device=device)
-        A1 = A1[:, None]
-        A1 = A1 * cycle_length_distrib
-        N1 = torch.arange(nparticles, device=device)
-        N1 = N1[:, None]
+        X1, V1, T1, H1, A1, cycle_length_distrib, N1 = init_particles(model_config, device=device)
 
-        # create different initial conditions
-        if scenario == 'scenario A':
-            X1[:, 0] = X1[:, 0] / nparticle_types
-            for n in range(nparticle_types):
-                X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / nparticle_types
-
-        # scenario C
-        # i0 = imread('graphs_data/pattern_1.tif')
-        # pos = np.argwhere(i0 == 255)
-        # l = np.arange(pos.shape[0])
-        # l = np.random.permutation(l)
-        # X1[index_particles[0],:] = torch.tensor(pos[l[index_particles[0]],:]/255,dtype=torch.float32,device=device)
-        # pos = np.argwhere(i0 == 0)
-        # l = np.arange(pos.shape[0])
-        # l = np.random.permutation(l)
-        # X1[index_particles[1],:] = torch.tensor(pos[l[index_particles[0]],:]/255,dtype=torch.float32,device=device)
-
-        # scenario D
-        # i0 = imread('graphs_data/pattern_2.tif')
-        # pos = np.argwhere(i0 == 255)
-        # l = np.arange(pos.shape[0])
-        # l = np.random.permutation(l)
-        # X1[index_particles[0],:] = torch.tensor(pos[l[0:1000],:]/255,dtype=torch.float32,device=device)
-        # pos = np.argwhere(i0 == 128)
-        # l = np.arange(pos.shape[0])
-        # l = np.random.permutation(l)
-        # X1[index_particles[1],:] = torch.tensor(pos[l[0:1000],:]/255,dtype=torch.float32,device=device)
-        # pos = np.argwhere(i0 == 0)
-        # l = np.arange(pos.shape[0])
-        # l = np.random.permutation(l)
-        # X1[index_particles[2],:] = torch.tensor(pos[l[0:1000],:]/255,dtype=torch.float32,device=device)
-
-        if (bMesh) | (model_config['model'] == 'PDE_O') | (model_config['model'] == 'Maze'):
-            x_width = int(np.sqrt(nnodes))
-            xs = torch.linspace(1 / x_width / 2, 1 - 1 / x_width / 2, steps=x_width)
-            ys = torch.linspace(1 / x_width / 2, 1 - 1 / x_width / 2, steps=x_width)
-            x_mesh, y_mesh = torch.meshgrid(xs, ys, indexing='xy')
-            x_mesh = torch.reshape(x_mesh, (x_width ** 2, 1))
-            y_mesh = torch.reshape(y_mesh, (x_width ** 2, 1))
-            x_width = 1 / x_width / 8
-            X1_mesh = torch.zeros((nnodes, 2), device=device)
-            X1_mesh[0:nnodes, 0:1] = x_mesh[0:nnodes]
-            X1_mesh[0:nnodes, 1:2] = y_mesh[0:nnodes]
-
-            mask_mesh = (x_mesh>torch.min(x_mesh)) & (x_mesh<torch.max(x_mesh)) & (y_mesh>torch.min(y_mesh)) & (y_mesh<torch.max(y_mesh))
-            X1_mesh = X1_mesh + torch.randn(nnodes, 2, device=device) * x_width
-            
-            i0 = imread(f'graphs_data/{node_value_map}')
-            values = i0[(to_numpy(X1_mesh[:, 0]) * 255).astype(int), (to_numpy(X1_mesh[:, 1]) * 255).astype(int)]
-
-            if (model_config['model'] == 'RD_Gray_Scott_Mesh'):
-                H1_mesh = torch.zeros((nnodes, 2), device=device)
-                H1_mesh[:, 0] -= 0.5 * torch.tensor(values / 255, device=device)
-                H1_mesh[:, 1] = 0.25 * torch.tensor(values / 255, device=device)
-            elif (model_config['model'] == 'RD_FitzHugh_Nagumo_Mesh'):
-                H1_mesh = torch.zeros((nnodes, 2), device=device) + torch.rand((nnodes, 2), device=device) * 0.1
-            elif (model_config['model'] == 'RD_RPS_Mesh'):
-                H1_mesh = torch.rand((nnodes, 3), device=device)
-                s = torch.sum(H1_mesh, axis=1)
-                for k in range(3):
-                    H1_mesh[:, k] = H1_mesh[:, k] / s
-            elif (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh') | (model_config['model'] == 'Maze'):
-                H1_mesh = torch.zeros((nnodes, 2), device=device)
-                H1_mesh[:, 0] = torch.tensor(values / 255 * 5000, device=device)
-            if model_config['model'] == 'PDE_O':
-                H1_mesh = torch.zeros((nparticles, 5), device=device)
-                H1_mesh[0:nparticles, 0:1] = x[0:nparticles]
-                H1_mesh[0:nparticles, 1:2] = y[0:nparticles]
-                H1_mesh[0:nparticles, 2:3] = torch.randn(nparticles, 1, device=device) * 2 * np.pi  # theta
-                H1_mesh[0:nparticles, 3:4] = torch.ones(nparticles, 1, device=device) * np.pi / 200  # d_theta
-                H1_mesh[0:nparticles, 4:5] = H1_mesh[0:nparticles, 3:4]  # d_theta0
-                X1_mesh[:, 0] = H1_mesh[:, 0] + 3 * x_width * torch.cos(H1_mesh[:, 2])
-                X1_mesh[:, 1] = H1_mesh[:, 1] + 3 * x_width * torch.sin(H1_mesh[:, 2])
-
-            i0 = imread(f'graphs_data/{node_type_map}')
-            values = i0[(to_numpy(x_mesh[:, 0]) * 255).astype(int), (to_numpy(y_mesh[:, 0]) * 255).astype(int)]
-            T1_mesh = torch.tensor(values, device=device)
-            T1_mesh = T1_mesh[:, None]
-
-            N1_mesh = torch.arange(nnodes, device=device)
-            N1_mesh = N1_mesh[:, None]
-            V1_mesh = torch.zeros((nnodes, 2), device=device)
-
-            # plt.ion()
-            # plt.scatter(to_numpy(X1_mesh[:, 0]), to_numpy(X1_mesh[:, 1]), s=10, c=to_numpy(T1_mesh[:, 0]))
-
-            x_mesh = torch.concatenate((N1_mesh.clone().detach(), X1_mesh.clone().detach(), V1_mesh.clone().detach(), T1_mesh.clone().detach(), H1_mesh.clone().detach()), 1)
-
-            # dataset = data.Data(x=x, pos=x[:, 1:3])
-            # transform_0 = T.Compose([T.Delaunay()])
-            # dataset_face = transform_0(dataset).face
-            # mesh_pos = torch.cat((x[:, 1:3], torch.ones((x.shape[0], 1), device=device)), dim=1)
-            # edge_index_mesh, edge_weight_mesh = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=dataset_face, normalization="None")
-            # plt.ion()
-            # pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
-            # dataset = data.Data(x=x, edge_index=edge_index_mesh)
-            # vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-            # nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=10, with_labels=False, alpha=1)
-
-            pos = to_numpy(x_mesh[:, 1:3])
-            tri = scipy.spatial.Delaunay(pos, qhull_options='QJ')
-            face = torch.from_numpy(tri.simplices)
-            face_longest_edge = np.zeros((face.shape[0], 1))
-
-            print('Removal of skinny faces ...')
-            time.sleep(0.5)
-            for k in trange(face.shape[0]):
-                # compute edge distances
-                x1 = pos[face[k, 0], :]
-                x2 = pos[face[k, 1], :]
-                x3 = pos[face[k, 2], :]
-                a = np.sqrt(np.sum((x1 - x2) ** 2))
-                b = np.sqrt(np.sum((x2 - x3) ** 2))
-                c = np.sqrt(np.sum((x3 - x1) ** 2))
-                A = np.max([a, b]) / np.min([a, b]) 
-                B = np.max([a, c]) / np.min([a, c]) 
-                C = np.max([c, b]) / np.min([c, b])
-                face_longest_edge[k] = np.max([A, B, C])
-
-            face_kept = np.argwhere(face_longest_edge < 5)
-            face_kept = face_kept[:, 0]
-            face = face[face_kept, :]
-            face = face.t().contiguous()
-            face = face.to(device,torch.long)
-
-            mesh_pos = torch.cat((x_mesh[:, 1:3], torch.ones((x_mesh.shape[0], 1), device=device)), dim=1)
-            edge_index_mesh, edge_weight_mesh = pyg_utils.get_mesh_laplacian(pos=mesh_pos, face=face, normalization="None")
-
-            torch.save({'face': face, 'edge_index': edge_index_mesh, 'edge_weight': edge_weight_mesh, 'mask_mesh': mask_mesh,'mesh_pos': mesh_pos }, f'graphs_data/graphs_particles_{dataset_name}/mesh_data_{run}.pt')
+        if (has_mesh) | (model_config['model'] == 'PDE_O') | (model_config['model'] == 'Maze'):
+            X1_mesh, V1_mesh, T1_mesh, H1_mesh, N1_mesh, mesh_data = init_mesh(model_config, device=device)
+            dataset_name = model_config['dataset_name']
+            torch.save(mesh_data, f'graphs_data/graphs_particles_{dataset_name}/mesh_data_{run}.pt')
 
             if model_config['model'] != 'Maze':
                 X1 = X1_mesh.clone().detach()
                 H1 = H1_mesh.clone().detach()
                 T1 = T1_mesh.clone().detach()
 
-                index_particles = []
-                for n in range(nparticles):
-                    pos = torch.argwhere(T1 == n)
-                    pos = to_numpy(pos[:, 0].squeeze()).astype(int)
-                    index_particles.append(pos)
+        index_particles = []
+        for n in range(nparticles):
+            pos = torch.argwhere(T1 == n)
+            pos = to_numpy(pos[:, 0].squeeze()).astype(int)
+            index_particles.append(pos)
 
-
-            # pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
-            # dataset = data.Data(x=x, edge_index=edge_index_mesh)
-            # vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-            # nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=10, with_labels=False, alpha=1, edge_color='r')
-
-            # deg = pyg_utils.degree(edge_index_mesh[0], mesh_pos.shape[0])
-            # plt.ion()
-            # plt.hist(to_numpy(deg),100)
-            # plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=10, c=to_numpy(deg))
-            
-            # plt.ion()
-            # pos = index_particles[0]
-            # plt.scatter(to_numpy(x[pos, 1]), to_numpy(x[pos, 1]), s=10, c=to_numpy(T1[pos, 0]))
-            # plt.scatter(to_numpy(X1_mesh[:, 0]), to_numpy(X1_mesh[:, 1]), s=10, c=to_numpy(T1_mesh[:, 0]))
 
         time.sleep(0.5)
         for it in trange(model_config['start_frame'], nframes + 1):
@@ -439,13 +150,13 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
                                    H1.clone().detach(), A1.clone().detach()), 1)
 
             # create mesh dataset
-            if bMesh | (model_config['model'] == 'Maze'):
+            if has_mesh | (model_config['model'] == 'Maze'):
                 x_mesh = torch.concatenate((N1_mesh.clone().detach(), X1_mesh.clone().detach(), V1_mesh.clone().detach(),
                                            T1_mesh.clone().detach(),
                                            H1_mesh.clone().detach()), 1)
-                dataset_mesh = data.Data(x=x_mesh, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
+                dataset_mesh = data.Data(x=x_mesh, edge_index=mesh_data['edge_index'], edge_attr=mesh_data['edge_weight'], device=device)
             # compute connectivity rule
-            distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+            distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
             t = torch.Tensor([radius ** 2])  # threshold
             adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
             edge_index = adj_t.nonzero().t().contiguous()
@@ -454,19 +165,18 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
             with torch.no_grad():
                 y = model(dataset)
             # append y_list
-            if (it >= 0):
+            if it >= 0:
                 x_list.append(x.clone().detach())
                 y_list.append(y.clone().detach())
 
             # Euler integration update
-            if not (bMesh):
-
+            if not has_mesh:
                 if model_config['model'] == 'PDE_O':
                     H1[:, 2] = H1[:, 2] + y.squeeze() * delta_t
                     # pos= torch.argwhere(H1[:, 0] > 0.9)
                     # H1[pos, 2] = 0
-                    X1[:, 0] = H1[:, 0] + 3 * x_width * torch.cos(H1[:, 2])
-                    X1[:, 1] = H1[:, 1] + 3 * x_width * torch.sin(H1[:, 2])
+                    X1[:, 0] = H1[:, 0] + (3/8) * mesh_data['size'] * torch.cos(H1[:, 2])
+                    X1[:, 1] = H1[:, 1] + (3/8) * mesh_data['size'] * torch.sin(H1[:, 2])
                     X1 = bc_pos(X1)
                 else:
                     if model_config['prediction'] == '2nd_derivative':
@@ -485,7 +195,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
                     int)
                 mask = mask[:, 0:1]
                 with torch.no_grad():
-                    pred = model_mesh(dataset_mesh)
+                    pred = mesh_model(dataset_mesh)
                     H1[mask, 1:2] = pred[mask]
                 H1[mask, 0:1] += H1[mask, 1:2] * delta_t
                 new_pred = torch.zeros_like(pred)
@@ -495,57 +205,32 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
             if model_config['model'] == 'WaveMesh':
 
                 with torch.no_grad():
-                    pred = model_mesh(dataset_mesh)
+                    pred = mesh_model(dataset_mesh)
                     H1_mesh[:, 1:2] += pred[:] * delta_t
                 H1_mesh[:, 0:1] += H1_mesh[:, 1:2] * delta_t
                 H1 = H1_mesh.clone().detach()
 
                 y_mesh_list.append(pred)
 
-                # fig = plt.figure(figsize=(12, 12))
-                # plt.ion()
-                # H1_IM = torch.reshape(pred, (100, 100, 1))
-                # plt.ion()
-                # plt.imshow(H1_IM.detach().cpu().numpy()*5)
-                # plt.scatter(to_numpy(X1_mesh[:, 0]), to_numpy(X1_mesh[:, 1]), s=10, c=to_numpy(T1_mesh[:, 0]))
-                
             if (model_config['model'] == 'RD_Gray_Scott_Mesh') | (
                     model_config['model'] == 'RD_FitzHugh_Nagumo_Mesh') | (model_config['model'] == 'RD_RPS_Mesh'):
-                # mask = to_numpy(torch.argwhere(
-                #     (X1[:, 0] > 0.02) & (X1[:, 0] < 0.98) & (X1[:, 1] > 0.02) & (X1[:, 1] < 0.98))).astype(int)
-                # mask = mask[:, 0:1]
                 with torch.no_grad():
-                    pred = model_mesh(dataset_mesh)
-                    H1_mesh[mask_mesh.squeeze(),:] += pred[mask_mesh.squeeze(),:] * delta_t
+                    pred = mesh_model(dataset_mesh)
+                    H1_mesh[mesh_data['mask'].squeeze(),:] += pred[mesh_data['mask'].squeeze(),:] * delta_t
                     H1 = H1_mesh.clone().detach()
-                    # fig = plt.figure(figsize=(12, 12))
-                    # plt.ion()
-                    # H1_IM = torch.reshape(pred, (100, 100, 3))
-                    # plt.ion()
-                    # plt.imshow(H1_IM.detach().cpu().numpy()*5)
-
 
                 y_mesh_list.append(pred)
 
             if model_config['model'] == 'Maze':
                 x_mesh_list.append(x_mesh.clone().detach())
                 with torch.no_grad():
-                    pred = model_mesh(dataset_mesh)
-                    H1_mesh[mask_mesh.squeeze(), :] += pred[mask_mesh.squeeze(), :] * delta_t
-                    distance = torch.sum(bc_diff(x[:, None, 1:3] - x_mesh[None, :, 1:3]) ** 2, axis=2)
+                    pred = mesh_model(dataset_mesh)
+                    H1_mesh[mesh_data['mask'].squeeze(), :] += pred[mesh_data['mask'].squeeze(), :] * delta_t
+                    distance = torch.sum(bc_dpos(x[:, None, 1:3] - x_mesh[None, :, 1:3]) ** 2, dim=2)
                     distance = distance < 0.0005
-                    distance = torch.sum(distance, axis=0)
+                    distance = torch.sum(distance, dim=0)
                     H1_mesh = torch.relu(H1_mesh*1.01 - 30*distance[:,None])
                     H1_mesh = torch.clamp(H1_mesh, min=0, max=5000)
-
-                    # fig = plt.figure(figsize=(12, 12))
-                    # plt.ion()
-                    # H1_IM = torch.reshape(distance, (300, 300))
-                    # plt.ion()
-                    # plt.imshow(H1_IM.detach().cpu().numpy()*5)
-                    # for n in range(nparticle_types):
-                    #     plt.scatter(x[index_particles[n], 1].detach().cpu().numpy()*300,
-                    #                 x[index_particles[n], 2].detach().cpu().numpy()*300, s=10, color='w')
 
                 y_mesh_list.append(pred)
 
@@ -554,9 +239,8 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
 
                 if 'graph' in bStyle:
                     fig = plt.figure(figsize=(10, 10))
-                    # plt.ion()
 
-                    distance2 = torch.sum((x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+                    distance2 = torch.sum((x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
                     adj_t2 = ((distance2 < radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
                     edge_index2 = adj_t2.nonzero().t().contiguous()
                     dataset2 = data.Data(x=x, edge_index=edge_index2)
@@ -569,10 +253,10 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
                             g = p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 7.5
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                         x[index_particles[n], 2].detach().cpu().numpy(), s=40, color=cmap.color(n))
-                    elif bMesh:
+                    elif has_mesh:
                         pts = x[:, 1:3].detach().cpu().numpy()
                         tri = Delaunay(pts)
-                        colors = torch.sum(x[tri.simplices, 6], axis=1) / 3.0
+                        colors = torch.sum(x[tri.simplices, 6], dim=1) / 3.0
                         if model_config['model'] == 'WaveMesh':
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                           facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=-2500,
@@ -594,14 +278,10 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                         x[index_particles[n], 2].detach().cpu().numpy(), s=25, color=cmap.color(n),
                                         alpha=0.5)
-                    if bMesh | (model_config['boundary'] == 'periodic'):
-                        # plt.text(0, 1.08, f'frame: {it}')
-                        # plt.text(0, 1.03, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
+                    if has_mesh | (model_config['boundary'] == 'periodic'):
                         plt.xlim([0, 1])
                         plt.ylim([0, 1])
                     else:
-                        # plt.text(-1.25, 1.5, f'frame: {it}')
-                        # plt.text(-1.25, 1.4, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
                         plt.xlim([-0.5, 0.5])
                         plt.ylim([-0.5, 0.5])
                     plt.xticks([])
@@ -612,7 +292,6 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
 
                 if 'color' in bStyle:
 
-                    # plt.ion()
                     if model_config['model'] == 'PDE_O':
                         fig = plt.figure(figsize=(12, 12))
                         plt.style.use('dark_background')
@@ -669,10 +348,10 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
                     else:
 
                         fig = plt.figure(figsize=(12, 12))
-                        if bMesh:
+                        if has_mesh:
                             pts = x[:, 1:3].detach().cpu().numpy()
                             tri = Delaunay(pts)
-                            colors = torch.sum(x[tri.simplices, 6], axis=1) / 3.0
+                            colors = torch.sum(x[tri.simplices, 6], dim=1) / 3.0
                             if model_config['model'] == 'DiffMesh':
                                 plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                               facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1000)
@@ -682,14 +361,14 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
                             if (model_config['model'] == 'RD_Gray_Scott_Mesh'):
                                 fig = plt.figure(figsize=(12, 6))
                                 ax = fig.add_subplot(1, 2, 1)
-                                colors = torch.sum(x[tri.simplices, 6], axis=1) / 3.0
+                                colors = torch.sum(x[tri.simplices, 6], dim=1) / 3.0
                                 plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                               facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
                                 plt.xticks([])
                                 plt.yticks([])
                                 plt.axis('off')
                                 ax = fig.add_subplot(1, 2, 2)
-                                colors = torch.sum(x[tri.simplices, 7], axis=1) / 3.0
+                                colors = torch.sum(x[tri.simplices, 7], dim=1) / 3.0
                                 plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                               facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
                                 plt.xticks([])
@@ -707,7 +386,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
                                 plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                             x[index_particles[n], 2].detach().cpu().numpy(), s=25, color=cmap.color(n))
 
-                        if bMesh | (model_config['boundary'] == 'periodic'):
+                        if has_mesh | (model_config['boundary'] == 'periodic'):
                             g = 1
                         else:
                             plt.xlim([-4, 4])
@@ -718,35 +397,6 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
                         plt.tight_layout()
                         plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/tmp_data/Fig_{it}.jpg", dpi=100)
                         plt.close()
-
-                if 'bw' in bStyle:
-                    fig = plt.figure(figsize=(12, 12))
-                    if bMesh:
-                        pts = x[:, 1:3].detach().cpu().numpy()
-                        tri = Delaunay(pts)
-                        colors = torch.sum(x[tri.simplices, 6], axis=1) / 3.0
-                        if model_config['model'] == 'WaveMesh':
-                            plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                          facecolors='w', edgecolors='k', vmin=-2500, vmax=2500)
-                        else:
-                            plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                          facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=0, vmax=2500)
-                    else:
-                        for n in range(nparticle_types):
-                            plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                        x[index_particles[n], 2].detach().cpu().numpy(), s=25, color='k')
-                    if bMesh | (model_config['boundary'] == 'periodic'):
-                        plt.xlim([0, 1])
-                        plt.ylim([0, 1])
-                    else:
-                        plt.xlim([-1.3, 1.3])
-                        plt.ylim([-1.3, 1.3])
-                    plt.xticks([])
-                    plt.yticks([])
-
-                    plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/tmp_data/Fig_bw_{it}.tif", dpi=300)
-                    plt.close()
 
         torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
         torch.save(y_list, f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
@@ -768,26 +418,18 @@ def data_train(model_config):
     dataset_name = model_config['dataset']
     nframes = model_config['nframes']
     data_augmentation = model_config['data_augmentation']
-    batch_size = model_config['batch_size']
+    target_batch_size = model_config['batch_size']
     bMesh = 'Mesh' in model_config['model']
     bReplace = 'replace' in model_config['sparsity']
-    aggr_type = model_config['aggr_type']
     bVisuEmbedding = False
 
     embedding_cluster = EmbeddingCluster(model_config)
 
-    if model_config['boundary'] == 'no':  # change this for usual BC
-        def bc_pos(X):
-            return X
-
-        def bc_diff(D):
-            return D
+    if model_config['small_init_batch_size']:
+        get_batch_size = constant_batch_size(target_batch_size)
     else:
-        def bc_pos(X):
-            return torch.remainder(X, 1.0)
-
-        def bc_diff(D):
-            return torch.remainder(D - .5, 1.0) - .5
+        get_batch_size = increasing_batch_size(target_batch_size)
+    batch_size = get_batch_size(0)
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
@@ -848,7 +490,6 @@ def data_train(model_config):
         logger.info(f'hnorm: {to_numpy(hnorm)}')
         time.sleep(0.5)
 
-        batch_size = 1
 
         mesh_data = torch.load(f'graphs_data/graphs_particles_{dataset_name}/mesh_data_1.pt',map_location=device)
 
@@ -858,54 +499,29 @@ def data_train(model_config):
         edge_weight_mesh = mesh_data['edge_weight']
         # face = mesh_data['face']
 
-        mask_mesh = mask_mesh.repeat(batch_size,1)
+        mask_mesh = mask_mesh.repeat(batch_size, 1)
 
     print('')
 
-    if model_config['model'] == 'PDE_G':
-        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
-    if model_config['model'] == 'PDE_E':
-        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
-    if (model_config['model'] == 'PDE_A') | (model_config['model'] == 'PDE_B'):
-        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
-    if (model_config['model'] == 'DiffMesh'):
-        model = Mesh_Laplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
-    if (model_config['model'] == 'WaveMesh'):
-        model = Mesh_Laplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
-    if (model_config['model'] == 'RD_RPS_Mesh'):
-        model = Mesh_RPS(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+    model, bc_pos, bc_dpos = choose_training_model(model_config, device)
 
     # net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_6.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
 
-    lra = 1E-3
-    lr = 1E-3
-    table = PrettyTable(["Modules", "Parameters"])
-    total_params = 0
-    it = 0
-    for name, parameter in model.named_parameters():
-        if not parameter.requires_grad:
-            continue
-        if it == 0:
-            optimizer = torch.optim.Adam([model.a], lr=lra)
-        else:
-            optimizer.add_param_group({'params': parameter, 'lr': lr})
-        it += 1
-        param = parameter.numel()
-        table.add_row([name, param])
-        total_params += param
-    logger.info(table)
-    logger.info(f"Total Trainable Params: {total_params}")
-    logger.info(f'Learning rates: {lr}, {lra}')
+    lr_embedding = model_config['learning_rate_embedding_start']
+    lr = model_config['learning_rate_start']
+    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+    logger.info(f"Total Trainable Params: {n_total_params}")
+    logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     print(f'network: {net}')
-    print(f'batch_size: {batch_size}')
+    print(f'initial batch_size: {batch_size}')
     print('')
     logger.info(f'network: {net}')
     logger.info(f'N epochs: {Nepochs}')
-    logger.info(f'batch_size: {batch_size}')
+    logger.info(f'initial batch_size: {batch_size}')
 
     x = x_list[1][0].clone().detach()
     T1 = x[:, 5:6].clone().detach()
@@ -913,11 +529,6 @@ def data_train(model_config):
     for n in range(model_config['nparticle_types']):
         index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
         index_particles.append(index.squeeze())
-    # plt.ion()
-    # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=10, c=to_numpy(mask_mesh)*2)
-    # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=10, c=to_numpy(T1) )
-
-    # optimizer.load_state_dict(state_dict['optimizer_state_dict'])
 
     data_augmentation_loop = 200
     print("Start training ...")
@@ -931,30 +542,25 @@ def data_train(model_config):
 
     for epoch in range(Nepochs + 1):
 
+        old_batch_size = batch_size
+        batch_size = get_batch_size(epoch)
         if epoch == 0:
             min_radius = 0.002
+            logger.info(f'min_radius: {min_radius}')
         elif epoch == 1:
             min_radius = model_config['min_radius']
             logger.info(f'min_radius: {min_radius}')
-        elif (epoch == 2) & (batch_size == 1):
-            batch_size = 8
-            mask_mesh = mask_mesh.repeat(batch_size, 1)
+        elif epoch == 2:
+            repeat_factor = batch_size // old_batch_size
+            mask_mesh = mask_mesh.repeat(repeat_factor, 1)
             print(f'batch_size: {batch_size}')
             logger.info(f'batch_size: {batch_size}')
         elif epoch == 3 * Nepochs // 4 + 2:
-            lra = 1E-3
-            lr = 5E-4
-            it = 0
-            for name, parameter in model.named_parameters():
-                if not parameter.requires_grad:
-                    continue
-                if it == 0:
-                    optimizer = torch.optim.Adam([model.a], lr=lra)
-                else:
-                    optimizer.add_param_group({'params': parameter, 'lr': lr})
-                it += 1
-            print(f'Learning rates: {lr}, {lra}')
-            logger.info(f'Learning rates: {lr}, {lra}')
+            lr_embedding = model_config['learning_rate_embedding_end']
+            lr = model_config['learning_rate_end']
+            optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+            logger.info(f"Total Trainable Params: {n_total_params}")
+            logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
         error_weight = torch.ones((batch_size * nparticles, 1),device=device, requires_grad=False)
 
@@ -988,7 +594,7 @@ def data_train(model_config):
                     else:
                         y_batch = torch.cat((y_batch, y), axis=0)
                 else:
-                    distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+                    distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
                     adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
                     t = torch.Tensor([radius ** 2])
                     edges = adj_t.nonzero().t().contiguous()
@@ -1306,33 +912,33 @@ def data_train(model_config):
                 plt.text(0, 1.1, f'Replaced', ha='left', va='top', transform=ax.transAxes,
                          fontsize=10)
                 if model_config['fix_cluster_embedding']:
-                    lra = 0
+                    lr_embedding = 0
                     lr = 1E-3
                     it = 0
                     for name, parameter in model.named_parameters():
                         if not parameter.requires_grad:
                             continue
                         if it == 0:
-                            optimizer = torch.optim.Adam([model.a], lr=lra)
+                            optimizer = torch.optim.Adam([model.a], lr=lr_embedding)
                         else:
                             optimizer.add_param_group({'params': parameter, 'lr': lr})
                         it += 1
-                    print(f'Learning rates: {lr}, {lra}')
-                    logger.info(f'Learning rates: {lr}, {lra}')
+                    print(f'Learning rates: {lr}, {lr_embedding}')
+                    logger.info(f'Learning rates: {lr}, {lr_embedding}')
             else:
-                lra = 1E-3
+                lr_embedding = 1E-3
                 lr = 1E-3
                 it = 0
                 for name, parameter in model.named_parameters():
                     if not parameter.requires_grad:
                         continue
                     if it == 0:
-                        optimizer = torch.optim.Adam([model.a], lr=lra)
+                        optimizer = torch.optim.Adam([model.a], lr=lr_embedding)
                     else:
                         optimizer.add_param_group({'params': parameter, 'lr': lr})
                     it += 1
-                print(f'Learning rates: {lr}, {lra}')
-                logger.info(f'Learning rates: {lr}, {lra}')
+                print(f'Learning rates: {lr}, {lr_embedding}')
+                logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
@@ -1341,31 +947,16 @@ def data_train(model_config):
 
 def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_particles=0, prev_nparticles=0, new_nparticles=0, prev_index_particles=0, best_model=0, step=5, bTest='', folder_out='tmp_recons', initial_map='', forced_embedding=[], forced_color=0, ratio=1):
     print('')
-    print('Plot validation inference ... ')
+    print('Plot roll-out inference ... ')
 
-    model = []
     radius = model_config['radius']
     min_radius = model_config['min_radius']
     nparticle_types = model_config['nparticle_types']
     nparticles = model_config['nparticles']
     dataset_name = model_config['dataset']
     nframes = model_config['nframes']
-    bMesh = 'Mesh' in model_config['model']
+    has_mesh = 'Mesh' in model_config['model']
     delta_t = model_config['delta_t']
-    aggr_type = model_config['aggr_type']
-
-    if model_config['boundary'] == 'no':  # change this for usual BC
-        def bc_pos(X):
-            return X
-
-        def bc_diff(D):
-            return D
-    else:
-        def bc_pos(X):
-            return torch.remainder(X, 1.0)
-
-        def bc_diff(D):
-            return torch.remainder(D - .5, 1.0) - .5
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
@@ -1376,39 +967,12 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
     for n in range(model_config['nparticle_types']):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
-    if (model_config['model'] == 'PDE_A') | (model_config['model'] == 'PDE_B'):
-        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
-    if model_config['model'] == 'PDE_G':
-        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
-        p_mass = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
-        p_mass = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
-        T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
-        for n in range(1, nparticle_types):
-            T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
-        T1 = torch.concatenate((T1[:, None], T1[:, None]), 1)
-    if model_config['model'] == 'PDE_E':
-        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
-        p_elec = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
-        for n in range(nparticle_types):
-            p_elec[n] = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
-        T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
-        for n in range(1, nparticle_types):
-            T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
-        T1 = torch.concatenate((T1[:, None], T1[:, None]), 1)
-    if bMesh:
-        p = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
-        if len(model_config['p']) > 0:
-            for n in range(nparticle_types):
-                p[n] = torch.tensor(model_config['p'][n])
-        model = PDE_G(aggr_type=aggr_type, p=torch.squeeze(p),
-                      clamp=model_config['clamp'], pred_limit=model_config['pred_limit'])
-        c = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
-        for n in range(nparticle_types):
-            c[n] = torch.tensor(model_config['c'][n])
-        if (model_config['model'] == 'WaveMesh'):
-            model_mesh = Mesh_Laplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
-        if (model_config['model'] == 'RD_RPS_Mesh'):
-            model_mesh = Mesh_RPS(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+    model, bc_pos, bc_dpos = choose_training_model(model_config, device)
+
+    if has_mesh:
+        mesh_model = choose_mesh_model(model_config, device)
+    else:
+        mesh_model = None
 
     files = glob.glob(f"./{log_dir}/tmp_recons/*")
     for f in files:
@@ -1423,10 +987,10 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
     print('Graph files N: ', NGraphs - 1)
     print(f'network: {net}')
 
-    if bMesh:
+    if has_mesh:
         state_dict = torch.load(net, map_location=device)
-        model_mesh.load_state_dict(state_dict['model_state_dict'])
-        model_mesh.eval()
+        mesh_model.load_state_dict(state_dict['model_state_dict'])
+        mesh_model.eval()
     else:
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
@@ -1444,7 +1008,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         print('Use ground truth labels')
 
     # nparticles larger than initially
-    if ratio > 1:  # nparticles larger than initially
+    if ratio > 1:
 
         prev_index_particles = index_particles
 
@@ -1465,8 +1029,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
                     new_embedding = embedding[prev_index_particles[n].astype(int), :]
                     new_labels = labels[prev_index_particles[n].astype(int)]
                 else:
-                    new_embedding = torch.cat((new_embedding, embedding[prev_index_particles[n].astype(int), :]),
-                                              axis=0)
+                    new_embedding = torch.cat((new_embedding, embedding[prev_index_particles[n].astype(int), :]), axis=0)
                     new_labels = torch.cat((new_labels, labels[prev_index_particles[n].astype(int)]), axis=0)
 
         model.a = nn.Parameter(
@@ -1474,8 +1037,6 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
                          requires_grad=False))
         model.a.requires_grad = False
         model.a[0] = new_embedding
-        labels = new_labels
-        nparticles = new_nparticles
         model_config['nparticles'] = new_nparticles
 
         index_particles = []
@@ -1504,14 +1065,12 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
     y_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_0.pt', map_location=device))
 
     x = x_list[0][0].clone().detach()
-    x00 = x_list[0][0].clone().detach()
 
-    if bMesh:
+    if has_mesh:
         hnorm = torch.load(f'./log/try_{dataset_name}/hnorm.pt', map_location=device).to(device)
 
         mesh_data = torch.load(f'graphs_data/graphs_particles_{dataset_name}/mesh_data_0.pt',map_location=device)
         mask_mesh = mesh_data['mask_mesh']
-        # mesh_pos = mesh_data['mesh_pos']
         edge_index_mesh = mesh_data['edge_index']
         edge_weight_mesh = mesh_data['edge_weight']
 
@@ -1522,11 +1081,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         print('')
     time.sleep(0.5)
 
-    rmserr_list = []
-    discrepency_list = []
-
     x = x_list[0][0].clone().detach()
-    T1 = x[:, 5:6].clone().detach()
     index_particles = []
     for n in range(model_config['nparticle_types']):
         index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
@@ -1536,28 +1091,26 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
     for it in trange(nframes - 1):
 
         x0 = x_list[0][it].clone().detach()
-        x0_next = x_list[0][it + 1].clone().detach()
-        y0 = y_list[0][it].clone().detach()
 
-        if bMesh:
+        if has_mesh:
             x[:, 1:5] = x0[:, 1:5].clone().detach()
             dataset_mesh = data.Data(x=x, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
 
         if model_config['model'] == 'DiffMesh':
             with torch.no_grad():
-                pred = model_mesh(dataset_mesh, data_id=0, )
+                pred = mesh_model(dataset_mesh, data_id=0, )
             x[:, 6:7] += pred * hnorm * delta_t
         elif model_config['model'] == 'WaveMesh':
             with torch.no_grad():
-                pred = model_mesh(dataset_mesh, data_id=0)
+                pred = mesh_model(dataset_mesh, data_id=0)
             x[mask_mesh.squeeze(), 7:8] += pred[mask_mesh.squeeze()] * hnorm * delta_t
             x[mask_mesh.squeeze(), 6:7] += x[mask_mesh.squeeze(), 7:8] * delta_t
-        elif (model_config['model'] == 'RD_RPS_Mesh'):
+        elif model_config['model'] == 'RD_RPS_Mesh':
             with torch.no_grad():
-                pred = model_mesh(dataset_mesh, data_id=0)
+                pred = mesh_model(dataset_mesh, data_id=0)
                 x[mask_mesh.squeeze(), 6:9] += pred[mask_mesh.squeeze()] * hnorm * delta_t
         else:
-            distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+            distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
             t = torch.Tensor([radius ** 2])  # threshold
             adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
 
@@ -1580,230 +1133,53 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
 
         if (it % step == 0) & (it >= 0) & bVisu:
 
-            if True:  # 'color' in bStyle:
-
-                fig = plt.figure(figsize=(12, 12))
-                if bMesh:
-                    pts = x[:, 1:3].detach().cpu().numpy()
-                    tri = Delaunay(pts)
-                    colors = torch.sum(x[tri.simplices, 6], axis=1) / 3.0
-                    if model_config['model'] == 'DiffMesh':
-                        plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                      facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1000)
-                    if model_config['model'] == 'WaveMesh':
-                        plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                      facecolors=colors.detach().cpu().numpy(), vmin=-1000, vmax=1000)
-                    if (model_config['model'] == 'RD_Gray_Scott_Mesh'):
-                        fig = plt.figure(figsize=(12, 6))
-                        ax = fig.add_subplot(1, 2, 1)
-                        colors = torch.sum(x[tri.simplices, 6], axis=1) / 3.0
-                        plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                      facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.axis('off')
-                        ax = fig.add_subplot(1, 2, 2)
-                        colors = torch.sum(x[tri.simplices, 7], axis=1) / 3.0
-                        plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                      facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.axis('off')
-                    if (model_config['model'] == 'RD_RPS_Mesh'):
-                        fig = plt.figure(figsize=(12, 12))
-                        H1_IM = torch.reshape(x0[:, 6:9], (100, 100, 3))
-                        plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=1)
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.axis('off')
-                else:
-                    for n in range(nparticle_types):
-                        plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                    x[index_particles[n], 2].detach().cpu().numpy(), s=25, color=cmap.color(n))
-
-                if bMesh | (model_config['boundary'] == 'periodic'):
-                    # plt.text(0.08, 0.92, f'frame: {it}',fontsize=8,color='w')
-                    gg = 0
-                    # plt.text(0, 1.03, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
-                    plt.xlim([0, 1])
-                    plt.ylim([0, 1])
-                # else:
-                # plt.text(-1.25, 1.5, f'frame: {it}')
-                # plt.text(-1.25, 1.4, f'{x.shape[0]} nodes {edge_index.shape[1]} edges ', fontsize=10)
-                # plt.xlim([-0.5, 0.5])
-                # plt.ylim([-0.5, 0.5])
-
-                # plt.xlim([0, 1])
-                # plt.ylim([0, 1])
-
-                # plt.xticks([])
-                # plt.yticks([])
-
-                # plt.xlim([-4, 4])
-                # plt.ylim([-4, 4])
-
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{dataset_name}_{it}.tif", dpi=300)
-                plt.close()
-
-            if False:
-                if bMesh:
-                    dataset2 = dataset_mesh
-                else:
-                    distance2 = torch.sum((x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
-                    adj_t2 = ((distance2 < radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
-                    edge_index2 = adj_t2.nonzero().t().contiguous()
-                    dataset2 = data.Data(x=x, edge_index=edge_index2)
-
-                fig = plt.figure(figsize=(16, 7.2))
-                plt.ion()
-
-                for k in range(5):
-                    if k == 0:
-                        ax = fig.add_subplot(2, 4, 1)
-                        x_ = x00
-                        sc = 2
-                    elif k == 1:
-                        ax = fig.add_subplot(2, 4, 2)
-                        x_ = x0
-                        sc = 2
-                    elif k == 2:
-                        ax = fig.add_subplot(2, 4, 6)
-                        x_ = x
-                        sc = 2
-                    elif k == 3:
-                        ax = fig.add_subplot(2, 4, 3)
-                        x_ = x0
-                        sc = 5
-                    elif k == 4:
-                        ax = fig.add_subplot(2, 4, 7)
-                        x_ = x
-                        sc = 5
-
-                    if (k == 0) & (bMesh):
-                        plt.scatter(to_numpy(x0_next[:, 6]), to_numpy(x[:, 6]), s=1, alpha=0.25, c='k')
-                        plt.xlabel('True [a.u.]', fontsize="14")
-                        plt.ylabel('Model [a.u]', fontsize="14")
-                    elif model_config['model'] == 'PDE_G':
-                        for n in range(nparticle_types):
-                            g = to_numpy(p_mass[to_numpy(T1[index_particles[n], 0])]) * 10 * sc
-                            plt.scatter(x_[index_particles[n], 1].detach().cpu(),
-                                        x_[index_particles[n], 2].detach().cpu(),
-                                        s=g, alpha=0.75, color=cmap.color(n))  # , facecolors='none', edgecolors='k')
-                    elif model_config['model'] == 'PDE_E':
-                        for n in range(nparticle_types):
-                            g = np.abs(to_numpy(p_elec[to_numpy(T1[index_particles[n], 0])]) * 20) * sc
-                            if model_config['p'][n][0] <= 0:
-                                plt.scatter(to_numpy(x_[index_particles[n], 1]),
-                                            to_numpy(x_[index_particles[n], 2]), s=g,
-                                            c='r', alpha=0.5)  # , facecolors='none', edgecolors='k')
-                            else:
-                                plt.scatter(to_numpy(x_[index_particles[n], 1]),
-                                            to_numpy(x_[index_particles[n], 2]), s=g,
-                                            c='b', alpha=0.5)  # , facecolors='none', edgecolors='k')
-                    elif bMesh:
-                        pts = to_numpy(x_[:, 1:3])
-                        tri = Delaunay(pts)
-                        colors = torch.sum(x_[tri.simplices, 6], axis=1) / 3.0
-                        if model_config['model'] == 'WaveMesh':
-                            plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                          facecolors=to_numpy(colors), vmin=-1500, vmax=1500)
-                        elif model_config['model'] == 'RD_RPS_Mesh':
-                            H1_IM = torch.reshape(x_[:, 6:9], (100, 100, 3))
-                            plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=1)
-                        elif model_config['model'] == 'DiffMesh':
-                            plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                          facecolors=to_numpy(colors), vmin=0, vmax=5000)
-                    else:
-                        if ((k == 2) | (k == 4)) & (len(forced_embedding) > 0):
-                            for n in range(nparticle_types):
-                                plt.scatter(x_[index_particles[n], 1].detach().cpu(),
-                                            x_[index_particles[n], 2].detach().cpu(),
-                                            s=sc, color=cmap.color(forced_color))
-                        else:
-                            plt.scatter(x_[:, 1].detach().cpu(), x_[:, 2].detach().cpu(),
-                                        s=sc, color=cmap.color(to_numpy(labels)))
-
-                    if (k > 2) & (bMesh == False):
-                        for n in range(nparticles):
-                            plt.arrow(x=x_[n, 1].detach().cpu().item(), y=x_[n, 2].detach().cpu().item(),
-                                      dx=x_[n, 3].detach().cpu().item() * model_config['arrow_length'],
-                                      dy=x_[n, 4].detach().cpu().item() * model_config['arrow_length'], color='k')
-                    if k < 3:
-                        if (k == 0) & (bMesh):
-                            plt.xlim([-1.3, 1.3])
-                            plt.ylim([-1.3, 1.3])
-                        elif (model_config['boundary'] == 'no'):
-                            plt.xlim([-1.3, 1.3])
-                            plt.ylim([-1.3, 1.3])
-                        elif not (model_config['model'] == 'RD_RPS_Mesh'):
-                            plt.xlim([0, 1])
-                            plt.ylim([0, 1])
-                    else:
-                        if model_config['model'] == 'RD_RPS_Mesh':
-                            plt.xlim([40, 60])
-                            plt.ylim([40, 60])
-                        elif bMesh | ('Boids' in model_config['description']) | (
-                                model_config['boundary'] == 'periodic'):
-                            plt.xlim([0.3, 0.7])
-                            plt.ylim([0.3, 0.7])
-                        elif not (model_config['model'] == 'RD_RPS_Mesh'):
-                            plt.xlim([-0.25, 0.25])
-                            plt.ylim([-0.25, 0.25])
+            fig = plt.figure(figsize=(12, 12))
+            if has_mesh:
+                pts = x[:, 1:3].detach().cpu().numpy()
+                tri = Delaunay(pts)
+                colors = torch.sum(x[tri.simplices, 6], dim=1) / 3.0
+                if model_config['model'] == 'DiffMesh':
+                    plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                  facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1000)
+                if model_config['model'] == 'WaveMesh':
+                    plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                  facecolors=colors.detach().cpu().numpy(), vmin=-1000, vmax=1000)
+                if (model_config['model'] == 'RD_Gray_Scott_Mesh'):
+                    fig = plt.figure(figsize=(12, 6))
+                    ax = fig.add_subplot(1, 2, 1)
+                    colors = torch.sum(x[tri.simplices, 6], dim=1) / 3.0
+                    plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                  facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
                     plt.xticks([])
                     plt.yticks([])
+                    plt.axis('off')
+                    ax = fig.add_subplot(1, 2, 2)
+                    colors = torch.sum(x[tri.simplices, 7], dim=1) / 3.0
+                    plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                  facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.axis('off')
+                if (model_config['model'] == 'RD_RPS_Mesh'):
+                    fig = plt.figure(figsize=(12, 12))
+                    H1_IM = torch.reshape(x0[:, 6:9], (100, 100, 3))
+                    plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=1)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.axis('off')
+            else:
+                for n in range(nparticle_types):
+                    plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
+                                x[index_particles[n], 2].detach().cpu().numpy(), s=25, color=cmap.color(n))
 
-                if True:
-                    ax = fig.add_subplot(2, 4, 4)
-                    plt.plot(np.arange(len(rmserr_list)), rmserr_list, label='RMSE', c='k')
-                    plt.ylim([0, 0.1])
-                    plt.xlim([0, nframes])
-                    plt.tick_params(axis='both', which='major', labelsize=10)
-                    plt.xlabel('Frame [a.u]', fontsize="14")
-                    ax.set_ylabel('RMSE [a.u]', fontsize="14", color='k')
-                    if bMesh:
-                        plt.ylim([0, 5000])
+            if has_mesh | (model_config['boundary'] == 'periodic'):
+                gg = 0
+                plt.xlim([0, 1])
+                plt.ylim([0, 1])
 
-                    if bDetails:
-                        ax = fig.add_subplot(2, 5, 6)
-                        pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
-                        vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
-                        nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False, alpha=0.2)
-                        if model_config['boundary'] == 'no':
-                            plt.xlim([-1.3, 1.3])
-                            plt.ylim([-1.3, 1.3])
-                        else:
-                            plt.xlim([0, 1])
-                            plt.ylim([0, 1])
-
-                    ax = fig.add_subplot(2, 4, 8)
-                    if not (bMesh):
-                        temp1 = torch.cat((x, x0_next), 0)
-                        temp2 = torch.tensor(np.arange(nparticles), device=device)
-                        temp3 = torch.tensor(np.arange(nparticles) + nparticles, device=device)
-                        temp4 = torch.concatenate((temp2[:, None], temp3[:, None]), 1)
-                        temp4 = torch.t(temp4)
-                        distance3 = torch.sqrt(torch.sum((x[:, 1:3] - x0_next[:, 1:3]) ** 2, 1))
-                        p = torch.argwhere(distance3 < 0.3)
-                        pos = dict(enumerate(np.array((temp1[:, 1:3]).detach().cpu()), 0))
-                        dataset = data.Data(x=temp1[:, 1:3], edge_index=torch.squeeze(temp4[:, p]))
-                        vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-                        nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False)
-                        if model_config['boundary'] == 'no':
-                            plt.xlim([-1.3, 1.3])
-                            plt.ylim([-1.3, 1.3])
-                        else:
-                            plt.xlim([0, 1])
-                            plt.ylim([0, 1])
-
-                plt.tight_layout()
-
-                if len(forced_embedding) > 0:
-                    plt.savefig(f"./{log_dir}/tmp_recons/Fig_{dataset_name}_{forced_color}_{it}.tif", dpi=300)
-                else:
-                    plt.savefig(f"./{log_dir}/tmp_recons/Fig_{dataset_name}_{it}.tif", dpi=300)
-
-                plt.close()
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/tmp_recons/Fig_{dataset_name}_{it}.tif", dpi=300)
+            plt.close()
 
 
 if __name__ == '__main__':

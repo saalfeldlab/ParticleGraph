@@ -22,13 +22,13 @@ class PDE_G(pyg.nn.MessagePassing):
         the acceleration of the particles (dimension 2)
     """
 
-    def __init__(self, aggr_type=[], p=[], clamp=[], pred_limit=[], bc_diff=[]):
+    def __init__(self, aggr_type=[], p=[], clamp=[], pred_limit=[], bc_dpos=[]):
         super(PDE_G, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.p = p
         self.clamp = clamp
         self.pred_limit = pred_limit
-        self.bc_diff = bc_diff
+        self.bc_dpos = bc_dpos
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
@@ -42,9 +42,9 @@ class PDE_G(pyg.nn.MessagePassing):
         return dd_pos
 
     def message(self, pos_i, pos_j, mass_j):
-        distance_ij = torch.sqrt(torch.sum(self.bc_diff(pos_j - pos_i) ** 2, axis=1))
+        distance_ij = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, axis=1))
         distance_ij = torch.clamp(distance_ij, min=self.clamp)
-        direction_ij = self.bc_diff(pos_j - pos_i) / distance_ij[:,None]
+        direction_ij = self.bc_dpos(pos_j - pos_i) / distance_ij[:,None]
         dd_pos = mass_j * direction_ij / (distance_ij[:,None] ** 2)
 
         return torch.clamp(dd_pos, max=self.pred_limit)

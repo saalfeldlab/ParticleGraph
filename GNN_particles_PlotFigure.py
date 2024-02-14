@@ -18,7 +18,7 @@ class Interaction_Particles_extract(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, model_config, device, aggr_type=[], bc_diff=[]):
+    def __init__(self, model_config, device, aggr_type=[], bc_dpos=[]):
 
         super(Interaction_Particles_extract, self).__init__(aggr=aggr_type)  # "Add" aggregation.
 
@@ -39,7 +39,7 @@ class Interaction_Particles_extract(pyg.nn.MessagePassing):
         self.nlayers_update = model_config['nlayers_update']
         self.hidden_size_update = model_config['hidden_size_update']
         self.sigma = model_config['sigma']
-        self.bc_diff = bc_diff
+        self.bc_dpos = bc_dpos
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
@@ -68,10 +68,10 @@ class Interaction_Particles_extract(pyg.nn.MessagePassing):
 
     def message(self, x_i, x_j):
 
-        r = torch.sqrt(torch.sum(self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)) / self.radius  # squared distance
+        r = torch.sqrt(torch.sum(self.bc_dpos(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)) / self.radius  # squared distance
         r = r[:, None]
 
-        delta_pos = self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) / self.radius
+        delta_pos = self.bc_dpos(x_j[:, 1:3] - x_i[:, 1:3]) / self.radius
         x_i_vx = x_i[:, 3:4] / self.vnorm
         x_i_vy = x_i[:, 4:5] / self.vnorm
         x_j_vx = x_j[:, 3:4] / self.vnorm
@@ -125,11 +125,11 @@ class PDE_B_extract(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, aggr_type=[], p=[], bc_diff=[]):
+    def __init__(self, aggr_type=[], p=[], bc_dpos=[]):
         super(PDE_B_extract, self).__init__(aggr=aggr_type)  # "mean" aggregation.
 
         self.p = p
-        self.bc_diff = bc_diff
+        self.bc_dpos = bc_dpos
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
@@ -142,21 +142,21 @@ class PDE_B_extract(pyg.nn.MessagePassing):
 
     def message(self, x_i, x_j):
 
-        r = torch.sum(self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)  # distance squared
+        r = torch.sum(self.bc_dpos(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, axis=1)  # distance squared
 
         pp = self.p[to_numpy(x_i[:, 5]), :]
 
-        cohesion = pp[:, 0:1].repeat(1, 2) * 0.5E-5 * self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3])
-        alignment = pp[:, 1:2].repeat(1, 2) * 5E-4 * self.bc_diff(x_j[:, 3:5] - x_i[:, 3:5])
-        separation = pp[:, 2:3].repeat(1, 2) * 1E-8 * self.bc_diff(x_i[:, 1:3] - x_j[:, 1:3]) / (r[:, None].repeat(1, 2))
+        cohesion = pp[:, 0:1].repeat(1, 2) * 0.5E-5 * self.bc_dpos(x_j[:, 1:3] - x_i[:, 1:3])
+        alignment = pp[:, 1:2].repeat(1, 2) * 5E-4 * self.bc_dpos(x_j[:, 3:5] - x_i[:, 3:5])
+        separation = pp[:, 2:3].repeat(1, 2) * 1E-8 * self.bc_dpos(x_i[:, 1:3] - x_j[:, 1:3]) / (r[:, None].repeat(1, 2))
 
         self.cohesion = cohesion
         self.alignment = alignment
         self.separation = separation
 
         self.r = r
-        self.diffx = self.bc_diff(x_j[:, 1:3] - x_i[:, 1:3])
-        self.diffv = self.bc_diff(x_j[:, 3:5] - x_i[:, 3:5])
+        self.diffx = self.bc_dpos(x_j[:, 1:3] - x_i[:, 1:3])
+        self.diffv = self.bc_dpos(x_j[:, 3:5] - x_i[:, 3:5])
         self .type = x_i[:, 5]
 
         return (separation + alignment + cohesion)
@@ -170,12 +170,12 @@ class RD_RPS_extract(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, aggr_type=[], c=[], beta=[], bc_diff=[]):
+    def __init__(self, aggr_type=[], c=[], beta=[], bc_dpos=[]):
         super(RD_RPS, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.c = c
         self.beta = beta
-        self.bc_diff = bc_diff
+        self.bc_dpos = bc_dpos
 
     def forward(self, data):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
@@ -244,7 +244,7 @@ class Mesh_RPS_extract(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, aggr_type=[], model_config=[], device=[], bc_diff=[]):
+    def __init__(self, aggr_type=[], model_config=[], device=[], bc_dpos=[]):
         super(Mesh_RPS_extract, self).__init__(aggr=aggr_type)  # "Add" aggregation.
 
         self.device = device
@@ -258,7 +258,7 @@ class Mesh_RPS_extract(pyg.nn.MessagePassing):
         self.noise_level = model_config['noise_level']
         self.embedding = model_config['embedding']
         self.ndataset = model_config['nrun']-1
-        self.bc_diff = bc_diff
+        self.bc_dpos = bc_dpos
 
         self.lin_phi = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
@@ -392,14 +392,14 @@ def data_plot_FIG2():
             return X
 
 
-        def bc_diff(D):
+        def bc_dpos(D):
             return D
     else:
         def bc_pos(X):
             return torch.remainder(X, 1.0)
 
 
-        def bc_diff(D):
+        def bc_dpos(D):
             return torch.remainder(D - .5, 1.0) - .5
 
     model = []
@@ -438,7 +438,7 @@ def data_plot_FIG2():
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     x = x_list[0][0].clone().detach()
 
-    model = Interaction_Particles(model_config=model_config, device=device, aggr_type = model_config['aggr_type'], bc_diff=bc_diff)
+    model = Interaction_Particles(model_config=model_config, device=device, aggr_type = model_config['aggr_type'], bc_dpos=bc_dpos)
     print(f'Training Interaction_Particles')
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
@@ -839,7 +839,7 @@ def data_plot_FIG2sup():
 
     def bc_pos(X):
         return torch.remainder(X, 1.0)
-    def bc_diff(D):
+    def bc_dpos(D):
         return torch.remainder(D - .5, 1.0) - .5
     aggr_type = 'mean'
 
@@ -856,14 +856,14 @@ def data_plot_FIG2sup():
             return X
 
 
-        def bc_diff(D):
+        def bc_dpos(D):
             return D
     else:
         def bc_pos(X):
             return torch.remainder(X, 1.0)
 
 
-        def bc_diff(D):
+        def bc_dpos(D):
             return torch.remainder(D - .5, 1.0) - .5
 
     model = []
@@ -917,7 +917,7 @@ def data_plot_FIG2sup():
     for n in range(model_config['nparticle_types']):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
-    model = Interaction_Particles(model_config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_diff=bc_diff)
+    model = Interaction_Particles(model_config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_dpos=bc_dpos)
 
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
@@ -960,7 +960,7 @@ def data_plot_FIG2sup():
         x0_next = x_list[0][it + 1].clone().detach()
         y0 = y_list[0][it].clone().detach()
 
-        distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+        distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
         t = torch.Tensor([radius ** 2])  # threshold
         adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
 
@@ -983,7 +983,7 @@ def data_plot_FIG2sup():
         x_recons.append(x.clone().detach())
         y_recons.append(y.clone().detach())
 
-        rmserr = torch.sqrt(torch.mean(torch.sum(bc_diff(x[:, 1:3] - x0_next[:, 1:3]) ** 2, axis=1)))
+        rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 1:3] - x0_next[:, 1:3]) ** 2, axis=1)))
         rmserr_list.append(rmserr.item())
 
         if (it % step == 0) & (it >= 0):
@@ -1058,7 +1058,7 @@ def data_plot_FIG2sup():
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
     NGraphs = int(len(graph_files))
 
-    model = Interaction_Particles(model_config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_diff=bc_diff)
+    model = Interaction_Particles(model_config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_dpos=bc_dpos)
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_20.pt"
 
@@ -1096,7 +1096,7 @@ def data_plot_FIG2sup():
         x0_next = x_list[0][it + 1].clone().detach()
         y0 = y_list[0][it].clone().detach()
 
-        distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+        distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
         t = torch.Tensor([radius ** 2])  # threshold
         adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
 
@@ -1119,7 +1119,7 @@ def data_plot_FIG2sup():
         x_recons.append(x.clone().detach())
         y_recons.append(y.clone().detach())
 
-        rmserr = torch.sqrt(torch.mean(torch.sum(bc_diff(x[:, 1:3] - x0_next[:, 1:3]) ** 2, axis=1)))
+        rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 1:3] - x0_next[:, 1:3]) ** 2, axis=1)))
         rmserr_list.append(rmserr.item())
 
         if (it % step == 0) & (it >= 0):
@@ -1153,7 +1153,7 @@ def data_plot_FIG2sup():
     nframes = 250
     ratio = 2
     data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4, ratio = ratio, device=device)
-    model = Interaction_Particles(model_config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_diff=bc_diff)
+    model = Interaction_Particles(model_config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_dpos=bc_dpos)
 
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
@@ -1234,7 +1234,7 @@ def data_plot_FIG2sup():
         x0_next = x_list[0][it + 1].clone().detach()
         y0 = y_list[0][it].clone().detach()
 
-        distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+        distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
         t = torch.Tensor([radius ** 2])  # threshold
         adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
 
@@ -1257,7 +1257,7 @@ def data_plot_FIG2sup():
         x_recons.append(x.clone().detach())
         y_recons.append(y.clone().detach())
 
-        rmserr = torch.sqrt(torch.mean(torch.sum(bc_diff(x[:, 1:3] - x0_next[:, 1:3]) ** 2, axis=1)))
+        rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 1:3] - x0_next[:, 1:3]) ** 2, axis=1)))
         rmserr_list.append(rmserr.item())
 
         if (it % step == 0) & (it >= 0):
@@ -1326,7 +1326,7 @@ def data_plot_FIG2sup():
         x0_next = x_list[0][it + 1].clone().detach()
         y0 = y_list[0][it].clone().detach()
 
-        distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+        distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
         t = torch.Tensor([radius ** 2])  # threshold
         adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
 
@@ -1349,7 +1349,7 @@ def data_plot_FIG2sup():
         x_recons.append(x.clone().detach())
         y_recons.append(y.clone().detach())
 
-        rmserr = torch.sqrt(torch.mean(torch.sum(bc_diff(x[:, 1:3] - x0_next[:, 1:3]) ** 2, axis=1)))
+        rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 1:3] - x0_next[:, 1:3]) ** 2, axis=1)))
         rmserr_list.append(rmserr.item())
 
         if (it % step == 0) & (it >= 0):
@@ -1411,14 +1411,14 @@ def data_plot_FIG3sup():
             return X
 
 
-        def bc_diff(D):
+        def bc_dpos(D):
             return D
     else:
         def bc_pos(X):
             return torch.remainder(X, 1.0)
 
 
-        def bc_diff(D):
+        def bc_dpos(D):
             return torch.remainder(D - .5, 1.0) - .5
     ratio = 1
 
@@ -1463,7 +1463,7 @@ def data_plot_FIG3sup():
         y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
         if run == 0:
             for k in np.arange(0, len(x) - 1, 4):
-                distance = torch.sum(bc_diff(x[k][:, None, 1:3] - x[k][None, :, 1:3]) ** 2, axis=2)
+                distance = torch.sum(bc_dpos(x[k][:, None, 1:3] - x[k][None, :, 1:3]) ** 2, axis=2)
                 t = torch.Tensor([radius ** 2])  # threshold
                 adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
                 edge_index = adj_t.nonzero().t().contiguous()
@@ -1492,7 +1492,7 @@ def data_plot_FIG3sup():
     y_stat = np.array(y_stat)
 
 
-    model = Interaction_Particles(model_config=model_config, device=device, aggr_type = model_config['aggr_type'], bc_diff=bc_diff)
+    model = Interaction_Particles(model_config=model_config, device=device, aggr_type = model_config['aggr_type'], bc_dpos=bc_dpos)
     print(f'Training Interaction_Particles')
 
     # if best_model == -1:
@@ -1887,7 +1887,7 @@ def data_plot_FIG4sup():
 
     def bc_pos(X):
         return torch.remainder(X, 1.0)
-    def bc_diff(D):
+    def bc_dpos(D):
         return torch.remainder(D - .5, 1.0) - .5
     aggr_type = 'mean'
 
@@ -1904,14 +1904,14 @@ def data_plot_FIG4sup():
             return X
 
 
-        def bc_diff(D):
+        def bc_dpos(D):
             return D
     else:
         def bc_pos(X):
             return torch.remainder(X, 1.0)
 
 
-        def bc_diff(D):
+        def bc_dpos(D):
             return torch.remainder(D - .5, 1.0) - .5
 
     model = []
@@ -1965,7 +1965,7 @@ def data_plot_FIG4sup():
     for n in range(model_config['nparticle_types']):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
-    model = Interaction_Particles(model_config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_diff=bc_diff)
+    model = Interaction_Particles(model_config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_dpos=bc_dpos)
 
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
@@ -2008,7 +2008,7 @@ def data_plot_FIG4sup():
         x0_next = x_list[0][it + 1].clone().detach()
         y0 = y_list[0][it].clone().detach()
 
-        distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+        distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
         t = torch.Tensor([radius ** 2])  # threshold
         adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
 
@@ -2031,7 +2031,7 @@ def data_plot_FIG4sup():
         x_recons.append(x.clone().detach())
         y_recons.append(y.clone().detach())
 
-        rmserr = torch.sqrt(torch.mean(torch.sum(bc_diff(x[:, 1:3] - x0_next[:, 1:3]) ** 2, axis=1)))
+        rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 1:3] - x0_next[:, 1:3]) ** 2, axis=1)))
         rmserr_list.append(rmserr.item())
 
         if (it % step == 0) & (it >= 0):
@@ -2106,7 +2106,7 @@ def data_plot_FIG4sup():
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
     NGraphs = int(len(graph_files))
 
-    model = Interaction_Particles(model_config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_diff=bc_diff)
+    model = Interaction_Particles(model_config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_dpos=bc_dpos)
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_20.pt"
 
@@ -2144,7 +2144,7 @@ def data_plot_FIG4sup():
         x0_next = x_list[0][it + 1].clone().detach()
         y0 = y_list[0][it].clone().detach()
 
-        distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+        distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
         t = torch.Tensor([radius ** 2])  # threshold
         adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
 
@@ -2167,7 +2167,7 @@ def data_plot_FIG4sup():
         x_recons.append(x.clone().detach())
         y_recons.append(y.clone().detach())
 
-        rmserr = torch.sqrt(torch.mean(torch.sum(bc_diff(x[:, 1:3] - x0_next[:, 1:3]) ** 2, axis=1)))
+        rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 1:3] - x0_next[:, 1:3]) ** 2, axis=1)))
         rmserr_list.append(rmserr.item())
 
         if (it % step == 0) & (it >= 0):
@@ -2201,7 +2201,7 @@ def data_plot_FIG4sup():
     nframes = 500
     ratio = 2
     data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4, ratio = ratio, device=device)
-    model = Interaction_Particles(model_config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_diff=bc_diff)
+    model = Interaction_Particles(model_config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_dpos=bc_dpos)
 
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
@@ -2282,7 +2282,7 @@ def data_plot_FIG4sup():
         x0_next = x_list[0][it + 1].clone().detach()
         y0 = y_list[0][it].clone().detach()
 
-        distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+        distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
         t = torch.Tensor([radius ** 2])  # threshold
         adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
 
@@ -2305,7 +2305,7 @@ def data_plot_FIG4sup():
         x_recons.append(x.clone().detach())
         y_recons.append(y.clone().detach())
 
-        rmserr = torch.sqrt(torch.mean(torch.sum(bc_diff(x[:, 1:3] - x0_next[:, 1:3]) ** 2, axis=1)))
+        rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 1:3] - x0_next[:, 1:3]) ** 2, axis=1)))
         rmserr_list.append(rmserr.item())
 
         if (it % step == 0) & (it >= 0):
@@ -2374,7 +2374,7 @@ def data_plot_FIG4sup():
         x0_next = x_list[0][it + 1].clone().detach()
         y0 = y_list[0][it].clone().detach()
 
-        distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+        distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
         t = torch.Tensor([radius ** 2])  # threshold
         adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
 
@@ -2397,7 +2397,7 @@ def data_plot_FIG4sup():
         x_recons.append(x.clone().detach())
         y_recons.append(y.clone().detach())
 
-        rmserr = torch.sqrt(torch.mean(torch.sum(bc_diff(x[:, 1:3] - x0_next[:, 1:3]) ** 2, axis=1)))
+        rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 1:3] - x0_next[:, 1:3]) ** 2, axis=1)))
         rmserr_list.append(rmserr.item())
 
         if (it % step == 0) & (it >= 0):
@@ -2448,7 +2448,7 @@ def data_plot_FIG3():
 
     def bc_pos(X):
         return X
-    def bc_diff(D):
+    def bc_dpos(D):
         return D
 
     for key, value in model_config.items():
@@ -2464,14 +2464,14 @@ def data_plot_FIG3():
             return X
 
 
-        def bc_diff(D):
+        def bc_dpos(D):
             return D
     else:
         def bc_pos(X):
             return torch.remainder(X, 1.0)
 
 
-        def bc_diff(D):
+        def bc_dpos(D):
             return torch.remainder(D - .5, 1.0) - .5
     ratio = 1
 
@@ -2511,7 +2511,7 @@ def data_plot_FIG3():
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     x = x_list[0][0].clone().detach()
 
-    model = Interaction_Particles(model_config=model_config, device=device, bc_diff=bc_diff, aggr_type=aggr_type)
+    model = Interaction_Particles(model_config=model_config, device=device, bc_dpos=bc_dpos, aggr_type=aggr_type)
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
     state_dict = torch.load(net, map_location=device)
@@ -2875,7 +2875,7 @@ def data_plot_FIG3_continous():
 
     def bc_pos(X):
         return X
-    def bc_diff(D):
+    def bc_dpos(D):
         return D
 
     for key, value in model_config.items():
@@ -2891,14 +2891,14 @@ def data_plot_FIG3_continous():
             return X
 
 
-        def bc_diff(D):
+        def bc_dpos(D):
             return D
     else:
         def bc_pos(X):
             return torch.remainder(X, 1.0)
 
 
-        def bc_diff(D):
+        def bc_dpos(D):
             return torch.remainder(D - .5, 1.0) - .5
     ratio = 1
 
@@ -2938,7 +2938,7 @@ def data_plot_FIG3_continous():
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     x = x_list[0][0].clone().detach()
 
-    model = Interaction_Particles(model_config=model_config, device=device, bc_diff=bc_diff, aggr_type=aggr_type)
+    model = Interaction_Particles(model_config=model_config, device=device, bc_dpos=bc_dpos, aggr_type=aggr_type)
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
     state_dict = torch.load(net, map_location=device)
@@ -3157,7 +3157,7 @@ def data_plot_FIG4():
 
     def bc_pos(X):
         return torch.remainder(X, 1.0)
-    def bc_diff(D):
+    def bc_dpos(D):
         return torch.remainder(D - .5, 1.0) - .5
 
     for key, value in model_config.items():
@@ -3171,13 +3171,13 @@ def data_plot_FIG4():
     if model_config['boundary'] == 'no':  # change this for usual BC
         def bc_pos(X):
             return X
-        def bc_diff(D):
+        def bc_dpos(D):
             return D
     else:
         def bc_pos(X):
             return torch.remainder(X, 1.0)
 
-        def bc_diff(D):
+        def bc_dpos(D):
             return torch.remainder(D - .5, 1.0) - .5
     ratio = 1
 
@@ -3218,7 +3218,7 @@ def data_plot_FIG4():
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
 
-    model = Interaction_Particles(model_config=model_config, device=device,bc_diff = bc_diff, aggr_type=aggr_type)
+    model = Interaction_Particles(model_config=model_config, device=device,bc_dpos = bc_dpos, aggr_type=aggr_type)
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
     state_dict = torch.load(net, map_location=device)
@@ -3568,7 +3568,7 @@ def data_plot_FIG5sup():
 
     def bc_pos(X):
         return X
-    def bc_diff(D):
+    def bc_dpos(D):
         return D
 
 
@@ -3590,12 +3590,12 @@ def data_plot_FIG5sup():
     if model_config['boundary'] == 'no':  # change this for usual BC
         def bc_pos(X):
             return X
-        def bc_diff(D):
+        def bc_dpos(D):
             return D
     else:
         def bc_pos(X):
             return torch.remainder(X, 1.0)
-        def bc_diff(D):
+        def bc_dpos(D):
             return torch.remainder(D - .5, 1.0) - .5
 
     model = []
@@ -3641,7 +3641,7 @@ def data_plot_FIG5sup():
 
 
     ratio = 1
-    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4,ratio = ratio, bc_diff=bc_diff, bc_pos=bc_pos, aggr_type=model_config['aggr_type'])
+    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4,ratio = ratio, bc_dpos=bc_dpos, bc_pos=bc_pos, aggr_type=model_config['aggr_type'])
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -3651,7 +3651,7 @@ def data_plot_FIG5sup():
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
     NGraphs = int(len(graph_files))
 
-    model = GravityParticles(model_config=model_config, device=device, bc_diff=bc_diff)
+    model = GravityParticles(model_config=model_config, device=device, bc_dpos=bc_dpos)
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_20.pt"
 
@@ -3690,7 +3690,7 @@ def data_plot_FIG5sup():
         x0_next = x_list[0][it + 1].clone().detach()
         y0 = y_list[0][it].clone().detach()
 
-        distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+        distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
         t = torch.Tensor([radius ** 2])  # threshold
         adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
 
@@ -3713,7 +3713,7 @@ def data_plot_FIG5sup():
         x_recons.append(x.clone().detach())
         y_recons.append(y.clone().detach())
 
-        rmserr = torch.sqrt(torch.mean(torch.sum(bc_diff(x[:, 1:3] - x0_next[:, 1:3]) ** 2, axis=1)))
+        rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 1:3] - x0_next[:, 1:3]) ** 2, axis=1)))
         rmserr_list.append(rmserr.item())
 
         if (it % step == 0) & (it >= 0):
@@ -3765,7 +3765,7 @@ def data_plot_FIG5sup():
 
     def bc_pos(X):
         return torch.remainder(X, 1.0)
-    def bc_diff(D):
+    def bc_dpos(D):
         return torch.remainder(D - .5, 1.0) - .5
 
     # model_config = load_model_config(id=config)
@@ -3787,12 +3787,12 @@ def data_plot_FIG5sup():
     if model_config['boundary'] == 'no':  # change this for usual BC
         def bc_pos(X):
             return X
-        def bc_diff(D):
+        def bc_dpos(D):
             return D
     else:
         def bc_pos(X):
             return torch.remainder(X, 1.0)
-        def bc_diff(D):
+        def bc_dpos(D):
             return torch.remainder(D - .5, 1.0) - .5
 
     model = []
@@ -3829,9 +3829,9 @@ def data_plot_FIG5sup():
     time.sleep(0.5)
 
     ratio = 1
-    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4,ratio = ratio, bc_diff=bc_diff, bc_pos=bc_pos, aggr_type=model_config['aggr_type'])
+    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4,ratio = ratio, bc_dpos=bc_dpos, bc_pos=bc_pos, aggr_type=model_config['aggr_type'])
 
-    model = ElecParticles(model_config=model_config, device=device, bc_diff=bc_diff)
+    model = ElecParticles(model_config=model_config, device=device, bc_dpos=bc_dpos)
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_20.pt"
 
@@ -3869,7 +3869,7 @@ def data_plot_FIG5sup():
         x0_next = x_list[0][it + 1].clone().detach()
         y0 = y_list[0][it].clone().detach()
 
-        distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+        distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
         t = torch.Tensor([radius ** 2])  # threshold
         adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
 
@@ -3892,7 +3892,7 @@ def data_plot_FIG5sup():
         x_recons.append(x.clone().detach())
         y_recons.append(y.clone().detach())
 
-        rmserr = torch.sqrt(torch.mean(torch.sum(bc_diff(x[:, 1:3] - x0_next[:, 1:3]) ** 2, axis=1)))
+        rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 1:3] - x0_next[:, 1:3]) ** 2, axis=1)))
         rmserr_list.append(rmserr.item())
 
         if (it % step == 0) & (it >= 0):
@@ -3952,7 +3952,7 @@ def data_plot_FIG5():
 
     def bc_pos(X):
         return X
-    def bc_diff(D):
+    def bc_dpos(D):
         return D
 
     for key, value in model_config.items():
@@ -3968,14 +3968,14 @@ def data_plot_FIG5():
             return X
 
 
-        def bc_diff(D):
+        def bc_dpos(D):
             return D
     else:
         def bc_pos(X):
             return torch.remainder(X, 1.0)
 
 
-        def bc_diff(D):
+        def bc_dpos(D):
             return torch.remainder(D - .5, 1.0) - .5
     ratio = 1
 
@@ -4033,7 +4033,7 @@ def data_plot_FIG5():
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     x = x_list[0][0].clone().detach()
 
-    model = Interaction_Particles_extract(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+    model = Interaction_Particles_extract(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
 
     # if best_model == -1:
     #     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
@@ -4225,7 +4225,7 @@ def data_plot_FIG5():
     y0 = y_list[0][it].clone().detach()
 
     x = x_list[0][it].clone().detach()
-    distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+    distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
     t = torch.Tensor([radius ** 2])  # threshold
     adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
     edge_index = adj_t.nonzero().t().contiguous()
@@ -4241,7 +4241,7 @@ def data_plot_FIG5():
     if len(model_config['p']) > 0:
         for n in range(nparticle_types):
             p[n] = torch.tensor(model_config['p'][n])
-    model_B = PDE_B_extract(aggr_type=aggr_type, p=torch.squeeze(p), bc_diff=bc_diff)
+    model_B = PDE_B_extract(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
     psi_output = []
     for n in range(nparticle_types):
         psi_output.append(model.psi(rr, torch.squeeze(p[n])))
@@ -4399,13 +4399,13 @@ def data_plot_FIG6():
         def bc_pos(X):
             return X
 
-        def bc_diff(D):
+        def bc_dpos(D):
             return D
     else:
         def bc_pos(X):
             return torch.remainder(X, 1.0)
 
-        def bc_diff(D):
+        def bc_dpos(D):
             return torch.remainder(D - .5, 1.0) - .5
 
     index_particles = []
@@ -4442,7 +4442,7 @@ def data_plot_FIG6():
     y_mesh_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_mesh_list_0.pt', map_location=device))
     hnorm = torch.load(os.path.join(log_dir, 'hnorm.pt'), map_location=device)
 
-    model = Mesh_Laplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+    model = Mesh_Laplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
     state_dict = torch.load(net, map_location=device)
@@ -4794,12 +4794,12 @@ def data_plot_FIG7():
     if model_config['boundary'] == 'no':  # change this for usual BC
         def bc_pos(X):
             return X
-        def bc_diff(D):
+        def bc_dpos(D):
             return D
     else:
         def bc_pos(X):
             return torch.remainder(X, 1.0)
-        def bc_diff(D):
+        def bc_dpos(D):
             return torch.remainder(D - .5, 1.0) - .5
 
     index_particles = []
@@ -4840,9 +4840,9 @@ def data_plot_FIG7():
     for n in range(nparticle_types):
         c[n] = torch.tensor(model_config['c'][n])
 
-    model_mesh = RD_RPS(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'], bc_diff=bc_diff)
+    model_mesh = RD_RPS(aggr_type=aggr_type, c=torch.squeeze(c), beta=model_config['beta'], bc_dpos=bc_dpos)
 
-    model = Mesh_RPS_extract(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+    model = Mesh_RPS_extract(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
 
     model_learn = Mesh_RPS_learn()
     model_learn = model_learn.to(device)

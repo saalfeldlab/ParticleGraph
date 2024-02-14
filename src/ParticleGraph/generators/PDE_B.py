@@ -22,11 +22,11 @@ class PDE_B(pyg.nn.MessagePassing):
         the acceleration of the Boids (dimension 2)
     """
 
-    def __init__(self, aggr_type=[], p=[], bc_diff=[]):
+    def __init__(self, aggr_type=[], p=[], bc_dpos=[]):
         super(PDE_B, self).__init__(aggr=aggr_type)  # "mean" aggregation.
 
         self.p = p
-        self.bc_diff = bc_diff
+        self.bc_dpos = bc_dpos
 
         self.a1 = 0.5E-5
         self.a2 = 5E-4
@@ -45,11 +45,11 @@ class PDE_B(pyg.nn.MessagePassing):
         return dd_pos
 
     def message(self, pos_i, pos_j, parameters_i, d_pos_i, d_pos_j):
-        distance_squared = torch.sum(self.bc_diff(pos_j - pos_i) ** 2, axis=1)  # distance squared
+        distance_squared = torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, axis=1)  # distance squared
 
-        cohesion = parameters_i[:,0,None] * self.a1 * self.bc_diff(pos_j - pos_i)
-        alignment = parameters_i[:,1,None] * self.a2 * self.bc_diff(d_pos_j - d_pos_i)
-        separation = - parameters_i[:,2,None] * self.a3 * self.bc_diff(pos_j - pos_i) / distance_squared[:, None]
+        cohesion = parameters_i[:,0,None] * self.a1 * self.bc_dpos(pos_j - pos_i)
+        alignment = parameters_i[:,1,None] * self.a2 * self.bc_dpos(d_pos_j - d_pos_i)
+        separation = - parameters_i[:,2,None] * self.a3 * self.bc_dpos(pos_j - pos_i) / distance_squared[:, None]
 
         return (separation + alignment + cohesion)
 

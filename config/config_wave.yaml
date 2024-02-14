@@ -9,6 +9,8 @@ min_radius: 0
 nparticles: 4225 
 nparticle_types: 5
 ninteractions: 5
+nnodes: 10000
+nnode_types: 5
 cluster_method: 'distance_plot'
 nframes: 1000
 sigma: 0.005 
@@ -24,8 +26,8 @@ prediction: '2nd_derivative'
 upgrade_type: 'none'
 p: [0.2,1.4,2.6,3.8,5.0]
 c: [0,0.6,0.8,1,0.4]
-particle_value_map: 'pattern_10.tif'
-particle_type_map: 'pattern_8.tif'
+node_value_map: 'pattern_10.tif'
+node_type_map: 'pattern_8.tif'
 beta: 1E-2 
 nrun: 2
 clamp: 0

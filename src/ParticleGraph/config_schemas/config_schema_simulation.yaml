@@ -19,6 +19,10 @@ data_augmentation:
   type: boolean
   default: True
 
+small_init_batch_size:
+  type: boolean
+  default: True
+
 batch_size:
   type: integer
   default: 1
@@ -46,6 +50,22 @@ fix_cluster_embedding:
 loss_weight:
   type: boolean
   default: False
+
+learning_rate_start:
+  type: number
+  default: 0.001
+
+learning_rate_end:
+  type: number
+  default: 0.005
+
+learning_rate_embedding_start:
+  type: number
+  default: 0.001
+
+learning_rate_embedding_end:
+  type: number
+  default: 0.0005
 
 # Model parameters
 model:
@@ -75,6 +95,10 @@ n_mp_layers:
 aggr_type:
   type: string
   required: True
+
+mesh_aggr_type:
+  type: string
+  default: 'add'
 
 embedding:
   type: integer
@@ -127,6 +151,10 @@ nnodes:
 nnode_types:
   type: integer
   default: 4
+
+has_cell_division:
+  type: boolean
+  default: False
 
 nframes:
   type: integer

@@ -26,7 +26,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         the acceleration of the particles (dimension 2)
     """
 
-    def __init__(self, model_config, device, aggr_type=[], bc_diff=[]):
+    def __init__(self, model_config, device, aggr_type=[], bc_dpos=[]):
 
         super(Interaction_Particles, self).__init__(aggr=aggr_type)  # "Add" aggregation.
 
@@ -47,7 +47,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         self.nlayers_update = model_config['nlayers_update']
         self.hidden_size_update = model_config['hidden_size_update']
         self.sigma = model_config['sigma']
-        self.bc_diff = bc_diff
+        self.bc_dpos = bc_dpos
         self.model = model_config['model']
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
@@ -85,8 +85,8 @@ class Interaction_Particles(pyg.nn.MessagePassing):
 
     def message(self, pos_i, pos_j, d_pos_i, d_pos_j, particle_id_i, particle_id_j):
         # squared distance
-        r = torch.sqrt(torch.sum(self.bc_diff(pos_j - pos_i) ** 2, axis=1)) / self.radius
-        delta_pos = self.bc_diff(pos_j - pos_i) / self.radius
+        r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, axis=1)) / self.radius
+        delta_pos = self.bc_dpos(pos_j - pos_i) / self.radius
         dpos_x_i = d_pos_i[:, 0] / self.vnorm
         dpos_y_i = d_pos_i[:, 1] / self.vnorm
         dpos_x_j = d_pos_j[:, 0] / self.vnorm

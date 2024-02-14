@@ -22,12 +22,12 @@ class RD_RPS(pyg.nn.MessagePassing):
         
     """
 
-    def __init__(self, aggr_type=[], c=[], beta=[], bc_diff=[]):
+    def __init__(self, aggr_type=[], c=[], beta=[], bc_dpos=[]):
         super(RD_RPS, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.c = c
         self.beta = beta
-        self.bc_diff = bc_diff
+        self.bc_dpos = bc_dpos
 
         self.D = 0.05
         self.a = 0.6

@@ -21,12 +21,12 @@ class RD_Gray_Scott(pyg.nn.MessagePassing):
         the first derivative of two scalar fields u and v
     """
 
-    def __init__(self, aggr_type=[], c=[], beta=[], bc_diff=[]):
+    def __init__(self, aggr_type=[], c=[], beta=[], bc_dpos=[]):
         super(RD_Gray_Scott, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.c = c
         self.beta = beta
-        self.bc_diff = bc_diff
+        self.bc_dpos = bc_dpos
 
         self.Du = 5E-2
         self.Dv = 1E-2
