@@ -98,12 +98,6 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
         # initialize particle and graph states
         X1, V1, T1, H1, A1, N1 = init_particles(model_config, device=device)
 
-        # create different initial conditions
-        if scenario == 'scenario A':
-            X1[:, 0] = X1[:, 0] / nparticle_types
-            for n in range(nparticle_types):
-                X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / nparticle_types
-
         if (has_mesh) | (model_config['model'] == 'PDE_O') | (model_config['model'] == 'Maze'):
             x_width = int(np.sqrt(nnodes))
             xs = torch.linspace(1 / x_width / 2, 1 - 1 / x_width / 2, steps=x_width)
