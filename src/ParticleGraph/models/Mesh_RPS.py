@@ -25,7 +25,7 @@ class Mesh_RPS(pyg.nn.MessagePassing):
         the first derivative of a scalar field on a mesh (dimension 3).
     """
 
-    def __init__(self, aggr_type=[], model_config=[], device=[], bc_diff=[]):
+    def __init__(self, aggr_type=[], model_config=[], device=[], bc_dpos=[]):
         super(Mesh_RPS, self).__init__(aggr=aggr_type)  # "Add" aggregation.
 
         self.device = device
@@ -36,7 +36,7 @@ class Mesh_RPS(pyg.nn.MessagePassing):
         self.embedding = model_config['embedding']
         self.nparticles = model_config['nparticles']
         self.ndataset = model_config['nrun'] - 1
-        self.bc_diff = bc_diff
+        self.bc_dpos = bc_dpos
 
         self.lin_phi = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                            hidden_size=self.hidden_size, device=self.device)

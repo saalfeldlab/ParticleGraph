@@ -21,12 +21,12 @@ class RD_FitzHugh_Nagumo(pyg.nn.MessagePassing):
         the first derivative of two scalar fields u and v
     """
 
-    def __init__(self, aggr_type=[], c=[], beta=[], bc_diff=[]):
+    def __init__(self, aggr_type=[], c=[], beta=[], bc_dpos=[]):
         super(RD_FitzHugh_Nagumo, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.c = c
         self.beta = beta
-        self.bc_diff = bc_diff
+        self.bc_dpos = bc_dpos
 
         self.a1 = 5E-3
         self.a2 = -2.8E-3

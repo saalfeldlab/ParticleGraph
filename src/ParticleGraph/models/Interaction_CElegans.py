@@ -11,7 +11,7 @@ class Interaction_CElegans(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, model_config, device, aggr_type=[], bc_diff=[]):
+    def __init__(self, model_config, device, aggr_type=[], bc_dpos=[]):
 
         super(Interaction_CElegans, self).__init__(aggr='mean')  # "Add" aggregation.
 
@@ -31,7 +31,7 @@ class Interaction_CElegans(pyg.nn.MessagePassing):
         self.upgrade_type = model_config['upgrade_type']
         self.nlayers_update = model_config['nlayers_update']
         self.hidden_size_update = model_config['hidden_size_update']
-        self.bc_diff = bc_diff
+        self.bc_dpos = bc_dpos
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                             hidden_size=self.hidden_size, device=self.device)
@@ -64,10 +64,10 @@ class Interaction_CElegans(pyg.nn.MessagePassing):
 
     def message(self, x_i, x_j, time):
 
-        r = torch.sqrt(torch.sum(self.bc_diff(x_i[:, 1:4] - x_j[:, 1:4]) ** 2, axis=1))  # squared distance
+        r = torch.sqrt(torch.sum(self.bc_dpos(x_i[:, 1:4] - x_j[:, 1:4]) ** 2, axis=1))  # squared distance
         r = r[:, None]
 
-        delta_pos = self.bc_diff(x_i[:, 1:4] - x_j[:, 1:4])
+        delta_pos = self.bc_dpos(x_i[:, 1:4] - x_j[:, 1:4])
         embedding = self.a[self.data_id, to_numpy(x_i[:, 0]).astype(int), :]
         in_features = torch.cat((delta_pos, r, x_i[:, 4:7], x_j[:, 4:7], embedding, time[:, None]), dim=-1)
 

@@ -22,12 +22,12 @@ class Laplacian_A(pyg.nn.MessagePassing):
         the Laplacian
     """
 
-    def __init__(self, aggr_type=[], c=[], beta=[], bc_diff=[]):
+    def __init__(self, aggr_type=[], c=[], beta=[], bc_dpos=[]):
         super(Laplacian_A, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.c = c
         self.beta = beta
-        self.bc_diff = bc_diff
+        self.bc_dpos = bc_dpos
 
     def forward(self, data):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr

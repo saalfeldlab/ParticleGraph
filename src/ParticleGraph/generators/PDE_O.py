@@ -24,10 +24,10 @@ class PDE_O(pyg.nn.MessagePassing):
         the speed of the particles (dimension 2)
     """
 
-    def __init__(self, aggr_type=[], bc_diff=[], p=[], beta=[], rr=[]):
+    def __init__(self, aggr_type=[], bc_dpos=[], p=[], beta=[], rr=[]):
         super(PDE_O, self).__init__(aggr=aggr_type)  # "mean" aggregation.
 
-        self.bc_diff = bc_diff
+        self.bc_dpos = bc_dpos
         self.p = p
         self.beta = beta
         self.rr = rr

@@ -19,6 +19,7 @@ import os
 import scipy.spatial
 
 from ParticleGraph.generators.utils import choose_model
+from ParticleGraph.train_utils import choose_training_model
 
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
@@ -82,7 +83,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
         node_value_map = model_config['node_value_map']
         node_type_map = model_config['node_type_map']
 
-    model, model_mesh, bc_pos, bc_diff = choose_model(model_config, device=device)
+    model, model_mesh, bc_pos, bc_dpos = choose_model(model_config, device=device)
 
     torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model.pt')
 
@@ -267,7 +268,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
                                            H1_mesh.clone().detach()), 1)
                 dataset_mesh = data.Data(x=x_mesh, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
             # compute connectivity rule
-            distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+            distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
             t = torch.Tensor([radius ** 2])  # threshold
             adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
             edge_index = adj_t.nonzero().t().contiguous()
@@ -338,7 +339,7 @@ def data_generate(model_config, bVisu=True, bStyle='color', bErase=False, step=5
                 with torch.no_grad():
                     pred = model_mesh(dataset_mesh)
                     H1_mesh[mask_mesh.squeeze(), :] += pred[mask_mesh.squeeze(), :] * delta_t
-                    distance = torch.sum(bc_diff(x[:, None, 1:3] - x_mesh[None, :, 1:3]) ** 2, axis=2)
+                    distance = torch.sum(bc_dpos(x[:, None, 1:3] - x_mesh[None, :, 1:3]) ** 2, axis=2)
                     distance = distance < 0.0005
                     distance = torch.sum(distance, axis=0)
                     H1_mesh = torch.relu(H1_mesh*1.01 - 30*distance[:,None])
@@ -542,13 +543,13 @@ def data_train(model_config):
         def bc_pos(X):
             return X
 
-        def bc_diff(D):
+        def bc_dpos(D):
             return D
     else:
         def bc_pos(X):
             return torch.remainder(X, 1.0)
 
-        def bc_diff(D):
+        def bc_dpos(D):
             return torch.remainder(D - .5, 1.0) - .5
 
     l_dir = os.path.join('.', 'log')
@@ -624,18 +625,8 @@ def data_train(model_config):
 
     print('')
 
-    if model_config['model'] == 'PDE_G':
-        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
-    if model_config['model'] == 'PDE_E':
-        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
-    if (model_config['model'] == 'PDE_A') | (model_config['model'] == 'PDE_B'):
-        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
-    if (model_config['model'] == 'DiffMesh'):
-        model = Mesh_Laplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
-    if (model_config['model'] == 'WaveMesh'):
-        model = Mesh_Laplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
-    if (model_config['model'] == 'RD_RPS_Mesh'):
-        model = Mesh_RPS(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+    model, model_mesh, bc_pos, bc_dpos = choose_training_model(model_config, device)
+
 
     # net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_6.pt"
     # state_dict = torch.load(net,map_location=device)
@@ -745,7 +736,7 @@ def data_train(model_config):
                     else:
                         y_batch = torch.cat((y_batch, y), axis=0)
                 else:
-                    distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+                    distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
                     adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
                     t = torch.Tensor([radius ** 2])
                     edges = adj_t.nonzero().t().contiguous()
@@ -1115,13 +1106,13 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         def bc_pos(X):
             return X
 
-        def bc_diff(D):
+        def bc_dpos(D):
             return D
     else:
         def bc_pos(X):
             return torch.remainder(X, 1.0)
 
-        def bc_diff(D):
+        def bc_dpos(D):
             return torch.remainder(D - .5, 1.0) - .5
 
     l_dir = os.path.join('.', 'log')
@@ -1134,9 +1125,9 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
     if (model_config['model'] == 'PDE_A') | (model_config['model'] == 'PDE_B'):
-        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
     if model_config['model'] == 'PDE_G':
-        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
         p_mass = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         p_mass = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
         T1 = torch.zeros(int(nparticles / nparticle_types), device=device)
@@ -1144,7 +1135,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
             T1 = torch.cat((T1, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
         T1 = torch.concatenate((T1[:, None], T1[:, None]), 1)
     if model_config['model'] == 'PDE_E':
-        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+        model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
         p_elec = torch.ones(nparticle_types, 1, device=device) + torch.rand(nparticle_types, 1, device=device)
         for n in range(nparticle_types):
             p_elec[n] = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p_{n}.pt')
@@ -1163,9 +1154,9 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
         for n in range(nparticle_types):
             c[n] = torch.tensor(model_config['c'][n])
         if (model_config['model'] == 'WaveMesh'):
-            model_mesh = Mesh_Laplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+            model_mesh = Mesh_Laplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
         if (model_config['model'] == 'RD_RPS_Mesh'):
-            model_mesh = Mesh_RPS(aggr_type=aggr_type, model_config=model_config, device=device, bc_diff=bc_diff)
+            model_mesh = Mesh_RPS(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
 
     files = glob.glob(f"./{log_dir}/tmp_recons/*")
     for f in files:
@@ -1314,7 +1305,7 @@ def data_test(model_config, bVisu=False, bPrint=True, bDetails=False, index_part
                 pred = model_mesh(dataset_mesh, data_id=0)
                 x[mask_mesh.squeeze(), 6:9] += pred[mask_mesh.squeeze()] * hnorm * delta_t
         else:
-            distance = torch.sum(bc_diff(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
+            distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, axis=2)
             t = torch.Tensor([radius ** 2])  # threshold
             adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
 

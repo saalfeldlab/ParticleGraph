@@ -23,14 +23,14 @@ class PDE_embedding(pyg.nn.MessagePassing):
         the displacements of the particles (dimension 2)
     """
 
-    def __init__(self, aggr_type=[], p=[], delta_t=[], prediction=[], sigma=[], bc_diff=[], device=[]):
+    def __init__(self, aggr_type=[], p=[], delta_t=[], prediction=[], sigma=[], bc_dpos=[], device=[]):
         super(PDE_embedding, self).__init__(aggr='mean')  # "mean" aggregation.
 
         self.p = p
         self.delta_t = delta_t
         self.prediction = prediction
         self.sigma = torch.tensor([sigma], device=device)
-        self.bc_diff = bc_diff
+        self.bc_dpos = bc_dpos
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
