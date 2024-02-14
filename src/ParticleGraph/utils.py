@@ -64,6 +64,22 @@ def norm_acceleration(yy, device):
     return torch.tensor([ax01, ax99, ay01, ay99, ax, ay], device=device)
 
 
+def choose_boundary_values(bc_name):
+    def identity(x):
+        return x
+
+    def periodic(x):
+        return torch.remainder(x, 1.0)  # in [0, 1)
+
+    def shifted_periodic(x):
+        return torch.remainder(x - 0.5, 1.0) - 0.5  # in [-0.5, 0.5)
+
+    if bc_name == 'no':
+        return identity, identity
+    else:
+        return periodic, shifted_periodic
+
+
 class CustomColorMap:
     def __init__(self, model_config):
         self.model_config = model_config

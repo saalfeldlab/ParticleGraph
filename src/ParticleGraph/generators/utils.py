@@ -3,6 +3,7 @@ import numpy as np
 
 from ParticleGraph.generators import PDE_A, PDE_B, PDE_E, PDE_G, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, \
     Laplacian_A, PDE_O
+from ParticleGraph.utils import choose_boundary_values
 
 
 def choose_model(model_config, device):
@@ -13,12 +14,7 @@ def choose_model(model_config, device):
     n_node_types = model_config['nnode_types']
 
     # create boundary functions for position and velocity respectively
-    if model_config['boundary'] == 'no':  # change this for usual BC
-        bc_pos = lambda x: x
-        bc_dpos = lambda x: x
-    else:
-        bc_pos = lambda x: torch.remainder(x, 1.0)
-        bc_dpos = lambda x: torch.remainder(x - 0.5, 1.0) - 0.5
+    bc_pos, bc_dpos = choose_boundary_values(model_config['boundary'])
 
     if has_mesh:
         p = initialize_random_values(n_particle_types, device)
