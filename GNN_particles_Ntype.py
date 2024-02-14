@@ -18,7 +18,7 @@ from tqdm import trange
 import os
 import scipy.spatial
 
-from ParticleGraph.fitting_models import func_lin
+from ParticleGraph.fitting_models import linear_model
 
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
@@ -1223,7 +1223,7 @@ def data_train(model_config):
                         r = torch.tensor(np.linspace(-150, 150, 100)).to(device)
                         in_features = torch.cat((r[:, None], embedding), dim=1)
                         h = model.lin_phi(in_features.float())
-                        popt, pcov = curve_fit(func_lin, to_numpy(r.squeeze()), to_numpy(h.squeeze()))
+                        popt, pcov = curve_fit(linear_model, to_numpy(r.squeeze()), to_numpy(h.squeeze()))
                         popt_list.append(popt)
                         h = h[:, 0]
                     f_list.append(h)

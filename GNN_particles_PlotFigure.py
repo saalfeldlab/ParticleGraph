@@ -4,7 +4,7 @@ import os
 from ParticleGraph.MLP import MLP
 import imageio
 
-from ParticleGraph.fitting_models import func_pow, func_boids, func_RD1, func_RD2, func_RD3
+from ParticleGraph.fitting_models import power_model, boids_model, reaction_diffusion_model
 
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
@@ -2760,7 +2760,7 @@ def data_plot_FIG3():
     p = np.linspace(0.5, 5, nparticle_types)
     popt_list = []
     for n in range(nparticle_types):
-        popt, pcov = curve_fit(func_pow, to_numpy(rr), to_numpy(plot_list[n]))
+        popt, pcov = curve_fit(power_model, to_numpy(rr), to_numpy(plot_list[n]))
         popt_list.append(popt)
     popt_list = np.array(popt_list)
 
@@ -2769,8 +2769,8 @@ def data_plot_FIG3():
     plt.text(-0.25, 1.1, f'g)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     x_data = p
     y_data = popt_list[:, 0]
-    lin_fit, lin_fitv = curve_fit(func_lin, x_data, y_data)
-    plt.plot(p, func_lin(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
+    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+    plt.plot(p, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
     plt.scatter(p, popt_list[:, 0], color='k',s=20)
     plt.title(r'Reconstructed masses', fontsize=12)
     plt.xlabel(r'True mass $[a.u.]$', fontsize=12)
@@ -2778,7 +2778,7 @@ def data_plot_FIG3():
     plt.xlim([0, 5.5])
     plt.ylim([0, 5.5])
     plt.text(0.5, 5, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
-    residuals = y_data - func_lin(x_data, *lin_fit)
+    residuals = y_data - linear_model(x_data, *lin_fit)
     ss_res = np.sum(residuals ** 2)
     ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
     r_squared = 1 - (ss_res / ss_tot)
@@ -3106,13 +3106,13 @@ def data_plot_FIG3_continous():
     p = np.linspace(0.5, 5, nparticles)
     popt_list = []
     for n in range(nparticles):
-        popt, pcov = curve_fit(func_pow, to_numpy(rr), to_numpy(plot_list[n]))
+        popt, pcov = curve_fit(power_model, to_numpy(rr), to_numpy(plot_list[n]))
         popt_list.append(popt)
     popt_list = np.array(popt_list)
 
     x_data = p
     y_data = np.clip(popt_list[:, 0],0, 5)
-    lin_fit, lin_fitv = curve_fit(func_lin, x_data, y_data)
+    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
     plt.scatter(p, popt_list[:, 0], color=colors, s=1)
     plt.xlabel(r'True mass $[a.u.]$', fontsize=12)
     plt.ylabel(r'Predicted mass $[a.u.]$', fontsize=12)
@@ -3120,7 +3120,7 @@ def data_plot_FIG3_continous():
     plt.ylim([0, 5.5])
     plt.text(0.5, 4.5, f"N: {nparticles}", fontsize=12)
     plt.text(0.5, 4.0, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
-    residuals = y_data - func_lin(x_data, *lin_fit)
+    residuals = y_data - linear_model(x_data, *lin_fit)
     ss_res = np.sum(residuals ** 2)
     ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
     r_squared = 1 - (ss_res / ss_tot)
@@ -3468,12 +3468,12 @@ def data_plot_FIG4():
     for m in range(nparticle_types):
         for n in range(nparticle_types):
             if plot_list_pairwise[nn][10] < 0:
-                popt, pocv = curve_fit(func_pow, to_numpy(rr),
+                popt, pocv = curve_fit(power_model, to_numpy(rr),
                                        -to_numpy(plot_list_pairwise[nn]), bounds=([0, 1.5], [5., 2.5]))
                 popt[0] = -popt[0]
             else:
-                popt, pocv = curve_fit(func_pow, to_numpy(rr),
-                                           to_numpy(plot_list_pairwise[nn]), bounds=([0, 1.5], [5., 2.5]))
+                popt, pocv = curve_fit(power_model, to_numpy(rr),
+                                       to_numpy(plot_list_pairwise[nn]), bounds=([0, 1.5], [5., 2.5]))
             nn += 1
             popt_list.append(popt)
             ptrue_list.append(-p[n] * p[m])
@@ -3486,12 +3486,12 @@ def data_plot_FIG4():
     plt.text(-0.25, 1.1, f'g)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     x_data = ptrue_list
     y_data = popt_list[:, 0]
-    lin_fit, lin_fitv = curve_fit(func_lin, x_data, y_data)
-    plt.plot(ptrue_list, func_lin(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
+    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+    plt.plot(ptrue_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
     plt.scatter(ptrue_list, popt_list[:, 0], color='k',s=20)
     plt.ylabel(r'Predicted $q_i q_j$', fontsize=12)
     plt.text(1, 1.8, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
-    residuals = y_data - func_lin(x_data, *lin_fit)
+    residuals = y_data - linear_model(x_data, *lin_fit)
     ss_res = np.sum(residuals ** 2)
     ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
     r_squared = 1 - (ss_res / ss_tot)
@@ -4289,7 +4289,7 @@ def data_plot_FIG5():
         rdiff = to_numpy(r[pos])
         x_data = np.concatenate((xdiff,vdiff,rdiff[:,None]),axis=1)
         y_data = to_numpy(torch.norm(lin_edge_out[pos, :], dim=1))
-        lin_fit, lin_fitv = curve_fit(func_boids, x_data, y_data, method='dogbox')
+        lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox')
         cohesion_fit[n] = lin_fit[0]
         alignment_fit[n] = lin_fit[1]
         separation_fit[n] = lin_fit[2]
@@ -4304,7 +4304,7 @@ def data_plot_FIG5():
         rdiff = to_numpy(r[pos])
         x_data = np.concatenate((xdiff,vdiff,rdiff[:,None]),axis=1)
         y_data = to_numpy(torch.norm(lin_edge_out[pos, :], dim=1))
-        lin_fit, lin_fitv = curve_fit(func_boids, x_data, y_data, method='dogbox', p0=p00)
+        lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox', p0=p00)
         cohesion_fit[n] = lin_fit[0]
         alignment_fit[n] = lin_fit[1]
         separation_fit[n] = lin_fit[2]
@@ -4315,14 +4315,14 @@ def data_plot_FIG5():
     plt.text(-0.25, 1.1, f'g)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
     x_data = np.abs(to_numpy(p[:,0])*0.5E-5)
     y_data = np.abs(cohesion_fit)
-    lin_fit, lin_fitv = curve_fit(func_lin, x_data, y_data)
-    plt.plot(x_data, func_lin(x_data, lin_fit[0],lin_fit[1]), color='r', linewidth=0.5)
+    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+    plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
     for n in range(nparticle_types):
         plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=20)
     plt.xlabel(r'True cohesion coeff. $[a.u.]$', fontsize=12)
     plt.ylabel(r'Predicted cohesion coeff. $[a.u.]$', fontsize=12)
     plt.text(4E-5, 4.5E-4, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
-    residuals = y_data - func_lin(x_data, *lin_fit)
+    residuals = y_data - linear_model(x_data, *lin_fit)
     ss_res = np.sum(residuals ** 2)
     ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
     r_squared = 1 - (ss_res / ss_tot)
@@ -4333,14 +4333,14 @@ def data_plot_FIG5():
     plt.text(-0.25, 1.1, f'h)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
     x_data = np.abs(to_numpy(p[:,1])*5E-4)
     y_data = alignment_fit
-    lin_fit, lin_fitv = curve_fit(func_lin, x_data, y_data)
-    plt.plot(x_data, func_lin(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
+    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+    plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
     for n in range(nparticle_types):
         plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=20)
     plt.xlabel(r'True alignment coeff. $[a.u.]$', fontsize=12)
     plt.ylabel(r'Predicted alignment coeff. $[a.u.]$', fontsize=12)
     plt.text(5e-3, 0.046, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
-    residuals = y_data - func_lin(x_data, *lin_fit)
+    residuals = y_data - linear_model(x_data, *lin_fit)
     ss_res = np.sum(residuals ** 2)
     ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
     r_squared = 1 - (ss_res / ss_tot)
@@ -4351,14 +4351,14 @@ def data_plot_FIG5():
     plt.text(-0.25, 1.1, f'i)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
     x_data = np.abs(to_numpy(p[:,2])*1E-8)
     y_data = separation_fit
-    lin_fit, lin_fitv = curve_fit(func_lin, x_data, y_data)
-    plt.plot(x_data, func_lin(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
+    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+    plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
     for n in range(nparticle_types):
         plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=20)
     plt.xlabel(r'True separation coeff. $[a.u.]$', fontsize=12)
     plt.ylabel(r'Predicted separation coeff. $[a.u.]$', fontsize=12)
     plt.text(5e-8, 4.4E-7, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
-    residuals = y_data - func_lin(x_data, *lin_fit)
+    residuals = y_data - linear_model(x_data, *lin_fit)
     ss_res = np.sum(residuals ** 2)
     ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
     r_squared = 1 - (ss_res / ss_tot)
@@ -4570,7 +4570,7 @@ def data_plot_FIG6():
             h = model.lin_phi(in_features.float())
             h = h[:, 0]
             f_list.append(h)
-            popt, pcov = curve_fit(func_lin, to_numpy(r), to_numpy(h))
+            popt, pcov = curve_fit(linear_model, to_numpy(r), to_numpy(h))
             popt_list.append(popt)
             if n%48 == 0:
                 type = to_numpy(T1[n])
@@ -4680,7 +4680,7 @@ def data_plot_FIG6():
         f_list.append(h)
         plt.plot(to_numpy(u), to_numpy(h) * to_numpy(hnorm) *100, linewidth=1, c=cmap.color(n))
 
-        popt, pcov = curve_fit(func_lin, to_numpy(u), to_numpy(h) * to_numpy(hnorm) *100)
+        popt, pcov = curve_fit(linear_model, to_numpy(u), to_numpy(h) * to_numpy(hnorm) * 100)
         popt_list.append(popt)
     popt_list = np.array(popt_list)
         
@@ -4695,8 +4695,8 @@ def data_plot_FIG6():
     plt.title(r'Reconstructed viscosity', fontsize=12)
     x_data = np.array(model_config['c'])
     y_data = popt_list[:,0]
-    lin_fit, lin_fitv = curve_fit(func_lin, x_data, y_data)
-    plt.plot(x_data, func_lin(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
+    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+    plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
     for n in range(nparticle_types):
         plt.scatter(x_data[n], y_data[n], color=cmap.color(n))
     plt.xlabel(r'True viscosity $[a.u.]$', fontsize=12)
@@ -4704,7 +4704,7 @@ def data_plot_FIG6():
     plt.xlim([-0.1, 1.1])
     plt.ylim([-0.1, 1.1])
     plt.text(0, 1.0, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
-    residuals = y_data - func_lin(x_data, *lin_fit)
+    residuals = y_data - linear_model(x_data, *lin_fit)
     ss_res = np.sum(residuals ** 2)
     ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
     r_squared = 1 - (ss_res / ss_tot)
@@ -5166,11 +5166,13 @@ def data_plot_FIG7():
         x_data = np.concatenate((laplacian_u[:,None],laplacian_v[:,None],laplacian_w[:,None],u[:,None],v[:,None],w[:,None]), axis=1)
         y_data1 = to_numpy(y[pos,0:1])
         y_data2 = to_numpy(increment[pos,0:1])
-        lin_fit1, lin_fitv = curve_fit(func_RD1, np.squeeze(x_data), np.squeeze(y_data1), method='dogbox')
-        lin_fit2, lin_fitv = curve_fit(func_RD1, np.squeeze(x_data), np.squeeze(y_data2), method='dogbox')
+        fitting_model = reaction_diffusion_model('u')
+        lin_fit1, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data1), method='dogbox')
+        lin_fit2, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data2), method='dogbox')
         
-        yy1 = func_RD1(x_data, lin_fit1[0], lin_fit1[1], lin_fit1[2], lin_fit1[3], lin_fit1[4], lin_fit1[5], lin_fit1[6], lin_fit1[7], lin_fit1[8], lin_fit1[9])
-        yy2 = func_RD2(x_data, lin_fit2[0], lin_fit2[1], lin_fit2[2], lin_fit2[3], lin_fit2[4], lin_fit2[5], lin_fit2[6], lin_fit2[7], lin_fit2[8], lin_fit2[9])
+        # yy1 = func_RD1(x_data, lin_fit1[0], lin_fit1[1], lin_fit1[2], lin_fit1[3], lin_fit1[4], lin_fit1[5], lin_fit1[6], lin_fit1[7], lin_fit1[8], lin_fit1[9])
+        # yy2 = func_RD2(x_data, lin_fit2[0], lin_fit2[1], lin_fit2[2], lin_fit2[3], lin_fit2[4], lin_fit2[5], lin_fit2[6], lin_fit2[7], lin_fit2[8], lin_fit2[9])
+        # yy3 = func_RD3(x_data, lin_fit3[n,0], lin_fit3[n,1], lin_fit3[n,2], lin_fit3[n,3], lin_fit3[n,4], lin_fit3[n,5], lin_fit3[n,6], lin_fit3[n,7], lin_fit3[n,8], lin_fit3[n,9])
 
         plt.scatter(y_data2, y_data1, c='k', s=1)
         plt.scatter(y_data2,yy2,c='k',s=1)
@@ -5178,25 +5180,11 @@ def data_plot_FIG7():
         plt.xlim([-0.25, 0.25])
         plt.ylim([-0.25, 0.25])
         
-        
-        # 
-        # fig = plt.figure(figsize=(9.5, 9))
-        # plt.scatter(y_data2,y_data1)
-        # 
-        # fig = plt.figure(figsize=(9.5, 9))
-        # plt.scatter(y_data2, y_data1,c='r',s=1)
-        # 
-        # plt.ion()
         y_data2 = to_numpy(y[pos,1:2])
-        lin_fit2[n], lin_fitv2 = curve_fit(func_RD2, np.squeeze(x_data), np.squeeze(y_data2), method='dogbox')
+        lin_fit2[n], lin_fitv2 = curve_fit(reaction_diffusion_model('v'), np.squeeze(x_data), np.squeeze(y_data2), method='dogbox')
         y_data3 = to_numpy(y[pos,2:3])
-        lin_fit3[n], lin_fitv3 = curve_fit(func_RD3, np.squeeze(x_data), np.squeeze(y_data3))
+        lin_fit3[n], lin_fitv3 = curve_fit(reaction_diffusion_model('w'), np.squeeze(x_data), np.squeeze(y_data3))
 
-
-        # yy3 = func_RD3(x_data, lin_fit3[n,0], lin_fit3[n,1], lin_fit3[n,2], lin_fit3[n,3], lin_fit3[n,4], lin_fit3[n,5],
-        #                lin_fit3[n,6], lin_fit3[n,7], lin_fit3[n,8], lin_fit3[n,9])
-
-    #     du =  a * uu + b * uv + c * uw + d * vv + e * vw + f * ww + g * u + h * v + i * w + cc *c * 0.05 * laplacian_u
 
     coeff1 = np.round(np.mean(lin_fit1, axis=0),2)
     coeff2 = np.round(np.mean(lin_fit2, axis=0),2)
@@ -5209,8 +5197,8 @@ def data_plot_FIG7():
     y_data = x_data*0
     for n in range(nparticle_types):
         y_data[n]= (lin_fit1[n,9]+lin_fit2[n,9]+lin_fit3[n,9])/3
-    lin_fit, lin_fitv = curve_fit(func_lin, x_data, y_data)
-    plt.plot(x_data, func_lin(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
+    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+    plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
 
     for n in range(nparticle_types):
         plt.scatter(x_data[n], y_data[n], color=cmap.color(n),s=20)
@@ -5220,7 +5208,7 @@ def data_plot_FIG7():
     plt.xlim([-0.1, 1.1])
     plt.ylim([-0.1, 1.1])
     plt.text(0, 1.0, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
-    residuals = y_data - func_lin(x_data, *lin_fit)
+    residuals = y_data - linear_model(x_data, *lin_fit)
     ss_res = np.sum(residuals ** 2)
     ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
     r_squared = 1 - (ss_res / ss_tot)
