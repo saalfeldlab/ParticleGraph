@@ -152,6 +152,10 @@ nnode_types:
   type: integer
   default: 4
 
+has_cell_division:
+  type: boolean
+  default: False
+
 nframes:
   type: integer
   default: 1000
