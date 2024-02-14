@@ -1902,9 +1902,7 @@ if __name__ == '__main__':
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
-    # config_manager = create_config_manager(config_type='simulation')
-
-    config_manager = ConfigManager(config_schema='./config_schemas/config_schema_simulation.yaml')
+    config_manager = create_config_manager(config_type='simulation')
     config_list = ['config_maze'] # ['config_RD_RPS2c'] # ['config_wave_HR3d'] #
 
 
