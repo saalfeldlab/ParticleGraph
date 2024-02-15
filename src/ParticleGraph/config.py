@@ -15,7 +15,7 @@ from ParticleGraph.config_manager import ConfigManager
 class SimulationConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     
-    params: list[float]
+    params: list[list[float]]
     min_radius: Annotated[float, Field(ge=0)] = 0
     max_radius: Annotated[float, Field(gt=0)]
     diffusion_coefficients: Optional[list[float]]
