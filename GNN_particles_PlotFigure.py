@@ -444,7 +444,7 @@ def data_plot_FIG2():
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     x = x_list[0][0].clone().detach()
 
-    model = Interaction_Particles(model_config=model_config, device=device, aggr_type = model_config['aggr_type'], bc_dpos=bc_dpos)
+    model = Interaction_Particles(config=model_config, device=device, aggr_type = model_config['aggr_type'], bc_dpos=bc_dpos)
     print(f'Training Interaction_Particles')
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
@@ -923,7 +923,7 @@ def data_plot_FIG2sup():
     for n in range(model_config['nparticle_types']):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
-    model = Interaction_Particles(model_config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_dpos=bc_dpos)
+    model = Interaction_Particles(config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_dpos=bc_dpos)
 
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
@@ -1064,7 +1064,7 @@ def data_plot_FIG2sup():
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
     NGraphs = int(len(graph_files))
 
-    model = Interaction_Particles(model_config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_dpos=bc_dpos)
+    model = Interaction_Particles(config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_dpos=bc_dpos)
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_20.pt"
 
@@ -1159,7 +1159,7 @@ def data_plot_FIG2sup():
     nframes = 250
     ratio = 2
     data_generate(model_config, visualize=False, style='color', alpha=0.2, erase=True, bLoad_p=False, step=model_config['nframes'] // 4, ratio = ratio, device=device)
-    model = Interaction_Particles(model_config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_dpos=bc_dpos)
+    model = Interaction_Particles(config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_dpos=bc_dpos)
 
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
@@ -1498,7 +1498,7 @@ def data_plot_FIG3sup():
     y_stat = np.array(y_stat)
 
 
-    model = Interaction_Particles(model_config=model_config, device=device, aggr_type = model_config['aggr_type'], bc_dpos=bc_dpos)
+    model = Interaction_Particles(config=model_config, device=device, aggr_type = model_config['aggr_type'], bc_dpos=bc_dpos)
     print(f'Training Interaction_Particles')
 
     # if best_model == -1:
@@ -1971,7 +1971,7 @@ def data_plot_FIG4sup():
     for n in range(model_config['nparticle_types']):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
-    model = Interaction_Particles(model_config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_dpos=bc_dpos)
+    model = Interaction_Particles(config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_dpos=bc_dpos)
 
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
@@ -2112,7 +2112,7 @@ def data_plot_FIG4sup():
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
     NGraphs = int(len(graph_files))
 
-    model = Interaction_Particles(model_config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_dpos=bc_dpos)
+    model = Interaction_Particles(config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_dpos=bc_dpos)
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_20.pt"
 
@@ -2207,7 +2207,7 @@ def data_plot_FIG4sup():
     nframes = 500
     ratio = 2
     data_generate(model_config, visualize=False, style='color', alpha=0.2, erase=True, bLoad_p=False, step=model_config['nframes'] // 4, ratio = ratio, device=device)
-    model = Interaction_Particles(model_config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_dpos=bc_dpos)
+    model = Interaction_Particles(config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_dpos=bc_dpos)
 
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
@@ -2517,7 +2517,7 @@ def data_plot_FIG3():
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     x = x_list[0][0].clone().detach()
 
-    model = Interaction_Particles(model_config=model_config, device=device, bc_dpos=bc_dpos, aggr_type=aggr_type)
+    model = Interaction_Particles(config=model_config, device=device, bc_dpos=bc_dpos, aggr_type=aggr_type)
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
     state_dict = torch.load(net, map_location=device)
@@ -2944,7 +2944,7 @@ def data_plot_FIG3_continous():
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     x = x_list[0][0].clone().detach()
 
-    model = Interaction_Particles(model_config=model_config, device=device, bc_dpos=bc_dpos, aggr_type=aggr_type)
+    model = Interaction_Particles(config=model_config, device=device, bc_dpos=bc_dpos, aggr_type=aggr_type)
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
     state_dict = torch.load(net, map_location=device)
@@ -3224,7 +3224,7 @@ def data_plot_FIG4():
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
 
-    model = Interaction_Particles(model_config=model_config, device=device,bc_dpos = bc_dpos, aggr_type=aggr_type)
+    model = Interaction_Particles(config=model_config, device=device, bc_dpos = bc_dpos, aggr_type=aggr_type)
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
     state_dict = torch.load(net, map_location=device)

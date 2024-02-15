@@ -13,11 +13,11 @@ def choose_training_model(model_config, device):
 
     match model_name:
         case 'PDE_A' | 'PDE_B':
-            model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
+            model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
         case 'PDE_E':
-            model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
+            model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
         case 'PDE_G':
-            model = Interaction_Particles(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
+            model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
         case 'DiffMesh':
             model = Mesh_Laplacian(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
         case 'WaveMesh':

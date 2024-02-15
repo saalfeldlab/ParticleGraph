@@ -26,40 +26,43 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         the acceleration of the particles (dimension 2)
     """
 
-    def __init__(self, model_config, device, aggr_type=[], bc_dpos=[]):
+    def __init__(self, config, device, aggr_type=None, bc_dpos=None):
 
         super(Interaction_Particles, self).__init__(aggr=aggr_type)  # "Add" aggregation.
 
-        self.device = device
-        self.input_size = model_config['input_size']
-        self.output_size = model_config['output_size']
-        self.hidden_size = model_config['hidden_size']
-        self.nlayers = model_config['n_mp_layers']
-        self.nparticles = model_config['nparticles']
-        self.radius = model_config['radius']
-        self.data_augmentation = model_config['data_augmentation']
-        self.noise_level = model_config['noise_level']
-        self.embedding = model_config['embedding']
-        self.ndataset = model_config['nrun'] - 1
-        self.upgrade_type = model_config['upgrade_type']
-        self.prediction = model_config['prediction']
-        self.upgrade_type = model_config['upgrade_type']
-        self.nlayers_update = model_config['nlayers_update']
-        self.hidden_size_update = model_config['hidden_size_update']
-        self.sigma = model_config['sigma']
-        self.bc_dpos = bc_dpos
-        self.model = model_config['model']
+        simulation_config = config.simulation
+        model_config = config.graph_model
+        train_config = config.training
 
-        self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
-                            hidden_size=self.hidden_size, device=self.device)
+        self.device = device
+        self.input_size = simulation_config.input_size
+        self.output_size = simulation_config.output_size
+        self.hidden_dim = simulation_config.hidden_dim
+        self.n_layers = simulation_config.n_mp_layers
+        self.n_particles = model_config.n_particles
+        self.max_radius = model_config.max_radius
+        self.data_augmentation = train_config.data_augmentation
+        self.noise_level = simulation_config.noise_level
+        self.embedding_dim = model_config.embedding_dim
+        self.n_dataset = train_config.n_runs - 1
+        self.prediction = model_config.prediction
+        self.update_type = model_config.update_type
+        self.n_layers_update = model_config.n_layers_update
+        self.hidden_dim_update = model_config.hidden_dim_update
+        self.sigma = simulation_config.sigma
+        self.model = model_config.name
+        self.bc_dpos = bc_dpos
+
+        self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
+                            hidden_size=self.hidden_dim, device=self.device)
 
         self.a = nn.Parameter(
-            torch.tensor(np.ones((self.ndataset, int(self.nparticles), self.embedding)), device=self.device,
+            torch.tensor(np.ones((self.n_dataset, int(self.n_particles), self.embedding_dim)), device=self.device,
                          requires_grad=True, dtype=torch.float32))
 
-        if self.upgrade_type != 'none':
-            self.lin_update = MLP(input_size=self.output_size + self.embedding + 2, output_size=self.output_size,
-                                  nlayers=self.nlayers_update, hidden_size=self.hidden_size_update, device=self.device)
+        if self.update_type != 'none':
+            self.lin_update = MLP(input_size=self.output_size + self.embedding_dim + 2, output_size=self.output_size,
+                                  nlayers=self.n_layers_update, hidden_size=self.hidden_dim_update, device=self.device)
 
     def forward(self, data, data_id, training, vnorm, phi):
 
@@ -77,7 +80,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
 
         pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id)
 
-        if self.upgrade_type == 'linear':
+        if self.update_type == 'linear':
             embedding = self.a[self.data_id, particle_id, :]
             pred = self.lin_update(torch.cat((pred, x[:, 3:5], embedding), dim=-1))
 
@@ -85,14 +88,14 @@ class Interaction_Particles(pyg.nn.MessagePassing):
 
     def message(self, pos_i, pos_j, d_pos_i, d_pos_j, particle_id_i, particle_id_j):
         # squared distance
-        r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, axis=1)) / self.radius
-        delta_pos = self.bc_dpos(pos_j - pos_i) / self.radius
+        r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
+        delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
         dpos_x_i = d_pos_i[:, 0] / self.vnorm
         dpos_y_i = d_pos_i[:, 1] / self.vnorm
         dpos_x_j = d_pos_j[:, 0] / self.vnorm
         dpos_y_j = d_pos_j[:, 1] / self.vnorm
 
-        if (self.data_augmentation) & (self.training == True):
+        if self.data_augmentation & (self.training == True):
             new_delta_pos_x = self.cos_phi * delta_pos[:, 0] + self.sin_phi * delta_pos[:, 1]
             new_delta_pos_y = -self.sin_phi * delta_pos[:, 0] + self.cos_phi * delta_pos[:, 1]
             delta_pos[:, 0] = new_delta_pos_x
@@ -112,15 +115,17 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         if self.model == 'PDE_A':
             in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
         if self.model == 'PDE_B':
-            in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None], dpos_y_j[:, None], embedding_i), dim=-1)
+            in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
+                                     dpos_y_j[:, None], embedding_i), dim=-1)
         if self.model == 'PDE_G':
             in_features = torch.cat(
-            (delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None], dpos_y_j[:, None], embedding_j),
-            dim=-1)
+                (delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None], dpos_y_j[:, None],
+                 embedding_j),
+                dim=-1)
         if self.model == 'PDE_E':
             in_features = torch.cat(
-            (delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None], dpos_y_j[:, None], embedding_i, embedding_j), dim=-1)
-
+                (delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None], dpos_y_j[:, None],
+                 embedding_i, embedding_j), dim=-1)
 
         out = self.lin_edge(in_features)
 
@@ -145,4 +150,3 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         if self.model == 'PDE_E':
             acc = p1 * p2 / r ** 2
             return -acc  # Elec particles
-
