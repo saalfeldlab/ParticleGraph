@@ -27,7 +27,7 @@ class Interaction_Particles_extract(pyg.nn.MessagePassing):
 
         train_config = config.training
         simulation_config = config.simulation
-        model_config = config.model_config
+        model_config = config.graph_model
 
         self.device = device
         self.input_size = train_config.input_size
@@ -390,7 +390,7 @@ def data_plot_FIG2():
             value = float(value)
             model_config[key] = value
 
-    cmap = CustomColorMap(model_config=model_config)
+    cmap = CustomColorMap(config=model_config)
     aggr_type = model_config['aggr_type']
 
     if model_config['boundary'] == 'no':  # change this for usual BC
@@ -855,7 +855,7 @@ def data_plot_FIG2sup():
             value = float(value)
             model_config[key] = value
 
-    cmap = CustomColorMap(model_config=model_config)
+    cmap = CustomColorMap(config=model_config)
     aggr_type = model_config['aggr_type']
     if model_config['boundary'] == 'no':  # change this for usual BC
         def bc_pos(X):
@@ -1409,7 +1409,7 @@ def data_plot_FIG3sup():
             value = float(value)
             model_config[key] = value
 
-    cmap = CustomColorMap(model_config=model_config)
+    cmap = CustomColorMap(config=model_config)
     aggr_type = model_config['aggr_type']
 
     if model_config['boundary'] == 'no':  # change this for usual BC
@@ -1903,7 +1903,7 @@ def data_plot_FIG4sup():
             value = float(value)
             model_config[key] = value
 
-    cmap = CustomColorMap(model_config=model_config)
+    cmap = CustomColorMap(config=model_config)
     aggr_type = model_config['aggr_type']
     if model_config['boundary'] == 'no':  # change this for usual BC
         def bc_pos(X):
@@ -2463,7 +2463,7 @@ def data_plot_FIG3():
             value = float(value)
             model_config[key] = value
 
-    cmap = CustomColorMap(model_config=model_config)
+    cmap = CustomColorMap(config=model_config)
     aggr_type = model_config['aggr_type']
     if model_config['boundary'] == 'no':  # change this for usual BC
         def bc_pos(X):
@@ -2890,7 +2890,7 @@ def data_plot_FIG3_continous():
             value = float(value)
             model_config[key] = value
 
-    cmap = CustomColorMap(model_config=model_config)
+    cmap = CustomColorMap(config=model_config)
     aggr_type = model_config['aggr_type']
     if model_config['boundary'] == 'no':  # change this for usual BC
         def bc_pos(X):
@@ -3172,7 +3172,7 @@ def data_plot_FIG4():
             value = float(value)
             model_config[key] = value
 
-    cmap = CustomColorMap(model_config=model_config)
+    cmap = CustomColorMap(config=model_config)
     aggr_type = model_config['aggr_type']
     if model_config['boundary'] == 'no':  # change this for usual BC
         def bc_pos(X):
@@ -3591,7 +3591,7 @@ def data_plot_FIG5sup():
             value = float(value)
             model_config[key] = value
 
-    cmap = CustomColorMap(model_config=model_config)
+    cmap = CustomColorMap(config=model_config)
     aggr_type = model_config['aggr_type']
     if model_config['boundary'] == 'no':  # change this for usual BC
         def bc_pos(X):
@@ -3787,7 +3787,7 @@ def data_plot_FIG5sup():
             value = float(value)
             model_config[key] = value
 
-    cmap = CustomColorMap(model_config=model_config)
+    cmap = CustomColorMap(config=model_config)
     aggr_type = model_config['aggr_type']
 
     if model_config['boundary'] == 'no':  # change this for usual BC
@@ -3967,7 +3967,7 @@ def data_plot_FIG5():
             value = float(value)
             model_config[key] = value
 
-    cmap = CustomColorMap(model_config=model_config)
+    cmap = CustomColorMap(config=model_config)
     aggr_type = model_config['aggr_type']
     if model_config['boundary'] == 'no':  # change this for usual BC
         def bc_pos(X):
@@ -4526,7 +4526,7 @@ def data_plot_FIG6():
     #     T1 = torch.tensor(values, device=device)
     #     T1 = T1[:, None]
 
-    cmap = CustomColorMap(model_config=model_config)
+    cmap = CustomColorMap(config=model_config)
 
 
     plt.rcParams['text.usetex'] = True
@@ -4926,7 +4926,7 @@ def data_plot_FIG7():
     T1 = torch.tensor(values, device=device)
     T1 = T1[:, None]
 
-    cmap = CustomColorMap(model_config=model_config)
+    cmap = CustomColorMap(config=model_config)
 
     fig = plt.figure(figsize=(10.5, 9.6))
     plt.ion()
