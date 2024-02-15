@@ -37,7 +37,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
 
     # create output folder, empty it if bErase=True, copy files into it
     dataset_name = config.dataset
-    folder = f'./graphs_data/graphs_particles_{dataset_name}/'
+    folder = f'./graphs_data/graphs_{dataset_name}/'
     if erase:
         files = glob.glob(f"{folder}/*")
         for f in files:
@@ -1195,7 +1195,7 @@ if __name__ == '__main__':
     device = set_device('auto')
     print(f'device {device}')
 
-    config_list = ['Boids_16', 'Coulomb_3']
+    config_list = ['arbitrary_3', 'gravity_16']
     for config_file in config_list:
 
         # Load parameters from config file
