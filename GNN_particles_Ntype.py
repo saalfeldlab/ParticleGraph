@@ -155,7 +155,6 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                 dataset_mesh = data.Data(x=x_mesh, edge_index=mesh_data['edge_index'], edge_attr=mesh_data['edge_weight'], device=device)
             # compute connectivity rule
             distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
-            t = torch.Tensor([radius ** 2])  # threshold
             adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
             edge_index = adj_t.nonzero().t().contiguous()
             dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
@@ -213,7 +212,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
             if model_config.name in ['RD_Gray_Scott_Mesh', 'RD_FitzHugh_Nagumo_Mesh', 'RD_RPS_Mesh']:
                 with torch.no_grad():
                     pred = mesh_model(dataset_mesh)
-                    H1_mesh[mesh_data['mask'].squeeze(),:] += pred[mesh_data['mask'].squeeze(),:] * delta_t
+                    H1_mesh[mesh_data['mask'].squeeze(), :] += pred[mesh_data['mask'].squeeze(), :] * delta_t
                     H1 = H1_mesh.clone().detach()
 
                 y_mesh_list.append(pred)
@@ -319,8 +318,8 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         fig = plt.figure(figsize=(12,6))
                         # plt.ion()
                         ax = fig.add_subplot(1, 2, 1)
-                        H1_IM = torch.reshape(H1_mesh[:,0], (300, 300))
-                        plt.imshow(H1_IM.detach().cpu().numpy(),vmin=0, vmax=5000, cmap='viridis')
+                        H1_IM = torch.reshape(H1_mesh[:, 0], (300, 300))
+                        plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=5000, cmap='viridis')
                         for n in range(n_particle_types):
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy()*300,
                                         x[index_particles[n], 2].detach().cpu().numpy()*300, s=1, color='w')
@@ -330,7 +329,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         plt.yticks([])
                         ax = fig.add_subplot(1, 2, 2)
                         H1_IM = torch.reshape(distance, (300, 300))
-                        plt.imshow(H1_IM.detach().cpu().numpy()*30,vmin=0,vmax=500)
+                        plt.imshow(H1_IM.detach().cpu().numpy()*30, vmin=0, vmax=500)
                         for n in range(n_particle_types):
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy() * 300,
                                         x[index_particles[n], 2].detach().cpu().numpy() * 300, s=1, color='w')
@@ -491,7 +490,7 @@ def data_train(config):
         time.sleep(0.5)
 
 
-        mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_1.pt',map_location=device)
+        mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_1.pt', map_location=device)
 
         mask_mesh = mesh_data['mask_mesh']
         # mesh_pos = mesh_data['mesh_pos']
@@ -562,7 +561,7 @@ def data_train(config):
             logger.info(f"Total Trainable Params: {n_total_params}")
             logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
-        error_weight = torch.ones((batch_size * n_particles, 1),device=device, requires_grad=False)
+        error_weight = torch.ones((batch_size * n_particles, 1), device=device, requires_grad=False)
 
         total_loss = 0
 
@@ -946,7 +945,7 @@ def data_train(config):
         plt.close()
 
 
-def data_test(config, visualize=False, verbose=True, index_particles=0, prev_nparticles=0, new_nparticles=0, prev_index_particles=0, best_model=0, step=5, bTest='', folder_out='tmp_recons', initial_map='', forced_embedding=[], forced_color=0, ratio=1):
+def data_test(config, visualize=False, verbose=True, best_model=0, step=5, forced_embedding=[], ratio=1):
     print('')
     print('Plot roll-out inference ... ')
 
@@ -1177,7 +1176,6 @@ def data_test(config, visualize=False, verbose=True, index_particles=0, prev_npa
                                 x[index_particles[n], 2].detach().cpu().numpy(), s=25, color=cmap.color(n))
 
             if has_mesh | (simulation_config.boundary == 'periodic'):
-                gg = 0
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
 
