@@ -10,96 +10,98 @@ from tqdm import trange
 from ParticleGraph.utils import to_numpy
 
 
-def init_particles(model_config, device):
-    nparticles = model_config['nparticles']
-    nparticle_types = model_config['nparticle_types']
-    v_init = model_config['v_init']
+def init_particles(config, device):
+    simulation_config = config.simulation
+    n_particles = simulation_config.n_particles
+    n_particle_types = simulation_config.n_particle_types
+    v_init = config['v_init']
 
     cycle_length = torch.clamp(torch.abs(
-        torch.ones(nparticle_types, 1, device=device) * 400 + torch.randn(nparticle_types, 1, device=device) * 150),
+        torch.ones(n_particle_types, 1, device=device) * 400 + torch.randn(n_particle_types, 1, device=device) * 150),
                                min=100, max=700)
 
-    if model_config['boundary'] == 'periodic':
-        pos = torch.rand(nparticles, 2, device=device)
+    if simulation_config.boundary == 'periodic':
+        pos = torch.rand(n_particles, 2, device=device)
     else:
-        pos = torch.randn(nparticles, 2, device=device) * 0.5
-    dpos = v_init * torch.randn((nparticles, 2), device=device)
+        pos = torch.randn(n_particles, 2, device=device) * 0.5
+    dpos = v_init * torch.randn((n_particles, 2), device=device)
     dpos = torch.clamp(dpos, min=-torch.std(dpos), max=+torch.std(dpos))
-    type = torch.zeros(int(nparticles / nparticle_types), device=device)
-    for n in range(1, nparticle_types):
-        type = torch.cat((type, n * torch.ones(int(nparticles / nparticle_types), device=device)), 0)
+    type = torch.zeros(int(n_particles / n_particle_types), device=device)
+    for n in range(1, n_particle_types):
+        type = torch.cat((type, n * torch.ones(int(n_particles / n_particle_types), device=device)), 0)
     type = type[:, None]
-    if model_config['p'] == 'continuous':
-        type = torch.tensor(np.arange(nparticles), device=device)
+    if simulation_config.params == 'continuous':  # TODO: params is a list[list[float]]; this can never happen?
+        type = torch.tensor(np.arange(n_particles), device=device)
         type = type[:, None]
-    features = torch.zeros((nparticles, 2), device=device)
+    features = torch.zeros((n_particles, 2), device=device)
     cycle_length_distrib = cycle_length[to_numpy(type[:, 0]).astype(int)]
-    cycle_duration = torch.rand(nparticles, device=device)
+    cycle_duration = torch.rand(n_particles, device=device)
     cycle_duration = cycle_duration[:, None]
     cycle_duration = cycle_duration * cycle_length_distrib
-    particle_id = torch.arange(nparticles, device=device)
+    particle_id = torch.arange(n_particles, device=device)
     particle_id = particle_id[:, None]
 
     return pos, dpos, type, features, cycle_duration, cycle_length_distrib, particle_id
 
 
-def init_mesh(model_config, device):
-    nnodes = model_config['nnodes']
-    nparticles = model_config['nparticles']
-    node_value_map = model_config['node_value_map']
-    node_type_map = model_config['node_type_map']
+def init_mesh(config, device):
+    simulation_config = config.simumlation
+    n_nodes = simulation_config.n_nodes
+    n_particles = simulation_config.n_particles
+    node_value_map = simulation_config.node_value_map
+    node_type_map = simulation_config.node_type_map
 
-    n_nodes_per_axis = int(np.sqrt(nnodes))
+    n_nodes_per_axis = int(np.sqrt(n_nodes))
     xs = torch.linspace(1 / (2 * n_nodes_per_axis), 1 - 1 / (2 * n_nodes_per_axis), steps=n_nodes_per_axis)
     ys = torch.linspace(1 / (2 * n_nodes_per_axis), 1 - 1 / (2 * n_nodes_per_axis), steps=n_nodes_per_axis)
     x_mesh, y_mesh = torch.meshgrid(xs, ys, indexing='xy')
     x_mesh = torch.reshape(x_mesh, (n_nodes_per_axis ** 2, 1))
     y_mesh = torch.reshape(y_mesh, (n_nodes_per_axis ** 2, 1))
     mesh_size = 1 / n_nodes_per_axis
-    pos_mesh = torch.zeros((nnodes, 2), device=device)
-    pos_mesh[0:nnodes, 0:1] = x_mesh[0:nnodes]
-    pos_mesh[0:nnodes, 1:2] = y_mesh[0:nnodes]
+    pos_mesh = torch.zeros((n_nodes, 2), device=device)
+    pos_mesh[0:n_nodes, 0:1] = x_mesh[0:n_nodes]
+    pos_mesh[0:n_nodes, 1:2] = y_mesh[0:n_nodes]
 
     mask_mesh = (x_mesh > torch.min(x_mesh)) & (x_mesh < torch.max(x_mesh)) & (y_mesh > torch.min(y_mesh)) & (
                 y_mesh < torch.max(y_mesh))
-    pos_mesh = pos_mesh + torch.randn(nnodes, 2, device=device) * mesh_size
+    pos_mesh = pos_mesh + torch.randn(n_nodes, 2, device=device) * mesh_size
 
     i0 = imread(f'graphs_data/{node_value_map}')
     values = i0[(to_numpy(pos_mesh[:, 0]) * 255).astype(int), (to_numpy(pos_mesh[:, 1]) * 255).astype(int)]
 
-    if model_config['model'] == 'RD_Gray_Scott_Mesh':
-        features_mesh = torch.zeros((nnodes, 2), device=device)
-        features_mesh[:, 0] -= 0.5 * torch.tensor(values / 255, device=device)
-        features_mesh[:, 1] = 0.25 * torch.tensor(values / 255, device=device)
-    elif model_config['model'] == 'RD_FitzHugh_Nagumo_Mesh':
-        features_mesh = torch.zeros((nnodes, 2), device=device) + torch.rand((nnodes, 2), device=device) * 0.1
-    elif model_config['model'] == 'RD_RPS_Mesh':
-        features_mesh = torch.rand((nnodes, 3), device=device)
-        s = torch.sum(features_mesh, dim=1)
-        for k in range(3):
-            features_mesh[:, k] = features_mesh[:, k] / s
-    elif (model_config['model'] == 'DiffMesh') | (model_config['model'] == 'WaveMesh') | (
-            model_config['model'] == 'Maze'):
-        features_mesh = torch.zeros((nnodes, 2), device=device)
-        features_mesh[:, 0] = torch.tensor(values / 255 * 5000, device=device)
-    if model_config['model'] == 'PDE_O':
-        features_mesh = torch.zeros((nparticles, 5), device=device)
-        features_mesh[0:nparticles, 0:1] = x_mesh[0:nparticles]
-        features_mesh[0:nparticles, 1:2] = y_mesh[0:nparticles]
-        features_mesh[0:nparticles, 2:3] = torch.randn(nparticles, 1, device=device) * 2 * np.pi  # theta
-        features_mesh[0:nparticles, 3:4] = torch.ones(nparticles, 1, device=device) * np.pi / 200  # d_theta
-        features_mesh[0:nparticles, 4:5] = features_mesh[0:nparticles, 3:4]  # d_theta0
-        pos_mesh[:, 0] = features_mesh[:, 0] + (3 / 8) * mesh_size * torch.cos(features_mesh[:, 2])
-        pos_mesh[:, 1] = features_mesh[:, 1] + (3 / 8) * mesh_size * torch.sin(features_mesh[:, 2])
+    match config.graph_model.name:
+        case 'RD_Gray_Scott_Mesh':
+            features_mesh = torch.zeros((n_nodes, 2), device=device)
+            features_mesh[:, 0] -= 0.5 * torch.tensor(values / 255, device=device)
+            features_mesh[:, 1] = 0.25 * torch.tensor(values / 255, device=device)
+        case 'RD_FitzHugh_Nagumo_Mesh':
+            features_mesh = torch.zeros((n_nodes, 2), device=device) + torch.rand((n_nodes, 2), device=device) * 0.1
+        case 'RD_RPS_Mesh':
+            features_mesh = torch.rand((n_nodes, 3), device=device)
+            s = torch.sum(features_mesh, dim=1)
+            for k in range(3):
+                features_mesh[:, k] = features_mesh[:, k] / s
+        case 'DiffMesh' | 'WaveMesh' | 'Maze':
+            features_mesh = torch.zeros((n_nodes, 2), device=device)
+            features_mesh[:, 0] = torch.tensor(values / 255 * 5000, device=device)
+        case 'PDE_O':
+            features_mesh = torch.zeros((n_particles, 5), device=device)
+            features_mesh[0:n_particles, 0:1] = x_mesh[0:n_particles]
+            features_mesh[0:n_particles, 1:2] = y_mesh[0:n_particles]
+            features_mesh[0:n_particles, 2:3] = torch.randn(n_particles, 1, device=device) * 2 * np.pi  # theta
+            features_mesh[0:n_particles, 3:4] = torch.ones(n_particles, 1, device=device) * np.pi / 200  # d_theta
+            features_mesh[0:n_particles, 4:5] = features_mesh[0:n_particles, 3:4]  # d_theta0
+            pos_mesh[:, 0] = features_mesh[:, 0] + (3 / 8) * mesh_size * torch.cos(features_mesh[:, 2])
+            pos_mesh[:, 1] = features_mesh[:, 1] + (3 / 8) * mesh_size * torch.sin(features_mesh[:, 2])
 
     i0 = imread(f'graphs_data/{node_type_map}')
     values = i0[(to_numpy(x_mesh[:, 0]) * 255).astype(int), (to_numpy(y_mesh[:, 0]) * 255).astype(int)]
     type_mesh = torch.tensor(values, device=device)
     type_mesh = type_mesh[:, None]
 
-    node_id_mesh = torch.arange(nnodes, device=device)
+    node_id_mesh = torch.arange(n_nodes, device=device)
     node_id_mesh = node_id_mesh[:, None]
-    dpos_mesh = torch.zeros((nnodes, 2), device=device)
+    dpos_mesh = torch.zeros((n_nodes, 2), device=device)
 
     x_mesh = torch.concatenate((node_id_mesh.clone().detach(), pos_mesh.clone().detach(), dpos_mesh.clone().detach(),
                                 type_mesh.clone().detach(), features_mesh.clone().detach()), 1)
