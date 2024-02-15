@@ -19,7 +19,7 @@ graph_model:
   prediction: 'first_derivative'
   input_size: 5
   output_size: 2
-  hidden_size: 128
+  hidden_dim: 128
   n_mp_layers: 5
   aggr_type: 'mean'
   embedding_dim: 2
@@ -36,6 +36,7 @@ training:
   sparsity: 'replace'
   cluster_method: 'distance_plot'
   data_augmentation: True
+  device: 'auto'
 
 
 

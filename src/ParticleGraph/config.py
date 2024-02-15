@@ -22,8 +22,8 @@ class SimulationConfig(BaseModel):
     n_particles: int = 1000
     n_particle_types: int = 5
     n_interactions: int = 5
-    n_nodes: int = 900
-    n_node_types: int = 4
+    n_nodes: Optional[int]
+    n_node_types: Optional[int]
     has_cell_division: bool = False
     n_frames: int = 1000
     sigma: Optional[float]
