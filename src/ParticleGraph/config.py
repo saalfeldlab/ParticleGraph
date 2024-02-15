@@ -1,7 +1,7 @@
 from typing import Optional, Literal, Annotated, Dict
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field
 
 from ParticleGraph.config_manager import ConfigManager
 
@@ -16,8 +16,8 @@ class SimulationConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     
     params: list[float]
-    radius: Annotated[float, Field(gt=0)]
     min_radius: Annotated[float, Field(ge=0)] = 0
+    max_radius: Annotated[float, Field(gt=0)]
     diffusion_coefficients: list[float]
     n_particles: int = 1000
     n_particle_types: int = 5
