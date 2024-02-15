@@ -27,24 +27,27 @@ class Mesh_Laplacian(pyg.nn.MessagePassing):
         the second derivative of a scalar field on a mesh (dimension 1).
     """
 
-    def __init__(self, aggr_type=[], model_config=[], device=[], bc_dpos=[]):
-        super(Mesh_Laplacian, self).__init__(aggr=aggr_type)  # "Add" aggregation.
+    def __init__(self, aggr_type=None, config=None, device=None, bc_dpos=None):
+        super(Mesh_Laplacian, self).__init__(aggr=aggr_type)
+
+        simulation_config = config.simulation
+        model_config = config.graph_model
 
         self.device = device
-        self.input_size = model_config['input_size']
-        self.output_size = model_config['output_size']
-        self.hidden_size = model_config['hidden_size']
-        self.nlayers = model_config['n_mp_layers']
-        self.embedding = model_config['embedding']
-        self.nparticles = model_config['nparticles']
-        self.ndataset = model_config['nrun'] - 1
+        self.input_size = simulation_config.input_size
+        self.output_size = simulation_config.output_size
+        self.hidden_dim = model_config.hidden_dim
+        self.n_layers = model_config.n_mp_layers
+        self.embedding = model_config.embedding_dim
+        self.n_particles = simulation_config.n_particles
+        self.n_datasets = config.train.n_runs - 1
         self.bc_dpos = bc_dpos
 
-        self.lin_phi = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
-                           hidden_size=self.hidden_size, device=self.device)
+        self.lin_phi = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
+                           hidden_size=self.hidden_dim, device=self.device)
 
         self.a = nn.Parameter(
-            torch.tensor(np.ones((int(self.ndataset), int(self.nparticles), self.embedding)), device=self.device,
+            torch.tensor(np.ones((int(self.n_datasets), int(self.n_particles), self.embedding)), device=self.device,
                          requires_grad=True, dtype=torch.float32))
 
     def forward(self, data, data_id):
@@ -62,12 +65,12 @@ class Mesh_Laplacian(pyg.nn.MessagePassing):
 
         pred = self.lin_phi(torch.cat((laplacian, embedding), dim=-1))
 
-        return pred
+        # pos = to_numpy(data.x)
+        # deg = pyg_utils.degree(edge_index[0], data.num_nodes)
+        # plt.ion()
+        # plt.scatter(pos[:,1],pos[:,2], s=20, c=to_numpy(deg),vmin=7,vmax=10)
 
-        pos = to_numpy(data.x)
-        deg = pyg_utils.degree(edge_index[0], data.num_nodes)
-        plt.ion()
-        plt.scatter(pos[:,1],pos[:,2], s=20, c=to_numpy(deg),vmin=7,vmax=10)
+        return pred
 
     def message(self, u_j, discrete_laplacian):
         L = discrete_laplacian[:,None] * u_j
