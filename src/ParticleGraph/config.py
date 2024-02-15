@@ -18,21 +18,21 @@ class SimulationConfig(BaseModel):
     params: list[list[float]]
     min_radius: Annotated[float, Field(ge=0)] = 0
     max_radius: Annotated[float, Field(gt=0)]
-    diffusion_coefficients: Optional[list[float]]
+    diffusion_coefficients: Optional[list[float]] = None
     n_particles: int = 1000
     n_particle_types: int = 5
     n_interactions: int = 5
-    n_nodes: Optional[int]
-    n_node_types: Optional[int]
+    n_nodes: Optional[int] = None
+    n_node_types: Optional[int] = None
     has_cell_division: bool = False
     n_frames: int = 1000
     sigma: float = 0.005
     delta_t: float = 1
     dpos_init: float = 0
     boundary: Literal['periodic', 'no'] = 'periodic'
-    node_value_map: Optional[str]
-    node_type_map: Optional[str]
-    beta: Optional[float]
+    node_value_map: Optional[str] = None
+    node_type_map: Optional[str] = None
+    beta: Optional[float] = None
     start_frame: int = 0
 
 
