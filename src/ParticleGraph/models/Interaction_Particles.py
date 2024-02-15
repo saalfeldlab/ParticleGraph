@@ -35,14 +35,14 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         train_config = config.training
 
         self.device = device
-        self.input_size = simulation_config.input_size
-        self.output_size = simulation_config.output_size
-        self.hidden_dim = simulation_config.hidden_dim
-        self.n_layers = simulation_config.n_mp_layers
-        self.n_particles = model_config.n_particles
-        self.max_radius = model_config.max_radius
+        self.input_size = model_config.input_size
+        self.output_size = model_config.output_size
+        self.hidden_dim = model_config.hidden_dim
+        self.n_layers = model_config.n_mp_layers
+        self.n_particles = simulation_config.n_particles
+        self.max_radius = simulation_config.max_radius
         self.data_augmentation = train_config.data_augmentation
-        self.noise_level = simulation_config.noise_level
+        self.noise_level = train_config.noise_level
         self.embedding_dim = model_config.embedding_dim
         self.n_dataset = train_config.n_runs - 1
         self.prediction = model_config.prediction

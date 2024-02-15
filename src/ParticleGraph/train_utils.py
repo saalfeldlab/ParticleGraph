@@ -6,10 +6,10 @@ from ParticleGraph.utils import choose_boundary_values
 
 
 def choose_training_model(model_config, device):
-    model_name = model_config['model']
-    aggr_type = model_config['aggr_type']
+    model_name = model_config.graph_model.name
+    aggr_type = model_config.graph_model.aggr_type
 
-    bc_pos, bc_dpos = choose_boundary_values(model_config['boundary'])
+    bc_pos, bc_dpos = choose_boundary_values(model_config.simulation.boundary)
 
     match model_name:
         case 'PDE_A' | 'PDE_B':
