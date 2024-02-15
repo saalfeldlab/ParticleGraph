@@ -43,8 +43,8 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                     f != 'generation_code.py'):
                 os.remove(f)
     os.makedirs(folder, exist_ok=True)
-    os.makedirs(f'./graphs_data/graphs_particles_{dataset_name}/tmp_data/', exist_ok=True)
-    files = glob.glob(f'./graphs_data/graphs_particles_{dataset_name}/tmp_data/*')
+    os.makedirs(f'./graphs_data/graphs_{dataset_name}/tmp_data/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/tmp_data/*')
     for f in files:
         os.remove(f)
     copyfile(os.path.realpath(__file__), os.path.join(folder, 'generation_code.py'))
@@ -74,7 +74,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
         mesh_model = None
 
 
-    torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model.pt')
+    torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_{dataset_name}/model.pt')
 
     for run in range(config.training.n_runs):
 
@@ -88,7 +88,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
 
         if has_mesh | (model_config.name == 'PDE_O') | (model_config.name == 'Maze'):
             X1_mesh, V1_mesh, T1_mesh, H1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
-            torch.save(mesh_data, f'graphs_data/graphs_particles_{dataset_name}/mesh_data_{run}.pt')
+            torch.save(mesh_data, f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt')
 
             if model_config.name != 'Maze':
                 X1 = X1_mesh.clone().detach()
@@ -282,7 +282,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/tmp_data/Fig_g_color_{it}.tif", dpi=300)
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/tmp_data/Fig_g_color_{it}.tif", dpi=300)
                     plt.close()
 
                 if 'color' in style:
@@ -297,7 +297,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/tmp_data/Lut_Fig_{it}.jpg", dpi=75)
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/tmp_data/Lut_Fig_{it}.jpg", dpi=75)
                         plt.close()
                         fig = plt.figure(figsize=(12, 12))
                         plt.style.use('default')
@@ -309,7 +309,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/tmp_data/Rot_Fig{it}.jpg", dpi=75)
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/tmp_data/Rot_Fig{it}.jpg", dpi=75)
                         plt.close()
 
                     elif model_config.name == 'Maze':
@@ -337,7 +337,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/tmp_data/Mesh_{it}.jpg", dpi=100)
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/tmp_data/Mesh_{it}.jpg", dpi=100)
                         plt.close()
 
                     else:
@@ -390,14 +390,14 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/tmp_data/Fig_{it}.jpg", dpi=100)
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/tmp_data/Fig_{it}.jpg", dpi=100)
                         plt.close()
 
-        torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
-        torch.save(y_list, f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
+        torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
+        torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
         if model_config.name != 'Maze':
-            torch.save(x_mesh_list, f'graphs_data/graphs_particles_{dataset_name}/x_mesh_list_{run}.pt')
-        torch.save(y_mesh_list, f'graphs_data/graphs_particles_{dataset_name}/y_mesh_list_{run}.pt')
+            torch.save(x_mesh_list, f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt')
+        torch.save(y_mesh_list, f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt')
 
     simulation_config.n_particles = int(simulation_config.n_particles / ratio)
 
@@ -448,7 +448,7 @@ def data_train(config):
     logger.setLevel(logging.INFO)
     logger.info(config)
 
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     NGraphs = len(graph_files)
     print(f'Graph files N: {NGraphs - 1}')
     logger.info(f'Graph files N: {NGraphs - 1}')
@@ -457,8 +457,8 @@ def data_train(config):
     y_list = []
     print('Load data ...')
     for run in trange(NGraphs):
-        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
+        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
+        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(torch.stack(x))
         y_list.append(torch.stack(y))
     x = torch.stack(x_list)
@@ -478,7 +478,7 @@ def data_train(config):
     if has_mesh:
         y_mesh_list = []
         for run in trange(NGraphs):
-            h = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
+            h = torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
             y_mesh_list.append(torch.stack(h))
         h = torch.stack(y_mesh_list)
         h = torch.reshape(h, (h.shape[0] * h.shape[1] * h.shape[2], h.shape[3]))
@@ -489,7 +489,7 @@ def data_train(config):
         time.sleep(0.5)
 
 
-        mesh_data = torch.load(f'graphs_data/graphs_particles_{dataset_name}/mesh_data_1.pt',map_location=device)
+        mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_1.pt',map_location=device)
 
         mask_mesh = mesh_data['mask_mesh']
         # mesh_pos = mesh_data['mesh_pos']
@@ -980,7 +980,7 @@ def data_test(config, visualize=False, verbose=True, index_particles=0, prev_npa
     for f in files:
         os.remove(f)
 
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     NGraphs = int(len(graph_files))
     if best_model == -1:
         net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
@@ -1063,15 +1063,15 @@ def data_test(config, visualize=False, verbose=True, index_particles=0, prev_npa
 
     x_list = []
     y_list = []
-    x_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_0.pt', map_location=device))
-    y_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_0.pt', map_location=device))
+    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device))
+    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_0.pt', map_location=device))
 
     x = x_list[0][0].clone().detach()
 
     if has_mesh:
         hnorm = torch.load(f'./log/try_{dataset_name}/hnorm.pt', map_location=device).to(device)
 
-        mesh_data = torch.load(f'graphs_data/graphs_particles_{dataset_name}/mesh_data_0.pt',map_location=device)
+        mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_0.pt',map_location=device)
         mask_mesh = mesh_data['mask_mesh']
         edge_index_mesh = mesh_data['edge_index']
         edge_weight_mesh = mesh_data['edge_weight']
@@ -1193,7 +1193,7 @@ if __name__ == '__main__':
     device = set_device('auto')
     print(f'device {device}')
 
-    config_list = ['arbitrary_3']
+    config_list = ['boids_16']
     for config_file in config_list:
 
         # Load parameters from config file
@@ -1203,5 +1203,5 @@ if __name__ == '__main__':
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
         data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 100)
-        data_train(config)
+        # data_train(config)
         # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 50, ratio=1)
