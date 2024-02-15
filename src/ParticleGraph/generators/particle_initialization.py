@@ -14,7 +14,7 @@ def init_particles(config, device):
     simulation_config = config.simulation
     n_particles = simulation_config.n_particles
     n_particle_types = simulation_config.n_particle_types
-    v_init = config['v_init']
+    dpos_init = simulation_config.dpos_init
 
     cycle_length = torch.clamp(torch.abs(
         torch.ones(n_particle_types, 1, device=device) * 400 + torch.randn(n_particle_types, 1, device=device) * 150),
@@ -24,7 +24,7 @@ def init_particles(config, device):
         pos = torch.rand(n_particles, 2, device=device)
     else:
         pos = torch.randn(n_particles, 2, device=device) * 0.5
-    dpos = v_init * torch.randn((n_particles, 2), device=device)
+    dpos = dpos_init * torch.randn((n_particles, 2), device=device)
     dpos = torch.clamp(dpos, min=-torch.std(dpos), max=+torch.std(dpos))
     type = torch.zeros(int(n_particles / n_particle_types), device=device)
     for n in range(1, n_particle_types):

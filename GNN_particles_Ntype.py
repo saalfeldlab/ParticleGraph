@@ -34,8 +34,8 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
     print('Generating data ...')
 
     # create output folder, empty it if bErase=True, copy files into it
-    dataset = config.dataset
-    folder = f'./graphs_data/graphs_particles_{dataset}/'
+    dataset_name = config.dataset
+    folder = f'./graphs_data/graphs_particles_{dataset_name}/'
     if erase:
         files = glob.glob(f"{folder}/*")
         for f in files:
@@ -43,8 +43,8 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                     f != 'generation_code.py'):
                 os.remove(f)
     os.makedirs(folder, exist_ok=True)
-    os.makedirs(f'./graphs_data/graphs_particles_{dataset}/tmp_data/', exist_ok=True)
-    files = glob.glob(f'./graphs_data/graphs_particles_{dataset}/tmp_data/*')
+    os.makedirs(f'./graphs_data/graphs_particles_{dataset_name}/tmp_data/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/graphs_particles_{dataset_name}/tmp_data/*')
     for f in files:
         os.remove(f)
     copyfile(os.path.realpath(__file__), os.path.join(folder, 'generation_code.py'))
@@ -74,9 +74,9 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
         mesh_model = None
 
 
-    torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset}/model.pt')
+    torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_particles_{dataset_name}/model.pt')
 
-    for run in range(simulation_config.n_runs):
+    for run in range(config.training.n_runs):
 
         x_list = []
         y_list = []
@@ -88,7 +88,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
 
         if has_mesh | (model_config.name == 'PDE_O') | (model_config.name == 'Maze'):
             X1_mesh, V1_mesh, T1_mesh, H1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
-            torch.save(mesh_data, f'graphs_data/graphs_particles_{dataset}/mesh_data_{run}.pt')
+            torch.save(mesh_data, f'graphs_data/graphs_particles_{dataset_name}/mesh_data_{run}.pt')
 
             if model_config.name != 'Maze':
                 X1 = X1_mesh.clone().detach()
@@ -282,7 +282,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_particles_{dataset}/tmp_data/Fig_g_color_{it}.tif", dpi=300)
+                    plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/tmp_data/Fig_g_color_{it}.tif", dpi=300)
                     plt.close()
 
                 if 'color' in style:
@@ -297,7 +297,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_particles_{dataset}/tmp_data/Lut_Fig_{it}.jpg", dpi=75)
+                        plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/tmp_data/Lut_Fig_{it}.jpg", dpi=75)
                         plt.close()
                         fig = plt.figure(figsize=(12, 12))
                         plt.style.use('default')
@@ -309,7 +309,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_particles_{dataset}/tmp_data/Rot_Fig{it}.jpg", dpi=75)
+                        plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/tmp_data/Rot_Fig{it}.jpg", dpi=75)
                         plt.close()
 
                     elif model_config.name == 'Maze':
@@ -337,7 +337,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_particles_{dataset}/tmp_data/Mesh_{it}.jpg", dpi=100)
+                        plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/tmp_data/Mesh_{it}.jpg", dpi=100)
                         plt.close()
 
                     else:
@@ -390,14 +390,14 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_particles_{dataset}/tmp_data/Fig_{it}.jpg", dpi=100)
+                        plt.savefig(f"graphs_data/graphs_particles_{dataset_name}/tmp_data/Fig_{it}.jpg", dpi=100)
                         plt.close()
 
-        torch.save(x_list, f'graphs_data/graphs_particles_{dataset}/x_list_{run}.pt')
-        torch.save(y_list, f'graphs_data/graphs_particles_{dataset}/y_list_{run}.pt')
+        torch.save(x_list, f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
+        torch.save(y_list, f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
         if model_config.name != 'Maze':
-            torch.save(x_mesh_list, f'graphs_data/graphs_particles_{dataset}/x_mesh_list_{run}.pt')
-        torch.save(y_mesh_list, f'graphs_data/graphs_particles_{dataset}/y_mesh_list_{run}.pt')
+            torch.save(x_mesh_list, f'graphs_data/graphs_particles_{dataset_name}/x_mesh_list_{run}.pt')
+        torch.save(y_mesh_list, f'graphs_data/graphs_particles_{dataset_name}/y_mesh_list_{run}.pt')
 
     simulation_config.n_particles = int(simulation_config.n_particles / ratio)
 
