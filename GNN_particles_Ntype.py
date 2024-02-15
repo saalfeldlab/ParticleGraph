@@ -1197,13 +1197,8 @@ if __name__ == '__main__':
     for config_file in config_list:
 
         # Load parameters from config file
-        config = ParticleGraphConfig(f'./config/{config_file}.yaml')
-
-        for key, value in config.items():
-            print(key, ":", value)
-            if ('E-' in str(value)) | ('E+' in str(value)):
-                value = float(value)
-                config[key] = value
+        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+        print(config.pretty())
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 

@@ -100,18 +100,21 @@ class ParticleGraphConfig(BaseModel):
     plotting: PlottingConfig
     training: TrainingConfig
 
-    def __init__(self, file_name: str):
+    @staticmethod
+    def from_yaml(file_name: str):
         with open(file_name, 'r') as file:
             raw_config = yaml.safe_load(file)
-        super().__init__(**raw_config)
+        return ParticleGraphConfig(**raw_config)
+
+    def pretty(self):
+        return yaml.dump(self.model_dump())
 
 
 if __name__ == '__main__':
 
-    config_file = './config/config_arbitrary_3.yaml' # Insert path to config file
-    raw_config = ConfigManager.load_config(config_file)
-
-    config = ParticleGraphConfig(**raw_config)
+    config_file = '../../config/arbitrary_3.yaml' # Insert path to config file
+    config = ParticleGraphConfig.from_yaml(config_file)
+    print(config.pretty())
 
     print('Successfully loaded config file. Model description:', config.description)
     
