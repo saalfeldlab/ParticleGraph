@@ -18,7 +18,7 @@ class SimulationConfig(BaseModel):
     params: list[float]
     min_radius: Annotated[float, Field(ge=0)] = 0
     max_radius: Annotated[float, Field(gt=0)]
-    diffusion_coefficients: list[float]
+    diffusion_coefficients: Optional[list[float]]
     n_particles: int = 1000
     n_particle_types: int = 5
     n_interactions: int = 5
@@ -46,7 +46,7 @@ class GraphModelConfig(BaseModel):
     n_mp_layers: int
     aggr_type: str
     mesh_aggr_type: str = 'add'
-    embedding: int = 2
+    embedding_dim: int = 2
     update_type: Literal['linear', 'none'] = 'none'
     n_layers_update: int = 3
     hidden_dim_update: int = 64
