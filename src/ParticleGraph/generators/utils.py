@@ -38,7 +38,7 @@ def choose_model(config, device):
                     p[n] = torch.tensor(params[n])
             model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
         case 'PDE_G':
-            if params[0] == -1:
+            if params[0] == [-1]:
                 p = np.linspace(0.5, 5, n_particle_types)
                 p = torch.tensor(p, device=device)
             if len(params) > 1:

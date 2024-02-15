@@ -2,7 +2,7 @@ description: 'Coulomb model with three different particle types of charges being
 dataset: 'Coulomb_3'
 
 simulation:
-  params: [2, 1, -1]
+  params: [[2], [1], [-1]]
   min_radius: 0.001
   max_radius: 0.15
   n_particles: 960
@@ -35,7 +35,7 @@ training:
   batch_size: 8
   small_init_batch_size: True
   n_runs: 2
-  sparsity: 'replace']
+  sparsity: 'replace'
   data_augmentation: True
   cluster_method: 'distance_plot'
-  device: 'auto'
+  device: 'cuda:1'

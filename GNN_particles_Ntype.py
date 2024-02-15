@@ -1195,7 +1195,7 @@ if __name__ == '__main__':
     device = set_device('auto')
     print(f'device {device}')
 
-    config_list = ['arbitrary_3']
+    config_list = ['Boids_16', 'Coulomb_3']
     for config_file in config_list:
 
         # Load parameters from config file
@@ -1204,6 +1204,6 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        # data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 100)
+        data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 100)
         data_train(config)
         # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 50, ratio=1)
