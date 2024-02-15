@@ -1205,7 +1205,7 @@ if __name__ == '__main__':
                 value = float(value)
                 config[key] = value
 
-        cmap = CustomColorMap(model_config=config)  # create colormap for given model_config
+        cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
         data_generate(config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, step=config.simulation.n_frames//100)
         data_train(config)

@@ -84,19 +84,19 @@ def choose_boundary_values(bc_name):
 
 
 class CustomColorMap:
-    def __init__(self, model_config):
-        self.model_config = model_config
-        self.model = model_config['model']
-        if model_config['cmap'] == 'tab10':
+    def __init__(self, config):
+        self.cmap_name = config.plotting.colormap
+        self.model_name = config.graph_model.name
+        if self.cmap_name == 'tab10':
             self.nmap = 8
         else:
-            self.nmap = model_config['nparticle_types']
+            self.nmap = config.simulation.n_particles
 
-        self.bMesh = 'Mesh' in model_config['model']
+        self.has_mesh = 'Mesh' in self.model_name
 
     def color(self, index):
 
-        if self.model == 'PDE_E':
+        if self.model_name == 'PDE_E':
             match index:
                 case 0:
                     color = (0, 0, 1)
@@ -108,14 +108,14 @@ class CustomColorMap:
                     color = (0.75, 0, 0)
                 case _:
                     color = (0, 0, 0)
-        elif self.bMesh:
+        elif self.has_mesh:
             if index == 0:
                 color = (0, 0, 0)
             else:
-                color_map = plt.colormaps.get_cmap(self.model_config['cmap'])
+                color_map = plt.colormaps.get_cmap(self.cmap_name)
                 color = color_map(index / self.nmap)
         else:
-            color_map = plt.colormaps.get_cmap(self.model_config['cmap'])
+            color_map = plt.colormaps.get_cmap(self.cmap_name)
             color = color_map(index / self.nmap)
 
         return color
