@@ -29,7 +29,7 @@ from ParticleGraph.fitting_models import linear_model
 from ParticleGraph.embedding_cluster import *
 
 
-def data_generate(config, visualize=True, style='color', erase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=[]):
+def data_generate(config, visualize=True, style='color', erase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=None):
     print('')
     print('Generating data ...')
 
