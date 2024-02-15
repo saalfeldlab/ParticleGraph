@@ -1,5 +1,5 @@
 description: 'Gravity model with 16 different particle types'
-dataset: 'gravity_100'
+dataset: 'gravity_16'
 
 simulation:
     params: [-1]
@@ -8,11 +8,11 @@ simulation:
     n_particles: 960
     n_particle_types: 16
     n_interactions: 16
-    n_frames: 2250
-    delta_t: 1.5E-5
-    dpos_init:  2.5E-5
+    n_frames: 1000
+    delta_t: 3.0E-5
+    dpos_init:  5.0E-5
     boundary: 'no'
-    start_frame: -250
+    start_frame: -1000
 
 graph_model:
     name: 'PDE_G'

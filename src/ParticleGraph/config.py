@@ -26,7 +26,7 @@ class SimulationConfig(BaseModel):
     n_node_types: Optional[int]
     has_cell_division: bool = False
     n_frames: int = 1000
-    sigma: Optional[float]
+    sigma: float = 0.005
     delta_t: float = 1
     dpos_init: float = 0
     boundary: Literal['periodic', 'no'] = 'periodic'
@@ -39,7 +39,7 @@ class SimulationConfig(BaseModel):
 class GraphModelConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     name: str
-    prediction: str
+    prediction: Literal['first_derivative', '2nd_derivative'] = '2nd_derivative'
     input_size: int
     output_size: int
     hidden_dim: int
@@ -79,7 +79,7 @@ class TrainingConfig(BaseModel):
     learning_rate_start: float = 0.001
     learning_rate_end: float = 0.0005
     learning_rate_embedding_start: float = 0.001
-    learning_rate_embedding_end: float = 0.0005
+    learning_rate_embedding_end: float = 0.001
 
     noise_level: float = 0
     data_augmentation: bool = True
