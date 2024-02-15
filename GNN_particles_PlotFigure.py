@@ -918,7 +918,7 @@ def data_plot_FIG2sup():
 
         distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
         t = torch.Tensor([max_radius ** 2])  # threshold
-        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
 
         edge_index = adj_t.nonzero().t().contiguous()
 
@@ -1049,7 +1049,7 @@ def data_plot_FIG2sup():
 
         distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
         t = torch.Tensor([max_radius ** 2])  # threshold
-        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
 
         edge_index = adj_t.nonzero().t().contiguous()
 
@@ -1185,7 +1185,7 @@ def data_plot_FIG2sup():
 
         distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
         t = torch.Tensor([max_radius ** 2])  # threshold
-        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
 
         edge_index = adj_t.nonzero().t().contiguous()
 
@@ -1278,7 +1278,7 @@ def data_plot_FIG2sup():
 
         distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
         t = torch.Tensor([max_radius ** 2])  # threshold
-        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
 
         edge_index = adj_t.nonzero().t().contiguous()
 
@@ -1391,7 +1391,7 @@ def data_plot_FIG3sup():
             for k in np.arange(0, len(x) - 1, 4):
                 distance = torch.sum(bc_dpos(x[k][:, None, 1:3] - x[k][None, :, 1:3]) ** 2, dim=2)
                 t = torch.Tensor([max_radius ** 2])  # threshold
-                adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
                 edge_index = adj_t.nonzero().t().contiguous()
                 dataset = data.Data(x=x, edge_index=edge_index)
                 distance = np.sqrt(to_numpy(distance[edge_index[0, :], edge_index[1, :]]))
@@ -1901,7 +1901,7 @@ def data_plot_FIG4sup():
 
         distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
         t = torch.Tensor([max_radius ** 2])  # threshold
-        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
 
         edge_index = adj_t.nonzero().t().contiguous()
 
@@ -2032,7 +2032,7 @@ def data_plot_FIG4sup():
 
         distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
         t = torch.Tensor([max_radius ** 2])  # threshold
-        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
 
         edge_index = adj_t.nonzero().t().contiguous()
 
@@ -2167,7 +2167,7 @@ def data_plot_FIG4sup():
 
         distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
         t = torch.Tensor([max_radius ** 2])  # threshold
-        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
 
         edge_index = adj_t.nonzero().t().contiguous()
 
@@ -2258,7 +2258,7 @@ def data_plot_FIG4sup():
 
         distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
         t = torch.Tensor([max_radius ** 2])  # threshold
-        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
 
         edge_index = adj_t.nonzero().t().contiguous()
 
@@ -3462,7 +3462,7 @@ def data_plot_FIG5sup():
 
         distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
         t = torch.Tensor([max_radius ** 2])  # threshold
-        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
 
         edge_index = adj_t.nonzero().t().contiguous()
 
@@ -3611,7 +3611,7 @@ def data_plot_FIG5sup():
 
         distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
         t = torch.Tensor([max_radius ** 2])  # threshold
-        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
 
         edge_index = adj_t.nonzero().t().contiguous()
 
@@ -3938,7 +3938,7 @@ def data_plot_FIG5():
     x = x_list[0][it].clone().detach()
     distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
     t = torch.Tensor([max_radius ** 2])  # threshold
-    adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+    adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
     edge_index = adj_t.nonzero().t().contiguous()
     dataset = data.Data(x=x, edge_index=edge_index)
 
