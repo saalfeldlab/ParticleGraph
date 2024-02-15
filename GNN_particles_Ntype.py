@@ -14,6 +14,8 @@ from torch_geometric.loader import DataLoader
 from torch_geometric.utils.convert import to_networkx
 from tqdm import trange
 import os
+import matplotlib
+matplotlib.use("Qt5Agg")
 
 from ParticleGraph.config import ParticleGraphConfig
 from ParticleGraph.generators.particle_initialization import init_particles, init_mesh
@@ -343,6 +345,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                     else:
 
                         fig = plt.figure(figsize=(12, 12))
+                        plt.ion()
                         if has_mesh:
                             pts = x[:, 1:3].detach().cpu().numpy()
                             tri = Delaunay(pts)
