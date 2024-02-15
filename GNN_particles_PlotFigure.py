@@ -916,7 +916,7 @@ def data_plot_FIG2sup():
     #################### first set of plots
 
     ratio = 1
-    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4, ratio = ratio, device=device)
+    data_generate(model_config, visualize=False, style='color', alpha=0.2, erase=True, bLoad_p=False, step=model_config['nframes'] // 4, ratio = ratio, device=device)
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -1054,7 +1054,7 @@ def data_plot_FIG2sup():
 
     ratio = 1
 
-    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4,ratio = ratio, device=device)
+    data_generate(model_config, visualize=False, style='color', alpha=0.2, erase=True, bLoad_p=False, step=model_config['nframes'] // 4, ratio = ratio, device=device)
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -1158,7 +1158,7 @@ def data_plot_FIG2sup():
     model_config['nframes'] = 250
     nframes = 250
     ratio = 2
-    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4, ratio = ratio, device=device)
+    data_generate(model_config, visualize=False, style='color', alpha=0.2, erase=True, bLoad_p=False, step=model_config['nframes'] // 4, ratio = ratio, device=device)
     model = Interaction_Particles(model_config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_dpos=bc_dpos)
 
 
@@ -1297,7 +1297,7 @@ def data_plot_FIG2sup():
     model_config['nparticles'] = 4800
     nframes = 500
     ratio = 2
-    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4, ratio = ratio, scenario = 'scenario A', device=device)
+    data_generate(model_config, visualize=False, style='color', alpha=0.2, erase=True, bLoad_p=False, step=model_config['nframes'] // 4, ratio = ratio, scenario ='scenario A', device=device)
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
     NGraphs = int(len(graph_files))
@@ -1391,7 +1391,7 @@ def data_plot_FIG2sup():
     nframes = 250
     model_config['nparticles'] = 4800
     ratio = 1
-    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4, ratio = ratio, scenario = 'scenario A', device=device)
+    data_generate(model_config, visualize=False, style='color', alpha=0.2, erase=True, bLoad_p=False, step=model_config['nframes'] // 4, ratio = ratio, scenario ='scenario A', device=device)
 
 def data_plot_FIG3sup():
 
@@ -1964,7 +1964,7 @@ def data_plot_FIG4sup():
     #################### first set of plots
 
     ratio = 1
-    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4, ratio = ratio, device=device)
+    data_generate(model_config, visualize=False, style='color', alpha=0.2, erase=True, bLoad_p=False, step=model_config['nframes'] // 4, ratio = ratio, device=device)
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -2102,7 +2102,7 @@ def data_plot_FIG4sup():
 
     ratio = 1
 
-    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4,ratio = ratio, device=device)
+    data_generate(model_config, visualize=False, style='color', alpha=0.2, erase=True, bLoad_p=False, step=model_config['nframes'] // 4, ratio = ratio, device=device)
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -2206,7 +2206,7 @@ def data_plot_FIG4sup():
     model_config['nframes'] = 500
     nframes = 500
     ratio = 2
-    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4, ratio = ratio, device=device)
+    data_generate(model_config, visualize=False, style='color', alpha=0.2, erase=True, bLoad_p=False, step=model_config['nframes'] // 4, ratio = ratio, device=device)
     model = Interaction_Particles(model_config=model_config, device=device, aggr_type=model_config['aggr_type'], bc_dpos=bc_dpos)
 
 
@@ -2345,7 +2345,7 @@ def data_plot_FIG4sup():
     model_config['nparticles'] = 4800
     nframes = 1000
     ratio = 2
-    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4, ratio = ratio, scenario = 'scenario A', device=device)
+    data_generate(model_config, visualize=False, style='color', alpha=0.2, erase=True, bLoad_p=False, step=model_config['nframes'] // 4, ratio = ratio, scenario ='scenario A', device=device)
 
     graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
     NGraphs = int(len(graph_files))
@@ -2439,7 +2439,7 @@ def data_plot_FIG4sup():
     nframes = 500
     model_config['nparticles'] = 4800
     ratio = 1
-    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4, ratio = ratio, scenario = 'scenario A', device=device)
+    data_generate(model_config, visualize=False, style='color', alpha=0.2, erase=True, bLoad_p=False, step=model_config['nframes'] // 4, ratio = ratio, scenario ='scenario A', device=device)
 
 def data_plot_FIG3():
 
@@ -3647,7 +3647,7 @@ def data_plot_FIG5sup():
 
 
     ratio = 1
-    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4,ratio = ratio, bc_dpos=bc_dpos, bc_pos=bc_pos, aggr_type=model_config['aggr_type'])
+    data_generate(model_config, visualize=False, style='color', alpha=0.2, erase=True, bLoad_p=False, step=model_config['nframes'] // 4, ratio = ratio, bc_dpos=bc_dpos, bc_pos=bc_pos, aggr_type=model_config['aggr_type'])
 
     index_particles = []
     np_i = int(model_config['nparticles'] / model_config['nparticle_types'])
@@ -3835,7 +3835,7 @@ def data_plot_FIG5sup():
     time.sleep(0.5)
 
     ratio = 1
-    data_generate(model_config, bVisu=False, bStyle='color', alpha=0.2, bErase=True, bLoad_p=False,step=model_config['nframes'] // 4,ratio = ratio, bc_dpos=bc_dpos, bc_pos=bc_pos, aggr_type=model_config['aggr_type'])
+    data_generate(model_config, visualize=False, style='color', alpha=0.2, erase=True, bLoad_p=False, step=model_config['nframes'] // 4, ratio = ratio, bc_dpos=bc_dpos, bc_pos=bc_pos, aggr_type=model_config['aggr_type'])
 
     model = ElecParticles(model_config=model_config, device=device, bc_dpos=bc_dpos)
 
