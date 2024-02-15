@@ -120,7 +120,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                     N1 = N1[:, None]
 
                     separation = 1E-3 * torch.randn((n_add_nodes, 2), device=device)
-                    X1 = torch.cat((X1, X1[pos, :] + separation), axis=0)
+                    X1 = torch.cat((X1, X1[pos, :] + separation), dim=0)
                     X1[pos, :] = X1[pos, :] - separation
 
                     phi = torch.randn(n_add_nodes, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
@@ -130,12 +130,12 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                     new_y = -sin_phi * V1[pos, 0] + cos_phi * V1[pos, 1]
                     V1[pos, 0] = new_x
                     V1[pos, 1] = new_y
-                    V1 = torch.cat((V1, -V1[pos, :]), axis=0)
+                    V1 = torch.cat((V1, -V1[pos, :]), dim=0)
 
-                    T1 = torch.cat((T1, T1[pos, :]), axis=0)
-                    H1 = torch.cat((H1, H1[pos, :]), axis=0)
+                    T1 = torch.cat((T1, T1[pos, :]), dim=0)
+                    H1 = torch.cat((H1, H1[pos, :]), dim=0)
                     A1[pos, :] = 0
-                    A1 = torch.cat((A1, A1[pos, :]), axis=0)
+                    A1 = torch.cat((A1, A1[pos, :]), dim=0)
 
                     index_particles = []
                     for n in range(n_particles):
@@ -632,7 +632,7 @@ def data_train(config):
             if train_config.loss_weight & (epoch > 1 * n_epochs // 4):
                 with torch.no_grad():
                     error_weight = torch.abs(pred - y_batch).reshape((batch_size, n_particles, 1))
-                    error_weight = torch.mean(error_weight, axis=0)
+                    error_weight = torch.mean(error_weight, dim=0)
                     error_weight = 1 + 2 * error_weight / torch.std(error_weight)
                     error_weight = error_weight.repeat(batch_size, 1, 1).reshape((batch_size * n_particles, 1)).clone().detach()
 
@@ -888,7 +888,7 @@ def data_train(config):
                 pos = np.array(pos)
                 if pos.size > 0:
                     median_center = model_a_[pos, :]
-                    median_center = torch.median(median_center, axis=0).values
+                    median_center = torch.median(median_center, dim=0).values
                     plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=20, c='r')
                     model_a_[pos, :] = median_center
                     plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=20, c='k')
@@ -1033,8 +1033,8 @@ def data_test(config, visualize=False, verbose=True, index_particles=0, prev_npa
                     new_embedding = embedding[prev_index_particles[n].astype(int), :]
                     new_labels = labels[prev_index_particles[n].astype(int)]
                 else:
-                    new_embedding = torch.cat((new_embedding, embedding[prev_index_particles[n].astype(int), :]), axis=0)
-                    new_labels = torch.cat((new_labels, labels[prev_index_particles[n].astype(int)]), axis=0)
+                    new_embedding = torch.cat((new_embedding, embedding[prev_index_particles[n].astype(int), :]), dim=0)
+                    new_labels = torch.cat((new_labels, labels[prev_index_particles[n].astype(int)]), dim=0)
 
         model.a = nn.Parameter(
             torch.tensor(np.ones((NGraphs - 1, int(prev_nparticles) * ratio, 2)), device=device, dtype=torch.float32,
