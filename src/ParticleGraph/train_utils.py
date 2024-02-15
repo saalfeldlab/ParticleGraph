@@ -23,7 +23,7 @@ def choose_training_model(model_config, device):
         case 'WaveMesh':
             model = Mesh_Laplacian(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
         case 'RD_RPS_Mesh':
-            model = Mesh_RPS(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
+            model = Mesh_RPS(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
         case _:
             raise ValueError(f'Unknown model {model_name}')
 

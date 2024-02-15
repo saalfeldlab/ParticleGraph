@@ -722,8 +722,8 @@ def data_train(config):
                     for k in range(n_particle_types):
                         for n in index_particles[k]:
                             rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
-                            embedding0 = model.a[m, n, :] * torch.ones((1000, model_config.embedding), device=device)
-                            embedding1 = model.a[m, n, :] * torch.ones((1000, model_config.embedding), device=device)
+                            embedding0 = model.a[m, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
+                            embedding1 = model.a[m, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
                             in_features = torch.cat((-rr[:, None] / simulation_config.radius, 0 * rr[:, None],
                                                      rr[:, None] / simulation_config.radius, 0 * rr[:, None],
                                                      0 * rr[:, None],
@@ -748,7 +748,7 @@ def data_train(config):
                 acc_list = []
                 for n in range(n_particles):
                     rr = torch.tensor(np.linspace(0, radius * 1.3, 1000)).to(device)
-                    embedding = model.a[0, n, :] * torch.ones((1000, model_config.embedding), device=device)
+                    embedding = model.a[0, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
                     in_features = torch.cat((rr[:, None] / simulation_config.radius, 0 * rr[:, None],
                                              rr[:, None] / simulation_config.radius, 0 * rr[:, None], 0 * rr[:, None],
                                              0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
@@ -773,7 +773,7 @@ def data_train(config):
                 acc_list = []
                 for n in range(n_particles):
                     rr = torch.tensor(np.linspace(0, radius, 200)).to(device)
-                    embedding = model.a[0, n, :] * torch.ones((200, model_config.embedding), device=device)
+                    embedding = model.a[0, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
                     if model_config.name == 'PDE_A':
                         in_features = torch.cat((rr[:, None] / simulation_config.radius, 0 * rr[:, None],
                                                  rr[:, None] / simulation_config.radius, embedding), dim=1)
@@ -801,9 +801,9 @@ def data_train(config):
                 f_list = []
                 popt_list = []
                 for n in range(n_particles):
-                    embedding = model.a[0, n, :] * torch.ones((100, model_config.embedding), device=device)
+                    embedding = model.a[0, n, :] * torch.ones((100, model_config.embedding_dim), device=device)
                     if model_config.name == 'RD_RPS_Mesh':
-                        embedding = model.a[0, n, :] * torch.ones((100, model_config.embedding), device=device)
+                        embedding = model.a[0, n, :] * torch.ones((100, model_config.embedding_dim), device=device)
                         u = torch.tensor(np.linspace(0, 1, 100)).to(device)
                         u = u[:, None]
                         r = u

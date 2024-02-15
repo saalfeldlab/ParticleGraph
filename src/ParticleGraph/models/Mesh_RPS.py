@@ -25,24 +25,27 @@ class Mesh_RPS(pyg.nn.MessagePassing):
         the first derivative of a scalar field on a mesh (dimension 3).
     """
 
-    def __init__(self, aggr_type=[], model_config=[], device=[], bc_dpos=[]):
-        super(Mesh_RPS, self).__init__(aggr=aggr_type)  # "Add" aggregation.
+    def __init__(self, aggr_type=None, config=None, device=None, bc_dpos=None):
+        super(Mesh_RPS, self).__init__(aggr=aggr_type)
+
+        simulation_config = config.simulation
+        model_config = config.graph_model
 
         self.device = device
-        self.input_size = model_config['input_size']
-        self.output_size = model_config['output_size']
-        self.hidden_size = model_config['hidden_size']
-        self.nlayers = model_config['n_mp_layers']
-        self.embedding = model_config['embedding']
-        self.nparticles = model_config['nparticles']
-        self.ndataset = model_config['nrun'] - 1
+        self.input_size = model_config.input_size
+        self.output_size = model_config.output_size
+        self.hidden_size = model_config.hidden_dim
+        self.nlayers = model_config.n_mp_layers
+        self.embedding_dim = model_config.embedding_dim
+        self.nparticles = simulation_config.n_particles
+        self.ndataset = simulation_config.n_runs - 1
         self.bc_dpos = bc_dpos
 
         self.lin_phi = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
                            hidden_size=self.hidden_size, device=self.device)
 
         self.a = nn.Parameter(
-            torch.tensor(np.ones((int(self.ndataset), int(self.nparticles), self.embedding)), device=self.device,
+            torch.tensor(np.ones((int(self.ndataset), int(self.nparticles), self.embedding_dim)), device=self.device,
                          requires_grad=True, dtype=torch.float32))
 
     def forward(self, data, data_id):
@@ -68,7 +71,7 @@ class Mesh_RPS(pyg.nn.MessagePassing):
         return Laplace
 
     def update(self, aggr_out):
-        return aggr_out  # self.lin_node(aggr_out)
+        return aggr_out
 
     def psi(self, r, p):
         return p * r

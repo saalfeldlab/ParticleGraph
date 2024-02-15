@@ -38,7 +38,7 @@ class Interaction_Particles_extract(pyg.nn.MessagePassing):
         self.radius = simulation_config.radius
         self.data_augmentation = train_config.data_augmentation
         self.noise_level = simulation_config.noise_level
-        self.embedding = model_config.embedding
+        self.embedding = model_config.embedding_dim
         self.n_dataset = train_config.n_runs - 1
         self.update_type = model_config.update_type
         self.prediction = model_config.prediction
