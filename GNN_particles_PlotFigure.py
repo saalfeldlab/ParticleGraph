@@ -1,10 +1,13 @@
 import matplotlib.cm as cmplt
 import torch_geometric as pyg
+import torch_geometric.utils as pyg_utils
 import os
 from ParticleGraph.MLP import MLP
 import imageio
 
 from ParticleGraph.fitting_models import power_model, boids_model, reaction_diffusion_model
+from ParticleGraph.generators import RD_RPS
+from ParticleGraph.models import Interaction_Particles
 
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
@@ -18,39 +21,42 @@ class Interaction_Particles_extract(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, model_config, device, aggr_type=[], bc_dpos=[]):
+    def __init__(self, config, device, aggr_type=[], bc_dpos=[]):
 
         super(Interaction_Particles_extract, self).__init__(aggr=aggr_type)  # "Add" aggregation.
 
+        train_config = config.training
+        simulation_config = config.simulation
+        model_config = config.model_config
+
         self.device = device
-        self.input_size = model_config['input_size']
-        self.output_size = model_config['output_size']
-        self.hidden_size = model_config['hidden_size']
-        self.nlayers = model_config['n_mp_layers']
-        self.nparticles = model_config['nparticles']
-        self.radius = model_config['radius']
-        self.data_augmentation = model_config['data_augmentation']
-        self.noise_level = model_config['noise_level']
-        self.embedding = model_config['embedding']
-        self.ndataset = model_config['nrun'] - 1
-        self.upgrade_type = model_config['upgrade_type']
-        self.prediction = model_config['prediction']
-        self.upgrade_type = model_config['upgrade_type']
-        self.nlayers_update = model_config['nlayers_update']
-        self.hidden_size_update = model_config['hidden_size_update']
-        self.sigma = model_config['sigma']
+        self.input_size = train_config.input_size
+        self.output_size = train_config.output_size
+        self.hidden_size = train_config.hidden_size
+        self.n_layers = train_config.n_mp_layers
+        self.n_particles = simulation_config.n_particles
+        self.radius = simulation_config.radius
+        self.data_augmentation = train_config.data_augmentation
+        self.noise_level = simulation_config.noise_level
+        self.embedding = model_config.embedding
+        self.n_dataset = train_config.n_runs - 1
+        self.update_type = model_config.update_type
+        self.prediction = model_config.prediction
+        self.n_layers_update = model_config.n_layers_update
+        self.hidden_dim_update = model_config.hidden_dim_update
+        self.sigma = simulation_config.sigma
         self.bc_dpos = bc_dpos
 
-        self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
+        self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                             hidden_size=self.hidden_size, device=self.device)
 
         self.a = nn.Parameter(
-            torch.tensor(np.ones((self.ndataset, int(self.nparticles), self.embedding)), device=self.device,
+            torch.tensor(np.ones((self.n_dataset, int(self.n_particles), self.embedding)), device=self.device,
                          requires_grad=True, dtype=torch.float32))
 
-        if self.upgrade_type != 'none':
+        if self.update_type != 'none':
             self.lin_update = MLP(input_size=self.output_size + self.embedding + 2, output_size=self.output_size,
-                                  nlayers=self.nlayers_update, hidden_size=self.hidden_size_update, device=self.device)
+                                  nlayers=self.n_layers_update, hidden_size=self.hidden_dim_update, device=self.device)
 
     def forward(self, data, data_id, step, vnorm, cos_phi, sin_phi):
 
@@ -4033,7 +4039,7 @@ def data_plot_FIG5():
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     x = x_list[0][0].clone().detach()
 
-    model = Interaction_Particles_extract(aggr_type=aggr_type, model_config=model_config, device=device, bc_dpos=bc_dpos)
+    model = Interaction_Particles_extract(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
 
     # if best_model == -1:
     #     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"

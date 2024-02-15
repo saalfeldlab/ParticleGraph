@@ -1,4 +1,6 @@
 from typing import Optional, Literal, Annotated, Dict
+
+import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from ParticleGraph.config_manager import ConfigManager
@@ -36,7 +38,7 @@ class SimulationConfig(BaseModel):
 
 class GraphModelConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    model_type: str
+    name: str
     prediction: str
     input_size: int
     output_size: int
@@ -92,16 +94,21 @@ class ParticleGraphConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
 
     description: Optional[str] = 'ParticleGraph'
+    dataset: str
     simulation: SimulationConfig
     graph_model: GraphModelConfig
     plotting: PlottingConfig
     training: TrainingConfig
 
+    def __init__(self, file_name: str):
+        with open(file_name, 'r') as file:
+            raw_config = yaml.safe_load(file)
+        super().__init__(**raw_config)
 
 
 if __name__ == '__main__':
 
-    config_file = './config/config_test.yaml' # Insert path to config file
+    config_file = './config/config_arbitrary_3.yaml' # Insert path to config file
     raw_config = ConfigManager.load_config(config_file)
 
     config = ParticleGraphConfig(**raw_config)
