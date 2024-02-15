@@ -11,37 +11,41 @@ class Interaction_CElegans(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
-    def __init__(self, model_config, device, aggr_type=[], bc_dpos=[]):
+    def __init__(self, config, device, bc_dpos=None):
 
-        super(Interaction_CElegans, self).__init__(aggr='mean')  # "Add" aggregation.
+        super(Interaction_CElegans, self).__init__(aggr='mean')
+
+        simulation_config = config.simulation
+        model_config = config.graph_model
+        train_config = config.training
 
         self.device = device
-        self.input_size = model_config['input_size']
-        self.output_size = model_config['output_size']
-        self.hidden_size = model_config['hidden_size']
-        self.nlayers = model_config['n_mp_layers']
-        self.nparticles = model_config['nparticles']
-        self.radius = model_config['radius']
-        self.data_augmentation = model_config['data_augmentation']
-        self.noise_level = model_config['noise_level']
-        self.embedding = model_config['embedding']
-        self.ndataset = model_config['nrun'] - 1
-        self.upgrade_type = model_config['upgrade_type']
-        self.prediction = model_config['prediction']
-        self.upgrade_type = model_config['upgrade_type']
-        self.nlayers_update = model_config['nlayers_update']
-        self.hidden_size_update = model_config['hidden_size_update']
+        self.input_size = simulation_config.input_size
+        self.output_size = simulation_config.output_size
+        self.hidden_dim = simulation_config.hidden_dim
+        self.nlayers = simulation_config.n_mp_layers
+        self.n_particles = simulation_config.n_particles
+        self.max_radius = simulation_config.max_radius
+        self.data_augmentation = train_config.data_augmentation
+        self.noise_level = simulation_config.noise_level
+        self.embedding_dim = model_config.embedding_dim
+        self.ndataset = train_config.n_runs - 1
+        self.update_type = model_config.update_type
+        self.prediction = model_config.prediction
+        self.update_type = model_config.update_type
+        self.nlayers_update = model_config.n_layers_update
+        self.hidden_size_update = model_config.hidden_dim_update
         self.bc_dpos = bc_dpos
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,
-                            hidden_size=self.hidden_size, device=self.device)
+                            hidden_size=self.hidden_dim, device=self.device)
 
         self.a = nn.Parameter(
-            torch.tensor(np.ones((self.ndataset, int(self.nparticles + 1), self.embedding)), device=self.device,
+            torch.tensor(np.ones((self.ndataset, int(self.n_particles + 1), self.embedding_dim)), device=self.device,
                          requires_grad=True, dtype=torch.float64))
 
-        if self.upgrade_type == 'linear':
-            self.lin_update = MLP(input_size=self.output_size + self.embedding + 2, output_size=self.output_size,
+        if self.update_type == 'linear':
+            self.lin_update = MLP(input_size=self.output_size + self.embedding_dim + 2, output_size=self.output_size,
                                   nlayers=self.nlayers_update, hidden_size=self.hidden_size_update, device=self.device)
 
         self.to(device=self.device)
@@ -56,7 +60,7 @@ class Interaction_CElegans(pyg.nn.MessagePassing):
 
         pred = self.propagate(edge_index, x=(x, x), time=time)
 
-        if self.upgrade_type == 'linear':
+        if self.update_type == 'linear':
             embedding = self.a[self.data_id, to_numpy(x[:, 0]), :]
             pred = self.lin_update(torch.cat((pred, x[:, 3:5], embedding), dim=-1))
 

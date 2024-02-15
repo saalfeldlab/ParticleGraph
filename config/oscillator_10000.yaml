@@ -1,0 +1,43 @@
+description: '10.000 oscillators model'
+dataset: 'oscillator_10000'
+
+simulation:
+  params: [0.2,0.4,0.6,0.8,1.0]
+  min_radius: 0.002
+  max_radius:  0.01
+  diffusion_coefficients: [0,0.6,0.8,1,0.7]
+  n_particles: 10000
+  n_particle_types: 1
+  n_interactions: 1
+  n_nodes: 10000
+  n_node_types: 1
+  n_frames: 10000
+  delta_t: 2
+  dpos_init: 5.0E-5
+  boundary: 'periodic'
+  node_value_map: 'pattern_10.tif'
+  node_type_map: 'pattern_8.tif'
+
+graph_model:
+  name: 'PDE_O'
+  prediction: '1st_derivative'
+  input_size: 9
+  output_size: 2
+  hidden_dim: 128
+  n_mp_layers: 5
+  aggr_type: 'mean'
+  mesh_aggr_type: 'mean'
+  embedding_dim: 2
+  update_type: 'none'
+
+plotting:
+  colormap: 'tab20'
+  arrow_length: 1
+
+training:
+  n_epochs: 20
+  cluster_method: 'kmeans_auto',
+  device: 'auto'
+
+
+
