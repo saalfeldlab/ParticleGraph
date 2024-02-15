@@ -28,6 +28,7 @@ graph_model:
   hidden_dim: 16
   n_mp_layers: 5
   aggr_type: 'add'
+  mesh_aggr_type: 'add'
   embedding_dim: 2
   update_type: 'none'
 
