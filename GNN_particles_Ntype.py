@@ -29,14 +29,14 @@ from ParticleGraph.fitting_models import linear_model
 from ParticleGraph.embedding_cluster import *
 
 
-def data_generate(config, bVisu=True, bStyle='color', bErase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=[]):
+def data_generate(config, visualize=True, style='color', erase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=[]):
     print('')
     print('Generating data ...')
 
     # create output folder, empty it if bErase=True, copy files into it
     dataset = config.dataset
     folder = f'./graphs_data/graphs_particles_{dataset}/'
-    if bErase:
+    if erase:
         files = glob.glob(f"{folder}/*")
         for f in files:
             if (f[-8:] != 'tmp_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (
@@ -230,9 +230,9 @@ def data_generate(config, bVisu=True, bStyle='color', bErase=False, step=5, alph
                 y_mesh_list.append(pred)
 
             # output plots
-            if bVisu & (run == 0) & (it % step == 0) & (it >= 0):
+            if visualize & (run == 0) & (it % step == 0) & (it >= 0):
 
-                if 'graph' in bStyle:
+                if 'graph' in style:
                     fig = plt.figure(figsize=(10, 10))
 
                     distance2 = torch.sum((x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
@@ -285,7 +285,7 @@ def data_generate(config, bVisu=True, bStyle='color', bErase=False, step=5, alph
                     plt.savefig(f"graphs_data/graphs_particles_{dataset}/tmp_data/Fig_g_color_{it}.tif", dpi=300)
                     plt.close()
 
-                if 'color' in bStyle:
+                if 'color' in style:
 
                     if model_config.name == 'PDE_O':
                         fig = plt.figure(figsize=(12, 12))
@@ -944,7 +944,7 @@ def data_train(config):
         plt.close()
 
 
-def data_test(config, bVisu=False, bPrint=True, bDetails=False, index_particles=0, prev_nparticles=0, new_nparticles=0, prev_index_particles=0, best_model=0, step=5, bTest='', folder_out='tmp_recons', initial_map='', forced_embedding=[], forced_color=0, ratio=1):
+def data_test(config, visualize=False, verbose=True, index_particles=0, prev_nparticles=0, new_nparticles=0, prev_index_particles=0, best_model=0, step=5, bTest='', folder_out='tmp_recons', initial_map='', forced_embedding=[], forced_color=0, ratio=1):
     print('')
     print('Plot roll-out inference ... ')
 
@@ -1057,7 +1057,7 @@ def data_test(config, bVisu=False, bPrint=True, bDetails=False, index_particles=
         param = parameter.numel()
         table.add_row([name, param])
         total_params += param
-    if bPrint:
+    if verbose:
         print(table)
         print(f"Total Trainable Params: {total_params}")
 
@@ -1076,7 +1076,7 @@ def data_test(config, bVisu=False, bPrint=True, bDetails=False, index_particles=
         edge_index_mesh = mesh_data['edge_index']
         edge_weight_mesh = mesh_data['edge_weight']
 
-    if bPrint:
+    if verbose:
         print('')
         print(f'x: {x.shape}')
         print(f'index_particles: {index_particles[0].shape}')
@@ -1133,7 +1133,7 @@ def data_test(config, bVisu=False, bPrint=True, bDetails=False, index_particles=
 
             x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t)  # position update
 
-        if (it % step == 0) & (it >= 0) & bVisu:
+        if (it % step == 0) & (it >= 0) & visualize:
 
             fig = plt.figure(figsize=(12, 12))
             if has_mesh:
@@ -1207,6 +1207,6 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, bVisu=True, bStyle='color', alpha=1, bErase=True, step=config.simulation.n_frames//100)
+        data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 100)
         data_train(config)
-        # data_test(model_config, bVisu=True, bPrint=True, best_model=20, bDetails=False, step = model_config['nframes']//50, ratio=1)
+        # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 50, ratio=1)
