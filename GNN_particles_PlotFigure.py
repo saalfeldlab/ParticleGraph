@@ -32,10 +32,10 @@ class Interaction_Particles_extract(pyg.nn.MessagePassing):
         self.device = device
         self.input_size = train_config.input_size
         self.output_size = train_config.output_size
-        self.hidden_size = train_config.hidden_size
+        self.hidden_size = train_config.hidden_dim
         self.n_layers = train_config.n_mp_layers
         self.n_particles = simulation_config.n_particles
-        self.radius = simulation_config.radius
+        self.radius = simulation_config.max_radius
         self.data_augmentation = train_config.data_augmentation
         self.noise_level = simulation_config.noise_level
         self.embedding = model_config.embedding_dim

@@ -53,7 +53,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
     simulation_config = config.simulation
     model_config = config.graph_model
 
-    radius = simulation_config.radius
+    radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
@@ -410,7 +410,7 @@ def data_train(config):
     model_config = config.graph_model
 
     n_epochs = train_config.n_epochs
-    radius = simulation_config.radius
+    radius = simulation_config.max_radius
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
     dataset_name = config.dataset
@@ -724,8 +724,8 @@ def data_train(config):
                             rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
                             embedding0 = model.a[m, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
                             embedding1 = model.a[m, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
-                            in_features = torch.cat((-rr[:, None] / simulation_config.radius, 0 * rr[:, None],
-                                                     rr[:, None] / simulation_config.radius, 0 * rr[:, None],
+                            in_features = torch.cat((-rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                     rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                                      0 * rr[:, None],
                                                      0 * rr[:, None], 0 * rr[:, None], embedding0, embedding1), dim=1)
                             acc = model.lin_edge(in_features.float())
@@ -749,8 +749,8 @@ def data_train(config):
                 for n in range(n_particles):
                     rr = torch.tensor(np.linspace(0, radius * 1.3, 1000)).to(device)
                     embedding = model.a[0, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
-                    in_features = torch.cat((rr[:, None] / simulation_config.radius, 0 * rr[:, None],
-                                             rr[:, None] / simulation_config.radius, 0 * rr[:, None], 0 * rr[:, None],
+                    in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                             rr[:, None] / simulation_config.max_radius, 0 * rr[:, None], 0 * rr[:, None],
                                              0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
                     acc = model.lin_edge(in_features.float())
                     acc = acc[:, 0]
@@ -775,11 +775,11 @@ def data_train(config):
                     rr = torch.tensor(np.linspace(0, radius, 200)).to(device)
                     embedding = model.a[0, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
                     if model_config.name == 'PDE_A':
-                        in_features = torch.cat((rr[:, None] / simulation_config.radius, 0 * rr[:, None],
-                                                 rr[:, None] / simulation_config.radius, embedding), dim=1)
+                        in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / simulation_config.max_radius, embedding), dim=1)
                     else:
-                        in_features = torch.cat((rr[:, None] / simulation_config.radius, 0 * rr[:, None],
-                                                 rr[:, None] / simulation_config.radius, 0 * rr[:, None], 0 * rr[:, None],
+                        in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / simulation_config.max_radius, 0 * rr[:, None], 0 * rr[:, None],
                                                  0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
                     acc = model.lin_edge(in_features.float())
                     acc = acc[:, 0]
@@ -952,7 +952,7 @@ def data_test(config, visualize=False, verbose=True, index_particles=0, prev_npa
     simulation_config = config.simulation
     model_config = config.graph_model
 
-    radius = simulation_config.radius
+    radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
