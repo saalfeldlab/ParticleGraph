@@ -3,8 +3,6 @@ from typing import Optional, Literal, Annotated, Dict
 import yaml
 from pydantic import BaseModel, ConfigDict, Field
 
-from ParticleGraph.config_manager import ConfigManager
-
 # from ParticleGraph import (
 #     GraphModel,
 # )
