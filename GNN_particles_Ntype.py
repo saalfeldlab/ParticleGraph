@@ -1193,7 +1193,7 @@ if __name__ == '__main__':
     device = set_device('auto')
     print(f'device {device}')
 
-    config_list = ['arbitrary_3', 'gravity_16']
+    config_list = ['boids_16', 'Coulomb_3'] # ['arbitrary_3', 'gravity_16']
     for config_file in config_list:
 
         # Load parameters from config file
