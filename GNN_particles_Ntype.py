@@ -15,7 +15,6 @@ from torch_geometric.utils.convert import to_networkx
 from tqdm import trange
 import os
 import matplotlib
-from sklearn import metrics
 # matplotlib.use("Qt5Agg")
 
 from ParticleGraph.config import ParticleGraphConfig
@@ -530,7 +529,7 @@ def data_train(config):
         index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
         index_particles.append(index.squeeze())
 
-    data_augmentation_loop = 2 #################3
+    data_augmentation_loop = 200
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
@@ -773,8 +772,8 @@ def data_train(config):
                 proj_interaction = trans.transform(coeff_norm)
             elif (model_config.name == 'PDE_A') | (model_config.name == 'PDE_B'):
                 acc_list = []
+                rr = torch.tensor(np.linspace(0, radius, 200)).to(device)
                 for n in range(n_particles):
-                    rr = torch.tensor(np.linspace(0, radius, 200)).to(device)
                     embedding = model.a[0, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
                     if model_config.name == 'PDE_A':
                         in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
@@ -789,15 +788,14 @@ def data_train(config):
                     if n % 5 == 0:
                         plt.plot(to_numpy(rr),
                                  to_numpy(acc) * to_numpy(ynorm) / simulation_config.delta_t,
-                                 color=cmap.color(to_numpy(x[n, 5])), linewidth=1, alpha=0.25)
+                                 color=cmap.color(to_numpy(x[n, 5]).astype(int)), linewidth=1, alpha=0.25)
                 plt.xlabel('Distance [a.u]', fontsize=12)
                 plt.ylabel('MLP [a.u]', fontsize=12)
                 acc_list = torch.stack(acc_list)
                 coeff_norm = to_numpy(acc_list)
                 new_index = np.random.permutation(coeff_norm.shape[0])
                 new_index = new_index[0:min(1000, coeff_norm.shape[0])]
-                trans = umap.UMAP(n_neighbors=np.round(n_particles / simulation_config.n_interactions).astype(int),
-                                  n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm[new_index])
+                trans = umap.UMAP(n_neighbors=32, n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm[new_index])
                 proj_interaction = trans.transform(coeff_norm)
             elif has_mesh:
                 f_list = []
