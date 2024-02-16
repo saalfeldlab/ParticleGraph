@@ -1140,7 +1140,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['gravity_16']
+    config_list = ['arbitrary_3']
     for config_file in config_list:
 
         # Load parameters from config file
