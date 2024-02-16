@@ -3,7 +3,23 @@ from prettytable import PrettyTable
 
 from ParticleGraph.models import Interaction_Particles, Mesh_Laplacian, Mesh_RPS
 from ParticleGraph.utils import choose_boundary_values
+from ParticleGraph.utils import to_numpy
+import numpy as np
 
+
+def get_embedding(model_a=None, index_particles=None, n_particles=None, n_particle_types=None):
+    embedding = []
+    for n in range(model_a.shape[0]):
+        embedding.append(model_a[n])
+    embedding = to_numpy(torch.stack(embedding))
+    embedding = np.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
+    embedding_ = embedding
+    embedding_particle = []
+    for m in range(model_a.shape[0]):
+        for n in range(n_particle_types):
+            embedding_particle.append(embedding[index_particles[n] + m * n_particles, :])
+
+    return embedding, embedding_particle
 
 def choose_training_model(model_config, device):
     model_name = model_config.graph_model.name

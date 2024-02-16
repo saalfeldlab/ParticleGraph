@@ -36,6 +36,7 @@ training:
   sparsity: 'replace'
   cluster_method: 'distance_plot'
   data_augmentation: True
+  data_augmentation_loop: 1
   device: 'auto'
 
 

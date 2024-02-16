@@ -22,7 +22,7 @@ from ParticleGraph.config import ParticleGraphConfig
 from ParticleGraph.generators.particle_initialization import init_particles, init_mesh
 from ParticleGraph.generators.utils import choose_model, choose_mesh_model
 from ParticleGraph.train_utils import choose_training_model, constant_batch_size, increasing_batch_size, \
-    set_trainable_parameters
+    set_trainable_parameters, get_embedding
 
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
@@ -543,7 +543,6 @@ def data_train(config):
 
         old_batch_size = batch_size
         batch_size = get_batch_size(epoch)
-        print(f'batch_size: {batch_size}')
         logger.info(f'batch_size: {batch_size}')
         if epoch == 0:
             min_radius = 0.002
@@ -670,7 +669,6 @@ def data_train(config):
                             plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5, color=cmap.color(n))
                 plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{N}.tif")
 
-
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         torch.save({'model_state_dict': model.state_dict(),
@@ -688,16 +686,7 @@ def data_train(config):
         plt.xlabel('Epochs', fontsize=12)
 
         ax = fig.add_subplot(1, 6, 2)
-        embedding = []
-        for n in range(model.a.shape[0]):
-            embedding.append(model.a[n])
-        embedding = to_numpy(torch.stack(embedding))
-        embedding = np.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
-        embedding_ = embedding
-        embedding_particle = []
-        for m in range(model.a.shape[0]):
-            for n in range(n_particle_types):
-                embedding_particle.append(embedding[index_particles[n] + m * n_particles, :])
+        embedding, embedding_particle = get_embedding(model.a, index_particles, n_particles, n_particle_types)
         if (embedding.shape[1] > 2):
             ax = fig.add_subplot(2, 4, 2, projection='3d')
             for n in range(n_particle_types):
