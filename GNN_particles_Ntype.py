@@ -553,12 +553,6 @@ def data_train(config):
             repeat_factor = batch_size // old_batch_size
             if has_mesh:
                 mask_mesh = mask_mesh.repeat(repeat_factor, 1)
-        elif epoch == 3 * n_epochs // 4 + 2:
-            lr_embedding = train_config.learning_rate_embedding_end
-            lr = train_config.learning_rate_end
-            optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-            logger.info(f'Learning rates: {lr}, {lr_embedding}')
-
         error_weight = torch.ones((batch_size * n_particles, 1), device=device, requires_grad=False)
 
         total_loss = 0
@@ -710,7 +704,7 @@ def data_train(config):
                 plt.xlabel('Distance [a.u]', fontsize=12)
                 plt.ylabel('MLP [a.u]', fontsize=12)
                 coeff_norm = to_numpy(acc_list)
-                trans = umap.UMAP(n_neighbors=32, n_components=2, transform_queue_size=0).fit(coeff_norm)
+                trans = umap.UMAP(n_neighbors=100, n_components=2, transform_queue_size=0).fit(coeff_norm)
                 proj_interaction = trans.transform(coeff_norm)
             elif model_config.name == 'PDE_G':
                 acc_list = []
@@ -731,7 +725,7 @@ def data_train(config):
                 plt.xlabel('Distance [a.u]', fontsize=12)
                 plt.ylabel('MLP [a.u]', fontsize=12)
                 coeff_norm = to_numpy(acc_list)
-                trans = umap.UMAP(n_neighbors=32, n_components=2, transform_queue_size=0).fit(coeff_norm)
+                trans = umap.UMAP(n_neighbors=100, n_components=2, transform_queue_size=0).fit(coeff_norm)
                 proj_interaction = trans.transform(coeff_norm)
             elif (model_config.name == 'PDE_A') | (model_config.name == 'PDE_B'):
                 acc_list = []
@@ -758,7 +752,7 @@ def data_train(config):
                 coeff_norm = to_numpy(acc_list)
                 new_index = np.random.permutation(coeff_norm.shape[0])
                 new_index = new_index[0:min(1000, coeff_norm.shape[0])]
-                trans = umap.UMAP(n_neighbors=32, n_components=2, transform_queue_size=0).fit(coeff_norm[new_index])
+                trans = umap.UMAP(n_neighbors=100, n_components=2, transform_queue_size=0).fit(coeff_norm[new_index])
                 proj_interaction = trans.transform(coeff_norm)
             elif has_mesh:
                 f_list = []
@@ -795,8 +789,6 @@ def data_train(config):
                 else:
                     proj_interaction = popt_list
                     proj_interaction[:, 1] = proj_interaction[:, 0]
-            # save projections
-            np.save(f'./{log_dir}/tmp_training/umap_projection_{epoch}.npy', proj_interaction)
 
             ax = fig.add_subplot(1, 6, 4)
             match train_config.cluster_method:
@@ -837,8 +829,8 @@ def data_train(config):
             Accuracy = metrics.accuracy_score(to_numpy(T1), new_labels)
             plt.text(0, 1.1, f'Accuracy: {np.round(Accuracy, 3)}', ha='left', va='top', transform=ax.transAxes,
                      fontsize=10)
-            print(f'Accuracy: {np.round(Accuracy, 3)}   nclusters: {nclusters}')
-            logger.info(f'Accuracy: {np.round(Accuracy, 3)}    nclusters: {nclusters}')
+            print(f'Accuracy: {np.round(Accuracy, 3)}   n_clusters: {nclusters}')
+            logger.info(f'Accuracy: {np.round(Accuracy, 3)}    n_clusters: {nclusters}')
 
             ax = fig.add_subplot(1, 6, 6)
             model_a_ = model.a.clone().detach()
@@ -876,9 +868,15 @@ def data_train(config):
                     lr = train_config.learning_rate_end
                     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
                     logger.info(f'Learning rates: {lr}, {lr_embedding}')
-                else
-                    lr_embedding = learning_rate_embedding_end
+            else:
+                if epoch > 3 * n_epochs // 4 + 1:
+                    lr_embedding = train_config.learning_rate_embedding_end
                     lr = train_config.learning_rate_end
+                    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                    logger.info(f'Learning rates: {lr}, {lr_embedding}')
+                else:
+                    lr_embedding = train_config.learning_rate_embedding_start
+                    lr = train_config.learning_rate_start
                     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
                     logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
@@ -1132,15 +1130,15 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    device = set_device('auto')
-    print(f'device {device}')
-
-    config_list = ['arbitrary_3']
+    config_list = ['gravity_16']
     for config_file in config_list:
 
         # Load parameters from config file
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         print(config.pretty())
+
+        device = set_device(config.training.device)
+        print(f'device {device}')
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 

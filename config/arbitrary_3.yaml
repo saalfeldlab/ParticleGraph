@@ -38,7 +38,7 @@ training:
   cluster_method: 'distance_plot'
   data_augmentation: True
   data_augmentation_loop: 200
-  device: 'auto'
+  device: 'cuda:0'
 
 
 
