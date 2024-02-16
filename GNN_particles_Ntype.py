@@ -16,7 +16,7 @@ from tqdm import trange
 import os
 from sklearn import metrics
 import matplotlib
-# matplotlib.use("Qt5Agg")
+matplotlib.use("Qt5Agg")
 
 from ParticleGraph.config import ParticleGraphConfig
 from ParticleGraph.generators.particle_initialization import init_particles, init_mesh
@@ -639,34 +639,15 @@ def data_train(config):
 
             if visualize_embedding:
                 fig = plt.figure(figsize=(8, 8))
-                embedding = []
-                for n in range(model.a.shape[0]):
-                    embedding.append(model.a[n])
-                embedding = to_numpy(torch.stack(embedding))
-                embedding = np.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
-                embedding_ = embedding
-                embedding_particle = []
+                plt.ion()
+                embedding, embedding_particle = get_embedding(model.a, index_particles, n_particles, n_particle_types)
                 for m in range(model.a.shape[0]):
                     for n in range(n_particle_types):
-                        embedding_particle.append(embedding[index_particles[n] + m * n_particles, :])
-                if (embedding.shape[1] > 2):
-                    ax = fig.add_subplot(2, 4, 2, projection='3d')
-                    for n in range(n_particle_types):
-                        ax.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1],
-                                   embedding_particle[n][:, 2],
-                                   color=cmap.color(n), s=1)
-                else:
-                    if (embedding.shape[1] > 1):
-                        for m in range(model.a.shape[0]):
-                            for n in range(n_particle_types):
-                                plt.scatter(embedding_particle[n + m * n_particle_types][:, 0],
-                                            embedding_particle[n + m * n_particle_types][:, 1], color=cmap.color(n), s=3)
-                        plt.xlabel('Embedding 0', fontsize=12)
-                        plt.ylabel('Embedding 1', fontsize=12)
-                    else:
-                        for n in range(n_particle_types):
-                            plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5, color=cmap.color(n))
-                plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{N}.tif")
+                        plt.scatter(embedding_particle[n + m * n_particle_types][:, 0],
+                                    embedding_particle[n + m * n_particle_types][:, 1], color=cmap.color(n), s=3)
+                plt.xlabel('Embedding 0', fontsize=12)
+                plt.ylabel('Embedding 1', fontsize=12)
+
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
@@ -679,7 +660,6 @@ def data_train(config):
         plt.ion()
         ax = fig.add_subplot(1, 6, 1)
         plt.plot(list_loss, color='k')
-        plt.ylim([0, 0.010])
         plt.xlim([0, n_epochs])
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
@@ -857,8 +837,8 @@ def data_train(config):
             Accuracy = metrics.accuracy_score(to_numpy(T1), new_labels)
             plt.text(0, 1.1, f'Accuracy: {np.round(Accuracy, 3)}', ha='left', va='top', transform=ax.transAxes,
                      fontsize=10)
-            print(f'Accuracy: {np.round(Accuracy, 3)}')
-            logger.info(f'Accuracy: {np.round(Accuracy, 3)}')
+            print(f'Accuracy: {np.round(Accuracy, 3)}   nclusters: {nclusters}')
+            logger.info(f'Accuracy: {np.round(Accuracy, 3)}    nclusters: {nclusters}')
 
             ax = fig.add_subplot(1, 6, 6)
             model_a_ = model.a.clone().detach()
@@ -891,12 +871,16 @@ def data_train(config):
                 print(f'regul_embedding: replaced')
                 logger.info(f'regul_embedding: replaced')
                 plt.text(0, 1.1, f'Replaced', ha='left', va='top', transform=ax.transAxes, fontsize=10)
-                # if train_config.fix_cluster_embedding:
-                #     lr_embedding = 0
-                #     lr = train_config.learning_rate_end
-                #     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-                #     print(f'Learning rates: {lr}, {lr_embedding}')
-                #     logger.info(f'Learning rates: {lr}, {lr_embedding}')
+                if train_config.fix_cluster_embedding:
+                    lr_embedding = 1E-5
+                    lr = train_config.learning_rate_end
+                    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                    logger.info(f'Learning rates: {lr}, {lr_embedding}')
+                else
+                    lr_embedding = learning_rate_embedding_end
+                    lr = train_config.learning_rate_end
+                    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                    logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
@@ -1151,7 +1135,7 @@ if __name__ == '__main__':
     device = set_device('auto')
     print(f'device {device}')
 
-    config_list = ['gravity_16'] 
+    config_list = ['arbitrary_3']
     for config_file in config_list:
 
         # Load parameters from config file
