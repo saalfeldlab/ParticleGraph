@@ -553,6 +553,7 @@ def data_train(config):
             repeat_factor = batch_size // old_batch_size
             if has_mesh:
                 mask_mesh = mask_mesh.repeat(repeat_factor, 1)
+
         error_weight = torch.ones((batch_size * n_particles, 1), device=device, requires_grad=False)
 
         total_loss = 0
@@ -873,7 +874,12 @@ def data_train(config):
                     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
                     logger.info(f'Learning rates: {lr}, {lr_embedding}')
             else:
-                if epoch > 3 * n_epochs // 4 + 1:
+                if (epoch > n_epochs - 3) & (replace_with_cluster):
+                    lr_embedding = 1E-5
+                    lr = train_config.learning_rate_end
+                    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                    logger.info(f'Learning rates: {lr}, {lr_embedding}')
+                elif epoch > 3 * n_epochs // 4 + 1:
                     lr_embedding = train_config.learning_rate_embedding_end
                     lr = train_config.learning_rate_end
                     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
