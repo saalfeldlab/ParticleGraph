@@ -418,6 +418,7 @@ def data_train(config):
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
     data_augmentation = train_config.data_augmentation
+    data_augmentation_loop = train_config.data_augmentation_loop
     target_batch_size = train_config.batch_size
     has_mesh = 'Mesh' in model_config.name
     replace_with_cluster = 'replace' in train_config.sparsity
@@ -529,7 +530,6 @@ def data_train(config):
         index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
         index_particles.append(index.squeeze())
 
-    data_augmentation_loop = 1
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
