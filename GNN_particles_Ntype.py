@@ -549,7 +549,6 @@ def data_train(config):
             logger.info(f'min_radius: {min_radius}')
         elif epoch == 1:
             min_radius = simulation_config.min_radius
-            print(f'min_radius: {min_radius}')
             logger.info(f'min_radius: {min_radius}')
             repeat_factor = batch_size // old_batch_size
             if has_mesh:
@@ -744,10 +743,7 @@ def data_train(config):
                     acc = model.lin_edge(in_features.float())
                     acc = acc[:, 0]
                     acc_list.append(acc)
-
-                    plt.plot(rr.detach().cpu().numpy(),
-                             acc.detach().cpu().numpy() * ynorm.detach().cpu().numpy() / simulation_config.delta_t,
-                             color=cmap.color(x[n, 5].detach().cpu().numpy()), linewidth=1, alpha=0.25)
+                    plt.plot(to_numpy(rr), to_numpy(acc) * to_numpy(ynorm) / simulation_config.delta_t, color=cmap.color(to_numpy(x[n, 5]).astype(int)), linewidth=1, alpha=0.25)
                 acc_list = torch.stack(acc_list)
                 plt.yscale('log')
                 plt.xscale('log')
@@ -1169,7 +1165,7 @@ if __name__ == '__main__':
     device = set_device('auto')
     print(f'device {device}')
 
-    config_list = ['arbitrary_3', 'gravity_16'] # ['boids_16', 'Coulomb_3'] #
+    config_list = ['gravity_16'] 
     for config_file in config_list:
 
         # Load parameters from config file

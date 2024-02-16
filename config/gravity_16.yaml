@@ -32,9 +32,9 @@ plotting:
 training:
     n_epochs: 20
     batch_size: 8
-    small_init_batch_size: True
+    small_init_batch_size: False
     n_runs: 2
     sparsity: 'replace'
     data_augmentation: True
     cluster_method: 'distance_plot'
-    device: 'auto'
+    device: 'cuda:1'
