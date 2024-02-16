@@ -15,6 +15,7 @@ from torch_geometric.utils.convert import to_networkx
 from tqdm import trange
 import os
 import matplotlib
+from sklearn import metrics
 # matplotlib.use("Qt5Agg")
 
 from ParticleGraph.config import ParticleGraphConfig
