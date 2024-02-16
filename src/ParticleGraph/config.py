@@ -82,7 +82,7 @@ class TrainingConfig(BaseModel):
     noise_level: float = 0
     data_augmentation: bool = True
     data_augmentation_loop: int = 200
-    cluster_method: Literal['kmeans_auto', 'distance_plot', 'distance_embedding', 'distance_both'] = 'distance_plot'
+    cluster_method: Literal['kmeans_auto_plot', 'kmeans_auto_embedding', 'distance_plot', 'distance_embedding', 'distance_both'] = 'distance_plot'
     
     device: Annotated[str, Field(pattern=r'^(auto|cpu|cuda:\d+)$')] = 'auto'
 

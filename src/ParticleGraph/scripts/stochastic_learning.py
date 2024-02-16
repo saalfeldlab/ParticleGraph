@@ -120,6 +120,8 @@ if __name__ == '__main__':
     plt.scatter(range(100), t.detach().cpu().numpy(), c='g',s=40)
     plt.scatter (range(100), normalized_distribution.detach().cpu().numpy(), c='k',s=2)
     plt.show()
+    
+    
     # plt.scatter(range(100), probs.detach().cpu().numpy())
     
 

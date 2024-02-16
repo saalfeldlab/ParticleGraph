@@ -792,12 +792,16 @@ def data_train(config):
 
             ax = fig.add_subplot(1, 6, 4)
             match train_config.cluster_method:
-                case 'kmeans_auto':
+                case 'kmeans_auto_plot':
                     labels, nclusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
+                case 'kmeans_auto_embedding':
+                    labels, nclusters = embedding_cluster.get(embedding_, 'kmeans_auto')
+                    proj_interaction = embedding_
                 case 'distance_plot':
                     labels, nclusters = embedding_cluster.get(proj_interaction, 'distance')
                 case 'distance_embedding':
                     labels, nclusters = embedding_cluster.get(embedding_, 'distance', thresh=1.5)
+                    proj_interaction = embedding_
                 case 'distance_both':
                     new_projection = np.concatenate((proj_interaction, embedding_), axis=-1)
                     labels, nclusters = embedding_cluster.get(new_projection, 'distance')
