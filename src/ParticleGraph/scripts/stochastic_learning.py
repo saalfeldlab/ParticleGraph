@@ -2,7 +2,6 @@
 import torch
 import numpy as np
 from torch.distributions import Categorical
-from torch.distributions import Categorical
 import torch.nn as nn
 import matplotlib.pyplot as plt
 import matplotlib
@@ -86,9 +85,9 @@ if __name__ == '__main__':
     prob2 = gt_distrib2.sample((200,))
     probs = torch.cat((prob1, prob2), 0)
 
-    fig = plt.figure(figsize=(10, 10))
-    plt.hist(probs.detach().cpu().numpy(),150)
-    plt.show()
+    # fig = plt.figure(figsize=(10, 10))
+    # plt.hist(probs.detach().cpu().numpy(),150)
+    # plt.show()
 
     t = plt.hist(probs.detach().cpu().numpy(), 100, range=[0, 100])
     t = torch.tensor(t[0],device='cuda:0')
@@ -104,6 +103,20 @@ if __name__ == '__main__':
     optimizer = torch.optim.Adam(md.parameters(), lr=0.01)
 
     # plot a normal distribution
+
+    for n in trange(10000):
+
+        m, normalized_distribution = md()
+
+        draw = m.rsample((100, 1))
+
+        loss = (draw.float()-40).norm(2)
+
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+
+
 
     for n in trange(10000):
     
