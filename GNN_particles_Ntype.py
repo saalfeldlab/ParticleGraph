@@ -530,7 +530,7 @@ def data_train(config):
         index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
         index_particles.append(index.squeeze())
 
-    data_augmentation_loop = 200
+    data_augmentation_loop = 1
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
@@ -552,7 +552,8 @@ def data_train(config):
             logger.info(f'min_radius: {min_radius}')
         elif epoch == 2:
             repeat_factor = batch_size // old_batch_size
-            mask_mesh = mask_mesh.repeat(repeat_factor, 1)
+            if has_mesh:
+                mask_mesh = mask_mesh.repeat(repeat_factor, 1)
             print(f'batch_size: {batch_size}')
             logger.info(f'batch_size: {batch_size}')
         elif epoch == 3 * n_epochs // 4 + 2:
@@ -743,8 +744,7 @@ def data_train(config):
                 plt.xlabel('Distance [a.u]', fontsize=12)
                 plt.ylabel('MLP [a.u]', fontsize=12)
                 coeff_norm = to_numpy(acc_list)
-                trans = umap.UMAP(n_neighbors=np.round(n_particles / simulation_config.n_interactions).astype(int),
-                                  n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
+                trans = umap.UMAP(n_neighbors=32, n_components=2, transform_queue_size=0).fit(coeff_norm)
                 proj_interaction = trans.transform(coeff_norm)
             elif model_config.name == 'PDE_G':
                 acc_list = []
@@ -768,8 +768,7 @@ def data_train(config):
                 plt.xlabel('Distance [a.u]', fontsize=12)
                 plt.ylabel('MLP [a.u]', fontsize=12)
                 coeff_norm = to_numpy(acc_list)
-                trans = umap.UMAP(n_neighbors=np.round(n_particles / simulation_config.n_interactions).astype(int),
-                                  n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
+                trans = umap.UMAP(n_neighbors=32, n_components=2, transform_queue_size=0).fit(coeff_norm)
                 proj_interaction = trans.transform(coeff_norm)
             elif (model_config.name == 'PDE_A') | (model_config.name == 'PDE_B'):
                 acc_list = []
@@ -796,7 +795,7 @@ def data_train(config):
                 coeff_norm = to_numpy(acc_list)
                 new_index = np.random.permutation(coeff_norm.shape[0])
                 new_index = new_index[0:min(1000, coeff_norm.shape[0])]
-                trans = umap.UMAP(n_neighbors=32, n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm[new_index])
+                trans = umap.UMAP(n_neighbors=32, n_components=2, transform_queue_size=0).fit(coeff_norm[new_index])
                 proj_interaction = trans.transform(coeff_norm)
             elif has_mesh:
                 f_list = []
@@ -828,8 +827,7 @@ def data_train(config):
                 popt_list = np.array(popt_list)
 
                 if model_config.name == 'RD_RPS_Mesh':
-                    trans = umap.UMAP(n_neighbors=500,
-                                      n_components=2, random_state=42, transform_queue_size=0).fit(coeff_norm)
+                    trans = umap.UMAP(n_neighbors=500, n_components=2, transform_queue_size=0).fit(coeff_norm)
                     proj_interaction = trans.transform(coeff_norm)
                 else:
                     proj_interaction = popt_list
@@ -1193,7 +1191,7 @@ if __name__ == '__main__':
     device = set_device('auto')
     print(f'device {device}')
 
-    config_list = ['boids_16', 'Coulomb_3'] # ['arbitrary_3', 'gravity_16']
+    config_list = ['arbitrary_3', 'gravity_16'] # ['boids_16', 'Coulomb_3'] #
     for config_file in config_list:
 
         # Load parameters from config file
@@ -1202,6 +1200,6 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 100)
+        # data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 100)
         data_train(config)
         # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 50, ratio=1)
