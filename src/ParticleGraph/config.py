@@ -107,7 +107,7 @@ class ParticleGraphConfig(BaseModel):
         return ParticleGraphConfig(**raw_config)
 
     def pretty(self):
-        return yaml.dump(self.model_dump())
+        return yaml.dump(self, default_flow_style=False, sort_keys=False, indent=4)
 
 
 if __name__ == '__main__':
