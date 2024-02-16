@@ -891,26 +891,12 @@ def data_train(config):
                 print(f'regul_embedding: replaced')
                 logger.info(f'regul_embedding: replaced')
                 plt.text(0, 1.1, f'Replaced', ha='left', va='top', transform=ax.transAxes, fontsize=10)
-                if train_config.fix_cluster_embedding:
-                    lr_embedding = 0
-                    lr = train_config.learning_rate_end
-                    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-                    print(f'Learning rates: {lr}, {lr_embedding}')
-                    logger.info(f'Learning rates: {lr}, {lr_embedding}')
-            else:
-                lr_embedding = 1E-3
-                lr = 1E-3
-                it = 0
-                for name, parameter in model.named_parameters():
-                    if not parameter.requires_grad:
-                        continue
-                    if it == 0:
-                        optimizer = torch.optim.Adam([model.a], lr=lr_embedding)
-                    else:
-                        optimizer.add_param_group({'params': parameter, 'lr': lr})
-                    it += 1
-                print(f'Learning rates: {lr}, {lr_embedding}')
-                logger.info(f'Learning rates: {lr}, {lr_embedding}')
+                # if train_config.fix_cluster_embedding:
+                #     lr_embedding = 0
+                #     lr = train_config.learning_rate_end
+                #     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                #     print(f'Learning rates: {lr}, {lr_embedding}')
+                #     logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
