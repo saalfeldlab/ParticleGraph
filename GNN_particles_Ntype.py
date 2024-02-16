@@ -752,7 +752,7 @@ def data_train(config):
                 coeff_norm = to_numpy(acc_list)
                 new_index = np.random.permutation(coeff_norm.shape[0])
                 new_index = new_index[0:min(1000, coeff_norm.shape[0])]
-                trans = umap.UMAP(n_neighbors=100, n_components=2, transform_queue_size=0).fit(coeff_norm[new_index])
+                trans = umap.UMAP(n_neighbors=250, n_components=2, transform_queue_size=0).fit(coeff_norm[new_index])
                 proj_interaction = trans.transform(coeff_norm)
             elif has_mesh:
                 f_list = []
