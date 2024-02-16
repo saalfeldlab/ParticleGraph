@@ -14,6 +14,7 @@ from torch_geometric.loader import DataLoader
 from torch_geometric.utils.convert import to_networkx
 from tqdm import trange
 import os
+from sklearn import metrics
 import matplotlib
 # matplotlib.use("Qt5Agg")
 
