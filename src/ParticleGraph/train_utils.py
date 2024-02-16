@@ -39,7 +39,7 @@ def constant_batch_size(batch_size):
 
 def increasing_batch_size(batch_size):
     def get_batch_size(epoch):
-        return 1 if epoch < 2 else batch_size
+        return 1 if epoch < 1 else batch_size
 
     return get_batch_size
 

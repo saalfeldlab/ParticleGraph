@@ -426,9 +426,9 @@ def data_train(config):
     embedding_cluster = EmbeddingCluster(config)
 
     if train_config.small_init_batch_size:
-        get_batch_size = constant_batch_size(target_batch_size)
-    else:
         get_batch_size = increasing_batch_size(target_batch_size)
+    else:
+        get_batch_size = constant_batch_size(target_batch_size)
     batch_size = get_batch_size(0)
 
     l_dir = os.path.join('.', 'log')
@@ -476,7 +476,6 @@ def data_train(config):
     time.sleep(0.5)
     print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
     logger.info(f'vnorm ynorm: {to_numpy(vnorm)} {to_numpy(ynorm)}')
-
     if has_mesh:
         y_mesh_list = []
         for run in trange(NGraphs):
@@ -501,7 +500,7 @@ def data_train(config):
 
         mask_mesh = mask_mesh.repeat(batch_size, 1)
 
-    print('')
+    print('done ...')
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
@@ -560,7 +559,6 @@ def data_train(config):
             lr_embedding = train_config.learning_rate_embedding_end
             lr = train_config.learning_rate_end
             optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-            logger.info(f"Total Trainable Params: {n_total_params}")
             logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
         error_weight = torch.ones((batch_size * n_particles, 1), device=device, requires_grad=False)
@@ -907,20 +905,11 @@ def data_train(config):
                         model.a[n] = model_a_[0].clone().detach()
                 print(f'regul_embedding: replaced')
                 logger.info(f'regul_embedding: replaced')
-                plt.text(0, 1.1, f'Replaced', ha='left', va='top', transform=ax.transAxes,
-                         fontsize=10)
+                plt.text(0, 1.1, f'Replaced', ha='left', va='top', transform=ax.transAxes, fontsize=10)
                 if train_config.fix_cluster_embedding:
                     lr_embedding = 0
-                    lr = 1E-3
-                    it = 0
-                    for name, parameter in model.named_parameters():
-                        if not parameter.requires_grad:
-                            continue
-                        if it == 0:
-                            optimizer = torch.optim.Adam([model.a], lr=lr_embedding)
-                        else:
-                            optimizer.add_param_group({'params': parameter, 'lr': lr})
-                        it += 1
+                    lr = train_config.learning_rate_end
+                    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
                     print(f'Learning rates: {lr}, {lr_embedding}')
                     logger.info(f'Learning rates: {lr}, {lr_embedding}')
             else:
