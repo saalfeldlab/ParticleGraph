@@ -31,7 +31,7 @@ plotting:
 
 training:
   n_epochs: 20
-  batch_size: 1
+  batch_size: 8
   n_runs: 2
   sparsity: 'replace'
   cluster_method: 'distance_plot'

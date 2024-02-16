@@ -544,18 +544,18 @@ def data_train(config):
 
         old_batch_size = batch_size
         batch_size = get_batch_size(epoch)
+        print(f'batch_size: {batch_size}')
+        logger.info(f'batch_size: {batch_size}')
         if epoch == 0:
             min_radius = 0.002
             logger.info(f'min_radius: {min_radius}')
         elif epoch == 1:
             min_radius = simulation_config.min_radius
+            print(f'min_radius: {min_radius}')
             logger.info(f'min_radius: {min_radius}')
-        elif epoch == 2:
             repeat_factor = batch_size // old_batch_size
             if has_mesh:
                 mask_mesh = mask_mesh.repeat(repeat_factor, 1)
-            print(f'batch_size: {batch_size}')
-            logger.info(f'batch_size: {batch_size}')
         elif epoch == 3 * n_epochs // 4 + 2:
             lr_embedding = train_config.learning_rate_embedding_end
             lr = train_config.learning_rate_end
@@ -886,15 +886,15 @@ def data_train(config):
                 if pos.size > 0:
                     median_center = model_a_[pos, :]
                     median_center = torch.median(median_center, dim=0).values
-                    plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=20, c='r')
+                    plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='r', alpha=0.25)
                     model_a_[pos, :] = median_center
-                    plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=20, c='k')
+                    plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='k')
             model_a_ = torch.reshape(model_a_, (model.a.shape[0], model.a.shape[1], model.a.shape[2]))
             for n in np.unique(new_labels):
                 pos = np.argwhere(new_labels == n).squeeze().astype(int)
                 pos = np.array(pos)
                 if pos.size>0:
-                    plt.scatter(to_numpy(model_a_[0, pos, 0]), to_numpy(model_a_[0, pos, 1]), color='k', s=6)
+                    plt.scatter(to_numpy(model_a_[0, pos, 0]), to_numpy(model_a_[0, pos, 1]), color='k', s=5)
             plt.xlabel('ai0', fontsize=12)
             plt.ylabel('ai1', fontsize=12)
             plt.xticks(fontsize=10.0)
