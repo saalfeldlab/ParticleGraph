@@ -15,7 +15,7 @@ from torch_geometric.utils.convert import to_networkx
 from tqdm import trange
 import os
 import matplotlib
-matplotlib.use("Qt5Agg")
+# matplotlib.use("Qt5Agg")
 
 from ParticleGraph.config import ParticleGraphConfig
 from ParticleGraph.generators.particle_initialization import init_particles, init_mesh
