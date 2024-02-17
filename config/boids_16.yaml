@@ -39,6 +39,6 @@ training:
   noise_level: 0
   data_augmentation: True
   cluster_method: 'distance_plot'
-  sparsity: 'replace'
-  device: 'auto'
+  fix_cluster_embedding: True
+  device: 'cuda:1'
 
