@@ -4952,34 +4952,34 @@ if __name__ == '__main__':
     print(f'device {device}')
 
     # # arbitrary_3 training
-    # # data_plot_FIG2()
-    # # print(' ')
-    # # print(' ')
-    # # arbitrary_3 inference
-    # # data_plot_FIG2sup()
-    # # print(' ')
-    # # print(' ')
-    # # arbitrary_16 training
-    # # data_plot_FIG3sup()
-    # # print(' ')
-    # # print(' ')
-    # # arbitrary_3 inference
-    # # data_plot_FIG4sup()
+    data_plot_FIG2()
+    # print(' ')
+    # print(' ')
+    # arbitrary_3 inference
+    # data_plot_FIG2sup()
+    # print(' ')
+    # print(' ')
+    # arbitrary_16 training
+    # data_plot_FIG3sup()
+    # print(' ')
+    # print(' ')
+    # arbitrary_3 inference
+    # data_plot_FIG4sup()
     #
-    # # gravity model
-    # # data_plot_FIG3()
-    # # gravity model continuous
-    # # data_plot_FIG3_continous()
+    # gravity model
+    # data_plot_FIG3()
+    # gravity model continuous
+    # data_plot_FIG3_continous()
     #
-    # # training Coloumb_3
-    # # data_plot_FIG4()
+    # training Coloumb_3
+    # data_plot_FIG4()
     #
-    # # data_plot_FIG5sup()
+    # data_plot_FIG5sup()
     #
-    # # boids HR2
-    # # data_plot_FIG5()
+    # boids HR2
+    # data_plot_FIG5()
     #
-    # # wave HR2 or HR3 (slit)
+    # wave HR2 or HR3 (slit)
     # data_plot_FIG6()
 
     # RD_RPS2

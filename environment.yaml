@@ -16,6 +16,7 @@ dependencies:
   - pydantic
   - gputil
   - pip
+  - imageio
   - pip:
     - geomloss
     - torch_geometric
