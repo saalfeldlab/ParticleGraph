@@ -794,20 +794,20 @@ def data_train(config):
             ax = fig.add_subplot(1, 6, 4)
             match train_config.cluster_method:
                 case 'kmeans_auto_plot':
-                    labels, nclusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
+                    labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
                 case 'kmeans_auto_embedding':
-                    labels, nclusters = embedding_cluster.get(embedding_, 'kmeans_auto')
+                    labels, n_clusters = embedding_cluster.get(embedding_, 'kmeans_auto')
                     proj_interaction = embedding_
                 case 'distance_plot':
-                    labels, nclusters = embedding_cluster.get(proj_interaction, 'distance')
+                    labels, n_clusters = embedding_cluster.get(proj_interaction, 'distance')
                 case 'distance_embedding':
-                    labels, nclusters = embedding_cluster.get(embedding_, 'distance', thresh=1.5)
+                    labels, n_clusters = embedding_cluster.get(embedding_, 'distance', thresh=1.5)
                     proj_interaction = embedding_
                 case 'distance_both':
                     new_projection = np.concatenate((proj_interaction, embedding_), axis=-1)
-                    labels, nclusters = embedding_cluster.get(new_projection, 'distance')
+                    labels, n_clusters = embedding_cluster.get(new_projection, 'distance')
 
-            for n in range(nclusters):
+            for n in range(n_clusters):
                 pos = np.argwhere(labels == n)
                 pos = np.array(pos)
                 if pos.size > 0:
@@ -820,7 +820,7 @@ def data_train(config):
 
             plt.xlabel('proj 0', fontsize=12)
             plt.ylabel('proj 1', fontsize=12)
-            plt.text(0., 1.1, f'Nclusters: {nclusters}', ha='left', va='top', transform=ax.transAxes)
+            plt.text(0., 1.1, f'Nclusters: {n_clusters}', ha='left', va='top', transform=ax.transAxes)
 
             ax = fig.add_subplot(1, 6, 5)
             new_labels = labels.copy()
@@ -834,13 +834,13 @@ def data_train(config):
             Accuracy = metrics.accuracy_score(to_numpy(T1), new_labels)
             plt.text(0, 1.1, f'Accuracy: {np.round(Accuracy, 3)}', ha='left', va='top', transform=ax.transAxes,
                      fontsize=10)
-            print(f'Accuracy: {np.round(Accuracy, 3)}   n_clusters: {nclusters}')
-            logger.info(f'Accuracy: {np.round(Accuracy, 3)}    n_clusters: {nclusters}')
+            print(f'Accuracy: {np.round(Accuracy, 3)}   n_clusters: {n_clusters}')
+            logger.info(f'Accuracy: {np.round(Accuracy, 3)}    n_clusters: {n_clusters}')
 
             ax = fig.add_subplot(1, 6, 6)
             model_a_ = model.a.clone().detach()
             model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
-            for n in range(nclusters):
+            for n in range(n_clusters):
                 pos = np.argwhere(labels == n).squeeze().astype(int)
                 pos = np.array(pos)
                 if pos.size > 0:
@@ -1152,6 +1152,6 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 100)
+        # data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 100)
         # data_train(config)
-        # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 50, ratio=1)
+        data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 50, ratio=1)
