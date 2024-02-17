@@ -5,11 +5,12 @@ import os
 from ParticleGraph.MLP import MLP
 from ParticleGraph.config import ParticleGraphConfig
 import imageio
+from matplotlib import rc
 
 from ParticleGraph.fitting_models import power_model, boids_model, reaction_diffusion_model
 from ParticleGraph.generators import RD_RPS
 from ParticleGraph.models import Interaction_Particles
-
+from ParticleGraph.train_utils import get_embedding
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
 # from data_loaders import *
@@ -376,10 +377,120 @@ class Mesh_RPS_learn(torch.nn.Module):
 
         return increment.squeeze()
 
+def plot_embedding(index, model_a, index_particles, n_particles, n_particle_types, epoch, it, fig, ax, cmap):
+
+    print(f'plot embedding epoch:{epoch} it: {it}')
+    embedding, embedding_particle = get_embedding(model_a, index_particles, n_particles, n_particle_types)
+
+    plt.text(-0.25, 1.1, f'{index}', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'Particle embedding', fontsize=12)
+    for m in range(model_a.shape[0]):
+        for n in range(n_particle_types):
+            plt.scatter(embedding_particle[n + m * n_particle_types][:, 0],
+                        embedding_particle[n + m * n_particle_types][:, 1], color=cmap.color(n), s=0.1)
+    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=12)
+    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=12)
+    plt.text(.05, .94, f'e: {epoch} it: ${it}$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
+    plt.text(.05, .86, f'N: {n_particles}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
+    plt.xticks(fontsize=10.0)
+    plt.yticks(fontsize=10.0)
+
+    return embedding, embedding_particle
+
+def plot_function(index, model_MLP, model_a, label, pos, max_radius, ynorm, index_particles, n_particles, n_particle_types, epoch, it, fig, ax,
+              cmap):
+
+    print(f'plot functions epoch:{epoch} it: {it}')
+
+    plt.text(-0.25, 1.1, f'{index}', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'Interaction functions (model)', fontsize=12)
+    func_list = []
+    for n in range(n_particles):
+        embedding_ = model_a[0, n, :] * torch.ones((pos.shape[0], 2), device=device)
+        in_features = torch.cat((pos[:, None] / max_radius, 0 * pos[:, None],
+                                 pos[:, None] / max_radius, embedding_), dim=1)
+        with torch.no_grad():
+            func = model_MLP(in_features.float())
+        func = func[:, 0]
+        func_list.append(func)
+        if (n % (n_particles // 50) == 0):
+            plt.plot(to_numpy(pos),
+                     to_numpy(func) * to_numpy(ynorm), color=cmap.color(label[n]), linewidth=1)
+    func_list = torch.stack(func_list)
+    func_list = to_numpy(func_list)
+    plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij}) [a.u.]$', fontsize=12)
+    plt.xticks(fontsize=10.0)
+    plt.yticks(fontsize=10.0)
+    plt.ylim([-0.04, 0.03])
+    plt.text(.05, .86, f'N: {n_particles // 50}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
+    plt.text(.05, .94, f'e: {epoch} it: {it}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
+
+    return func_list
+
+def plot_umap(index, func_list, log_dir, n_neighbors, index_particles, n_particles, n_particle_types, embedding_cluster, epoch, it, fig, ax, cmap):
+
+    print(f'plot umap epoch:{epoch} it: {it}')
+    plt.text(-0.25, 1.1, f'{index}', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    if os.path.exists(os.path.join(log_dir, f'proj_interaction_{epoch}.npy')):
+        proj_interaction = np.load(os.path.join(log_dir, f'proj_interaction_{epoch}.npy'))
+    else:
+        new_index = np.random.permutation(func_list.shape[0])
+        new_index = new_index[0:min(1000, func_list.shape[0])]
+        trans = umap.UMAP(n_neighbors=n_neighbors, n_components=2, transform_queue_size=0).fit(func_list[new_index])
+        proj_interaction = trans.transform(func_list)
+    np.save(os.path.join(log_dir, f'proj_interaction_20_1.npy'), proj_interaction)
+
+    plt.text(-0.25, 1.1, f'c)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'UMAP of $f(\ensuremath{\mathbf{a}}_i, r_{ij}$)', fontsize=12)
+
+    labels, nclusters = embedding_cluster.get(proj_interaction, 'distance')
+
+    label_list = []
+    for n in range(n_particle_types):
+        tmp = labels[index_particles[n]]
+        label_list.append(np.round(np.median(tmp)))
+    label_list = np.array(label_list)
+    new_labels = labels.copy()
+    for n in range(n_particle_types):
+        new_labels[labels == label_list[n]] = n
+        plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1],
+                    color=cmap.color(n), s=1)
+
+    plt.xlabel(r'UMAP 0', fontsize=12)
+    plt.ylabel(r'UMAP 1', fontsize=12)
+
+    plt.xticks(fontsize=10.0)
+    plt.yticks(fontsize=10.0)
+    plt.text(.05, .86, f'N: {n_particles}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
+    plt.text(.05, .94, f'e: 1 it: $5.10^4$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
+
+    return proj_interaction, new_labels, nclusters
+
+def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoch, it, fig, ax):
+
+    print(f'plot confusion matrix epoch:{epoch} it: {it}')
+    plt.text(-0.25, 1.1, f'{index}', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'Particle classification', fontsize=12)
+    confusion_matrix = metrics.confusion_matrix(true_labels, new_labels)  # , normalize='true')
+    cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix=confusion_matrix)
+    if n_particle_types > 8:
+        cm_display.plot(ax=fig.gca(), cmap='Blues', include_values=False, colorbar=False)
+    else:
+        cm_display.plot(ax=fig.gca(), cmap='Blues', include_values=True, values_format='d', colorbar=False)
+    Accuracy = metrics.accuracy_score(true_labels, new_labels)
+    print(f'Accuracy: {np.round(Accuracy,3)}')
+    plt.xticks(fontsize=10.0)
+    plt.yticks(fontsize=10.0)
+    plt.xlabel(r'Predicted label', fontsize=12)
+    plt.ylabel(r'True label', fontsize=12)
+
+    return Accuracy
+
 
 def data_plot_FIG2():
-    config_name = 'arbitrary_3'
 
+    config_name = 'arbitrary_3'
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_name}.yaml')
 
@@ -390,8 +501,6 @@ def data_plot_FIG2():
 
     cmap = CustomColorMap(config=config)
     aggr_type = config.graph_model.aggr_type
-
-    bc_pos, bc_dpos = choose_boundary_values(config.simulation.boundary)
 
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
@@ -408,7 +517,7 @@ def data_plot_FIG2():
     log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
     print('log_dir: {}'.format(log_dir))
 
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     n_graphs = len(graph_files)
     print('Graph files N: ', n_graphs - 1)
     time.sleep(0.5)
@@ -417,273 +526,61 @@ def data_plot_FIG2():
     y_list = []
     print('Load normalizations ...')
     time.sleep(1)
-    x_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_0.pt', map_location=device))
-    y_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_0.pt', map_location=device))
+    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device))
+    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_0.pt', map_location=device))
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     x = x_list[0][0].clone().detach()
 
-    model = Interaction_Particles(config=config, device=device, aggr_type=config.graph_model.aggr_type, bc_dpos=bc_dpos)
-    print(f'Training Interaction_Particles')
-
-    net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
-    state_dict = torch.load(net, map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
-
-    lra = 1E-3
-    lr = 1E-3
-
-    table = PrettyTable(["Modules", "Parameters"])
-    total_params = 0
-    it = 0
-    for name, parameter in model.named_parameters():
-        if not parameter.requires_grad:
-            continue
-        if it == 0:
-            optimizer = torch.optim.Adam([model.a], lr=lra)
-        else:
-            optimizer.add_param_group({'params': parameter, 'lr': lr})
-        it += 1
-        param = parameter.numel()
-        table.add_row([name, param])
-        total_params += param
-    print(table)
-    print(f"Total Trainable Params: {total_params}")
-    print(f'Learning rates: {lr}, {lra}')
-    print('')
-    print(f'network: {net}')
-    model.eval()
-
-    print('')
-    time.sleep(0.5)
-    print('Plotting ...')
+    model, bc_pos, bc_dpos = choose_training_model(config, device)
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_0.pt"
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
-
-    rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-    embedding = []
-    for n in range(model.a.shape[0]):
-        embedding.append(model.a[n])
-    embedding = to_numpy(torch.stack(embedding))
-    embedding = np.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
-    embedding_ = embedding
-    embedding_particle = []
-    for m in range(model.a.shape[0]):
-        for n in range(n_particle_types):
-            embedding_particle.append(embedding[index_particles[n] + m * n_particles, :])
+    model.eval()
 
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+    matplotlib.use("Qt5Agg")
 
     fig = plt.figure(figsize=(12.5, 9.6))
     plt.ion()
     ax = fig.add_subplot(3, 4, 1)
-    print('1')
-    plt.text(-0.25, 1.1, f'a)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-    plt.title(r'Particle embedding', fontsize=12)
-    if (embedding.shape[1] > 1):
-        for m in range(model.a.shape[0]):
-            for n in range(n_particle_types):
-                plt.scatter(embedding_particle[n + m * n_particle_types][:, 0],
-                            embedding_particle[n + m * n_particle_types][:, 1], color=cmap.color(n), s=0.1)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=12)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=12)
-    plt.text(.05, .94, f'e: 1 it: $5.10^4$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
-    plt.text(.05, .86, f'N: {n_particles}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
-    plt.xticks(fontsize=10.0)
-    plt.yticks(fontsize=10.0)
-    plt.tight_layout()
+    embedding, embedding_particle = plot_embedding('a)', model.a, index_particles, n_particles, n_particle_types, 1, '5E4', fig, ax, cmap)
 
     ax = fig.add_subplot(3, 4, 2)
-    print('2 UMAP ...')
-    plt.text(-0.25, 1.1, f'b)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-    plt.title(r'Interaction functions (model)', fontsize=12)
-    acc_list = []
-    for n in range(n_particles):
-        embedding = model.a[0, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                 rr[:, None] / max_radius, embedding), dim=1)
-        with torch.no_grad():
-            acc = model.lin_edge(in_features.float())
-        acc = acc[:, 0]
-        acc_list.append(acc)
-        if (n % (n_particles // 50) == 0):
-            plt.plot(to_numpy(rr),
-                     to_numpy(acc) * to_numpy(ynorm),
-                     color=cmap.color(to_numpy(x[n, 5])), linewidth=1)
-    acc_list = torch.stack(acc_list)
-    coeff_norm = to_numpy(acc_list)
-    if os.path.exists(os.path.join(log_dir, f'proj_interaction_20_1.npy')):
-        proj_interaction = np.load(os.path.join(log_dir, f'proj_interaction_20_1.npy'))
-    else:
-        trans = umap.UMAP(n_neighbors=np.round(n_particles / n_interactions).astype(int), n_components=2,
-                          transform_queue_size=0).fit(coeff_norm)
-        proj_interaction = trans.transform(coeff_norm)
-        proj_interaction = np.squeeze(proj_interaction)
-        np.save(os.path.join(log_dir, f'proj_interaction_20_1.npy'), proj_interaction)
-    plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij}) [a.u.]$', fontsize=12)
-    plt.xticks(fontsize=10.0)
-    plt.yticks(fontsize=10.0)
-    plt.ylim([-0.04, 0.03])
-    plt.text(.05, .86, f'N: {n_particles // 50}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
-    plt.text(.05, .94, f'e: 1 it: $5.10^4$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
-    plt.tight_layout()
+    rr = torch.tensor(np.linspace(min_radius, max_radius, 200)).to(device)
+    func_list = plot_function('b)', model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 1, '5E4', fig, ax, cmap)
 
     ax = fig.add_subplot(3, 4, 3)
-    print('3')
-    plt.text(-0.25, 1.1, f'c)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-    plt.title(r'UMAP of $f(\ensuremath{\mathbf{a}}_i, r_{ij}$)', fontsize=12)
-    labels, n_clusters = embedding_cluster.get(proj_interaction, 'distance', thresh=1.5)
-    label_list = []
-    for n in range(n_particle_types):
-        tmp = labels[index_particles[n]]
-        sub_group = np.round(np.median(tmp))
-        label_list.append(sub_group)
-    label_list = np.array(label_list)
-    new_labels = labels.copy()
-    for n in range(n_particle_types):
-        new_labels[labels == label_list[n]] = n
-        plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1],
-                    color=cmap.color(n), s=0.1)
-        plt.xlabel(r'UMAP 0', fontsize=12)
-        plt.ylabel(r'UMAP 1', fontsize=12)
-    model_a_ = model.a.clone().detach()
-    model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
-    t = []
-    for k in range(n_clusters):
-        pos = np.argwhere(labels == k).squeeze().astype(int)
-        temp = model_a_[pos, :].clone().detach()
-        print(torch.median(temp, dim=0).values)
-        model_a_[pos, :] = torch.median(temp, dim=0).values.repeat((len(pos), 1))
-        t.append(torch.median(temp, dim=0).values)
-    model_a_ = torch.reshape(model_a_, (model.a.shape[0], model.a.shape[1], model.a.shape[2]))
-    with torch.no_grad():
-        for n in range(model.a.shape[0]):
-            model.a[n] = model_a_[0]
-    embedding = []
-    for n in range(model.a.shape[0]):
-        embedding.append(model.a[n])
-    embedding = to_numpy(torch.stack(embedding))
-    embedding = np.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
-    embedding_particle = []
-    for m in range(model.a.shape[0]):
-        for n in range(n_particle_types):
-            embedding_particle.append(embedding[index_particles[n] + m * n_particles, :])
-    plt.xticks(fontsize=10.0)
-    plt.yticks(fontsize=10.0)
-    plt.text(.05, .86, f'N: {n_particles}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
-    plt.text(.05, .94, f'e: 1 it: $5.10^4$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
-    plt.tight_layout()
+    proj_interaction, new_labels, nclusters = plot_umap('c)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 1, '5E4', fig, ax, cmap)
 
     ax = fig.add_subplot(3, 4, 4)
-    print('4')
-    plt.text(-0.25, 1.1, f'd)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-    plt.title(r'Particle classification', fontsize=12)
-    T1 = torch.zeros(int(n_particles / n_particle_types), device=device)
-    for n in range(1, n_particle_types):
-        T1 = torch.cat((T1, n * torch.ones(int(n_particles / n_particle_types), device=device)), 0)
-    T1 = T1[:, None]
-    confusion_matrix = metrics.confusion_matrix(to_numpy(T1), new_labels)  # , normalize='true')
-    cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix=confusion_matrix)
-    if n_particle_types > 8:
-        cm_display.plot(ax=fig.gca(), cmap='Blues', include_values=False, colorbar=False)
-    else:
-        cm_display.plot(ax=fig.gca(), cmap='Blues', include_values=True, values_format='d', colorbar=False)
-    Accuracy = metrics.accuracy_score(to_numpy(T1), new_labels)
-    print(f'Accuracy: {Accuracy}')
-    plt.xticks(fontsize=10.0)
-    plt.yticks(fontsize=10.0)
-    plt.xlabel(r'Predicted label', fontsize=12)
-    plt.ylabel(r'True label', fontsize=12)
-
-    ####
+    Accuracy = plot_confusion_matrix('d)', to_numpy(x[:,5:6]), new_labels, n_particle_types, 1, '5E4', fig, ax)
+    plt.tight_layout()
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
 
-    embedding = []
-    for n in range(model.a.shape[0]):
-        embedding.append(model.a[n])
-    embedding = to_numpy(torch.stack(embedding))
-    embedding = np.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
-    embedding_ = embedding
-    embedding_particle = []
-    for m in range(model.a.shape[0]):
-        for n in range(n_particle_types):
-            embedding_particle.append(embedding[index_particles[n] + m * n_particles, :])
-
     ax = fig.add_subplot(3, 4, 5)
-    print('5')
-    plt.text(-0.25, 1.1, f'e)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-    plt.title(r'Particle embedding', fontsize=12)
-    for m in range(model.a.shape[0]):
-        for n in range(n_particle_types):
-            plt.scatter(embedding_particle[n + m * n_particle_types][:, 0],
-                        embedding_particle[n + m * n_particle_types][:, 1], color=cmap.color(n), s=6)
-    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=12)
-    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=12)
-    plt.text(.05, .86, f'N: {n_particles}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
-    plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
-    plt.xticks(fontsize=10.0)
-    plt.yticks(fontsize=10.0)
+    embedding, embedding_particle = plot_embedding('e)', model.a, index_particles, n_particles, n_particle_types, 20, '1E6', fig, ax, cmap)
 
     ax = fig.add_subplot(3, 4, 6)
-    print('6')
-    plt.text(-0.25, 1.1, f'f)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-    plt.title(r'Interaction functions (model)', fontsize=12)
-    acc_list = []
-    for n in range(n_particles):
-        embedding = model.a[0, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                 rr[:, None] / max_radius, embedding), dim=1)
-        with torch.no_grad():
-            acc = model.lin_edge(in_features.float())
-        acc = acc[:, 0]
-        acc_list.append(acc)
-        if (n % (n_particles // 50) == 0):
-            plt.plot(to_numpy(rr),
-                     to_numpy(acc) * to_numpy(ynorm),
-                     color=cmap.color(to_numpy(x[n, 5])), linewidth=1)
-    acc_list = torch.stack(acc_list)
-    coeff_norm = to_numpy(acc_list)
-    if os.path.exists(os.path.join(log_dir, f'proj_interaction_20_2.npy')):
-        proj_interaction = np.load(os.path.join(log_dir, f'proj_interaction_20_2.npy'))
-    else:
-        trans = umap.UMAP(n_neighbors=np.round(n_particles / n_interactions).astype(int), n_components=2,
-                          transform_queue_size=0).fit(coeff_norm)
-        proj_interaction = trans.transform(coeff_norm)
-        proj_interaction = np.squeeze(proj_interaction)
-        np.save(os.path.join(log_dir, f'proj_interaction_20_2.npy'), proj_interaction)
-    plt.xlabel(r'$r_{ij}$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
-    plt.xticks(fontsize=10.0)
-    plt.yticks(fontsize=10.0)
-    plt.ylim([-0.04, 0.03])
-    plt.text(.05, .86, f'N: {n_particles // 50}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
-    plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
+    rr = torch.tensor(np.linspace(min_radius, max_radius, 200)).to(device)
+    func_list = plot_function('f)', model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '1E6', fig, ax, cmap)
 
     ax = fig.add_subplot(3, 4, 7)
-    print('7')
-    plt.text(-0.25, 1.1, f'g)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-    plt.title(r'UMAP of $f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
-    labels, n_clusters = embedding_cluster.get(proj_interaction, 'distance')
-    label_list = []
-    for n in range(n_particle_types):
-        tmp = labels[index_particles[n]]
-        sub_group = np.round(np.median(tmp))
-        label_list.append(sub_group)
-    label_list = np.array(label_list)
-    new_labels = labels.copy()
-    for n in range(n_particle_types):
-        new_labels[labels == label_list[n]] = n
-        plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1],
-                    color=cmap.color(n), s=0.1)
-        plt.xlabel(r'UMAP 0', fontsize=12)
-        plt.ylabel(r'UMAP 1', fontsize=12)
+    proj_interaction, new_labels, nclusters = plot_umap('c)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 20, '1E6', fig, ax, cmap)
+
+    ax = fig.add_subplot(3, 4, 4)
+    Accuracy = plot_confusion_matrix('d)', to_numpy(x[:,5:6]), new_labels, n_particle_types, 1, '5E4', fig, ax)
+    plt.tight_layout()
+
+
+
+
+
     model_a_ = model.a.clone().detach()
     model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
     t = []
@@ -782,7 +679,7 @@ def data_plot_FIG2():
     if len(p) > 0:
         p = torch.tensor(p, device=device)
     else:
-        p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
+        p = torch.load(f'graphs_data/graphs_{dataset_name}/p.pt')
     for n in range(n_particle_types - 1, -1, -1):
         plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n), linewidth=1)
     plt.xlabel(r'$r_{ij}$', fontsize=12)
@@ -854,7 +751,7 @@ def data_plot_FIG2sup():
     for n in range(n_particle_types):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     n_graphs = len(graph_files)
     print('Graph files N: ', n_graphs - 1)
     time.sleep(0.5)
@@ -877,7 +774,7 @@ def data_plot_FIG2sup():
 
     model = Interaction_Particles(config=config, device=device, aggr_type=aggr_type, bc_dpos=bc_dpos)
 
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     n_graphs = int(len(graph_files))
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{n_graphs - 1}_graphs_20.pt"
@@ -894,8 +791,8 @@ def data_plot_FIG2sup():
     x_list = []
     y_list = []
     for run in range(2):
-        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
+        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
+        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(torch.stack(x))
         y_list.append(torch.stack(y))
 
@@ -1006,7 +903,7 @@ def data_plot_FIG2sup():
     for n in range(n_particle_types):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     n_graphs = int(len(graph_files))
 
     model = Interaction_Particles(config=config, device=device, aggr_type=aggr_type, bc_dpos=bc_dpos)
@@ -1025,8 +922,8 @@ def data_plot_FIG2sup():
     x_list = []
     y_list = []
     for run in range(2):
-        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
+        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
+        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(torch.stack(x))
         y_list.append(torch.stack(y))
 
@@ -1105,7 +1002,7 @@ def data_plot_FIG2sup():
     data_generate(config, visualize=False, style='color', alpha=0.2, erase=True, step=n_frames // 4, ratio=ratio, device=device)
     model = Interaction_Particles(config=config, device=device, aggr_type=aggr_type, bc_dpos=bc_dpos)
 
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     n_graphs = int(len(graph_files))
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{n_graphs - 1}_graphs_20.pt"
@@ -1161,8 +1058,8 @@ def data_plot_FIG2sup():
     x_list = []
     y_list = []
     for run in range(2):
-        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
+        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
+        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(torch.stack(x))
         y_list.append(torch.stack(y))
 
@@ -1243,7 +1140,7 @@ def data_plot_FIG2sup():
     data_generate(config, visualize=False, style='color', alpha=0.2, erase=True,
                   step=n_frames // 4, ratio=ratio, scenario='scenario A', device=device)
 
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     n_graphs = int(len(graph_files))
 
     ynorm = torch.load(f'./log/try_{dataset_name}/ynorm.pt', map_location=device).to(device)
@@ -1254,8 +1151,8 @@ def data_plot_FIG2sup():
     x_list = []
     y_list = []
     for run in range(2):
-        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
+        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
+        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(torch.stack(x))
         y_list.append(torch.stack(y))
 
@@ -1370,7 +1267,7 @@ def data_plot_FIG3sup():
     log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
     print('log_dir: {}'.format(log_dir))
 
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     n_graphs = len(graph_files)
     print('Graph files N: ', n_graphs - 1)
     time.sleep(0.5)
@@ -1385,8 +1282,8 @@ def data_plot_FIG3sup():
     time.sleep(1)
 
     for run in trange(n_graphs):
-        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
+        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
+        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
         if run == 0:
             for k in np.arange(0, len(x) - 1, 4):
                 distance = torch.sum(bc_dpos(x[k][:, None, 1:3] - x[k][None, :, 1:3]) ** 2, dim=2)
@@ -1746,7 +1643,7 @@ def data_plot_FIG3sup():
     if len(p) > 0:
         p = torch.tensor(p, device=device)
     else:
-        p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
+        p = torch.load(f'graphs_data/graphs_{dataset_name}/p.pt')
 
     psi_output = []
     for n in range(n_particle_types):
@@ -1837,7 +1734,7 @@ def data_plot_FIG4sup():
     for n in range(n_particle_types):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     n_graphs = len(graph_files)
     print('Graph files N: ', n_graphs - 1)
     time.sleep(0.5)
@@ -1860,7 +1757,7 @@ def data_plot_FIG4sup():
 
     model = Interaction_Particles(config=config, device=device, aggr_type=aggr_type, bc_dpos=bc_dpos)
 
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     n_graphs = int(len(graph_files))
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{n_graphs - 1}_graphs_20.pt"
@@ -1877,8 +1774,8 @@ def data_plot_FIG4sup():
     x_list = []
     y_list = []
     for run in range(2):
-        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
+        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
+        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(torch.stack(x))
         y_list.append(torch.stack(y))
 
@@ -1989,7 +1886,7 @@ def data_plot_FIG4sup():
     for n in range(n_particle_types):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     n_graphs = int(len(graph_files))
 
     model = Interaction_Particles(config=config, device=device, aggr_type=config.graph_model.aggr_type, bc_dpos=bc_dpos)
@@ -2008,8 +1905,8 @@ def data_plot_FIG4sup():
     x_list = []
     y_list = []
     for run in range(2):
-        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
+        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
+        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(torch.stack(x))
         y_list.append(torch.stack(y))
 
@@ -2088,7 +1985,7 @@ def data_plot_FIG4sup():
     data_generate(config, visualize=False, style='color', alpha=0.2, erase=True, step=n_frames // 4, ratio=ratio, device=device)
     model = Interaction_Particles(config=config, device=device, aggr_type=config.graph_model.aggr_type, bc_dpos=bc_dpos)
 
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     n_graphs = int(len(graph_files))
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{n_graphs - 1}_graphs_20.pt"
@@ -2143,8 +2040,8 @@ def data_plot_FIG4sup():
     x_list = []
     y_list = []
     for run in range(2):
-        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
+        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
+        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(torch.stack(x))
         y_list.append(torch.stack(y))
 
@@ -2223,7 +2120,7 @@ def data_plot_FIG4sup():
     ratio = 2
     data_generate(config, visualize=False, style='color', alpha=0.2, erase=True, step=n_frames // 4, ratio=ratio, scenario='scenario A', device=device)
 
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     n_graphs = int(len(graph_files))
 
     ynorm = torch.load(f'./log/try_{dataset_name}/ynorm.pt', map_location=device).to(device)
@@ -2234,8 +2131,8 @@ def data_plot_FIG4sup():
     x_list = []
     y_list = []
     for run in range(2):
-        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
+        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
+        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(torch.stack(x))
         y_list.append(torch.stack(y))
 
@@ -2348,7 +2245,7 @@ def data_plot_FIG3():
     log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
     print('log_dir: {}'.format(log_dir))
 
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     n_graphs = len(graph_files)
     print('Graph files N: ', n_graphs - 1)
     time.sleep(0.5)
@@ -2357,8 +2254,8 @@ def data_plot_FIG3():
     y_list = []
     print('Load normalizations ...')
     time.sleep(1)
-    x_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_0.pt', map_location=device))
-    y_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_0.pt', map_location=device))
+    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device))
+    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_0.pt', map_location=device))
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     x = x_list[0][0].clone().detach()
@@ -2584,7 +2481,7 @@ def data_plot_FIG3():
         print('6')
         plt.text(-0.25, 1.1, f'f)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
         plt.title(r'Interaction functions (true)', fontsize=12)
-        p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
+        p = torch.load(f'graphs_data/graphs_{dataset_name}/p.pt')
         for n in range(n_particle_types - 1, -1, -1):
             plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n), linewidth=1)
 
@@ -2748,7 +2645,7 @@ def data_plot_FIG3_continous():
     log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
     print('log_dir: {}'.format(log_dir))
 
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     n_graphs = len(graph_files)
     print('Graph files N: ', n_graphs - 1)
     time.sleep(0.5)
@@ -2757,8 +2654,8 @@ def data_plot_FIG3_continous():
     y_list = []
     print('Load normalizations ...')
     time.sleep(1)
-    x_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_0.pt', map_location=device))
-    y_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_0.pt', map_location=device))
+    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device))
+    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_0.pt', map_location=device))
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     x = x_list[0][0].clone().detach()
@@ -2900,7 +2797,7 @@ def data_plot_FIG3_continous():
     print('6')
     plt.text(-0.25, 1.1, f'f)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
     plt.title(r'Interaction functions (true)', fontsize=12)
-    p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt', map_location=device)
+    p = torch.load(f'graphs_data/graphs_{dataset_name}/p.pt', map_location=device)
     psi_output = []
     for n in range(n_particles):
         psi_output.append(model.psi(rr, p[n], p[n]))
@@ -2999,7 +2896,7 @@ def data_plot_FIG4():
     log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
     print('log_dir: {}'.format(log_dir))
 
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     n_graphs = len(graph_files)
     print('Graph files N: ', n_graphs - 1)
     time.sleep(0.5)
@@ -3009,8 +2906,8 @@ def data_plot_FIG4():
     print('Load normalizations ...')
     time.sleep(1)
 
-    x_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_0.pt', map_location=device))
-    y_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_0.pt', map_location=device))
+    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device))
+    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_0.pt', map_location=device))
 
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
@@ -3228,7 +3125,7 @@ def data_plot_FIG4():
     if len(p) > 0:
         p = torch.tensor(p, device=device)
     else:
-        p = torch.load(f'graphs_data/graphs_particles_{dataset_name}/p.pt')
+        p = torch.load(f'graphs_data/graphs_{dataset_name}/p.pt')
     psi_output = []
     for m in range(n_particle_types):
         for n in range(n_particle_types):
@@ -3400,7 +3297,7 @@ def data_plot_FIG5sup():
     for n in range(n_particle_types):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     n_graphs = len(graph_files)
     print('Graph files N: ', n_graphs - 1)
     time.sleep(0.5)
@@ -3419,7 +3316,7 @@ def data_plot_FIG5sup():
     for n in range(n_particle_types):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     n_graphs = int(len(graph_files))
 
     model = GravityParticles(model_config=config, device=device, bc_dpos=bc_dpos)
@@ -3438,8 +3335,8 @@ def data_plot_FIG5sup():
     x_list = []
     y_list = []
     for run in range(2):
-        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
+        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
+        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(torch.stack(x))
         y_list.append(torch.stack(y))
 
@@ -3563,7 +3460,7 @@ def data_plot_FIG5sup():
     for n in range(n_particle_types):
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     n_graphs = len(graph_files)
     print('Graph files N: ', n_graphs - 1)
     time.sleep(0.5)
@@ -3587,8 +3484,8 @@ def data_plot_FIG5sup():
     x_list = []
     y_list = []
     for run in range(2):
-        x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt', map_location=device)
+        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
+        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(torch.stack(x))
         y_list.append(torch.stack(y))
 
@@ -3711,7 +3608,7 @@ def data_plot_FIG5():
     log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
     print('log_dir: {}'.format(log_dir))
 
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     n_graphs = len(graph_files)
     print('Graph files N: ', n_graphs - 1)
     time.sleep(0.5)
@@ -3720,8 +3617,8 @@ def data_plot_FIG5():
     # x_list=[]
     # y_list=[]
     # for run in arr:
-    #     x = torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_{run}.pt')
-    #     y = torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_{run}.pt')
+    #     x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
+    #     y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
     #     x_list.append(torch.stack(x))
     #     y_list.append(torch.stack(y))
     # x = torch.stack(x_list)
@@ -3738,8 +3635,8 @@ def data_plot_FIG5():
     y_list = []
     print('Load normalizations ...')
     time.sleep(1)
-    x_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_0.pt', map_location=device))
-    y_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_0.pt', map_location=device))
+    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device))
+    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_0.pt', map_location=device))
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     x = x_list[0][0].clone().detach()
@@ -4124,7 +4021,7 @@ def data_plot_FIG6():
     log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
     print('log_dir: {}'.format(log_dir))
 
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     n_graphs = len(graph_files)
     print('Graph files N: ', n_graphs - 1)
     time.sleep(0.5)
@@ -4134,14 +4031,14 @@ def data_plot_FIG6():
     print('Load normalizations ...')
     time.sleep(1)
 
-    x_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_0.pt', map_location=device))
-    y_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_0.pt', map_location=device))
+    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device))
+    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_0.pt', map_location=device))
 
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
 
     y_mesh_list = []
-    y_mesh_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_mesh_list_0.pt', map_location=device))
+    y_mesh_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_0.pt', map_location=device))
     hnorm = torch.load(os.path.join(log_dir, 'hnorm.pt'), map_location=device)
 
     model = Mesh_Laplacian(aggr_type=aggr_type, model_config=config, device=device, bc_dpos=bc_dpos)
@@ -4501,7 +4398,7 @@ def data_plot_FIG7():
     log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
     print('log_dir: {}'.format(log_dir))
 
-    graph_files = glob.glob(f"graphs_data/graphs_particles_{dataset_name}/x_list*")
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     n_graphs = len(graph_files)
     print('Graph files N: ', n_graphs - 1)
     time.sleep(0.5)
@@ -4511,14 +4408,14 @@ def data_plot_FIG7():
     print('Load normalizations ...')
     time.sleep(1)
 
-    x_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/x_list_0.pt', map_location=device))
-    y_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_list_0.pt', map_location=device))
+    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device))
+    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_0.pt', map_location=device))
 
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
 
     y_mesh_list = []
-    y_mesh_list.append(torch.load(f'graphs_data/graphs_particles_{dataset_name}/y_mesh_list_0.pt', map_location=device))
+    y_mesh_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_0.pt', map_location=device))
     hnorm = torch.load(os.path.join(log_dir, 'hnorm.pt'), map_location=device)
 
     c = torch.ones(n_particle_types, 1, device=device) + torch.rand(n_particle_types, 1, device=device)
@@ -4789,7 +4686,7 @@ def data_plot_FIG7():
 
     it = 5000
 
-    mesh_data = torch.load(f'graphs_data/graphs_particles_{dataset_name}/mesh_data_0.pt', map_location=device)
+    mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_0.pt', map_location=device)
 
     mask_mesh = mesh_data['mask_mesh']
     edge_index_mesh = mesh_data['edge_index']
