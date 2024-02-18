@@ -18,7 +18,7 @@ def init_particles(config, device):
 
     cycle_length = torch.clamp(torch.abs(
         torch.ones(n_particle_types, 1, device=device) * 400 + torch.randn(n_particle_types, 1, device=device) * 150),
-                               min=100, max=700)
+                               min=300, max=700)
 
     if simulation_config.boundary == 'periodic':
         pos = torch.rand(n_particles, 2, device=device)
@@ -41,7 +41,7 @@ def init_particles(config, device):
     particle_id = torch.arange(n_particles, device=device)
     particle_id = particle_id[:, None]
 
-    return pos, dpos, type, features, cycle_duration, cycle_length_distrib, particle_id
+    return pos, dpos, type, features, cycle_duration, cycle_length_distrib, cycle_length, particle_id
 
 
 def init_mesh(config, device):

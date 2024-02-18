@@ -87,7 +87,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
         y_mesh_list = []
 
         # initialize particle and graph states
-        X1, V1, T1, H1, A1, cycle_length_distrib, N1 = init_particles(config, device=device)
+        X1, V1, T1, H1, A1, cycle_length_distrib, cycle_length, N1 = init_particles(config, device=device)
 
         if has_mesh | (model_config.name == 'PDE_O') | (model_config.name == 'Maze'):
             X1_mesh, V1_mesh, T1_mesh, H1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
@@ -111,7 +111,8 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
             # calculate graph states at itme t and t+1 
             if (it > 0) & has_cell_division & (n_particles < 20000):
                 cycle_test = (torch.ones(n_particles, device=device) + 0.05 * torch.randn(n_particles, device=device))
-                pos = torch.argwhere(A1 > cycle_test[:, None] * cycle_length_distrib)
+                cell_cycle_duration_sample = cycle_test.squeeze() * cycle_length_distrib.squeeze()
+                pos = torch.argwhere(A1.squeeze() > cell_cycle_duration_sample)
                 # cell division
                 if len(pos) > 1:
                     n_add_nodes = len(pos)
@@ -137,6 +138,8 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                     H1 = torch.cat((H1, H1[pos, :]), dim=0)
                     A1[pos, :] = 0
                     A1 = torch.cat((A1, A1[pos, :]), dim=0)
+
+                    cycle_length_distrib = cycle_length[to_numpy(T1).astype(int)].squeeze()
 
                     index_particles = []
                     for n in range(n_particles):
@@ -676,7 +679,6 @@ def data_train(config):
                 for n in range(n_particle_types):
                     plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5, color=cmap.color(n))
 
-
         ax = fig.add_subplot(1, 6, 3)
         if simulation_config.n_interactions < 100:  # cluster embedding
             if model_config.name == 'PDE_E':
@@ -1133,7 +1135,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['boids_16']
+    config_list = ['boids_16_division']
     for config_file in config_list:
 
         # Load parameters from config file
@@ -1145,8 +1147,8 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        # data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=100) # config.simulation.n_frames // 100)
+        data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 2000)
         # data_train(config)
-        data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 50, ratio=1)
+        # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 50, ratio=1)
 
     # compute the information gain in bits from a series of measurements
