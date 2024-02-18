@@ -34,6 +34,7 @@ def choose_model(config, device):
             print(f'Generate PDE_B')
             p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
             p[:, 0] = p[:, 0] * 0.5 + 50
+            p[:, 1] = p[:, 1] * 1.5
             p[:, 2] = p[:, 2] * 0.5
             if params[0] != [-1]:
                 for n in range(n_particle_types):
