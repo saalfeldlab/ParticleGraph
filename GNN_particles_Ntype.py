@@ -16,7 +16,7 @@ from tqdm import trange
 import os
 from sklearn import metrics
 import matplotlib
-matplotlib.use("Qt5Agg")
+# matplotlib.use("Qt5Agg")
 
 from ParticleGraph.config import ParticleGraphConfig
 from ParticleGraph.generators.particle_initialization import init_particles, init_mesh
