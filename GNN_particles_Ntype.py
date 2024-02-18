@@ -643,7 +643,6 @@ def data_train(config):
                 plt.xlabel('Embedding 0', fontsize=12)
                 plt.ylabel('Embedding 1', fontsize=12)
 
-
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         torch.save({'model_state_dict': model.state_dict(),
@@ -681,76 +680,70 @@ def data_train(config):
         ax = fig.add_subplot(1, 6, 3)
         if simulation_config.n_interactions < 100:  # cluster embedding
             if model_config.name == 'PDE_E':
-                acc_list = []
-                for m in range(model.a.shape[0]):
-                    for k in range(n_particle_types):
-                        for n in index_particles[k]:
-                            rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
-                            embedding0 = model.a[m, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
-                            embedding1 = model.a[m, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
-                            in_features = torch.cat((-rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                                     rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                                     0 * rr[:, None],
-                                                     0 * rr[:, None], 0 * rr[:, None], embedding0, embedding1), dim=1)
-                            acc = model.lin_edge(in_features.float())
-                            acc = acc[:, 0]
-                            acc_list.append(acc)
-                            if n % 5 == 0:
-                                plt.plot(to_numpy(rr),
-                                         to_numpy(acc) * to_numpy(ynorm) / simulation_config.delta_t,
-                                         linewidth=1,
-                                         color=cmap.color(k), alpha=0.25)
-                acc_list = torch.stack(acc_list)
+                func_list = []
+                rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
+                for n in range(n_particles):
+                        embedding_ = model.a[0, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
+                        in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                             rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
+                        func = model.lin_edge(in_features.float())
+                        func = func[:, 0]
+                        func_list.append(func)
+                        plt.plot(to_numpy(rr),
+                                 to_numpy(func) * to_numpy(ynorm),
+                                 linewidth=1,
+                                 color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
+                func_list = torch.stack(func_list)
                 plt.xlim([0, 0.05])
                 plt.xlabel('Distance [a.u]', fontsize=12)
                 plt.ylabel('MLP [a.u]', fontsize=12)
-                coeff_norm = to_numpy(acc_list)
+                coeff_norm = to_numpy(func_list)
                 trans = umap.UMAP(n_neighbors=100, n_components=2, transform_queue_size=0).fit(coeff_norm)
                 proj_interaction = trans.transform(coeff_norm)
             elif model_config.name == 'PDE_G':
-                acc_list = []
+                func_list = []
+                rr = torch.tensor(np.linspace(0, radius * 1.3, 1000)).to(device)
                 for n in range(n_particles):
-                    rr = torch.tensor(np.linspace(0, radius * 1.3, 1000)).to(device)
-                    embedding = model.a[0, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
+                    embedding_ = model.a[0, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
                     in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                              rr[:, None] / simulation_config.max_radius, 0 * rr[:, None], 0 * rr[:, None],
-                                             0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
-                    acc = model.lin_edge(in_features.float())
-                    acc = acc[:, 0]
-                    acc_list.append(acc)
-                    plt.plot(to_numpy(rr), to_numpy(acc) * to_numpy(ynorm) / simulation_config.delta_t, color=cmap.color(to_numpy(x[n, 5]).astype(int)), linewidth=1, alpha=0.25)
-                acc_list = torch.stack(acc_list)
+                                             0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                    func = model.lin_edge(in_features.float())
+                    func = func[:, 0]
+                    func_list.append(func)
+                    plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm), color=cmap.color(to_numpy(x[n, 5]).astype(int)), linewidth=1, alpha=0.25)
+                func_list = torch.stack(func_list)
                 plt.yscale('log')
                 plt.xscale('log')
                 plt.xlim([1E-3, 0.2])
                 plt.xlabel('Distance [a.u]', fontsize=12)
                 plt.ylabel('MLP [a.u]', fontsize=12)
-                coeff_norm = to_numpy(acc_list)
+                coeff_norm = to_numpy(func_list)
                 trans = umap.UMAP(n_neighbors=100, n_components=2, transform_queue_size=0).fit(coeff_norm)
                 proj_interaction = trans.transform(coeff_norm)
             elif (model_config.name == 'PDE_A') | (model_config.name == 'PDE_B'):
-                acc_list = []
+                func_list = []
                 rr = torch.tensor(np.linspace(0, radius, 200)).to(device)
                 for n in range(n_particles):
-                    embedding = model.a[0, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
+                    embedding_ = model.a[0, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
                     if model_config.name == 'PDE_A':
                         in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                                 rr[:, None] / simulation_config.max_radius, embedding), dim=1)
+                                                 rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
                     else:
                         in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                                  rr[:, None] / simulation_config.max_radius, 0 * rr[:, None], 0 * rr[:, None],
                                                  0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
-                    acc = model.lin_edge(in_features.float())
-                    acc = acc[:, 0]
-                    acc_list.append(acc)
+                    func = model.lin_edge(in_features.float())
+                    func = func[:, 0]
+                    func_list.append(func)
                     if n % 5 == 0:
                         plt.plot(to_numpy(rr),
-                                 to_numpy(acc) * to_numpy(ynorm) / simulation_config.delta_t,
+                                 to_numpy(func) * to_numpy(ynorm),
                                  color=cmap.color(to_numpy(x[n, 5]).astype(int)), linewidth=1, alpha=0.25)
                 plt.xlabel('Distance [a.u]', fontsize=12)
                 plt.ylabel('MLP [a.u]', fontsize=12)
-                acc_list = torch.stack(acc_list)
-                coeff_norm = to_numpy(acc_list)
+                func_list = torch.stack(func_list)
+                coeff_norm = to_numpy(func_list)
                 new_index = np.random.permutation(coeff_norm.shape[0])
                 new_index = new_index[0:min(1000, coeff_norm.shape[0])]
                 trans = umap.UMAP(n_neighbors=500, n_components=2, transform_queue_size=0).fit(coeff_norm[new_index])
@@ -1140,7 +1133,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['gravity_16']
+    config_list = ['Coulomb_3']
     for config_file in config_list:
 
         # Load parameters from config file
@@ -1152,6 +1145,6 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        # data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 100)
-        # data_train(config)
-        data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 50, ratio=1)
+        data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=1) # config.simulation.n_frames // 100)
+        data_train(config)
+        # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 50, ratio=1)

@@ -124,8 +124,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
                 dim=-1)
         if self.model == 'PDE_E':
             in_features = torch.cat(
-                (delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None], dpos_y_j[:, None],
-                 embedding_i, embedding_j), dim=-1)
+                (delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
 
         out = self.lin_edge(in_features)
 
