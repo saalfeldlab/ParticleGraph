@@ -247,7 +247,6 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
 
                     if model_config.name == 'PDE_G':
                         for n in range(n_particle_types):
-                            g = p[T1[index_particles[n], 0].detach().cpu().numpy()].detach().cpu().numpy() * 7.5
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                         x[index_particles[n], 2].detach().cpu().numpy(), s=40, color=cmap.color(n))
                     elif has_mesh:
@@ -1134,7 +1133,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_16']
+    config_list = ['boids_16']
     for config_file in config_list:
 
         # Load parameters from config file
@@ -1146,7 +1145,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        # data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=50) # config.simulation.n_frames // 100)
+        # data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=100) # config.simulation.n_frames // 100)
         # data_train(config)
         data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 50, ratio=1)
 

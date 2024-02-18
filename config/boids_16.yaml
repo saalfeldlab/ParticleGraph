@@ -40,5 +40,5 @@ training:
   data_augmentation: True
   cluster_method: 'distance_plot'
   fix_cluster_embedding: True
-  device: 'cuda:1'
+  device: 'cuda:0'
 
