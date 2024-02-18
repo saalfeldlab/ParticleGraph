@@ -343,7 +343,6 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         plt.close()
 
                     else:
-
                         fig = plt.figure(figsize=(12, 12))
                         if has_mesh:
                             pts = x[:, 1:3].detach().cpu().numpy()
@@ -384,7 +383,8 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                                             x[index_particles[n], 2].detach().cpu().numpy(), s=25, color=cmap.color(n))
 
                         if has_mesh | (simulation_config.boundary == 'periodic'):
-                            g = 1
+                            plt.xlim([0, 1])
+                            plt.ylim([0, 1])
                         else:
                             plt.xlim([-4, 4])
                             plt.ylim([-4, 4])
@@ -676,6 +676,7 @@ def data_train(config):
             else:
                 for n in range(n_particle_types):
                     plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5, color=cmap.color(n))
+
 
         ax = fig.add_subplot(1, 6, 3)
         if simulation_config.n_interactions < 100:  # cluster embedding
@@ -1145,6 +1146,6 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=1) # config.simulation.n_frames // 100)
+        # data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=1) # config.simulation.n_frames // 100)
         data_train(config)
         # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 50, ratio=1)
