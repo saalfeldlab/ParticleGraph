@@ -109,7 +109,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
             # calculate graph states at itme t and t+1 
-            if (it > 1000) & has_cell_division & (n_particles < 20000):
+            if (it > 1000) & (it%10==0) has_cell_division & (n_particles < 20000):
                 cycle_test = (torch.ones(n_particles, device=device) + 0.05 * torch.randn(n_particles, device=device))
                 cell_cycle_duration_sample = cycle_test.squeeze() * cycle_length_distrib.squeeze()
                 pos = torch.argwhere(A1.squeeze() > cell_cycle_duration_sample)
