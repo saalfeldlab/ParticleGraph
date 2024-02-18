@@ -1,0 +1,44 @@
+description: 'Boids 16 different types, division'
+dataset: 'boids_16_division_b'
+
+simulation:
+  params: [[-1]]
+  min_radius: 0.001
+  max_radius: 0.04
+  n_particles: 1792
+  has_cell_division: True
+  n_particle_types: 16
+  n_interactions: 16
+  n_frames: 4000
+  sigma: 0.005
+  delta_t: 1
+  dpos_init: 5.0E-3
+  boundary: 'periodic'
+  start_frame: 0
+
+graph_model:
+  name: 'PDE_B'
+  prediction: '2nd_derivative'
+  input_size: 9
+  output_size: 2
+  hidden_dim: 128
+  n_mp_layers: 5
+  aggr_type: 'mean'
+  embedding_dim: 2
+  update_type: 'none'
+
+plotting:
+  colormap: 'tab20'
+  arrow_length: 5
+
+training:
+  n_epochs: 20
+  batch_size: 8
+  small_init_batch_size: True
+  n_runs: 2
+  noise_level: 0
+  data_augmentation: True
+  cluster_method: 'distance_plot'
+  fix_cluster_embedding: True
+  device: 'cuda:0'
+
