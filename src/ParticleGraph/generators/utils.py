@@ -33,9 +33,11 @@ def choose_model(config, device):
         case 'PDE_B':
             print(f'Generate PDE_B')
             p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
-            if len(params) > 0:
+            if params[0] != [-1]:
                 for n in range(n_particle_types):
                     p[n] = torch.tensor(params[n])
+            else:
+                print(p)
             model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
         case 'PDE_G':
             if params[0] == [-1]:
