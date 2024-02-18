@@ -186,7 +186,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         V1 = y[:, 0:2]
                     X1 = bc_pos(X1 + V1 * delta_t)
 
-                A1 = A1 + delta_t / 2
+                A1 = A1 + delta_t 
             # append y_mesh_list
             # Euler integration update for mesh
 
