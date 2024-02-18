@@ -186,7 +186,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         V1 = y[:, 0:2]
                     X1 = bc_pos(X1 + V1 * delta_t)
 
-                A1 = A1 + 1
+                A1 = A1 + delta_t
             # append y_mesh_list
             # Euler integration update for mesh
 
@@ -1147,7 +1147,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 200)
+        data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 400)
         # data_train(config)
         # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 50, ratio=1)
 
