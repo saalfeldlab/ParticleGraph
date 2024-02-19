@@ -89,12 +89,6 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
         # initialize particle and graph states
         X1, V1, T1, H1, A1, cycle_length_distrib, cycle_length, N1 = init_particles(config, device=device)
 
-        # save all data related to cell division
-        torch.save(A1, f'graphs_data/graphs_{dataset_name}/A1_{run}.pt')
-        torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib_{run}.pt')
-        torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length_{run}.pt')
-        torch.save(model.p, f'graphs_data/graphs_{dataset_name}/p_{run}.pt')
-
         if has_mesh | (model_config.name == 'PDE_O') | (model_config.name == 'Maze'):
             X1_mesh, V1_mesh, T1_mesh, H1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
             torch.save(mesh_data, f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt')
@@ -109,7 +103,6 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
             pos = torch.argwhere(T1 == n)
             pos = to_numpy(pos[:, 0].squeeze()).astype(int)
             index_particles.append(pos)
-
 
         time.sleep(0.5)
         for it in trange(simulation_config.start_frame, n_frames + 1):
@@ -1150,8 +1143,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['boids_16_division_a', 'boids_16_division_b', 'boids_16_division_c', 'boids_16_division_d', 'boids_16_division_e', 'boids_16_division_f', 'boids_16_division_g', 'boids_16_division_h', 'boids_16_division_i', 'boids_16_division_j']
-
+    config_list = ['wave']
 
     for config_file in config_list:
 
@@ -1164,8 +1156,8 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True, style='color_black', alpha=1, erase=True, step=config.simulation.n_frames // 500)
-        # data_train(config)
+        data_generate(config, device=device, visualize=True, style='color_black', alpha=1, erase=True, step=config.simulation.n_frames // 50)
+        data_train(config)
         # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 50, ratio=1)
 
     # compute the information gain in bits from a series of measurements

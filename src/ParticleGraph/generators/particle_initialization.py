@@ -45,7 +45,7 @@ def init_particles(config, device):
 
 
 def init_mesh(config, device):
-    simulation_config = config.simumlation
+    simulation_config = config.simulation
     n_nodes = simulation_config.n_nodes
     n_particles = simulation_config.n_particles
     node_value_map = simulation_config.node_value_map
@@ -62,12 +62,11 @@ def init_mesh(config, device):
     pos_mesh[0:n_nodes, 0:1] = x_mesh[0:n_nodes]
     pos_mesh[0:n_nodes, 1:2] = y_mesh[0:n_nodes]
 
-    mask_mesh = (x_mesh > torch.min(x_mesh)) & (x_mesh < torch.max(x_mesh)) & (y_mesh > torch.min(y_mesh)) & (
-                y_mesh < torch.max(y_mesh))
-    pos_mesh = pos_mesh + torch.randn(n_nodes, 2, device=device) * mesh_size
-
     i0 = imread(f'graphs_data/{node_value_map}')
     values = i0[(to_numpy(pos_mesh[:, 0]) * 255).astype(int), (to_numpy(pos_mesh[:, 1]) * 255).astype(int)]
+
+    mask_mesh = (x_mesh > torch.min(x_mesh)) & (x_mesh < torch.max(x_mesh)) & (y_mesh > torch.min(y_mesh)) & (y_mesh < torch.max(y_mesh))
+    pos_mesh = pos_mesh + torch.randn(n_nodes, 2, device=device) * mesh_size / 8
 
     match config.graph_model.name:
         case 'RD_Gray_Scott_Mesh':

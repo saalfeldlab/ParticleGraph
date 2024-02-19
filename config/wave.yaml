@@ -1,18 +1,18 @@
 description: 'Wave propagation'
-dataset: 'Wave'
+dataset: 'wave'
 
 simulation:
-  params: [0.2,1.4,2.6,3.8,5.0]
+  params: [[0.2],[1.4],[2.6],[3.8],[5.0]]
   min_radius: 0
   max_radius: 0.3
-  diffusion_coefficients: [0,0.6,0.8,1,0.4]
+  diffusion_coefficients: [[0],[0.6],[0.8],[1],[0.4]]
   n_particles: 10000
   n_particle_types: 5
   n_interactions: 5
   n_nodes: 10000
   n_node_types:  5
   n_frames: 4000
-  delta_t: 0.5
+  delta_t: 0.25
   dpos_init: 0
   boundary: 'periodic'
   node_value_map: 'pattern_10.tif'
@@ -43,6 +43,6 @@ training:
   n_runs: 2
   sparsity: 'none'
   data_augmentation: True
-  cluster_method: 'kmeans_auto'
+  cluster_method: 'kmeans_auto_plot'
 
   device: 'auto'

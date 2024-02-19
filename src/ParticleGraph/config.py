@@ -16,7 +16,7 @@ class SimulationConfig(BaseModel):
     params: list[list[float]]
     min_radius: Annotated[float, Field(ge=0)] = 0
     max_radius: Annotated[float, Field(gt=0)]
-    diffusion_coefficients: Optional[list[float]] = None
+    diffusion_coefficients: list[list[float]] = None
     n_particles: int = 1000
     n_particle_types: int = 5
     n_interactions: int = 5
