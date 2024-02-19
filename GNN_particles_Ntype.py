@@ -380,9 +380,12 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                                 plt.yticks([])
                                 plt.axis('off')
                         else:
+                            s_p=25
+                            if model_config.simulation.has_cell_division:
+                                s_p=5
                             for n in range(n_particle_types):
                                 plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                            x[index_particles[n], 2].detach().cpu().numpy(), s=25, color=cmap.color(n))
+                                            x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
 
                         if has_mesh | (simulation_config.boundary == 'periodic'):
                             plt.xlim([0, 1])
