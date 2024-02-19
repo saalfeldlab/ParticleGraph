@@ -354,7 +354,13 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         plt.close()
 
                     else:
+
                         fig = plt.figure(figsize=(12, 12))
+
+                        if 'black' in style:
+                                plt.style.use('dark_background')
+
+
                         if has_mesh:
                             pts = x[:, 1:3].detach().cpu().numpy()
                             tri = Delaunay(pts)
@@ -1147,9 +1153,9 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    #config_list = ['boids_16_division_a', 'boids_16_division_b', 'boids_16_division_c', 'boids_16_division_d', 'boids_16_division_e', 'boids_16_division_f', 'boids_16_division_g', 'boids_16_division_h', 'boids_16_division_i', 'boids_16_division_j']
+    config_list = ['boids_16_division_a', 'boids_16_division_b', 'boids_16_division_c', 'boids_16_division_d', 'boids_16_division_e', 'boids_16_division_f', 'boids_16_division_g', 'boids_16_division_h', 'boids_16_division_i', 'boids_16_division_j']
 
-    config_list = ['gravity_100']
+
     for config_file in config_list:
 
         # Load parameters from config file
@@ -1161,8 +1167,8 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 500)
-        data_train(config)
+        data_generate(config, device=device, visualize=True, style='color_black', alpha=1, erase=True, step=config.simulation.n_frames // 500)
+        # data_train(config)
         # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 50, ratio=1)
 
     # compute the information gain in bits from a series of measurements
