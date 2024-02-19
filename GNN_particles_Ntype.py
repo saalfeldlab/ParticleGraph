@@ -93,6 +93,8 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
         torch.save(A1, f'graphs_data/graphs_{dataset_name}/A1_{run}.pt')
         torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib_{run}.pt')
         torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length_{run}.pt')
+        torch.save(model.p, f'graphs_data/graphs_{dataset_name}/p_{run}.pt')
+
 
 
 
