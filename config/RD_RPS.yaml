@@ -14,7 +14,7 @@ simulation:
   n_frames: 4000
   delta_t: 0.05
   boundary: 'periodic'
-  node_value_map: pattern_10.tif'
+  node_value_map: 'pattern_10.tif'
   node_type_map: 'pattern_17.tif'
   beta: 1
 
