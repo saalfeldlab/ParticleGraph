@@ -17,7 +17,7 @@ simulation:
   start_frame: 0
 
 graph_model:
-  name: 'PDE_B'
+  name: 'PDE_B_bis'
   prediction: '2nd_derivative'
   input_size: 9
   output_size: 2

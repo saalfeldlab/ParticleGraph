@@ -42,11 +42,6 @@ class PDE_B(pyg.nn.MessagePassing):
         d_pos = x[:, 3:5].clone().detach()
         dd_pos = self.propagate(edge_index, pos=x[:,1:3], parameters=parameters, d_pos=d_pos)
 
-        oldv_norm = torch.norm(d_pos, dim=1)
-        newv_norm = torch.norm(d_pos + dd_pos, dim=1)
-        factor = (oldv_norm + self.p[particle_type, 1] / 5E2 * (newv_norm - oldv_norm)) / newv_norm
-        dd_pos = (d_pos + dd_pos) * factor[:, None].repeat(1, 2) - d_pos
-
         return dd_pos
 
     def message(self, pos_i, pos_j, parameters_i, d_pos_i, d_pos_j):

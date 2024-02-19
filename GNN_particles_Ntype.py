@@ -89,6 +89,13 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
         # initialize particle and graph states
         X1, V1, T1, H1, A1, cycle_length_distrib, cycle_length, N1 = init_particles(config, device=device)
 
+        # save all data related to cell division
+        torch.save(A1, f'graphs_data/graphs_{dataset_name}/A1_{run}.pt')
+        torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib_{run}.pt')
+        torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length_{run}.pt')
+
+
+
         if has_mesh | (model_config.name == 'PDE_O') | (model_config.name == 'Maze'):
             X1_mesh, V1_mesh, T1_mesh, H1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
             torch.save(mesh_data, f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt')
@@ -1138,7 +1145,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['boids_16_division_c', 'boids_16_division_d', 'boids_16_division_e', 'boids_16_division_f', 'boids_16_division_g', 'boids_16_division_h', 'boids_16_division_i', 'boids_16_division_j']
+    config_list = ['boids_16_division_a', 'boids_16_division_b', 'boids_16_division_c', 'boids_16_division_d', 'boids_16_division_e', 'boids_16_division_f', 'boids_16_division_g', 'boids_16_division_h', 'boids_16_division_i', 'boids_16_division_j']
     for config_file in config_list:
 
         # Load parameters from config file

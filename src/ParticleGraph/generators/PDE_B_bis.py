@@ -4,7 +4,7 @@ import torch_geometric.utils as pyg_utils
 from ParticleGraph.utils import to_numpy
 
 
-class PDE_B(pyg.nn.MessagePassing):
+class PDE_B_bis(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
@@ -23,7 +23,7 @@ class PDE_B(pyg.nn.MessagePassing):
     """
 
     def __init__(self, aggr_type=[], p=[], bc_dpos=[]):
-        super(PDE_B, self).__init__(aggr=aggr_type)  # "mean" aggregation.
+        super(PDE_B_bis, self).__init__(aggr=aggr_type)  # "mean" aggregation.
 
         self.p = p
         self.bc_dpos = bc_dpos

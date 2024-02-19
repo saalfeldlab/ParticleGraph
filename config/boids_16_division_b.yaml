@@ -2,29 +2,14 @@ description: 'Boids 16 different types, division'
 dataset: 'boids_16_division_b'
 
 simulation:
-  params: [[23.7853, 90.5957, 94.4533],
-        [68.4394, 76.8048, 88.6428],
-        [ 1.8621, 90.1581, 19.0548],
-        [38.2139, 34.6317, 52.2358],
-        [38.3967, 82.2044, 33.7407],
-        [10.7415, 50.2190, 90.2300],
-        [11.8161, 38.3840, 38.3132],
-        [49.1938,  9.5957, 13.4145],
-        [53.1752, 31.9241, 76.1194],
-        [78.7371, 95.1112, 24.0842],
-        [82.7541, 47.7526, 68.5920],
-        [70.4163, 71.0256, 27.8650],
-        [20.8454, 79.1968, 52.5521],
-        [92.4346, 45.7972,  8.6136],
-        [54.1234, 82.6566,  3.7863],
-        [36.2683, 30.0982, 45.2832]]
+  params: [[-1]]
   min_radius: 0.001
   max_radius: 0.04
   n_particles: 1792
   has_cell_division: True
   n_particle_types: 16
   n_interactions: 16
-  n_frames: 8000
+  n_frames: 16000
   sigma: 0.005
   delta_t: 1
   dpos_init: 1.0E-4
@@ -32,7 +17,7 @@ simulation:
   start_frame: 0
 
 graph_model:
-  name: 'PDE_B'
+  name: 'PDE_B_bis'
   prediction: '2nd_derivative'
   input_size: 9
   output_size: 2

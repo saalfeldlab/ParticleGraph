@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 
-from ParticleGraph.generators import PDE_A, PDE_B, PDE_E, PDE_G, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, \
+from ParticleGraph.generators import PDE_A, PDE_B, PDE_B_bis, PDE_E, PDE_G, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, \
     Laplacian_A, PDE_O
 from ParticleGraph.utils import choose_boundary_values
 
@@ -39,6 +39,15 @@ def choose_model(config, device):
             else:
                 print(p)
             model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
+        case 'PDE_B_bis':
+            print(f'Generate PDE_B_bis')
+            p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
+            if params[0] != [-1]:
+                for n in range(n_particle_types):
+                    p[n] = torch.tensor(params[n])
+            else:
+                print(p)
+            model = PDE_B_bis(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
         case 'PDE_G':
             if params[0] == [-1]:
                 p = np.linspace(0.5, 5, n_particle_types)
