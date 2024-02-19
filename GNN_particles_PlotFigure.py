@@ -2665,7 +2665,7 @@ if __name__ == '__main__':
     # Coloumb_3
     data_plot_FIG4()
     # boids_16 HR
-    # data_plot_FIG5()
+    data_plot_FIG5()
     #
     # wave HR2 or HR3 (slit)
     # data_plot_FIG6()
