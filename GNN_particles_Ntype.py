@@ -95,9 +95,6 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
         torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length_{run}.pt')
         torch.save(model.p, f'graphs_data/graphs_{dataset_name}/p_{run}.pt')
 
-
-
-
         if has_mesh | (model_config.name == 'PDE_O') | (model_config.name == 'Maze'):
             X1_mesh, V1_mesh, T1_mesh, H1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
             torch.save(mesh_data, f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt')
@@ -397,7 +394,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         else:
                             s_p = 25
                             if simulation_config.has_cell_division:
-                                s_p = 15
+                                s_p = 5
                             for n in range(n_particle_types):
                                 plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                             x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
