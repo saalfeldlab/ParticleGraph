@@ -2,17 +2,17 @@ description: 'Rock Paper Scissor model'
 dataset: 'RD_RPS'
 
 simulation:
-  params: [0,0,0,0]
+  params: [[0],[0],[0],[0]]
   min_radius: 0
   max_radius: 0.3
-  diffusion_coefficients: [0.4,0.8,1,0.6]
+  diffusion_coefficients: [[0.4],[0.8],[1],[0.6]]
   n_particles: 10000
   n_particle_types: 4
   n_interactions: 4
   n_nodes: 10000
   n_node_types: 4
-  n_frames: 10000
-  delta_t: 0.1
+  n_frames: 4000
+  delta_t: 0.05
   boundary: 'periodic'
   node_value_map: pattern_10.tif'
   node_type_map: 'pattern_17.tif'
@@ -43,4 +43,4 @@ training:
   sparsity: 'none'
   cluster_method: 'distance_plot'
 
-  device: 'auto'
+  device: 'cuda:1'
