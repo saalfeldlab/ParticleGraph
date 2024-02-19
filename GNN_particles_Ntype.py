@@ -350,7 +350,6 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         if 'black' in style:
                                 plt.style.use('dark_background')
 
-
                         if has_mesh:
                             pts = x[:, 1:3].detach().cpu().numpy()
                             tri = Delaunay(pts)
@@ -392,9 +391,10 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                                 plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                             x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
 
-                        if has_mesh | (simulation_config.boundary == 'periodic'):
-                            plt.xlim([0, 1])
-                            plt.ylim([0, 1])
+                        if (has_mesh | (simulation_config.boundary == 'periodic')):
+                            if (model_config.name != 'RD_RPS_Mesh'):
+                                plt.xlim([0, 1])
+                                plt.ylim([0, 1])
                         else:
                             plt.xlim([-4, 4])
                             plt.ylim([-4, 4])
