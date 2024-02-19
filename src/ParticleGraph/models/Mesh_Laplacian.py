@@ -34,8 +34,8 @@ class Mesh_Laplacian(pyg.nn.MessagePassing):
         model_config = config.graph_model
 
         self.device = device
-        self.input_size = simulation_config.input_size
-        self.output_size = simulation_config.output_size
+        self.input_size = model_config.input_size
+        self.output_size = model_config.output_size
         self.hidden_dim = model_config.hidden_dim
         self.n_layers = model_config.n_mp_layers
         self.embedding = model_config.embedding_dim

@@ -500,10 +500,9 @@ def data_train(config):
         logger.info(f'hnorm: {to_numpy(hnorm)}')
         time.sleep(0.5)
 
-
         mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_1.pt', map_location=device)
 
-        mask_mesh = mesh_data['mask_mesh']
+        mask_mesh = mesh_data['mask']
         # mesh_pos = mesh_data['mesh_pos']
         edge_index_mesh = mesh_data['edge_index']
         edge_weight_mesh = mesh_data['edge_weight']
@@ -1156,7 +1155,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True, style='color_black', alpha=1, erase=True, step=config.simulation.n_frames // 50)
+        # data_generate(config, device=device, visualize=True, style='color_black', alpha=1, erase=True, step=config.simulation.n_frames // 50)
         data_train(config)
         # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 50, ratio=1)
 
