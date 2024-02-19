@@ -35,7 +35,7 @@ training:
   n_epochs: 20
   batch_size: 8
   small_init_batch_size: True
-  n_runs: 2
+  n_runs: 1
   noise_level: 0
   data_augmentation: True
   cluster_method: 'distance_plot'
