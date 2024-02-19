@@ -382,7 +382,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         else:
                             s_p = 25
                             if simulation_config.has_cell_division:
-                                s_p = 10
+                                s_p = 15
                             for n in range(n_particle_types):
                                 plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                             x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
