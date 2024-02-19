@@ -45,7 +45,7 @@ class PDE_B(pyg.nn.MessagePassing):
         oldv_norm = torch.norm(d_pos, dim=1)
         newv_norm = torch.norm(d_pos + dd_pos, dim=1)
         factor = (oldv_norm + self.p[particle_type, 1] / 5E2 * (newv_norm - oldv_norm)) / newv_norm
-        newv *= factor[:, None].repeat(1, 2)
+        newv = (d_pos + dd_pos) * factor[:, None].repeat(1, 2)
 
         dd_pos = newv - oldv
 
