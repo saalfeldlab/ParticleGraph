@@ -1138,7 +1138,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['boids_16_division_a', 'boids_16_division_b', 'boids_16_division_c', 'boids_16_division_d', 'boids_16_division_e', 'boids_16_division_f']
+    config_list = ['boids_16_division_c', 'boids_16_division_d', 'boids_16_division_e', 'boids_16_division_f', 'boids_16_division_g', 'boids_16_division_h', 'boids_16_division_i', 'boids_16_division_j']
     for config_file in config_list:
 
         # Load parameters from config file
