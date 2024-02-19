@@ -20,7 +20,7 @@ simulation:
 
 graph_model:
   name: 'RD_RPS_Mesh'
-  prediction: 'First_derivative'
+  prediction: 'first_derivative'
   input_size: 8
   output_size: 3
   hidden_dim: 32
