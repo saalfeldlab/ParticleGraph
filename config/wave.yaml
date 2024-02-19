@@ -11,7 +11,7 @@ simulation:
   n_interactions: 5
   n_nodes: 10000
   n_node_types:  5
-  n_frames: 400
+  n_frames: 4000
   delta_t: 0.25
   dpos_init: 0
   boundary: 'periodic'

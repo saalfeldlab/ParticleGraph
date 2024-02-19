@@ -40,7 +40,7 @@ class Mesh_Laplacian(pyg.nn.MessagePassing):
         self.n_layers = model_config.n_mp_layers
         self.embedding = model_config.embedding_dim
         self.n_particles = simulation_config.n_particles
-        self.n_datasets = config.train.n_runs - 1
+        self.n_datasets = config.training.n_runs - 1
         self.bc_dpos = bc_dpos
 
         self.lin_phi = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
