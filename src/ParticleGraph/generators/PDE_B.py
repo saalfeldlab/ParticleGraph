@@ -39,15 +39,13 @@ class PDE_B(pyg.nn.MessagePassing):
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         particle_type = to_numpy(x[:, 5])
         parameters = self.p[particle_type, :]
-        d_pos = x[:, 3:5]
+        d_pos = x[:, 3:5].clone().detach()
         dd_pos = self.propagate(edge_index, pos=x[:,1:3], parameters=parameters, d_pos=d_pos)
 
         oldv_norm = torch.norm(d_pos, dim=1)
         newv_norm = torch.norm(d_pos + dd_pos, dim=1)
         factor = (oldv_norm + self.p[particle_type, 1] / 5E2 * (newv_norm - oldv_norm)) / newv_norm
-        newv = (d_pos + dd_pos) * factor[:, None].repeat(1, 2)
-
-        dd_pos = newv - oldv
+        dd_pos = (d_pos + dd_pos) * factor[:, None].repeat(1, 2) - d_pos
 
         return dd_pos
 
