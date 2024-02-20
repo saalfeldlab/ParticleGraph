@@ -40,7 +40,8 @@ training:
   batch_size: 8
   small_init_batch_size: True
   n_runs: 2
-  sparsity: 'none'
+  sparsity: 'replace'
   cluster_method: 'distance_plot'
+  fix_cluster_embedding: True
 
   device: 'cuda:0'
