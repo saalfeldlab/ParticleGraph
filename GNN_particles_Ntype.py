@@ -1142,7 +1142,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['RD_RPS']
+    config_list = ['wave']
 
     for config_file in config_list:
 
