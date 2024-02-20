@@ -11,8 +11,8 @@ simulation:
   n_interactions: 5
   n_nodes: 10000
   n_node_types:  5
-  n_frames: 4000
-  delta_t: 0.25
+  n_frames: 8000
+  delta_t: 0.125
   dpos_init: 0
   boundary: 'periodic'
   node_value_map: 'pattern_10.tif'
