@@ -25,7 +25,7 @@ graph_model:
   prediction: '2nd_derivative'
   input_size: 3
   output_size: 1
-  hidden_dim: 8
+  hidden_dim: 64
   n_mp_layers: 5
   aggr_type: 'add'
   mesh_aggr_type: 'add'

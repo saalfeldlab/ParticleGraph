@@ -1142,7 +1142,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['wave_a']
+    config_list = ['wave_a','wave_b','wave_c','wave_d']
 
     for config_file in config_list:
 
@@ -1155,8 +1155,8 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 50)
-        data_train(config)
-        # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 50, ratio=1)
+        # data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 50)
+        # data_train(config)
+        data_test(config, visualize=True, verbose=True, best_model=5, step=config.simulation.n_frames // 50, ratio=1)
 
     # compute the information gain in bits from a series of measurements
