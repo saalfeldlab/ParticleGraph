@@ -70,6 +70,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
         index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
     model, bc_pos, bc_dpos = choose_model(config, device=device)
+
     has_mesh = 'Mesh' in model_config.name
     if has_mesh:
         mesh_model = choose_mesh_model(config, device=device)
@@ -92,7 +93,6 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
         if has_mesh | (model_config.name == 'PDE_O') | (model_config.name == 'Maze'):
             X1_mesh, V1_mesh, T1_mesh, H1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
             torch.save(mesh_data, f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt')
-
             if model_config.name != 'Maze':
                 X1 = X1_mesh.clone().detach()
                 H1 = H1_mesh.clone().detach()
@@ -1024,7 +1024,7 @@ def data_test(config, visualize=False, verbose=True, best_model=0, step=5, force
         hnorm = torch.load(f'./log/try_{dataset_name}/hnorm.pt', map_location=device).to(device)
 
         mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_0.pt',map_location=device)
-        mask_mesh = mesh_data['mask_mesh']
+        mask_mesh = mesh_data['mask']
         edge_index_mesh = mesh_data['edge_index']
         edge_weight_mesh = mesh_data['edge_weight']
 
@@ -1126,7 +1126,7 @@ def data_test(config, visualize=False, verbose=True, best_model=0, step=5, force
                     plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                 x[index_particles[n], 2].detach().cpu().numpy(), s=25, color=cmap.color(n))
 
-            if has_mesh | (simulation_config.boundary == 'periodic'):
+            if (has_mesh | (simulation_config.boundary == 'periodic')) & (model_config.name != 'RD_RPS_Mesh'):
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
 
@@ -1141,7 +1141,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['wave_a']   #['wave_a','wave_b','wave_c','wave_d']
+    config_list = ['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
 
     for config_file in config_list:
 
@@ -1154,8 +1154,8 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        # data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 50)
+        data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 50)
         # data_train(config)
-        data_test(config, visualize=True, verbose=True, best_model=5, step=config.simulation.n_frames // 50, ratio=1)
+        # data_test(config, visualize=True, verbose=True, best_model=5, step=config.simulation.n_frames // 50, ratio=1)
 
-    # compute the information gain in bits from a series of measurements
+
