@@ -421,7 +421,8 @@ def data_train(config):
     data_augmentation = train_config.data_augmentation
     data_augmentation_loop = train_config.data_augmentation_loop
     target_batch_size = train_config.batch_size
-    has_mesh = 'Mesh' in model_config.name
+    has_mesh = (config.graph_model.mesh_model_name != '')
+    only_mesh = (config.graph_model.particle_model_name == '') & has_mesh
     replace_with_cluster = 'replace' in train_config.sparsity
     visualize_embedding = False
 
@@ -895,6 +896,8 @@ def data_test(config, visualize=False, verbose=True, best_model=0, step=5, force
     dataset_name = config.dataset
     simulation_config = config.simulation
     model_config = config.graph_model
+    has_mesh = (config.graph_model.mesh_model_name != '')
+    only_mesh = (config.graph_model.particle_model_name == '') & has_mesh
 
     print(f'Test data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
@@ -903,7 +906,6 @@ def data_test(config, visualize=False, verbose=True, best_model=0, step=5, force
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
     n_frames = simulation_config.n_frames
-    has_mesh = 'Mesh' in model_config.name
     delta_t = simulation_config.delta_t
 
     l_dir = os.path.join('.', 'log')
@@ -1044,16 +1046,16 @@ def data_test(config, visualize=False, verbose=True, best_model=0, step=5, force
             x[:, 1:5] = x0[:, 1:5].clone().detach()
             dataset_mesh = data.Data(x=x, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
 
-        if model_config.name == 'DiffMesh':
+        if model_config.mesh_model_name == 'DiffMesh':
             with torch.no_grad():
                 pred = mesh_model(dataset_mesh, data_id=0, )
             x[:, 6:7] += pred * hnorm * delta_t
-        elif model_config.name == 'WaveMesh':
+        elif model_config.mesh_model_name == 'WaveMesh':
             with torch.no_grad():
                 pred = mesh_model(dataset_mesh, data_id=0)
             x[mask_mesh.squeeze(), 7:8] += pred[mask_mesh.squeeze()] * hnorm * delta_t
             x[mask_mesh.squeeze(), 6:7] += x[mask_mesh.squeeze(), 7:8] * delta_t
-        elif model_config.name == 'RD_RPS_Mesh':
+        elif model_config.mesh_model_name == 'RD_RPS_Mesh':
             with torch.no_grad():
                 pred = mesh_model(dataset_mesh, data_id=0)
                 x[mask_mesh.squeeze(), 6:9] += pred[mask_mesh.squeeze()] * hnorm * delta_t
@@ -1120,7 +1122,7 @@ def data_test(config, visualize=False, verbose=True, best_model=0, step=5, force
                     plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                 x[index_particles[n], 2].detach().cpu().numpy(), s=25, color=cmap.color(n))
 
-            if (has_mesh | (simulation_config.boundary == 'periodic')) & (model_config.name != 'RD_RPS_Mesh'):
+            if (has_mesh | (simulation_config.boundary == 'periodic')) & (model_config.mesh_model_name != 'RD_RPS_Mesh'):
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
 
@@ -1135,7 +1137,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['oscillator'] #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
+    config_list = ['arbitrary_3'] #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
 
     for config_file in config_list:
 
@@ -1148,8 +1150,8 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=20) #config.simulation.n_frames // 100)
+        # data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=1) #config.simulation.n_frames // 100)
         # data_train(config)
-        # data_test(config, visualize=True, verbose=True, best_model=5, step=config.simulation.n_frames // 50, ratio=1)
+        data_test(config, visualize=True, verbose=True, best_model=5, step=1) #config.simulation.n_frames // 50)
 
 
