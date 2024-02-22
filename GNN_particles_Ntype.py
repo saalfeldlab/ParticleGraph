@@ -95,6 +95,10 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
         if has_mesh:
             X1_mesh, V1_mesh, T1_mesh, H1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
             torch.save(mesh_data, f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt')
+        if (model_config.particle_model_name == 'PDE_O') | (model_config.particle_model_name == 'Maze'):
+            X1 = X1_mesh.clone().detach()
+            H1 = H1_mesh.clone().detach()
+            T1 = T1_mesh.clone().detach()
 
         index_particles = []
         for n in range(n_particles):
@@ -212,6 +216,8 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                             distance = torch.sum(distance, dim=0)
                             H1_mesh = torch.relu(H1_mesh*1.01 - 30*distance[:,None])
                             H1_mesh = torch.clamp(H1_mesh, min=0, max=5000)
+                    case 'PDE_O_Mesh':
+                        pred=[]
 
                 y_mesh_list.append(pred)
 
@@ -275,7 +281,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                     if model_config.particle_model_name == 'PDE_O':
                         fig = plt.figure(figsize=(12, 12))
                         plt.style.use('dark_background')
-                        plt.scatter(H1[:, 0].detach().cpu().numpy(), H1[:, 1].detach().cpu().numpy(), s=500,
+                        plt.scatter(H1[:, 0].detach().cpu().numpy(), H1[:, 1].detach().cpu().numpy(), s=20,
                                     c=np.sin(to_numpy(H1[:, 2])), vmin=-1, vmax=1, cmap='viridis')
                         plt.xlim([0, 1])
                         plt.ylim([0, 1])
@@ -1129,7 +1135,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['RD_RPS'] #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
+    config_list = ['oscillator'] #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
 
     for config_file in config_list:
 
@@ -1142,7 +1148,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 50)
+        data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=20) #config.simulation.n_frames // 100)
         # data_train(config)
         # data_test(config, visualize=True, verbose=True, best_model=5, step=config.simulation.n_frames // 50, ratio=1)
 

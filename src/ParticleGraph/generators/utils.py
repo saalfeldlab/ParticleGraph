@@ -99,6 +99,11 @@ def choose_mesh_model(config, device):
             for n in range(n_node_types):
                 c[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
             mesh_model = Laplacian_A(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
+        case 'PDE_O_Mesh':
+            c = initialize_random_values(n_node_types, device)
+            for n in range(n_node_types):
+                c[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
+            mesh_model = Laplacian_A(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
         case _:
             raise ValueError(f'Unknown model {model_name}')
 

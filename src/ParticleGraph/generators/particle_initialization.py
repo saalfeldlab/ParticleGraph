@@ -83,7 +83,7 @@ def init_mesh(config, device):
         case 'DiffMesh' | 'WaveMesh' | 'Maze':
             features_mesh = torch.zeros((n_nodes, 2), device=device)
             features_mesh[:, 0] = torch.tensor(values / 255 * 5000, device=device)
-        case 'PDE_O':
+        case 'PDE_O_Mesh':
             features_mesh = torch.zeros((n_particles, 5), device=device)
             features_mesh[0:n_particles, 0:1] = x_mesh[0:n_particles]
             features_mesh[0:n_particles, 1:2] = y_mesh[0:n_particles]
