@@ -47,12 +47,12 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
     if erase:
         files = glob.glob(f"{folder}/*")
         for f in files:
-            if (f[-8:] != 'tmp_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (
+            if (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (
                     f != 'generation_code.py'):
                 os.remove(f)
     os.makedirs(folder, exist_ok=True)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/tmp_data/', exist_ok=True)
-    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/tmp_data/*')
+    os.makedirs(f'./graphs_data/graphs_{dataset_name}/generated_data/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/generated_data/*')
     for f in files:
         os.remove(f)
     copyfile(os.path.realpath(__file__), os.path.join(folder, 'generation_code.py'))
@@ -278,7 +278,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/tmp_data/Fig_g_color_{it}.tif", dpi=300)
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_g_color_{it}.tif", dpi=300)
                     plt.close()
 
                 if 'color' in style:
@@ -293,7 +293,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/tmp_data/Lut_Fig_{it}.jpg", dpi=75)
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Lut_Fig_{it}.jpg", dpi=75)
                         plt.close()
                         fig = plt.figure(figsize=(12, 12))
                         plt.style.use('default')
@@ -305,7 +305,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/tmp_data/Rot_Fig{it}.jpg", dpi=75)
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Rot_Fig{it}.jpg", dpi=75)
                         plt.close()
 
                     elif model_config.particle_model_name == 'Maze':
@@ -333,16 +333,14 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/tmp_data/Mesh_{it}.jpg", dpi=100)
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Mesh_{it}.jpg", dpi=100)
                         plt.close()
 
                     else:
 
                         fig = plt.figure(figsize=(12, 12))
-
                         if 'black' in style:
                                 plt.style.use('dark_background')
-
                         if has_mesh:
                             pts = x[:, 1:3].detach().cpu().numpy()
                             tri = Delaunay(pts)
@@ -384,7 +382,6 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                             for n in range(n_particle_types):
                                 plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                             x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
-
                         if (has_mesh | (simulation_config.boundary == 'periodic')):
                             if (model_config.mesh_model_name != 'RD_RPS_Mesh'):
                                 plt.xlim([0, 1])
@@ -392,12 +389,35 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         else:
                             plt.xlim([-4, 4])
                             plt.ylim([-4, 4])
-
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/tmp_data/Fig_{it}.jpg", dpi=100)
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{it}.jpg", dpi=170.7)
                         plt.close()
+
+                        if not(has_mesh):
+                            fig = plt.figure(figsize=(12, 12))
+                            s_p = 25
+                            if simulation_config.has_cell_division:
+                                s_p = 10
+                            for n in range(n_particle_types):
+                                plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
+                                            x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color='k')
+                            if (simulation_config.boundary == 'periodic'):
+                                plt.xlim([0, 1])
+                                plt.ylim([0, 1])
+                            else:
+                                plt.xlim([-4, 4])
+                                plt.ylim([-4, 4])
+                            plt.xticks([])
+                            plt.yticks([])
+                            plt.tight_layout()
+                            plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_bw_{it}.jpg", dpi=170.7)
+                            plt.close()
+
+
+
+
 
         torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
         torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
@@ -1190,7 +1210,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['gravity_16'] #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
+    config_list = ['arbitrary_3', 'arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
 
     for config_file in config_list:
 
@@ -1203,8 +1223,8 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        # data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=1) #config.simulation.n_frames // 100)
-        data_train(config)
+        data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=1) #config.simulation.n_frames // 100)
+        # data_train(config)
         # data_test(config, visualize=True, verbose=True, best_model=5, step=1) #config.simulation.n_frames // 50)
 
 
