@@ -3,6 +3,7 @@ import logging
 import time
 from shutil import copyfile
 
+import matplotlib.pyplot as plt
 import networkx as nx
 import torch.nn as nn
 import torch_geometric.data as data
@@ -16,6 +17,7 @@ from tqdm import trange
 import os
 from sklearn import metrics
 import matplotlib
+from matplotlib import rc
 # matplotlib.use("Qt5Agg")
 
 from ParticleGraph.config import ParticleGraphConfig
@@ -34,6 +36,9 @@ from ParticleGraph.embedding_cluster import *
 
 def data_generate(config, visualize=True, style='color', erase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=None):
     print('')
+
+    plt.rcParams['text.usetex'] = True
+    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
 
     # create output folder, empty it if bErase=True, copy files into it
@@ -64,6 +69,8 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
     n_frames = simulation_config.n_frames
     has_cell_division = simulation_config.has_cell_division
     delta_t = simulation_config.delta_t
+    has_mesh = (config.graph_model.mesh_model_name != '')
+    only_mesh = (config.graph_model.particle_model_name == '') & has_mesh
 
     index_particles = []
     np_i = int(n_particles / n_particle_types)
@@ -72,8 +79,6 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
 
     model, bc_pos, bc_dpos = choose_model(config, device=device)
 
-    has_mesh = (config.graph_model.mesh_model_name != '')
-    only_mesh = (config.graph_model.particle_model_name == '') & has_mesh
     if has_mesh:
         mesh_model = choose_mesh_model(config, device=device)
     else:
@@ -406,6 +411,9 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
 def data_train(config):
     print('')
 
+    plt.rcParams['text.usetex'] = True
+    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
@@ -439,11 +447,10 @@ def data_train(config):
     print('log_dir: {}'.format(log_dir))
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'models'), exist_ok=True)
-    os.makedirs(log_dir, exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'tmp_training'), exist_ok=True)
-    os.makedirs(log_dir, exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'tmp_training/embedding'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'tmp_recons'), exist_ok=True)
-    os.makedirs(log_dir, exist_ok=True)
+
 
     copyfile(os.path.realpath(__file__), os.path.join(log_dir, 'training_code.py'))
     logging.basicConfig(filename=os.path.join(log_dir, 'training.log'),
@@ -617,7 +624,7 @@ def data_train(config):
                 else:
                     pred = model(batch, data_id=run - 1, training=True, vnorm=vnorm, phi=phi)
 
-            if model_config.name == 'RD_RPS_Mesh':
+            if model_config.mesh_model_name == 'RD_RPS_Mesh':
                 loss = ((pred - y_batch) * error_weight * mask_mesh).norm(2)
             else:
                 loss = ((pred - y_batch) * error_weight).norm(2)
@@ -633,16 +640,62 @@ def data_train(config):
             optimizer.step()
             total_loss += loss.item()
 
-            if visualize_embedding:
+            visualize_embedding=True
+            if visualize_embedding & (   (epoch==0)&(N%(Niter//1000)==0)  |   (epoch>0)&(N%(Niter//20)==0) )   :
                 fig = plt.figure(figsize=(8, 8))
-                plt.ion()
+
                 embedding, embedding_particle = get_embedding(model.a, index_particles, n_particles, n_particle_types)
                 for m in range(model.a.shape[0]):
                     for n in range(n_particle_types):
                         plt.scatter(embedding_particle[n + m * n_particle_types][:, 0],
                                     embedding_particle[n + m * n_particle_types][:, 1], color=cmap.color(n), s=3)
-                plt.xlabel('Embedding 0', fontsize=12)
-                plt.ylabel('Embedding 1', fontsize=12)
+                plt.xlabel('Embedding 0', fontsize=18)
+                plt.ylabel('Embedding 1', fontsize=18)
+                # remove xticks label
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_training/embedding/Fig_{dataset_name}_embedding_{epoch}_{N}.tif",dpi=300)
+                plt.close()
+
+                fig = plt.figure(figsize=(8, 8))
+                rr = torch.tensor(np.linspace(0, radius, 200)).to(device)
+                for n in range(n_particles):
+                    embedding_ = model.a[0, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
+                    if (model_config.particle_model_name == 'PDE_A') :
+                        in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
+                    elif (model_config.particle_model_name == 'PDE_B'):
+                        in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                 0 * rr[:, None],
+                                                 0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                    elif model_config.particle_model_name == 'PDE_E':
+                        in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                             rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
+                    else:
+                        in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                 0 * rr[:, None],
+                                                 0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                    func = model.lin_edge(in_features.float())
+                    func = func[:, 0]
+                    if n % 5 == 0:
+                        plt.plot(to_numpy(rr),
+                                 to_numpy(func) * to_numpy(ynorm),
+                                 linewidth=1,
+                                 color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
+                plt.xlabel('Distance', fontsize=18)
+                plt.ylabel('Interaction function', fontsize=18)
+                # plt.xlim([0,0.02])
+                # plt.ylim([-1E6,0])
+                # plt.xlim([0,0.02])
+                # plt.ylim([-0.001,0])
+                plt.xlim([0,0.02])
+                plt.ylim([0,500000])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_training/embedding/Fig_{dataset_name}_function_{epoch}_{N}.tif",dpi=300)
+                plt.close()
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
@@ -680,7 +733,7 @@ def data_train(config):
 
         ax = fig.add_subplot(1, 6, 3)
         if simulation_config.n_interactions < 100:  # cluster embedding
-            if model_config.name == 'PDE_E':
+            if model_config.particle_model_name == 'PDE_E':
                 func_list = []
                 rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
                 for n in range(n_particles):
@@ -701,7 +754,7 @@ def data_train(config):
                 coeff_norm = to_numpy(func_list)
                 trans = umap.UMAP(n_neighbors=100, n_components=2, transform_queue_size=0).fit(coeff_norm)
                 proj_interaction = trans.transform(coeff_norm)
-            elif model_config.name == 'PDE_G':
+            elif model_config.particle_model_name == 'PDE_G':
                 func_list = []
                 rr = torch.tensor(np.linspace(0, radius * 1.3, 1000)).to(device)
                 for n in range(n_particles):
@@ -722,7 +775,7 @@ def data_train(config):
                 coeff_norm = to_numpy(func_list)
                 trans = umap.UMAP(n_neighbors=100, n_components=2, transform_queue_size=0).fit(coeff_norm)
                 proj_interaction = trans.transform(coeff_norm)
-            elif (model_config.name == 'PDE_A') | (model_config.name == 'PDE_B'):
+            elif (model_config.particle_model_name == 'PDE_A') | (model_config.particle_model_name == 'PDE_B'):
                 func_list = []
                 rr = torch.tensor(np.linspace(0, radius, 200)).to(device)
                 for n in range(n_particles):
@@ -778,7 +831,7 @@ def data_train(config):
                 coeff_norm = to_numpy(f_list)
                 popt_list = np.array(popt_list)
 
-                if model_config.name == 'RD_RPS_Mesh':
+                if model_config.mesh_model_name == 'RD_RPS_Mesh':
                     trans = umap.UMAP(n_neighbors=500, n_components=2, transform_queue_size=0).fit(coeff_norm)
                     proj_interaction = trans.transform(coeff_norm)
                 else:
@@ -1137,7 +1190,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3'] #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
+    config_list = ['gravity_16'] #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
 
     for config_file in config_list:
 
@@ -1151,7 +1204,7 @@ if __name__ == '__main__':
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
         # data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=1) #config.simulation.n_frames // 100)
-        # data_train(config)
-        data_test(config, visualize=True, verbose=True, best_model=5, step=1) #config.simulation.n_frames // 50)
+        data_train(config)
+        # data_test(config, visualize=True, verbose=True, best_model=5, step=1) #config.simulation.n_frames // 50)
 
 

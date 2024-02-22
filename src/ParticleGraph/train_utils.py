@@ -22,11 +22,13 @@ def get_embedding(model_a=None, index_particles=None, n_particles=None, n_partic
     return embedding, embedding_particle
 
 def choose_training_model(model_config, device):
-    model_name = model_config.graph_model.particle_model_name
+    
     aggr_type = model_config.graph_model.aggr_type
 
     bc_pos, bc_dpos = choose_boundary_values(model_config.simulation.boundary)
 
+    model=[]
+    model_name = model_config.graph_model.particle_model_name
     match model_name:
         case 'PDE_A' | 'PDE_B':
             model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
@@ -34,14 +36,17 @@ def choose_training_model(model_config, device):
             model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
         case 'PDE_G':
             model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
+    model_name = model_config.graph_model.mesh_model_name
+    match model_name:
         case 'DiffMesh':
             model = Mesh_Laplacian(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
         case 'WaveMesh':
             model = Mesh_Laplacian(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
         case 'RD_RPS_Mesh':
             model = Mesh_RPS(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
-        case _:
-            raise ValueError(f'Unknown model {model_name}')
+  
+    if model==[]:
+        raise ValueError(f'Unknown model {model_name}')
 
     return model, bc_pos, bc_dpos
 

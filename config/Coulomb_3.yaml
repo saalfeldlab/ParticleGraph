@@ -41,4 +41,4 @@ training:
   data_augmentation_loop: 200
   cluster_method: 'distance_plot'
   fix_cluster_embedding: True
-  device: 'cuda:0'
+  device: 'auto'
