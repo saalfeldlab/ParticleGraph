@@ -68,7 +68,7 @@ def init_mesh(config, device):
     mask_mesh = (x_mesh > torch.min(x_mesh)) & (x_mesh < torch.max(x_mesh)) & (y_mesh > torch.min(y_mesh)) & (y_mesh < torch.max(y_mesh))
     pos_mesh = pos_mesh + torch.randn(n_nodes, 2, device=device) * mesh_size / 8
 
-    match config.graph_model.name:
+    match config.graph_model.mesh_model_name:
         case 'RD_Gray_Scott_Mesh':
             features_mesh = torch.zeros((n_nodes, 2), device=device)
             features_mesh[:, 0] -= 0.5 * torch.tensor(values / 255, device=device)

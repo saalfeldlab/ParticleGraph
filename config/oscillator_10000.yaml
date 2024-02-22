@@ -19,7 +19,8 @@ simulation:
   node_type_map: 'pattern_8.tif'
 
 graph_model:
-  name: 'PDE_O'
+  particle_model_name: 'PDE_O'
+  mesh_model_name: ''
   prediction: '1st_derivative'
   input_size: 9
   output_size: 2

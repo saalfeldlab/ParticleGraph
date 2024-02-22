@@ -21,7 +21,8 @@ simulation:
   start_frame: int = 0
 
 graph_model:
-  name: 'Maze'
+  particle_model_name: 'Maze'
+  mesh_model_name: 'Maze'
   prediction: '2nd_derivative'
   input_size: 9
   output_size: 2

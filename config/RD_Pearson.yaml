@@ -19,7 +19,8 @@ simulation:
   beta: 1
 
 graph_model:
-  name: 'RD_Pearson_Mesh'
+  particle_model_name: ''
+  mesh_model_name: 'RD_Pearson_Mesh'
   prediction: 'First_derivative'
   input_size: 8
   output_size: 3

@@ -34,7 +34,7 @@ from ParticleGraph.embedding_cluster import *
 
 def data_generate(config, visualize=True, style='color', erase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=None):
     print('')
-    print('Generating data ...')
+
 
     # create output folder, empty it if bErase=True, copy files into it
     dataset_name = config.dataset
@@ -55,6 +55,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
     # load model parameters and create local varibales
     simulation_config = config.simulation
     model_config = config.graph_model
+    print(f'Generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
@@ -72,6 +73,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
     model, bc_pos, bc_dpos = choose_model(config, device=device)
 
     has_mesh = (config.graph_model.mesh_model_name != '')
+    only_mesh = (config.graph_model.particle_model_name == '') & has_mesh
     if has_mesh:
         mesh_model = choose_mesh_model(config, device=device)
     else:
@@ -90,13 +92,9 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
         # initialize particle and graph states
         X1, V1, T1, H1, A1, cycle_length_distrib, cycle_length, N1 = init_particles(config, device=device)
 
-        if has_mesh | (model_config.name == 'PDE_O') | (model_config.name == 'Maze'):
+        if has_mesh:
             X1_mesh, V1_mesh, T1_mesh, H1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
             torch.save(mesh_data, f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt')
-            if model_config.name != 'Maze':
-                X1 = X1_mesh.clone().detach()
-                H1 = H1_mesh.clone().detach()
-                T1 = T1_mesh.clone().detach()
 
         index_particles = []
         for n in range(n_particles):
@@ -148,13 +146,11 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
 
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                                    H1.clone().detach(), A1.clone().detach()), 1)
-
-            # update mesh dataset
-            if has_mesh | (model_config.name == 'Maze'):
-                x_mesh = torch.concatenate((N1_mesh.clone().detach(), X1_mesh.clone().detach(), V1_mesh.clone().detach(),
-                                           T1_mesh.clone().detach(),
-                                           H1_mesh.clone().detach()), 1)
+            if has_mesh:
+                x_mesh = torch.concatenate((N1_mesh.clone().detach(), X1_mesh.clone().detach(), V1_mesh.clone().detach(), 
+                                            T1_mesh.clone().detach(),H1_mesh.clone().detach()), 1)
                 dataset_mesh = data.Data(x=x_mesh, edge_index=mesh_data['edge_index'], edge_attr=mesh_data['edge_weight'], device=device)
+ 
             # compute connectivity rule
             distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
             adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
@@ -168,67 +164,54 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                 x_list.append(x.clone().detach())
                 y_list.append(y.clone().detach())
 
-            # Euler integration update
-            if not has_mesh:
-                if model_config.name == 'PDE_O':
-                    H1[:, 2] = H1[:, 2] + y.squeeze() * delta_t
-                    # pos= torch.argwhere(H1[:, 0] > 0.9)
-                    # H1[pos, 2] = 0
-                    X1[:, 0] = H1[:, 0] + (3/8) * mesh_data['size'] * torch.cos(H1[:, 2])
-                    X1[:, 1] = H1[:, 1] + (3/8) * mesh_data['size'] * torch.sin(H1[:, 2])
-                    X1 = bc_pos(X1)
+            # Particle update
+            if model_config.particle_model_name == 'PDE_O':
+                H1[:, 2] = H1[:, 2] + y.squeeze() * delta_t
+                # pos= torch.argwhere(H1[:, 0] > 0.9)
+                # H1[pos, 2] = 0
+                X1[:, 0] = H1[:, 0] + (3/8) * mesh_data['size'] * torch.cos(H1[:, 2])
+                X1[:, 1] = H1[:, 1] + (3/8) * mesh_data['size'] * torch.sin(H1[:, 2])
+                X1 = bc_pos(X1)
+            else:
+                if model_config.prediction == '2nd_derivative':
+                    V1 += y[:, 0:2] * delta_t
                 else:
-                    if model_config.prediction == '2nd_derivative':
-                        V1 += y[:, 0:2] * delta_t
-                    else:
-                        V1 = y[:, 0:2]
-                    X1 = bc_pos(X1 + V1 * delta_t)
+                    V1 = y[:, 0:2]
+                X1 = bc_pos(X1 + V1 * delta_t)
+            A1 = A1 + delta_t
 
-                A1 = A1 + delta_t
-            # append y_mesh_list
-            # Euler integration update for mesh
-
-            if model_config.name == 'DiffMesh':
-                mask = to_numpy(
-                    torch.argwhere((X1[:, 0] > 0.1) & (X1[:, 0] < 0.9) & (X1[:, 1] > 0.1) & (X1[:, 1] < 0.9))).astype(
-                    int)
-                mask = mask[:, 0:1]
-                with torch.no_grad():
-                    pred = mesh_model(dataset_mesh)
-                    H1[mask, 1:2] = pred[mask]
-                H1[mask, 0:1] += H1[mask, 1:2] * delta_t
-                new_pred = torch.zeros_like(pred)
-                new_pred[mask] = pred[mask]
-                y_mesh_list.append(new_pred)
-
-            if model_config.name == 'WaveMesh':
-
-                with torch.no_grad():
-                    pred = mesh_model(dataset_mesh)
-                    H1_mesh[:, 1:2] += pred[:] * delta_t
-                H1_mesh[:, 0:1] += H1_mesh[:, 1:2] * delta_t
-                H1 = H1_mesh.clone().detach()
-
-                y_mesh_list.append(pred)
-
-            if model_config.name in ['RD_Gray_Scott_Mesh', 'RD_FitzHugh_Nagumo_Mesh', 'RD_RPS_Mesh']:
-                with torch.no_grad():
-                    pred = mesh_model(dataset_mesh)
-                    H1_mesh[mesh_data['mask'].squeeze(), :] += pred[mesh_data['mask'].squeeze(), :] * delta_t
-                    H1 = H1_mesh.clone().detach()
-
-                y_mesh_list.append(pred)
-
-            if model_config.name == 'Maze':
-                x_mesh_list.append(x_mesh.clone().detach())
-                with torch.no_grad():
-                    pred = mesh_model(dataset_mesh)
-                    H1_mesh[mesh_data['mask'].squeeze(), :] += pred[mesh_data['mask'].squeeze(), :] * delta_t
-                    distance = torch.sum(bc_dpos(x[:, None, 1:3] - x_mesh[None, :, 1:3]) ** 2, dim=2)
-                    distance = distance < 0.0005
-                    distance = torch.sum(distance, dim=0)
-                    H1_mesh = torch.relu(H1_mesh*1.01 - 30*distance[:,None])
-                    H1_mesh = torch.clamp(H1_mesh, min=0, max=5000)
+            # Mesh update
+            if has_mesh:
+                match config.graph_model.mesh_model_name:
+                    case 'DiffMesh':
+                        with torch.no_grad():
+                            pred = mesh_model(dataset_mesh)
+                            H1[mesh_data['mask'].squeeze(), 1:2] = pred[mask]
+                        H1[mesh_data['mask'].squeeze(), 0:1] += H1[mask, 1:2] * delta_t
+                        new_pred = torch.zeros_like(pred)
+                        new_pred[mask] = pred[mask]
+                        pred = new_pred
+                    case 'WaveMesh':
+                        with torch.no_grad():
+                            pred = mesh_model(dataset_mesh)
+                            H1_mesh[:, 1:2] += pred[:] * delta_t
+                        H1_mesh[:, 0:1] += H1_mesh[:, 1:2] * delta_t
+                        H1 = H1_mesh.clone().detach()
+                    case 'RD_Gray_Scott_Mesh' | 'RD_FitzHugh_Nagumo_Mesh' | 'RD_RPS_Mesh':
+                        with torch.no_grad():
+                            pred = mesh_model(dataset_mesh)
+                            H1_mesh[mesh_data['mask'].squeeze(), :] += pred[mesh_data['mask'].squeeze(), :] * delta_t
+                            H1 = H1_mesh.clone().detach()
+                    case 'Maze':
+                        x_mesh_list.append(x_mesh.clone().detach())
+                        with torch.no_grad():
+                            pred = mesh_model(dataset_mesh)
+                            H1_mesh[mesh_data['mask'].squeeze(), :] += pred[mesh_data['mask'].squeeze(), :] * delta_t
+                            distance = torch.sum(bc_dpos(x[:, None, 1:3] - x_mesh[None, :, 1:3]) ** 2, dim=2)
+                            distance = distance < 0.0005
+                            distance = torch.sum(distance, dim=0)
+                            H1_mesh = torch.relu(H1_mesh*1.01 - 30*distance[:,None])
+                            H1_mesh = torch.clamp(H1_mesh, min=0, max=5000)
 
                 y_mesh_list.append(pred)
 
@@ -289,7 +272,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
 
                 if 'color' in style:
 
-                    if model_config.name == 'PDE_O':
+                    if model_config.particle_model_name == 'PDE_O':
                         fig = plt.figure(figsize=(12, 12))
                         plt.style.use('dark_background')
                         plt.scatter(H1[:, 0].detach().cpu().numpy(), H1[:, 1].detach().cpu().numpy(), s=500,
@@ -314,7 +297,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/tmp_data/Rot_Fig{it}.jpg", dpi=75)
                         plt.close()
 
-                    elif model_config.name == 'Maze':
+                    elif model_config.particle_model_name == 'Maze':
 
                         fig = plt.figure(figsize=(12,6))
                         # plt.ion()
@@ -353,35 +336,36 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                             pts = x[:, 1:3].detach().cpu().numpy()
                             tri = Delaunay(pts)
                             colors = torch.sum(x[tri.simplices, 6], dim=1) / 3.0
-                            if model_config.name == 'DiffMesh':
-                                plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                              facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1000)
-                            if model_config.name == 'WaveMesh':
-                                plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                              facecolors=colors.detach().cpu().numpy(), vmin=-1000, vmax=1000)
-                            if model_config.name == 'RD_Gray_Scott_Mesh':
-                                fig = plt.figure(figsize=(12, 6))
-                                ax = fig.add_subplot(1, 2, 1)
-                                colors = torch.sum(x[tri.simplices, 6], dim=1) / 3.0
-                                plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                              facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
-                                plt.xticks([])
-                                plt.yticks([])
-                                plt.axis('off')
-                                ax = fig.add_subplot(1, 2, 2)
-                                colors = torch.sum(x[tri.simplices, 7], dim=1) / 3.0
-                                plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                              facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
-                                plt.xticks([])
-                                plt.yticks([])
-                                plt.axis('off')
-                            if model_config.name == 'RD_RPS_Mesh':
-                                fig = plt.figure(figsize=(12, 12))
-                                H1_IM = torch.reshape(H1, (100, 100, 3))
-                                plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=1)
-                                plt.xticks([])
-                                plt.yticks([])
-                                plt.axis('off')
+                            match model_config.mesh_model_name:
+                                case 'DiffMesh':
+                                    plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                                  facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1000)
+                                case 'WaveMesh':
+                                    plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                                  facecolors=colors.detach().cpu().numpy(), vmin=-1000, vmax=1000)
+                                case 'RD_Gray_Scott_Mesh':
+                                    fig = plt.figure(figsize=(12, 6))
+                                    ax = fig.add_subplot(1, 2, 1)
+                                    colors = torch.sum(x[tri.simplices, 6], dim=1) / 3.0
+                                    plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                                  facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
+                                    plt.xticks([])
+                                    plt.yticks([])
+                                    plt.axis('off')
+                                    ax = fig.add_subplot(1, 2, 2)
+                                    colors = torch.sum(x[tri.simplices, 7], dim=1) / 3.0
+                                    plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                                  facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
+                                    plt.xticks([])
+                                    plt.yticks([])
+                                    plt.axis('off')
+                                case 'RD_RPS_Mesh':
+                                    fig = plt.figure(figsize=(12, 12))
+                                    H1_IM = torch.reshape(H1, (100, 100, 3))
+                                    plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=1)
+                                    plt.xticks([])
+                                    plt.yticks([])
+                                    plt.axis('off')
                         else:
                             s_p = 25
                             if simulation_config.has_cell_division:
@@ -391,7 +375,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                                             x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
 
                         if (has_mesh | (simulation_config.boundary == 'periodic')):
-                            if (model_config.name != 'RD_RPS_Mesh'):
+                            if (model_config.mesh_model_name != 'RD_RPS_Mesh'):
                                 plt.xlim([0, 1])
                                 plt.ylim([0, 1])
                         else:
@@ -406,9 +390,9 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
 
         torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
         torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
-        if model_config.name != 'Maze':
+        if has_mesh:
             torch.save(x_mesh_list, f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt')
-        torch.save(y_mesh_list, f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt')
+            torch.save(y_mesh_list, f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt')
 
     simulation_config.n_particles = int(simulation_config.n_particles / ratio)
 
@@ -419,6 +403,8 @@ def data_train(config):
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
+
+    print(f'Training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     n_epochs = train_config.n_epochs
     radius = simulation_config.max_radius
@@ -904,6 +890,8 @@ def data_test(config, visualize=False, verbose=True, best_model=0, step=5, force
     simulation_config = config.simulation
     model_config = config.graph_model
 
+    print(f'Test data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+
     radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
@@ -1141,7 +1129,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3'] #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
+    config_list = ['RD_RPS'] #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
 
     for config_file in config_list:
 

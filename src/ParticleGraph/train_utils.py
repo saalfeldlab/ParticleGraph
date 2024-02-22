@@ -22,7 +22,7 @@ def get_embedding(model_a=None, index_particles=None, n_particles=None, n_partic
     return embedding, embedding_particle
 
 def choose_training_model(model_config, device):
-    model_name = model_config.graph_model.name
+    model_name = model_config.graph_model.particle_model_name
     aggr_type = model_config.graph_model.aggr_type
 
     bc_pos, bc_dpos = choose_boundary_values(model_config.simulation.boundary)
