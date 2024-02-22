@@ -71,7 +71,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
 
     model, bc_pos, bc_dpos = choose_model(config, device=device)
 
-    has_mesh = 'Mesh' in model_config.name
+    has_mesh = (config.graph_model.mesh_model_name != '')
     if has_mesh:
         mesh_model = choose_mesh_model(config, device=device)
     else:

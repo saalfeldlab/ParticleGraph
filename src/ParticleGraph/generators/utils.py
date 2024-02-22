@@ -74,7 +74,7 @@ def choose_model(config, device):
 
 
 def choose_mesh_model(config, device):
-    model_name = config.graph_model.name
+    mesh_model_name = config.graph_model.mesh_model_name
     n_node_types = config.simulation.n_node_types
     aggr_type = config.graph_model.mesh_aggr_type
     _, bc_dpos = choose_boundary_values(config.simulation.boundary)
@@ -85,7 +85,7 @@ def choose_mesh_model(config, device):
 
     beta = config.simulation.beta
 
-    match model_name:
+    match mesh_model_name:
         case 'RD_Gray_Scott_Mesh':
             mesh_model = RD_Gray_Scott(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
         case 'RD_FitzHugh_Nagumo_Mesh':
