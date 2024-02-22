@@ -45,7 +45,6 @@ def choose_training_model(model_config, device):
 
     return model, bc_pos, bc_dpos
 
-
 def constant_batch_size(batch_size):
     def get_batch_size(epoch):
         return batch_size

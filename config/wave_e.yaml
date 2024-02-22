@@ -1,5 +1,5 @@
 description: 'Wave propagation'
-dataset: 'wave_a'
+dataset: 'wave_e'
 
 simulation:
   params: [[0.2],[1.4],[2.6],[3.8],[5.0]]
@@ -18,14 +18,14 @@ simulation:
   node_value_map: 'pattern_10.tif'
   node_type_map: 'pattern_21.tif'
   beta: 1.E-2
-  start_frame: 0
+  start_frame: -4000
 
 graph_model:
   name: 'WaveMesh'
   prediction: '2nd_derivative'
   input_size: 3
   output_size: 1
-  hidden_dim: 8
+  hidden_dim: 16
   n_mp_layers: 5
   aggr_type: 'add'
   mesh_aggr_type: 'add'
