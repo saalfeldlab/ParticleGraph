@@ -7,22 +7,15 @@ from ParticleGraph.utils import choose_boundary_values
 
 
 def choose_model(config, device):
-    model_name = config.graph_model.name
+    particle_model_name = config.graph_model.particle_model_name
     n_particle_types = config.simulation.n_particle_types
     aggr_type = config.graph_model.aggr_type
-    has_mesh = 'Mesh' in model_name
-
-    # create boundary functions for position and velocity respectively
     bc_pos, bc_dpos = choose_boundary_values(config.simulation.boundary)
-
-    if has_mesh:
-        return PDE_Z(), bc_pos, bc_dpos
 
     params = config.simulation.params
 
-    match model_name:
+    match particle_model_name:
         case 'PDE_A':
-            print(f'Generate PDE_A')
             p = torch.ones(n_particle_types, 4, device=device) + torch.rand(n_particle_types, 4, device=device)
             if len(params) > 0:
                 for n in range(n_particle_types):
@@ -31,7 +24,6 @@ def choose_model(config, device):
             p = p if n_particle_types == 1 else torch.squeeze(p)
             model = PDE_A(aggr_type=aggr_type, p=torch.squeeze(p), sigma=sigma, bc_dpos=bc_dpos)
         case 'PDE_B':
-            print(f'Generate PDE_B')
             p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
             if params[0] != [-1]:
                 for n in range(n_particle_types):
@@ -40,7 +32,6 @@ def choose_model(config, device):
                 print(p)
             model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
         case 'PDE_B_bis':
-            print(f'Generate PDE_B_bis')
             p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
             if params[0] != [-1]:
                 for n in range(n_particle_types):
@@ -77,7 +68,7 @@ def choose_model(config, device):
                 p[n] = torch.tensor(params[n])
             model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
         case _:
-            raise ValueError(f'Unknown model {model_name}')
+            model = PDE_Z()
 
     return model, bc_pos, bc_dpos
 

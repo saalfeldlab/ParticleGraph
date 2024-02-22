@@ -36,7 +36,8 @@ class SimulationConfig(BaseModel):
 
 class GraphModelConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    name: str
+    particle_model_name: str
+    mesh_model_name: str
     prediction: Literal['first_derivative', '2nd_derivative'] = '2nd_derivative'
     input_size: int
     output_size: int

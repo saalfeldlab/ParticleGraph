@@ -86,7 +86,8 @@ def choose_boundary_values(bc_name):
 class CustomColorMap:
     def __init__(self, config):
         self.cmap_name = config.plotting.colormap
-        self.model_name = config.graph_model.name
+        self.model_name = config.graph_model.particle_model_name
+
         if self.cmap_name == 'tab10':
             self.nmap = 8
         else:
