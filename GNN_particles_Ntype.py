@@ -415,10 +415,6 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                             plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_bw_{it}.jpg", dpi=170.7)
                             plt.close()
 
-
-
-
-
         torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
         torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
         if has_mesh:
@@ -1198,9 +1194,14 @@ def data_test(config, visualize=False, verbose=True, best_model=0, step=5, force
             if (has_mesh | (simulation_config.boundary == 'periodic')) & (model_config.mesh_model_name != 'RD_RPS_Mesh'):
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
+            if model_config.particle_model_name == 'PDE_G':
+                plt.xlim([-4, 4])
+                plt.ylim([-4, 4])
 
+            plt.xticks([])
+            plt.yticks([])
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_recons/Fig_{dataset_name}_{it}.tif", dpi=300)
+            plt.savefig(f"./{log_dir}/tmp_recons/Fig_{dataset_name}_{it}.tif", dpi=170.7)
             plt.close()
 
 
@@ -1210,7 +1211,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3', 'arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
+    config_list = ['gravity_16'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
 
     for config_file in config_list:
 
@@ -1223,8 +1224,8 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=1) #config.simulation.n_frames // 100)
+        # data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=1) #config.simulation.n_frames // 100)
         # data_train(config)
-        # data_test(config, visualize=True, verbose=True, best_model=5, step=1) #config.simulation.n_frames // 50)
+        data_test(config, visualize=True, verbose=True, best_model=20, step=1) #config.simulation.n_frames // 50)
 
 
