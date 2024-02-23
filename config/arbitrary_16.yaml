@@ -40,7 +40,7 @@ training:
   data_augmentation: True
   data_augmentation_loop: 200
   fix_cluster_embedding: True
-  device: 'cuda:0'
+  device: 'auto'
 
 
 

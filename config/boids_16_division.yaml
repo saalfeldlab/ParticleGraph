@@ -1,5 +1,5 @@
 description: 'Boids 16 different types, division'
-dataset: 'boids_16_division'
+dataset: 'boids_16_division_e'
 
 simulation:
   params: [[-1]]
@@ -9,7 +9,7 @@ simulation:
   has_cell_division: True
   n_particle_types: 16
   n_interactions: 16
-  n_frames: 4000
+  n_frames: 16000
   sigma: 0.005
   delta_t: 1
   dpos_init: 5.0E-2
@@ -36,7 +36,7 @@ training:
   n_epochs: 20
   batch_size: 8
   small_init_batch_size: True
-  n_runs: 2
+  n_runs: 1
   noise_level: 0
   data_augmentation: True
   cluster_method: 'distance_plot'

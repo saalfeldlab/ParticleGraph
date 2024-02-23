@@ -98,10 +98,9 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
         X1, V1, T1, H1, A1, cycle_length_distrib, cycle_length, N1 = init_particles(config, device=device)
 
         # create differnet initial conditions
-        if True: # scenario == 'scenario A':
-            X1[:, 0] = X1[:, 0] / n_particle_types
-            for n in range(n_particle_types):
-                X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / n_particle_types
+        # X1[:, 0] = X1[:, 0] / n_particle_types
+        # for n in range(n_particle_types):
+        #     X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / n_particle_types
 
         if has_mesh:
             X1_mesh, V1_mesh, T1_mesh, H1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
@@ -663,7 +662,7 @@ def data_train(config):
             total_loss += loss.item()
 
             visualize_embedding=True
-            if visualize_embedding & (   (epoch==0)&(N%(Niter//1000)==0)  |   (epoch>0)&(N%(Niter//20)==0) )   :
+            if visualize_embedding & (   (epoch==0)&(N%(Niter//500)==0)  |   (epoch>0)&(N%(Niter//25)==0) )   :
                 fig = plt.figure(figsize=(8, 8))
 
                 embedding, embedding_particle = get_embedding(model.a, index_particles, n_particles, n_particle_types)
@@ -681,9 +680,9 @@ def data_train(config):
                 plt.close()
 
                 fig = plt.figure(figsize=(8, 8))
-                rr = torch.tensor(np.linspace(0, radius, 200)).to(device)
+                rr = torch.tensor(np.linspace(0, radius, 2000)).to(device)
                 for n in range(n_particles):
-                    embedding_ = model.a[0, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
+                    embedding_ = model.a[0, n, :] * torch.ones((2000, model_config.embedding_dim), device=device)
                     if (model_config.particle_model_name == 'PDE_A') :
                         in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                                  rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
@@ -1217,7 +1216,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
+    config_list = ['gravity_16'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
 
     for config_file in config_list:
 
@@ -1230,8 +1229,8 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=1) #config.simulation.n_frames // 100)
-        # data_train(config)
-        data_test(config, visualize=True, verbose=True, best_model=20, step=1) #config.simulation.n_frames // 50)
+        # data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=20) #config.simulation.n_frames // 100)
+        data_train(config)
+        # data_test(config, visualize=True, verbose=True, best_model=20, step=1) #config.simulation.n_frames // 50)
 
 
