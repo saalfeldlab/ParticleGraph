@@ -29,7 +29,7 @@ from ParticleGraph.train_utils import choose_training_model, constant_batch_size
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
 from ParticleGraph.data_loaders import *
-from ParticleGraph.utils import to_numpy, CustomColorMap, set_device, norm_velocity, norm_acceleration
+from ParticleGraph.utils import to_numpy, CustomColorMap, set_device, norm_velocity, norm_acceleration, grads2D
 from ParticleGraph.fitting_models import linear_model
 from ParticleGraph.embedding_cluster import *
 
@@ -192,6 +192,14 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                 else:
                     V1 = y[:, 0:2]
                 X1 = bc_pos(X1 + V1 * delta_t)
+                if config.graph_model.mesh_model_name=='Chemotaxism_Mesh':
+                    grad = grads2D(torch.reshape(H1_mesh[:, 0], (300, 300)))
+                    x_ = np.clip(to_numpy(X1[:, 0]) * 300, 0, 299)
+                    y_ = np.clip(to_numpy(X1[:, 1]) * 300, 0, 299)
+                    X1[:,0] += grad[1][y_, x_] / 1E4
+                    X1[:,1] += grad[0][y_, x_] / 1E4
+
+
             A1 = A1 + delta_t
 
             # Mesh update
@@ -224,7 +232,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                             distance = torch.sum(bc_dpos(x[:, None, 1:3] - x_mesh[None, :, 1:3]) ** 2, dim=2)
                             distance = distance < 0.0005
                             distance = torch.sum(distance, dim=0)
-                            H1_mesh = torch.relu(H1_mesh*1.01 - 10*distance[:,None])
+                            H1_mesh = torch.relu(H1_mesh*1.002 - 2*distance[:,None])
                             H1_mesh = torch.clamp(H1_mesh, min=0, max=5000)
                     case 'PDE_O_Mesh':
                         pred=[]
@@ -315,6 +323,13 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
 
                     elif model_config.mesh_model_name == 'Chemotaxism_Mesh':
 
+                        # dx_ = to_numpy(grad[1][y_,x_])/100
+                        # dy_ = to_numpy(grad[0][y_,x_])/100
+                        # H1_IM = torch.reshape(H1_mesh[:, 0], (300, 300))
+                        # plt.imshow(to_numpy(grad[1]+grad[0]), cmap='viridis')
+                        # for i in range(1700):
+                        #     plt.arrow(x=x_[i],y=y_[i],dx=dx_[i],dy=dy_[i], head_width=2, length_includes_head=True, color='w')
+
                         fig = plt.figure(figsize=(12,12))
                         H1_IM = torch.reshape(H1_mesh[:, 0], (300, 300))
                         plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=5000, cmap='viridis')
@@ -328,20 +343,20 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         plt.tight_layout()
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/All_{it}.jpg", dpi=170.7)
                         plt.close()
-                        
-                        fig = plt.figure(figsize=(12,12))
-                        H1_IM = torch.reshape(distance, (300, 300))
-                        plt.imshow(H1_IM.detach().cpu().numpy()*30, vmin=0, vmax=500)
-                        for n in range(n_particle_types):
-                            plt.scatter(x[index_particles[n], 1].detach().cpu().numpy() * 300,
-                                        x[index_particles[n], 2].detach().cpu().numpy() * 300, s=1, color='w')
-                        plt.xlim([0, 300])
-                        plt.ylim([0, 300])
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Boids_{it}.jpg", dpi=170.7)
-                        plt.close()
+
+                        # fig = plt.figure(figsize=(12,12))
+                        # H1_IM = torch.reshape(distance, (300, 300))
+                        # plt.imshow(H1_IM.detach().cpu().numpy()*30, vmin=0, vmax=500)
+                        # for n in range(n_particle_types):
+                        #     plt.scatter(x[index_particles[n], 1].detach().cpu().numpy() * 300,
+                        #                 x[index_particles[n], 2].detach().cpu().numpy() * 300, s=1, color='w')
+                        # plt.xlim([0, 300])
+                        # plt.ylim([0, 300])
+                        # plt.xticks([])
+                        # plt.yticks([])
+                        # plt.tight_layout()
+                        # plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Boids_{it}.jpg", dpi=170.7)
+                        # plt.close()
 
                     else:
 
@@ -1234,7 +1249,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=20) #config.simulation.n_frames // 100)
+        data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=1) #config.simulation.n_frames // 100)
         # data_train(config)
         # data_test(config, visualize=True, verbose=True, best_model=20, step=20) #config.simulation.n_frames // 50)
 

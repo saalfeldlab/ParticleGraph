@@ -15,7 +15,7 @@ simulation:
   delta_t: 0.5
   dpos_init: 5.0E-4
   boundary: 'periodic'
-  node_value_map: 'pattern_20.tif'
+  node_value_map: 'pattern_22.tif'
   node_type_map: 'pattern_17.tif'
   beta: 1.0E-2
   start_frame: 0
@@ -23,6 +23,7 @@ simulation:
 graph_model:
   particle_model_name: 'PDE_B'
   mesh_model_name: 'Chemotaxism_Mesh'
+  inter_model_name: 'Chemotaxism_Inter'
   prediction: '2nd_derivative'
   input_size: 9
   output_size: 2
@@ -40,7 +41,7 @@ plotting:
 training:
   n_epochs: 20
   batch_size: 8
-  n_runs: 2
+  n_runs: 1
   sparsity: 'replace'
   cluster_method: 'distance_plot'
   device: 'auto'

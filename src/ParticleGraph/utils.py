@@ -81,6 +81,28 @@ def choose_boundary_values(bc_name):
             return periodic, shifted_periodic
         case _:
             raise ValueError(f'Unknown boundary condition {bc_name}')
+    
+def grads2D(params):
+
+    params_sx = torch.roll(params, -1, 0)
+    params_sy = torch.roll(params, -1, 1)
+
+    sx = -(params - params_sx)
+    sy = -(params - params_sy)
+
+    sx[-1, :] = 0
+    sy[:, -1] = 0
+
+    return [sx,sy]
+
+def tv2d(params):
+    nb_voxel = (params.shape[0]) * (params.shape[1])
+    t=params.detach().cpu()
+    sx,sy= grads2D(t)
+
+    tvloss = torch.sqrt(sx.cuda() ** 2 + sy.cuda() ** 2 + 1e-8).sum()
+    # tvloss += torch.nn.functional.relu(-params).norm(1) / 15
+    return tvloss / (nb_voxel)
 
 
 class CustomColorMap:
