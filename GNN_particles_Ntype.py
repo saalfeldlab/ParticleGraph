@@ -709,7 +709,7 @@ def data_train(config):
                 plt.xlabel('Distance', fontsize=18)
                 plt.ylabel('Interaction function', fontsize=18)
                 plt.xlim([0,0.07])
-                plt.ylim([-0.05,0.09])
+                plt.ylim([-0.08,1.00])
                 # plt.xlim([0,0.02])
                 # plt.ylim([-1E6,0])
                 # plt.xlim([0,0.02])
