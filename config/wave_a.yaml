@@ -21,7 +21,9 @@ simulation:
   start_frame: 0
 
 graph_model:
-  name: 'WaveMesh'
+  particle_model_name: ''
+  mesh_model_name: 'WaveMesh'
+  inter_model_name: ''
   prediction: '2nd_derivative'
   input_size: 3
   output_size: 1

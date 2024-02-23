@@ -229,9 +229,9 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                             pred = mesh_model(dataset_mesh)
                             H1_mesh[mesh_data['mask'].squeeze(), :] += pred[mesh_data['mask'].squeeze(), :] * delta_t
                             distance = torch.sum(bc_dpos(x[:, None, 1:3] - x_mesh[None, :, 1:3]) ** 2, dim=2)
-                            distance = distance < 0.0005
+                            distance = distance < 0.00015
                             distance = torch.sum(distance, dim=0)
-                            H1_mesh = torch.relu(H1_mesh*1.003 - 2*distance[:,None])
+                            H1_mesh = torch.relu(H1_mesh*1.002 - 2*distance[:,None])
                             H1_mesh = torch.clamp(H1_mesh, min=0, max=5000)
                     case 'PDE_O_Mesh':
                         pred=[]
@@ -1235,7 +1235,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['chemotaxism'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
+    config_list = ['wave_a'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
 
     for config_file in config_list:
 
@@ -1250,6 +1250,6 @@ if __name__ == '__main__':
 
         data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=1) #config.simulation.n_frames // 100)
         # data_train(config)
-        # data_test(config, visualize=True, verbose=True, best_model=20, step=20) #config.simulation.n_frames // 50)
+        data_test(config, visualize=True, verbose=True, best_model=20, step=1) #config.simulation.n_frames // 50)
 
 
