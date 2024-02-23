@@ -18,7 +18,7 @@ import os
 from sklearn import metrics
 import matplotlib
 from matplotlib import rc
-# matplotlib.use("Qt5Agg")
+matplotlib.use("Qt5Agg")
 
 from ParticleGraph.config import ParticleGraphConfig
 from ParticleGraph.generators.particle_initialization import init_particles, init_mesh
@@ -216,7 +216,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                             pred = mesh_model(dataset_mesh)
                             H1_mesh[mesh_data['mask'].squeeze(), :] += pred[mesh_data['mask'].squeeze(), :] * delta_t
                             H1 = H1_mesh.clone().detach()
-                    case 'Maze':
+                    case 'Chemotaxism_Mesh':
                         x_mesh_list.append(x_mesh.clone().detach())
                         with torch.no_grad():
                             pred = mesh_model(dataset_mesh)
@@ -224,7 +224,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                             distance = torch.sum(bc_dpos(x[:, None, 1:3] - x_mesh[None, :, 1:3]) ** 2, dim=2)
                             distance = distance < 0.0005
                             distance = torch.sum(distance, dim=0)
-                            H1_mesh = torch.relu(H1_mesh*1.01 - 30*distance[:,None])
+                            H1_mesh = torch.relu(H1_mesh*1.01 - 10*distance[:,None])
                             H1_mesh = torch.clamp(H1_mesh, min=0, max=5000)
                     case 'PDE_O_Mesh':
                         pred=[]
@@ -313,11 +313,9 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Rot_Fig{it}.jpg", dpi=75)
                         plt.close()
 
-                    elif model_config.particle_model_name == 'Maze':
+                    elif model_config.mesh_model_name == 'Chemotaxism_Mesh':
 
-                        fig = plt.figure(figsize=(12,6))
-                        # plt.ion()
-                        ax = fig.add_subplot(1, 2, 1)
+                        fig = plt.figure(figsize=(12,12))
                         H1_IM = torch.reshape(H1_mesh[:, 0], (300, 300))
                         plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=5000, cmap='viridis')
                         for n in range(n_particle_types):
@@ -327,7 +325,11 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         plt.ylim([0, 300])
                         plt.xticks([])
                         plt.yticks([])
-                        ax = fig.add_subplot(1, 2, 2)
+                        plt.tight_layout()
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/All_{it}.jpg", dpi=170.7)
+                        plt.close()
+                        
+                        fig = plt.figure(figsize=(12,12))
                         H1_IM = torch.reshape(distance, (300, 300))
                         plt.imshow(H1_IM.detach().cpu().numpy()*30, vmin=0, vmax=500)
                         for n in range(n_particle_types):
@@ -338,7 +340,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Mesh_{it}.jpg", dpi=100)
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Boids_{it}.jpg", dpi=170.7)
                         plt.close()
 
                     else:
@@ -708,12 +710,13 @@ def data_train(config):
                                  color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
                 plt.xlabel('Distance', fontsize=18)
                 plt.ylabel('Interaction function', fontsize=18)
+                plt.ylim([-0.04,0.03])
                 # plt.xlim([0,0.07])
                 # plt.ylim([-0.08,1.00])
                 # plt.xlim([0,0.02])
                 # plt.ylim([-1E6,0])
-                plt.xlim([0,0.02])
-                plt.ylim([-0.001,0])
+                # plt.xlim([0,0.02])
+                # plt.ylim([-0.001,0])
                 # plt.xlim([0,0.02])
                 # plt.ylim([0,500000])
                 plt.tight_layout()
@@ -803,7 +806,7 @@ def data_train(config):
                 rr = torch.tensor(np.linspace(0, radius, 200)).to(device)
                 for n in range(n_particles):
                     embedding_ = model.a[0, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
-                    if model_config.name == 'PDE_A':
+                    if model_config.particle_model_name == 'PDE_A':
                         in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                                  rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
                     else:
@@ -1218,7 +1221,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['boids_16'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
+    config_list = ['chemotaxism'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
 
     for config_file in config_list:
 
@@ -1231,8 +1234,8 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        # data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=20) #config.simulation.n_frames // 100)
-        data_train(config)
-        # data_test(config, visualize=True, verbose=True, best_model=20, step=1) #config.simulation.n_frames // 50)
+        data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=20) #config.simulation.n_frames // 100)
+        # data_train(config)
+        # data_test(config, visualize=True, verbose=True, best_model=20, step=20) #config.simulation.n_frames // 50)
 
 

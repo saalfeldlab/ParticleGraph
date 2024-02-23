@@ -80,7 +80,7 @@ def init_mesh(config, device):
             s = torch.sum(features_mesh, dim=1)
             for k in range(3):
                 features_mesh[:, k] = features_mesh[:, k] / s
-        case 'DiffMesh' | 'WaveMesh' | 'Maze':
+        case 'DiffMesh' | 'WaveMesh' | 'Chemotaxism_Mesh':
             features_mesh = torch.zeros((n_nodes, 2), device=device)
             features_mesh[:, 0] = torch.tensor(values / 255 * 5000, device=device)
         case 'PDE_O_Mesh':
