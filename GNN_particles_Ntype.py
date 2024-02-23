@@ -708,12 +708,14 @@ def data_train(config):
                                  color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
                 plt.xlabel('Distance', fontsize=18)
                 plt.ylabel('Interaction function', fontsize=18)
+                plt.xlim([0,0.07])
+                plt.ylim([-0.04,0.03])
                 # plt.xlim([0,0.02])
                 # plt.ylim([-1E6,0])
                 # plt.xlim([0,0.02])
                 # plt.ylim([-0.001,0])
-                plt.xlim([0,0.02])
-                plt.ylim([0,500000])
+                # plt.xlim([0,0.02])
+                # plt.ylim([0,500000])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_training/embedding/Fig_{dataset_name}_function_{epoch}_{N}.tif",dpi=300)
                 plt.close()
@@ -1216,7 +1218,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['gravity_16'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
+    config_list = ['arbitrary_3'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
 
     for config_file in config_list:
 
