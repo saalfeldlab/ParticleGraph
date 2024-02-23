@@ -105,13 +105,13 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
         if has_mesh:
             X1_mesh, V1_mesh, T1_mesh, H1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
             torch.save(mesh_data, f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt')
-        if (model_config.particle_model_name == 'PDE_O') | (model_config.particle_model_name == 'Maze'):
+        if only_mesh | (model_config.particle_model_name == 'PDE_O'):
             X1 = X1_mesh.clone().detach()
             H1 = H1_mesh.clone().detach()
             T1 = T1_mesh.clone().detach()
 
         index_particles = []
-        for n in range(n_particles):
+        for n in range(n_particle_types):
             pos = torch.argwhere(T1 == n)
             pos = to_numpy(pos[:, 0].squeeze()).astype(int)
             index_particles.append(pos)
@@ -208,7 +208,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         with torch.no_grad():
                             pred = mesh_model(dataset_mesh)
                             H1[mesh_data['mask'].squeeze(), 1:2] = pred[mask]
-                        H1[mesh_data['mask'].squeeze(), 0:1] += H1[mask, 1:2] * delta_t
+                        H1_mesh[mesh_data['mask'].squeeze(), 0:1] += pred[:] * delta_t
                         new_pred = torch.zeros_like(pred)
                         new_pred[mask] = pred[mask]
                         pred = new_pred
@@ -216,8 +216,11 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         with torch.no_grad():
                             pred = mesh_model(dataset_mesh)
                             H1_mesh[:, 1:2] += pred[:] * delta_t
-                        H1_mesh[:, 0:1] += H1_mesh[:, 1:2] * delta_t
-                        H1 = H1_mesh.clone().detach()
+                            H1_mesh[:, 0:1] += H1_mesh[:, 1:2] * delta_t
+
+                            # x_ = to_numpy(x_mesh)
+                            # plt.scatter(x_[:, 1], x_[:, 2], c=to_numpy(H1_mesh[:, 0]))
+
                     case 'RD_Gray_Scott_Mesh' | 'RD_FitzHugh_Nagumo_Mesh' | 'RD_RPS_Mesh':
                         with torch.no_grad():
                             pred = mesh_model(dataset_mesh)
@@ -363,9 +366,9 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         if 'black' in style:
                                 plt.style.use('dark_background')
                         if has_mesh:
-                            pts = x[:, 1:3].detach().cpu().numpy()
+                            pts = x_mesh[:, 1:3].detach().cpu().numpy()
                             tri = Delaunay(pts)
-                            colors = torch.sum(x[tri.simplices, 6], dim=1) / 3.0
+                            colors = torch.sum(x_mesh[tri.simplices, 6], dim=1) / 3.0
                             match model_config.mesh_model_name:
                                 case 'DiffMesh':
                                     plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
@@ -1235,7 +1238,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['wave_a'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
+    config_list = ['wave'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
 
     for config_file in config_list:
 
@@ -1248,7 +1251,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=1) #config.simulation.n_frames // 100)
+        data_generate(config, device=device, visualize=True, style='color', alpha=1, erase=True, step=50) #config.simulation.n_frames // 100)
         # data_train(config)
         data_test(config, visualize=True, verbose=True, best_model=20, step=1) #config.simulation.n_frames // 50)
 
