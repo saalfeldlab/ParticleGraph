@@ -2250,172 +2250,130 @@ def data_plot_FIG7():
     edge_weight_mesh = mesh_data['edge_weight']
     # face = mesh_data['face']
 
-    k=2500
-    x_mesh = x_mesh_list[k].clone().detach()
-
-
-    plt.scatter(to_numpy(x_mesh[:, 0]), to_numpy(x_mesh[:, 1]), c=to_numpy(x_mesh[:, 6]), s=1)
-    H1 = x_mesh[:, 6:9]
-    H1_IM = torch.reshape(H1, (100, 100, 3))
-    fig = plt.figure(figsize=(12, 12))
-    H1_IM = torch.reshape(H1, (100, 100, 3))
-    plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=1)
-    plt.xticks([])
-    plt.yticks([])
-    plt.axis('off')
-
-    dataset_mesh = data.Data(x=x_mesh, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
-
-    with torch.no_grad():
-        y, input_phi, embedding = model(dataset_mesh, data_id=0)
-    y = y * hnorm
-
-    # RD_RPS_model :
-    c = model_mesh.c[to_numpy(dataset_mesh.x[:, 5])]
-    u = input_phi[:, 3]
-    v = input_phi[:, 4]
-    w = input_phi[:, 5]
-    # laplacian = model_mesh.beta * c * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
-    laplacian_u = 1 * c * input_phi[:, 0]
-    laplacian_v = 1 * c * input_phi[:, 1]
-    laplacian_w = 1 * c * input_phi[:, 2]
-    D = 0.05
-    a = 0.6
-    p = u + v + w
-    du = D * laplacian_u + u * (1 - p - a * v)
-    dv = D * laplacian_v + v * (1 - p - a * w)
-    dw = D * laplacian_w + w * (1 - p - a * u)
-    increment = torch.cat((du[:, None], dv[:, None], dw[:, None]), dim=1)
-    increment = increment.squeeze()
+    k_list = [2000, 1000, 2500, 3000, 3500]
+    for k in k_list:
+        
+        print (f'k: {k}')
+        x_mesh = x_mesh_list[k].clone().detach()
     
+        # plt.scatter(to_numpy(x_mesh[:, 0]), to_numpy(x_mesh[:, 1]), c=to_numpy(x_mesh[:, 6]), s=1)
+        # H1 = x_mesh[:, 6:9]
+        # H1_IM = torch.reshape(H1, (100, 100, 3))
+        # fig = plt.figure(figsize=(12, 12))
+        # H1_IM = torch.reshape(H1, (100, 100, 3))
+        # plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=1)
+        # plt.xticks([])
+        # plt.yticks([])
+        # plt.axis('off')
+    
+        dataset_mesh = data.Data(x=x_mesh, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
+    
+        with torch.no_grad():
+            y, input_phi, embedding = model(dataset_mesh, data_id=0)
+        y = y * hnorm
+    
+        # RD_RPS_model :
+        c = model_mesh.c[to_numpy(dataset_mesh.x[:, 5])]
+        u = input_phi[:, 3]
+        v = input_phi[:, 4]
+        w = input_phi[:, 5]
+        # laplacian = model_mesh.beta * c * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
+        laplacian_u = 1 * c * input_phi[:, 0]
+        laplacian_v = 1 * c * input_phi[:, 1]
+        laplacian_w = 1 * c * input_phi[:, 2]
+        D = 0.05
+        a = 0.6
+        p = u + v + w
+        du = D * laplacian_u + u * (1 - p - a * v)
+        dv = D * laplacian_v + v * (1 - p - a * w)
+        dw = D * laplacian_w + w * (1 - p - a * u)
+        increment = torch.cat((du[:, None], dv[:, None], dw[:, None]), dim=1)
+        increment = increment.squeeze()
+    
+        # fig = plt.figure(figsize=(9.5, 9))
+        # plt.ion()
+        # plt.scatter(to_numpy(increment[:, 0]), to_numpy(y[:, 0]), c='r', s=1)
+        # plt.scatter(to_numpy(increment[:, 1]), to_numpy(y[:, 1]), c='g', s=1)
+        # plt.scatter(to_numpy(increment[:, 2]), to_numpy(y[:, 2]), c='b', s=1)
+        # plt.xlim([-0.25, 0.25])
+        # plt.ylim([-0.25, 0.25])
+    
+        lin_fit1 = np.zeros((4, 3, 10))
+        lin_fit2 = np.zeros((4, 3, 10))
+    
+        for n in range(n_particle_types):
+            # print(f'type :{n}')
+            eq_list = ['u','v', 'w']
+            for it, eq in enumerate(eq_list):
+                pos = index_particles[n]
+                laplacian_u = to_numpy(input_phi[pos, 0])
+                laplacian_v = to_numpy(input_phi[pos, 1])
+                laplacian_w = to_numpy(input_phi[pos, 2])
+                u = to_numpy(input_phi[pos, 3])
+                v = to_numpy(input_phi[pos, 4])
+                w = to_numpy(input_phi[pos, 5])
+    
+                x_data = np.concatenate(
+                    (laplacian_u[:, None], laplacian_v[:, None], laplacian_w[:, None], u[:, None], v[:, None], w[:, None]),
+                    axis=1)
+                y_data1 = to_numpy(y[pos, it:it+1])
+                y_data2 = to_numpy(increment[pos, it:it+1])
+    
+                pos = np.argwhere((y_data2 > -0.1) & (y_data2 < 0.1)).squeeze().astype(int)
+                pos = pos[:, 0].squeeze()
+                x_data = x_data[pos, :]
+                y_data1 = y_data1[pos, :]
+                y_data2 = y_data2[pos, :]
+    
+                fitting_model = reaction_diffusion_model(eq)
+                
+                if k==2000:
+                    lin_fit1[n,it], lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data1))
+                    lin_fit2[n,it], lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data2))
+                else:
+                    lin_fit1[n,it], lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data1), p0=average_fit_1[it])
+                    lin_fit2[n,it], lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data2), p0=average_fit_2[it])
+    
+                # print(eq)
+                # print(np.round(lin_fit2[n,it], 3))
+                # print(np.round(lin_fit1[n,it], 3))
+                
+        
+        average_fit_2 = np.mean(lin_fit2, axis=0)
+        print(np.round(average_fit_2, 1))
+    
+        average_fit_1 = np.mean(lin_fit1, axis=0)
+        print(np.round(average_fit_1, 1))
+        print()
 
-    fig = plt.figure(figsize=(9.5, 9))
-    plt.ion()
-    plt.scatter(to_numpy(increment[:, 0]), to_numpy(y[:, 0]), c='r', s=1)
-    plt.scatter(to_numpy(increment[:, 1]), to_numpy(y[:, 1]), c='g', s=1)
-    plt.scatter(to_numpy(increment[:, 2]), to_numpy(y[:, 2]), c='b', s=1)
+    coeff = np.round(np.mean(lin_fit2, axis=1), 2)
+    print(coeff[:, 9])
+    coeff = np.round(np.mean(lin_fit1, axis=1), 2)
+    print(coeff[:, 9])
+    
+        
+        
+        
+
+    # yy1 = func_RD1(x_data, lin_fit1[0], lin_fit1[1], lin_fit1[2], lin_fit1[3], lin_fit1[4], lin_fit1[5], lin_fit1[6], lin_fit1[7], lin_fit1[8], lin_fit1[9])
+    # yy2 = func_RD2(x_data, lin_fit2[0], lin_fit2[1], lin_fit2[2], lin_fit2[3], lin_fit2[4], lin_fit2[5], lin_fit2[6], lin_fit2[7], lin_fit2[8], lin_fit2[9])
+    # yy3 = func_RD3(x_data, lin_fit3[n,0], lin_fit3[n,1], lin_fit3[n,2], lin_fit3[n,3], lin_fit3[n,4], lin_fit3[n,5], lin_fit3[n,6], lin_fit3[n,7], lin_fit3[n,8], lin_fit3[n,9])
+
+    plt.scatter(y_data2, y_data1, c='k', s=1)
     plt.xlim([-0.25, 0.25])
     plt.ylim([-0.25, 0.25])
 
-    lin_fit1 = np.zeros((5, 10))
-    lin_fit2 = np.zeros((5, 10))
-    lin_fit3 = np.zeros((5, 10))
     
-    for n in trange(0, 1) # n_particle_types):
+    plt.scatter(y_data2, yy2, c='k', s=1)
+    plt.scatter(y_data1, yy1, c='r', s=1)
+    plt.xlim([-0.25, 0.25])
+    plt.ylim([-0.25, 0.25])
 
-        ### u 
-
-        pos = index_particles[n]
-        laplacian_u = to_numpy(input_phi[pos, 0])
-        laplacian_v = to_numpy(input_phi[pos, 1])
-        laplacian_w = to_numpy(input_phi[pos, 2])
-        u = to_numpy(input_phi[pos, 3])
-        v = to_numpy(input_phi[pos, 4])
-        w = to_numpy(input_phi[pos, 5])
-
-        x_data = np.concatenate((laplacian_u[:, None], laplacian_v[:, None], laplacian_w[:, None], u[:, None], v[:, None], w[:, None]), axis=1)
-        y_data1 = to_numpy(y[pos, 0:1])
-        y_data2 = to_numpy(increment[pos, 0:1])
-        
-        pos = np.argwhere((y_data2>-0.1) & (y_data2<0.1)).squeeze().astype(int)
-        pos = pos[:, 0].squeeze()
-        x_data = x_data[pos, :]
-        y_data1 = y_data1[pos, :]
-        y_data2 = y_data2[pos, :]
-        
-        fitting_model = reaction_diffusion_model('u')
-        
-        lin_fit1, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data1), method='dogbox')
-        lin_fit2, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data2), method='dogbox')
-
-        print('u')
-        print(np.round(lin_fit2, 3))
-        print(np.round(lin_fit1, 3))
-        
-        #### v
-
-        pos = index_particles[n]
-        laplacian_u = to_numpy(input_phi[pos, 0])
-        laplacian_v = to_numpy(input_phi[pos, 1])
-        laplacian_w = to_numpy(input_phi[pos, 2])
-        u = to_numpy(input_phi[pos, 3])
-        v = to_numpy(input_phi[pos, 4])
-        w = to_numpy(input_phi[pos, 5])
-
-        x_data = np.concatenate(
-            (laplacian_u[:, None], laplacian_v[:, None], laplacian_w[:, None], u[:, None], v[:, None], w[:, None]),
-            axis=1)
-        y_data1 = to_numpy(y[pos, 1:2])
-        y_data2 = to_numpy(increment[pos, 1:2])
-
-        pos = np.argwhere((y_data2 > -0.1) & (y_data2 < 0.1)).squeeze().astype(int)
-        pos = pos[:, 0].squeeze()
-        x_data = x_data[pos, :]
-        y_data1 = y_data1[pos, :]
-        y_data2 = y_data2[pos, :]
-
-        fitting_model = reaction_diffusion_model('v')
-
-        lin_fit1, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data1), method='dogbox')
-        lin_fit2, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data2), method='dogbox')
-
-        print('v')
-        print(np.round(lin_fit2, 3))
-        print(np.round(lin_fit1, 3))
-        
-        ### w
-        
-        pos = index_particles[n]
-        laplacian_u = to_numpy(input_phi[pos, 0])
-        laplacian_v = to_numpy(input_phi[pos, 1])
-        laplacian_w = to_numpy(input_phi[pos, 2])
-        u = to_numpy(input_phi[pos, 3])
-        v = to_numpy(input_phi[pos, 4])
-        w = to_numpy(input_phi[pos, 5])
-
-        x_data = np.concatenate(
-            (laplacian_u[:, None], laplacian_v[:, None], laplacian_w[:, None], u[:, None], v[:, None], w[:, None]),
-            axis=1)
-        y_data1 = to_numpy(y[pos, 2:3])
-        y_data2 = to_numpy(increment[pos, 2:3])
-
-        pos = np.argwhere((y_data2 > -0.1) & (y_data2 < 0.1)).squeeze().astype(int)
-        pos = pos[:, 0].squeeze()
-        x_data = x_data[pos, :]
-        y_data1 = y_data1[pos, :]
-        y_data2 = y_data2[pos, :]
-
-        fitting_model = reaction_diffusion_model('w')
-
-        lin_fit1, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data1), method='dogbox')
-        lin_fit2, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data2), method='dogbox')
-
-        print('w')
-        print(np.round(lin_fit2, 3))
-        print(np.round(lin_fit1, 3))
-        
-        
-        
-
-        # yy1 = func_RD1(x_data, lin_fit1[0], lin_fit1[1], lin_fit1[2], lin_fit1[3], lin_fit1[4], lin_fit1[5], lin_fit1[6], lin_fit1[7], lin_fit1[8], lin_fit1[9])
-        # yy2 = func_RD2(x_data, lin_fit2[0], lin_fit2[1], lin_fit2[2], lin_fit2[3], lin_fit2[4], lin_fit2[5], lin_fit2[6], lin_fit2[7], lin_fit2[8], lin_fit2[9])
-        # yy3 = func_RD3(x_data, lin_fit3[n,0], lin_fit3[n,1], lin_fit3[n,2], lin_fit3[n,3], lin_fit3[n,4], lin_fit3[n,5], lin_fit3[n,6], lin_fit3[n,7], lin_fit3[n,8], lin_fit3[n,9])
-
-        plt.scatter(y_data2, y_data1, c='k', s=1)
-        plt.xlim([-0.25, 0.25])
-        plt.ylim([-0.25, 0.25])
-
-        
-        plt.scatter(y_data2, yy2, c='k', s=1)
-        plt.scatter(y_data1, yy1, c='r', s=1)
-        plt.xlim([-0.25, 0.25])
-        plt.ylim([-0.25, 0.25])
-
-        y_data2 = to_numpy(y[pos, 1:2])
-        lin_fit2[n], lin_fitv2 = curve_fit(reaction_diffusion_model('v'), np.squeeze(x_data), np.squeeze(y_data2),
-                                           method='dogbox')
-        y_data3 = to_numpy(y[pos, 2:3])
-        lin_fit3[n], lin_fitv3 = curve_fit(reaction_diffusion_model('w'), np.squeeze(x_data), np.squeeze(y_data3))
+    y_data2 = to_numpy(y[pos, 1:2])
+    lin_fit2[n], lin_fitv2 = curve_fit(reaction_diffusion_model('v'), np.squeeze(x_data), np.squeeze(y_data2),
+                                       method='dogbox')
+    y_data3 = to_numpy(y[pos, 2:3])
+    lin_fit3[n], lin_fitv3 = curve_fit(reaction_diffusion_model('w'), np.squeeze(x_data), np.squeeze(y_data3))
 
     coeff1 = np.round(np.mean(lin_fit1, axis=0), 2)
     coeff2 = np.round(np.mean(lin_fit2, axis=0), 2)
