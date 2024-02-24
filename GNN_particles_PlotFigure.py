@@ -1997,7 +1997,7 @@ def data_plot_FIG6():
 
 
 def data_plot_FIG7():
-    config_name = 'RD_RPS2d'
+    config_name = 'RD_RPS'
 
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_name}.yaml')
@@ -2011,7 +2011,7 @@ def data_plot_FIG7():
     n_particles = config.simulation.n_particles
     n_frames = config.simulation.n_frames
     has_mesh = 'Mesh' in dataset_name
-    n_runs = config.simulation.n_runs
+    n_runs = config.training.n_runs
     cluster_method = config.training.cluster_method
     aggr_type = config.graph_model.aggr_type
     delta_t = config.simulation.delta_t
@@ -2663,12 +2663,12 @@ if __name__ == '__main__':
     # gravity
     # data_plot_FIG3()
     # Coloumb_3
-    data_plot_FIG4()
+    # data_plot_FIG4()
     # boids_16 HR
-    data_plot_FIG5()
+    # data_plot_FIG5()
     #
     # wave HR2 or HR3 (slit)
     # data_plot_FIG6()
 
-    # RD_RPS2
-    # data_plot_FIG7()
+    # RD_RPS
+    data_plot_FIG7()

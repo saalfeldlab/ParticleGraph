@@ -680,7 +680,7 @@ def data_train(config):
             optimizer.step()
             total_loss += loss.item()
 
-            visualize_embedding=True
+            visualize_embedding=False
             if visualize_embedding & (   (epoch==0)&(N%(Niter//500)==0)  |   (epoch>0)&(N%(Niter//25)==0) )   :
                 fig = plt.figure(figsize=(8, 8))
 
@@ -1208,7 +1208,7 @@ def data_test(config, visualize=False, verbose=True, best_model=0, step=5, force
                     plt.axis('off')
                 if model_config.mesh_model_name == 'RD_RPS_Mesh':
                     fig = plt.figure(figsize=(12, 12))
-                    H1_IM = torch.reshape(x0[:, 6:9], (100, 100, 3))
+                    H1_IM = torch.reshape(x[:, 6:9], (100, 100, 3))
                     plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=1)
                     plt.xticks([])
                     plt.yticks([])
@@ -1238,7 +1238,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['boids_16'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
+    config_list = ['RD_RPS'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
 
     for config_file in config_list:
 
@@ -1251,8 +1251,8 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        # data_generate(config, device=device, visualize=False, style='color', alpha=1, erase=True, step=50) #config.simulation.n_frames // 100)
-        data_train(config)
-        # data_test(config, visualize=True, verbose=True, best_model=20, step=1) #config.simulation.n_frames // 50)
+        # data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=20) #config.simulation.n_frames // 100)
+        # data_train(config)
+        data_test(config, visualize=True, verbose=True, best_model=20, step=20) #config.simulation.n_frames // 50)
 
 
