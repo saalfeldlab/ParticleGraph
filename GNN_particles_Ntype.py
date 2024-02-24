@@ -203,6 +203,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
 
             # Mesh update
             if has_mesh:
+                x_mesh_list.append(x_mesh.clone().detach())
                 match config.graph_model.mesh_model_name:
                     case 'DiffMesh':
                         with torch.no_grad():
@@ -217,17 +218,14 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                             pred = mesh_model(dataset_mesh)
                             H1_mesh[:, 1:2] += pred[:] * delta_t
                             H1_mesh[:, 0:1] += H1_mesh[:, 1:2] * delta_t
-
                             # x_ = to_numpy(x_mesh)
                             # plt.scatter(x_[:, 1], x_[:, 2], c=to_numpy(H1_mesh[:, 0]))
-
                     case 'RD_Gray_Scott_Mesh' | 'RD_FitzHugh_Nagumo_Mesh' | 'RD_RPS_Mesh':
                         with torch.no_grad():
                             pred = mesh_model(dataset_mesh)
                             H1_mesh[mesh_data['mask'].squeeze(), :] += pred[mesh_data['mask'].squeeze(), :] * delta_t
                             H1 = H1_mesh.clone().detach()
                     case 'Chemotaxism_Mesh':
-                        x_mesh_list.append(x_mesh.clone().detach())
                         with torch.no_grad():
                             pred = mesh_model(dataset_mesh)
                             H1_mesh[mesh_data['mask'].squeeze(), :] += pred[mesh_data['mask'].squeeze(), :] * delta_t
@@ -243,6 +241,8 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
 
             # output plots
             if visualize & (run == 0) & (it % step == 0) & (it >= 0):
+
+                plt.style.use('dark_background')
 
                 if 'graph' in style:
                     fig = plt.figure(figsize=(10, 10))
@@ -363,8 +363,6 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                     else:
 
                         fig = plt.figure(figsize=(12, 12))
-                        if 'black' in style:
-                                plt.style.use('dark_background')
                         if has_mesh:
                             pts = x_mesh[:, 1:3].detach().cpu().numpy()
                             tri = Delaunay(pts)
@@ -413,6 +411,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         else:
                             plt.xlim([-4, 4])
                             plt.ylim([-4, 4])
+
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
@@ -426,7 +425,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                                 s_p = 10
                             for n in range(n_particle_types):
                                 plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                            x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color='k')
+                                            x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color='w')
                             if (simulation_config.boundary == 'periodic'):
                                 plt.xlim([0, 1])
                                 plt.ylim([0, 1])
@@ -527,8 +526,11 @@ def data_train(config):
     print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
     logger.info(f'vnorm ynorm: {to_numpy(vnorm)} {to_numpy(ynorm)}')
     if has_mesh:
+        x_mesh_list = []
         y_mesh_list = []
         for run in trange(NGraphs):
+            x_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
+            x_mesh_list.append(torch.stack(x_mesh))
             h = torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
             y_mesh_list.append(torch.stack(h))
         h = torch.stack(y_mesh_list)
@@ -578,6 +580,8 @@ def data_train(config):
         index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
         index_particles.append(index.squeeze())
 
+    # plt.scatter(to_numpy(x[:,1]),to_numpy(x[:,2]),c=to_numpy(x[:,5]))
+
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
@@ -626,7 +630,8 @@ def data_train(config):
                 x = x_list[run][k].clone().detach()
 
                 if has_mesh:
-                    dataset = data.Data(x=x, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
+                    x_mesh = x_mesh_list[run][k].clone().detach()
+                    dataset = data.Data(x=x_mesh, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
                     dataset_batch.append(dataset)
                     y = y_mesh_list[run][k].clone().detach() / hnorm
                     if batch == 0:
@@ -1179,6 +1184,8 @@ def data_test(config, visualize=False, verbose=True, best_model=0, step=5, force
 
         if (it % step == 0) & (it >= 0) & visualize:
 
+            plt.style.use('dark_background')
+
             fig = plt.figure(figsize=(12, 12))
             if has_mesh:
                 pts = x[:, 1:3].detach().cpu().numpy()
@@ -1238,7 +1245,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['RD_RPS'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
+    config_list = ['arbitrary_3'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
 
     for config_file in config_list:
 
@@ -1251,8 +1258,8 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        # data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=20) #config.simulation.n_frames // 100)
+        data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=1) #config.simulation.n_frames // 100)
         # data_train(config)
-        data_test(config, visualize=True, verbose=True, best_model=20, step=20) #config.simulation.n_frames // 50)
+        data_test(config, visualize=True, verbose=True, best_model=20, step=1) #config.simulation.n_frames // 50)
 
 
