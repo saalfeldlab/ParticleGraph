@@ -275,7 +275,6 @@ class Mesh_RPS_extract(MessagePassing):
         self.n_particles = config.simulation.n_particles
         self.max_radius = config.simulation.max_radius
         self.data_augmentation = config.training.data_augmentation
-        self.noise_level = config.simulation.noise_level
         self.embedding = config.graph_model.embedding_dim
         self.n_datasets = config.training.n_runs - 1
         self.bc_dpos = bc_dpos
@@ -2130,7 +2129,7 @@ def data_plot_FIG7():
     X1_ = torch.clamp(X1, min=0, max=1)
 
     node_type_map = config.simulation.node_type_map
-    i0 = imread(f'graphs_data/{node_type_map}')
+    i0 = imageio.imread(f'graphs_data/{node_type_map}')
 
     values = i0[(to_numpy(X1_[:, 0]) * 255).astype(int), (to_numpy(X1_[:, 1]) * 255).astype(int)]
     T1 = torch.tensor(values, device=device)
@@ -2153,8 +2152,6 @@ def data_plot_FIG7():
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=12)
     plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
     plt.text(.05, .86, f'N: {n_particles}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
-    plt.xlim([-5, 5])
-    plt.ylim([-5, 5])
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.tight_layout()
@@ -2180,10 +2177,10 @@ def data_plot_FIG7():
                 h = model.lin_phi(in_features.float())
                 h = h[:, 0]
                 f_list.append(h)
-                # if n % 24 == 0:
-                #     plt.plot(to_numpy(r),
-                #              to_numpy(h) * to_numpy(hnorm), linewidth=1,
-                #              color='k', alpha=0.05)
+                if n % 24 == 0:
+                    plt.plot(to_numpy(r),
+                             to_numpy(h) * to_numpy(hnorm), linewidth=1,
+                             color='k', alpha=0.05)
             f_list = torch.stack(f_list)
             coeff_norm = to_numpy(f_list)
 

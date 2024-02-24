@@ -854,18 +854,18 @@ def data_train(config):
                 f_list = []
                 popt_list = []
                 for n in range(n_particles):
-                    embedding = model.a[0, n, :] * torch.ones((100, model_config.embedding_dim), device=device)
+                    embedding_ = model.a[0, n, :] * torch.ones((100, model_config.embedding_dim), device=device)
                     if model_config.mesh_model_name == 'RD_RPS_Mesh':
-                        embedding = model.a[0, n, :] * torch.ones((100, model_config.embedding_dim), device=device)
+                        embedding_ = model.a[0, n, :] * torch.ones((100, model_config.embedding_dim), device=device)
                         u = torch.tensor(np.linspace(0, 1, 100)).to(device)
                         u = u[:, None]
                         r = u
-                        in_features = torch.cat((u, u, u, u, u, u, embedding), dim=1)
+                        in_features = torch.cat((u, u, u, u, u, u, embedding_), dim=1)
                         h = model.lin_phi(in_features.float())
                         h = h[:, 0]
                     else:
                         r = torch.tensor(np.linspace(-150, 150, 100)).to(device)
-                        in_features = torch.cat((r[:, None], embedding), dim=1)
+                        in_features = torch.cat((r[:, None], embedding_), dim=1)
                         h = model.lin_phi(in_features.float())
                         popt, pcov = curve_fit(linear_model, to_numpy(r.squeeze()), to_numpy(h.squeeze()))
                         popt_list.append(popt)
@@ -891,15 +891,15 @@ def data_train(config):
                 case 'kmeans_auto_plot':
                     labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
                 case 'kmeans_auto_embedding':
-                    labels, n_clusters = embedding_cluster.get(embedding_, 'kmeans_auto')
-                    proj_interaction = embedding_
+                    labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
+                    proj_interaction = embedding
                 case 'distance_plot':
                     labels, n_clusters = embedding_cluster.get(proj_interaction, 'distance')
                 case 'distance_embedding':
-                    labels, n_clusters = embedding_cluster.get(embedding_, 'distance', thresh=1.5)
-                    proj_interaction = embedding_
+                    labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=1.5)
+                    proj_interaction = embedding
                 case 'distance_both':
-                    new_projection = np.concatenate((proj_interaction, embedding_), axis=-1)
+                    new_projection = np.concatenate((proj_interaction, embedding), axis=-1)
                     labels, n_clusters = embedding_cluster.get(new_projection, 'distance')
 
             for n in range(n_clusters):
