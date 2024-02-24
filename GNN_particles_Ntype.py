@@ -529,7 +529,7 @@ def data_train(config):
         x_mesh_list = []
         y_mesh_list = []
         for run in trange(NGraphs):
-            x_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
+            x_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
             x_mesh_list.append(torch.stack(x_mesh))
             h = torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
             y_mesh_list.append(torch.stack(h))
@@ -1245,7 +1245,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
+    config_list = ['wave'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
 
     for config_file in config_list:
 
@@ -1258,8 +1258,8 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=1) #config.simulation.n_frames // 100)
-        # data_train(config)
-        data_test(config, visualize=True, verbose=True, best_model=20, step=1) #config.simulation.n_frames // 50)
+        # data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=20) #config.simulation.n_frames // 100)
+        data_train(config)
+        # data_test(config, visualize=True, verbose=True, best_model=20, step=1) #config.simulation.n_frames // 50)
 
 
