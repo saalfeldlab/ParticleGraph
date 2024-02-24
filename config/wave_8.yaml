@@ -1,5 +1,5 @@
 description: 'Wave propagation'
-dataset: 'wave'
+dataset: 'wave_8'
 
 simulation:
   params: [[0.2],[1.4],[2.6],[3.8],[5.0]]
@@ -27,7 +27,7 @@ graph_model:
   prediction: '2nd_derivative'
   input_size: 3
   output_size: 1
-  hidden_dim: 16
+  hidden_dim: 8
   n_mp_layers: 5
   aggr_type: 'add'
   mesh_aggr_type: 'add'

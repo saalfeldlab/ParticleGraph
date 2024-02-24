@@ -47,7 +47,7 @@ class Interaction_Particles_extract(MessagePassing):
         self.n_layers_update = model_config.n_layers_update
         self.hidden_dim_update = model_config.hidden_dim_update
         self.sigma = simulation_config.sigma
-        self.model = model_config.name
+        self.model = model_config.particle_model_name
         self.bc_dpos = bc_dpos
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
