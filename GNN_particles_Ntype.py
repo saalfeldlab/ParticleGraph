@@ -98,9 +98,9 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
         X1, V1, T1, H1, A1, cycle_length_distrib, cycle_length, N1 = init_particles(config, device=device)
 
         # create differnet initial conditions
-        # X1[:, 0] = X1[:, 0] / n_particle_types
-        # for n in range(n_particle_types):
-        #     X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / n_particle_types
+        X1[:, 0] = X1[:, 0] / n_particle_types
+        for n in range(n_particle_types):
+            X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / n_particle_types
 
         if has_mesh:
             X1_mesh, V1_mesh, T1_mesh, H1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
@@ -1245,7 +1245,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['RD_RPS'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
+    config_list = ['wave_slit'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
 
     for config_file in config_list:
 
@@ -1258,8 +1258,8 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=20) #config.simulation.n_frames // 100)
-        # data_train(config)
+        data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=1) #config.simulation.n_frames // 100)
+        data_train(config)
         # data_test(config, visualize=True, verbose=True, best_model=20, step=1) #config.simulation.n_frames // 50)
 
 

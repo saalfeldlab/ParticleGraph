@@ -1,5 +1,5 @@
 description: 'Wave propagation'
-dataset: 'wave'
+dataset: 'wave_slit'
 
 simulation:
   params: [[0.2],[1.4],[2.6],[3.8],[5.0]]
@@ -16,7 +16,7 @@ simulation:
   dpos_init: 0
   boundary: 'periodic'
   node_value_map: 'pattern_10.tif'
-  node_type_map: 'pattern_21.tif'
+  node_type_map: 'pattern_19.tif'
   beta: 1.E-2
   start_frame: 0
 
@@ -27,7 +27,7 @@ graph_model:
   prediction: '2nd_derivative'
   input_size: 3
   output_size: 1
-  hidden_dim: 8
+  hidden_dim: 16
   n_mp_layers: 5
   aggr_type: 'add'
   mesh_aggr_type: 'add'

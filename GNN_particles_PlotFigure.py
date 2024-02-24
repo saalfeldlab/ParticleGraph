@@ -2328,11 +2328,11 @@ def data_plot_FIG7():
                 fitting_model = reaction_diffusion_model(eq)
                 
                 if k==2000:
-                    lin_fit1[n,it], lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data1))
-                    lin_fit2[n,it], lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data2))
+                    lin_fit1[n,it], lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data1), method='trf')
+                    lin_fit2[n,it], lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data2), method='trf')
                 else:
-                    lin_fit1[n,it], lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data1), p0=average_fit_1[it])
-                    lin_fit2[n,it], lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data2), p0=average_fit_2[it])
+                    lin_fit1[n,it], lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data1), method='trf', p0=average_fit_1[it])
+                    lin_fit2[n,it], lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data2), method='trf', p0=average_fit_2[it])
     
                 # print(eq)
                 # print(np.round(lin_fit2[n,it], 3))
@@ -2351,66 +2351,6 @@ def data_plot_FIG7():
     coeff = np.round(np.mean(lin_fit1, axis=1), 2)
     print(coeff[:, 9])
     
-        
-        
-        
-
-    # yy1 = func_RD1(x_data, lin_fit1[0], lin_fit1[1], lin_fit1[2], lin_fit1[3], lin_fit1[4], lin_fit1[5], lin_fit1[6], lin_fit1[7], lin_fit1[8], lin_fit1[9])
-    # yy2 = func_RD2(x_data, lin_fit2[0], lin_fit2[1], lin_fit2[2], lin_fit2[3], lin_fit2[4], lin_fit2[5], lin_fit2[6], lin_fit2[7], lin_fit2[8], lin_fit2[9])
-    # yy3 = func_RD3(x_data, lin_fit3[n,0], lin_fit3[n,1], lin_fit3[n,2], lin_fit3[n,3], lin_fit3[n,4], lin_fit3[n,5], lin_fit3[n,6], lin_fit3[n,7], lin_fit3[n,8], lin_fit3[n,9])
-
-    plt.scatter(y_data2, y_data1, c='k', s=1)
-    plt.xlim([-0.25, 0.25])
-    plt.ylim([-0.25, 0.25])
-
-    
-    plt.scatter(y_data2, yy2, c='k', s=1)
-    plt.scatter(y_data1, yy1, c='r', s=1)
-    plt.xlim([-0.25, 0.25])
-    plt.ylim([-0.25, 0.25])
-
-    y_data2 = to_numpy(y[pos, 1:2])
-    lin_fit2[n], lin_fitv2 = curve_fit(reaction_diffusion_model('v'), np.squeeze(x_data), np.squeeze(y_data2),
-                                       method='dogbox')
-    y_data3 = to_numpy(y[pos, 2:3])
-    lin_fit3[n], lin_fitv3 = curve_fit(reaction_diffusion_model('w'), np.squeeze(x_data), np.squeeze(y_data3))
-
-    coeff1 = np.round(np.mean(lin_fit1, axis=0), 2)
-    coeff2 = np.round(np.mean(lin_fit2, axis=0), 2)
-    coeff3 = np.round(np.mean(lin_fit3, axis=0), 2)
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
