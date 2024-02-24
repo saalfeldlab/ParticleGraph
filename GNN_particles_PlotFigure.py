@@ -1819,7 +1819,7 @@ def data_plot_FIG6():
     proj_interaction = popt_list
     proj_interaction[:, 1] = proj_interaction[:, 0]
 
-    labels, nclusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
+    labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
 
     # plt.hist(popt_list[:,0], 100)
     new_labels = np.zeros(n_particles)
@@ -2156,6 +2156,316 @@ def data_plot_FIG7():
     plt.yticks(fontsize=10.0)
     plt.tight_layout()
 
+    fig = plt.figure(figsize=(22, 4))
+    
+    ax = fig.add_subplot(1, 6, 1)
+    embedding, embedding_particle = get_embedding(model.a, index_particles, n_particles, n_particle_types)
+    if (embedding.shape[1] > 2):
+        ax = fig.add_subplot(2, 4, 2, projection='3d')
+        for n in range(n_particle_types):
+            ax.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], embedding_particle[n][:, 2],
+                       color=cmap.color(n), s=1)
+    else:
+        if (embedding.shape[1] > 1):
+            for m in range(model.a.shape[0]):
+                for n in range(n_particle_types):
+                    plt.scatter(embedding_particle[n + m * n_particle_types][:, 0],
+                                embedding_particle[n + m * n_particle_types][:, 1], color=cmap.color(n), s=3)
+            plt.xlabel('Embedding 0', fontsize=12)
+            plt.ylabel('Embedding 1', fontsize=12)
+        else:
+            for n in range(n_particle_types):
+                plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5, color=cmap.color(n))
+
+    ax = fig.add_subplot(1, 6, 2)
+    labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
+    proj_interaction = embedding
+    
+    for n in range(n_clusters):
+        pos = np.argwhere(labels == n)
+        pos = np.array(pos)
+        if pos.size > 0:
+            plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=5)
+    plt.xlabel('proj 0', fontsize=12)
+    plt.ylabel('proj 1', fontsize=12)
+    plt.text(0., 1.1, f'Nclusters: {n_clusters}', ha='left', va='top', transform=ax.transAxes)
+            
+    label_list = []
+    for n in range(n_particle_types):
+        tmp = labels[index_particles[n]]
+        label_list.append(np.round(np.median(tmp)))
+    label_list = np.array(label_list)
+
+    ax = fig.add_subplot(1, 6, 3)
+    new_labels = labels.copy()
+    for n in range(n_particle_types):
+        new_labels[labels == label_list[n]] = n
+        pos = np.argwhere(labels == label_list[n])
+        pos = np.array(pos)
+        if pos.size > 0:
+            plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1],
+                        color=cmap.color(n), s=0.1)
+    Accuracy = metrics.accuracy_score(to_numpy(T1), new_labels)
+    ax = fig.add_subplot(1, 6, 4)
+    print('3')
+    confusion_matrix = metrics.confusion_matrix(to_numpy(T1), new_labels)  # , normalize='true')
+    cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix=confusion_matrix)
+    if n_particle_types > 8:
+        cm_display.plot(ax=fig.gca(), cmap='Blues', include_values=False, colorbar=False)
+    else:
+        cm_display.plot(ax=fig.gca(), cmap='Blues', include_values=True, values_format='d', colorbar=False)
+    print(f'Accuracy: {np.round(Accuracy, 3)}   n_clusters: {n_clusters}')
+
+
+    ax = fig.add_subplot(1, 6, 5)
+    model_a_ = model.a.clone().detach()
+    model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
+    for n in range(n_clusters):
+        pos = np.argwhere(labels == n).squeeze().astype(int)
+        pos = np.array(pos)
+        if pos.size > 0:
+            median_center = model_a_[pos, :]
+            median_center = torch.median(median_center, dim=0).values
+            plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='r', alpha=0.25)
+            model_a_[pos, :] = median_center
+            plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='k')
+    model_a_ = torch.reshape(model_a_, (model.a.shape[0], model.a.shape[1], model.a.shape[2]))
+    for n in np.unique(new_labels):
+        pos = np.argwhere(new_labels == n).squeeze().astype(int)
+        pos = np.array(pos)
+        if pos.size > 0:
+            plt.scatter(to_numpy(model_a_[0, pos, 0]), to_numpy(model_a_[0, pos, 1]), color='k', s=5)
+    plt.xlabel('ai0', fontsize=12)
+    plt.ylabel('ai1', fontsize=12)
+    plt.xticks(fontsize=10.0)
+    plt.yticks(fontsize=10.0)
+
+    run = 1
+    x_mesh_list = torch.load(f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
+
+    mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_1.pt', map_location=device)
+    mask_mesh = mesh_data['mask']
+    # mesh_pos = mesh_data['mesh_pos']
+    edge_index_mesh = mesh_data['edge_index']
+    edge_weight_mesh = mesh_data['edge_weight']
+    # face = mesh_data['face']
+
+    k=2500
+    x_mesh = x_mesh_list[k].clone().detach()
+
+
+    plt.scatter(to_numpy(x_mesh[:, 0]), to_numpy(x_mesh[:, 1]), c=to_numpy(x_mesh[:, 6]), s=1)
+    H1 = x_mesh[:, 6:9]
+    H1_IM = torch.reshape(H1, (100, 100, 3))
+    fig = plt.figure(figsize=(12, 12))
+    H1_IM = torch.reshape(H1, (100, 100, 3))
+    plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=1)
+    plt.xticks([])
+    plt.yticks([])
+    plt.axis('off')
+
+    dataset_mesh = data.Data(x=x_mesh, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
+
+    with torch.no_grad():
+        y, input_phi, embedding = model(dataset_mesh, data_id=0)
+    y = y * hnorm
+
+    # RD_RPS_model :
+    c = model_mesh.c[to_numpy(dataset_mesh.x[:, 5])]
+    u = input_phi[:, 3]
+    v = input_phi[:, 4]
+    w = input_phi[:, 5]
+    # laplacian = model_mesh.beta * c * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
+    laplacian_u = 1 * c * input_phi[:, 0]
+    laplacian_v = 1 * c * input_phi[:, 1]
+    laplacian_w = 1 * c * input_phi[:, 2]
+    D = 0.05
+    a = 0.6
+    p = u + v + w
+    du = D * laplacian_u + u * (1 - p - a * v)
+    dv = D * laplacian_v + v * (1 - p - a * w)
+    dw = D * laplacian_w + w * (1 - p - a * u)
+    increment = torch.cat((du[:, None], dv[:, None], dw[:, None]), dim=1)
+    increment = increment.squeeze()
+    
+
+    fig = plt.figure(figsize=(9.5, 9))
+    plt.ion()
+    plt.scatter(to_numpy(increment[:, 0]), to_numpy(y[:, 0]), c='r', s=1)
+    plt.scatter(to_numpy(increment[:, 1]), to_numpy(y[:, 1]), c='g', s=1)
+    plt.scatter(to_numpy(increment[:, 2]), to_numpy(y[:, 2]), c='b', s=1)
+    plt.xlim([-0.25, 0.25])
+    plt.ylim([-0.25, 0.25])
+
+    lin_fit1 = np.zeros((5, 10))
+    lin_fit2 = np.zeros((5, 10))
+    lin_fit3 = np.zeros((5, 10))
+    
+    for n in trange(0, 1) # n_particle_types):
+
+        ### u 
+
+        pos = index_particles[n]
+        laplacian_u = to_numpy(input_phi[pos, 0])
+        laplacian_v = to_numpy(input_phi[pos, 1])
+        laplacian_w = to_numpy(input_phi[pos, 2])
+        u = to_numpy(input_phi[pos, 3])
+        v = to_numpy(input_phi[pos, 4])
+        w = to_numpy(input_phi[pos, 5])
+
+        x_data = np.concatenate((laplacian_u[:, None], laplacian_v[:, None], laplacian_w[:, None], u[:, None], v[:, None], w[:, None]), axis=1)
+        y_data1 = to_numpy(y[pos, 0:1])
+        y_data2 = to_numpy(increment[pos, 0:1])
+        
+        pos = np.argwhere((y_data2>-0.1) & (y_data2<0.1)).squeeze().astype(int)
+        pos = pos[:, 0].squeeze()
+        x_data = x_data[pos, :]
+        y_data1 = y_data1[pos, :]
+        y_data2 = y_data2[pos, :]
+        
+        fitting_model = reaction_diffusion_model('u')
+        
+        lin_fit1, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data1), method='dogbox')
+        lin_fit2, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data2), method='dogbox')
+
+        print('u')
+        print(np.round(lin_fit2, 3))
+        print(np.round(lin_fit1, 3))
+        
+        #### v
+
+        pos = index_particles[n]
+        laplacian_u = to_numpy(input_phi[pos, 0])
+        laplacian_v = to_numpy(input_phi[pos, 1])
+        laplacian_w = to_numpy(input_phi[pos, 2])
+        u = to_numpy(input_phi[pos, 3])
+        v = to_numpy(input_phi[pos, 4])
+        w = to_numpy(input_phi[pos, 5])
+
+        x_data = np.concatenate(
+            (laplacian_u[:, None], laplacian_v[:, None], laplacian_w[:, None], u[:, None], v[:, None], w[:, None]),
+            axis=1)
+        y_data1 = to_numpy(y[pos, 1:2])
+        y_data2 = to_numpy(increment[pos, 1:2])
+
+        pos = np.argwhere((y_data2 > -0.1) & (y_data2 < 0.1)).squeeze().astype(int)
+        pos = pos[:, 0].squeeze()
+        x_data = x_data[pos, :]
+        y_data1 = y_data1[pos, :]
+        y_data2 = y_data2[pos, :]
+
+        fitting_model = reaction_diffusion_model('v')
+
+        lin_fit1, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data1), method='dogbox')
+        lin_fit2, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data2), method='dogbox')
+
+        print('v')
+        print(np.round(lin_fit2, 3))
+        print(np.round(lin_fit1, 3))
+        
+        ### w
+        
+        pos = index_particles[n]
+        laplacian_u = to_numpy(input_phi[pos, 0])
+        laplacian_v = to_numpy(input_phi[pos, 1])
+        laplacian_w = to_numpy(input_phi[pos, 2])
+        u = to_numpy(input_phi[pos, 3])
+        v = to_numpy(input_phi[pos, 4])
+        w = to_numpy(input_phi[pos, 5])
+
+        x_data = np.concatenate(
+            (laplacian_u[:, None], laplacian_v[:, None], laplacian_w[:, None], u[:, None], v[:, None], w[:, None]),
+            axis=1)
+        y_data1 = to_numpy(y[pos, 2:3])
+        y_data2 = to_numpy(increment[pos, 2:3])
+
+        pos = np.argwhere((y_data2 > -0.1) & (y_data2 < 0.1)).squeeze().astype(int)
+        pos = pos[:, 0].squeeze()
+        x_data = x_data[pos, :]
+        y_data1 = y_data1[pos, :]
+        y_data2 = y_data2[pos, :]
+
+        fitting_model = reaction_diffusion_model('w')
+
+        lin_fit1, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data1), method='dogbox')
+        lin_fit2, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data2), method='dogbox')
+
+        print('w')
+        print(np.round(lin_fit2, 3))
+        print(np.round(lin_fit1, 3))
+        
+        
+        
+
+        # yy1 = func_RD1(x_data, lin_fit1[0], lin_fit1[1], lin_fit1[2], lin_fit1[3], lin_fit1[4], lin_fit1[5], lin_fit1[6], lin_fit1[7], lin_fit1[8], lin_fit1[9])
+        # yy2 = func_RD2(x_data, lin_fit2[0], lin_fit2[1], lin_fit2[2], lin_fit2[3], lin_fit2[4], lin_fit2[5], lin_fit2[6], lin_fit2[7], lin_fit2[8], lin_fit2[9])
+        # yy3 = func_RD3(x_data, lin_fit3[n,0], lin_fit3[n,1], lin_fit3[n,2], lin_fit3[n,3], lin_fit3[n,4], lin_fit3[n,5], lin_fit3[n,6], lin_fit3[n,7], lin_fit3[n,8], lin_fit3[n,9])
+
+        plt.scatter(y_data2, y_data1, c='k', s=1)
+        plt.xlim([-0.25, 0.25])
+        plt.ylim([-0.25, 0.25])
+
+        
+        plt.scatter(y_data2, yy2, c='k', s=1)
+        plt.scatter(y_data1, yy1, c='r', s=1)
+        plt.xlim([-0.25, 0.25])
+        plt.ylim([-0.25, 0.25])
+
+        y_data2 = to_numpy(y[pos, 1:2])
+        lin_fit2[n], lin_fitv2 = curve_fit(reaction_diffusion_model('v'), np.squeeze(x_data), np.squeeze(y_data2),
+                                           method='dogbox')
+        y_data3 = to_numpy(y[pos, 2:3])
+        lin_fit3[n], lin_fitv3 = curve_fit(reaction_diffusion_model('w'), np.squeeze(x_data), np.squeeze(y_data3))
+
+    coeff1 = np.round(np.mean(lin_fit1, axis=0), 2)
+    coeff2 = np.round(np.mean(lin_fit2, axis=0), 2)
+    coeff3 = np.round(np.mean(lin_fit3, axis=0), 2)
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     ax = fig.add_subplot(3, 3, 2)
     print('2 UMAP ...')
     plt.text(-0.25, 1.1, f'b)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
@@ -2203,7 +2513,8 @@ def data_plot_FIG7():
         proj_interaction = np.squeeze(proj_interaction)
         np.save(os.path.join(log_dir, f'proj_interaction_20.npy'), proj_interaction)
 
-    labels, nclusters = embedding_cluster.get(proj_interaction, 'distance', thresh=4)
+    labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
+    proj_interaction = embedding
 
     label_list = []
     for n in range(n_particle_types):
@@ -2223,7 +2534,7 @@ def data_plot_FIG7():
     model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
     t = []
     tt = []
-    for k in range(nclusters):
+    for k in range(n_clusters):
         pos = np.argwhere(labels == k).squeeze().astype(int)
         temp = model_a_[pos, :].clone().detach()
         # plt.scatter(to_numpy(temp[:, 0]), to_numpy(temp[:, 1]))
@@ -2280,6 +2591,10 @@ def data_plot_FIG7():
     # create random tensor 0:1
     # input_phi = torch.cat((laplacian_u[:, None], laplacian_v[:, None], laplacian_w[:, None], u[:, None], v[:, None], w[:, None], embedding), dim=-1)
     # infere per type 1,2,3,4
+    
+    
+    
+    
 
     for n in range(n_particle_types):
         pos = np.argwhere(new_labels == n).squeeze().astype(int)
