@@ -84,7 +84,6 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
     else:
         mesh_model = None
 
-
     torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_{dataset_name}/model.pt')
 
     for run in range(config.training.n_runs):
@@ -181,8 +180,6 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
             # Particle update
             if model_config.particle_model_name == 'PDE_O':
                 H1[:, 2] = H1[:, 2] + y.squeeze() * delta_t
-                # pos= torch.argwhere(H1[:, 0] > 0.9)
-                # H1[pos, 2] = 0
                 X1[:, 0] = H1[:, 0] + (3/8) * mesh_data['size'] * torch.cos(H1[:, 2])
                 X1[:, 1] = H1[:, 1] + (3/8) * mesh_data['size'] * torch.sin(H1[:, 2])
                 X1 = bc_pos(X1)
@@ -232,7 +229,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                             distance = torch.sum(bc_dpos(x[:, None, 1:3] - x_mesh[None, :, 1:3]) ** 2, dim=2)
                             distance = distance < 0.00015
                             distance = torch.sum(distance, dim=0)
-                            H1_mesh = torch.relu(H1_mesh*1.002 - 2*distance[:,None])
+                            H1_mesh = torch.relu(H1_mesh*1.0012 - 2*distance[:,None])
                             H1_mesh = torch.clamp(H1_mesh, min=0, max=5000)
                     case 'PDE_O_Mesh':
                         pred=[]
@@ -308,7 +305,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Lut_Fig_{it}.jpg", dpi=75)
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Lut_Fig_{it}.jpg", dpi=170.7)
                         plt.close()
                         fig = plt.figure(figsize=(12, 12))
                         plt.style.use('default')
@@ -320,7 +317,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Rot_Fig{it}.jpg", dpi=75)
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Rot_Fig{it}.jpg", dpi=170.7)
                         plt.close()
 
                     elif model_config.mesh_model_name == 'Chemotaxism_Mesh':
@@ -440,9 +437,8 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
 
         torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
         torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
-        if has_mesh:
-            torch.save(x_mesh_list, f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt')
-            torch.save(y_mesh_list, f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt')
+        torch.save(x_mesh_list, f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt')
+        torch.save(y_mesh_list, f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt')
 
     simulation_config.n_particles = int(simulation_config.n_particles / ratio)
 
@@ -1245,7 +1241,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['wave', 'wave_slit'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
+    config_list = ['boids_16_division'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
 
     for config_file in config_list:
 
@@ -1258,8 +1254,8 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        # data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 400)
-        # data_train(config)
-        data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 400)
+        data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 500)
+        data_train(config)
+        # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 400)
 
 
