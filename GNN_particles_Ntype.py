@@ -773,7 +773,11 @@ def data_train(config):
             if (embedding.shape[1] > 1):
                 for m in range(model.a.shape[0]):
                     for n in range(n_particle_types):
-                        plt.scatter(embedding_particle[n + m * n_particle_types][:, 0],
+                        if simulation_config.has_cell_division:
+                            plt.scatter(embedding_particle[n + m * n_particle_types][:, 0],
+                                        embedding_particle[n + m * n_particle_types][:, 1], color='k', s=3)
+                        else:
+                            plt.scatter(embedding_particle[n + m * n_particle_types][:, 0],
                                     embedding_particle[n + m * n_particle_types][:, 1], color=cmap.color(n), s=3)
                 plt.xlabel('Embedding 0', fontsize=12)
                 plt.ylabel('Embedding 1', fontsize=12)
@@ -782,7 +786,7 @@ def data_train(config):
                     plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5, color=cmap.color(n))
 
         ax = fig.add_subplot(1, 6, 3)
-        if simulation_config.n_interactions < 100:  # cluster embedding
+        if (simulation_config.n_interactions < 100) & not(simulation_config.has_cell_division) :  # cluster embedding
             if model_config.particle_model_name == 'PDE_E':
                 func_list = []
                 rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
@@ -1260,7 +1264,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 400)
+        # data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 400)
         data_train(config)
 
         # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 400)
