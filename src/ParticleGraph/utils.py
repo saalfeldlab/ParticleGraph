@@ -81,7 +81,8 @@ def choose_boundary_values(bc_name):
             return periodic, shifted_periodic
         case _:
             raise ValueError(f'Unknown boundary condition {bc_name}')
-    
+
+
 def grads2D(params):
 
     params_sx = torch.roll(params, -1, 0)
@@ -94,6 +95,7 @@ def grads2D(params):
     sy[:, -1] = 0
 
     return [sx,sy]
+
 
 def tv2d(params):
     nb_voxel = (params.shape[0]) * (params.shape[1])

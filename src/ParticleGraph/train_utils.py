@@ -30,7 +30,7 @@ def choose_training_model(model_config, device):
     model=[]
     model_name = model_config.graph_model.particle_model_name
     match model_name:
-        case 'PDE_A' | 'PDE_B':
+        case 'PDE_A' | 'PDE_B' | 'PDE_B_bis' :
             model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
         case 'PDE_E':
             model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)

@@ -1,5 +1,5 @@
 description: 'Boids 16 different types, division'
-dataset: 'boids_16_division_e'
+dataset: 'boids_16_division'
 
 simulation:
   params: [[-1]]
@@ -9,10 +9,10 @@ simulation:
   has_cell_division: True
   n_particle_types: 16
   n_interactions: 16
-  n_frames: 200
+  n_frames: 8000
   sigma: 0.005
   delta_t: 1
-  dpos_init: 5.0E-2
+  dpos_init: 5.0E-4
   boundary: 'periodic'
   start_frame: 0
 
@@ -37,10 +37,10 @@ training:
   n_epochs: 20
   batch_size: 8
   small_init_batch_size: True
-  n_runs: 1
+  n_runs: 2
   noise_level: 0
   data_augmentation: True
   cluster_method: 'distance_plot'
   fix_cluster_embedding: True
-  device: 'cuda:0'
+  device: 'auto'
 

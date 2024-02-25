@@ -56,9 +56,16 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                             hidden_size=self.hidden_dim, device=self.device)
 
-        self.a = nn.Parameter(
-            torch.tensor(np.ones((self.n_dataset, int(self.n_particles), self.embedding_dim)), device=self.device,
-                         requires_grad=True, dtype=torch.float32))
+        if simulation_config.has_cell_division :
+            self.a = nn.Parameter(
+                torch.tensor(np.ones((self.n_dataset, 20000, self.embedding_dim)), device=self.device,
+                             requires_grad=True, dtype=torch.float32))
+        else:
+            self.a = nn.Parameter(
+                torch.tensor(np.ones((self.n_dataset, int(self.n_particles), self.embedding_dim)), device=self.device,
+                             requires_grad=True, dtype=torch.float32))
+
+
 
         if self.update_type != 'none':
             self.lin_update = MLP(input_size=self.output_size + self.embedding_dim + 2, output_size=self.output_size,
@@ -112,19 +119,20 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         embedding_i = self.a[self.data_id, to_numpy(particle_id_i), :].squeeze()
         embedding_j = self.a[self.data_id, to_numpy(particle_id_j), :].squeeze()
 
-        if self.model == 'PDE_A':
-            in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
-        if self.model == 'PDE_B':
-            in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
-                                     dpos_y_j[:, None], embedding_i), dim=-1)
-        if self.model == 'PDE_G':
-            in_features = torch.cat(
-                (delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None], dpos_y_j[:, None],
-                 embedding_j),
-                dim=-1)
-        if self.model == 'PDE_E':
-            in_features = torch.cat(
-                (delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
+        match self.model:
+            case 'PDE_A':
+                in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
+            case 'PDE_B' | 'PDE_B_bis':
+                in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
+                                         dpos_y_j[:, None], embedding_i), dim=-1)
+            case 'PDE_G':
+                in_features = torch.cat(
+                    (delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None], dpos_y_j[:, None],
+                     embedding_j),
+                    dim=-1)
+            case 'PDE_E':
+                in_features = torch.cat(
+                    (delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
 
         out = self.lin_edge(in_features)
 

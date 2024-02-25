@@ -18,7 +18,7 @@ import os
 from sklearn import metrics
 import matplotlib
 from matplotlib import rc
-matplotlib.use("Qt5Agg")
+# matplotlib.use("Qt5Agg")
 
 from ParticleGraph.config import ParticleGraphConfig
 from ParticleGraph.generators.particle_initialization import init_particles, init_mesh
@@ -86,7 +86,12 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
 
     torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_{dataset_name}/model.pt')
 
+    # initialize particle and graph states
+    X1, V1, T1, H1, A1, cycle_length_distrib_first, cycle_length_first, N1 = init_particles(config, device=device)
+
     for run in range(config.training.n_runs):
+
+        n_particles = simulation_config.n_particles
 
         x_list = []
         y_list = []
@@ -94,7 +99,8 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
         y_mesh_list = []
 
         # initialize particle and graph states
-        X1, V1, T1, H1, A1, cycle_length_distrib, cycle_length, N1 = init_particles(config, device=device)
+        X1, V1, T1, H1, A1, cycle_length_distrib_, cycle_length, N1 = init_particles(config, device=device)
+        cycle_length_distrib = cycle_length_distrib_first
 
         # create differnet initial conditions
         # X1[:, 0] = X1[:, 0] / n_particle_types
@@ -440,6 +446,9 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
         torch.save(x_mesh_list, f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt')
         torch.save(y_mesh_list, f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt')
 
+    torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
+    torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
+
     simulation_config.n_particles = int(simulation_config.n_particles / ratio)
 
 
@@ -506,13 +515,16 @@ def data_train(config):
     for run in trange(NGraphs):
         x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
         y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
-        x_list.append(torch.stack(x))
-        y_list.append(torch.stack(y))
+        x_list.append(x)
+        y_list.append(y)
 
-    x = torch.stack(x_list)
-    x = torch.reshape(x, (x.shape[0] * x.shape[1] * x.shape[2], x.shape[3]))
-    y = torch.stack(y_list)
-    y = torch.reshape(y, (y.shape[0] * y.shape[1] * y.shape[2], y.shape[3]))
+    x = x_list[0][0].clone().detach()
+    y = y_list[0][0].clone().detach()
+    for run in range(NGraphs):
+        for k in range(n_frames):
+            x = torch.cat((x,x_list[run][k].clone().detach()),0)
+            y = torch.cat((y,y_list[run][k].clone().detach()),0)
+
     vnorm = norm_velocity(x, device)
     ynorm = norm_acceleration(y, device)
     vnorm = vnorm[4]
@@ -527,11 +539,13 @@ def data_train(config):
         y_mesh_list = []
         for run in trange(NGraphs):
             x_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
-            x_mesh_list.append(torch.stack(x_mesh))
+            x_mesh_list.append(x_mesh)
             h = torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
-            y_mesh_list.append(torch.stack(h))
-        h = torch.stack(y_mesh_list)
-        h = torch.reshape(h, (h.shape[0] * h.shape[1] * h.shape[2], h.shape[3]))
+            y_mesh_list.append(h)
+        h = y_mesh_list[0][0].clone().detach()
+        for run in range(NGraphs):
+            for k in range(n_frames):
+                h = torch.cat((h, y_mesh_list[run][k].clone().detach()), 0)
         hnorm = torch.std(h)
         torch.save(hnorm, os.path.join(log_dir, 'hnorm.pt'))
         print(f'hnorm: {to_numpy(hnorm)}')
@@ -603,8 +617,6 @@ def data_train(config):
             if has_mesh:
                 mask_mesh = mask_mesh.repeat(repeat_factor, 1)
 
-        error_weight = torch.ones((batch_size * n_particles, 1), device=device, requires_grad=False)
-
         total_loss = 0
 
         Niter = n_frames * data_augmentation_loop // batch_size
@@ -667,16 +679,9 @@ def data_train(config):
                     pred = model(batch, data_id=run - 1, training=True, vnorm=vnorm, phi=phi)
 
             if model_config.mesh_model_name == 'RD_RPS_Mesh':
-                loss = ((pred - y_batch) * error_weight * mask_mesh).norm(2)
+                loss = ((pred - y_batch) * mask_mesh).norm(2)
             else:
-                loss = ((pred - y_batch) * error_weight).norm(2)
-
-            if train_config.loss_weight & (epoch > 1 * n_epochs // 4):
-                with torch.no_grad():
-                    error_weight = torch.abs(pred - y_batch).reshape((batch_size, n_particles, 1))
-                    error_weight = torch.mean(error_weight, dim=0)
-                    error_weight = 1 + 2 * error_weight / torch.std(error_weight)
-                    error_weight = error_weight.repeat(batch_size, 1, 1).reshape((batch_size * n_particles, 1)).clone().detach()
+                loss = (pred - y_batch).norm(2)
 
             loss.backward()
             optimizer.step()
@@ -1255,8 +1260,9 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=10) # config.simulation.n_frames // 500)
+        data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 400)
         data_train(config)
+
         # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 400)
 
 
