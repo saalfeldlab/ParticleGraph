@@ -48,4 +48,4 @@ training:
   cluster_method: 'kmeans_auto_plot'
   fix_cluster_embedding: True
 
-  device: 'auto'
+  device: 'cuda:0'
