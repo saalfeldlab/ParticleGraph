@@ -786,7 +786,7 @@ def data_train(config):
                     plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5, color=cmap.color(n))
 
         ax = fig.add_subplot(1, 6, 3)
-        if (simulation_config.n_interactions < 100) & not(simulation_config.has_cell_division) :  # cluster embedding
+        if (simulation_config.n_interactions < 100) & (simulation_config.has_cell_division == False) :  # cluster embedding
             if model_config.particle_model_name == 'PDE_E':
                 func_list = []
                 rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
