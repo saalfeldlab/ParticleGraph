@@ -1270,9 +1270,8 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=False , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 400)
+        # data_generate(config, device=device, visualize=False , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 400)
         data_train(config)
-
         # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 400)
 
 
