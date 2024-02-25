@@ -525,7 +525,6 @@ def data_train(config):
             if (k%10 == 0) | (n_frames<1000):
                 x = torch.cat((x,x_list[run][k].clone().detach()),0)
                 y = torch.cat((y,y_list[run][k].clone().detach()),0)
-
         print(x_list[run][k].shape)
 
     vnorm = norm_velocity(x, device)
@@ -1258,7 +1257,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['boids_16_division'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
+    config_list = ['wave_janelia'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
 
     for config_file in config_list:
 
@@ -1272,7 +1271,7 @@ if __name__ == '__main__':
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
         # data_generate(config, device=device, visualize=False , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 400)
-        data_train(config)
-        # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 400)
+        # data_train(config)
+        data_test(config, visualize=True, verbose=True, best_model=17, step=20) #config.simulation.n_frames // 400)
 
 
