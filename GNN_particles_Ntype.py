@@ -521,11 +521,12 @@ def data_train(config):
     x = x_list[0][0].clone().detach()
     y = y_list[0][0].clone().detach()
     for run in range(NGraphs):
-        for k in range(n_frames):
-            if k%10 == 0:
+        for k in trange(n_frames):
+            if (k%10 == 0) | (n_frames<1000):
                 x = torch.cat((x,x_list[run][k].clone().detach()),0)
                 y = torch.cat((y,y_list[run][k].clone().detach()),0)
-                print(x_list[run][k].shape)
+
+        print(x_list[run][k].shape)
 
     vnorm = norm_velocity(x, device)
     ynorm = norm_acceleration(y, device)
