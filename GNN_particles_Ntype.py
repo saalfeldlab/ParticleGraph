@@ -508,6 +508,7 @@ def data_train(config):
         y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(torch.stack(x))
         y_list.append(torch.stack(y))
+
     x = torch.stack(x_list)
     x = torch.reshape(x, (x.shape[0] * x.shape[1] * x.shape[2], x.shape[3]))
     y = torch.stack(y_list)
@@ -1254,7 +1255,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 500)
+        data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=10) # config.simulation.n_frames // 500)
         data_train(config)
         # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 400)
 
