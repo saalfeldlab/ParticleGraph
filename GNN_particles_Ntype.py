@@ -521,7 +521,7 @@ def data_train(config):
     x = x_list[0][0].clone().detach()
     y = y_list[0][0].clone().detach()
     for run in range(NGraphs):
-        for k in range(n_frames):
+        for k in trange(n_frames):
             x = torch.cat((x,x_list[run][k].clone().detach()),0)
             y = torch.cat((y,y_list[run][k].clone().detach()),0)
 
