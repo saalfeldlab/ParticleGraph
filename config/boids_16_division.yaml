@@ -40,7 +40,7 @@ training:
   n_runs: 2
   noise_level: 0
   data_augmentation: True
-  data_augmentation_loop: 10
+  data_augmentation_loop: 2
   cluster_method: 'distance_plot'
   fix_cluster_embedding: True
   device: 'auto'

@@ -89,8 +89,6 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
     # initialize particle and graph states
     X1, V1, T1, H1, A1, cycle_length_distrib_first, cycle_length_first, N1 = init_particles(config, device=device)
 
-    cycle_length_first = torch.load(f'./cycle_length.pt', map_location=device)
-
     for run in range(config.training.n_runs):
 
         n_particles = simulation_config.n_particles
@@ -102,7 +100,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
 
         # initialize particle and graph states
         X1, V1, T1, H1, A1, cycle_length_distrib_, cycle_length, N1 = init_particles(config, device=device)
-        cycle_length = cycle_length_first-
+        cycle_length = cycle_length_first
         cycle_length_distrib = cycle_length[to_numpy(T1).astype(int)].squeeze()
         A1 = torch.rand(n_particles, device=device)
         A1 = A1  * cycle_length_distrib
@@ -1258,7 +1256,8 @@ def data_test(config, visualize=False, verbose=True, best_model=0, step=5, force
 
             x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t)  # position update
 
-        A1 = A1 + delta_t
+        if simulation_config.has_cell_division:
+            A1 = A1 + delta_t
 
         if (it % step == 0) & (it >= 0) & visualize:
 
@@ -1340,8 +1339,8 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        # data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 400, bSave=False)
+        data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 200, bSave=True)
         # data_train(config)
-        data_test(config, visualize=True, verbose=True, best_model=7, step=config.simulation.n_frames // 400)
+        # data_test(config, visualize=True, verbose=True, best_model=7, step=config.simulation.n_frames // 200)
 
 
