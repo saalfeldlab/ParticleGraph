@@ -4,12 +4,12 @@ dataset: 'oscillator'
 simulation:
   params: [[0.2],[0.4],[0.6],[0.8],[1.0]]
   min_radius: 0.002
-  max_radius:  0.01
+  max_radius:  0.1
   diffusion_coefficients: [[0],[0],[0],[0],[0]]
-  n_particles: 10000
+  n_particles: 4900
   n_particle_types: 5
   n_interactions: 5
-  n_nodes: 10000
+  n_nodes: 4900
   n_node_types: 5
   n_frames: 10000
   delta_t: 2

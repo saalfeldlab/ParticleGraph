@@ -303,8 +303,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
 
                     if model_config.particle_model_name == 'PDE_O':
                         fig = plt.figure(figsize=(12, 12))
-
-                        plt.scatter(H1[:, 0].detach().cpu().numpy(), H1[:, 1].detach().cpu().numpy(), s=20,
+                        plt.scatter(H1[:, 0].detach().cpu().numpy(), H1[:, 1].detach().cpu().numpy(), s=100,
                                     c=np.sin(to_numpy(H1[:, 2])), vmin=-1, vmax=1, cmap='viridis')
                         plt.xlim([0, 1])
                         plt.ylim([0, 1])
@@ -313,9 +312,9 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         plt.tight_layout()
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Lut_Fig_{it}.jpg", dpi=170.7)
                         plt.close()
-                        fig = plt.figure(figsize=(12, 12))
 
-                        plt.scatter(H1[:, 0].detach().cpu().numpy(), H1[:, 1].detach().cpu().numpy(), s=1, c='b')
+                        fig = plt.figure(figsize=(12, 12))
+                        # plt.scatter(H1[:, 0].detach().cpu().numpy(), H1[:, 1].detach().cpu().numpy(), s=5, c='b')
                         plt.scatter(X1[:, 0].detach().cpu().numpy(), X1[:, 1].detach().cpu().numpy(), s=10, c='lawngreen',
                                     alpha=0.75)
                         plt.xlim([0, 1])
