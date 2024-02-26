@@ -5,6 +5,7 @@ from shutil import copyfile
 
 import matplotlib.pyplot as plt
 import networkx as nx
+import torch
 import torch.nn as nn
 import torch_geometric.data as data
 import umap
@@ -18,7 +19,7 @@ import os
 from sklearn import metrics
 import matplotlib
 from matplotlib import rc
-# matplotlib.use("Qt5Agg")
+matplotlib.use("Qt5Agg")
 
 from ParticleGraph.config import ParticleGraphConfig
 from ParticleGraph.generators.particle_initialization import init_particles, init_mesh
@@ -114,6 +115,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
         if has_mesh:
             X1_mesh, V1_mesh, T1_mesh, H1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
             torch.save(mesh_data, f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt')
+            mask_mesh = mesh_data['mask'].squeeze()
         if only_mesh | (model_config.particle_model_name == 'PDE_O'):
             X1 = X1_mesh.clone().detach()
             H1 = H1_mesh.clone().detach()
@@ -129,7 +131,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
             # calculate cell division
-            if (it > 0 ) & (it%10==0) & has_cell_division & (n_particles < 20000):
+            if (it > 0 ) & has_cell_division & (n_particles < 20000):
                 cycle_test = (torch.ones(n_particles, device=device) + 0.05 * torch.randn(n_particles, device=device))
                 cell_cycle_duration_sample = cycle_test.squeeze() * cycle_length_distrib.squeeze()
                 pos = torch.argwhere(A1.squeeze() > cell_cycle_duration_sample)
@@ -137,6 +139,10 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                 if len(pos) > 1:
                     n_add_nodes = len(pos)
                     pos = to_numpy(pos[:, 0].squeeze()).astype(int)
+                    
+                    if 19 in pos:
+                        print(f' {to_numpy(A1[19])}  {to_numpy(cycle_test[19])}   {to_numpy(cycle_length_distrib[19])}')
+                    
                     n_particles = n_particles + n_add_nodes
                     N1 = torch.arange(n_particles, device=device)
                     N1 = N1[:, None]
@@ -216,15 +222,15 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         with torch.no_grad():
                             pred = mesh_model(dataset_mesh)
                             H1[mesh_data['mask'].squeeze(), 1:2] = pred[mask]
-                        H1_mesh[mesh_data['mask'].squeeze(), 0:1] += pred[:] * delta_t
+                        H1_mesh[mask_mesh, 0:1] += pred[:] * delta_t
                         new_pred = torch.zeros_like(pred)
-                        new_pred[mask] = pred[mask]
+                        new_pred[mask_mesh] = pred[mask_mesh]
                         pred = new_pred
                     case 'WaveMesh':
                         with torch.no_grad():
                             pred = mesh_model(dataset_mesh)
-                            H1_mesh[:, 1:2] += pred[:] * delta_t
-                            H1_mesh[:, 0:1] += H1_mesh[:, 1:2] * delta_t
+                            H1_mesh[mask_mesh, 1:2] += pred[mask_mesh,:] * delta_t
+                            H1_mesh[mask_mesh, 0:1] += H1_mesh[mask_mesh, 1:2] * delta_t
                             # x_ = to_numpy(x_mesh)
                             # plt.scatter(x_[:, 1], x_[:, 2], c=to_numpy(H1_mesh[:, 0]))
                     case 'RD_Gray_Scott_Mesh' | 'RD_FitzHugh_Nagumo_Mesh' | 'RD_RPS_Mesh':
@@ -532,6 +538,9 @@ def data_train(config):
                 y = torch.cat((y,y_list[run][k].clone().detach()),0)
         print(x_list[run][k].shape)
 
+
+
+
     vnorm = norm_velocity(x, device)
     ynorm = norm_acceleration(y, device)
     vnorm = vnorm[4]
@@ -601,8 +610,6 @@ def data_train(config):
     for n in range(n_particle_types):
         index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
         index_particles.append(index.squeeze())
-
-    # plt.scatter(to_numpy(x[:,1]),to_numpy(x[:,2]),c=to_numpy(x[:,5]))
 
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
@@ -769,6 +776,8 @@ def data_train(config):
 
         fig = plt.figure(figsize=(22, 4))
         plt.ion()
+        # white background
+        plt.style.use('classic')
         ax = fig.add_subplot(1, 6, 1)
         plt.plot(list_loss, color='k')
         plt.xlim([0, n_epochs])
@@ -890,7 +899,7 @@ def data_train(config):
                         popt_list.append(popt)
                         h = h[:, 0]
                     f_list.append(h)
-                    if (n % 24) & (mask_mesh[n]) == 0:
+                    if (n % 24):
                         plt.plot(to_numpy(r),
                                  to_numpy(h) * to_numpy(hnorm), linewidth=1,
                                  color='k', alpha=0.05)
@@ -1007,6 +1016,93 @@ def data_train(config):
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
         plt.close()
+
+
+def data_train_clock(config):
+    print('')
+
+    plt.rcParams['text.usetex'] = True
+    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+
+    simulation_config = config.simulation
+    train_config = config.training
+    model_config = config.graph_model
+
+    print(f'Training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+
+    n_epochs = train_config.n_epochs
+    radius = simulation_config.max_radius
+    n_particle_types = simulation_config.n_particle_types
+    n_particles = simulation_config.n_particles
+    dataset_name = config.dataset
+    n_frames = simulation_config.n_frames
+    data_augmentation = train_config.data_augmentation
+    data_augmentation_loop = train_config.data_augmentation_loop
+    target_batch_size = train_config.batch_size
+    has_mesh = (config.graph_model.mesh_model_name != '')
+    only_mesh = (config.graph_model.particle_model_name == '') & has_mesh
+    replace_with_cluster = 'replace' in train_config.sparsity
+    visualize_embedding = False
+
+    embedding_cluster = EmbeddingCluster(config)
+
+    if train_config.small_init_batch_size:
+        get_batch_size = increasing_batch_size(target_batch_size)
+    else:
+        get_batch_size = constant_batch_size(target_batch_size)
+    batch_size = get_batch_size(0)
+
+    l_dir = os.path.join('.', 'log')
+    log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
+    print('log_dir: {}'.format(log_dir))
+    os.makedirs(log_dir, exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'models'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'tmp_training'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'tmp_training/embedding'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'tmp_recons'), exist_ok=True)
+
+
+    copyfile(os.path.realpath(__file__), os.path.join(log_dir, 'training_code.py'))
+    logging.basicConfig(filename=os.path.join(log_dir, 'training.log'),
+                        format='%(asctime)s %(message)s',
+                        filemode='w')
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    logger.info(config)
+
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
+    NGraphs = len(graph_files)
+    print(f'Graph files N: {NGraphs - 1}')
+    logger.info(f'Graph files N: {NGraphs - 1}')
+
+    x_list = []
+    y_list = []
+    print('Load data ...')
+    for run in trange(NGraphs):
+        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
+        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
+        x_list.append(x)
+        y_list.append(y)
+
+    x = x_list[0][0].clone().detach()
+    y = y_list[0][0].clone().detach()
+    for k in trange(1,n_frames):
+        x = torch.cat((x,x_list[0][k].clone().detach()),0)
+        y = torch.cat((y,y_list[0][k].clone().detach()),0)
+
+    cycle_length = torch.load(f'./graphs_data/graphs_{dataset_name}/cycle_length.pt', map_location=device).to(device)
+                
+    cell_indices = to_numpy(torch.unique(x[:,0]))
+
+    index_cell = 19
+    pos = torch.argwhere(x[:,0]==cell_indices[index_cell])
+    pos = to_numpy(pos[:, 0])
+    cell_time = to_numpy(x[pos,8])
+    plt.plot(cell_time)
+    
+        
+        
+    
 
 
 def data_test(config, visualize=False, verbose=True, best_model=0, step=5, forced_embedding=[], ratio=1):
@@ -1143,6 +1239,16 @@ def data_test(config, visualize=False, verbose=True, best_model=0, step=5, force
         mask_mesh = mesh_data['mask']
         edge_index_mesh = mesh_data['edge_index']
         edge_weight_mesh = mesh_data['edge_weight']
+
+        xy = to_numpy(mesh_data['mesh_pos'])
+        x_ = xy[:,0]
+        y_ = xy[:,1]
+        mask = to_numpy(mask_mesh)
+
+        mask_mesh = (x_ > np.min(x_)+0.02) & (x_ < np.max(x_)-0.02) & (y_ > np.min(y_)+0.02) & (y_ < np.max(y_)-0.02)
+        mask_mesh = torch.tensor(mask_mesh, dtype=torch.bool, device=device)
+
+        # plt.scatter(x_, y_, s=2, c=to_numpy(mask_mesh))
 
     if verbose:
         print('')
@@ -1339,8 +1445,9 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 200, bSave=True)
+        data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=20, bSave=True)
         # data_train(config)
-        # data_test(config, visualize=True, verbose=True, best_model=7, step=config.simulation.n_frames // 200)
+        # data_train_clock(config)
+        # data_test(config, visualize=True, verbose=True, best_model=6, step=config.simulation.n_frames // 40)
 
 
