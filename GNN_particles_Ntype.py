@@ -34,7 +34,7 @@ from ParticleGraph.fitting_models import linear_model
 from ParticleGraph.embedding_cluster import *
 
 
-def data_generate(config, visualize=True, style='color', erase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=None):
+def data_generate(config, visualize=True, style='color', erase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=None, bSave=True):
     print('')
 
     plt.rcParams['text.usetex'] = True
@@ -179,7 +179,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
             with torch.no_grad():
                 y = model(dataset)
             # append list
-            if it >= 0:
+            if (it >= 0) & bSave:
                 x_list.append(x.clone().detach())
                 y_list.append(y.clone().detach())
 
@@ -303,7 +303,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
 
                     if model_config.particle_model_name == 'PDE_O':
                         fig = plt.figure(figsize=(12, 12))
-                        plt.style.use('dark_background')
+
                         plt.scatter(H1[:, 0].detach().cpu().numpy(), H1[:, 1].detach().cpu().numpy(), s=20,
                                     c=np.sin(to_numpy(H1[:, 2])), vmin=-1, vmax=1, cmap='viridis')
                         plt.xlim([0, 1])
@@ -314,9 +314,9 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Lut_Fig_{it}.jpg", dpi=170.7)
                         plt.close()
                         fig = plt.figure(figsize=(12, 12))
-                        plt.style.use('default')
+
                         plt.scatter(H1[:, 0].detach().cpu().numpy(), H1[:, 1].detach().cpu().numpy(), s=1, c='b')
-                        plt.scatter(X1[:, 0].detach().cpu().numpy(), X1[:, 1].detach().cpu().numpy(), s=10, c='r',
+                        plt.scatter(X1[:, 0].detach().cpu().numpy(), X1[:, 1].detach().cpu().numpy(), s=10, c='lawngreen',
                                     alpha=0.75)
                         plt.xlim([0, 1])
                         plt.ylim([0, 1])
@@ -441,13 +441,15 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                             plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_bw_{it}.jpg", dpi=170.7)
                             plt.close()
 
-        torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
-        torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
-        torch.save(x_mesh_list, f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt')
-        torch.save(y_mesh_list, f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt')
+        if bSave:
+            torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
+            torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
+            torch.save(x_mesh_list, f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt')
+            torch.save(y_mesh_list, f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt')
 
-    torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
-    torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
+    if bSave:
+        torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
+        torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
 
     simulation_config.n_particles = int(simulation_config.n_particles / ratio)
 
@@ -1259,7 +1261,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['boids_16_division'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
+    config_list = ['oscillator'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
 
     for config_file in config_list:
 
@@ -1272,8 +1274,8 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=20) # config.simulation.n_frames // 400)
-        data_train(config)
-        # data_test(config, visualize=True, verbose=True, best_model=17, step=20) #config.simulation.n_frames // 400)
+        data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 400, bSave=False)
+        # data_train(config)
+        # data_test(config, visualize=True, verbose=True, best_model=20, step=20) #config.simulation.n_frames // 400)
 
 
