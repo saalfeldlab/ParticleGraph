@@ -89,6 +89,8 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
     # initialize particle and graph states
     X1, V1, T1, H1, A1, cycle_length_distrib_first, cycle_length_first, N1 = init_particles(config, device=device)
 
+    cycle_length_first = torch.load(f'./cycle_length.pt', map_location=device)
+
     for run in range(config.training.n_runs):
 
         n_particles = simulation_config.n_particles
@@ -100,7 +102,11 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
 
         # initialize particle and graph states
         X1, V1, T1, H1, A1, cycle_length_distrib_, cycle_length, N1 = init_particles(config, device=device)
-        cycle_length_distrib = cycle_length_distrib_first
+        cycle_length = cycle_length_first-
+        cycle_length_distrib = cycle_length[to_numpy(T1).astype(int)].squeeze()
+        A1 = torch.rand(n_particles, device=device)
+        A1 = A1  * cycle_length_distrib
+        A1 = A1[:,None]
 
         # create differnet initial conditions
         # X1[:, 0] = X1[:, 0] / n_particle_types
@@ -447,8 +453,8 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
             torch.save(y_mesh_list, f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt')
 
     if bSave:
-        torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
-        torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
+        torch.save(cycle_length_first, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
+        torch.save(cycle_length_distrib_first, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
 
     simulation_config.n_particles = int(simulation_config.n_particles / ratio)
 
@@ -1153,10 +1159,65 @@ def data_test(config, visualize=False, verbose=True, best_model=0, step=5, force
         index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
         index_particles.append(index.squeeze())
 
+    if simulation_config.has_cell_division:
+        cycle_length = torch.load(f'./graphs_data/graphs_{dataset_name}/cycle_length.pt', map_location=device).to(device)
+        cycle_length_distrib = cycle_length[to_numpy(x[:,5]).astype(int)].squeeze()
+        A1 = torch.rand(n_particles, device=device)
+        A1 = A1  * cycle_length_distrib
+        A1 = A1[:,None]
+
     time.sleep(1)
     for it in trange(n_frames - 1):
 
         x0 = x_list[0][it].clone().detach()
+
+        if (it % 10 == 0) & simulation_config.has_cell_division & (n_particles < 20000):
+            cycle_test = (torch.ones(n_particles, device=device) + 0.05 * torch.randn(n_particles, device=device))
+            cell_cycle_duration_sample = cycle_test.squeeze() * cycle_length_distrib.squeeze()
+            pos = torch.argwhere(A1.squeeze() > cell_cycle_duration_sample)
+            # cell division
+            if len(pos) > 1:
+                n_add_nodes = len(pos)
+                pos = to_numpy(pos[:, 0].squeeze()).astype(int)
+                n_particles = n_particles + n_add_nodes
+                N1 = torch.arange(n_particles, device=device)
+                N1 = N1[:, None]
+
+                X1 = x[:,1:3]
+                separation = 1E-3 * torch.randn((n_add_nodes, 2), device=device)
+                X1 = torch.cat((X1, X1[pos, :] + separation), dim=0)
+                X1[pos, :] = X1[pos, :] - separation
+
+                V1 = x[:,3:5]
+                phi = torch.randn(n_add_nodes, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
+                cos_phi = torch.cos(phi)
+                sin_phi = torch.sin(phi)
+                new_x = cos_phi * V1[pos, 0] + sin_phi * V1[pos, 1]
+                new_y = -sin_phi * V1[pos, 0] + cos_phi * V1[pos, 1]
+                V1[pos, 0] = new_x
+                V1[pos, 1] = new_y
+                V1 = torch.cat((V1, -V1[pos, :]), dim=0)
+                
+                T1 = x[:,5:6]
+                T1 = torch.cat((T1, T1[pos, :]), dim=0)
+
+                H1 = x[:,6:8]
+                H1 = torch.cat((H1, H1[pos, :]), dim=0)
+
+                A1[pos, :] = 0
+                A1 = torch.cat((A1, A1[pos, :]), dim=0)
+
+                x = torch.concatenate(
+                    (N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
+                     H1.clone().detach(), A1.clone().detach()), 1)
+
+                cycle_length_distrib = cycle_length[to_numpy(T1).astype(int)].squeeze()
+
+                index_particles = []
+                for n in range(n_particles):
+                    pos = torch.argwhere(T1 == n)
+                    pos = to_numpy(pos[:, 0].squeeze()).astype(int)
+                    index_particles.append(pos)
 
         if has_mesh:
             x[:, 1:5] = x0[:, 1:5].clone().detach()
@@ -1197,6 +1258,8 @@ def data_test(config, visualize=False, verbose=True, best_model=0, step=5, force
 
             x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t)  # position update
 
+        A1 = A1 + delta_t
+
         if (it % step == 0) & (it >= 0) & visualize:
 
             plt.style.use('dark_background')
@@ -1236,9 +1299,12 @@ def data_test(config, visualize=False, verbose=True, best_model=0, step=5, force
                     plt.yticks([])
                     plt.axis('off')
             else:
+                s_p = 25
+                if simulation_config.has_cell_division:
+                    s_p = 10
                 for n in range(n_particle_types):
                     plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                x[index_particles[n], 2].detach().cpu().numpy(), s=25, color=cmap.color(n))
+                                x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
 
             if (has_mesh | (simulation_config.boundary == 'periodic')) & (model_config.mesh_model_name != 'RD_RPS_Mesh'):
                 plt.xlim([0, 1])
@@ -1254,13 +1320,14 @@ def data_test(config, visualize=False, verbose=True, best_model=0, step=5, force
             plt.close()
 
 
+
 if __name__ == '__main__':
 
     print('')
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['oscillator'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
+    config_list = ['boids_16_division'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
 
     for config_file in config_list:
 
@@ -1273,8 +1340,8 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 400, bSave=False)
+        # data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 400, bSave=False)
         # data_train(config)
-        # data_test(config, visualize=True, verbose=True, best_model=20, step=20) #config.simulation.n_frames // 400)
+        data_test(config, visualize=True, verbose=True, best_model=7, step=config.simulation.n_frames // 400)
 
 
