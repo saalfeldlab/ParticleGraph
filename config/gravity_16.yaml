@@ -8,11 +8,11 @@ simulation:
     n_particles: 960
     n_particle_types: 16
     n_interactions: 16
-    n_frames: 1000
+    n_frames: 2000
     delta_t: 3.0E-5
     dpos_init:  5.0E-5
     boundary: 'no'
-    start_frame: -1000
+    start_frame: 0 # -1000
 
 graph_model:
     particle_model_name: 'PDE_G'

@@ -63,7 +63,8 @@ def init_mesh(config, device):
     i0 = imread(f'graphs_data/{node_value_map}')
     values = i0[(to_numpy(pos_mesh[:, 0]) * 255).astype(int), (to_numpy(pos_mesh[:, 1]) * 255).astype(int)]
 
-    mask_mesh = (x_mesh > torch.min(x_mesh)) & (x_mesh < torch.max(x_mesh)) & (y_mesh > torch.min(y_mesh)) & (y_mesh < torch.max(y_mesh))
+    mask_mesh = (x_mesh > torch.min(x_mesh) + 0.02) & (x_mesh < torch.max(x_mesh) - 0.02) & (y_mesh > torch.min(y_mesh) + 0.02) & (y_mesh < torch.max(y_mesh) - 0.02)
+
     pos_mesh = pos_mesh + torch.randn(n_nodes, 2, device=device) * mesh_size / 8
 
     match config.graph_model.mesh_model_name:

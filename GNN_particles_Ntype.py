@@ -101,14 +101,18 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
         X1, V1, T1, H1, A1, N1, cycle_length, cycle_length_distrib = init_particles(config, device=device, cycle_length=cycle_length)
 
         # create differnet initial conditions
-        # X1[:, 0] = X1[:, 0] / n_particle_types
-        # for n in range(n_particle_types):
-        #     X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / n_particle_types
+        X1[:, 0] = X1[:, 0] / n_particle_types - torch.ones_like(X1[:,0])*0.5
+        for n in range(n_particle_types):
+            X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / n_particle_types
 
         if has_mesh:
             X1_mesh, V1_mesh, T1_mesh, H1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
             torch.save(mesh_data, f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt')
             mask_mesh = mesh_data['mask'].squeeze()
+
+            plt.scatter(to_numpy(X1_mesh[:, 0]), to_numpy(X1_mesh[:, 1]), c=to_numpy(T1_mesh[:, 0]))
+            plt.show
+
         if only_mesh | (model_config.particle_model_name == 'PDE_O'):
             X1 = X1_mesh.clone().detach()
             H1 = H1_mesh.clone().detach()
@@ -124,7 +128,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
             # calculate cell division
-            if (it > 0 ) & has_cell_division & (n_particles < 20000):
+            if (it > 0) & has_cell_division & (n_particles < 20000):
                 pos = torch.argwhere(A1.squeeze() > cycle_length_distrib)
                 # cell division
                 if len(pos) > 1:
@@ -161,7 +165,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                                    H1.clone().detach(), A1.clone().detach()), 1)
             if has_mesh:
                 x_mesh = torch.concatenate((N1_mesh.clone().detach(), X1_mesh.clone().detach(), V1_mesh.clone().detach(), 
-                                            T1_mesh.clone().detach(),H1_mesh.clone().detach()), 1)
+                                            T1_mesh.clone().detach(), H1_mesh.clone().detach()), 1)
                 dataset_mesh = data.Data(x=x_mesh, edge_index=mesh_data['edge_index'], edge_attr=mesh_data['edge_weight'], device=device)
  
             # compute connectivity rule
@@ -215,8 +219,8 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                     case 'WaveMesh':
                         with torch.no_grad():
                             pred = mesh_model(dataset_mesh)
-                            H1_mesh[mask_mesh, 1:2] += pred[mask_mesh,:] * delta_t
-                            H1_mesh[mask_mesh, 0:1] += H1_mesh[mask_mesh, 1:2] * delta_t
+                        H1_mesh[mask_mesh, 1:2] += pred[mask_mesh,:] * delta_t
+                        H1_mesh[mask_mesh, 0:1] += H1_mesh[mask_mesh, 1:2] * delta_t
                             # x_ = to_numpy(x_mesh)
                             # plt.scatter(x_[:, 1], x_[:, 2], c=to_numpy(H1_mesh[:, 0]))
                     case 'RD_Gray_Scott_Mesh' | 'RD_FitzHugh_Nagumo_Mesh' | 'RD_RPS_Mesh':
@@ -523,10 +527,6 @@ def data_train(config):
                 x = torch.cat((x,x_list[run][k].clone().detach()),0)
                 y = torch.cat((y,y_list[run][k].clone().detach()),0)
         print(x_list[run][k].shape)
-
-
-
-
     vnorm = norm_velocity(x, device)
     ynorm = norm_acceleration(y, device)
     vnorm = vnorm[4]
@@ -693,15 +693,16 @@ def data_train(config):
             optimizer.step()
             total_loss += loss.item()
 
-            visualize_embedding=False
-            if visualize_embedding & (   (epoch==0)&(N%(Niter//500)==0)  |   (epoch>0)&(N%(Niter//25)==0) )   :
+            visualize_embedding=True
+            if visualize_embedding & ((epoch==0)&(N%(Niter//20)==0)|(epoch>0)&(N%(Niter//4)==0)):
+
                 fig = plt.figure(figsize=(8, 8))
 
                 embedding, embedding_particle = get_embedding(model.a, index_particles, n_particles, n_particle_types)
                 for m in range(model.a.shape[0]):
                     for n in range(n_particle_types):
-                        plt.scatter(embedding_particle[n + m * n_particle_types][:, 0],
-                                    embedding_particle[n + m * n_particle_types][:, 1], color=cmap.color(n), s=3)
+                        plt.scatter(embedding[index_particles[n], 0],
+                                    embedding[index_particles[n], 1], color=cmap.color(n), s=3)
                 plt.xlabel('Embedding 0', fontsize=18)
                 plt.ylabel('Embedding 1', fontsize=18)
                 # remove xticks label
@@ -711,8 +712,12 @@ def data_train(config):
                 plt.savefig(f"./{log_dir}/tmp_training/embedding/Fig_{dataset_name}_embedding_{epoch}_{N}.tif",dpi=300)
                 plt.close()
 
+                popt_list = []
                 fig = plt.figure(figsize=(8, 8))
-                rr = torch.tensor(np.linspace(0, radius, 2000)).to(device)
+                if model_config.mesh_model_name == 'WaveMesh':
+                    rr = torch.tensor(np.linspace(-150, 150, 1000)).to(device)
+                else:
+                    rr = torch.tensor(np.linspace(0, radius, 2000)).to(device)
                 for n in range(n_particles):
                     embedding_ = model.a[0, n, :] * torch.ones((2000, model_config.embedding_dim), device=device)
                     if (model_config.particle_model_name == 'PDE_A') :
@@ -726,18 +731,28 @@ def data_train(config):
                     elif model_config.particle_model_name == 'PDE_E':
                         in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                              rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
+                    elif model_config.mesh_model_name == 'WaveMesh':
+                        in_features = torch.cat((rr[:, None], embedding_), dim=1)
+
                     else:
                         in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                                  rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                                  0 * rr[:, None],
                                                  0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-                    func = model.lin_edge(in_features.float())
-                    func = func[:, 0]
-                    if n % 5 == 0:
-                        plt.plot(to_numpy(rr),
-                                 to_numpy(func) * to_numpy(ynorm),
-                                 linewidth=1,
-                                 color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
+
+                    if model_config.mesh_model_name == 'WaveMesh':
+                        h = model.lin_phi(in_features.float())
+                        h = h[:, 0]
+                        popt, pcov = curve_fit(linear_model, to_numpy(r.squeeze()), to_numpy(h.squeeze()))
+                        popt_list.append(popt)
+                    else:
+                        func = model.lin_edge(in_features.float())
+                        func = func[:, 0]
+                        if n % 5 == 0:
+                            plt.plot(to_numpy(rr),
+                                     to_numpy(func) * to_numpy(ynorm),
+                                     linewidth=1,
+                                     color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
                 plt.xlabel('Distance', fontsize=18)
                 plt.ylabel('Interaction function', fontsize=18)
                 # plt.ylim([-0.04,0.03])
@@ -1416,7 +1431,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['boids_16_division'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
+    config_list = ['wave'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
 
     for config_file in config_list:
 
@@ -1429,9 +1444,9 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        # data_generate(config, device=device, visualize=False , style='color', alpha=1, erase=True, step=20, bSave=True)
+        data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 400, bSave=True)
         # data_train(config)
-        data_train_clock(config)
-        # data_test(config, visualize=True, verbose=True, best_model=6, step=config.simulation.n_frames // 40)
+        # data_train_clock(config)
+        # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 400)
 
 

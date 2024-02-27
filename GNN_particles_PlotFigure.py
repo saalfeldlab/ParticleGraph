@@ -7,16 +7,19 @@ from ParticleGraph.config import ParticleGraphConfig
 import imageio
 from matplotlib import rc
 
-from ParticleGraph.fitting_models import power_model, boids_model, reaction_diffusion_model
+from ParticleGraph.fitting_models import power_model, boids_model, reaction_diffusion_model, linear_model
 from ParticleGraph.generators import RD_RPS
-from ParticleGraph.models import Interaction_Particles
+from ParticleGraph.models import Interaction_Particles, Mesh_Laplacian
 from ParticleGraph.train_utils import get_embedding
+from ParticleGraph.fitting_models import power_model, boids_model, reaction_diffusion_model, linear_model
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
 # from data_loaders import *
 from GNN_particles_Ntype import *
 from ParticleGraph.embedding_cluster import *
 from ParticleGraph.utils import to_numpy, CustomColorMap, choose_boundary_values
+
+matplotlib.use("Qt5Agg")
 
 
 class Interaction_Particles_extract(MessagePassing):
@@ -1620,7 +1623,7 @@ def data_plot_FIG3_continous():
 
 
 def data_plot_FIG6():
-    config_name = 'wave_HR3f'
+    config_name = 'wave'
 
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_name}.yaml')
@@ -1632,7 +1635,7 @@ def data_plot_FIG6():
     n_particles = config.simulation.n_particles
     n_frames = config.simulation.n_frames
     has_mesh = dataset_name in ['DiffMesh', 'WaveMesh']
-    n_runs = config.simulation.n_runs
+    n_runs = config.training.n_runs
     cluster_method = config.training.cluster_method
     aggr_type = config.graph_model.aggr_type
 
@@ -1674,7 +1677,7 @@ def data_plot_FIG6():
     y_mesh_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_0.pt', map_location=device))
     hnorm = torch.load(os.path.join(log_dir, 'hnorm.pt'), map_location=device)
 
-    model = Mesh_Laplacian(aggr_type=aggr_type, model_config=config, device=device, bc_dpos=bc_dpos)
+    model = Mesh_Laplacian(aggr_type=aggr_type, config=config, device=device, bc_dpos=bc_dpos)
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{n_runs - 1}_graphs_20.pt"
     state_dict = torch.load(net, map_location=device)
@@ -1759,19 +1762,28 @@ def data_plot_FIG6():
 
     cm = 1 / 2.54 * 3 / 2.3
 
+    x = x_list[0][0].clone().detach()
+    T1 = x[:, 5:6].clone().detach()
+    index_particles = []
+    for n in range(n_particle_types):
+        index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
+        index_particles.append(index.squeeze())
+        
+    
+
     fig = plt.figure(figsize=(10.5, 9.6))
     plt.ion()
     ax = fig.add_subplot(3, 3, 1)
     print('1')
     plt.text(-0.25, 1.1, f'a)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     plt.title(r'Particle embedding', fontsize=12)
-    if (embedding.shape[1] > 1):
-        for m in range(model.a.shape[0]):
-            for n in range(n_particle_types):
-                plt.scatter(embedding_particle[n + m * n_particle_types][:, 0],
-                            embedding_particle[n + m * n_particle_types][:, 1], color=cmap.color(n), s=0.1)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=12)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=12)
+    embedding, embedding_particle = get_embedding(model.a, index_particles, n_particles, n_particle_types)
+    for m in range(model.a.shape[0]):
+        for n in range(n_particle_types):
+            plt.scatter(embedding[index_particles[n], 0],
+                        embedding[index_particles[n], 1], color=cmap.color(n), s=3)
+    plt.xlabel('Embedding 0', fontsize=12)
+    plt.ylabel('Embedding 1', fontsize=12)
     plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
     plt.text(.05, .86, f'N: {n_particles}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
     plt.xticks(fontsize=10.0)
@@ -1785,32 +1797,22 @@ def data_plot_FIG6():
     popt_list = []
     with torch.no_grad():
         for n in trange(n_particles):
-            if n % 12 == 0:
-                type = to_numpy(T1[n])
-                if type == 0:
-                    r = torch.tensor(np.linspace(-150, 150, 1000)).to(device)
-                    embedding = model.a[0, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-                    in_features = torch.cat((r[:, None], embedding), dim=1)
-                    h = model.lin_phi(in_features.float())
-                    h = h[:, 0]
-                    plt.scatter(to_numpy(r), to_numpy(h) * to_numpy(hnorm) * 100, c=cmap.color(type), s=0.01, alpha=0.1)
-        for n in trange(n_particles):
             r = torch.tensor(np.linspace(-150, 150, 1000)).to(device)
             embedding = model.a[0, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             in_features = torch.cat((r[:, None], embedding), dim=1)
             h = model.lin_phi(in_features.float())
             h = h[:, 0]
-            f_list.append(h)
-            popt, pcov = curve_fit(linear_model, to_numpy(r), to_numpy(h))
+            popt, pcov = curve_fit(linear_model, to_numpy(r.squeeze()), to_numpy(h.squeeze()))
             popt_list.append(popt)
+            f_list.append(h)
             if n % 48 == 0:
                 type = to_numpy(T1[n])
-                if type != 0:
-                    plt.scatter(to_numpy(r), to_numpy(h) * to_numpy(hnorm) * 100, c=cmap.color(type), s=0.01, alpha=0.1)
+                plt.scatter(to_numpy(r), to_numpy(h) * to_numpy(hnorm) * 100, c=cmap.color(type), s=0.01, alpha=0.1)
     plt.xlabel(r'$\Delta u_{i}$', fontsize=12)
     plt.ylabel(r'$\Phi (\ensuremath{\mathbf{a}}_i, \Delta u_i)$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
+    plt.tight_layout()
 
     f_list = torch.stack(f_list)
     coeff_norm = to_numpy(f_list)
@@ -1922,20 +1924,20 @@ def data_plot_FIG6():
     plt.title(r'Reconstructed viscosity', fontsize=12)
     x_data = np.array(config.simulation.diffusion_coefficients)
     y_data = popt_list[:, 0]
-    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-    plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
+    # lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+    # plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
     for n in range(n_particle_types):
         plt.scatter(x_data[n], y_data[n], color=cmap.color(n))
     plt.xlabel(r'True viscosity $[a.u.]$', fontsize=12)
     plt.ylabel(r'Predicted viscosity $[a.u.]$', fontsize=12)
     plt.xlim([-0.1, 1.1])
     plt.ylim([-0.1, 1.1])
-    plt.text(0, 1.0, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
-    residuals = y_data - linear_model(x_data, *lin_fit)
-    ss_res = np.sum(residuals ** 2)
-    ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-    r_squared = 1 - (ss_res / ss_tot)
-    plt.text(0, 0.9, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
+    # plt.text(0, 1.0, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
+    # residuals = y_data - linear_model(x_data, *lin_fit)
+    # ss_res = np.sum(residuals ** 2)
+    # ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+    # r_squared = 1 - (ss_res / ss_tot)
+    # plt.text(0, 0.9, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
 
     x_width = int(np.sqrt(n_particles))
     xs = torch.linspace(1 / x_width / 2, 1 - 1 / x_width / 2, steps=x_width)
@@ -2877,8 +2879,8 @@ if __name__ == '__main__':
     # boids_16 HR
     # data_plot_FIG5()
     #
-    # wave HR2 or HR3 (slit)
-    # data_plot_FIG6()
+    # wave
+    data_plot_FIG6()
 
     # RD_RPS
-    data_plot_FIG7()
+    # data_plot_FIG7()
