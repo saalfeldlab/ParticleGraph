@@ -1080,11 +1080,13 @@ def data_train_clock(config):
                 
     cell_indices = to_numpy(torch.unique(x[:,0]))
 
-    index_cell = 19
-    pos = torch.argwhere(x[:,0]==cell_indices[index_cell])
-    pos = to_numpy(pos[:, 0])
-    cell_time = to_numpy(x[pos,8])
-    plt.plot(cell_time)
+    index_cell_list = [19, 49 ,190 ,400, 750]
+
+    for index_cell in index_cell_list:
+        pos = torch.argwhere(x[:,0]==cell_indices[index_cell])
+        pos = to_numpy(pos[:, 0])
+        cell_time = to_numpy(x[pos,8])
+        plt.plot(cell_time)
 
 
 def data_test(config, visualize=False, verbose=True, best_model=0, step=5, forced_embedding=[], ratio=1):
@@ -1427,7 +1429,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=False , style='color', alpha=1, erase=True, step=20, bSave=True)
+        # data_generate(config, device=device, visualize=False , style='color', alpha=1, erase=True, step=20, bSave=True)
         # data_train(config)
         data_train_clock(config)
         # data_test(config, visualize=True, verbose=True, best_model=6, step=config.simulation.n_frames // 40)
