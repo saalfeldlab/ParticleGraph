@@ -72,7 +72,11 @@ def choose_boundary_values(bc_name):
         return torch.remainder(x, 1.0)  # in [0, 1)
 
     def shifted_periodic(x):
-        return torch.remainder(x - 0.5, 1.0) - 0.5  # in [-0.5, 0.5)
+        try :
+            return torch.remainder(x - 0.5, 1.0) - 0.5  # in [-0.5, 0.5)
+        except:
+            print('pb')
+
 
     match bc_name:
         case 'no':

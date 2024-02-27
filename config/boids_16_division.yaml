@@ -5,11 +5,11 @@ simulation:
   params: [[-1]]
   min_radius: 0.001
   max_radius: 0.04
-  n_particles: 1792
+  n_particles: 256
   has_cell_division: True
   n_particle_types: 16
   n_interactions: 16
-  n_frames: 4000
+  n_frames: 1500
   sigma: 0.005
   delta_t: 1
   dpos_init: 5.0E-4

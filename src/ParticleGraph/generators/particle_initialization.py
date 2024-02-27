@@ -10,15 +10,14 @@ from tqdm import trange
 from ParticleGraph.utils import to_numpy
 
 
-def init_particles(config, device):
+def init_particles(config, device, cycle_length=None):
     simulation_config = config.simulation
     n_particles = simulation_config.n_particles
     n_particle_types = simulation_config.n_particle_types
     dpos_init = simulation_config.dpos_init
 
-    cycle_length = torch.clamp(torch.abs(
-        torch.ones(n_particle_types, 1, device=device) * 400 + torch.randn(n_particle_types, 1, device=device) * 150),
-                               min=100, max=700)
+    if cycle_length == None:
+        cycle_length = torch.clamp(torch.abs(torch.ones(n_particle_types, 1, device=device) * 400 + torch.randn(n_particle_types, 1, device=device) * 50), min=100, max=700)
 
     if simulation_config.boundary == 'periodic':
         pos = torch.rand(n_particles, 2, device=device)
@@ -29,19 +28,18 @@ def init_particles(config, device):
     type = torch.zeros(int(n_particles / n_particle_types), device=device)
     for n in range(1, n_particle_types):
         type = torch.cat((type, n * torch.ones(int(n_particles / n_particle_types), device=device)), 0)
-    type = type[:, None]
     if simulation_config.params == 'continuous':  # TODO: params is a list[list[float]]; this can never happen?
         type = torch.tensor(np.arange(n_particles), device=device)
-        type = type[:, None]
     features = torch.zeros((n_particles, 2), device=device)
-    cycle_length_distrib = cycle_length[to_numpy(type[:, 0]).astype(int)]
+    cycle_length_distrib = cycle_length[to_numpy(type)].squeeze() * (torch.ones(n_particles, device=device) + 0.05 * torch.randn(n_particles, device=device))
+    type = type[:, None]
     cycle_duration = torch.rand(n_particles, device=device)
+    cycle_duration = cycle_duration * cycle_length[to_numpy(type)].squeeze()
     cycle_duration = cycle_duration[:, None]
-    cycle_duration = cycle_duration * cycle_length_distrib
     particle_id = torch.arange(n_particles, device=device)
     particle_id = particle_id[:, None]
 
-    return pos, dpos, type, features, cycle_duration, cycle_length_distrib, cycle_length, particle_id
+    return pos, dpos, type, features, cycle_duration, particle_id, cycle_length, cycle_length_distrib
 
 
 def init_mesh(config, device):

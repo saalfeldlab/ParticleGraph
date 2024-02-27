@@ -84,11 +84,9 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
         mesh_model = choose_mesh_model(config, device=device)
     else:
         mesh_model = None
-
     torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_{dataset_name}/model.pt')
 
-    # initialize particle and graph states
-    X1, V1, T1, H1, A1, cycle_length_distrib_first, cycle_length_first, N1 = init_particles(config, device=device)
+    cycle_length = None
 
     for run in range(config.training.n_runs):
 
@@ -100,12 +98,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
         y_mesh_list = []
 
         # initialize particle and graph states
-        X1, V1, T1, H1, A1, cycle_length_distrib_, cycle_length, N1 = init_particles(config, device=device)
-        cycle_length = cycle_length_first
-        cycle_length_distrib = cycle_length[to_numpy(T1).astype(int)].squeeze()
-        A1 = torch.rand(n_particles, device=device)
-        A1 = A1  * cycle_length_distrib
-        A1 = A1[:,None]
+        X1, V1, T1, H1, A1, N1, cycle_length, cycle_length_distrib = init_particles(config, device=device, cycle_length=cycle_length)
 
         # create differnet initial conditions
         # X1[:, 0] = X1[:, 0] / n_particle_types
@@ -133,24 +126,17 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
             # calculate cell division
             if (it > 0 ) & has_cell_division & (n_particles < 20000):
                 cycle_test = (torch.ones(n_particles, device=device) + 0.05 * torch.randn(n_particles, device=device))
-                cell_cycle_duration_sample = cycle_test.squeeze() * cycle_length_distrib.squeeze()
-                pos = torch.argwhere(A1.squeeze() > cell_cycle_duration_sample)
+                pos = torch.argwhere(A1.squeeze() > cycle_length_distrib)
                 # cell division
                 if len(pos) > 1:
                     n_add_nodes = len(pos)
                     pos = to_numpy(pos[:, 0].squeeze()).astype(int)
-                    
-                    if 19 in pos:
-                        print(f' {to_numpy(A1[19])}  {to_numpy(cycle_test[19])}   {to_numpy(cycle_length_distrib[19])}')
-                    
                     n_particles = n_particles + n_add_nodes
                     N1 = torch.arange(n_particles, device=device)
                     N1 = N1[:, None]
-
                     separation = 1E-3 * torch.randn((n_add_nodes, 2), device=device)
                     X1 = torch.cat((X1, X1[pos, :] + separation), dim=0)
                     X1[pos, :] = X1[pos, :] - separation
-
                     phi = torch.randn(n_add_nodes, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
                     cos_phi = torch.cos(phi)
                     sin_phi = torch.sin(phi)
@@ -159,14 +145,12 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                     V1[pos, 0] = new_x
                     V1[pos, 1] = new_y
                     V1 = torch.cat((V1, -V1[pos, :]), dim=0)
-
                     T1 = torch.cat((T1, T1[pos, :]), dim=0)
                     H1 = torch.cat((H1, H1[pos, :]), dim=0)
                     A1[pos, :] = 0
                     A1 = torch.cat((A1, A1[pos, :]), dim=0)
-
-                    cycle_length_distrib = cycle_length[to_numpy(T1).astype(int)].squeeze()
-
+                    nd = torch.ones(len(pos), device=device) + 0.05 * torch.randn(len(pos), device=device)
+                    cycle_length_distrib = torch.cat((cycle_length_distrib, cycle_length[to_numpy(T1[pos, 0])].squeeze() * nd),dim=0)
                     index_particles = []
                     for n in range(n_particles):
                         pos = torch.argwhere(T1 == n)
@@ -185,9 +169,11 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
             adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
             edge_index = adj_t.nonzero().t().contiguous()
             dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+            
             # model prediction
             with torch.no_grad():
                 y = model(dataset)
+
             # append list
             if (it >= 0) & bSave:
                 x_list.append(x.clone().detach())
@@ -457,8 +443,8 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
             torch.save(y_mesh_list, f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt')
 
     if bSave:
-        torch.save(cycle_length_first, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
-        torch.save(cycle_length_distrib_first, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
+        torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
+        torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
 
     simulation_config.n_particles = int(simulation_config.n_particles / ratio)
 
@@ -1099,10 +1085,6 @@ def data_train_clock(config):
     pos = to_numpy(pos[:, 0])
     cell_time = to_numpy(x[pos,8])
     plt.plot(cell_time)
-    
-        
-        
-    
 
 
 def data_test(config, visualize=False, verbose=True, best_model=0, step=5, forced_embedding=[], ratio=1):
@@ -1445,9 +1427,9 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=20, bSave=True)
+        data_generate(config, device=device, visualize=False , style='color', alpha=1, erase=True, step=20, bSave=True)
         # data_train(config)
-        # data_train_clock(config)
+        data_train_clock(config)
         # data_test(config, visualize=True, verbose=True, best_model=6, step=config.simulation.n_frames // 40)
 
 
