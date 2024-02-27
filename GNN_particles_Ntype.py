@@ -20,7 +20,7 @@ import os
 from sklearn import metrics
 import matplotlib
 from matplotlib import rc
-matplotlib.use("Qt5Agg")
+# matplotlib.use("Qt5Agg")
 
 from ParticleGraph.config import ParticleGraphConfig
 from ParticleGraph.generators.particle_initialization import init_particles, init_mesh
@@ -764,7 +764,7 @@ def data_train(config):
                     t = np.array(popt_list)
                     t = t[:, 0]
                     t = np.reshape(t, (100, 100))
-                    plt.imshow(t)
+                    plt.imshow(t, cmap='viridis')
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
@@ -800,9 +800,8 @@ def data_train(config):
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
 
         fig = plt.figure(figsize=(22, 4))
-        plt.ion()
         # white background
-        plt.style.use('classic')
+        # plt.style.use('classic')
         ax = fig.add_subplot(1, 6, 1)
         plt.plot(list_loss, color='k')
         plt.xlim([0, n_epochs])
@@ -1455,7 +1454,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['wave_slit'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
+    config_list = ['wave_logo'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
 
     for config_file in config_list:
 
