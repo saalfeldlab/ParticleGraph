@@ -125,12 +125,12 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
 
             # calculate cell division
             if (it > 0 ) & has_cell_division & (n_particles < 20000):
-                cycle_test = (torch.ones(n_particles, device=device) + 0.05 * torch.randn(n_particles, device=device))
                 pos = torch.argwhere(A1.squeeze() > cycle_length_distrib)
                 # cell division
                 if len(pos) > 1:
                     n_add_nodes = len(pos)
                     pos = to_numpy(pos[:, 0].squeeze()).astype(int)
+
                     n_particles = n_particles + n_add_nodes
                     N1 = torch.arange(n_particles, device=device)
                     N1 = N1[:, None]
@@ -169,7 +169,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
             adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
             edge_index = adj_t.nonzero().t().contiguous()
             dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
-            
+
             # model prediction
             with torch.no_grad():
                 y = model(dataset)
