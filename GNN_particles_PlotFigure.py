@@ -1679,7 +1679,7 @@ def data_plot_FIG6():
 
     model = Mesh_Laplacian(aggr_type=aggr_type, config=config, device=device, bc_dpos=bc_dpos)
 
-    net = f"./log/try_{dataset_name}/models/best_model_with_{n_runs - 1}_graphs_20.pt"
+    net = f"./log/try_{dataset_name}/models/best_model_with_{n_runs - 1}_graphs_1.pt"
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
 
