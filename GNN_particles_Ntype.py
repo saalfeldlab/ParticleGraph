@@ -3,6 +3,7 @@ import logging
 import time
 from shutil import copyfile
 
+import imageio.v2
 import matplotlib.pyplot as plt
 import networkx as nx
 import torch
@@ -697,29 +698,25 @@ def data_train(config):
             if visualize_embedding & ((epoch==0)&(N%(Niter//20)==0)|(epoch>0)&(N%(Niter//4)==0)):
 
                 fig = plt.figure(figsize=(8, 8))
-
                 embedding, embedding_particle = get_embedding(model.a, index_particles, n_particles, n_particle_types)
                 for m in range(model.a.shape[0]):
                     for n in range(n_particle_types):
                         plt.scatter(embedding[index_particles[n], 0],
                                     embedding[index_particles[n], 1], color=cmap.color(n), s=3)
-                plt.xlabel('Embedding 0', fontsize=18)
-                plt.ylabel('Embedding 1', fontsize=18)
-                # remove xticks label
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_training/embedding/Fig_{dataset_name}_embedding_{epoch}_{N}.tif",dpi=300)
                 plt.close()
 
-                popt_list = []
                 fig = plt.figure(figsize=(8, 8))
                 if model_config.mesh_model_name == 'WaveMesh':
-                    rr = torch.tensor(np.linspace(-150, 150, 1000)).to(device)
+                    rr = torch.tensor(np.linspace(-150, 150, 200)).to(device)
                 else:
-                    rr = torch.tensor(np.linspace(0, radius, 2000)).to(device)
-                for n in range(n_particles):
-                    embedding_ = model.a[0, n, :] * torch.ones((2000, model_config.embedding_dim), device=device)
+                    rr = torch.tensor(np.linspace(0, radius, 200)).to(device)
+                popt_list = []
+                for n in trange(n_particles):
+                    embedding_ = model.a[0, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
                     if (model_config.particle_model_name == 'PDE_A') :
                         in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                                  rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
@@ -733,7 +730,6 @@ def data_train(config):
                                              rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
                     elif model_config.mesh_model_name == 'WaveMesh':
                         in_features = torch.cat((rr[:, None], embedding_), dim=1)
-
                     else:
                         in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                                  rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
@@ -743,8 +739,10 @@ def data_train(config):
                     if model_config.mesh_model_name == 'WaveMesh':
                         h = model.lin_phi(in_features.float())
                         h = h[:, 0]
-                        popt, pcov = curve_fit(linear_model, to_numpy(r.squeeze()), to_numpy(h.squeeze()))
+                        popt, pcov = curve_fit(linear_model, to_numpy(rr.squeeze()), to_numpy(h.squeeze()))
                         popt_list.append(popt)
+                        if n % 100 == 0:
+                             plt.scatter(to_numpy(rr), to_numpy(h) * to_numpy(hnorm) * 100, c='k', s=0.01)
                     else:
                         func = model.lin_edge(in_features.float())
                         func = func[:, 0]
@@ -753,20 +751,21 @@ def data_train(config):
                                      to_numpy(func) * to_numpy(ynorm),
                                      linewidth=1,
                                      color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
-                plt.xlabel('Distance', fontsize=18)
-                plt.ylabel('Interaction function', fontsize=18)
-                # plt.ylim([-0.04,0.03])
-                # plt.xlim([0,0.07])
-                # plt.ylim([-0.08,0.1])
-                # plt.xlim([0,0.02])
-                # plt.ylim([-1E6,0])
-                plt.xlim([0,0.02])
-                plt.ylim([-0.001,0])
-                # plt.xlim([0,0.02])
-                # plt.ylim([0,500000])
-                plt.tight_layout()
+
                 plt.savefig(f"./{log_dir}/tmp_training/embedding/Fig_{dataset_name}_function_{epoch}_{N}.tif",dpi=300)
                 plt.close()
+
+                if model_config.mesh_model_name == 'WaveMesh':
+                    fig = plt.figure(figsize=(8, 8))
+                    t = np.array(popt_list)
+                    t = t[:, 0]
+                    t = np.reshape(t, (100, 100))
+                    plt.imshow(t)
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/tmp_training/embedding/Fig_{dataset_name}_map_{epoch}_{N}.tif",
+                                dpi=300)
+                    plt.close()
+                    imageio.imwrite(f"./{log_dir}/tmp_training/embedding/{dataset_name}_map_{epoch}_{N}.tif", t, 'TIFF')
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
@@ -1431,7 +1430,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['wave'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
+    config_list = ['wave_logo'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
 
     for config_file in config_list:
 
@@ -1444,8 +1443,8 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 400, bSave=True)
-        # data_train(config)
+        # data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 400, bSave=True)
+        data_train(config)
         # data_train_clock(config)
         # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 400)
 

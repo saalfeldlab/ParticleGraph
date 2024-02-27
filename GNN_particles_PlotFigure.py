@@ -1797,17 +1797,17 @@ def data_plot_FIG6():
     popt_list = []
     with torch.no_grad():
         for n in trange(n_particles):
-            r = torch.tensor(np.linspace(-150, 150, 1000)).to(device)
-            embedding = model.a[0, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+            r = torch.tensor(np.linspace(-150, 150, 500)).to(device)
+            embedding = model.a[0, n, :] * torch.ones((500, config.graph_model.embedding_dim), device=device)
             in_features = torch.cat((r[:, None], embedding), dim=1)
             h = model.lin_phi(in_features.float())
             h = h[:, 0]
             popt, pcov = curve_fit(linear_model, to_numpy(r.squeeze()), to_numpy(h.squeeze()))
             popt_list.append(popt)
             f_list.append(h)
-            if n % 48 == 0:
-                type = to_numpy(T1[n])
-                plt.scatter(to_numpy(r), to_numpy(h) * to_numpy(hnorm) * 100, c=cmap.color(type), s=0.01, alpha=0.1)
+            # if n % 48 == 0:
+            #     type = to_numpy(T1[n])
+            #     plt.scatter(to_numpy(r), to_numpy(h) * to_numpy(hnorm) * 100, c=cmap.color(type), s=0.01, alpha=0.1)
     plt.xlabel(r'$\Delta u_{i}$', fontsize=12)
     plt.ylabel(r'$\Phi (\ensuremath{\mathbf{a}}_i, \Delta u_i)$', fontsize=12)
     plt.xticks(fontsize=10.0)
