@@ -574,7 +574,7 @@ def data_plot_FIG2():
 
     ax = fig.add_subplot(3, 4, 2)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-    func_list = plot_function(True,'b)', config.graph_model.name, model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 1, '$5.10^4$', fig, ax, cmap)
+    func_list = plot_function(True,'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 1, '$5.10^4$', fig, ax, cmap)
 
     ax = fig.add_subplot(3, 4, 3)
     proj_interaction, new_labels, n_clusters = plot_umap('c)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 1, '$5.10^4$', fig, ax, cmap)
@@ -591,7 +591,7 @@ def data_plot_FIG2():
 
     ax = fig.add_subplot(3, 4, 6)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-    func_list = plot_function(True,'f)', config.graph_model.name, model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
+    func_list = plot_function(True,'f)', config.graph_model.particle_model_name, model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
 
     ax = fig.add_subplot(3, 4, 7)
     proj_interaction, new_labels, n_clusters = plot_umap('g)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap)
@@ -748,7 +748,7 @@ def data_plot_FIG3():
 
     ax = fig.add_subplot(3, 3, 2)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-    func_list = plot_function(False, 'b)', config.graph_model.name, model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
+    func_list = plot_function(False, 'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
     proj_interaction, new_labels, n_clusters = plot_umap('b)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap)
 
     ax = fig.add_subplot(3, 3, 3)
@@ -958,7 +958,7 @@ def data_plot_FIG4():
 
     ax = fig.add_subplot(3, 3, 2)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-    func_list = plot_function(False, 'b)', config.graph_model.name, model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
+    func_list = plot_function(False, 'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
     proj_interaction, new_labels, n_clusters = plot_umap('b)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap)
 
     ax = fig.add_subplot(3, 3, 3)
@@ -1120,6 +1120,7 @@ def data_plot_FIG4():
     plt.savefig('Fig4.jpg', dpi=300)
     plt.close()
 
+
 def data_plot_FIG5():
 
     config_name = 'boids_16'
@@ -1182,7 +1183,7 @@ def data_plot_FIG5():
 
     ax = fig.add_subplot(3, 3, 2)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-    func_list = plot_function(False, 'b)', config.graph_model.name, model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
+    func_list = plot_function(False, 'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
     proj_interaction, new_labels, n_clusters = plot_umap('b)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap)
 
     ax = fig.add_subplot(3, 3, 3)
@@ -1623,7 +1624,7 @@ def data_plot_FIG3_continous():
 
 
 def data_plot_FIG6():
-    config_name = 'wave'
+    config_name = 'wave_slit'
 
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_name}.yaml')
@@ -1768,30 +1769,15 @@ def data_plot_FIG6():
     for n in range(n_particle_types):
         index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
         index_particles.append(index.squeeze())
-        
-    
 
     fig = plt.figure(figsize=(10.5, 9.6))
     plt.ion()
+    plt.ion()
     ax = fig.add_subplot(3, 3, 1)
-    print('1')
-    plt.text(-0.25, 1.1, f'a)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-    plt.title(r'Particle embedding', fontsize=12)
-    embedding, embedding_particle = get_embedding(model.a, index_particles, n_particles, n_particle_types)
-    for m in range(model.a.shape[0]):
-        for n in range(n_particle_types):
-            plt.scatter(embedding[index_particles[n], 0],
-                        embedding[index_particles[n], 1], color=cmap.color(n), s=3)
-    plt.xlabel('Embedding 0', fontsize=12)
-    plt.ylabel('Embedding 1', fontsize=12)
-    plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
-    plt.text(.05, .86, f'N: {n_particles}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
-    plt.xticks(fontsize=10.0)
-    plt.yticks(fontsize=10.0)
-    plt.tight_layout()
+    embedding, embedding_particle = plot_embedding('a)', model.a, index_particles, n_particles, n_particle_types, 1, '$5.10^4$', fig, ax, cmap)
 
     ax = fig.add_subplot(3, 3, 2)
-    print('2 UMAP ...')
+    print('plot function')
     plt.text(-0.25, 1.1, f'b)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     f_list = []
     popt_list = []
@@ -1805,9 +1791,9 @@ def data_plot_FIG6():
             popt, pcov = curve_fit(linear_model, to_numpy(r.squeeze()), to_numpy(h.squeeze()))
             popt_list.append(popt)
             f_list.append(h)
-            # if n % 48 == 0:
-            #     type = to_numpy(T1[n])
-            #     plt.scatter(to_numpy(r), to_numpy(h) * to_numpy(hnorm) * 100, c=cmap.color(type), s=0.01, alpha=0.1)
+            if n % 48 == 0:
+                type = to_numpy(T1[n])
+                plt.plot(to_numpy(r), to_numpy(h) * to_numpy(hnorm) * 100, c=cmap.color(type), alpha=0.1)
     plt.xlabel(r'$\Delta u_{i}$', fontsize=12)
     plt.ylabel(r'$\Phi (\ensuremath{\mathbf{a}}_i, \Delta u_i)$', fontsize=12)
     plt.xticks(fontsize=10.0)
@@ -1922,22 +1908,22 @@ def data_plot_FIG6():
     print('6')
     plt.text(-0.25, 1.1, f'f)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     plt.title(r'Reconstructed viscosity', fontsize=12)
-    x_data = np.array(config.simulation.diffusion_coefficients)
+    x_data = np.squeeze(np.array(config.simulation.diffusion_coefficients))
     y_data = popt_list[:, 0]
-    # lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-    # plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
+    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+    plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
     for n in range(n_particle_types):
         plt.scatter(x_data[n], y_data[n], color=cmap.color(n))
     plt.xlabel(r'True viscosity $[a.u.]$', fontsize=12)
     plt.ylabel(r'Predicted viscosity $[a.u.]$', fontsize=12)
     plt.xlim([-0.1, 1.1])
     plt.ylim([-0.1, 1.1])
-    # plt.text(0, 1.0, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
-    # residuals = y_data - linear_model(x_data, *lin_fit)
-    # ss_res = np.sum(residuals ** 2)
-    # ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-    # r_squared = 1 - (ss_res / ss_tot)
-    # plt.text(0, 0.9, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
+    plt.text(0, 1.0, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
+    residuals = y_data - linear_model(x_data, *lin_fit)
+    ss_res = np.sum(residuals ** 2)
+    ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+    r_squared = 1 - (ss_res / ss_tot)
+    plt.text(0, 0.9, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
 
     x_width = int(np.sqrt(n_particles))
     xs = torch.linspace(1 / x_width / 2, 1 - 1 / x_width / 2, steps=x_width)
@@ -2747,7 +2733,7 @@ def data_plot_suppFIG1():
 
     ax = fig.add_subplot(3, 4, 2)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-    func_list = plot_function(True,'b)', config.graph_model.name, model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 1, '$5.10^4$', fig, ax, cmap)
+    func_list = plot_function(True,'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 1, '$5.10^4$', fig, ax, cmap)
 
     ax = fig.add_subplot(3, 4, 3)
     proj_interaction, new_labels, n_clusters = plot_umap('c)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 1, '$5.10^4$', fig, ax, cmap)
@@ -2764,7 +2750,7 @@ def data_plot_suppFIG1():
 
     ax = fig.add_subplot(3, 4, 6)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-    func_list = plot_function(True,'f)', config.graph_model.name, model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
+    func_list = plot_function(True,'f)', config.graph_model.particle_model_name, model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
 
     ax = fig.add_subplot(3, 4, 7)
     proj_interaction, new_labels, n_clusters = plot_umap('g)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap)
