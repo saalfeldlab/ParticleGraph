@@ -20,7 +20,7 @@ import os
 from sklearn import metrics
 import matplotlib
 from matplotlib import rc
-matplotlib.use("Qt5Agg")
+# matplotlib.use("Qt5Agg")
 
 from ParticleGraph.config import ParticleGraphConfig
 from ParticleGraph.generators.particle_initialization import init_particles, init_mesh
