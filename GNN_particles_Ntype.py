@@ -693,11 +693,11 @@ def data_train(config):
 
                     if has_cell_division:
                         if batch == 0:
-                            time_batch = torch.concatenate( (x[:, 0:1], torch.ones_like(y[:, 2:3], device=device) * k), dim = 1)
+                            time_batch = torch.concatenate( (x[:, 0:1], torch.ones_like(y[:, 3:4], device=device) * k), dim = 1)
                             y_batch_division = y[:, 2:3]
                         else:
                             time_batch = torch.concatenate((time_batch, torch.concatenate((x[:, 0:1], torch.ones_like(y[:, 2:3], device=device) * k), dim=1)), dim=0)
-                            y_batch_division = torch.concatenate((y_batch_division, y[:, 2:3]), dim=0)
+                            y_batch_division = torch.concatenate((y_batch_division, y[:, 3:4]), dim=0)
 
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)

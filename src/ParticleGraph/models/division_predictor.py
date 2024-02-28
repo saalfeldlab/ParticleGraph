@@ -29,6 +29,6 @@ class division_predictor(nn.Module):
 
         x = torch.concatenate((x[:,1:2], time_embedding), dim=1)
         x = self.mlp(x)
-        x = self.sigmoid(x)
+        # x = self.sigmoid(x)
 
         return x
