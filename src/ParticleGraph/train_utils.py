@@ -76,3 +76,16 @@ def set_trainable_parameters(model, lr_embedding, lr):
         optimizer.add_param_group({'params': parameter, 'lr': lr})
 
     return optimizer, n_total_params
+
+def set_trainable_division_parameters(model, lr):
+    trainable_params = [param for _, param in model.named_parameters() if param.requires_grad]
+    n_total_params = sum(p.numel() for p in trainable_params) + torch.numel(model.t)
+
+    embedding = model.t
+    optimizer = torch.optim.Adam([embedding], lr=lr)
+
+    _, *parameters = trainable_params
+    for parameter in parameters:
+        optimizer.add_param_group({'params': parameter, 'lr': lr})
+
+    return optimizer, n_total_params

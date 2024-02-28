@@ -20,13 +20,13 @@ import os
 from sklearn import metrics
 import matplotlib
 from matplotlib import rc
-# matplotlib.use("Qt5Agg")
+matplotlib.use("Qt5Agg")
 
 from ParticleGraph.config import ParticleGraphConfig
 from ParticleGraph.generators.particle_initialization import init_particles, init_mesh
 from ParticleGraph.generators.utils import choose_model, choose_mesh_model
 from ParticleGraph.train_utils import choose_training_model, constant_batch_size, increasing_batch_size, \
-    set_trainable_parameters, get_embedding
+    set_trainable_parameters, get_embedding, set_trainable_division_parameters
 
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
@@ -34,6 +34,7 @@ from ParticleGraph.data_loaders import *
 from ParticleGraph.utils import to_numpy, CustomColorMap, set_device, norm_velocity, norm_acceleration, grads2D
 from ParticleGraph.fitting_models import linear_model
 from ParticleGraph.embedding_cluster import *
+from ParticleGraph.models import division_predictor
 
 
 def data_generate(config, visualize=True, style='color', erase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=None, bSave=True):
@@ -102,9 +103,9 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
         X1, V1, T1, H1, A1, N1, cycle_length, cycle_length_distrib = init_particles(config, device=device, cycle_length=cycle_length)
 
         # create differnet initial conditions
-        X1[:, 0] = X1[:, 0] / n_particle_types - torch.ones_like(X1[:,0])*0.5
-        for n in range(n_particle_types):
-            X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / n_particle_types
+        # X1[:, 0] = X1[:, 0] / n_particle_types - torch.ones_like(X1[:,0])*0.5
+        # for n in range(n_particle_types):
+        #     X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / n_particle_types
 
         if has_mesh:
             X1_mesh, V1_mesh, T1_mesh, H1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
@@ -113,7 +114,6 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
 
             plt.scatter(to_numpy(X1_mesh[:, 0]), to_numpy(X1_mesh[:, 1]), c=to_numpy(T1_mesh[:, 0]))
             plt.show
-
         if only_mesh | (model_config.particle_model_name == 'PDE_O'):
             X1 = X1_mesh.clone().detach()
             H1 = H1_mesh.clone().detach()
@@ -129,12 +129,15 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
             # calculate cell division
-            if (it > 0) & has_cell_division & (n_particles < 20000):
+            if (it >= 0) & has_cell_division & (n_particles < 20000):
                 pos = torch.argwhere(A1.squeeze() > cycle_length_distrib)
+                y_division = (A1.squeeze() > cycle_length_distrib).clone().detach()*1.0
                 # cell division
                 if len(pos) > 1:
                     n_add_nodes = len(pos)
                     pos = to_numpy(pos[:, 0].squeeze()).astype(int)
+
+                    y_division = torch.concatenate((y_division,torch.zeros((n_add_nodes),device=device)),0)
 
                     n_particles = n_particles + n_add_nodes
                     N1 = torch.arange(n_particles, device=device)
@@ -156,6 +159,8 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                     A1 = torch.cat((A1, A1[pos, :]), dim=0)
                     nd = torch.ones(len(pos), device=device) + 0.05 * torch.randn(len(pos), device=device)
                     cycle_length_distrib = torch.cat((cycle_length_distrib, cycle_length[to_numpy(T1[pos, 0])].squeeze() * nd),dim=0)
+                    y_time_to_divide = (cycle_length_distrib - A1.squeeze()).clone().detach()
+
                     index_particles = []
                     for n in range(n_particles):
                         pos = torch.argwhere(T1 == n)
@@ -182,6 +187,8 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
             # append list
             if (it >= 0) & bSave:
                 x_list.append(x.clone().detach())
+                if has_cell_division:
+                    y = torch.concatenate((y, y_division[:, None],y_time_to_divide[:,None]), 1)
                 y_list.append(y.clone().detach())
 
             # Particle update
@@ -451,7 +458,6 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
         torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
         torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
 
-    simulation_config.n_particles = int(simulation_config.n_particles / ratio)
 
 
 def data_train(config):
@@ -472,6 +478,7 @@ def data_train(config):
     n_particles = simulation_config.n_particles
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
+    has_cell_division = simulation_config.has_cell_division
     data_augmentation = train_config.data_augmentation
     data_augmentation_loop = train_config.data_augmentation_loop
     target_batch_size = train_config.batch_size
@@ -572,7 +579,6 @@ def data_train(config):
     print('done ...')
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-
     # net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_6.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
@@ -582,6 +588,13 @@ def data_train(config):
     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
     logger.info(f"Total Trainable Params: {n_total_params}")
     logger.info(f'Learning rates: {lr}, {lr_embedding}')
+
+    if  has_cell_division:
+        model_division = division_predictor(config, device)
+        optimizer_division, n_total_params_division = set_trainable_division_parameters(model_division, lr=1E-3)
+        logger.info(f"Total Trainable Divsion Params: {n_total_params_division}")
+        logger.info(f'Learning rates: 1E-3')
+
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     print(f'network: {net}')
@@ -623,6 +636,7 @@ def data_train(config):
                 mask_mesh = mask_mesh.repeat(repeat_factor, 1)
 
         total_loss = 0
+        total_loss_division = 0
 
         Niter = n_frames * data_augmentation_loop // batch_size
         if (has_mesh) & (batch_size == 1):
@@ -637,6 +651,7 @@ def data_train(config):
             run = 1 + np.random.randint(NGraphs - 1)
 
             dataset_batch = []
+            time_batch=[]
 
             for batch in range(batch_size):
 
@@ -672,9 +687,18 @@ def data_train(config):
                         y[:, 0] = new_x
                         y[:, 1] = new_y
                     if batch == 0:
-                        y_batch = y
+                        y_batch = y[:, 0:2]
                     else:
-                        y_batch = torch.cat((y_batch, y), dim=0)
+                        y_batch = torch.cat((y_batch, y[:,0:2]), dim=0)
+
+                    if has_cell_division:
+                        if batch == 0:
+                            time_batch = torch.concatenate( (x[:, 0:1], torch.ones_like(y[:, 2:3], device=device) * k), dim = 1)
+                            y_batch_division = y[:, 2:3]
+                        else:
+                            time_batch = torch.concatenate((time_batch, torch.concatenate((x[:, 0:1], torch.ones_like(y[:, 2:3], device=device) * k), dim=1)), dim=0)
+                            y_batch_division = torch.concatenate((y_batch_division, y[:, 2:3]), dim=0)
+
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
@@ -684,6 +708,14 @@ def data_train(config):
                     pred = model(batch, data_id=run - 1)
                 else:
                     pred = model(batch, data_id=run - 1, training=True, vnorm=vnorm, phi=phi)
+            if has_cell_division:
+                optimizer_division.zero_grad()
+
+                pred_division = model_division(time_batch, data_id=run - 1)
+                loss_division = (pred_division - y_batch_division).norm(2)
+                loss_division.backward()
+                optimizer_division.step()
+                total_loss_division += loss_division.item()
 
             if model_config.mesh_model_name == 'RD_RPS_Mesh':
                 loss = ((pred - y_batch) * mask_mesh).norm(2)
@@ -789,13 +821,16 @@ def data_train(config):
 
 
 
-
-
-
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs_{epoch}.pt'))
+        if has_cell_division:
+            print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss_division / (N + 1) / n_particles / batch_size))
+            logger.info("Epoch {}. Division Loss: {:.6f}".format(epoch, total_loss_division / (N + 1) / n_particles / batch_size))
+            torch.save({'model_state_dict': model_division.state_dict(),
+                        'optimizer_state_dict': optimizer_division.state_dict()}, os.path.join(log_dir, 'models', f'best_model_division_with_{NGraphs - 1}_graphs_{epoch}.pt'))
+
 
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
 
@@ -1041,90 +1076,6 @@ def data_train(config):
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
         plt.close()
 
-
-def data_train_clock(config):
-    print('')
-
-    plt.rcParams['text.usetex'] = True
-    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-
-    simulation_config = config.simulation
-    train_config = config.training
-    model_config = config.graph_model
-
-    print(f'Training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
-
-    n_epochs = train_config.n_epochs
-    radius = simulation_config.max_radius
-    n_particle_types = simulation_config.n_particle_types
-    n_particles = simulation_config.n_particles
-    dataset_name = config.dataset
-    n_frames = simulation_config.n_frames
-    data_augmentation = train_config.data_augmentation
-    data_augmentation_loop = train_config.data_augmentation_loop
-    target_batch_size = train_config.batch_size
-    has_mesh = (config.graph_model.mesh_model_name != '')
-    only_mesh = (config.graph_model.particle_model_name == '') & has_mesh
-    replace_with_cluster = 'replace' in train_config.sparsity
-    visualize_embedding = False
-
-    embedding_cluster = EmbeddingCluster(config)
-
-    if train_config.small_init_batch_size:
-        get_batch_size = increasing_batch_size(target_batch_size)
-    else:
-        get_batch_size = constant_batch_size(target_batch_size)
-    batch_size = get_batch_size(0)
-
-    l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
-    print('log_dir: {}'.format(log_dir))
-    os.makedirs(log_dir, exist_ok=True)
-    os.makedirs(os.path.join(log_dir, 'models'), exist_ok=True)
-    os.makedirs(os.path.join(log_dir, 'tmp_training'), exist_ok=True)
-    os.makedirs(os.path.join(log_dir, 'tmp_training/embedding'), exist_ok=True)
-    os.makedirs(os.path.join(log_dir, 'tmp_recons'), exist_ok=True)
-
-
-    copyfile(os.path.realpath(__file__), os.path.join(log_dir, 'training_code.py'))
-    logging.basicConfig(filename=os.path.join(log_dir, 'training.log'),
-                        format='%(asctime)s %(message)s',
-                        filemode='w')
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    logger.info(config)
-
-    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
-    NGraphs = len(graph_files)
-    print(f'Graph files N: {NGraphs - 1}')
-    logger.info(f'Graph files N: {NGraphs - 1}')
-
-    x_list = []
-    y_list = []
-    print('Load data ...')
-    for run in trange(NGraphs):
-        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
-        x_list.append(x)
-        y_list.append(y)
-
-    x = x_list[0][0].clone().detach()
-    y = y_list[0][0].clone().detach()
-    for k in trange(1,n_frames):
-        x = torch.cat((x,x_list[0][k].clone().detach()),0)
-        y = torch.cat((y,y_list[0][k].clone().detach()),0)
-
-    cycle_length = torch.load(f'./graphs_data/graphs_{dataset_name}/cycle_length.pt', map_location=device).to(device)
-                
-    cell_indices = to_numpy(torch.unique(x[:,0]))
-
-    index_cell_list = [19, 49 ,190 ,400, 750]
-
-    for index_cell in index_cell_list:
-        pos = torch.argwhere(x[:,0]==cell_indices[index_cell])
-        pos = to_numpy(pos[:, 0])
-        cell_time = to_numpy(x[pos,8])
-        plt.plot(cell_time)
 
 
 def data_test(config, visualize=False, verbose=True, best_model=0, step=5, forced_embedding=[], ratio=1):
@@ -1454,7 +1405,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['wave_logo','wave_slit'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
+    config_list = ['boids_16_division'] # ['arbitrary_16', 'gravity_16', 'boids_16', 'Coulomb_3']    #['wave_e'] #['wave_a','wave_b','wave_c','wave_d'] ['RD_RPS'] #
 
     for config_file in config_list:
 
@@ -1467,9 +1418,9 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        # data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 400, bSave=True)
-        # data_train(config)
+        # data_generate(config, device=device, visualize=False , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 400, bSave=True)
+        data_train(config)
         # data_train_clock(config)
-        data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 400)
+        # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 400)
 
 

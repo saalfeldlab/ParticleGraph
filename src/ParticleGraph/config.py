@@ -51,6 +51,12 @@ class GraphModelConfig(BaseModel):
     n_layers_update: int = 3
     hidden_dim_update: int = 64
 
+    division_predictor_input_size: int = 3
+    division_predictor_output_size: int = 1
+    division_predictor_hidden_dim: int = 16
+    division_predictor_n_layers: int = 3
+
+
     # def get_instance(self, **kwargs):
     #     return GraphModel(**self.model_dump(), **kwargs)
 

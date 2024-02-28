@@ -58,13 +58,12 @@ class Interaction_Particles(pyg.nn.MessagePassing):
 
         if simulation_config.has_cell_division :
             self.a = nn.Parameter(
-                torch.tensor(np.ones((self.n_dataset, 20500, self.embedding_dim)), device=self.device,
+                torch.tensor(np.ones((self.n_dataset, 20500, 2)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
         else:
             self.a = nn.Parameter(
                 torch.tensor(np.ones((self.n_dataset, int(self.n_particles), self.embedding_dim)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
-
 
 
         if self.update_type != 'none':
