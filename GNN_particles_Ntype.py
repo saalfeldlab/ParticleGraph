@@ -726,9 +726,7 @@ def data_train(config):
             optimizer.step()
             total_loss += loss.item()
 
-            visualize_embedding=True
-
-            #
+            visualize_embedding=False
             if visualize_embedding & ( (epoch == 0) & (N < 100) & (N % 2 == 0)  |  (epoch==0)&(N<10000) & (N%200==0)  |  (epoch==0)&(N%(Niter//100)==0)   | (epoch>0)&(N%(Niter//4)==0)):
 
                 if model_config.mesh_model_name == 'WaveMesh':
@@ -773,15 +771,6 @@ def data_train(config):
                                      linewidth=1,
                                      color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
 
-                fig = plt.figure(figsize=(8, 8))
-                embedding, embedding_particle = get_embedding(model.a, index_particles, n_particles, n_particle_types)
-                plt.scatter(embedding[:, 0], embedding[:,1], c=t, s=3, cmap='viridis')
-                plt.xticks([])
-                plt.yticks([])
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/embedding/Fig_{dataset_name}_embedding_{epoch}_{N}.tif", dpi=300)
-                plt.close()
-
                 # plt.xlim([-150,150])
                 # plt.ylim([-150,150])
                 #
@@ -789,6 +778,17 @@ def data_train(config):
                 # plt.close()
 
                 if model_config.mesh_model_name == 'WaveMesh':
+                    fig = plt.figure(figsize=(8, 8))
+                    embedding, embedding_particle = get_embedding(model.a, index_particles, n_particles,
+                                                                  n_particle_types)
+                    plt.scatter(embedding[:, 0], embedding[:, 1], c=t, s=3, cmap='viridis')
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/tmp_training/embedding/Fig_{dataset_name}_embedding_{epoch}_{N}.tif",
+                                dpi=300)
+                    plt.close()
+
                     fig = plt.figure(figsize=(8, 8))
                     t = np.array(popt_list)
                     t = t[:, 0]
