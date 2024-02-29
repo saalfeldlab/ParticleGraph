@@ -773,9 +773,6 @@ def data_train(config):
                                      linewidth=1,
                                      color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
 
-                t = np.array(popt_list)
-                t = t[:, 0]
-
                 fig = plt.figure(figsize=(8, 8))
                 embedding, embedding_particle = get_embedding(model.a, index_particles, n_particles, n_particle_types)
                 plt.scatter(embedding[:, 0], embedding[:,1], c=t, s=3, cmap='viridis')
@@ -1418,7 +1415,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 400, bSave=True)
+        # data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 400, bSave=True)
         data_train(config)
         # data_train_clock(config)
         # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 400)
