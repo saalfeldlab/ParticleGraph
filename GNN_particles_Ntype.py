@@ -653,6 +653,8 @@ def data_train(config):
 
     model.train()
 
+    model_forward, bc_pos, bc_dpos = choose_model(config, device=device)
+
     list_loss = []
     time.sleep(0.5)
 
@@ -706,14 +708,8 @@ def data_train(config):
                     else:
                         y_batch = torch.cat((y_batch, y), dim=0)
                 else:
-                    
-                    distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
-                    adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                    t = torch.Tensor([radius ** 2])
-                    edges = adj_t.nonzero().t().contiguous()
-                    dataset = data.Data(x=x[:, :], edge_index=edges)
-                    dataset_batch.append(dataset)
-                    y = y_list[run][k].clone().detach()
+
+                    x = x_list[run][k].clone().detach()
                     if model_config.prediction == '2nd_derivative':
                         y = y / ynorm
                     else:
@@ -1786,7 +1782,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['boids_16_division']
+    config_list = ['arbitrary_3']
 
     for config_file in config_list:
 
@@ -1799,8 +1795,8 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 40, bSave=True)
-        # data_train(config)
+        # data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 40, bSave=True)
+        data_train(config)
         # data_plot_training(config)
 
         # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 40)
