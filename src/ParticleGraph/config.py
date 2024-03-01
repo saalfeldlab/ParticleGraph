@@ -79,6 +79,7 @@ class TrainingConfig(BaseModel):
     clamp: float = 0
     pred_limit: float = 1.E+10
     sparsity: Literal['none', 'replace'] = 'none'
+    dropout: float = 0
 
     fix_cluster_embedding: bool = False
     loss_weight: bool = False
