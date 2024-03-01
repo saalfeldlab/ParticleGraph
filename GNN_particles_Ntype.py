@@ -175,7 +175,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                     A1 = torch.cat((A1, A1[pos, :]), dim=0)
                     nd = torch.ones(len(pos), device=device) + 0.05 * torch.randn(len(pos), device=device)
                     cycle_length_distrib = torch.cat((cycle_length_distrib, cycle_length[to_numpy(T1[pos, 0])].squeeze() * nd),dim=0)
-                    y_time_to_divide = (cycle_length_distrib - A1.squeeze()).clone().detach()
+                    y_timer = A1.squeeze().clone().detach()
 
                     index_particles = []
                     for n in range(n_particles):
@@ -205,7 +205,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
 
                 if has_cell_division:
                     x_list.append(x.clone().detach())
-                    y_ = torch.concatenate((y, y_division[:, None],y_time_to_divide[:,None]), 1)
+                    y_ = torch.concatenate((y,y_timer[:, None], y_division[:, None]), 1)
                     y_list.append(y_.clone().detach())
                 else:
                     if has_dropout:
