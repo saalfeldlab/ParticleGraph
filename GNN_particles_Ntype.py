@@ -205,8 +205,8 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
 
                 if has_cell_division:
                     x_list.append(x.clone().detach())
-                    y = torch.concatenate((y[dropout_mask], y_division[dropout_mask, None],y_time_to_divide[dropout_mask,None]), 1)
-                    y_list.append(y.clone().detach())
+                    y_ = torch.concatenate((y, y_division[:, None],y_time_to_divide[:,None]), 1)
+                    y_list.append(y_.clone().detach())
                 else:
                     if has_dropout:
                         x_ = x[dropout_mask].clone().detach()
@@ -226,9 +226,9 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                 X1 = bc_pos(X1)
             else:
                 if model_config.prediction == '2nd_derivative':
-                    V1 += y[:, 0:2] * delta_t
+                    V1 += y * delta_t
                 else:
-                    V1 = y[:, 0:2]
+                    V1 = y
                 X1 = bc_pos(X1 + V1 * delta_t)
                 if config.graph_model.mesh_model_name=='Chemotaxism_Mesh':
                     grad = grads2D(torch.reshape(H1_mesh[:, 0], (300, 300)))
@@ -1786,7 +1786,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3_dropout_5']
+    config_list = ['boids_16_division']
 
     for config_file in config_list:
 
@@ -1800,7 +1800,7 @@ if __name__ == '__main__':
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
         data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 40, bSave=True)
-        data_train(config)
+        # data_train(config)
         # data_plot_training(config)
 
         # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 40)
