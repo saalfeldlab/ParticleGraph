@@ -3,10 +3,7 @@ import logging
 import time
 from shutil import copyfile
 
-import imageio.v2
-import matplotlib.pyplot as plt
 import networkx as nx
-import torch
 import torch.nn as nn
 import torch_geometric.data as data
 import umap
@@ -18,15 +15,15 @@ from torch_geometric.utils.convert import to_networkx
 from tqdm import trange
 import os
 from sklearn import metrics
-import matplotlib
 from matplotlib import rc
+import matplotlib
 # matplotlib.use("Qt5Agg")
 
 from ParticleGraph.config import ParticleGraphConfig
 from ParticleGraph.generators.particle_initialization import init_particles, init_mesh
 from ParticleGraph.generators.utils import choose_model, choose_mesh_model
-from ParticleGraph.train_utils import choose_training_model, constant_batch_size, increasing_batch_size, \
-    set_trainable_parameters, get_embedding, set_trainable_division_parameters
+from ParticleGraph.models.utils import *
+from ParticleGraph.models.Ghost_Particles import Ghost_Particles
 
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
@@ -34,7 +31,7 @@ from ParticleGraph.data_loaders import *
 from ParticleGraph.utils import to_numpy, CustomColorMap, set_device, norm_velocity, norm_acceleration, grads2D
 from ParticleGraph.fitting_models import linear_model
 from ParticleGraph.embedding_cluster import *
-from ParticleGraph.models import division_predictor
+from ParticleGraph.models import Division_Predictor
 
 
 def data_generate(config, visualize=True, style='color', erase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=None, bSave=True):
@@ -524,6 +521,7 @@ def data_train(config):
     only_mesh = (config.graph_model.particle_model_name == '') & has_mesh
     replace_with_cluster = 'replace' in train_config.sparsity
     visualize_embedding = False
+    has_ghost = train_config.n_ghosts > 0
 
     embedding_cluster = EmbeddingCluster(config)
 
@@ -627,11 +625,10 @@ def data_train(config):
     logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
     if  has_cell_division:
-        model_division = division_predictor(config, device)
+        model_division = Division_Predictor(config, device)
         optimizer_division, n_total_params_division = set_trainable_division_parameters(model_division, lr=1E-3)
         logger.info(f"Total Trainable Divsion Params: {n_total_params_division}")
         logger.info(f'Learning rates: 1E-3')
-
 
     net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     print(f'network: {net}')
@@ -641,17 +638,23 @@ def data_train(config):
     logger.info(f'N epochs: {n_epochs}')
     logger.info(f'initial batch_size: {batch_size}')
 
+    # update variable if dropout
     x = x_list[1][0].clone().detach()
+    # TO DO why T1 associated with run 1 ?
     T1 = x[:, 5:6].clone().detach()
     n_particles = x.shape[0]
     print(f'N particles: {n_particles}')
     logger.info(f'N particles: {n_particles}')
-
     config.simulation.n_particles = n_particles
     index_particles = []
     for n in range(n_particle_types):
         index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
         index_particles.append(index.squeeze())
+    if has_ghost:
+        ghosts_particles = Ghost_Particles(config, n_particles, device)
+        optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.ghost_pos], lr=1E-3)
+
+
 
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
@@ -696,6 +699,10 @@ def data_train(config):
 
                 k = np.random.randint(n_frames - 1)
                 x = x_list[run][k].clone().detach()
+
+                if has_ghost:
+                    x_ghost = ghosts_particles.get_pos(dataset_id=run-1, frame=k)
+                    x = torch.cat((x, x_ghost), 0)
 
                 if has_mesh:
                     x_mesh = x_mesh_list[run][k].clone().detach()
@@ -742,15 +749,18 @@ def data_train(config):
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
+            if has_ghost:
+                optimizer_ghost_particles.zero_grad()
+            if has_cell_division:
+                optimizer_division.zero_grad()
 
             for batch in batch_loader:
                 if has_mesh:
                     pred = model(batch, data_id=run - 1)
                 else:
                     pred = model(batch, data_id=run - 1, training=True, vnorm=vnorm, phi=phi)
-            if has_cell_division:
-                optimizer_division.zero_grad()
 
+            if has_cell_division:
                 pred_division = model_division(time_batch, data_id=run - 1)
                 loss_division = (pred_division - y_batch_division).norm(2)
                 loss_division.backward()
@@ -764,6 +774,8 @@ def data_train(config):
 
             loss.backward()
             optimizer.step()
+            if has_ghost:
+                optimizer_ghost_particles.step()
             total_loss += loss.item()
 
             visualize_embedding=False
@@ -856,8 +868,6 @@ def data_train(config):
                                 dpi=300)
                     plt.close()
 
-
-
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         torch.save({'model_state_dict': model.state_dict(),
@@ -867,7 +877,10 @@ def data_train(config):
             logger.info("Epoch {}. Division Loss: {:.6f}".format(epoch, total_loss_division / (N + 1) / n_particles / batch_size))
             torch.save({'model_state_dict': model_division.state_dict(),
                         'optimizer_state_dict': optimizer_division.state_dict()}, os.path.join(log_dir, 'models', f'best_model_division_with_{NGraphs - 1}_graphs_{epoch}.pt'))
-
+        if has_ghost:
+            torch.save({'model_state_dict': ghosts_particles.state_dict(),
+                        'optimizer_state_dict': optimizer_ghost_particles.state_dict()},
+                       os.path.join(log_dir, 'models', f'best_ghost_particles_with_{NGraphs - 1}_graphs_{epoch}.pt'))
 
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
 
@@ -1242,7 +1255,7 @@ def data_plot_training(config):
     logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
     if  has_cell_division:
-        model_division = division_predictor(config, device)
+        model_division = Division_Predictor(config, device)
         optimizer_division, n_total_params_division = set_trainable_division_parameters(model_division, lr=1E-3)
         logger.info(f"Total Trainable Divsion Params: {n_total_params_division}")
         logger.info(f'Learning rates: 1E-3')
@@ -1552,7 +1565,7 @@ def data_test(config, visualize=False, verbose=True, best_model=0, step=5, force
         mesh_model = None
 
     if has_division:
-        model_division = division_predictor(config, device)
+        model_division = Division_Predictor(config, device)
         net = f"./log/try_{dataset_name}/models/best_model_division_with_{NGraphs - 1}_graphs_20.pt"
         state_dict = torch.load(net, map_location=device)
         model_division.load_state_dict(state_dict['model_state_dict'])
@@ -1789,7 +1802,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3_dropout_5_1000']
+    config_list = ['arbitrary_3_dropout_5']
 
     for config_file in config_list:
 
@@ -1802,7 +1815,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=False, step=config.simulation.n_frames // 40, bSave=True)
+        data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 40, bSave=True)
         data_train(config)
         # data_plot_training(config)
 

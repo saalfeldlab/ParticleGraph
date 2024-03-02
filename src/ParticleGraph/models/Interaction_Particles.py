@@ -52,6 +52,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         self.sigma = simulation_config.sigma
         self.model = model_config.particle_model_name
         self.bc_dpos = bc_dpos
+        self.n_ghosts = int(train_config.n_ghosts)
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                             hidden_size=self.hidden_dim, device=self.device)
@@ -90,7 +91,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
             embedding = self.a[self.data_id, particle_id, :]
             pred = self.lin_update(torch.cat((pred, x[:, 3:5], embedding), dim=-1))
 
-        return pred
+        return pred[:-self.n_ghosts]
 
     def message(self, pos_i, pos_j, d_pos_i, d_pos_j, particle_id_i, particle_id_j):
         # squared distance

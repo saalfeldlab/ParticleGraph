@@ -5,10 +5,10 @@ import torch.nn.functional as F
 from ParticleGraph.MLP import MLP
 from ParticleGraph.utils import to_numpy
 
-class division_predictor(nn.Module):
+class Division_Predictor(nn.Module):
 
     def __init__(self, config, device):
-        super(division_predictor, self).__init__()
+        super(Division_Predictor, self).__init__()
         self.mlp = MLP(input_size=config.graph_model.division_predictor_input_size,
                        output_size=config.graph_model.division_predictor_output_size,
                        nlayers=config.graph_model.division_predictor_n_layers,

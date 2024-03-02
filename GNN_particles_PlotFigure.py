@@ -3,15 +3,12 @@ from torch_geometric.nn import MessagePassing
 import torch_geometric.utils as pyg_utils
 import os
 from ParticleGraph.MLP import MLP
-from ParticleGraph.config import ParticleGraphConfig
 import imageio
-from matplotlib import rc
 
-from ParticleGraph.fitting_models import power_model, boids_model, reaction_diffusion_model, linear_model
 from ParticleGraph.generators import RD_RPS
 from ParticleGraph.models import Interaction_Particles, Mesh_Laplacian
-from ParticleGraph.train_utils import get_embedding
-from ParticleGraph.fitting_models import power_model, boids_model, reaction_diffusion_model, linear_model
+from ParticleGraph.fitting_models import power_model, boids_model, reaction_diffusion_model
+
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
 # from data_loaders import *
@@ -1437,7 +1434,7 @@ def data_plot_FIG5_time():
     model.load_state_dict(state_dict['model_state_dict'])
     model.eval()
 
-    model_division = division_predictor(config, device)
+    model_division = Division_Predictor(config, device)
     net = f"./log/try_{dataset_name}/models/best_model_division_with_{nrun - 1}_graphs_20.pt"
     state_dict = torch.load(net, map_location=device)
     model_division.load_state_dict(state_dict['model_state_dict'])

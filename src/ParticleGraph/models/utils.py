@@ -56,13 +56,11 @@ def constant_batch_size(batch_size):
 
     return get_batch_size
 
-
 def increasing_batch_size(batch_size):
     def get_batch_size(epoch):
         return 1 if epoch < 1 else batch_size
 
     return get_batch_size
-
 
 def set_trainable_parameters(model, lr_embedding, lr):
     trainable_params = [param for _, param in model.named_parameters() if param.requires_grad]
@@ -89,3 +87,9 @@ def set_trainable_division_parameters(model, lr):
         optimizer.add_param_group({'params': parameter, 'lr': lr})
 
     return optimizer, n_total_params
+
+
+
+
+
+
