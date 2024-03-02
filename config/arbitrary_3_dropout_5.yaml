@@ -35,7 +35,7 @@ training:
   n_epochs: 20
   batch_size: 1
   small_init_batch_size: False
-  n_runs: 2
+  n_runs: 10
   dropout: 0.05
   sparsity: 'none'
   cluster_method: 'distance_plot'
