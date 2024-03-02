@@ -709,7 +709,13 @@ def data_train(config):
                         y_batch = torch.cat((y_batch, y), dim=0)
                 else:
 
-                    x = x_list[run][k].clone().detach()
+                    distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
+                    adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                    t = torch.Tensor([radius ** 2])
+                    edges = adj_t.nonzero().t().contiguous()
+                    dataset = data.Data(x=x[:, :], edge_index=edges)
+                    dataset_batch.append(dataset)
+                    y = y_list[run][k].clone().detach()
                     if model_config.prediction == '2nd_derivative':
                         y = y / ynorm
                     else:
