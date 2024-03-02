@@ -43,7 +43,6 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
-
     # create output folder, empty it if bErase=True, copy files into it
     dataset_name = config.dataset
     folder = f'./graphs_data/graphs_{dataset_name}/'
@@ -489,8 +488,8 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
             torch.save(x_mesh_list, f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt')
             torch.save(y_mesh_list, f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt')
 
-    x_ = torch.load(f'graphs_data/graphs_{dataset_name}/x_200.pt', map_location=device)
-    y_ = torch.load(f'graphs_data/graphs_{dataset_name}/y_200.pt', map_location=device)
+    # x_ = torch.load(f'graphs_data/graphs_{dataset_name}/x_200.pt', map_location=device)
+    # y_ = torch.load(f'graphs_data/graphs_{dataset_name}/y_200.pt', map_location=device)
 
     if bSave:
         torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
