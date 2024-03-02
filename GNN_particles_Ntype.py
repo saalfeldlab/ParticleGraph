@@ -20,7 +20,7 @@ import os
 from sklearn import metrics
 import matplotlib
 from matplotlib import rc
-# matplotlib.use("Qt5Agg")
+matplotlib.use("Qt5Agg")
 
 from ParticleGraph.config import ParticleGraphConfig
 from ParticleGraph.generators.particle_initialization import init_particles, init_mesh
@@ -216,6 +216,9 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                     else:
                         x_list.append(x.clone().detach())
                         y_list.append(y.clone().detach())
+                        if (run==1) & (it==200):
+                            torch.save(x, f'graphs_data/graphs_{dataset_name}/x_200.pt')
+                            torch.save(y, f'graphs_data/graphs_{dataset_name}/y_200.pt')
 
 
             # Particle update
@@ -486,6 +489,9 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
             torch.save(x_mesh_list, f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt')
             torch.save(y_mesh_list, f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt')
 
+    x_ = torch.load(f'graphs_data/graphs_{dataset_name}/x_200.pt', map_location=device)
+    y_ = torch.load(f'graphs_data/graphs_{dataset_name}/y_200.pt', map_location=device)
+
     if bSave:
         torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
         torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
@@ -506,6 +512,7 @@ def data_train(config):
 
     n_epochs = train_config.n_epochs
     radius = simulation_config.max_radius
+    min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
     dataset_name = config.dataset
@@ -663,12 +670,7 @@ def data_train(config):
         old_batch_size = batch_size
         batch_size = get_batch_size(epoch)
         logger.info(f'batch_size: {batch_size}')
-        if epoch == 0:
-            min_radius = 0.002
-            logger.info(f'min_radius: {min_radius}')
-        elif epoch == 1:
-            min_radius = simulation_config.min_radius
-            logger.info(f'min_radius: {min_radius}')
+        if epoch == 1:
             repeat_factor = batch_size // old_batch_size
             if has_mesh:
                 mask_mesh = mask_mesh.repeat(repeat_factor, 1)
@@ -1788,7 +1790,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3_dropout_5']
+    config_list = ['arbitrary_3']
 
     for config_file in config_list:
 
@@ -1801,7 +1803,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        # data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 40, bSave=True)
+        # data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=False, step=config.simulation.n_frames // 40, bSave=True)
         data_train(config)
         # data_plot_training(config)
 
