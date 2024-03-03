@@ -1844,6 +1844,6 @@ if __name__ == '__main__':
         # data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 40, bSave=True)
         data_train(config)
         # data_plot_training(config)
-        # data_test(config, visualize=True, verbose=True, best_model=8, step=config.simulation.n_frames // 40)
+        # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 40)
 
 
