@@ -84,6 +84,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
         cut = int(n_particles * (1-training_config.dropout))
         dropout_mask = draw[0:cut]
         inv_dropout_mask = draw[cut:]
+        x_removed_list = []
     else:
         dropout_mask = np.arange(n_particles)
 
@@ -208,7 +209,11 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         x_ = x[dropout_mask].clone().detach()
                         x_[:,0] = torch.arange(len(x_), device=device)
                         x_list.append(x_)
+                        x_ = x[inv_dropout_mask].clone().detach()
+                        x_[:,0] = torch.arange(len(x_), device=device)
+                        x_removed_list.append(x[inv_dropout_mask].clone().detach())
                         y_list.append(y[dropout_mask].clone().detach())
+
                     else:
                         x_list.append(x.clone().detach())
                         y_list.append(y.clone().detach())
@@ -481,6 +486,8 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
 
         if bSave:
             torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
+            if has_dropout:
+                torch.save(x_removed_list, f'graphs_data/graphs_{dataset_name}/x_removed_list_{run}.pt')
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
             torch.save(x_mesh_list, f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt')
             torch.save(y_mesh_list, f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt')
