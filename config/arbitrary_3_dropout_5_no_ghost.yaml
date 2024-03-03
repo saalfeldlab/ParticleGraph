@@ -36,7 +36,7 @@ training:
   batch_size: 1
   small_init_batch_size: True
   n_runs: 2
-  dropout: 0.05
+  dropout: 0
   n_ghosts: 0
   sparsity: 'replace'
   cluster_method: 'distance_plot'
