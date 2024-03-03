@@ -908,8 +908,7 @@ def data_train(config):
                             plt.scatter(embedding_particle[n + m * n_particle_types][:, 0],
                                         embedding_particle[n + m * n_particle_types][:, 1], color='k', s=3)
                         else:
-                            plt.scatter(embedding_particle[n + m * n_particle_types][:, 0],
-                                    embedding_particle[n + m * n_particle_types][:, 1], color=cmap.color(n), s=3)
+                            plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n), s=0.1)
                 plt.xlabel('Embedding 0', fontsize=12)
                 plt.ylabel('Embedding 1', fontsize=12)
             else:
