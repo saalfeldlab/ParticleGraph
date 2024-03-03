@@ -35,7 +35,7 @@ training:
   n_epochs: 20
   batch_size: 1
   small_init_batch_size: True
-  n_runs: 10
+  n_runs: 2
   dropout: 0.05
   n_ghosts: 240
   sparsity: 'replace'
