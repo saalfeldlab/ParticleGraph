@@ -91,7 +91,10 @@ class Interaction_Particles(pyg.nn.MessagePassing):
             embedding = self.a[self.data_id, particle_id, :]
             pred = self.lin_update(torch.cat((pred, x[:, 3:5], embedding), dim=-1))
 
-        return pred[:-self.n_ghosts]
+        if self.n_ghosts>0:
+            pred = pred[:-self.n_ghosts]
+
+        return pred
 
     def message(self, pos_i, pos_j, d_pos_i, d_pos_j, particle_id_i, particle_id_j):
         # squared distance
