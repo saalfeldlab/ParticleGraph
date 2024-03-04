@@ -17,7 +17,7 @@ import os
 from sklearn import metrics
 from matplotlib import rc
 import matplotlib
-# matplotlib.use("Qt5Agg")
+matplotlib.use("Qt5Agg")
 
 from ParticleGraph.config import ParticleGraphConfig
 from ParticleGraph.generators.particle_initialization import init_particles, init_mesh
@@ -643,8 +643,8 @@ def data_train(config):
     logger.info(f'N epochs: {n_epochs}')
     logger.info(f'initial batch_size: {batch_size}')
 
-    # update variable if dropout
-    x = x_list[1][0].clone().detach()
+    # update variable if dropout, cell_division
+    x = x_list[1][n_frames].clone().detach()
     T1 = x[:, 5:6].clone().detach()
     n_particles = x.shape[0]
     print(f'N particles: {n_particles}')
@@ -759,9 +759,9 @@ def data_train(config):
 
             for batch in batch_loader:
                 if has_mesh:
-                    pred = model(batch, data_id=run - 1)
+                    pred = model(batch, data_id=run)
                 else:
-                    pred = model(batch, data_id=run - 1, training=True, vnorm=vnorm, phi=phi)
+                    pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi)
 
             if has_cell_division:
                 pred_division = model_division(time_batch, data_id=run - 1)
@@ -834,7 +834,7 @@ def data_train(config):
 
                 if model_config.mesh_model_name == 'WaveMesh':
                     fig = plt.figure(figsize=(8, 8))
-                    embedding, embedding_particle = get_embedding(model.a, index_particles, n_particles,
+                    embedding, embedding_particle = get_embedding(model.a, 1, index_particles, n_particles,
                                                                   n_particle_types)
                     plt.scatter(embedding[:, 0], embedding[:, 1], c=t, s=3, cmap='viridis')
                     plt.xticks([])
@@ -897,26 +897,13 @@ def data_train(config):
         plt.xlabel('Epochs', fontsize=12)
 
         ax = fig.add_subplot(1, 6, 2)
-        embedding, embedding_particle = get_embedding(model.a, index_particles, n_particles, n_particle_types)
-        if (embedding.shape[1] > 2):
-            ax = fig.add_subplot(2, 4, 2, projection='3d')
-            for n in range(n_particle_types):
-                ax.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], embedding_particle[n][:, 2],
-                           color=cmap.color(n), s=1)
-        else:
-            if (embedding.shape[1] > 1):
-                for m in range(model.a.shape[0]):
-                    for n in range(n_particle_types):
-                        if simulation_config.has_cell_division:
-                            plt.scatter(embedding_particle[n + m * n_particle_types][:, 0],
-                                        embedding_particle[n + m * n_particle_types][:, 1], color='k', s=3)
-                        else:
-                            plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n), s=0.1)
-                plt.xlabel('Embedding 0', fontsize=12)
-                plt.ylabel('Embedding 1', fontsize=12)
-            else:
-                for n in range(n_particle_types):
-                    plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5, color=cmap.color(n))
+        embedding, embedding_particle = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+        for n in range(n_particle_types):
+            plt.scatter(embedding[index_particles[n], 0],
+                        embedding[index_particles[n], 1], color=cmap.color(n), s=0.1)
+        plt.xlabel('Embedding 0', fontsize=12)
+        plt.ylabel('Embedding 1', fontsize=12)
+
 
         ax = fig.add_subplot(1, 6, 3)
         if (simulation_config.n_interactions < 100) & (simulation_config.has_cell_division == False) :  # cluster embedding
@@ -1306,7 +1293,7 @@ def data_plot_training(config):
         plt.xlabel('epochs', fontsize=14)
 
         ax = fig.add_subplot(1, 5, 2)
-        embedding, embedding_particle = get_embedding(model.a, index_particles, n_particles, n_particle_types)
+        embedding, embedding_particle = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
         if (embedding.shape[1] > 2):
             ax = fig.add_subplot(2, 4, 2, projection='3d')
             for n in range(n_particle_types):
@@ -1515,7 +1502,7 @@ def data_plot_training(config):
 
 
 
-def data_test(config, visualize=False, verbose=True, best_model=0, step=5, forced_embedding=[], ratio=1):
+def data_test(config, visualize=False, verbose=True, best_model=0, step=5, ratio=1, run=0):
     print('')
     print('Plot roll-out inference ... ')
 
@@ -1637,12 +1624,8 @@ def data_test(config, visualize=False, verbose=True, best_model=0, step=5, force
 
     x_list = []
     y_list = []
-    if has_ghost:
-        x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_1.pt', map_location=device))
-        y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_1.pt', map_location=device))
-    else:
-        x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device))
-        y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_0.pt', map_location=device))
+    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device))
+    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device))
 
     if has_mesh:
         hnorm = torch.load(f'./log/try_{dataset_name}/hnorm.pt', map_location=device).to(device)
@@ -1710,9 +1693,10 @@ def data_test(config, visualize=False, verbose=True, best_model=0, step=5, force
                 x[mask_mesh.squeeze(), 6:9] += pred[mask_mesh.squeeze()] * hnorm * delta_t
         else:
 
+            x_ = x
             if has_ghost:
                 x_ghost = model_ghost.get_pos(dataset_id=0, frame=it)
-                x_ = torch.cat((x, x_ghost), 0)
+                x_ = torch.cat((x_, x_ghost), 0)
 
             distance = torch.sum(bc_dpos(x_[:, None, 1:3] - x_[None, :, 1:3]) ** 2, dim=2)
             t = torch.Tensor([radius ** 2])  # threshold
@@ -1828,7 +1812,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3_dropout_5']
+    config_list = ['boids_16_division']
 
     for config_file in config_list:
 
@@ -1844,6 +1828,6 @@ if __name__ == '__main__':
         # data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 40, bSave=True)
         data_train(config)
         # data_plot_training(config)
-        # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 40)
+        # data_test(config, visualize=True, verbose=True, best_model=20, step=config.simulation.n_frames // 40, run=1)
 
 

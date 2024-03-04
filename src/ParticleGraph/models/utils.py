@@ -7,17 +7,14 @@ from ParticleGraph.utils import to_numpy
 import numpy as np
 
 
-def get_embedding(model_a=None, index_particles=None, n_particles=None, n_particle_types=None):
+def get_embedding(model_a=None, dataset_number = 0, index_particles=None, n_particles=None, n_particle_types=None):
     embedding = []
-    for n in range(model_a.shape[0]):
-        embedding.append(model_a[n])
+    embedding.append(model_a[dataset_number])
     embedding = to_numpy(torch.stack(embedding))
-    embedding = np.reshape(embedding, [embedding.shape[0] * embedding.shape[1], embedding.shape[2]])
     embedding_ = embedding
     embedding_particle = []
-    for m in range(model_a.shape[0]):
-        for n in range(n_particle_types):
-            embedding_particle.append(embedding[index_particles[n] + m * n_particles, :])
+    for n in range(n_particle_types):
+        embedding_particle.append(embedding[index_particles[n] + m * n_particles, :])
 
     return embedding, embedding_particle
 

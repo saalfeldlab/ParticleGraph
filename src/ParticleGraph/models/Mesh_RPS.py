@@ -38,7 +38,7 @@ class Mesh_RPS(pyg.nn.MessagePassing):
         self.nlayers = model_config.n_mp_layers
         self.embedding_dim = model_config.embedding_dim
         self.nparticles = simulation_config.n_particles
-        self.ndataset = config.training.n_runs - 1
+        self.ndataset = config.training.n_runs
         self.bc_dpos = bc_dpos
 
         self.lin_phi = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.nlayers,

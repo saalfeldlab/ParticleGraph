@@ -44,7 +44,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         self.data_augmentation = train_config.data_augmentation
         self.noise_level = train_config.noise_level
         self.embedding_dim = model_config.embedding_dim
-        self.n_dataset = train_config.n_runs - 1
+        self.n_dataset = train_config.n_runs
         self.prediction = model_config.prediction
         self.update_type = model_config.update_type
         self.n_layers_update = model_config.n_layers_update

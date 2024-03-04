@@ -34,13 +34,13 @@ plotting:
   arrow_length: 5
 
 training:
-  n_epochs: 20
+  n_epochs: 1
   batch_size: 1
   small_init_batch_size: True
   n_runs: 2
   noise_level: 0
   data_augmentation: True
-  data_augmentation_loop: 2
+  data_augmentation_loop: 1
   cluster_method: 'distance_plot'
   fix_cluster_embedding: True
   device: 'auto'

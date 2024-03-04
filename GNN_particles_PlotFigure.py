@@ -389,17 +389,16 @@ class Mesh_RPS_learn(torch.nn.Module):
 
         return increment.squeeze()
 
-def plot_embedding(index, model_a, index_particles, n_particles, n_particle_types, epoch, it, fig, ax, cmap):
+def plot_embedding(index, model_a, dataset_number, index_particles, n_particles, n_particle_types, epoch, it, fig, ax, cmap):
 
     print(f'plot embedding epoch:{epoch} it: {it}')
-    embedding, embedding_particle = get_embedding(model_a, index_particles, n_particles, n_particle_types)
+    embedding, embedding_particle = get_embedding(model_a, dataset_number, index_particles, n_particles, n_particle_types)
 
     plt.text(-0.25, 1.1, f'{index}', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     plt.title(r'Particle embedding', fontsize=12)
-    for m in range(model_a.shape[0]):
-        for n in range(n_particle_types):
-            plt.scatter(embedding[index_particles[n], 0],
-                        embedding[index_particles[n], 1], color=cmap.color(n), s=0.1)
+    for n in range(n_particle_types):
+        plt.scatter(embedding[index_particles[n], 0],
+                    embedding[index_particles[n], 1], color=cmap.color(n), s=0.1)
     plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=12)
     plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=12)
     plt.text(.05, .94, f'e: {epoch} it: {it}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
@@ -571,7 +570,7 @@ def data_plot_FIG2():
     fig = plt.figure(figsize=(12.5, 9.6))
     plt.ion()
     ax = fig.add_subplot(3, 4, 1)
-    embedding, embedding_particle = plot_embedding('a)', model.a, index_particles, n_particles, n_particle_types, 1, '$5.10^4$', fig, ax, cmap)
+    embedding, embedding_particle = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 1, '$5.10^4$', fig, ax, cmap)
 
     ax = fig.add_subplot(3, 4, 2)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
@@ -588,7 +587,7 @@ def data_plot_FIG2():
     model.load_state_dict(state_dict['model_state_dict'])
 
     ax = fig.add_subplot(3, 4, 5)
-    embedding, embedding_particle = plot_embedding('e)', model.a, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
+    embedding, embedding_particle = plot_embedding('e)', model.a, 1, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
 
     ax = fig.add_subplot(3, 4, 6)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
@@ -745,7 +744,7 @@ def data_plot_FIG3():
     fig = plt.figure(figsize=(10.5, 9.6))
     plt.ion()
     ax = fig.add_subplot(3, 3, 1)
-    embedding, embedding_particle = plot_embedding('a)', model.a, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
+    embedding, embedding_particle = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
 
     ax = fig.add_subplot(3, 3, 2)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
@@ -955,7 +954,7 @@ def data_plot_FIG4():
     fig = plt.figure(figsize=(10.5, 9.6))
     plt.ion()
     ax = fig.add_subplot(3, 3, 1)
-    embedding, embedding_particle = plot_embedding('a)', model.a, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
+    embedding, embedding_particle = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
 
     ax = fig.add_subplot(3, 3, 2)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
@@ -1180,7 +1179,7 @@ def data_plot_FIG5():
     fig = plt.figure(figsize=(10.5, 9.6))
     plt.ion()
     ax = fig.add_subplot(3, 3, 1)
-    embedding, embedding_particle = plot_embedding('a)', model.a, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
+    embedding, embedding_particle = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
 
     ax = fig.add_subplot(3, 3, 2)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
@@ -1411,8 +1410,8 @@ def data_plot_FIG5_time():
     y_list = []
     print('Load normalizations ...')
     time.sleep(1)
-    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device))
-    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_0.pt', map_location=device))
+    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_1.pt', map_location=device))
+    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_1.pt', map_location=device))
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     x = x_list[0][0].clone().detach()
@@ -1447,7 +1446,7 @@ def data_plot_FIG5_time():
     fig = plt.figure(figsize=(10.5, 9.6))
     plt.ion()
     ax = fig.add_subplot(3, 3, 1)
-    embedding, embedding_particle = plot_embedding('a)', model.a, index_particles, 263, n_particle_types, 20, '$10^6$', fig, ax, cmap)
+    embedding, embedding_particle = plot_embedding('a)', model.a, 1, index_particles, 263, n_particle_types, 20, '$10^6$', fig, ax, cmap)
 
     for it in trange(simulation_config.start_frame, n_frames + 1):
 
@@ -2062,7 +2061,7 @@ def data_plot_FIG6():
     plt.ion()
     plt.ion()
     ax = fig.add_subplot(3, 3, 1)
-    embedding, embedding_particle = plot_embedding('a)', model.a, index_particles, n_particles, n_particle_types, 1, '$5.10^4$', fig, ax, cmap)
+    embedding, embedding_particle = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 1, '$5.10^4$', fig, ax, cmap)
 
     ax = fig.add_subplot(3, 3, 2)
     print('plot function')
@@ -3017,7 +3016,7 @@ def data_plot_suppFIG1():
     fig = plt.figure(figsize=(12.5, 9.6))
     plt.ion()
     ax = fig.add_subplot(3, 4, 1)
-    embedding, embedding_particle = plot_embedding('a)', model.a, index_particles, n_particles, n_particle_types, 1, '$5.10^4$', fig, ax, cmap)
+    embedding, embedding_particle = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 1, '$5.10^4$', fig, ax, cmap)
 
     ax = fig.add_subplot(3, 4, 2)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
@@ -3034,7 +3033,7 @@ def data_plot_suppFIG1():
     model.load_state_dict(state_dict['model_state_dict'])
 
     ax = fig.add_subplot(3, 4, 5)
-    embedding, embedding_particle = plot_embedding('e)', model.a, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
+    embedding, embedding_particle = plot_embedding('e)', model.a, 1, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
 
     ax = fig.add_subplot(3, 4, 6)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
