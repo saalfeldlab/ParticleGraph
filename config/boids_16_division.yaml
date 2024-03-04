@@ -28,6 +28,8 @@ graph_model:
   aggr_type: 'mean'
   embedding_dim: 2
   update_type: 'none'
+#  n_layers_update: 3
+#  hidden_dim_update: 64
 
 plotting:
   colormap: 'tab20'

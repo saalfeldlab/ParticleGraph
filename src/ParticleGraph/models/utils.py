@@ -5,18 +5,104 @@ from ParticleGraph.models import Interaction_Particles, Mesh_Laplacian, Mesh_RPS
 from ParticleGraph.utils import choose_boundary_values
 from ParticleGraph.utils import to_numpy
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 def get_embedding(model_a=None, dataset_number = 0, index_particles=None, n_particles=None, n_particle_types=None):
     embedding = []
     embedding.append(model_a[dataset_number])
-    embedding = to_numpy(torch.stack(embedding))
-    embedding_ = embedding
-    embedding_particle = []
-    for n in range(n_particle_types):
-        embedding_particle.append(embedding[index_particles[n] + m * n_particles, :])
+    embedding = to_numpy(torch.stack(embedding).squeeze())
 
-    return embedding, embedding_particle
+    return embedding
+
+def plot_training (dataset_name, filename, log_dir, epoch, N, x, model, dataset_num, index_particles, n_particles, n_particle_types, cmap):
+
+    match filename:
+
+        case 'embedding':
+            fig = plt.figure(figsize=(8, 8))
+            embedding = get_embedding(model.a, dataset_num, index_particles, n_particles, n_particle_types)
+            for n in range(n_particle_types):
+                plt.scatter(embedding[index_particles[n], 0],
+                            embedding[index_particles[n], 1], color=cmap.color(n), s=0.1)
+            plt.savefig(f"./{log_dir}/tmp_training/embedding/{filename}_{dataset_name}_{epoch}_{N}.tif", dpi=300)
+            plt.close()
+        case 'wave_mesh':
+            rr = torch.tensor(np.linspace(-150, 150, 200)).to(device)
+            popt_list = []
+            for n in range(n_particles):
+                embedding_ = model.a[dataset_num, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
+                in_features = torch.cat((rr[:, None], embedding_), dim=1)
+                h = model.lin_phi(in_features.float())
+                h = h[:, 0]
+                popt, pcov = curve_fit(linear_model, to_numpy(rr.squeeze()), to_numpy(h.squeeze()))
+                popt_list.append(popt)
+            t = np.array(popt_list)
+            t = t[:, 0]
+            fig = plt.figure(figsize=(8, 8))
+            embedding = get_embedding(model.a, 1)
+            plt.scatter(embedding[:, 0], embedding[:, 1], c=t[:, None], s=3, cmap='viridis')
+            plt.xticks([])
+            plt.yticks([])
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/tmp_training/embedding/mesh_embedding_{dataset_name}_{epoch}_{N}.tif",dpi=300)
+            plt.close()
+
+            fig = plt.figure(figsize=(8, 8))
+            t = np.reshape(t, (100, 100))
+            plt.imshow(t, cmap='viridis')
+            plt.xticks([])
+            plt.yticks([])
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/tmp_training/embedding/mesh_map_{dataset_name}_{epoch}_{N}.tif",
+                        dpi=300)
+            # imageio.imwrite(f"./{log_dir}/tmp_training/embedding/{dataset_name}_map_{epoch}_{N}.tif", t, 'TIFF')
+
+            fig = plt.figure(figsize=(8, 8))
+            t = np.array(popt_list)
+            t = t[:, 0]
+            pts = x[:, 1:3].detach().cpu().numpy()
+            tri = Delaunay(pts)
+            colors = np.sum(t[tri.simplices], axis=1)
+            plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(), facecolors=colors)
+            plt.xticks([])
+            plt.yticks([])
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/tmp_training/embedding/mesh_Delaunay_{dataset_name}_{epoch}_{N}.tif",
+                        dpi=300)
+            plt.close()
+
+        case 'interaction':
+            fig = plt.figure(figsize=(8, 8))
+            rr = torch.tensor(np.linspace(0, radius, 200)).to(device)
+            for n in range(n_particles):
+                embedding_ = model.a[dataset_num, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
+                if (model_config.particle_model_name == 'PDE_A'):
+                    in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                             rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
+                elif (model_config.particle_model_name == 'PDE_B'):
+                    in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                             rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                             0 * rr[:, None],
+                                             0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                elif model_config.particle_model_name == 'PDE_E':
+                    in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                             rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
+                else:
+                    in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                             rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                             0 * rr[:, None],
+                                             0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                func = model.lin_edge(in_features.float())
+                func = func[:, 0]
+                if n % 5 == 0:
+                    plt.plot(to_numpy(rr),
+                             to_numpy(func),
+                             linewidth=1,
+                             color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
+                plt.savefig(f"./{log_dir}/tmp_training/embedding/{filename}_{dataset_name}_{epoch}_{N}.tif", dpi=300)
+                plt.close()
+
 
 def choose_training_model(model_config, device):
     

@@ -17,7 +17,7 @@ class Division_Predictor(nn.Module):
 
         self.sigmoid = nn.Sigmoid()
 
-        self.n_dataset = config.training.n_runs - 1
+        self.n_dataset = config.training.n_runs
 
         self.t = nn.Parameter(torch.tensor(np.ones((self.n_dataset, 20500, 2)), device=device, requires_grad=True, dtype=torch.float32))
 

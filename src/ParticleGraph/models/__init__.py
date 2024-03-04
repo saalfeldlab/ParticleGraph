@@ -6,6 +6,7 @@ from .PDE_embedding import PDE_embedding
 from .Division_Predictor import Division_Predictor
 from .Division_Predictor import Division_Predictor
 from .Ghost_Particles import Ghost_Particles
-from .utils import get_embedding, choose_training_model, constant_batch_size, increasing_batch_size, set_trainable_parameters, set_trainable_division_parameters
+from .utils import get_embedding, choose_training_model, constant_batch_size, increasing_batch_size, set_trainable_parameters, set_trainable_division_parameters, plot_training
 
-__all__ = [Interaction_CElegans, Interaction_Particles, Mesh_RPS, Mesh_Laplacian, PDE_embedding, Division_Predictor, Ghost_Particles, get_embedding, choose_training_model, constant_batch_size, increasing_batch_size, set_trainable_parameters, set_trainable_division_parameters]
+__all__ = [Interaction_CElegans, Interaction_Particles, Mesh_RPS, Mesh_Laplacian, PDE_embedding, Division_Predictor, Ghost_Particles, get_embedding, choose_training_model, constant_batch_size,
+           increasing_batch_size, set_trainable_parameters, set_trainable_division_parameters, plot_training]
