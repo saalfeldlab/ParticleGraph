@@ -78,7 +78,7 @@ class TrainingConfig(BaseModel):
     n_runs: int = 2
     clamp: float = 0
     pred_limit: float = 1.E+10
-    sparsity: Literal['none', 'replace'] = 'none'
+    sparsity: Literal['none', 'replace_embedding', 'replace_embedding_function'] = 'none'
     dropout: float = 0
     n_ghosts: int = 0
 

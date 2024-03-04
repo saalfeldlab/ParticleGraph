@@ -1726,7 +1726,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['boids_16_division']
+    config_list = ['arbitrary_3']
 
     for config_file in config_list:
 

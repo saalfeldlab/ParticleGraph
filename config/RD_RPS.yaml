@@ -42,7 +42,7 @@ training:
   batch_size: 8
   small_init_batch_size: True
   n_runs: 2
-  sparsity: 'replace'
+  sparsity: 'replace_embedding'
   cluster_method: 'distance_plot'
   fix_cluster_embedding: True
 
