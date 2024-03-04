@@ -41,7 +41,7 @@ class Interaction_Particles_extract(MessagePassing):
         self.data_augmentation = train_config.data_augmentation
         self.noise_level = train_config.noise_level
         self.embedding_dim = model_config.embedding_dim
-        self.n_dataset = train_config.n_runs - 1
+        self.n_dataset = train_config.n_runs
         self.prediction = model_config.prediction
         self.update_type = model_config.update_type
         self.n_layers_update = model_config.n_layers_update
@@ -392,7 +392,7 @@ class Mesh_RPS_learn(torch.nn.Module):
 def plot_embedding(index, model_a, dataset_number, index_particles, n_particles, n_particle_types, epoch, it, fig, ax, cmap):
 
     print(f'plot embedding epoch:{epoch} it: {it}')
-    embedding, embedding_particle = get_embedding(model_a, dataset_number, index_particles, n_particles, n_particle_types)
+    embedding = get_embedding(model_a, 1, index_particles, n_particles, n_particle_types)
 
     plt.text(-0.25, 1.1, f'{index}', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     plt.title(r'Particle embedding', fontsize=12)
@@ -406,7 +406,7 @@ def plot_embedding(index, model_a, dataset_number, index_particles, n_particles,
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
 
-    return embedding, embedding_particle
+    return embedding
 
 def plot_function(bVisu, index, model_name, model_MLP, model_a, label, pos, max_radius, ynorm, index_particles, n_particles, n_particle_types, epoch, it, fig, ax, cmap):
 
@@ -1428,13 +1428,13 @@ def data_plot_FIG5_time():
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
     model = Interaction_Particles_extract(config, device, aggr_type=config.graph_model.aggr_type, bc_dpos=bc_dpos)
-    net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
+    net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_1.pt"
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
     model.eval()
 
     model_division = Division_Predictor(config, device)
-    net = f"./log/try_{dataset_name}/models/best_model_division_with_{nrun - 1}_graphs_20.pt"
+    net = f"./log/try_{dataset_name}/models/best_model_division_with_{nrun - 1}_graphs_1.pt"
     state_dict = torch.load(net, map_location=device)
     model_division.load_state_dict(state_dict['model_state_dict'])
     model_division.eval()
@@ -1446,7 +1446,7 @@ def data_plot_FIG5_time():
     fig = plt.figure(figsize=(10.5, 9.6))
     plt.ion()
     ax = fig.add_subplot(3, 3, 1)
-    embedding, embedding_particle = plot_embedding('a)', model.a, 1, index_particles, 263, n_particle_types, 20, '$10^6$', fig, ax, cmap)
+    embedding = plot_embedding('a)', model.a, 1, index_particles, 263, n_particle_types, 20, '$10^6$', fig, ax, cmap)
 
     for it in trange(simulation_config.start_frame, n_frames + 1):
 

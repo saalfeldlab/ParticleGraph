@@ -784,8 +784,6 @@ def data_train(config):
             if visualize_embedding & ( (epoch == 0) & (N < 100) & (N % 2 == 0)  |  (epoch==0)&(N<10000) & (N%200==0)  |  (epoch==0)&(N%(Niter//100)==0)   | (epoch>0)&(N%(Niter//4)==0)):
                 plot_training(dataset_name=dataset_name, filename='embedding', log_dir=log_dir, epoch=epoch, N=N, x=x, model=model, dataset_num = 1, index_particles=index_particles, n_particles=n_particles, n_particle_types=n_particle_types, cmap=cmap)
 
-
-
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         torch.save({'model_state_dict': model.state_dict(),
@@ -973,8 +971,7 @@ def data_train(config):
             logger.info(f'Accuracy: {np.round(Accuracy, 3)}    n_clusters: {n_clusters}')
 
             ax = fig.add_subplot(1, 6, 6)
-            model_a_ = model.a.clone().detach()
-            model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
+            model_a_ = model.a[1].clone().detach()
             for n in range(n_clusters):
                 pos = np.argwhere(labels == n).squeeze().astype(int)
                 pos = np.array(pos)
@@ -984,30 +981,68 @@ def data_train(config):
                     plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='r', alpha=0.25)
                     model_a_[pos, :] = median_center
                     plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='k')
-            model_a_ = torch.reshape(model_a_, (model.a.shape[0], model.a.shape[1], model.a.shape[2]))
             for n in np.unique(new_labels):
                 pos = np.argwhere(new_labels == n).squeeze().astype(int)
                 pos = np.array(pos)
                 if pos.size>0:
-                    plt.scatter(to_numpy(model_a_[0, pos, 0]), to_numpy(model_a_[0, pos, 1]), color='k', s=5)
+                    plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), color='k', s=5)
             plt.xlabel('ai0', fontsize=12)
             plt.ylabel('ai1', fontsize=12)
             plt.xticks(fontsize=10.0)
             plt.yticks(fontsize=10.0)
 
             if (replace_with_cluster) & ((epoch == 1 * n_epochs // 4) | (epoch == 2 * n_epochs // 4) | (epoch == 3 * n_epochs // 4)):
-                # Constrain embedding
-                with torch.no_grad():
-                    for n in range(model.a.shape[0]):
-                        model.a[n] = model_a_[0].clone().detach()
-                print(f'regul_embedding: replaced')
-                logger.info(f'regul_embedding: replaced')
-                plt.text(0, 1.1, f'Replaced', ha='left', va='top', transform=ax.transAxes, fontsize=10)
-                if train_config.fix_cluster_embedding:
-                    lr_embedding = 1E-5
-                    lr = train_config.learning_rate_end
-                    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-                    logger.info(f'Learning rates: {lr}, {lr_embedding}')
+                match train_config.sparsity:
+                    case 'replace_embedding':
+                        # Constrain embedding domain
+                        with torch.no_grad():
+                            model.a[1] = model_a_.clone().detach()
+                        print(f'regul_embedding: replaced')
+                        logger.info(f'regul_embedding: replaced')
+                        plt.text(0, 1.1, f'Replaced', ha='left', va='top', transform=ax.transAxes, fontsize=10)
+                        if train_config.fix_cluster_embedding:
+                            lr_embedding = 1E-8
+                            lr = train_config.learning_rate_end
+                            optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                            logger.info(f'Learning rates: {lr}, {lr_embedding}')
+                    case 'replace_embedding_function':
+                        logger.info(f'replace_embedding_function')
+                        # Constrain function domain
+                        y_func_list = func_list * 0
+                        for n in range(n_particles):
+                            pos = np.argwhere(new_labels == n)
+                            pos = pos.squeeze()
+                            if pos.size > 0:
+                                target_func = torch.median(func_list[pos, :], dim=0).values.squeeze()
+                                y_func_list[pos] = target_func
+                        lr_embedding = 1E-8
+                        if has_ghost:
+                            lr = 1E-8
+                        else:
+                            lr = train_config.learning_rate_end
+                        optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                        for sub_epochs in trange(20):
+                            loss=0
+                            rr = torch.tensor(np.linspace(0, radius, 200)).to(device)
+                            in_features=[]
+                            for n in range(n_particles):
+                                optimizer.zero_grad()
+                                if (model_config.particle_model_name == 'PDE_A') | (model_config.particle_model_name == 'PDE_B'):
+                                    embedding_ = model.a[1, n, :].clone().detach() * torch.ones((200, model_config.embedding_dim), device=device)
+                                    if model_config.particle_model_name == 'PDE_A':
+                                        in_features.append(torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                                 rr[:, None] / simulation_config.max_radius, embedding_), dim=1))
+                            pred=model.lin_edge(torch.stack(in_features).float())
+                            loss = (pred[:,:,0] - y_func_list.clone().detach()).norm(2)
+                            logger.info(f'    loss: {np.round(loss.item()/n_particles, 3)}')
+                            loss.backward()
+                            optimizer.step()
+                        # Constrain embedding domain
+                        with torch.no_grad():
+                            model.a[1] = model_a_.clone().detach()
+                        print(f'regul_embedding: replaced')
+                        logger.info(f'regul_embedding: replaced')
+                        plt.text(0, 1.1, f'Replaced', ha='left', va='top', transform=ax.transAxes, fontsize=10)
             else:
                 if (epoch > n_epochs - 3) & (replace_with_cluster):
                     lr_embedding = 1E-5
@@ -1207,27 +1242,10 @@ def data_plot_training(config):
         plt.xlabel('epochs', fontsize=14)
 
         ax = fig.add_subplot(1, 5, 2)
-        embedding, embedding_particle = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
-        if (embedding.shape[1] > 2):
-            ax = fig.add_subplot(2, 4, 2, projection='3d')
-            for n in range(n_particle_types):
-                ax.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], embedding_particle[n][:, 2],
-                           color=cmap.color(n), s=1)
-        else:
-            if (embedding.shape[1] > 1):
-                for m in range(model.a.shape[0]):
-                    for n in range(n_particle_types):
-                        if simulation_config.has_cell_division:
-                            plt.scatter(embedding_particle[n + m * n_particle_types][:, 0],
-                                        embedding_particle[n + m * n_particle_types][:, 1], color='k', s=3)
-                        else:
-                            plt.scatter(embedding_particle[n + m * n_particle_types][:, 0],
-                                    embedding_particle[n + m * n_particle_types][:, 1], color=cmap.color(n), s=3)
-                plt.xlabel('dim 0', fontsize=14)
-                plt.ylabel('dim 1', fontsize=14)
-            else:
-                for n in range(n_particle_types):
-                    plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5, color=cmap.color(n))
+        embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+        for n in range(n_particle_types):
+            plt.scatter(embedding[index_particles[n], 0],
+                        embedding[index_particles[n], 1], color=cmap.color(n), s=0.1)
         plt.xlim([-1, 2])
         plt.ylim([-1, 2])
 
@@ -1726,7 +1744,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3']
+    config_list = ['arbitrary_3_dropout_5']
 
     for config_file in config_list:
 
