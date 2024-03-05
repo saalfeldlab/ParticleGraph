@@ -1,12 +1,13 @@
 import torch
 from prettytable import PrettyTable
-
 from ParticleGraph.models import Interaction_Particles, Mesh_Laplacian, Mesh_RPS
 from ParticleGraph.utils import choose_boundary_values
 from ParticleGraph.utils import to_numpy
 import numpy as np
 import matplotlib.pyplot as plt
-
+from scipy.optimize import curve_fit
+from scipy.spatial import Delaunay
+from ParticleGraph.fitting_models import linear_model
 
 def get_embedding(model_a=None, dataset_number = 0, index_particles=None, n_particles=None, n_particle_types=None):
     embedding = []
@@ -15,7 +16,7 @@ def get_embedding(model_a=None, dataset_number = 0, index_particles=None, n_part
 
     return embedding
 
-def plot_training (dataset_name, filename, log_dir, epoch, N, x, model, dataset_num, index_particles, n_particles, n_particle_types, cmap):
+def plot_training (dataset_name, filename, log_dir, epoch, N, x, model, dataset_num, index_particles, n_particles, n_particle_types, cmap, device):
 
     match filename:
 
@@ -31,7 +32,7 @@ def plot_training (dataset_name, filename, log_dir, epoch, N, x, model, dataset_
             rr = torch.tensor(np.linspace(-150, 150, 200)).to(device)
             popt_list = []
             for n in range(n_particles):
-                embedding_ = model.a[dataset_num, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
+                embedding_ = model.a[dataset_num, n, :] * torch.ones((200, 2), device=device)
                 in_features = torch.cat((rr[:, None], embedding_), dim=1)
                 h = model.lin_phi(in_features.float())
                 h = h[:, 0]

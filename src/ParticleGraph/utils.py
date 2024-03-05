@@ -103,8 +103,7 @@ def grads2D(params):
 
 def tv2d(params):
     nb_voxel = (params.shape[0]) * (params.shape[1])
-    t=params.detach().cpu()
-    sx,sy= grads2D(t)
+    sx,sy= grads2D(params)
 
     tvloss = torch.sqrt(sx.cuda() ** 2 + sy.cuda() ** 2 + 1e-8).sum()
     # tvloss += torch.nn.functional.relu(-params).norm(1) / 15

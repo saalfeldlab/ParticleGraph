@@ -28,7 +28,7 @@ from ParticleGraph.models.Ghost_Particles import Ghost_Particles
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
 from ParticleGraph.data_loaders import *
-from ParticleGraph.utils import to_numpy, CustomColorMap, set_device, norm_velocity, norm_acceleration, grads2D
+from ParticleGraph.utils import to_numpy, CustomColorMap, set_device, norm_velocity, norm_acceleration, grads2D, tv2d
 from ParticleGraph.fitting_models import linear_model
 from ParticleGraph.embedding_cluster import *
 from ParticleGraph.models import Division_Predictor
@@ -542,6 +542,11 @@ def data_train(config):
     os.makedirs(os.path.join(log_dir, 'models'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'tmp_training'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'tmp_training/embedding'), exist_ok=True)
+    files = glob.glob(f"{log_dir}/tmp_training/embedding/*")
+    for f in files:
+        if (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (
+                f != 'generation_code.py'):
+            os.remove(f)
     os.makedirs(os.path.join(log_dir, 'tmp_recons'), exist_ok=True)
     copyfile(os.path.realpath(__file__), os.path.join(log_dir, 'training_code.py'))
     logging.basicConfig(filename=os.path.join(log_dir, 'training.log'),
@@ -564,7 +569,6 @@ def data_train(config):
         y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(x)
         y_list.append(y)
-
     x = x_list[0][0].clone().detach()
     y = y_list[0][0].clone().detach()
     for run in range(NGraphs):
@@ -586,6 +590,7 @@ def data_train(config):
     if has_mesh:
         x_mesh_list = []
         y_mesh_list = []
+        time.sleep(0.5)
         for run in trange(NGraphs):
             x_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
             x_mesh_list.append(x_mesh)
@@ -657,6 +662,7 @@ def data_train(config):
     if has_ghost:
         ghosts_particles = Ghost_Particles(config, n_particles, device)
         optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.ghost_pos], lr=1E-4)
+        # optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.data], lr=1E-3)
         mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
         mask_ghost = np.tile(mask_ghost, batch_size)
         mask_ghost = np.argwhere(mask_ghost == 1)
@@ -712,9 +718,9 @@ def data_train(config):
                 x = x_list[run][k].clone().detach()
 
                 if has_ghost:
-                    x_ghost = ghosts_particles.get_pos(dataset_id=run-1, frame=k)
+                    x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k)
+                    x_ghost = ghosts_particles.get_pos_t(dataset_id=run, frame=k)
                     x = torch.cat((x, x_ghost), 0)
-
                 if has_mesh:
                     x_mesh = x_mesh_list[run][k].clone().detach()
                     if train_config.noise_level > 0:
@@ -727,7 +733,6 @@ def data_train(config):
                     else:
                         y_batch = torch.cat((y_batch, y), dim=0)
                 else:
-
                     distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
                     adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
                     t = torch.Tensor([radius ** 2])
@@ -780,7 +785,7 @@ def data_train(config):
             if has_mesh:
                 loss = ((pred - y_batch) * mask_mesh).norm(2)
             elif has_ghost:
-                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
+                loss = ((pred[mask_ghost] - y_batch)).norm(2)
             else:
                  loss = (pred - y_batch).norm(2)
 
@@ -788,11 +793,25 @@ def data_train(config):
             optimizer.step()
             if has_ghost:
                 optimizer_ghost_particles.step()
+                # if (N>0) & (N % 1000 == 0):
+                    # optimizer_ghost_particles.zero_grad()
+                    # loss_ghost = 0
+                    # for i in range(config.training.n_ghosts):
+                    #     slice = ghosts_particles.data[run, :, i, :].squeeze()
+                    #     loss_ghost += tv2d(slice)  # torch.sum(horizontal_diff ** 2) + torch.sum(vertical_diff ** 2)
+                    # loss_ghost.backward()
+                    # optimizer_ghost_particles.step()
+                    # fig = plt.figure(figsize=(8, 8))
+                    # plt.imshow(to_numpy(ghosts_particles.data[run, :, 120, :].squeeze()))
+                    # fig.savefig(f"{log_dir}/tmp_training/embedding/ghosts_{N}.jpg", dpi=300)
+                    # plt.close()
+
             total_loss += loss.item()
 
             visualize_embedding=True
             if visualize_embedding & ( (epoch == 0) & (N < 100) & (N % 2 == 0)  |  (epoch==0)&(N<10000) & (N%200==0)  |  (epoch==0)&(N%(Niter//100)==0)   | (epoch>0)&(N%(Niter//4)==0)):
-                plot_training(dataset_name=dataset_name, filename='embedding', log_dir=log_dir, epoch=epoch, N=N, x=x, model=model, dataset_num = 1, index_particles=index_particles, n_particles=n_particles, n_particle_types=n_particle_types, cmap=cmap)
+                plot_training(dataset_name=dataset_name, filename='embedding', log_dir=log_dir, epoch=epoch, N=N, x=x, model=model, dataset_num = 1,
+                              index_particles=index_particles, n_particles=n_particles, n_particle_types=n_particle_types, cmap=cmap, device=device)
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
@@ -825,7 +844,6 @@ def data_train(config):
                         embedding[index_particles[n], 1], color=cmap.color(n), s=0.1)
         plt.xlabel('Embedding 0', fontsize=12)
         plt.ylabel('Embedding 1', fontsize=12)
-
 
         ax = fig.add_subplot(1, 6, 3)
         if (simulation_config.n_interactions < 100) & (simulation_config.has_cell_division == False) :  # cluster embedding
@@ -1037,14 +1055,14 @@ def data_train(config):
                             in_features=[]
                             for n in range(n_particles):
                                 optimizer.zero_grad()
-                                if (model_config.particle_model_name == 'PDE_G')
+                                if (model_config.particle_model_name == 'PDE_G'):
                                     embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim),
                                                                                device=device)
                                     in_features = torch.cat(
                                         (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                          rr[:, None] / simulation_config.max_radius, 0 * rr[:, None], 0 * rr[:, None],
                                          0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-                                elif (model_config.particle_model_name == 'PDE_E')
+                                elif (model_config.particle_model_name == 'PDE_E'):
                                     embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim),
                                                                                device=device)
                                     in_features = torch.cat(
@@ -1651,7 +1669,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 
             x_ = x
             if has_ghost:
-                x_ghost = model_ghost.get_pos(dataset_id=0, frame=it)
+                x_ghost = model_ghost.get_pos(dataset_id=run, frame=it)
                 x_ = torch.cat((x_, x_ghost), 0)
 
             distance = torch.sum(bc_dpos(x_[:, None, 1:3] - x_[None, :, 1:3]) ** 2, dim=2)
@@ -1761,14 +1779,13 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 
 
 
-
 if __name__ == '__main__':
 
     print('')
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3_dropout_20']
+    config_list = ['arbitrary_3_dropout_10']
 
     for config_file in config_list:
 
