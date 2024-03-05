@@ -2,6 +2,10 @@ import numpy as np
 import torch
 import GPUtil
 import matplotlib.pyplot as plt
+import os
+import glob
+import logging
+from shutil import copyfile
 
 
 def to_numpy(tensor: torch.Tensor) -> np.ndarray:
@@ -147,3 +151,29 @@ class CustomColorMap:
             color = color_map(index)
 
         return color
+    
+    
+
+def create_log_dir(config, dataset_name):
+    l_dir = os.path.join('.', 'log')
+    log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
+    print('log_dir: {}'.format(log_dir))
+    os.makedirs(log_dir, exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'models'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'tmp_training'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'tmp_training/embedding'), exist_ok=True)
+    files = glob.glob(f"{log_dir}/tmp_training/embedding/*")
+    for f in files:
+        if (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (
+                f != 'generation_code.py'):
+            os.remove(f)
+    os.makedirs(os.path.join(log_dir, 'tmp_recons'), exist_ok=True)
+    copyfile(os.path.realpath(__file__), os.path.join(log_dir, 'training_code.py'))
+    logging.basicConfig(filename=os.path.join(log_dir, 'training.log'),
+                        format='%(asctime)s %(message)s',
+                        filemode='w')
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    logger.info(config)
+
+    return l_dir, log_dir, logger

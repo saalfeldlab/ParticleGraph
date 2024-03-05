@@ -28,7 +28,7 @@ from ParticleGraph.models.Ghost_Particles import Ghost_Particles
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
 from ParticleGraph.data_loaders import *
-from ParticleGraph.utils import to_numpy, CustomColorMap, set_device, norm_velocity, norm_acceleration, grads2D, tv2d
+from ParticleGraph.utils import *
 from ParticleGraph.fitting_models import linear_model
 from ParticleGraph.embedding_cluster import *
 from ParticleGraph.models import Division_Predictor
@@ -66,12 +66,12 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
     min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
-    n_frames = simulation_config.n_frames
-
     delta_t = simulation_config.delta_t
     has_mesh = (config.graph_model.mesh_model_name != '')
     only_mesh = (config.graph_model.particle_model_name == '') & has_mesh
     has_cell_division = simulation_config.has_cell_division
+    n_frames = simulation_config.n_frames
+    cycle_length = None
     has_dropout = training_config.dropout > 0
 
     index_particles = []
@@ -88,20 +88,12 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
     else:
         dropout_mask = np.arange(n_particles)
 
-
     model, bc_pos, bc_dpos = choose_model(config, device=device)
 
     if has_mesh:
         mesh_model = choose_mesh_model(config, device=device)
     else:
         mesh_model = None
-    torch.save({'model_state_dict': model.state_dict()}, f'graphs_data/graphs_{dataset_name}/model.pt')
-
-    cycle_length = None
-
-    ################################################################################
-    ##### Main loop ################################################################
-    ################################################################################
 
     for run in range(config.training.n_runs):
 
@@ -124,9 +116,6 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
             X1_mesh, V1_mesh, T1_mesh, H1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
             torch.save(mesh_data, f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt')
             mask_mesh = mesh_data['mask'].squeeze()
-
-            plt.scatter(to_numpy(X1_mesh[:, 0]), to_numpy(X1_mesh[:, 1]), c=to_numpy(T1_mesh[:, 0]))
-            plt.show
         if only_mesh | (model_config.particle_model_name == 'PDE_O'):
             X1 = X1_mesh.clone().detach()
             H1 = H1_mesh.clone().detach()
@@ -213,7 +202,6 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         x_[:,0] = torch.arange(len(x_), device=device)
                         x_removed_list.append(x[inv_dropout_mask].clone().detach())
                         y_list.append(y[dropout_mask].clone().detach())
-
                     else:
                         x_list.append(x.clone().detach())
                         y_list.append(y.clone().detach())
@@ -535,26 +523,7 @@ def data_train(config):
         get_batch_size = constant_batch_size(target_batch_size)
     batch_size = get_batch_size(0)
 
-    l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
-    print('log_dir: {}'.format(log_dir))
-    os.makedirs(log_dir, exist_ok=True)
-    os.makedirs(os.path.join(log_dir, 'models'), exist_ok=True)
-    os.makedirs(os.path.join(log_dir, 'tmp_training'), exist_ok=True)
-    os.makedirs(os.path.join(log_dir, 'tmp_training/embedding'), exist_ok=True)
-    files = glob.glob(f"{log_dir}/tmp_training/embedding/*")
-    for f in files:
-        if (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (
-                f != 'generation_code.py'):
-            os.remove(f)
-    os.makedirs(os.path.join(log_dir, 'tmp_recons'), exist_ok=True)
-    copyfile(os.path.realpath(__file__), os.path.join(log_dir, 'training_code.py'))
-    logging.basicConfig(filename=os.path.join(log_dir, 'training.log'),
-                        format='%(asctime)s %(message)s',
-                        filemode='w')
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    logger.info(config)
+    l_dir, log_dir,logger = create_log_dir(config, dataset_name)
 
     graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     NGraphs = len(graph_files)
@@ -661,8 +630,8 @@ def data_train(config):
 
     if has_ghost:
         ghosts_particles = Ghost_Particles(config, n_particles, device)
-        optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.ghost_pos], lr=1E-4)
-        # optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.data], lr=1E-3)
+        # optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.ghost_pos], lr=1E-4)
+        optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.data], lr=1E-3)
         mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
         mask_ghost = np.tile(mask_ghost, batch_size)
         mask_ghost = np.argwhere(mask_ghost == 1)
@@ -718,7 +687,7 @@ def data_train(config):
                 x = x_list[run][k].clone().detach()
 
                 if has_ghost:
-                    x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k)
+                    # x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k)
                     x_ghost = ghosts_particles.get_pos_t(dataset_id=run, frame=k)
                     x = torch.cat((x, x_ghost), 0)
                 if has_mesh:
@@ -793,7 +762,7 @@ def data_train(config):
             optimizer.step()
             if has_ghost:
                 optimizer_ghost_particles.step()
-                # if (N>0) & (N % 1000 == 0):
+                if (N>0) & (N % 1000 == 0):
                     # optimizer_ghost_particles.zero_grad()
                     # loss_ghost = 0
                     # for i in range(config.training.n_ghosts):
@@ -801,10 +770,10 @@ def data_train(config):
                     #     loss_ghost += tv2d(slice)  # torch.sum(horizontal_diff ** 2) + torch.sum(vertical_diff ** 2)
                     # loss_ghost.backward()
                     # optimizer_ghost_particles.step()
-                    # fig = plt.figure(figsize=(8, 8))
-                    # plt.imshow(to_numpy(ghosts_particles.data[run, :, 120, :].squeeze()))
-                    # fig.savefig(f"{log_dir}/tmp_training/embedding/ghosts_{N}.jpg", dpi=300)
-                    # plt.close()
+                    fig = plt.figure(figsize=(8, 8))
+                    plt.imshow(to_numpy(ghosts_particles.data[run, :, 120, :].squeeze()))
+                    fig.savefig(f"{log_dir}/tmp_training/embedding/ghosts_{N}.jpg", dpi=300)
+                    plt.close()
 
             total_loss += loss.item()
 
@@ -1785,7 +1754,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3_dropout_10']
+    config_list = ['arbitrary_3_dropout_5']
 
     for config_file in config_list:
 
