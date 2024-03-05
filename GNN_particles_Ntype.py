@@ -17,7 +17,7 @@ import os
 from sklearn import metrics
 from matplotlib import rc
 import matplotlib
-# matplotlib.use("Qt5Agg")
+matplotlib.use("Qt5Agg")
 
 from ParticleGraph.config import ParticleGraphConfig
 from ParticleGraph.generators.particle_initialization import init_particles, init_mesh
@@ -220,7 +220,6 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         if (run==1) & (it==200):
                             torch.save(x, f'graphs_data/graphs_{dataset_name}/x_200.pt')
                             torch.save(y, f'graphs_data/graphs_{dataset_name}/y_200.pt')
-
 
             # Particle update
             if model_config.particle_model_name == 'PDE_O':
@@ -658,7 +657,11 @@ def data_train(config):
     if has_ghost:
         ghosts_particles = Ghost_Particles(config, n_particles, device)
         optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.ghost_pos], lr=1E-4)
-
+        mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
+        mask_ghost = np.tile(mask_ghost, batch_size)
+        mask_ghost = np.argwhere(mask_ghost == 1)
+        mask_ghost = mask_ghost[:, 0].astype(int)
+        
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
@@ -679,6 +682,11 @@ def data_train(config):
             repeat_factor = batch_size // old_batch_size
             if has_mesh:
                 mask_mesh = mask_mesh.repeat(repeat_factor, 1)
+            if has_ghost:
+                mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
+                mask_ghost = np.tile(mask_ghost,batch_size)
+                mask_ghost = np.argwhere(mask_ghost==1)
+                mask_ghost = mask_ghost[:,0].astype(int)
 
         total_loss = 0
         total_loss_division = 0
@@ -769,10 +777,12 @@ def data_train(config):
                 optimizer_division.step()
                 total_loss_division += loss_division.item()
 
-            if model_config.mesh_model_name == 'RD_RPS_Mesh':
+            if has_mesh:
                 loss = ((pred - y_batch) * mask_mesh).norm(2)
+            elif has_ghost:
+                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
             else:
-                loss = (pred - y_batch).norm(2)
+                 loss = (pred - y_batch).norm(2)
 
             loss.backward()
             optimizer.step()
@@ -1434,7 +1444,7 @@ def data_plot_training(config):
 
 
 
-def data_test(config, visualize=False, verbose=True, best_model=0, step=5, ratio=1, run=0):
+def data_test(config, visualize=False, verbose=True, best_model=20, step=5, ratio=1, run=1):
     print('')
     print('Plot roll-out inference ... ')
 
@@ -1744,7 +1754,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3_dropout_5']
+    config_list = ['gravity_16_dropout_5']
 
     for config_file in config_list:
 
@@ -1758,8 +1768,8 @@ if __name__ == '__main__':
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
         # data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 40, bSave=True)
-        # data_train(config)
+        data_train(config)
         # data_plot_training(config)
-        data_test(config, visualize=True, verbose=True, best_model=16, run=1, step=2) #config.simulation.n_frames // 40, run=1)
+        # data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=config.simulation.n_frames // 40, run=1)
 
 
