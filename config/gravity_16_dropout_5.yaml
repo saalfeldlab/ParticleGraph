@@ -1,5 +1,5 @@
 description: 'Gravity model with 16 different particle types'
-dataset: 'gravity_16_droput_5'
+dataset: 'gravity_16_dropout_5'
 
 simulation:
     params: [[-1]]
@@ -38,7 +38,7 @@ training:
     n_runs: 2
     dropout: 0.05
     n_ghosts: 48
-    sparsity: 'replace_embedding'
+    sparsity: 'replace_embedding_function'
     data_augmentation: True
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True

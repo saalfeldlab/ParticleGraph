@@ -1033,15 +1033,29 @@ def data_train(config):
                         optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
                         for sub_epochs in trange(20):
                             loss=0
-                            rr = torch.tensor(np.linspace(0, radius, 200)).to(device)
+                            rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
                             in_features=[]
                             for n in range(n_particles):
                                 optimizer.zero_grad()
-                                if (model_config.particle_model_name == 'PDE_A') | (model_config.particle_model_name == 'PDE_B'):
-                                    embedding_ = model.a[1, n, :].clone().detach() * torch.ones((200, model_config.embedding_dim), device=device)
+                                if (model_config.particle_model_name == 'PDE_G')
+                                    embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim),
+                                                                               device=device)
+                                    in_features = torch.cat(
+                                        (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                         rr[:, None] / simulation_config.max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                         0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                                elif (model_config.particle_model_name == 'PDE_E')
+                                    embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim),
+                                                                               device=device)
+                                    in_features = torch.cat(
+                                        (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                         rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
+                                elif (model_config.particle_model_name == 'PDE_A') | (model_config.particle_model_name == 'PDE_B'):
+                                    embedding_ = model.a[1, n, :].clone().detach() * torch.ones((1000, model_config.embedding_dim), device=device)
                                     if model_config.particle_model_name == 'PDE_A':
                                         in_features.append(torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                                                  rr[:, None] / simulation_config.max_radius, embedding_), dim=1))
+
                             pred=model.lin_edge(torch.stack(in_features).float())
                             loss = (pred[:,:,0] - y_func_list.clone().detach()).norm(2)
                             logger.info(f'    loss: {np.round(loss.item()/n_particles, 3)}')
@@ -1754,7 +1768,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['gravity_16_dropout_5']
+    config_list = ['arbitrary_3_dropout_20']
 
     for config_file in config_list:
 
@@ -1767,7 +1781,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        # data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 40, bSave=True)
+        data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 40, bSave=True)
         data_train(config)
         # data_plot_training(config)
         # data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=config.simulation.n_frames // 40, run=1)
