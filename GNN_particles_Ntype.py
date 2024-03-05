@@ -1639,7 +1639,7 @@ def data_test(config, visualize=False, verbose=True, best_model=0, step=5, ratio
             dataset = data.Data(x=x_, edge_index=edge_index)
 
             with torch.no_grad():
-                y = model(dataset, data_id=0, training=False, vnorm=vnorm,
+                y = model(dataset, data_id=run, training=False, vnorm=vnorm,
                           phi=torch.zeros(1, device=device))  # acceleration estimation
 
             if model_config.prediction == '2nd_derivative':
@@ -1744,7 +1744,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3_dropout_5']
+    config_list = ['arbitrary_3']
 
     for config_file in config_list:
 
@@ -1760,6 +1760,6 @@ if __name__ == '__main__':
         # data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 40, bSave=True)
         # data_train(config)
         # data_plot_training(config)
-        data_test(config, visualize=True, verbose=True, best_model=16, run=1, step=2) #config.simulation.n_frames // 40, run=1)
+        data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=2) #config.simulation.n_frames // 40, run=1)
 
 
