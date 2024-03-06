@@ -1,5 +1,5 @@
 description: 'attraction-repulsion with 3 types particles'
-dataset: 'arbitrary_3_dropout_20'
+dataset: 'arbitrary_3_dropout_10_pos'
 
 simulation:
   params: [[1.6233, 1.0413, 1.6012, 1.5615], [1.7667, 1.8308, 1.0855, 1.9055], [1.7226, 1.7850, 1.0584, 1.8579]]
@@ -33,11 +33,12 @@ plotting:
 
 training:
   n_epochs: 20
-  batch_size: 1
-  small_init_batch_size: True
+  batch_size: 8
+  small_init_batch_size: False
   n_runs: 2
-  dropout: 0.2
-  n_ghosts: 960
+  dropout: 0.1
+  ghost_method: 'tensor'
+  n_ghosts: 480
   sparsity: 'replace_embedding_function'
   cluster_method: 'distance_plot'
   data_augmentation: True

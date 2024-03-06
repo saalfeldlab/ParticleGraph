@@ -19,7 +19,7 @@ class Renderer(nn.Module):
 
     def forward(self, x):
         out = self.net(x)
-        return out
+        return torch.clamp(out, min=0, max=1)
 
 class Ghost_Particles(torch.nn.Module):
 
@@ -32,7 +32,7 @@ class Ghost_Particles(torch.nn.Module):
 
         self.ghost_pos = nn.Parameter(torch.rand((self.n_dataset, self.n_frames, self.n_ghosts, 2), device=device, requires_grad=True))
 
-        self.data = nn.Parameter(0 * torch.randn((self.n_dataset, 32, self.n_ghosts, 128), device=device), requires_grad=True)
+        self.data = nn.Parameter(0*torch.randn((self.n_dataset, 32, self.n_ghosts, 128), device=device), requires_grad=True)
         
         self.N1 = torch.arange(n_particles,n_particles+self.n_ghosts, device=device, requires_grad=False)
         self.V1 = torch.zeros((self.n_ghosts,2), device=device, requires_grad=False)
@@ -40,7 +40,7 @@ class Ghost_Particles(torch.nn.Module):
         self.H1 = torch.zeros((self.n_ghosts,2), device=device, requires_grad=False)
         self.A1 = torch.zeros(self.n_ghosts, device=device, requires_grad=False)
 
-        self.renderer = Renderer(in_dim=32, hidden_dim=64, num_layers=3, out_dim=2)
+        self.renderer = Renderer(in_dim=32, hidden_dim=32, num_layers=2, out_dim=2)
         self.renderer = self.renderer.to(device)
         
         

@@ -81,6 +81,7 @@ class TrainingConfig(BaseModel):
     sparsity: Literal['none', 'replace_embedding', 'replace_embedding_function'] = 'none'
     dropout: float = 0
     n_ghosts: int = 0
+    ghost_method: Literal['none', 'tensor', 'MLP'] = 'none'
 
     fix_cluster_embedding: bool = False
     loss_weight: bool = False

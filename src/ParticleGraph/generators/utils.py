@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 
-from ParticleGraph.generators import PDE_A, PDE_B, PDE_B_bis, PDE_E, PDE_G, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, \
+from ParticleGraph.generators import PDE_A, PDE_A_bis, PDE_B, PDE_B_bis, PDE_E, PDE_G, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, \
     Laplacian_A, PDE_O
 from ParticleGraph.utils import choose_boundary_values
 
@@ -17,12 +17,24 @@ def choose_model(config, device):
     match particle_model_name:
         case 'PDE_A':
             p = torch.ones(n_particle_types, 4, device=device) + torch.rand(n_particle_types, 4, device=device)
-            if len(params) > 0:
+            if params[0] != [-1]:
                 for n in range(n_particle_types):
                     p[n] = torch.tensor(params[n])
+            else:
+                print(p)
             sigma = config.simulation.sigma
             p = p if n_particle_types == 1 else torch.squeeze(p)
             model = PDE_A(aggr_type=aggr_type, p=torch.squeeze(p), sigma=sigma, bc_dpos=bc_dpos)
+        case 'PDE_A_bis':
+            p = torch.ones(n_particle_types, n_particle_types, 4, device=device) + torch.rand(n_particle_types, n_particle_types, 4, device=device)
+            if params[0] != [-1]:
+                for n in range(n_particle_types):
+                    p[n] = torch.tensor(params[n])
+            else:
+                print(p)
+            sigma = config.simulation.sigma
+            p = p if n_particle_types == 1 else torch.squeeze(p)
+            model = PDE_A_bis(aggr_type=aggr_type, p=torch.squeeze(p), sigma=sigma, bc_dpos=bc_dpos)
         case 'PDE_B':
             p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
             if params[0] != [-1]:

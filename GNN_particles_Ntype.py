@@ -584,7 +584,6 @@ def data_train(config):
         # face = mesh_data['face']
 
         mask_mesh = mask_mesh.repeat(batch_size, 1)
-
     h=[]
     x=[]
     y=[]
@@ -630,8 +629,10 @@ def data_train(config):
 
     if has_ghost:
         ghosts_particles = Ghost_Particles(config, n_particles, device)
-        # optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.ghost_pos], lr=1E-4)
-        optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.data], lr=1E-3)
+        if train_config.ghost_method == 'MLP':
+            optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.data], lr=5E-4)
+        else:
+            optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.ghost_pos], lr=1E-4)
         mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
         mask_ghost = np.tile(mask_ghost, batch_size)
         mask_ghost = np.argwhere(mask_ghost == 1)
@@ -687,8 +688,10 @@ def data_train(config):
                 x = x_list[run][k].clone().detach()
 
                 if has_ghost:
-                    # x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k)
-                    x_ghost = ghosts_particles.get_pos_t(dataset_id=run, frame=k)
+                    if train_config.ghost_method == 'MLP':
+                        x_ghost = ghosts_particles.get_pos_t(dataset_id=run, frame=k)
+                    else:
+                        x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k)
                     x = torch.cat((x, x_ghost), 0)
                 if has_mesh:
                     x_mesh = x_mesh_list[run][k].clone().detach()
@@ -762,7 +765,7 @@ def data_train(config):
             optimizer.step()
             if has_ghost:
                 optimizer_ghost_particles.step()
-                if (N>0) & (N % 1000 == 0):
+                if (N>0) & (N % 1000 == 0) & (train_config.ghost_method == 'MLP'):
                     # optimizer_ghost_particles.zero_grad()
                     # loss_ghost = 0
                     # for i in range(config.training.n_ghosts):
@@ -860,9 +863,9 @@ def data_train(config):
                 proj_interaction = trans.transform(coeff_norm)
             elif (model_config.particle_model_name == 'PDE_A') | (model_config.particle_model_name == 'PDE_B'):
                 func_list = []
-                rr = torch.tensor(np.linspace(0, radius, 200)).to(device)
+                rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
                 for n in range(n_particles):
-                    embedding_ = model.a[1, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
+                    embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
                     if model_config.particle_model_name == 'PDE_A':
                         in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                                  rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
@@ -1754,7 +1757,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3_dropout_5']
+    config_list = ['arbitrary_3_3']
 
     for config_file in config_list:
 
@@ -1768,7 +1771,7 @@ if __name__ == '__main__':
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
         data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 40, bSave=True)
-        data_train(config)
+        # data_train(config)
         # data_plot_training(config)
         # data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=config.simulation.n_frames // 40, run=1)
 

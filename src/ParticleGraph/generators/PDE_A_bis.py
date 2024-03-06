@@ -4,7 +4,7 @@ import torch_geometric.utils as pyg_utils
 from ParticleGraph.utils import to_numpy
 
 
-class PDE_A(pyg.nn.MessagePassing):
+class PDE_A_bis(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
@@ -25,7 +25,7 @@ class PDE_A(pyg.nn.MessagePassing):
     """
 
     def __init__(self, aggr_type=[], p=[], sigma=[], bc_dpos=[]):
-        super(PDE_A, self).__init__(aggr=aggr_type)  # "mean" aggregation.
+        super(PDE_A_bis, self).__init__(aggr=aggr_type)  # "mean" aggregation.
 
         self.p = p
         self.sigma = sigma
@@ -34,18 +34,19 @@ class PDE_A(pyg.nn.MessagePassing):
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        particle_type = to_numpy(x[:, 5])
-        parameters = self.p[particle_type,:]
-        d_pos = self.propagate(edge_index, pos=x[:, 1:3], parameters=parameters, sigma=self.sigma)
+        particle_type = x[:, 5:6]
+        d_pos = self.propagate(edge_index, pos=x[:, 1:3], particle_type=particle_type)
         return d_pos
 
-    def message(self, pos_i, pos_j, parameters_i):
+    def message(self, pos_i, pos_j, particle_type_i, particle_type_j):
         distance_squared = torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, axis=1)  # squared distance
-        psi = (parameters_i[:, 0] * torch.exp(-distance_squared ** parameters_i[:, 1] / (2 * self.sigma ** 2))
-               - parameters_i[:, 2] * torch.exp(-distance_squared ** parameters_i[:, 3] / (2 * self.sigma ** 2)))
+        parameters = self.p[to_numpy(particle_type_i), to_numpy(particle_type_j), :]
+        
+        psi = (parameters[:, 0] * torch.exp(-distance_squared ** parameters[:, 1] / (2 * self.sigma ** 2))
+               - parameters[:, 2] * torch.exp(-distance_squared ** parameters[:, 3] / (2 * self.sigma ** 2)))
         d_pos = psi[:, None] * self.bc_dpos(pos_j - pos_i)
         return d_pos
 
-    def psi(self, r, p):
+    def psi(self, r, p, i ,j):
         return r * (p[0] * torch.exp(-r ** (2 * p[1]) / (2 * self.sigma ** 2))
                     - p[2] * torch.exp(-r ** (2 * p[3]) / (2 * self.sigma ** 2)))
