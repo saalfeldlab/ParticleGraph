@@ -3003,14 +3003,18 @@ def data_plot_suppFIG1():
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
-    model.a = model.a[0:1].clone().detach()
-
-    net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_0.pt"
+    net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_21.pt"
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
     model.eval()
 
-    model.a[1] = model.a[0].clone().detach()
+    config.training.n_runs = 1
+    b=model.a.data.clone().detach()
+    b=torch.cat((b,b),dim=0)
+    model.a = nn.Parameter(b)
+    torch.save({'model_state_dict': model.state_dict()},
+               os.path.join(log_dir, 'models', f'best_model_with_1_graphs_21.pt'))
+
 
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
