@@ -271,7 +271,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
             # output plots
             if visualize & (run == 0) & (it % step == 0) & (it >= 0):
 
-                # plt.style.use('dark_background')
+                plt.style.use('dark_background')
 
                 if 'graph' in style:
                     fig = plt.figure(figsize=(10, 10))
@@ -861,18 +861,22 @@ def data_train(config):
                 coeff_norm = to_numpy(func_list)
                 trans = umap.UMAP(n_neighbors=100, n_components=2, transform_queue_size=0).fit(coeff_norm)
                 proj_interaction = trans.transform(coeff_norm)
-            elif (model_config.particle_model_name == 'PDE_A') | (model_config.particle_model_name == 'PDE_B'):
+            elif (model_config.particle_model_name == 'PDE_A') | (model_config.particle_model_name == 'PDE_A_bis') | (model_config.particle_model_name == 'PDE_B'):
                 func_list = []
                 rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
                 for n in range(n_particles):
                     embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
-                    if model_config.particle_model_name == 'PDE_A':
-                        in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                                 rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
-                    else:
-                        in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                                 rr[:, None] / simulation_config.max_radius, 0 * rr[:, None], 0 * rr[:, None],
-                                                 0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                    match model_config.particle_model_name:
+                        case 'PDE_A':
+                            in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                     rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
+                        case 'PDE_A_bis':
+                            in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                     rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
+                        case 'PDE_B':
+                            in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                     rr[:, None] / simulation_config.max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                                     0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
                     func = model.lin_edge(in_features.float())
                     func = func[:, 0]
                     func_list.append(func)
@@ -1757,7 +1761,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3_3']
+    config_list = ['arbitrary_3_dropout_20_pos']
 
     for config_file in config_list:
 
@@ -1770,8 +1774,8 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 40, bSave=True)
-        # data_train(config)
+        # data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 40, bSave=True)
+        data_train(config)
         # data_plot_training(config)
         # data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=config.simulation.n_frames // 40, run=1)
 

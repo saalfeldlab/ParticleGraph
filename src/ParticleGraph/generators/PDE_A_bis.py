@@ -40,7 +40,7 @@ class PDE_A_bis(pyg.nn.MessagePassing):
 
     def message(self, pos_i, pos_j, particle_type_i, particle_type_j):
         distance_squared = torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, axis=1)  # squared distance
-        parameters = self.p[to_numpy(particle_type_i), to_numpy(particle_type_j), :]
+        parameters = self.p[to_numpy(particle_type_i), to_numpy(particle_type_j), :].squeeze()
         
         psi = (parameters[:, 0] * torch.exp(-distance_squared ** parameters[:, 1] / (2 * self.sigma ** 2))
                - parameters[:, 2] * torch.exp(-distance_squared ** parameters[:, 3] / (2 * self.sigma ** 2)))

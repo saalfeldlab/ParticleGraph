@@ -81,6 +81,9 @@ def plot_training (dataset_name, filename, log_dir, epoch, N, x, model, dataset_
                 if (model_config.particle_model_name == 'PDE_A'):
                     in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                              rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
+                elif (model_config.particle_model_name == 'PDE_A_bis'):
+                    in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                             rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
                 elif (model_config.particle_model_name == 'PDE_B'):
                     in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                              rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
@@ -101,8 +104,8 @@ def plot_training (dataset_name, filename, log_dir, epoch, N, x, model, dataset_
                              to_numpy(func),
                              linewidth=1,
                              color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
-                plt.savefig(f"./{log_dir}/tmp_training/embedding/{filename}_{dataset_name}_{epoch}_{N}.tif", dpi=300)
-                plt.close()
+            plt.savefig(f"./{log_dir}/tmp_training/embedding/{filename}_{dataset_name}_{epoch}_{N}.tif", dpi=300)
+            plt.close()
 
 
 def choose_training_model(model_config, device):
@@ -114,7 +117,7 @@ def choose_training_model(model_config, device):
     model=[]
     model_name = model_config.graph_model.particle_model_name
     match model_name:
-        case 'PDE_A' | 'PDE_B' | 'PDE_B_bis' :
+        case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_bis' :
             model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
         case 'PDE_E':
             model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)

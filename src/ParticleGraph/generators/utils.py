@@ -26,10 +26,11 @@ def choose_model(config, device):
             p = p if n_particle_types == 1 else torch.squeeze(p)
             model = PDE_A(aggr_type=aggr_type, p=torch.squeeze(p), sigma=sigma, bc_dpos=bc_dpos)
         case 'PDE_A_bis':
-            p = torch.ones(n_particle_types, n_particle_types, 4, device=device) + torch.rand(n_particle_types, n_particle_types, 4, device=device)
+            p = torch.ones(n_particle_types, n_particle_types, 4, device=device) + torch.randn(n_particle_types, n_particle_types, 4, device=device)
             if params[0] != [-1]:
                 for n in range(n_particle_types):
-                    p[n] = torch.tensor(params[n])
+                    for m in range(n_particle_types):
+                        p[n,m] = torch.tensor(params[n*3+m])
             else:
                 print(p)
             sigma = config.simulation.sigma
