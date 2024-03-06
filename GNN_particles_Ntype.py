@@ -3,7 +3,7 @@ import logging
 import time
 from shutil import copyfile
 
-import networkx as nx
+# import networkx as nx
 import torch.nn as nn
 import torch_geometric.data as data
 import umap
