@@ -2995,18 +2995,22 @@ def data_plot_suppFIG1():
     y_list = []
     print('Load normalizations ...')
     time.sleep(1)
-    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device))
-    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_0.pt', map_location=device))
+    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_1.pt', map_location=device))
+    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_1.pt', map_location=device))
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     x = x_list[0][0].clone().detach()
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
+    model.a = model.a[0:1].clone().detach()
+
     net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_0.pt"
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
     model.eval()
+
+    model.a[1] = model.a[0].clone().detach()
 
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
@@ -3141,9 +3145,9 @@ if __name__ == '__main__':
     print(f'device {device}')
 
     # arbitrary_3
-    data_plot_FIG2()
+    # data_plot_FIG2()
     # arbitrary_16
-    # data_plot_suppFIG1()
+    data_plot_suppFIG1()
     # gravity
     # data_plot_FIG3()
     # Coloumb_3
