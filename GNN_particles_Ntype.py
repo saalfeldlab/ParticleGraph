@@ -17,7 +17,7 @@ import os
 from sklearn import metrics
 from matplotlib import rc
 import matplotlib
-matplotlib.use("Qt5Agg")
+# matplotlib.use("Qt5Agg")
 
 from ParticleGraph.config import ParticleGraphConfig
 from ParticleGraph.generators.particle_initialization import init_particles, init_mesh
@@ -25,7 +25,7 @@ from ParticleGraph.generators.utils import choose_model, choose_mesh_model
 from ParticleGraph.models.utils import *
 from ParticleGraph.models.Ghost_Particles import Ghost_Particles
 
-os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
+# os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
 from ParticleGraph.data_loaders import *
 from ParticleGraph.utils import *
