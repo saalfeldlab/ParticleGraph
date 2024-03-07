@@ -1063,7 +1063,7 @@ def data_train(config):
                                                  0 * rr[:, None],
                                                  0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
 
-                            pred=model.lin_edge(torch.stack(in_features).float())
+                            pred=model.lin_edge(in_features.float())
                             loss = (pred[:,:,0] - y_func_list.clone().detach()).norm(2)
                             logger.info(f'    loss: {np.round(loss.item()/n_particles, 3)}')
                             loss.backward()
@@ -1780,7 +1780,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos']
+    config_list = ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos'] # arbitrary_3_3'] #
 
     for config_file in config_list:
 
