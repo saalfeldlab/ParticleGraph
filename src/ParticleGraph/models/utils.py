@@ -149,7 +149,7 @@ def analyze_edge_function(rr=None, vizualize=False, config=None, model_lin_edge=
         trans = umap.UMAP(n_neighbors=500, n_components=2, transform_queue_size=0).fit(coeff_norm[new_index])
         proj_interaction = trans.transform(coeff_norm)
     else:
-        trans = umap.UMAP(n_neighbors=100, n_components=2, transform_queue_size=0).fit(coeff_norm[new_index])
+        trans = umap.UMAP(n_neighbors=100, n_components=2, transform_queue_size=0).fit(coeff_norm)
         proj_interaction = trans.transform(coeff_norm)
     if vizualize:
         if config.graph_model.particle_model_name == 'PDE_G':

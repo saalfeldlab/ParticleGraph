@@ -1182,7 +1182,8 @@ def data_plot_FIG5():
 
     ax = fig.add_subplot(3, 3, 2)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-    func_list = plot_function(False, 'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
+    func_list = plot_function(False, 'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, 0,to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
+
     proj_interaction, new_labels, n_clusters = plot_umap('b)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap)
 
     ax = fig.add_subplot(3, 3, 3)
@@ -3151,13 +3152,13 @@ if __name__ == '__main__':
     # arbitrary_3
     # data_plot_FIG2()
     # arbitrary_16
-    data_plot_suppFIG1()
+    # data_plot_suppFIG1()
     # gravity
     # data_plot_FIG3()
     # Coloumb_3
     # data_plot_FIG4()
     # boids_16 HR
-    # data_plot_FIG5()
+    data_plot_FIG5()
     #
     # wave
     # data_plot_FIG5_time()
