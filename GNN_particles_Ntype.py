@@ -591,9 +591,9 @@ def data_train(config):
     print('done ...')
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_4.pt"
-    state_dict = torch.load(net,map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
+    # net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_4.pt"
+    # state_dict = torch.load(net,map_location=device)
+    # model.load_state_dict(state_dict['model_state_dict'])
 
     lr_embedding = train_config.learning_rate_embedding_start
     lr = train_config.learning_rate_start
@@ -1706,7 +1706,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos'] #
+    config_list = ['arbitrary_3_3', 'arbitrary_3', 'gravity_16'] #['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos'] #
 
     for config_file in config_list:
 
