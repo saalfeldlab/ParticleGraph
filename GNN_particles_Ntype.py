@@ -780,7 +780,7 @@ def data_train(config):
 
             total_loss += loss.item()
 
-            visualize_embedding=False
+            visualize_embedding=True
             if visualize_embedding & ( (epoch == 0) & (N < 100) & (N % 2 == 0)  |  (epoch==0)&(N<10000) & (N%200==0)  |  (epoch==0)&(N%(Niter//100)==0)   | (epoch>0)&(N%(Niter//4)==0)):
                 plot_training(dataset_name=dataset_name, filename='embedding', log_dir=log_dir, epoch=epoch, N=N, x=x, model=model, dataset_num = 1,
                               index_particles=index_particles, n_particles=n_particles, n_particle_types=n_particle_types, cmap=cmap, device=device)
@@ -1624,6 +1624,9 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
         model_ghost.load_state_dict(state_dict['model_state_dict'])
         model_ghost.eval()
         x_removed_list = torch.load(f'graphs_data/graphs_{dataset_name}/x_removed_list_0.pt', map_location=device)
+        mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
+        mask_ghost = np.argwhere(mask_ghost == 1)
+        mask_ghost = mask_ghost[:, 0].astype(int)
 
     if simulation_config.has_cell_division:
         cycle_length = torch.load(f'./graphs_data/graphs_{dataset_name}/cycle_length.pt', map_location=device).to(device)
@@ -1672,6 +1675,9 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
             with torch.no_grad():
                 y = model(dataset, data_id=run, training=False, vnorm=vnorm,
                           phi=torch.zeros(1, device=device))  # acceleration estimation
+
+            if has_ghost:
+                y = y[mask_ghost]
 
             if model_config.prediction == '2nd_derivative':
                 y = y * ynorm * delta_t
@@ -1774,7 +1780,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3_3']
+    config_list = ['arbitrary_3_dropout_30_pos','arbitrary_3_dropout_50_pos']
 
     for config_file in config_list:
 
@@ -1787,9 +1793,9 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=False , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 40, bSave=True)
-        data_train(config)
+        # data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 40, bSave=True)
+        # data_train(config)
         # data_plot_training(config)
-        # data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=config.simulation.n_frames // 40, run=1)
+        data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=2) #config.simulation.n_frames // 100)
 
 
