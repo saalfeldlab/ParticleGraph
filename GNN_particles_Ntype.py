@@ -780,7 +780,7 @@ def data_train(config):
 
             total_loss += loss.item()
 
-            visualize_embedding=True
+            visualize_embedding=False
             if visualize_embedding & ( (epoch == 0) & (N < 100) & (N % 2 == 0)  |  (epoch==0)&(N<10000) & (N%200==0)  |  (epoch==0)&(N%(Niter//100)==0)   | (epoch>0)&(N%(Niter//4)==0)):
                 plot_training(dataset_name=dataset_name, filename='embedding', log_dir=log_dir, epoch=epoch, N=N, x=x, model=model, dataset_num = 1,
                               index_particles=index_particles, n_particles=n_particles, n_particle_types=n_particle_types, cmap=cmap, device=device)
