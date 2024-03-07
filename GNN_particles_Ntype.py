@@ -34,7 +34,7 @@ from ParticleGraph.embedding_cluster import *
 from ParticleGraph.models import Division_Predictor
 
 
-def data_generate(config, visualize=True, style='color', erase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=None, bSave=True):
+def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=None, bSave=True):
     print('')
 
     # plt.rcParams['text.usetex'] = True
@@ -269,7 +269,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                 y_mesh_list.append(pred)
 
             # output plots
-            if visualize & (run == 0) & (it % step == 0) & (it >= 0):
+            if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
 
                 plt.style.use('dark_background')
 
@@ -336,7 +336,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Lut_Fig_{it}.jpg", dpi=170.7)
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Lut_Fig_{run}_{it}.jpg", dpi=170.7)
                         plt.close()
 
                         fig = plt.figure(figsize=(12, 12))
@@ -348,7 +348,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Rot_Fig{it}.jpg", dpi=170.7)
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Rot_{run}_Fig{it}.jpg", dpi=170.7)
                         plt.close()
 
                     elif model_config.mesh_model_name == 'Chemotaxism_Mesh':
@@ -371,7 +371,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/All_{it}.jpg", dpi=170.7)
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/All__{run}_{it}.jpg", dpi=170.7)
                         plt.close()
 
                         # fig = plt.figure(figsize=(12,12))
@@ -448,7 +448,7 @@ def data_generate(config, visualize=True, style='color', erase=False, step=5, al
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{it}.jpg", dpi=170.7)
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
                         plt.close()
 
                         if not(has_mesh):
@@ -1780,7 +1780,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3_dropout_30_pos','arbitrary_3_dropout_50_pos']
+    config_list = ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos']
 
     for config_file in config_list:
 
@@ -1793,9 +1793,9 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        # data_generate(config, device=device, visualize=True , style='color', alpha=1, erase=True, step=config.simulation.n_frames // 40, bSave=True)
-        # data_train(config)
+        data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 40, bSave=True)
+        data_train(config)
         # data_plot_training(config)
-        data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=2) #config.simulation.n_frames // 100)
+        # data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=2) #config.simulation.n_frames // 100)
 
 
