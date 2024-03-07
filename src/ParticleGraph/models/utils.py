@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from scipy.spatial import Delaunay
 from ParticleGraph.fitting_models import linear_model
+import umap
 
 def get_embedding(model_a=None, dataset_number = 0, index_particles=None, n_particles=None, n_particle_types=None):
     embedding = []
@@ -16,7 +17,7 @@ def get_embedding(model_a=None, dataset_number = 0, index_particles=None, n_part
 
     return embedding
 
-def plot_training (dataset_name, filename, log_dir, epoch, N, x, model, dataset_num, index_particles, n_particles, n_particle_types, cmap, device):
+def plot_training (dataset_name, filename, log_dir, epoch, N, x, model, dataset_num, n_particles, ynorm, cmap, device):
 
     match filename:
 
@@ -109,6 +110,58 @@ def plot_training (dataset_name, filename, log_dir, epoch, N, x, model, dataset_
             plt.savefig(f"./{log_dir}/tmp_training/embedding/{filename}_{dataset_name}_{epoch}_{N}.tif", dpi=300)
             plt.close()
 
+def analyze_edge_function(rr=None, vizualize=False, config=None, model_lin_edge=[], model_a=None, dataset_number = 0, n_particles=None, ynorm=None, types=None, cmap=None, device=None):
+    func_list = []
+    for n in range(n_particles):
+        embedding_ = model_a[dataset_number, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+        max_radius = config.simulation.max_radius
+        match config.graph_model.particle_model_name:
+            case 'PDE_A':
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                         rr[:, None] / max_radius, embedding_), dim=1)
+            case 'PDE_A_bis':
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                         rr[:, None] / max_radius, embedding_, embedding_), dim=1)
+            case 'PDE_B':
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                         rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                         0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+            case 'PDE_G':
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                         rr[:, None] / max_radius, 0 * rr[:, None],
+                                         0 * rr[:, None],
+                                         0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+            case 'PDE_E':
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                         rr[:, None] / max_radius, embedding_, embedding_), dim=1)
+        func = model_lin_edge(in_features.float())
+        func = func[:, 0]
+        func_list.append(func)
+        if (n % 5 == 0) & vizualize:
+            plt.plot(to_numpy(rr),
+                     to_numpy(func) * to_numpy(ynorm),
+                     color=cmap.color(types[n].astype(int)), linewidth=1, alpha=0.25)
+    func_list = torch.stack(func_list)
+    coeff_norm = to_numpy(func_list)
+    if coeff_norm.shape[0] > 1000:
+        new_index = np.random.permutation(coeff_norm.shape[0])
+        new_index = new_index[0:min(1000, coeff_norm.shape[0])]
+        trans = umap.UMAP(n_neighbors=500, n_components=2, transform_queue_size=0).fit(coeff_norm[new_index])
+        proj_interaction = trans.transform(coeff_norm)
+    else:
+        trans = umap.UMAP(n_neighbors=100, n_components=2, transform_queue_size=0).fit(coeff_norm[new_index])
+        proj_interaction = trans.transform(coeff_norm)
+    if vizualize:
+        if config.graph_model.particle_model_name == 'PDE_G':
+            plt.yscale('log')
+            plt.xscale('log')
+            plt.xlim([1E-3, 0.2])
+        if config.graph_model.particle_model_name == 'PDE_E':
+            plt.xlim([0, 0.05])
+        plt.xlabel('Distance [a.u]', fontsize=12)
+        plt.ylabel('MLP [a.u]', fontsize=12)
+
+    return func_list, proj_interaction
 
 def choose_training_model(model_config, device):
     
