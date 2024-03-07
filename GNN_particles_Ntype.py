@@ -591,9 +591,9 @@ def data_train(config):
     print('done ...')
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_6.pt"
-    # state_dict = torch.load(net,map_location=device)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_4.pt"
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
 
     lr_embedding = train_config.learning_rate_embedding_start
     lr = train_config.learning_rate_start
@@ -818,52 +818,15 @@ def data_train(config):
         plt.ylabel('Embedding 1', fontsize=12)
 
         ax = fig.add_subplot(1, 6, 3)
-        if (simulation_config.n_interactions < 100) & (simulation_config.has_cell_division == False) :  # cluster embedding
-            if model_config.particle_model_name == 'PDE_E':
-                func_list = []
-                rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
-                for n in range(n_particles):
-                        embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
-                        in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                             rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
-                        func = model.lin_edge(in_features.float())
-                        func = func[:, 0]
-                        func_list.append(func)
-                        plt.plot(to_numpy(rr),
-                                 to_numpy(func) * to_numpy(ynorm),
-                                 linewidth=1,
-                                 color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
-                func_list = torch.stack(func_list)
-                plt.xlim([0, 0.05])
-                plt.xlabel('Distance [a.u]', fontsize=12)
-                plt.ylabel('MLP [a.u]', fontsize=12)
-                coeff_norm = to_numpy(func_list)
-                trans = umap.UMAP(n_neighbors=100, n_components=2, transform_queue_size=0).fit(coeff_norm)
-                proj_interaction = trans.transform(coeff_norm)
-            elif model_config.particle_model_name == 'PDE_G':
-                func_list = []
+        if (simulation_config.n_interactions < 100) & (simulation_config.has_cell_division == False) :
+
+            if model_config.particle_model_name == 'PDE_G':
                 rr = torch.tensor(np.linspace(0, radius * 1.3, 1000)).to(device)
-                for n in range(n_particles):
-                    embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
-                    in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                             rr[:, None] / simulation_config.max_radius, 0 * rr[:, None], 0 * rr[:, None],
-                                             0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-                    func = model.lin_edge(in_features.float())
-                    func = func[:, 0]
-                    func_list.append(func)
-                    plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm), color=cmap.color(to_numpy(x[n, 5]).astype(int)), linewidth=1, alpha=0.25)
-                func_list = torch.stack(func_list)
-                plt.yscale('log')
-                plt.xscale('log')
-                plt.xlim([1E-3, 0.2])
-                plt.xlabel('Distance [a.u]', fontsize=12)
-                plt.ylabel('MLP [a.u]', fontsize=12)
-                coeff_norm = to_numpy(func_list)
-                trans = umap.UMAP(n_neighbors=100, n_components=2, transform_queue_size=0).fit(coeff_norm)
-                proj_interaction = trans.transform(coeff_norm)
-            elif (model_config.particle_model_name == 'PDE_A') | (model_config.particle_model_name == 'PDE_A_bis') | (model_config.particle_model_name == 'PDE_B'):
-                func_list = []
+            else:
                 rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
+
+            if has_mesh==False:
+                func_list = []
                 for n in range(n_particles):
                     embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
                     match model_config.particle_model_name:
@@ -877,6 +840,14 @@ def data_train(config):
                             in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                                      rr[:, None] / simulation_config.max_radius, 0 * rr[:, None], 0 * rr[:, None],
                                                      0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                        case 'PDE_G':
+                            in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                     rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                     0 * rr[:, None],
+                                                     0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                        case 'PDE_E':
+                            in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                     rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
                     func = model.lin_edge(in_features.float())
                     func = func[:, 0]
                     func_list.append(func)
@@ -884,16 +855,17 @@ def data_train(config):
                         plt.plot(to_numpy(rr),
                                  to_numpy(func) * to_numpy(ynorm),
                                  color=cmap.color(to_numpy(x[n, 5]).astype(int)), linewidth=1, alpha=0.25)
+                func_list = torch.stack(func_list)
+                if model_config.particle_model_name == 'PDE_G':
+                    plt.yscale('log')
+                    plt.xscale('log')
+                    plt.xlim([1E-3, 0.2])
+                if model_config.particle_model_name == 'PDE_E':
+                    plt.xlim([0, 0.05])
                 plt.xlabel('Distance [a.u]', fontsize=12)
                 plt.ylabel('MLP [a.u]', fontsize=12)
-                func_list = torch.stack(func_list)
-                coeff_norm = to_numpy(func_list)
-                new_index = np.random.permutation(coeff_norm.shape[0])
-                new_index = new_index[0:min(1000, coeff_norm.shape[0])]
-                trans = umap.UMAP(n_neighbors=500, n_components=2, transform_queue_size=0).fit(coeff_norm[new_index])
-                proj_interaction = trans.transform(coeff_norm)
-            elif has_mesh:
-                f_list = []
+            else:
+                func_list = []
                 popt_list = []
                 for n in range(n_particles):
                     embedding_ = model.a[1, n, :] * torch.ones((100, model_config.embedding_dim), device=device)
@@ -912,13 +884,13 @@ def data_train(config):
                         popt, pcov = curve_fit(linear_model, to_numpy(r.squeeze()), to_numpy(h.squeeze()))
                         popt_list.append(popt)
                         h = h[:, 0]
-                    f_list.append(h)
+                    func_list.append(h)
                     if (n % 24):
                         plt.plot(to_numpy(r),
                                  to_numpy(h) * to_numpy(hnorm), linewidth=1,
                                  color='k', alpha=0.05)
-                f_list = torch.stack(f_list)
-                coeff_norm = to_numpy(f_list)
+                func_list = torch.stack(func_list)
+                coeff_norm = to_numpy(func_list)
                 popt_list = np.array(popt_list)
 
                 if model_config.mesh_model_name == 'RD_RPS_Mesh':
@@ -1352,7 +1324,7 @@ def data_plot_training(config):
                 trans = umap.UMAP(n_neighbors=500, n_components=2, transform_queue_size=0).fit(coeff_norm[new_index])
                 proj_interaction = trans.transform(coeff_norm)
             elif has_mesh:
-                f_list = []
+                func_list = []
                 popt_list = []
                 for n in range(n_particles):
                     embedding_ = model.a[1, n, :] * torch.ones((100, model_config.embedding_dim), device=device)
@@ -1371,13 +1343,13 @@ def data_plot_training(config):
                         popt, pcov = curve_fit(linear_model, to_numpy(r.squeeze()), to_numpy(h.squeeze()))
                         popt_list.append(popt)
                         h = h[:, 0]
-                    f_list.append(h)
+                    func_list.append(h)
                     if (n % 24):
                         plt.plot(to_numpy(r),
                                  to_numpy(h) * to_numpy(hnorm), linewidth=1,
                                  color='k', alpha=0.05)
-                f_list = torch.stack(f_list)
-                coeff_norm = to_numpy(f_list)
+                func_list = torch.stack(func_list)
+                coeff_norm = to_numpy(func_list)
                 popt_list = np.array(popt_list)
 
                 if model_config.mesh_model_name == 'RD_RPS_Mesh':
@@ -1780,7 +1752,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3_3'] # 'arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos'] # 
+    config_list = ['arbitrary_3'] # 'arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos'] #
 
     for config_file in config_list:
 
@@ -1793,7 +1765,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 40, bSave=True)
+        # data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 40, bSave=True)
         data_train(config)
         # data_plot_training(config)
         # data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=2) #config.simulation.n_frames // 100)
