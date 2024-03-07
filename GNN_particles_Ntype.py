@@ -1780,7 +1780,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos'] # arbitrary_3_3'] #
+    config_list = ['arbitrary_3_3'] # 'arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos'] # 
 
     for config_file in config_list:
 
