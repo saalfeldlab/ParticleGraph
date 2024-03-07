@@ -1044,11 +1044,24 @@ def data_train(config):
                                     in_features = torch.cat(
                                         (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                          rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
-                                elif (model_config.particle_model_name == 'PDE_A') | (model_config.particle_model_name == 'PDE_B'):
+                                elif (model_config.particle_model_name == 'PDE_A') | (model_config.particle_model_name == 'PDE_A_bis') | (model_config.particle_model_name == 'PDE_B'):
                                     embedding_ = model.a[1, n, :].clone().detach() * torch.ones((1000, model_config.embedding_dim), device=device)
-                                    if model_config.particle_model_name == 'PDE_A':
-                                        in_features.append(torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                                                 rr[:, None] / simulation_config.max_radius, embedding_), dim=1))
+                                    match model_config.particle_model_name:
+                                        case 'PDE_A':
+                                            in_features = torch.cat(
+                                                (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
+                                        case 'PDE_A_bis':
+                                            in_features = torch.cat(
+                                                (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / simulation_config.max_radius, embedding_, embedding_),
+                                                dim=1)
+                                        case 'PDE_B':
+                                            in_features = torch.cat(
+                                                (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                                 0 * rr[:, None],
+                                                 0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
 
                             pred=model.lin_edge(torch.stack(in_features).float())
                             loss = (pred[:,:,0] - y_func_list.clone().detach()).norm(2)
@@ -1761,7 +1774,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3_dropout_20_pos', 'arbitrary_3_dropout_30_pos']
+    config_list = ['arbitrary_3_3', 'arbitrary_3_dropout_30_pos']
 
     for config_file in config_list:
 
