@@ -17,7 +17,7 @@ def get_embedding(model_a=None, dataset_number = 0, index_particles=None, n_part
 
     return embedding
 
-def plot_training (dataset_name, filename, log_dir, epoch, N, x, model, dataset_num, n_particles, ynorm, cmap, device):
+def plot_training (dataset_name, filename, log_dir, epoch, N, x, index_particles, n_particles, n_particle_types, model, dataset_num, ynorm, cmap, device):
 
     match filename:
 
