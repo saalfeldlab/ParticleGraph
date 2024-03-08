@@ -1166,7 +1166,7 @@ def data_plot_FIG5():
     model, bc_pos, bc_dpos = choose_training_model(config, device)
     model = Interaction_Particles_extract(config, device, aggr_type=config.graph_model.aggr_type, bc_dpos=bc_dpos)
 
-    net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
+    net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_1.pt"
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
     model.eval()
@@ -1190,8 +1190,7 @@ def data_plot_FIG5():
     Accuracy = plot_confusion_matrix('c)', to_numpy(x[:,5:6]), new_labels, n_particle_types, 20, '$10^6$', fig, ax)
     plt.tight_layout()
 
-    model_a_ = model.a.clone().detach()
-    model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
+    model_a_ = model.a[1].clone().detach()
     for k in range(n_clusters):
         pos = np.argwhere(new_labels == k).squeeze().astype(int)
         temp = model_a_[pos, :].clone().detach()
@@ -1199,14 +1198,18 @@ def data_plot_FIG5():
     with torch.no_grad():
         for n in range(model.a.shape[0]):
             model.a[n] = model_a_
-    embedding, embedding_particle = get_embedding(model.a, index_particles, n_particles, n_particle_types)
+    embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
 
-    it = 300
+    it = 3000
     x0 = x_list[0][it].clone().detach()
     x0_next = x_list[0][it + 1].clone().detach()
     y0 = y_list[0][it].clone().detach()
 
     x = x_list[0][it].clone().detach()
+    
+    x [:,2:5] = 0
+    
+    
     distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
     t = torch.Tensor([max_radius ** 2])  # threshold
     adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
@@ -1235,30 +1238,67 @@ def data_plot_FIG5():
 
     ax = fig.add_subplot(3, 3, 4)
     print('5')
-    plt.text(-0.25, 1.1, f'd)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
-    plt.title(r'Interaction functions (model)', fontsize=12)
+    plt.text(-0.25, 1.1, 'e)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'Clustered particle embedding', fontsize=12)
     for n in range(n_particle_types):
-        pos = np.argwhere(type == n)
-        pos = pos[:, 0].astype(int)
-        plt.scatter(to_numpy(r[pos]), to_numpy(torch.norm(lin_edge_out[pos, :], dim=1)), color=cmap.color(n), s=1)
-    plt.ylim([0, 5E-5])
-    plt.xlabel(r'$r_{ij}$', fontsize=12)
-    plt.ylabel(
-        r'$\left| \left| f(\ensuremath{\mathbf{a}}_i, x_j-x_i, \dot{x}_i, \dot{x}_j, r_{ij}) \right| \right|[a.u.]$',
-        fontsize=12)
+        pos = np.argwhere(new_labels == n).squeeze().astype(int)
+        plt.scatter(embedding[pos[0], 0], embedding[pos[0], 1], color=cmap.color(n), s=6)
+    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=12)
+    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=12)
+    plt.xticks(fontsize=10.0)
+    plt.yticks(fontsize=10.0)
+    plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
+    
     ax = fig.add_subplot(3, 3, 5)
+
+    fig = plt.figure(figsize=(8, 8))
     print('6')
     plt.text(-0.25, 1.1, f'e)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
     plt.title(r'Interaction functions (true)', fontsize=12)
     for n in range(n_particle_types):
         pos = np.argwhere(type == n)
         pos = pos[:, 0].astype(int)
-        plt.scatter(to_numpy(r[pos]), to_numpy(torch.norm(sum[pos, :], dim=1)), color=cmap.color(n), s=1, alpha=1)
-    plt.ylim([0, 5E-5])
+        plt.scatter(to_numpy(diffx[pos,0]), to_numpy(sum[pos, 0]), color=cmap.color(n), s=1, alpha=1)
+    plt.ylim([-0.08, 0.08])
+    plt.ylim([-5E-5, 5E-5])
     plt.xlabel(r'$r_{ij}$', fontsize=12)
     plt.ylabel(
         r'$\left| \left| f(\ensuremath{\mathbf{a}}_i, x_j-x_i, \dot{x}_i, \dot{x}_j, r_{ij}) \right| \right|[a.u.]$',
         fontsize=12)
+    
+    fig = plt.figure(figsize=(8, 8))
+    print('6')
+    plt.text(-0.25, 1.1, f'e)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'Interaction functions (true)', fontsize=12)
+    for n in range(n_particle_types):
+        pos = np.argwhere(type == n)
+        pos = pos[:, 0].astype(int)
+        plt.scatter(to_numpy(diffx[pos,0]), to_numpy(alignment[pos, 0]), color=cmap.color(n), s=1, alpha=1)
+    # plt.ylim([0, 5E-5])
+    plt.xlabel(r'$r_{ij}$', fontsize=12)
+    plt.ylabel(
+        r'$\left| \left| f(\ensuremath{\mathbf{a}}_i, x_j-x_i, \dot{x}_i, \dot{x}_j, r_{ij}) \right| \right|[a.u.]$',
+        fontsize=12)
+
+    
+    xs = torch.linspace(0, 1, 400)
+    ys = torch.linspace(-1, 1, 400)
+    xv, yv = torch.meshgrid([xs, ys], indexing="ij")
+    xy = torch.stack((yv.flatten(), xv.flatten())).t()
+
+    # fig = plt.figure(figsize=(8, 8))
+    # plt.hist(to_numpy(r),100)
+
+    fig = plt.figure(figsize=(8, 8))
+    for n in range(0,8):
+        pos = np.argwhere(new_labels == n).squeeze().astype(int)
+        embedding_ = torch.tensor(embedding[pos[0],:])*torch.ones((160000,2))
+        in_features = torch.cat((xy[:,1:2], xy[:,1:2]*0, xy[:,1:2], xy[:,0:1]*0,  xy[:,0:1]*0, xy*0, embedding_), dim=1)
+        in_features=in_features.to(device)
+        with torch.no_grad():
+            func = model.lin_edge(in_features)
+        plt.scatter(xy[:,1:2].cpu().numpy(), func[:,0].cpu().numpy(), s=1, color=cmap.color(n))
+
 
     # find last image file in logdir
     ax = fig.add_subplot(3, 3, 6)

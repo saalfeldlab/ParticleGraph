@@ -141,6 +141,11 @@ class Interaction_Particles(pyg.nn.MessagePassing):
 
         out = self.lin_edge(in_features)
 
+        if self.model == 'PDE_B':
+            self.diffx = delta_pos * self.max_radius
+            self.lin_edge_out = out
+            self.particle_id = particle_id_i
+
         return out
 
     def update(self, aggr_out):

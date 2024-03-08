@@ -777,6 +777,33 @@ def data_train(config):
             if visualize_embedding & ( (epoch == 0) & (N < 100) & (N % 2 == 0)  |  (epoch==0)&(N<10000) & (N%200==0)  |  (epoch==0)&(N%(Niter//100)==0)   | (epoch>0)&(N%(Niter//4)==0)):
                 plot_training(dataset_name=dataset_name, filename='embedding', log_dir=log_dir, epoch=epoch, N=N, x=x, model=model, dataset_num = 1,
                               index_particles=index_particles, n_particles=n_particles, n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, device=device)
+                
+                if model_config.particle_model_name == 'PDE_B':
+                    x = x_list[1][3000].clone().detach()
+                    x[:, 2:5] = 0
+                    distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
+                    adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                    t = torch.Tensor([radius ** 2])
+                    edges = adj_t.nonzero().t().contiguous()
+                    dataset = data.Data(x=x[:, :], edge_index=edges)
+                    with torch.no_grad():
+                        y = model(dataset, data_id=1, training=False, vnorm=vnorm, phi=torch.zeros(1, device=device))  # acceleration estimation
+                        lin_edge_out = model.lin_edge_out * ynorm
+                        diffx = model.diffx
+                        particle_id = to_numpy(model.particle_id)
+                    type = to_numpy(T1[particle_id])
+                    fig = plt.figure(figsize=(8, 8))
+                    for n in range(n_particle_types):
+                        pos = np.argwhere(type == n)
+                        pos = pos[:, 0].astype(int)
+                        plt.scatter(to_numpy(diffx[pos, 0]), to_numpy(lin_edge_out[pos, 0]), color=cmap.color(n), s=1, alpha=0.5)
+                    plt.xlim([-0.04, 0.04])
+                    plt.ylim([-5E-5, 5E-5])
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/tmp_training/embedding/func_{dataset_name}_{epoch}_{N}.tif",dpi=300)
+                    plt.close()
+
+                
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
@@ -1338,7 +1365,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']  # ['Coulomb_3', 'boids_16', 'arbitrary_16', 'gravity_100']  # ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos']  #    ## ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']
+    config_list = ['boids_16']   #['arbitrary_3_3', 'arbitrary_3', 'gravity_16']  # ['Coulomb_3', 'boids_16', 'arbitrary_16', 'gravity_100']  # ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos']  #    ## ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']
 
     for config_file in config_list:
 
@@ -1351,7 +1378,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 40, bSave=True)
+        # data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 40, bSave=True)
         data_train(config)
         # data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=2) #config.simulation.n_frames // 100)
 
