@@ -690,7 +690,7 @@ def data_plot_FIG2():
 
 def data_plot_FIG8():
 
-    config_name = 'arbitrary_3_3'
+    config_name = 'arbitrary_3_3_2'
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_name}.yaml')
 
@@ -806,7 +806,7 @@ def data_plot_FIG8():
     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
-    plt.ylim([-0.15, 0.03])
+    plt.ylim([-0.15, 0.15])
     plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
 
     ax = fig.add_subplot(3, 4, 7)
@@ -820,14 +820,14 @@ def data_plot_FIG8():
         for n in range(n_particle_types):
             for m in range(n_particle_types):
                 p[n, m] = torch.tensor(params[n * 3 + m])
-    for n in range(1):
-        for m in range(1):
+    for n in range(n_particle_types):
+        for m in range(n_particle_types):
             plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n,m], p[n,m])), color=cmap.color(n), linewidth=1)
     plt.xlabel(r'$r_{ij}$', fontsize=12)
     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
-    plt.ylim([-0.15, 0.03])
+    plt.ylim([-0.15, 0.15])
 
     # find last image file in logdir
     ax = fig.add_subplot(3, 4, 12)
@@ -846,8 +846,8 @@ def data_plot_FIG8():
         plt.yticks([])
 
     plt.tight_layout()
-    # plt.savefig('Fig2.pdf', format="pdf", dpi=300)
-    plt.savefig('Fig2.jpg', dpi=300)
+    # plt.savefig('Fig8.pdf', format="pdf", dpi=300)
+    plt.savefig('Fig8.jpg', dpi=300)
     plt.close()
 
 
@@ -1015,8 +1015,8 @@ def data_plot_FIG3():
     plt.plot(p, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
     plt.scatter(p, popt_list[:, 0], color='k', s=20)
     plt.title(r'Reconstructed masses', fontsize=12)
-    plt.xlabel(r'True mass $[a.u.]$', fontsize=12)
-    plt.ylabel(r'Predicted mass $[a.u.]$', fontsize=12)
+    plt.xlabel(r'True mass ', fontsize=12)
+    plt.ylabel(r'Predicted mass ', fontsize=12)
     plt.xlim([0, 5.5])
     plt.ylim([0, 5.5])
     plt.text(0.5, 5, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
@@ -1033,8 +1033,8 @@ def data_plot_FIG3():
     plt.xlim([0, 5.5])
     plt.ylim([-4, 0])
     plt.title(r'Reconstructed exponent', fontsize=12)
-    plt.xlabel(r'True mass $[a.u.]$', fontsize=12)
-    plt.ylabel(r'Exponent fit $[a.u.]$', fontsize=12)
+    plt.xlabel(r'True mass ', fontsize=12)
+    plt.ylabel(r'Exponent fit ', fontsize=12)
     plt.text(0.5, -0.5, f"Exponent: {np.round(np.mean(-popt_list[:, 1]), 3)}+/-{np.round(np.std(popt_list[:, 1]), 3)}",
              fontsize=10)
 
@@ -1260,7 +1260,7 @@ def data_plot_FIG4():
     plt.text(-0.25, 1.1, f'h)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     plt.scatter(ptrue_list, -popt_list[:, 1], color='k', s=20)
     plt.ylim([-4, 0])
-    plt.ylabel(r'Exponent fit $[a.u.]$', fontsize=12)
+    plt.ylabel(r'Exponent fit ', fontsize=12)
     plt.text(-2, -0.5, f"Exponent: {np.round(np.mean(-popt_list[:, 1]), 3)}+/-{np.round(np.std(popt_list[:, 1]), 3)}",
              fontsize=10)
 
@@ -1366,13 +1366,13 @@ def data_plot_FIG5():
             model.a[n] = model_a_
     embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
 
-    it = 3000
+    it = 2000
     x0 = x_list[0][it].clone().detach()
     x0_next = x_list[0][it + 1].clone().detach()
     y0 = y_list[0][it].clone().detach()
 
     x = x_list[0][it].clone().detach()
-    x [:,2:5] = 0
+    # x [:,2:5] = 0
     
     distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
     t = torch.Tensor([max_radius ** 2])  # threshold
@@ -1451,24 +1451,6 @@ def data_plot_FIG5():
         # rmove xtick
         plt.xticks([])
         plt.yticks([])
-
-    it = 3000
-    x0 = x_list[0][it].clone().detach()
-    x0_next = x_list[0][it + 1].clone().detach()
-    y0 = y_list[0][it].clone().detach()
-    distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
-    t = torch.Tensor([max_radius ** 2])  # threshold
-    adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
-    edge_index = adj_t.nonzero().t().contiguous()
-    dataset = data.Data(x=x, edge_index=edge_index)
-    
-    x = x_list[0][it].clone().detach()
-
-    with torch.no_grad():
-        y, in_features, lin_edge_out = model(dataset, data_id=0, training=False, vnorm=vnorm,
-                                             phi=torch.zeros(1, device=device))  # acceleration estimation
-    y = y * ynorm
-    lin_edge_out = lin_edge_out * ynorm
         
     cohesion_GT = np.zeros(n_particle_types)
     alignment_GT = np.zeros(n_particle_types)
@@ -1514,8 +1496,8 @@ def data_plot_FIG5():
     plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
     for n in range(n_particle_types):
         plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=20)
-    plt.xlabel(r'True cohesion coeff. $[a.u.]$', fontsize=12)
-    plt.ylabel(r'Predicted cohesion coeff. $[a.u.]$', fontsize=12)
+    plt.xlabel(r'True cohesion coeff. ', fontsize=12)
+    plt.ylabel(r'Predicted cohesion coeff. ', fontsize=12)
     plt.text(4E-5, 4.5E-4, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
     residuals = y_data - linear_model(x_data, *lin_fit)
     ss_res = np.sum(residuals ** 2)
@@ -1532,8 +1514,8 @@ def data_plot_FIG5():
     plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
     for n in range(n_particle_types):
         plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=20)
-    plt.xlabel(r'True alignment coeff. $[a.u.]$', fontsize=12)
-    plt.ylabel(r'Predicted alignment coeff. $[a.u.]$', fontsize=12)
+    plt.xlabel(r'True alignment coeff. ', fontsize=12)
+    plt.ylabel(r'Predicted alignment coeff. ', fontsize=12)
     plt.text(5e-3, 0.046, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
     residuals = y_data - linear_model(x_data, *lin_fit)
     ss_res = np.sum(residuals ** 2)
@@ -1550,8 +1532,8 @@ def data_plot_FIG5():
     plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
     for n in range(n_particle_types):
         plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=20)
-    plt.xlabel(r'True separation coeff. $[a.u.]$', fontsize=12)
-    plt.ylabel(r'Predicted separation coeff. $[a.u.]$', fontsize=12)
+    plt.xlabel(r'True separation coeff. ', fontsize=12)
+    plt.ylabel(r'Predicted separation coeff. ', fontsize=12)
     plt.text(5e-8, 4.4E-7, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
     residuals = y_data - linear_model(x_data, *lin_fit)
     ss_res = np.sum(residuals ** 2)
@@ -1801,8 +1783,8 @@ def data_plot_FIG5_time():
     plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
     for n in range(n_particle_types):
         plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=20)
-    plt.xlabel(r'True cohesion coeff. $[a.u.]$', fontsize=12)
-    plt.ylabel(r'Predicted cohesion coeff. $[a.u.]$', fontsize=12)
+    plt.xlabel(r'True cohesion coeff. ', fontsize=12)
+    plt.ylabel(r'Predicted cohesion coeff. ', fontsize=12)
     plt.text(4E-5, 4.5E-4, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
     residuals = y_data - linear_model(x_data, *lin_fit)
     ss_res = np.sum(residuals ** 2)
@@ -1819,8 +1801,8 @@ def data_plot_FIG5_time():
     plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
     for n in range(n_particle_types):
         plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=20)
-    plt.xlabel(r'True alignment coeff. $[a.u.]$', fontsize=12)
-    plt.ylabel(r'Predicted alignment coeff. $[a.u.]$', fontsize=12)
+    plt.xlabel(r'True alignment coeff. ', fontsize=12)
+    plt.ylabel(r'Predicted alignment coeff. ', fontsize=12)
     plt.text(5e-3, 0.046, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
     residuals = y_data - linear_model(x_data, *lin_fit)
     ss_res = np.sum(residuals ** 2)
@@ -1837,8 +1819,8 @@ def data_plot_FIG5_time():
     plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
     for n in range(n_particle_types):
         plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=20)
-    plt.xlabel(r'True separation coeff. $[a.u.]$', fontsize=12)
-    plt.ylabel(r'Predicted separation coeff. $[a.u.]$', fontsize=12)
+    plt.xlabel(r'True separation coeff. ', fontsize=12)
+    plt.ylabel(r'Predicted separation coeff. ', fontsize=12)
     plt.text(5e-8, 4.4E-7, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
     residuals = y_data - linear_model(x_data, *lin_fit)
     ss_res = np.sum(residuals ** 2)
@@ -2072,8 +2054,8 @@ def data_plot_FIG3_continous():
     y_data = np.clip(popt_list[:, 0], 0, 5)
     lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
     plt.scatter(p, popt_list[:, 0], color=colors, s=1)
-    plt.xlabel(r'True mass $[a.u.]$', fontsize=12)
-    plt.ylabel(r'Predicted mass $[a.u.]$', fontsize=12)
+    plt.xlabel(r'True mass ', fontsize=12)
+    plt.ylabel(r'Predicted mass ', fontsize=12)
     plt.xlim([0, 5.5])
     plt.ylim([0, 5.5])
     plt.text(0.5, 4.5, f"N: {n_particles}", fontsize=12)
@@ -2091,8 +2073,8 @@ def data_plot_FIG3_continous():
     plt.scatter(p, -popt_list[:, 1], color='k', s=1)
     plt.xlim([0, 5.5])
     plt.ylim([-4, 0])
-    plt.xlabel(r'True mass $[a.u.]$', fontsize=12)
-    plt.ylabel(r'Exponent fit $[a.u.]$', fontsize=12)
+    plt.xlabel(r'True mass ', fontsize=12)
+    plt.ylabel(r'Exponent fit ', fontsize=12)
     plt.text(0.5, -0.5, f"{np.round(np.mean(-popt_list[:, 1]), 3)}+/-{np.round(np.std(popt_list[:, 1]), 3)}",
              fontsize=12)
 
@@ -2395,8 +2377,8 @@ def data_plot_FIG6():
     plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
     for n in range(n_particle_types):
         plt.scatter(x_data[n], y_data[n], color=cmap.color(n))
-    plt.xlabel(r'True viscosity $[a.u.]$', fontsize=12)
-    plt.ylabel(r'Predicted viscosity $[a.u.]$', fontsize=12)
+    plt.xlabel(r'True viscosity ', fontsize=12)
+    plt.ylabel(r'Predicted viscosity ', fontsize=12)
     plt.xlim([-0.1, 1.1])
     plt.ylim([-0.1, 1.1])
     plt.text(0, 1.0, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
@@ -3098,8 +3080,8 @@ def data_plot_FIG7():
     for n in range(n_particle_types):
         plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=20)
 
-    plt.xlabel(r'True viscosity $[a.u.]$', fontsize=12)
-    plt.ylabel(r'Predicted viscosity $[a.u.]$', fontsize=12)
+    plt.xlabel(r'True viscosity ', fontsize=12)
+    plt.ylabel(r'Predicted viscosity ', fontsize=12)
     plt.xlim([-0.1, 1.1])
     plt.ylim([-0.1, 1.1])
     plt.text(0, 1.0, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
@@ -3344,5 +3326,5 @@ if __name__ == '__main__':
     print(f'device {device}')
 
 
-    data_plot_FIG5()
+    data_plot_FIG8()
 
