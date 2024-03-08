@@ -1332,7 +1332,7 @@ def data_plot_FIG5():
     model, bc_pos, bc_dpos = choose_training_model(config, device)
     model = Interaction_Particles_extract(config, device, aggr_type=config.graph_model.aggr_type, bc_dpos=bc_dpos)
 
-    net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_1.pt"
+    net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
     model.eval()
@@ -1372,9 +1372,7 @@ def data_plot_FIG5():
     y0 = y_list[0][it].clone().detach()
 
     x = x_list[0][it].clone().detach()
-    
     x [:,2:5] = 0
-    
     
     distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
     t = torch.Tensor([max_radius ** 2])  # threshold
@@ -1416,37 +1414,20 @@ def data_plot_FIG5():
     plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
     
     ax = fig.add_subplot(3, 3, 5)
-
-    fig = plt.figure(figsize=(8, 8))
     print('6')
     plt.text(-0.25, 1.1, f'e)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
-    plt.title(r'Interaction functions (true)', fontsize=12)
+    plt.title(r'Interaction functions (model)', fontsize=12)
     for n in range(n_particle_types):
         pos = np.argwhere(type == n)
         pos = pos[:, 0].astype(int)
-        plt.scatter(to_numpy(diffx[pos,0]), to_numpy(sum[pos, 0]), color=cmap.color(n), s=1, alpha=1)
+        plt.scatter(to_numpy(diffx[pos,0]), to_numpy(lin_edge_out[pos, 0]), color=cmap.color(n), s=1, alpha=1)
     plt.ylim([-0.08, 0.08])
     plt.ylim([-5E-5, 5E-5])
     plt.xlabel(r'$r_{ij}$', fontsize=12)
     plt.ylabel(
         r'$\left| \left| f(\ensuremath{\mathbf{a}}_i, x_j-x_i, \dot{x}_i, \dot{x}_j, r_{ij}) \right| \right|[a.u.]$',
         fontsize=12)
-    
-    fig = plt.figure(figsize=(8, 8))
-    print('6')
-    plt.text(-0.25, 1.1, f'e)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
-    plt.title(r'Interaction functions (true)', fontsize=12)
-    for n in range(n_particle_types):
-        pos = np.argwhere(type == n)
-        pos = pos[:, 0].astype(int)
-        plt.scatter(to_numpy(diffx[pos,0]), to_numpy(alignment[pos, 0]), color=cmap.color(n), s=1, alpha=1)
-    # plt.ylim([0, 5E-5])
-    plt.xlabel(r'$r_{ij}$', fontsize=12)
-    plt.ylabel(
-        r'$\left| \left| f(\ensuremath{\mathbf{a}}_i, x_j-x_i, \dot{x}_i, \dot{x}_j, r_{ij}) \right| \right|[a.u.]$',
-        fontsize=12)
 
-    
     xs = torch.linspace(0, 1, 400)
     ys = torch.linspace(-1, 1, 400)
     xv, yv = torch.meshgrid([xs, ys], indexing="ij")
@@ -1454,17 +1435,6 @@ def data_plot_FIG5():
 
     # fig = plt.figure(figsize=(8, 8))
     # plt.hist(to_numpy(r),100)
-
-    fig = plt.figure(figsize=(8, 8))
-    for n in range(0,8):
-        pos = np.argwhere(new_labels == n).squeeze().astype(int)
-        embedding_ = torch.tensor(embedding[pos[0],:])*torch.ones((160000,2))
-        in_features = torch.cat((xy[:,1:2], xy[:,1:2]*0, xy[:,1:2], xy[:,0:1]*0,  xy[:,0:1]*0, xy*0, embedding_), dim=1)
-        in_features=in_features.to(device)
-        with torch.no_grad():
-            func = model.lin_edge(in_features)
-        plt.scatter(xy[:,1:2].cpu().numpy(), func[:,0].cpu().numpy(), s=1, color=cmap.color(n))
-
 
     # find last image file in logdir
     ax = fig.add_subplot(3, 3, 6)
@@ -1482,6 +1452,24 @@ def data_plot_FIG5():
         plt.xticks([])
         plt.yticks([])
 
+    it = 3000
+    x0 = x_list[0][it].clone().detach()
+    x0_next = x_list[0][it + 1].clone().detach()
+    y0 = y_list[0][it].clone().detach()
+    distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
+    t = torch.Tensor([max_radius ** 2])  # threshold
+    adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
+    edge_index = adj_t.nonzero().t().contiguous()
+    dataset = data.Data(x=x, edge_index=edge_index)
+    
+    x = x_list[0][it].clone().detach()
+
+    with torch.no_grad():
+        y, in_features, lin_edge_out = model(dataset, data_id=0, training=False, vnorm=vnorm,
+                                             phi=torch.zeros(1, device=device))  # acceleration estimation
+    y = y * ynorm
+    lin_edge_out = lin_edge_out * ynorm
+        
     cohesion_GT = np.zeros(n_particle_types)
     alignment_GT = np.zeros(n_particle_types)
     separation_GT = np.zeros(n_particle_types)
@@ -3355,20 +3343,6 @@ if __name__ == '__main__':
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
-    # arbitrary_3
-    # data_plot_FIG2()
-    data_plot_FIG8()
-    # arbitrary_16
-    # data_plot_suppFIG1()
-    # gravity
-    # data_plot_FIG3()
-    # Coloumb_3
-    # data_plot_FIG4()
-    # boids_16 HR
-    # data_plot_FIG5()
-    #
-    # wave
-    # data_plot_FIG5_time()
 
-    # RD_RPS
-    # data_plot_FIG7()
+    data_plot_FIG5()
+
