@@ -26,7 +26,7 @@ def plot_training (dataset_name, filename, log_dir, epoch, N, x, index_particles
             embedding = get_embedding(model.a, dataset_num, index_particles, n_particles, n_particle_types)
             for n in range(n_particle_types):
                 plt.scatter(embedding[index_particles[n], 0],
-                            embedding[index_particles[n], 1], color=cmap.color(n), s=0.1)
+                            embedding[index_particles[n], 1], color=cmap.color(n), s=5)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/tmp_training/embedding/{filename}_{dataset_name}_{epoch}_{N}.tif", dpi=300)
             plt.close()
