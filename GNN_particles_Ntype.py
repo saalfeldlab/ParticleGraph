@@ -95,6 +95,15 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
     else:
         mesh_model = None
 
+    # fig = plt.figure(figsize=(8, 8))
+    # pp=model.p.clone().detach()
+    # max_radius = config.simulation.max_radius
+    # rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
+    # for n in range(n_particle_types):
+    #     for m in range(n_particle_types):
+    #         plt.plot(to_numpy(rr), to_numpy(model.psi(rr, pp[n,m])), color=cmap.color(n), linewidth=1)
+    # plt.show()
+
     for run in range(config.training.n_runs):
 
         n_particles = simulation_config.n_particles
@@ -802,7 +811,6 @@ def data_train(config):
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/tmp_training/embedding/func_{dataset_name}_{epoch}_{N}.tif",dpi=300)
                     plt.close()
-
                 
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
@@ -1365,7 +1373,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['boids_16']   #['arbitrary_3_3', 'arbitrary_3', 'gravity_16']  # ['Coulomb_3', 'boids_16', 'arbitrary_16', 'gravity_100']  # ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos']  #    ## ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']
+    config_list = ['arbitrary_3_3_2']   #['arbitrary_3_3', 'arbitrary_3', 'gravity_16']  # ['Coulomb_3', 'boids_16', 'arbitrary_16', 'gravity_100']  # ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos']  #    ## ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']
 
     for config_file in config_list:
 
@@ -1378,7 +1386,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        # data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 40, bSave=True)
+        data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 40, bSave=True)
         data_train(config)
         # data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=2) #config.simulation.n_frames // 100)
 

@@ -145,6 +145,11 @@ class Interaction_Particles(pyg.nn.MessagePassing):
             self.diffx = delta_pos * self.max_radius
             self.lin_edge_out = out
             self.particle_id = particle_id_i
+        if self.model == 'PDE_A_bis':
+            self.diffx = delta_pos * self.max_radius
+            self.lin_edge_out = out
+            self.particle_id_i = particle_id_i
+            self.particle_id_j = particle_id_j
 
         return out
 
@@ -154,7 +159,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
 
     def psi(self, r, p1, p2):
 
-        if self.model == 'PDE_A':
+        if (self.model == 'PDE_A') | (self.model =='PDE_A_bis'):
             return r * (p1[0] * torch.exp(-r ** (2 * p1[1]) / (2 * self.sigma ** 2))
                         - p1[2] * torch.exp(-r ** (2 * p1[3]) / (2 * self.sigma ** 2)))
         if self.model == 'PDE_B':

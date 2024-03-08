@@ -47,6 +47,6 @@ class PDE_A_bis(pyg.nn.MessagePassing):
         d_pos = psi[:, None] * self.bc_dpos(pos_j - pos_i)
         return d_pos
 
-    def psi(self, r, p, i ,j):
+    def psi(self, r, p):
         return r * (p[0] * torch.exp(-r ** (2 * p[1]) / (2 * self.sigma ** 2))
                     - p[2] * torch.exp(-r ** (2 * p[3]) / (2 * self.sigma ** 2)))
