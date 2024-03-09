@@ -53,10 +53,9 @@ def convert_data(data, device, n_particle_types, n_frames):
             else:
                 object_data = torch.cat((object_data, tmp[None,:]), 0)
 
-            ax = data[n][it+1, 4]
-            ay = data[n][it+1, 5]
-            az = data[n][it+1, 6]
-            tmp = torch.stack([ax, ay, az])
+            ax = data[n][it+1, 4]-data[n][it, 4]
+            ay = data[n][it+1, 5]-data[n][it, 5]
+            tmp = torch.stack([ax, ay])
             if n==0:
                 acc_data = tmp[None,:]
             else:
@@ -99,10 +98,10 @@ def generate_solar_system_from_data(config, device=None, visualize=False, folder
         data = pd.read_csv(filename, header=None, skiprows=df, sep='\s+', nrows=n_step)
         tmp_x = data.iloc[:, 4:5].values
         tmp_y = data.iloc[:, 5:6].values
-        tmp_z = data.iloc[:, 7:8].values
-        tmp_vx = data.iloc[:, 8:9].values
-        tmp_vy = data.iloc[:, 9:10].values
-        tmp_vz = data.iloc[:, 10:11].values
+        tmp_z = data.iloc[:, 6:7].values
+        tmp_vx = data.iloc[:, 7:8].values
+        tmp_vy = data.iloc[:, 8:9].values
+        tmp_vz = data.iloc[:, 9:10].values
         tmp_x = tmp_x[:, 0][:-1]
         tmp_y = tmp_y[:, 0][:-1]
         tmp_z = tmp_z[:, 0][:-1]
@@ -143,7 +142,10 @@ def generate_solar_system_from_data(config, device=None, visualize=False, folder
                 for id, object in enumerate(object_list):
                     plt.scatter(to_numpy(x_list[it][id, 1]), to_numpy(x_list[it][id, 2]), s=20)
                     if id < 10:
-                        plt.text(to_numpy(x_list[it][id, 1]+1E8), to_numpy(x_list[it][id, 2]), object, fontsize=6)
+                        plt.text(to_numpy(x_list[it][id, 1]), to_numpy(x_list[it][id, 2]), object, fontsize=6)
+                        plt.arrow(to_numpy(x_list[it][id, 1]), to_numpy(x_list[it][id, 2]),
+                                  to_numpy(y_list[it][id, 0]) * 5E8, to_numpy(y_list[it][id, 1]) * 5E8,
+                                  head_width=0.5, head_length=0.7, fc='k', ec='k')
                 plt.xlim([-0.5E10, 0.5E10])
                 plt.ylim([-0.5E10, 0.5E10])
                 plt.tight_layout()
