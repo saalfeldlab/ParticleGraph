@@ -20,7 +20,7 @@ graph_model:
     mesh_model_name: ''
     inter_model_name: ''
     prediction: '2nd_derivative'
-    input_size: 5
+    input_size: 3
     output_size: 2
     hidden_dim: 128
     n_mp_layers: 5
@@ -39,7 +39,7 @@ training:
     n_runs: 2
     sparsity: 'none'
     data_augmentation: True
-    data_augmentation_loop: 20
+    data_augmentation_loop: 100
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'
