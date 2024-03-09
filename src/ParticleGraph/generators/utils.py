@@ -2,8 +2,19 @@ import torch
 import numpy as np
 
 from ParticleGraph.generators import PDE_A, PDE_A_bis, PDE_B, PDE_B_bis, PDE_E, PDE_G, PDE_GS, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, \
-    Laplacian_A, PDE_O
+    Laplacian_A, PDE_O, generate_solar_system_from_data
 from ParticleGraph.utils import choose_boundary_values
+
+
+def generate_from_data(config, device, visualize=True, folder=None, step=None):
+
+    data_folder_name = config.data_folder_name
+
+    match data_folder_name:
+        case 'graphs_data/solar_system':
+            generate_solar_system_from_data(config, device, visualize, folder, step)
+        case _:
+            raise ValueError(f'Unknown data folder name {data_folder_name}')
 
 
 def choose_model(config, device):

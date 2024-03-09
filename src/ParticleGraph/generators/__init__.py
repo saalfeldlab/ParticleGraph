@@ -11,8 +11,8 @@ from .PDE_Z import PDE_Z
 from .RD_FitzHugh_Nagumo import RD_FitzHugh_Nagumo
 from .RD_Gray_Scott import RD_Gray_Scott
 from .RD_RPS import RD_RPS
-from .read_solar_system import read_solar_system
+from .generate_solar_system_from_data import generate_solar_system_from_data
 from .utils import choose_model, choose_mesh_model
 
 __all__ = [Laplacian_A, PDE_A, PDE_A_bis, PDE_B, PDE_B_bis, PDE_E, PDE_G, PDE_GS, PDE_O, PDE_Z, RD_FitzHugh_Nagumo, RD_Gray_Scott, RD_RPS,
-           read_solar_system, choose_model, choose_mesh_model]
+           generate_solar_system_from_data, choose_model, choose_mesh_model]

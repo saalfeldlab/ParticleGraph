@@ -21,7 +21,7 @@ import matplotlib
 
 from ParticleGraph.config import ParticleGraphConfig
 from ParticleGraph.generators.particle_initialization import init_particles, init_mesh
-from ParticleGraph.generators.utils import choose_model, choose_mesh_model
+from ParticleGraph.generators.utils import choose_model, choose_mesh_model, generate_from_data
 from ParticleGraph.models.utils import *
 from ParticleGraph.models.Ghost_Particles import Ghost_Particles
 
@@ -55,6 +55,10 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
     for f in files:
         os.remove(f)
     copyfile(os.path.realpath(__file__), os.path.join(folder, 'generation_code.py'))
+
+    if config.data_folder_name != 'none':
+        generate_from_data(config=config, device=device, visualize=visualize, folder=folder, step=step)
+        return
 
     # load model parameters and create local varibales
     simulation_config = config.simulation
@@ -625,7 +629,7 @@ def data_train(config):
     logger.info(f'initial batch_size: {batch_size}')
 
     # update variable if dropout, cell_division, etc ...
-    x = x_list[1][n_frames].clone().detach()
+    x = x_list[1][n_frames-1].clone().detach()
     T1 = x[:, 5:6].clone().detach()
     n_particles = x.shape[0]
     print(f'N particles: {n_particles}')
@@ -1373,7 +1377,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3_3_2']   #['arbitrary_3_3', 'arbitrary_3', 'gravity_16']  # ['Coulomb_3', 'boids_16', 'arbitrary_16', 'gravity_100']  # ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos']  #    ## ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']
+    config_list = ['gravity_solar_system']   #['arbitrary_3_3', 'arbitrary_3', 'gravity_16']  # ['Coulomb_3', 'boids_16', 'arbitrary_16', 'gravity_100']  # ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos']  #    ## ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']
 
     for config_file in config_list:
 
@@ -1386,7 +1390,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 40, bSave=True)
+        # data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 1000, bSave=True)
         data_train(config)
         # data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=2) #config.simulation.n_frames // 100)
 

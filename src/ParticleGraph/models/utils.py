@@ -126,6 +126,9 @@ def analyze_edge_function(rr=None, vizualize=False, config=None, model_lin_edge=
                 in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                          rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
                                          0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+            case 'PDE_GS':
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                         rr[:, None] / max_radius, embedding_), dim=1)
             case 'PDE_G':
                 in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                          rr[:, None] / max_radius, 0 * rr[:, None],
@@ -178,7 +181,7 @@ def choose_training_model(model_config, device):
             model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
         case 'PDE_GS':
             model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
-            edges =
+            edges = 1
     model_name = model_config.graph_model.mesh_model_name
     match model_name:
         case 'DiffMesh':
