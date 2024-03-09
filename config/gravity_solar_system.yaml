@@ -37,13 +37,13 @@ training:
     batch_size: 8
     small_init_batch_size: True
     n_runs: 2
-    learning_rate_start: float = 0.0001
-    learning_rate_end: float = 0.00005
-    learning_rate_embedding_start: float = 0.0001
-    learning_rate_embedding_end: float = 0.0001
+    learning_rate_start: 0.0001
+    learning_rate_end: 0.00005
+    learning_rate_embedding_start: 0.0001
+    learning_rate_embedding_end: 0.0001
     sparsity: 'none'
     data_augmentation: True
-    data_augmentation_loop: 20
+    data_augmentation_loop: 5
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'
