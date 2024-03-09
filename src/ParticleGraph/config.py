@@ -105,6 +105,7 @@ class ParticleGraphConfig(BaseModel):
 
     description: Optional[str] = 'ParticleGraph'
     dataset: str
+    data_folder_name: str = 'none'
     simulation: SimulationConfig
     graph_model: GraphModelConfig
     plotting: PlottingConfig
