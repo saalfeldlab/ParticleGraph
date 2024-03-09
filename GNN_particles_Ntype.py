@@ -787,8 +787,8 @@ def data_train(config):
                     fig.savefig(f"{log_dir}/tmp_training/embedding/ghosts_{N}.jpg", dpi=300)
                     plt.close()
 
-            # if N%1000==0:
-            #     print(loss.item())
+            if N%1000==0:
+                print(loss.item())
 
             total_loss += loss.item()
 
