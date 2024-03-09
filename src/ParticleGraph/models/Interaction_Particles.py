@@ -135,6 +135,10 @@ class Interaction_Particles(pyg.nn.MessagePassing):
                     (delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None], dpos_y_j[:, None],
                      embedding_j),
                     dim=-1)
+            case 'PDE_GS':
+                in_features = torch.cat(
+                    (delta_pos, r[:, None], embedding_j),
+                    dim=-1)
             case 'PDE_E':
                 in_features = torch.cat(
                     (delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
