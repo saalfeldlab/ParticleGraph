@@ -20,7 +20,7 @@ import matplotlib
 
 
 
-def read_solar_system_data(config, visualize=False):
+def generate_solar_system_from_data.py(config, visualize=False):
     print('')
 
     # plt.rcParams['text.usetex'] = True
@@ -41,6 +41,10 @@ def read_solar_system_data(config, visualize=False):
     for f in files:
         os.remove(f)
     copyfile(os.path.realpath(__file__), os.path.join(folder, 'generation_code.py'))
+
+
+
+
 
     # load model parameters and create local varibales
     simulation_config = config.simulation

@@ -166,18 +166,19 @@ def analyze_edge_function(rr=None, vizualize=False, config=None, model_lin_edge=
 def choose_training_model(model_config, device):
     
     aggr_type = model_config.graph_model.aggr_type
+    n_particle_types = model_config.simulation.n_particle_types
+    n_particles = model_config.simulation.n_particles
 
     bc_pos, bc_dpos = choose_boundary_values(model_config.simulation.boundary)
 
     model=[]
     model_name = model_config.graph_model.particle_model_name
     match model_name:
-        case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_bis' :
+        case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G':
             model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
-        case 'PDE_E':
+        case 'PDE_GS':
             model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
-        case 'PDE_G':
-            model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
+            edges =
     model_name = model_config.graph_model.mesh_model_name
     match model_name:
         case 'DiffMesh':
