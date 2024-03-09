@@ -684,7 +684,7 @@ def data_train(config):
         if (has_mesh) & (batch_size == 1):
             Niter = Niter // 4
 
-        for N in trange(Niter):
+        for N in range(Niter):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -787,6 +787,9 @@ def data_train(config):
                     fig.savefig(f"{log_dir}/tmp_training/embedding/ghosts_{N}.jpg", dpi=300)
                     plt.close()
 
+            # if N%1000==0:
+            #     print(loss.item())
+
             total_loss += loss.item()
 
             visualize_embedding=True
@@ -798,7 +801,7 @@ def data_train(config):
                     rr = torch.tensor(np.logspace(1,10,1000)).to(device)
                     for n in range(n_particles):
                         embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
-                        in_features = torch.cat((rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
+                        in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None], rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
                         func = model.lin_edge(in_features.float())
                         func = func[:, 0]
                         plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
