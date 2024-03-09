@@ -178,20 +178,29 @@ def choose_training_model(model_config, device):
 
     model=[]
     model_name = model_config.graph_model.particle_model_name
+
     match model_name:
         case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G':
             model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
+            model.edges = []
         case 'PDE_GS':
             model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
-            edges = 1
+            t = np.arange(model_config.simulation.n_particles)
+            t1 = np.repeat(t, model_config.simulation.n_particles)
+            t2 = np.tile(t, model_config.simulation.n_particles)
+            e = np.stack((t1, t2), axis=0)
+            model.edges = torch.tensor(e, dtype=torch.long, device=device)
     model_name = model_config.graph_model.mesh_model_name
     match model_name:
         case 'DiffMesh':
             model = Mesh_Laplacian(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
+            model.edges = []
         case 'WaveMesh':
             model = Mesh_Laplacian(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
+            model.edges = []
         case 'RD_RPS_Mesh':
             model = Mesh_RPS(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
+            model.edges = []
   
     if model==[]:
         raise ValueError(f'Unknown model {model_name}')

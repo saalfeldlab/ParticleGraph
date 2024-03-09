@@ -718,11 +718,14 @@ def data_train(config):
                     else:
                         y_batch = torch.cat((y_batch, y), dim=0)
                 else:
-                    distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
-                    adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                    t = torch.Tensor([radius ** 2])
-                    edges = adj_t.nonzero().t().contiguous()
-                    dataset = data.Data(x=x[:, :], edge_index=edges)
+                    if model.edges==[]:
+                        distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
+                        adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                        t = torch.Tensor([radius ** 2])
+                        edges = adj_t.nonzero().t().contiguous()
+                        dataset = data.Data(x=x[:, :], edge_index=edges)
+                    else:
+                        dataset = data.Data(x=x[:, :], edge_index=model.edges)
                     dataset_batch.append(dataset)
                     y = y_list[run][k].clone().detach()
                     if model_config.prediction == '2nd_derivative':
@@ -790,7 +793,22 @@ def data_train(config):
             if visualize_embedding & ( (epoch == 0) & (N < 100) & (N % 2 == 0)  |  (epoch==0)&(N<10000) & (N%200==0)  |  (epoch==0)&(N%(Niter//100)==0)   | (epoch>0)&(N%(Niter//4)==0)):
                 plot_training(dataset_name=dataset_name, filename='embedding', log_dir=log_dir, epoch=epoch, N=N, x=x, model=model, dataset_num = 1,
                               index_particles=index_particles, n_particles=n_particles, n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, device=device)
-                
+                if model_config.particle_model_name == 'PDE_GS':
+                    fig = plt.figure(figsize=(8, 8))
+                    rr = torch.tensor(np.logspace(1,10,1000)).to(device)
+                    for n in range(n_particles):
+                        embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
+                        in_features = torch.cat((rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
+                        func = model.lin_edge(in_features.float())
+                        func = func[:, 0]
+                        plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
+                                 color=cmap.color(to_numpy(x[n, 5]).astype(int)), linewidth=1)
+                    plt.xlabel('Distance [a.u]', fontsize=14)
+                    plt.ylabel('MLP [a.u]', fontsize=14)
+                    plt.xscale('log')
+                    plt.savefig(f"./{log_dir}/tmp_training/embedding/func_{dataset_name}_{epoch}_{N}.tif", dpi=300)
+                    plt.close()
+
                 if model_config.particle_model_name == 'PDE_B':
                     x = x_list[1][3000].clone().detach()
                     x[:, 2:5] = 0
@@ -1062,7 +1080,7 @@ def data_train(config):
 
 
 
-def data_test(config, visualize=False, verbose=True, best_model=20, step=5, ratio=1, run=1):
+def data_test(config, visualize=False, verbose=True, best_model=20, step=5, ratio=1, run=1, test_simulation=False):
     print('')
     print('Plot roll-out inference ... ')
 
@@ -1236,6 +1254,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
     for it in trange(n_frames - 1):
 
         x0 = x_list[0][it].clone().detach()
+        y0 = y_list[0][it].clone().detach()
 
         if has_mesh:
             x[:, 1:5] = x0[:, 1:5].clone().detach()
@@ -1269,9 +1288,12 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 
             dataset = data.Data(x=x_, edge_index=edge_index)
 
-            with torch.no_grad():
-                y = model(dataset, data_id=run, training=False, vnorm=vnorm,
-                          phi=torch.zeros(1, device=device))  # acceleration estimation
+            if test_simulation:
+                y = y0 / ynorm
+            else:
+                with torch.no_grad():
+                    y = model(dataset, data_id=run, training=False, vnorm=vnorm,
+                              phi=torch.zeros(1, device=device))  # acceleration estimation
 
             if has_ghost:
                 y = y[mask_ghost]
@@ -1299,6 +1321,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 
             # plt.style.use('dark_background')
 
+            # matplotlib.use("Qt5Agg")
             fig = plt.figure(figsize=(12, 12))
             if has_mesh:
                 pts = x[:, 1:3].detach().cpu().numpy()
@@ -1346,6 +1369,9 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
             if model_config.particle_model_name == 'PDE_G':
                 plt.xlim([-4, 4])
                 plt.ylim([-4, 4])
+            if model_config.particle_model_name == 'PDE_GS':
+                plt.xlim([-0.5E10, 0.5E10])
+                plt.ylim([-0.5E10, 0.5E10])
 
             plt.xticks([])
             plt.yticks([])
@@ -1390,8 +1416,8 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 1000, bSave=True)
+        data_generate(config, device=device, visualize=False, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 1000, bSave=True)
         data_train(config)
-        # data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=2) #config.simulation.n_frames // 100)
+        # data_test(config, visualize=True, verbose=True, best_model=2, run=1, step=config.simulation.n_frames // 100, test_simulation=True)
 
 

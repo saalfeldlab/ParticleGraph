@@ -210,11 +210,23 @@ def data_plot_training(config):
 
         ax = fig.add_subplot(1, 5, 2)
         embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
-        for n in range(n_particle_types):
-            plt.scatter(embedding[index_particles[n], 0],
-                        embedding[index_particles[n], 1], color=cmap.color(n), s=0.1)
-        plt.xlim([-1, 2])
-        plt.ylim([-1, 2])
+
+
+        if config.data_folder_name == 'graphs_data/solar_system':
+            for n in range(n_particle_types):
+                plt.scatter(embedding[index_particles[n], 0],
+                            embedding[index_particles[n], 1], color=cmap.color(n), s=10)
+            object_list = ['sun', 'mercury', 'venus', 'earth', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune',
+                           'pluto', 'io', 'europa',
+                           'ganymede', 'callisto', 'mimas', 'enceladus', 'tethys', 'dione', 'rhea', 'titan', 'hyperion',
+                           'moon', 'phobos', 'deimos', 'charon']
+            for n in range(10):
+                plt.text(embedding[index_particles[n], 0], embedding[index_particles[n], 1], object_list[n])
+        else:
+            for n in range(n_particle_types):
+                plt.scatter(embedding[index_particles[n], 0],
+                            embedding[index_particles[n], 1], color=cmap.color(n), s=0.1)
+
 
         ax = fig.add_subplot(1, 5, 3)
         if (simulation_config.n_interactions < 100) & (simulation_config.has_cell_division == False) :  # cluster embedding
@@ -255,6 +267,22 @@ def data_plot_training(config):
                 plt.yscale('log')
                 plt.xscale('log')
                 plt.xlim([1E-3, 0.2])
+                plt.xlabel('Distance [a.u]', fontsize=14)
+                plt.ylabel('MLP [a.u]', fontsize=14)
+                coeff_norm = to_numpy(func_list)
+                trans = umap.UMAP(n_neighbors=100, n_components=2, transform_queue_size=0).fit(coeff_norm)
+                proj_interaction = trans.transform(coeff_norm)
+            elif model_config.particle_model_name == 'PDE_GS':
+                func_list = []
+                rr = torch.tensor(np.linspace(0, radius * 1.3, 1000)).to(device)
+                for n in range(n_particles):
+                    embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
+                    in_features = torch.cat((rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
+                    func = model.lin_edge(in_features.float())
+                    func = func[:, 0]
+                    func_list.append(func)
+                    plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm), color=cmap.color(to_numpy(x[n, 5]).astype(int)), linewidth=1)
+                func_list = torch.stack(func_list)
                 plt.xlabel('Distance [a.u]', fontsize=14)
                 plt.ylabel('MLP [a.u]', fontsize=14)
                 coeff_norm = to_numpy(func_list)
@@ -322,8 +350,8 @@ def data_plot_training(config):
                 else:
                     proj_interaction = popt_list
                     proj_interaction[:, 1] = proj_interaction[:, 0]
-            plt.xlim([0,0.075])
-            plt.ylim([-0.04,0.03])
+            # plt.xlim([0,0.075])
+            # plt.ylim([-0.04,0.03])
 
             ax = fig.add_subplot(1, 5, 4)
             match train_config.cluster_method:
@@ -406,7 +434,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list =['Coulomb_3', 'boids_16', 'arbitrary_16', 'gravity_100']  # ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos'] # ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']
+    config_list =['gravity_solar_system']  # ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos'] # ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']
 
     for config_file in config_list:
 
@@ -419,9 +447,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 40, bSave=True)
-        data_train(config)
-        # data_plot_training(config)
-        # data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=2) #config.simulation.n_frames // 100)
+        data_plot_training(config)
+
 
 
