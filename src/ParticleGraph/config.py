@@ -74,6 +74,7 @@ class TrainingConfig(BaseModel):
     n_epochs: int = 20
     batch_size: int = 1
     small_init_batch_size: bool = True
+    large_range: bool = False
 
     n_runs: int = 2
     clamp: float = 0

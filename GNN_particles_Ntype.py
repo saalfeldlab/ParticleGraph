@@ -527,6 +527,7 @@ def data_train(config):
     has_mesh = (config.graph_model.mesh_model_name != '')
     replace_with_cluster = 'replace' in train_config.sparsity
     has_ghost = train_config.n_ghosts > 0
+    has_large_range = train_config.large_range
 
     embedding_cluster = EmbeddingCluster(config)
 
@@ -775,7 +776,10 @@ def data_train(config):
             elif has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
             else:
-                 loss = (pred - y_batch).norm(2)
+                 if not(has_large_range):
+                     loss = (pred - y_batch).norm(2)
+                 else:
+                    loss = ((pred - y_batch)/(y_batch+1E-10)).norm(2)
 
             loss.backward()
             optimizer.step()
@@ -786,9 +790,6 @@ def data_train(config):
                     plt.imshow(to_numpy(ghosts_particles.data[run, :, 120, :].squeeze()))
                     fig.savefig(f"{log_dir}/tmp_training/embedding/ghosts_{N}.jpg", dpi=300)
                     plt.close()
-
-            if N%100==0:
-                print(loss.item()/batch_size)
 
             total_loss += loss.item()
 
