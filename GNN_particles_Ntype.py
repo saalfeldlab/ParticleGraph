@@ -787,8 +787,8 @@ def data_train(config):
                     fig.savefig(f"{log_dir}/tmp_training/embedding/ghosts_{N}.jpg", dpi=300)
                     plt.close()
 
-            if N%1000==0:
-                print(loss.item())
+            if N%100==0:
+                print(loss.item()/batch_size)
 
             total_loss += loss.item()
 
@@ -878,6 +878,9 @@ def data_train(config):
             ax = fig.add_subplot(1, 6, 3)
             if model_config.particle_model_name == 'PDE_G':
                 rr = torch.tensor(np.linspace(0, radius * 1.3, 1000)).to(device)
+            elif model_config.particle_model_name == 'PDE_GS':
+                rr = torch.tensor(np.logspace(1, 10, 1000)).to(device)
+
             else:
                 rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
             if has_mesh==False:

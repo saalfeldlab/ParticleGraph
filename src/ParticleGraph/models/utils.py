@@ -139,7 +139,7 @@ def analyze_edge_function(rr=None, vizualize=False, config=None, model_lin_edge=
         func = model_lin_edge(in_features.float())
         func = func[:, 0]
         func_list.append(func)
-        if (n % 5 == 0) & vizualize:
+        if ((n % 5 == 0) | (config.graph_model.particle_model_name=='PDE_GS')) & vizualize:
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
                      color=cmap.color(types[n].astype(int)), linewidth=1, alpha=0.25)
@@ -155,7 +155,6 @@ def analyze_edge_function(rr=None, vizualize=False, config=None, model_lin_edge=
         proj_interaction = trans.transform(coeff_norm)
     if vizualize:
         if config.graph_model.particle_model_name == 'PDE_GS':
-            plt.yscale('log')
             plt.xscale('log')
         if config.graph_model.particle_model_name == 'PDE_G':
             plt.yscale('log')
