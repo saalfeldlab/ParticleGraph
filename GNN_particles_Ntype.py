@@ -798,7 +798,7 @@ def data_train(config):
                               index_particles=index_particles, n_particles=n_particles, n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, device=device)
                 if model_config.particle_model_name == 'PDE_GS':
                     fig = plt.figure(figsize=(8, 8))
-                    rr = torch.tensor(np.logspace(1,10,1000)).to(device)
+                    rr = torch.tensor(np.logspace(7,10,1000)).to(device)
                     for n in range(n_particles):
                         embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
                         in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None], rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
@@ -879,7 +879,7 @@ def data_train(config):
             if model_config.particle_model_name == 'PDE_G':
                 rr = torch.tensor(np.linspace(0, radius * 1.3, 1000)).to(device)
             elif model_config.particle_model_name == 'PDE_GS':
-                rr = torch.tensor(np.logspace(1, 10, 1000)).to(device)
+                rr = torch.tensor(np.logspace(7,10,1000)).to(device)
 
             else:
                 rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)

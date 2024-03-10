@@ -4,7 +4,7 @@ import torch_geometric.utils as pyg_utils
 import os
 from ParticleGraph.MLP import MLP
 import imageio
-from matplotlib.plt import plt
+
 
 from ParticleGraph.generators import RD_RPS
 from ParticleGraph.models import Interaction_Particles, Mesh_Laplacian
