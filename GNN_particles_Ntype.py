@@ -780,7 +780,7 @@ def data_train(config):
                  if not(has_large_range):
                      loss = (pred - y_batch).norm(2)
                  else:
-                    loss = ((pred - y_batch)/(y_batch+1E-10)).norm(2) / 1E8
+                    loss = ((pred - y_batch)/(y_batch)).norm(2) / 1E9
 
             loss.backward()
             optimizer.step()
@@ -807,7 +807,7 @@ def data_train(config):
                     rr = torch.tensor(np.logspace(7,9,1000)).to(device)
                     for n in range(n_particles):
                         embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
-                        in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None], rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
+                        in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None], rr[:, None] / simulation_config.max_radius, 10**embedding_), dim=1)
                         func = model.lin_edge(in_features.float())
                         func = func[:, 0]
                         plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
@@ -815,6 +815,7 @@ def data_train(config):
                     plt.xlabel('Distance [a.u]', fontsize=14)
                     plt.ylabel('MLP [a.u]', fontsize=14)
                     plt.xscale('log')
+                    plt.yscale('log')
                     plt.tight_layout()
                     ax = fig.add_subplot(1, 2, 2)
                     plt.scatter(np.log(np.abs(to_numpy(y_batch[:, 0]))), np.log(np.abs(to_numpy(pred[:, 0]))), c='k', s=1, alpha=0.15)
@@ -893,7 +894,6 @@ def data_train(config):
                 rr = torch.tensor(np.linspace(0, radius * 1.3, 1000)).to(device)
             elif model_config.particle_model_name == 'PDE_GS':
                 rr = torch.tensor(np.logspace(7,9,1000)).to(device)
-
             else:
                 rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
             if has_mesh==False:

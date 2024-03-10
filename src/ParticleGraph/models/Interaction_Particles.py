@@ -54,7 +54,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         self.bc_dpos = bc_dpos
         self.n_ghosts = int(train_config.n_ghosts)
 
-        if self.model == 'PDE_GS':
+        if train_config.large_range:
             self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device, activation='tanh')
         else:
@@ -140,7 +140,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
                      embedding_j),
                     dim=-1)
             case 'PDE_GS':
-                in_features = torch.cat((delta_pos, r[:, None], embedding_j),dim=-1)
+                in_features = torch.cat((delta_pos, r[:, None], 10**embedding_j),dim=-1)
             case 'PDE_E':
                 in_features = torch.cat(
                     (delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)

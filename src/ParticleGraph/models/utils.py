@@ -127,7 +127,7 @@ def analyze_edge_function(rr=None, vizualize=False, config=None, model_lin_edge=
                                          rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
                                          0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
             case 'PDE_GS':
-                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None], rr[:, None] / max_radius, embedding_), dim=1)
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None], rr[:, None] / max_radius, 10**embedding_), dim=1)
             case 'PDE_G':
                 in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                          rr[:, None] / max_radius, 0 * rr[:, None],
@@ -156,9 +156,10 @@ def analyze_edge_function(rr=None, vizualize=False, config=None, model_lin_edge=
     if vizualize:
         if config.graph_model.particle_model_name == 'PDE_GS':
             plt.xscale('log')
-        if config.graph_model.particle_model_name == 'PDE_G':
             plt.yscale('log')
+        if config.graph_model.particle_model_name == 'PDE_G':
             plt.xscale('log')
+            plt.yscale('log')
             plt.xlim([1E-3, 0.2])
         if config.graph_model.particle_model_name == 'PDE_E':
             plt.xlim([0, 0.05])
