@@ -1419,7 +1419,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['gravity_16'] # ['gravity_solar_system']   #['arbitrary_3_3', 'arbitrary_3', 'gravity_16']  # ['Coulomb_3', 'boids_16', 'arbitrary_16', 'gravity_100']  # ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos']  #    ## ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']
+    config_list = ['gravity_solar_system']   #['arbitrary_3_3', 'arbitrary_3', 'gravity_16']  # ['Coulomb_3', 'boids_16', 'arbitrary_16', 'gravity_100']  # ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos']  #    ## ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']
 
     for config_file in config_list:
 
