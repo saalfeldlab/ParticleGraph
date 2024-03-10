@@ -54,8 +54,12 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         self.bc_dpos = bc_dpos
         self.n_ghosts = int(train_config.n_ghosts)
 
-        self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
-                            hidden_size=self.hidden_dim, device=self.device)
+        if self.model == 'PDE_GS':
+            self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
+                                hidden_size=self.hidden_dim, device=self.device, activation='tanh')
+        else:
+            self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
+                                hidden_size=self.hidden_dim, device=self.device)
 
         if simulation_config.has_cell_division :
             self.a = nn.Parameter(

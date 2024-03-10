@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 class MLP(nn.Module):
 
-    def __init__(self, input_size, output_size, nlayers, hidden_size, device):
+    def __init__(self, input_size=None, output_size=None, nlayers=None, hidden_size=None, device=None, activation=None):
 
         super(MLP, self).__init__()
         self.layers = nn.ModuleList()
@@ -20,10 +20,15 @@ class MLP(nn.Module):
         nn.init.zeros_(layer.bias)
         self.layers.append(layer)
 
+        if activation=='tanh':
+            self.activation = F.tanh
+        else:
+            self.activation = F.relu
+
     def forward(self, x):
         for l in range(len(self.layers) - 1):
             x = self.layers[l](x)
-            x = F.relu(x)
+            x = self.activation(x)
         x = self.layers[-1](x)
         return x
 
