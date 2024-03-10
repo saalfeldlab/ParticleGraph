@@ -3,6 +3,7 @@ import logging
 import time
 from shutil import copyfile
 
+import matplotlib.pyplot as plt
 # import networkx as nx
 import torch.nn as nn
 import torch_geometric.data as data
@@ -801,7 +802,8 @@ def data_train(config):
                 plot_training(dataset_name=dataset_name, filename='embedding', log_dir=log_dir, epoch=epoch, N=N, x=x, model=model, dataset_num = 1,
                               index_particles=index_particles, n_particles=n_particles, n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, device=device)
                 if model_config.particle_model_name == 'PDE_GS':
-                    fig = plt.figure(figsize=(8, 8))
+                    fig = plt.figure(figsize=(8, 4))
+                    ax = fig.add_subplot(1, 2, 1)
                     rr = torch.tensor(np.logspace(7,9,1000)).to(device)
                     for n in range(n_particles):
                         embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
@@ -813,6 +815,11 @@ def data_train(config):
                     plt.xlabel('Distance [a.u]', fontsize=14)
                     plt.ylabel('MLP [a.u]', fontsize=14)
                     plt.xscale('log')
+                    plt.tight_layout()
+                    ax = fig.add_subplot(1, 2, 2)
+                    plt.scatter(to_numpy(y_batch[:, 0]), to_numpy(pred[:, 0]), c='k', s=1, alpha=0.5)
+                    plt.scatter(to_numpy(y_batch[:, 1]), to_numpy(pred[:, 1]), c='k', s=1, alpha=0.5)
+                    plt.tight_layout()
                     plt.savefig(f"./{log_dir}/tmp_training/embedding/func_{dataset_name}_{epoch}_{N}.tif", dpi=300)
                     plt.close()
 
