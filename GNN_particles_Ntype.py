@@ -251,7 +251,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                     case 'DiffMesh':
                         with torch.no_grad():
                             pred = mesh_model(dataset_mesh)
-                            H1[mesh_data['mask'].squeeze(), 1:2] = pred[mask]
+                            H1[mask_mesh, 1:2] = pred[mask_mesh]
                         H1_mesh[mask_mesh, 0:1] += pred[:] * delta_t
                         new_pred = torch.zeros_like(pred)
                         new_pred[mask_mesh] = pred[mask_mesh]
@@ -296,7 +296,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                     dataset2 = data.Data(x=x, edge_index=edge_index2)
                     pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
                     vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
-                    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False, alpha=alpha)
+                    # nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False, alpha=alpha)
 
                     if model_config.particle_model_name == 'PDE_G':
                         for n in range(n_particle_types):
@@ -529,14 +529,13 @@ def data_train(config):
     replace_with_cluster = 'replace' in train_config.sparsity
     has_ghost = train_config.n_ghosts > 0
     has_large_range = train_config.large_range
-
-    embedding_cluster = EmbeddingCluster(config)
-
     if train_config.small_init_batch_size:
         get_batch_size = increasing_batch_size(target_batch_size)
     else:
         get_batch_size = constant_batch_size(target_batch_size)
     batch_size = get_batch_size(0)
+
+    embedding_cluster = EmbeddingCluster(config)
 
     l_dir, log_dir,logger = create_log_dir(config, dataset_name)
 
@@ -545,9 +544,9 @@ def data_train(config):
     print(f'Graph files N: {NGraphs}')
     logger.info(f'Graph files N: {NGraphs}')
 
+    print('Load data ...')
     x_list = []
     y_list = []
-    print('Load data ...')
     for run in trange(NGraphs):
         x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
         y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
@@ -603,19 +602,17 @@ def data_train(config):
     x=[]
     y=[]
 
-    print('done ...')
-
+    print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
     # net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_4.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
-
     lr_embedding = train_config.learning_rate_embedding_start
     lr = train_config.learning_rate_start
     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
     logger.info(f"Total Trainable Params: {n_total_params}")
     logger.info(f'Learning rates: {lr}, {lr_embedding}')
-
+    model.train()
     if  has_cell_division:
         model_division = Division_Predictor(config, device)
         optimizer_division, n_total_params_division = set_trainable_division_parameters(model_division, lr=1E-3)
@@ -630,6 +627,7 @@ def data_train(config):
     logger.info(f'N epochs: {n_epochs}')
     logger.info(f'initial batch_size: {batch_size}')
 
+    print ('Update variables ...')
     # update variable if dropout, cell_division, etc ...
     x = x_list[1][n_frames-1].clone().detach()
     T1 = x[:, 5:6].clone().detach()
@@ -641,7 +639,6 @@ def data_train(config):
     for n in range(n_particle_types):
         index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
         index_particles.append(index.squeeze())
-
     if has_ghost:
         ghosts_particles = Ghost_Particles(config, n_particles, device)
         if train_config.ghost_method == 'MLP':
@@ -656,10 +653,6 @@ def data_train(config):
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-
-    model.train()
-
-    model_forward, bc_pos, bc_dpos = choose_model(config, device=device)
 
     list_loss = []
     time.sleep(0.5)
@@ -784,6 +777,7 @@ def data_train(config):
 
             loss.backward()
             optimizer.step()
+
             if has_ghost:
                 optimizer_ghost_particles.step()
                 if (N>0) & (N % 1000 == 0) & (train_config.ghost_method == 'MLP'):
@@ -853,6 +847,9 @@ def data_train(config):
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs_{epoch}.pt'))
+        list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
+        torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
+
         if has_cell_division:
             print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss_division / (N + 1) / n_particles / batch_size))
             logger.info("Epoch {}. Division Loss: {:.6f}".format(epoch, total_loss_division / (N + 1) / n_particles / batch_size))
@@ -861,8 +858,6 @@ def data_train(config):
         if has_ghost:
             torch.save({'model_state_dict': ghosts_particles.state_dict(),
                         'optimizer_state_dict': optimizer_ghost_particles.state_dict()}, os.path.join(log_dir, 'models', f'best_ghost_particles_with_{NGraphs - 1}_graphs_{epoch}.pt'))
-
-        list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
 
         # matplotlib.use("Qt5Agg")
         fig = plt.figure(figsize=(22, 4))
@@ -895,7 +890,9 @@ def data_train(config):
                 rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
             if has_mesh==False:
                 func_list, proj_interaction = analyze_edge_function(rr=rr, vizualize=True, config=config,
-                                                               model_lin_edge=model.lin_edge, model_a=model.a, dataset_number = 1, n_particles=n_particles, ynorm=ynorm, types=to_numpy(x[:, 5]), cmap=cmap, device=device)
+                                                                model_lin_edge=model.lin_edge, model_a=model.a, dataset_number = 1,
+                                                                n_particles=n_particles, ynorm=ynorm, types=to_numpy(x[:, 5]),
+                                                                cmap=cmap, device=device)
             else:
                 func_list = []
                 popt_list = []
@@ -1123,7 +1120,6 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 
     # update variable if dropout
 
-
     graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     NGraphs = int(len(graph_files))
     if best_model == -1:
@@ -1167,7 +1163,8 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
     # nparticles larger than initially
     if ratio > 1:
 
-        prev_index_particles = index_particles
+        index_particles = []
+        prev_index_particles = index
 
         new_nparticles = n_particles * ratio
         prev_nparticles = n_particles
