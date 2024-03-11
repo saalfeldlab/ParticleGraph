@@ -285,7 +285,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
 
-                plt.style.use('dark_background')
+                # plt.style.use('dark_background')
 
                 if 'graph' in style:
                     fig = plt.figure(figsize=(10, 10))
@@ -472,7 +472,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                                 s_p = 10
                             for n in range(n_particle_types):
                                 plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                            x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color='w')
+                                            x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color='k')
                             if (simulation_config.boundary == 'periodic'):
                                 plt.xlim([0, 1])
                                 plt.ylim([0, 1])
@@ -1416,7 +1416,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['gravity_solar_system']   #['arbitrary_3_3', 'arbitrary_3', 'gravity_16']  # ['Coulomb_3', 'boids_16', 'arbitrary_16', 'gravity_100']  # ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos']  #    ## ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']
+    config_list = ['boids_16']   #['arbitrary_3_3', 'arbitrary_3', 'gravity_16']  # ['Coulomb_3', 'boids_16', 'arbitrary_16', 'gravity_100']  # ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos']  #    ## ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']
 
     for config_file in config_list:
 
@@ -1429,8 +1429,20 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        # data_generate(config, device=device, visualize=False, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 1000, bSave=True)
-        data_train(config)
-        # data_test(config, visualize=True, verbose=True, best_model=2, run=1, step=config.simulation.n_frames // 100, test_simulation=True)
+    config_list = ['boids_16']  # ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos'] # ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']
+
+    for config_file in config_list:
+        # Load parameters from config file
+        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+        print(config.pretty())
+
+        device = set_device(config.training.device)
+        print(f'device {device}')
+
+        cmap = CustomColorMap(config=config)  # create colormap for given model_config
+        data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 8, bSave=True)
+        # data_train(config)
+        data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=config.simulation.n_frames // 8)
+
 
 
