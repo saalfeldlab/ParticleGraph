@@ -38,11 +38,29 @@ from ParticleGraph.models import Division_Predictor
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=None, bSave=True):
     print('')
 
-    # plt.rcParams['text.usetex'] = True
-    # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+    simulation_config = config.simulation
+    model_config = config.graph_model
 
-    # create output folder, empty it if bErase=True, copy files into it
+    print(f'Generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+
+    radius = simulation_config.max_radius
+    min_radius = simulation_config.min_radius
+    n_particle_types = simulation_config.n_particle_types
+    n_particles = simulation_config.n_particles
+    delta_t = simulation_config.delta_t
+    has_mesh = (config.graph_model.mesh_model_name != '')
+    only_mesh = (config.graph_model.particle_model_name == '') & has_mesh
+    has_cell_division = simulation_config.has_cell_division
+    n_frames = simulation_config.n_frames
+    cycle_length = None
+    has_dropout = training_config.dropout > 0
+    cmap = CustomColorMap(config=config)
     dataset_name = config.dataset
+
+    if config.data_folder_name != 'none':
+        generate_from_data(config=config, device=device, visualize=visualize, folder=folder, step=step)
+        return
+
     folder = f'./graphs_data/graphs_{dataset_name}/'
     if erase:
         files = glob.glob(f"{folder}/*")
@@ -57,33 +75,15 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
         os.remove(f)
     copyfile(os.path.realpath(__file__), os.path.join(folder, 'generation_code.py'))
 
-    if config.data_folder_name != 'none':
-        generate_from_data(config=config, device=device, visualize=visualize, folder=folder, step=step)
-        return
-
-    # load model parameters and create local varibales
-    simulation_config = config.simulation
-    model_config = config.graph_model
-    training_config = config.training
-    print(f'Generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
-
-    radius = simulation_config.max_radius
-    min_radius = simulation_config.min_radius
-    n_particle_types = simulation_config.n_particle_types
-    n_particles = simulation_config.n_particles
-    delta_t = simulation_config.delta_t
-    has_mesh = (config.graph_model.mesh_model_name != '')
-    only_mesh = (config.graph_model.particle_model_name == '') & has_mesh
-    has_cell_division = simulation_config.has_cell_division
-    n_frames = simulation_config.n_frames
-    cycle_length = None
-    has_dropout = training_config.dropout > 0
+    model, bc_pos, bc_dpos = choose_model(config, device=device)
+    if has_mesh:
+        mesh_model = choose_mesh_model(config, device=device)
+    else:
+        mesh_model = None
 
     index_particles = []
-    np_i = int(n_particles / n_particle_types)
     for n in range(n_particle_types):
-        index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
-
+        index_particles.append(np.arange((n_particles // n_particle_types) * n, (n_particles // n_particle_types) * (n + 1)))
     if has_dropout:
         draw = np.random.permutation(np.arange(n_particles))
         cut = int(n_particles * (1-training_config.dropout))
@@ -92,22 +92,6 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
         x_removed_list = []
     else:
         dropout_mask = np.arange(n_particles)
-
-    model, bc_pos, bc_dpos = choose_model(config, device=device)
-
-    if has_mesh:
-        mesh_model = choose_mesh_model(config, device=device)
-    else:
-        mesh_model = None
-
-    # fig = plt.figure(figsize=(8, 8))
-    # pp=model.p.clone().detach()
-    # max_radius = config.simulation.max_radius
-    # rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-    # for n in range(n_particle_types):
-    #     for m in range(n_particle_types):
-    #         plt.plot(to_numpy(rr), to_numpy(model.psi(rr, pp[n,m])), color=cmap.color(n), linewidth=1)
-    # plt.show()
 
     for run in range(config.training.n_runs):
 
@@ -492,21 +476,13 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
             torch.save(x_mesh_list, f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt')
             torch.save(y_mesh_list, f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt')
-
-    # x_ = torch.load(f'graphs_data/graphs_{dataset_name}/x_200.pt', map_location=device)
-    # y_ = torch.load(f'graphs_data/graphs_{dataset_name}/y_200.pt', map_location=device)
-
-    if bSave:
-        torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
-        torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
+            torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
+            torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
 
 
 
 def data_train(config):
     print('')
-
-    # plt.rcParams['text.usetex'] = True
-    # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
     simulation_config = config.simulation
     train_config = config.training
@@ -534,11 +510,10 @@ def data_train(config):
     else:
         get_batch_size = constant_batch_size(target_batch_size)
     batch_size = get_batch_size(0)
-
+    cmap = CustomColorMap(config=config)  # create colormap for given model_config
     embedding_cluster = EmbeddingCluster(config)
 
     l_dir, log_dir,logger = create_log_dir(config, dataset_name)
-
     graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     NGraphs = len(graph_files)
     print(f'Graph files N: {NGraphs}')
@@ -607,8 +582,9 @@ def data_train(config):
     # net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_4.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
-    lr_embedding = train_config.learning_rate_embedding_start
+
     lr = train_config.learning_rate_start
+    lr_embedding = train_config.learning_rate_embedding_start
     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
     logger.info(f"Total Trainable Params: {n_total_params}")
     logger.info(f'Learning rates: {lr}, {lr_embedding}')
@@ -630,7 +606,7 @@ def data_train(config):
     print ('Update variables ...')
     # update variable if dropout, cell_division, etc ...
     x = x_list[1][n_frames-1].clone().detach()
-    T1 = x[:, 5:6].clone().detach()
+    type_list = x[:, 5:6].clone().detach()
     n_particles = x.shape[0]
     print(f'N particles: {n_particles}')
     logger.info(f'N particles: {n_particles}')
@@ -655,8 +631,7 @@ def data_train(config):
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
 
     list_loss = []
-    time.sleep(0.5)
-
+    time.sleep(1)
     for epoch in range(n_epochs + 1):
 
         old_batch_size = batch_size
@@ -830,7 +805,7 @@ def data_train(config):
                         lin_edge_out = model.lin_edge_out * ynorm
                         diffx = model.diffx
                         particle_id = to_numpy(model.particle_id)
-                    type = to_numpy(T1[particle_id])
+                    type = to_numpy(type_list[particle_id])
                     fig = plt.figure(figsize=(8, 8))
                     for n in range(n_particle_types):
                         pos = np.argwhere(type == n)
@@ -968,7 +943,7 @@ def data_train(config):
                 if pos.size>0:
                     plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1],
                                 color=cmap.color(n), s=0.1)
-            Accuracy = metrics.accuracy_score(to_numpy(T1), new_labels)
+            Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
             plt.text(0, 1.1, f'Accuracy: {np.round(Accuracy, 3)}', ha='left', va='top', transform=ax.transAxes,
                      fontsize=10)
             print(f'Accuracy: {np.round(Accuracy, 3)}   n_clusters: {n_clusters}')
@@ -1095,7 +1070,6 @@ def data_train(config):
 
 def data_test(config, visualize=False, verbose=True, best_model=20, step=5, ratio=1, run=1, test_simulation=False):
     print('')
-    print('Plot roll-out inference ... ')
 
     dataset_name = config.dataset
     simulation_config = config.simulation
@@ -1104,9 +1078,6 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
     only_mesh = (config.graph_model.particle_model_name == '') & has_mesh
     has_division = simulation_config.has_cell_division
     has_ghost = config.training.n_ghosts > 0
-
-    print(f'Test data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
-
     radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
@@ -1114,23 +1085,34 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
     n_frames = simulation_config.n_frames
     delta_t = simulation_config.delta_t
 
+    print(f'Test data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
     print('log_dir: {}'.format(log_dir))
-
-    # update variable if dropout
-
+    files = glob.glob(f"./{log_dir}/tmp_recons/*")
+    for f in files:
+        os.remove(f)
     graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     NGraphs = int(len(graph_files))
     if best_model == -1:
         net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     else:
         net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_{best_model}.pt"
-
     print('Graph files N: ', NGraphs - 1)
     print(f'network: {net}')
-
     model, bc_pos, bc_dpos = choose_training_model(config, device)
+    table = PrettyTable(["Modules", "Parameters"])
+    total_params = 0
+    for name, parameter in model.named_parameters():
+        if not parameter.requires_grad:
+            continue
+        param = parameter.numel()
+        table.add_row([name, param])
+        total_params += param
+    if verbose:
+        print(table)
+        print(f"Total Trainable Params: {total_params}")
     if has_mesh:
         mesh_model, bc_pos, bc_dpos  = choose_training_model(config, device)
         state_dict = torch.load(net, map_location=device)
@@ -1141,24 +1123,15 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
         model.load_state_dict(state_dict['model_state_dict'])
         model.eval()
         mesh_model = None
-
     if has_division:
         model_division = Division_Predictor(config, device)
         net = f"./log/try_{dataset_name}/models/best_model_division_with_{NGraphs - 1}_graphs_20.pt"
         state_dict = torch.load(net, map_location=device)
         model_division.load_state_dict(state_dict['model_state_dict'])
         model_division.eval()
-
-    files = glob.glob(f"./{log_dir}/tmp_recons/*")
-    for f in files:
-        os.remove(f)
-
     if os.path.isfile(os.path.join(log_dir, f'labels_{best_model}.pt')):
         print('Use learned labels')
         labels = torch.load(os.path.join(log_dir, f'labels_{best_model}.pt'))
-    else:
-        # labels = T1
-        print('Use ground truth labels')
 
     # nparticles larger than initially
     if ratio > 1:
@@ -1198,26 +1171,36 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
         for n in range(n_particle_types):
             index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
-    ynorm = torch.load(f'./log/try_{dataset_name}/ynorm.pt', map_location=device).to(device)
-    vnorm = torch.load(f'./log/try_{dataset_name}/vnorm.pt', map_location=device).to(device)
-
-    table = PrettyTable(["Modules", "Parameters"])
-    total_params = 0
-    for name, parameter in model.named_parameters():
-        if not parameter.requires_grad:
-            continue
-        param = parameter.numel()
-        table.add_row([name, param])
-        total_params += param
-    if verbose:
-        print(table)
-        print(f"Total Trainable Params: {total_params}")
-
     x_list = []
     y_list = []
     x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device))
     y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device))
-
+    ynorm = torch.load(f'./log/try_{dataset_name}/ynorm.pt', map_location=device).to(device)
+    vnorm = torch.load(f'./log/try_{dataset_name}/vnorm.pt', map_location=device).to(device)
+    x = x_list[0][0].clone().detach()
+    n_particles = x.shape[0]
+    config.simulation.n_particles = n_particles
+    print(f'N particles: {n_particles}')
+    index_particles = []
+    for n in range(n_particle_types):
+        index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
+        index_particles.append(index.squeeze())
+    if has_ghost:
+        model_ghost = Ghost_Particles(config, n_particles, device)
+        net = f"./log/try_{dataset_name}/models/best_ghost_particles_with_{NGraphs - 1}_graphs_20.pt"
+        state_dict = torch.load(net, map_location=device)
+        model_ghost.load_state_dict(state_dict['model_state_dict'])
+        model_ghost.eval()
+        x_removed_list = torch.load(f'graphs_data/graphs_{dataset_name}/x_removed_list_0.pt', map_location=device)
+        mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
+        mask_ghost = np.argwhere(mask_ghost == 1)
+        mask_ghost = mask_ghost[:, 0].astype(int)
+    if simulation_config.has_cell_division:
+        cycle_length = torch.load(f'./graphs_data/graphs_{dataset_name}/cycle_length.pt', map_location=device).to(device)
+        cycle_length_distrib = cycle_length[to_numpy(x[:,5]).astype(int)].squeeze()
+        A1 = torch.rand(cycle_length_distrib.shape[0], device=device)
+        A1 = A1  * cycle_length_distrib
+        A1 = A1[:,None]
     if has_mesh:
         hnorm = torch.load(f'./log/try_{dataset_name}/hnorm.pt', map_location=device).to(device)
 
@@ -1235,33 +1218,6 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
         mask_mesh = torch.tensor(mask_mesh, dtype=torch.bool, device=device)
 
         # plt.scatter(x_, y_, s=2, c=to_numpy(mask_mesh))
-
-    x = x_list[0][0].clone().detach()
-    n_particles = x.shape[0]
-    print(f'N particles: {n_particles}')
-    config.simulation.n_particles = n_particles
-    index_particles = []
-    for n in range(n_particle_types):
-        index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
-        index_particles.append(index.squeeze())
-
-    if has_ghost:
-        model_ghost = Ghost_Particles(config, n_particles, device)
-        net = f"./log/try_{dataset_name}/models/best_ghost_particles_with_{NGraphs - 1}_graphs_20.pt"
-        state_dict = torch.load(net, map_location=device)
-        model_ghost.load_state_dict(state_dict['model_state_dict'])
-        model_ghost.eval()
-        x_removed_list = torch.load(f'graphs_data/graphs_{dataset_name}/x_removed_list_0.pt', map_location=device)
-        mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
-        mask_ghost = np.argwhere(mask_ghost == 1)
-        mask_ghost = mask_ghost[:, 0].astype(int)
-
-    if simulation_config.has_cell_division:
-        cycle_length = torch.load(f'./graphs_data/graphs_{dataset_name}/cycle_length.pt', map_location=device).to(device)
-        cycle_length_distrib = cycle_length[to_numpy(x[:,5]).astype(int)].squeeze()
-        A1 = torch.rand(cycle_length_distrib.shape[0], device=device)
-        A1 = A1  * cycle_length_distrib
-        A1 = A1[:,None]
 
     time.sleep(1)
     for it in trange(n_frames - 1):
@@ -1412,22 +1368,6 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 
 if __name__ == '__main__':
 
-    print('')
-    print('version 0.2.0 240111')
-    print('')
-
-    config_list = ['boids_16']   #['arbitrary_3_3', 'arbitrary_3', 'gravity_16']  # ['Coulomb_3', 'boids_16', 'arbitrary_16', 'gravity_100']  # ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos']  #    ## ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']
-
-    for config_file in config_list:
-
-        # Load parameters from config file
-        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        print(config.pretty())
-
-        device = set_device(config.training.device)
-        print(f'device {device}')
-
-        cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
     config_list = ['boids_16']  # ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos'] # ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']
 
@@ -1439,7 +1379,6 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        cmap = CustomColorMap(config=config)  # create colormap for given model_config
         data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 8, bSave=True)
         # data_train(config)
         data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=config.simulation.n_frames // 8)

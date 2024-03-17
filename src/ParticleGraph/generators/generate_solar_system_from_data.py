@@ -23,6 +23,8 @@ import torch
 from ParticleGraph.utils import *
 # from ParticleGraph.generators.utils import convert_data
 
+# data obtained from https://ssd.jpl.nasa.gov/horizons/app.html#/
+
 def skip_to(file, start_line):
     with open(file) as f:
         pos = 0
