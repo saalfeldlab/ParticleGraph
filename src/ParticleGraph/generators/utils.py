@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 # matplotlib.use("Qt5Agg")
-from ParticleGraph.generators import PDE_A, PDE_A_bis, PDE_B, PDE_B_bis, PDE_E, PDE_G, PDE_GS, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, \
+from ParticleGraph.generators import PDE_A, PDE_A_bis, PDE_B, PDE_B_bis, PDE_E, PDE_G, PDE_GS, PDE_N, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, \
     Laplacian_A, PDE_O
 from ParticleGraph.utils import choose_boundary_values
 from ParticleGraph.data_loaders import load_solar_system
@@ -52,14 +52,11 @@ def choose_model(config, device):
             sigma = config.simulation.sigma
             p = p if n_particle_types == 1 else torch.squeeze(p)
             model = PDE_A(aggr_type=aggr_type, p=torch.squeeze(p), sigma=sigma, bc_dpos=bc_dpos)
-
             # matplotlib.use("Qt5Agg")
             # rr = torch.tensor(np.linspace(0, 0.075, 1000)).to(device)
             # for n in range(n_particles):
             #     func= model.psi(rr,p[n])
             #     plt.plot(rr.detach().cpu().numpy(),func.detach().cpu().numpy(),c='k',alpha=0.01)
-
-
         case 'PDE_A_bis':
             p = torch.ones(n_particle_types, n_particle_types, 4, device=device) + torch.randn(n_particle_types, n_particle_types, 4, device=device)
             if params[0] != [-1]:
@@ -124,6 +121,12 @@ def choose_model(config, device):
             for n in range(n_particle_types):
                 p[n] = torch.tensor(params[n])
             model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
+        case 'PDE_N':
+            p = torch.rand(n_particle_types, 2, device=device) * 100  # comprised between 10 and 50
+            if params[0] != [-1]:
+                for n in range(n_particle_types):
+                    p[n] = torch.tensor(params[n])
+            model = PDE_N(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
         case _:
             model = PDE_Z()
 

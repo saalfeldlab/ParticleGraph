@@ -15,6 +15,7 @@ from torch_geometric.loader import DataLoader
 from torch_geometric.utils.convert import to_networkx
 from tqdm import trange
 import os
+import scipy.io
 from sklearn import metrics
 from matplotlib import rc
 import matplotlib
@@ -49,6 +50,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
     delta_t = simulation_config.delta_t
+    has_adjacency_matrix = (simulation_config.connectivity_file != '')
     has_mesh = (config.graph_model.mesh_model_name != '')
     only_mesh = (config.graph_model.particle_model_name == '') & has_mesh
     has_cell_division = simulation_config.has_cell_division
@@ -82,7 +84,6 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
         mesh_model = choose_mesh_model(config, device=device)
     else:
         mesh_model = None
-
     index_particles = []
     for n in range(n_particle_types):
         index_particles.append(np.arange((n_particles // n_particle_types) * n, (n_particles // n_particle_types) * (n + 1)))
@@ -94,6 +95,14 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
         x_removed_list = []
     else:
         dropout_mask = np.arange(n_particles)
+    if has_adjacency_matrix:
+        mat = scipy.io.loadmat(simulation_config.connectivity_file)
+        adjacency = torch.tensor(mat['A'],device=device)
+        adj_t = adjacency > 0
+        edge_index = adj_t.nonzero().t().contiguous()
+        edge_attr = adjacency[adj_t]
+
+
 
     for run in range(config.training.n_runs):
 
@@ -176,10 +185,15 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                 dataset_mesh = data.Data(x=x_mesh, edge_index=mesh_data['edge_index'], edge_attr=mesh_data['edge_weight'], device=device)
  
             # compute connectivity rule
-            distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
-            adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-            edge_index = adj_t.nonzero().t().contiguous()
-            dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+            if has_adjacency_matrix:
+                adj_t = adjacency > 0
+                edge_index = adj_t.nonzero().t().contiguous()
+                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr)
+            else:
+                distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
+                adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                edge_index = adj_t.nonzero().t().contiguous()
+                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
 
             # model prediction
             with torch.no_grad():
@@ -1333,7 +1347,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 if __name__ == '__main__':
 
 
-    config_list = ['arbitrary_16_noise_01','arbitrary_16_noise_005','arbitrary_16_noise_02']   # ['arbitrary_3_continuous']
+    config_list = ['arbitrary_16_noise_1E-4', 'arbitrary_16_noise_1E-3', 'arbitrary_16_noise_1E-2', 'arbitrary_16_noise_1E-1']
 
     for config_file in config_list:
         # Load parameters from config file

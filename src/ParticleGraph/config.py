@@ -12,7 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class SimulationConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
-    
+    connectivity_file: str = ''
     params: list[list[float]]
     min_radius: Annotated[float, Field(ge=0)] = 0
     max_radius: Annotated[float, Field(gt=0)]
