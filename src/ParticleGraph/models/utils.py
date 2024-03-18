@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from scipy.spatial import Delaunay
+from ParticleGraph.utils import to_numpy
 from ParticleGraph.fitting_models import linear_model
 import umap
 
@@ -25,9 +26,12 @@ def plot_training (dataset_name, model_name, log_dir, epoch, N, x, index_particl
 
     fig = plt.figure(figsize=(8, 8))
     embedding = get_embedding(model.a, dataset_num, index_particles, n_particles, n_particle_types)
-    for n in range(n_particle_types):
-        plt.scatter(embedding[index_particles[n], 0],
-                    embedding[index_particles[n], 1], color=cmap.color(n), s=5)  #
+    if n_particle_types > 1000:
+        plt.scatter(embedding[:, 0], embedding[:, 1], c=to_numpy(x[:, 5])/n_particles, s=5, cmap='viridis')
+    else:
+        for n in range(n_particle_types):
+            plt.scatter(embedding[index_particles[n], 0],
+                        embedding[index_particles[n], 1], color=cmap.color(n), s=5)  #
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/embedding/{model_name}_{dataset_name}_{epoch}_{N}.tif", dpi=300)
     plt.close()
@@ -167,7 +171,6 @@ def plot_training (dataset_name, model_name, log_dir, epoch, N, x, index_particl
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/tmp_training/embedding/{model_name}_{dataset_name}_{epoch}_{N}.tif", dpi=300)
             plt.close()
-
 
 def analyze_edge_function(rr=None, vizualize=False, config=None, model_lin_edge=[], model_a=None, dataset_number = 0, n_particles=None, ynorm=None, types=None, cmap=None, device=None):
     func_list = []

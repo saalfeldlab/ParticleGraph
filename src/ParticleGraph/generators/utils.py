@@ -1,6 +1,8 @@
 import torch
 import numpy as np
-
+import matplotlib.pyplot as plt
+import matplotlib
+# matplotlib.use("Qt5Agg")
 from ParticleGraph.generators import PDE_A, PDE_A_bis, PDE_B, PDE_B_bis, PDE_E, PDE_G, PDE_GS, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, \
     Laplacian_A, PDE_O
 from ParticleGraph.utils import choose_boundary_values
@@ -20,8 +22,9 @@ def generate_from_data(config, device, visualize=True, folder=None, step=None):
 
 def choose_model(config, device):
     particle_model_name = config.graph_model.particle_model_name
-    n_particle_types = config.simulation.n_particle_types
     aggr_type = config.graph_model.aggr_type
+    n_particles = config.simulation.n_particles
+    n_particle_types = config.simulation.n_particle_types
     bc_pos, bc_dpos = choose_boundary_values(config.simulation.boundary)
 
     params = config.simulation.params
@@ -29,7 +32,19 @@ def choose_model(config, device):
     match particle_model_name:
         case 'PDE_A':
             p = torch.ones(n_particle_types, 4, device=device) + torch.rand(n_particle_types, 4, device=device)
-            if params[0] != [-1]:
+            if config.simulation.non_discrete_level>0:
+                pp=[]
+                n_particle_types = len(params)
+                for n in range(n_particle_types):
+                    p[n] = torch.tensor(params[n])
+                for n in range(n_particle_types):
+                    if n==0:
+                        pp=p[n].repeat(n_particles//n_particle_types,1)
+                    else:
+                        pp=torch.cat((pp,p[n].repeat(n_particles//n_particle_types,1)),0)
+                p=pp.clone().detach()
+                p=p+torch.randn(n_particles,4,device=device) * config.simulation.non_discrete_level
+            elif params[0] != [-1]:
                 for n in range(n_particle_types):
                     p[n] = torch.tensor(params[n])
             else:
@@ -37,6 +52,14 @@ def choose_model(config, device):
             sigma = config.simulation.sigma
             p = p if n_particle_types == 1 else torch.squeeze(p)
             model = PDE_A(aggr_type=aggr_type, p=torch.squeeze(p), sigma=sigma, bc_dpos=bc_dpos)
+
+            # matplotlib.use("Qt5Agg")
+            # rr = torch.tensor(np.linspace(0, 0.075, 1000)).to(device)
+            # for n in range(n_particles):
+            #     func= model.psi(rr,p[n])
+            #     plt.plot(rr.detach().cpu().numpy(),func.detach().cpu().numpy(),c='k',alpha=0.01)
+
+
         case 'PDE_A_bis':
             p = torch.ones(n_particle_types, n_particle_types, 4, device=device) + torch.randn(n_particle_types, n_particle_types, 4, device=device)
             if params[0] != [-1]:

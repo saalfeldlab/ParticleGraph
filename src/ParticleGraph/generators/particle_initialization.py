@@ -14,6 +14,7 @@ def init_particles(config, device, cycle_length=None):
     simulation_config = config.simulation
     n_particles = simulation_config.n_particles
     n_particle_types = simulation_config.n_particle_types
+
     dpos_init = simulation_config.dpos_init
 
     if cycle_length == None:
@@ -28,7 +29,7 @@ def init_particles(config, device, cycle_length=None):
     type = torch.zeros(int(n_particles / n_particle_types), device=device)
     for n in range(1, n_particle_types):
         type = torch.cat((type, n * torch.ones(int(n_particles / n_particle_types), device=device)), 0)
-    if simulation_config.params == 'continuous':  # TODO: params is a list[list[float]]; this can never happen?
+    if (simulation_config.params == 'continuous') | (config.simulation.non_discrete_level > 0):  # TODO: params is a list[list[float]]; this can never happen?
         type = torch.tensor(np.arange(n_particles), device=device)
     features = torch.zeros((n_particles, 2), device=device)
     cycle_length_distrib = cycle_length[to_numpy(type)].squeeze() * (torch.ones(n_particles, device=device) + 0.05 * torch.randn(n_particles, device=device))

@@ -20,6 +20,7 @@ class SimulationConfig(BaseModel):
     n_particles: int = 1000
     n_particle_types: int = 5
     n_interactions: int = 5
+    non_discrete_level: float = 0
     n_nodes: Optional[int] = None
     n_node_types: Optional[int] = None
     has_cell_division: bool = False
@@ -32,6 +33,7 @@ class SimulationConfig(BaseModel):
     node_type_map: Optional[str] = None
     beta: Optional[float] = None
     start_frame: int = 0
+
 
 
 class GraphModelConfig(BaseModel):
