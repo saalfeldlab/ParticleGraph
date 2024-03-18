@@ -148,7 +148,10 @@ class CustomColorMap:
                 color = color_map(index / self.nmap)
         else:
             color_map = plt.colormaps.get_cmap(self.cmap_name)
-            color = color_map(index)
+            if self.cmap_name== 'tab20':
+                color = color_map(index%20)
+            else:
+                color = color_map(index)
 
         return color
     

@@ -1,27 +1,26 @@
-description: 'Boids 16 different types'
-dataset: 'boids_64'
+description: 'attraction-repulsion with 16 types particles'
+dataset: 'arbitrary_64'
 
 simulation:
   params: [[-1]]
-  min_radius: 0.001
-  max_radius: 0.04
-  n_particles: 1792
+  min_radius: 0
+  max_radius: 0.075
+  n_particles: 4800
   n_particle_types: 64
   n_interactions: 64
-  has_cell_division: False
-  n_frames: 8000
+  n_frames: 1000
   sigma: 0.005
-  delta_t: 0.5
-  dpos_init: 5.0E-4
+  delta_t: 0.025
+  dpos_init: 0
   boundary: 'periodic'
-  start_frame: 0
 
 graph_model:
-  particle_model_name: 'PDE_B'
+  particle_model_name: 'PDE_A'
   mesh_model_name: ''
   inter_model_name: ''
-  prediction: '2nd_derivative'
-  input_size: 9
+  inter_model_name: ''
+  prediction: 'first_derivative'
+  input_size: 5
   output_size: 2
   hidden_dim: 128
   n_mp_layers: 5
@@ -31,16 +30,21 @@ graph_model:
 
 plotting:
   colormap: 'tab20'
-  arrow_length: 5
+  arrow_length: 2
 
 training:
   n_epochs: 20
-  batch_size: 8
-  small_init_batch_size: True
+  batch_size: 1
+  small_init_batch_size: False
   n_runs: 2
-  noise_level: 0
+  sparsity: 'replace_embedding'
+  cluster_method: 'distance_plot'
   data_augmentation: True
   data_augmentation_loop: 100
   fix_cluster_embedding: True
   device: 'auto'
+
+
+
+
 

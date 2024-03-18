@@ -1323,7 +1323,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 if __name__ == '__main__':
 
 
-    config_list = ['boids_32', 'boids_64']
+    config_list = ['arbitrary_32', 'arbitrary_64']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -1333,8 +1333,8 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 8, bSave=True)
-        data_train(config)
+        data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 20, bSave=True)
+        # data_train(config)
         # data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=config.simulation.n_frames // 8)
 
 

@@ -106,32 +106,32 @@ def plot_training (dataset_name, model_name, log_dir, epoch, N, x, index_particl
             plt.savefig(f"./{log_dir}/tmp_training/embedding/func_{dataset_name}_{epoch}_{N}.tif", dpi=300)
             plt.close()
 
-        case 'PDE_B':
-                x = x_list[1][3000].clone().detach()
-                x[:, 2:5] = 0
-                distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
-                adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                t = torch.Tensor([radius ** 2])
-                edges = adj_t.nonzero().t().contiguous()
-                dataset = data.Data(x=x[:, :], edge_index=edges)
-                with torch.no_grad():
-                    y = model(dataset, data_id=1, training=False, vnorm=vnorm,
-                              phi=torch.zeros(1, device=device))  # acceleration estimation
-                    lin_edge_out = model.lin_edge_out * ynorm
-                    diffx = model.diffx
-                    particle_id = to_numpy(model.particle_id)
-                type = to_numpy(type_list[particle_id])
-                fig = plt.figure(figsize=(8, 8))
-                for n in range(n_particle_types):
-                    pos = np.argwhere(type == n)
-                    pos = pos[:, 0].astype(int)
-                    plt.scatter(to_numpy(diffx[pos, 0]), to_numpy(lin_edge_out[pos, 0]), color=cmap.color(n), s=1,
-                                alpha=0.5)
-                plt.xlim([-0.04, 0.04])
-                plt.ylim([-5E-5, 5E-5])
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/embedding/func_{dataset_name}_{epoch}_{N}.tif", dpi=300)
-                plt.close()
+        # case 'PDE_B':
+        #         x = x_list[1][3000].clone().detach()
+        #         x[:, 2:5] = 0
+        #         distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
+        #         adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
+        #         t = torch.Tensor([radius ** 2])
+        #         edges = adj_t.nonzero().t().contiguous()
+        #         dataset = data.Data(x=x[:, :], edge_index=edges)
+        #         with torch.no_grad():
+        #             y = model(dataset, data_id=1, training=False, vnorm=vnorm,
+        #                       phi=torch.zeros(1, device=device))  # acceleration estimation
+        #             lin_edge_out = model.lin_edge_out * ynorm
+        #             diffx = model.diffx
+        #             particle_id = to_numpy(model.particle_id)
+        #         type = to_numpy(type_list[particle_id])
+        #         fig = plt.figure(figsize=(8, 8))
+        #         for n in range(n_particle_types):
+        #             pos = np.argwhere(type == n)
+        #             pos = pos[:, 0].astype(int)
+        #             plt.scatter(to_numpy(diffx[pos, 0]), to_numpy(lin_edge_out[pos, 0]), color=cmap.color(n), s=1,
+        #                         alpha=0.5)
+        #         plt.xlim([-0.04, 0.04])
+        #         plt.ylim([-5E-5, 5E-5])
+        #         plt.tight_layout()
+        #         plt.savefig(f"./{log_dir}/tmp_training/embedding/func_{dataset_name}_{epoch}_{N}.tif", dpi=300)
+        #         plt.close()
 
         case 'interaction':
             fig = plt.figure(figsize=(8, 8))
