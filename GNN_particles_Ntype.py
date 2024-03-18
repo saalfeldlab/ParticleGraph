@@ -1334,7 +1334,7 @@ if __name__ == '__main__':
         print(f'device {device}')
 
         data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 20, bSave=True)
-        # data_train(config)
+        data_train(config)
         # data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=config.simulation.n_frames // 8)
 
 
