@@ -427,9 +427,15 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                             s_p = 25
                             if simulation_config.has_cell_division:
                                 s_p = 10
-                            for n in range(n_particle_types):
-                                plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                            x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
+                            # for n in range(n_particle_types):
+                            #     plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
+                            #                 x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
+
+                            for n in range(n_particles):
+                                plt.scatter(x[n, 1].detach().cpu().numpy(),
+                                            x[n, 2].detach().cpu().numpy(), s=s_p)
+
+
                             if training_config.dropout>0:
                                 plt.scatter(x[inv_dropout_mask, 1].detach().cpu().numpy(), x[inv_dropout_mask, 2].detach().cpu().numpy(), s=25, color='k', alpha=0.75)
                                 plt.plot(x[inv_dropout_mask, 1].detach().cpu().numpy(), x[inv_dropout_mask, 2].detach().cpu().numpy(), '+', color='w')
@@ -440,8 +446,8 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                                 plt.xlim([0, 1])
                                 plt.ylim([0, 1])
                         else:
-                            plt.xlim([-4, 4])
-                            plt.ylim([-4, 4])
+                            plt.xlim([-2, 2])
+                            plt.ylim([-2, 2])
 
                         plt.xticks([])
                         plt.yticks([])
@@ -449,7 +455,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
                         plt.close()
 
-                        if not(has_mesh):
+                        if False: # not(has_mesh):
                             fig = plt.figure(figsize=(12, 12))
                             s_p = 25
                             if simulation_config.has_cell_division:
@@ -1369,7 +1375,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 if __name__ == '__main__':
 
 
-    config_list = ['boids_16']  # ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos'] # ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']
+    config_list = ['gravity_100']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -1379,9 +1385,14 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
+<<<<<<< Updated upstream
         data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 8, bSave=True)
+=======
+        cmap = CustomColorMap(config=config)  # create colormap for given model_config
+        data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 18, bSave=True)
+>>>>>>> Stashed changes
         # data_train(config)
-        data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=config.simulation.n_frames // 8)
+        # data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=config.simulation.n_frames // 8)
 
 
 

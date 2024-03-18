@@ -393,7 +393,7 @@ class Mesh_RPS_learn(torch.nn.Module):
 
         return increment.squeeze()
 
-def plot_embedding(index, model_a, dataset_number, index_particles, n_particles, n_particle_types, epoch, it, fig, ax, cmap):
+def plot_embedding(index, model_a, dataset_number, index_particles, n_particles, n_particle_types, epoch, it, fig, ax, cmap, device):
 
     print(f'plot embedding epoch:{epoch} it: {it}')
     embedding = get_embedding(model_a, dataset_number, index_particles, n_particles, n_particle_types)
@@ -412,7 +412,7 @@ def plot_embedding(index, model_a, dataset_number, index_particles, n_particles,
 
     return embedding
 
-def plot_function(bVisu, index, model_name, model_MLP, model_a, dataset_number, label, pos, max_radius, ynorm, index_particles, n_particles, n_particle_types, epoch, it, fig, ax, cmap):
+def plot_function(bVisu, index, model_name, model_MLP, model_a, dataset_number, label, pos, max_radius, ynorm, index_particles, n_particles, n_particle_types, epoch, it, fig, ax, cmap, device):
 
     print(f'plot functions epoch:{epoch} it: {it}')
 
@@ -463,7 +463,7 @@ def plot_function(bVisu, index, model_name, model_MLP, model_a, dataset_number, 
 
     return func_list
 
-def plot_umap(index, func_list, log_dir, n_neighbors, index_particles, n_particles, n_particle_types, embedding_cluster, epoch, it, fig, ax, cmap):
+def plot_umap(index, func_list, log_dir, n_neighbors, index_particles, n_particles, n_particle_types, embedding_cluster, epoch, it, fig, ax, cmap,device):
 
     print(f'plot umap epoch:{epoch} it: {it}')
     plt.text(-0.25, 1.1, f'{index}', ha='left', va='top', transform=ax.transAxes, fontsize=12)
@@ -579,14 +579,14 @@ def data_plot_FIG2():
     fig = plt.figure(figsize=(12.5, 9.6))
     plt.ion()
     ax = fig.add_subplot(3, 4, 1)
-    embedding = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 1, '$5.10^4$', fig, ax, cmap)
+    embedding = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 1, '$5.10^4$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(3, 4, 2)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-    func_list = plot_function(True,'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, 1, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 1, '$5.10^4$', fig, ax, cmap)
+    func_list = plot_function(True,'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, 1, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 1, '$5.10^4$', fig, ax, cmap, device)
 
     ax = fig.add_subplot(3, 4, 3)
-    proj_interaction, new_labels, n_clusters = plot_umap('c)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 1, '$5.10^4$', fig, ax, cmap)
+    proj_interaction, new_labels, n_clusters = plot_umap('c)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 1, '$5.10^4$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(3, 4, 4)
     Accuracy = plot_confusion_matrix('d)', to_numpy(x[:,5:6]), new_labels, n_particle_types, 1, '$5.10^4$', fig, ax)
@@ -596,14 +596,14 @@ def data_plot_FIG2():
     model.load_state_dict(state_dict['model_state_dict'])
 
     ax = fig.add_subplot(3, 4, 5)
-    embedding = plot_embedding('e)', model.a, 1, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
+    embedding = plot_embedding('e)', model.a, 1, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(3, 4, 6)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-    func_list = plot_function(True,'f)', config.graph_model.particle_model_name, model.lin_edge, model.a, 1, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
+    func_list = plot_function(True,'f)', config.graph_model.particle_model_name, model.lin_edge, model.a, 1, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(3, 4, 7)
-    proj_interaction, new_labels, n_clusters = plot_umap('g)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap)
+    proj_interaction, new_labels, n_clusters = plot_umap('g)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(3, 4, 8)
     Accuracy = plot_confusion_matrix('h)', to_numpy(x[:,5:6]), new_labels, n_particle_types, 1, '$5.10^$4', fig, ax)
@@ -749,17 +749,22 @@ def data_plot_FIG8():
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     matplotlib.use("Qt5Agg")
 
+
+
+
+
+
     fig = plt.figure(figsize=(12.5, 9.6))
     plt.ion()
     ax = fig.add_subplot(3, 4, 1)
-    embedding = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 1, '$5.10^4$', fig, ax, cmap)
+    embedding = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 1, '$5.10^4$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(3, 4, 2)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-    func_list = plot_function(True,'f)', config.graph_model.particle_model_name, model.lin_edge, model.a, 1, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
+    func_list = plot_function(True,'f)', config.graph_model.particle_model_name, model.lin_edge, model.a, 1, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(3, 4, 3)
-    proj_interaction, new_labels, n_clusters = plot_umap('g)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap)
+    proj_interaction, new_labels, n_clusters = plot_umap('g)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(3, 4, 4)
     Accuracy = plot_confusion_matrix('h)', to_numpy(x[:,5:6]), new_labels, n_particle_types, 1, '$5.10^$4', fig, ax)
@@ -915,12 +920,12 @@ def data_plot_FIG3():
     fig = plt.figure(figsize=(10.5, 9.6))
     plt.ion()
     ax = fig.add_subplot(3, 3, 1)
-    embedding = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
+    embedding = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(3, 3, 2)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-    func_list = plot_function(False, 'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
-    proj_interaction, new_labels, n_clusters = plot_umap('b)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap)
+    func_list = plot_function(False, 'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap,device)
+    proj_interaction, new_labels, n_clusters = plot_umap('b)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(3, 3, 3)
     Accuracy = plot_confusion_matrix('c)', to_numpy(x[:,5:6]), new_labels, n_particle_types, 20, '$10^6$', fig, ax)
@@ -1127,13 +1132,13 @@ def data_plot_FIG9():
     fig = plt.figure(figsize=(10.5, 9.6))
     plt.ion()
     ax = fig.add_subplot(3, 3, 1)
-    embedding = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
+    embedding = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(3, 3, 2)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
     func_list = plot_function(True, 'b)', config.graph_model.particle_model_name, model.lin_edge,
                               model.a, 1, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles,
-                              n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
+                              n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(3, 3, 3)
 
@@ -1154,7 +1159,7 @@ def data_plot_FIG9():
 
 
     proj_interaction, new_labels, n_clusters = plot_umap('b)', func_list, log_dir, 500, index_particles,
-                                                         n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap)
+                                                         n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(3, 3, 3)
     Accuracy = plot_confusion_matrix('c)', to_numpy(x[:,5:6]), new_labels, n_particle_types, 20, '$10^6$', fig, ax)
@@ -1359,12 +1364,12 @@ def data_plot_FIG4():
     fig = plt.figure(figsize=(10.5, 9.6))
     plt.ion()
     ax = fig.add_subplot(3, 3, 1)
-    embedding = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
+    embedding = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(3, 3, 2)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-    func_list = plot_function(False, 'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
-    proj_interaction, new_labels, n_clusters = plot_umap('b)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap)
+    func_list = plot_function(False, 'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap,device)
+    proj_interaction, new_labels, n_clusters = plot_umap('b)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(3, 3, 3)
     Accuracy = plot_confusion_matrix('c)', to_numpy(x[:,5:6]), new_labels, n_particle_types, 20, '$10^6$', fig, ax)
@@ -1584,13 +1589,13 @@ def data_plot_FIG5():
     fig = plt.figure(figsize=(10.5, 9.6))
     plt.ion()
     ax = fig.add_subplot(3, 3, 1)
-    embedding = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
+    embedding = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(3, 3, 2)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-    func_list = plot_function(False, 'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, 0,to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
+    func_list = plot_function(False, 'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, 0,to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap,device)
 
-    proj_interaction, new_labels, n_clusters = plot_umap('b)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap)
+    proj_interaction, new_labels, n_clusters = plot_umap('b)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(3, 3, 3)
     Accuracy = plot_confusion_matrix('c)', to_numpy(x[:,5:6]), new_labels, n_particle_types, 20, '$10^6$', fig, ax)
@@ -1862,7 +1867,7 @@ def data_plot_FIG5_time():
     fig = plt.figure(figsize=(10.5, 9.6))
     plt.ion()
     ax = fig.add_subplot(3, 3, 1)
-    embedding = plot_embedding('a)', model.a, 1, index_particles, 263, n_particle_types, 20, '$10^6$', fig, ax, cmap)
+    embedding = plot_embedding('a)', model.a, 1, index_particles, 263, n_particle_types, 20, '$10^6$', fig, ax, cmap,device)
 
     for it in trange(simulation_config.start_frame, n_frames + 1):
 
@@ -1886,8 +1891,8 @@ def data_plot_FIG5_time():
 
     ax = fig.add_subplot(3, 3, 2)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-    func_list = plot_function(False, 'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
-    proj_interaction, new_labels, n_clusters = plot_umap('b)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap)
+    func_list = plot_function(False, 'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap,device)
+    proj_interaction, new_labels, n_clusters = plot_umap('b)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(3, 3, 3)
     Accuracy = plot_confusion_matrix('c)', to_numpy(x[:,5:6].squeeze()), new_labels, n_particle_types, 20, '$10^6$', fig, ax)
@@ -2477,7 +2482,7 @@ def data_plot_FIG6():
     plt.ion()
     plt.ion()
     ax = fig.add_subplot(3, 3, 1)
-    embedding = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 1, '$5.10^4$', fig, ax, cmap)
+    embedding = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 1, '$5.10^4$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(3, 3, 2)
     print('plot function')
@@ -2803,8 +2808,7 @@ def data_plot_FIG7():
         for n in range(n_particle_types):
             embedding_particle.append(embedding[index_particles[n] + m * n_particles, :])
 
-    plt.rcParams['text.usetex'] = True
-    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+
 
     X1 = torch.rand(n_particles, 2, device=device)
     x_width = int(np.sqrt(n_particles))
@@ -2828,45 +2832,15 @@ def data_plot_FIG7():
 
     cmap = CustomColorMap(config=config)
 
-    fig = plt.figure(figsize=(10.5, 9.6))
-    plt.ion()
-    ax = fig.add_subplot(3, 3, 1)
-    print('1')
-    plt.text(-0.25, 1.1, f'a)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-    plt.title(r'Particle embedding', fontsize=12)
-    if (embedding.shape[1] > 1):
-        for m in range(model.a.shape[0]):
-            for n in range(n_particle_types):
-                plt.scatter(embedding_particle[n + m * n_particle_types][:, 0],
-                            embedding_particle[n + m * n_particle_types][:, 1], color=cmap.color(n), s=0.1)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=12)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=12)
-    plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
-    plt.text(.05, .86, f'N: {n_particles}', ha='left', va='top', transform=ax.transAxes, fontsize=10)
-    plt.xticks(fontsize=10.0)
-    plt.yticks(fontsize=10.0)
-    plt.tight_layout()
+    plt.rcParams['text.usetex'] = True
+    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+    # matplotlib.use("Qt5Agg")
+
 
     fig = plt.figure(figsize=(22, 4))
     
     ax = fig.add_subplot(1, 6, 1)
-    embedding, embedding_particle = get_embedding(model.a, index_particles, n_particles, n_particle_types)
-    if (embedding.shape[1] > 2):
-        ax = fig.add_subplot(2, 4, 2, projection='3d')
-        for n in range(n_particle_types):
-            ax.scatter(embedding_particle[n][:, 0], embedding_particle[n][:, 1], embedding_particle[n][:, 2],
-                       color=cmap.color(n), s=1)
-    else:
-        if (embedding.shape[1] > 1):
-            for m in range(model.a.shape[0]):
-                for n in range(n_particle_types):
-                    plt.scatter(embedding_particle[n + m * n_particle_types][:, 0],
-                                embedding_particle[n + m * n_particle_types][:, 1], color=cmap.color(n), s=3)
-            plt.xlabel('Embedding 0', fontsize=12)
-            plt.ylabel('Embedding 1', fontsize=12)
-        else:
-            for n in range(n_particle_types):
-                plt.hist(embedding_particle[n][:, 0], width=0.01, alpha=0.5, color=cmap.color(n))
+    embedding = plot_embedding('a)', model.a, 0, index_particles, n_particles, n_particle_types, 1, '$5.10^4$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(1, 6, 2)
     labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
@@ -3042,10 +3016,6 @@ def data_plot_FIG7():
     coeff = np.round(np.mean(lin_fit1, axis=1), 2)
     print(coeff[:, 9])
     
-
-
-
-
 
 
 
@@ -3440,14 +3410,14 @@ def data_plot_suppFIG1():
     fig = plt.figure(figsize=(12.5, 9.6))
     plt.ion()
     ax = fig.add_subplot(3, 4, 1)
-    embedding = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 1, '$5.10^4$', fig, ax, cmap)
+    embedding = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 1, '$5.10^4$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(3, 4, 2)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-    func_list = plot_function(True,'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 1, '$5.10^4$', fig, ax, cmap)
+    func_list = plot_function(True,'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 1, '$5.10^4$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(3, 4, 3)
-    proj_interaction, new_labels, n_clusters = plot_umap('c)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 1, '$5.10^4$', fig, ax, cmap)
+    proj_interaction, new_labels, n_clusters = plot_umap('c)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 1, '$5.10^4$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(3, 4, 4)
     Accuracy = plot_confusion_matrix('d)', to_numpy(x[:,5:6]), new_labels, n_particle_types, 1, '$5.10^4$', fig, ax)
@@ -3457,14 +3427,14 @@ def data_plot_suppFIG1():
     model.load_state_dict(state_dict['model_state_dict'])
 
     ax = fig.add_subplot(3, 4, 5)
-    embedding = plot_embedding('e)', model.a, 1, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
+    embedding = plot_embedding('e)', model.a, 1, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(3, 4, 6)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-    func_list = plot_function(True,'f)', config.graph_model.particle_model_name, model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap)
+    func_list = plot_function(True,'f)', config.graph_model.particle_model_name, model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(3, 4, 7)
-    proj_interaction, new_labels, n_clusters = plot_umap('g)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap)
+    proj_interaction, new_labels, n_clusters = plot_umap('g)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(3, 4, 8)
     Accuracy = plot_confusion_matrix('h)', to_numpy(x[:,5:6]), new_labels, n_particle_types, 1, '$5.10^$4', fig, ax)
@@ -3566,5 +3536,5 @@ if __name__ == '__main__':
     print(f'device {device}')
 
 
-    data_plot_FIG9()
+    data_plot_FIG7()
 

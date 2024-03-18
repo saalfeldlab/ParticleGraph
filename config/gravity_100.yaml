@@ -28,11 +28,11 @@ graph_model:
     update_type: 'none'
 
 plotting:
-    colormap: 'tab20'
+    colormap: 'jet'
     arrow_length: 1
 
 training:
-    n_epochs: 20
+    n_epochs: 1
     batch_size: 8
     small_init_batch_size: False
     n_runs: 2

@@ -10,6 +10,10 @@ from scipy.spatial import Delaunay
 from ParticleGraph.fitting_models import linear_model
 import umap
 
+import matplotlib.pyplot as plt
+import matplotlib
+# matplotlib.use("Qt5Agg")
+
 def get_embedding(model_a=None, dataset_number = 0, index_particles=None, n_particles=None, n_particle_types=None):
     embedding = []
     embedding.append(model_a[dataset_number])
@@ -26,10 +30,54 @@ def plot_training (dataset_name, filename, log_dir, epoch, N, x, index_particles
             embedding = get_embedding(model.a, dataset_num, index_particles, n_particles, n_particle_types)
             for n in range(n_particle_types):
                 plt.scatter(embedding[index_particles[n], 0],
-                            embedding[index_particles[n], 1], color=cmap.color(n), s=5)
+                            embedding[index_particles[n], 1], color='k', s=5)  # cmap.color(n)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/tmp_training/embedding/{filename}_{dataset_name}_{epoch}_{N}.tif", dpi=300)
             plt.close()
+
+        case 'RD_RPS_mesh':
+
+            fig = plt.figure(figsize=(8, 8))
+            embedding = get_embedding(model.a, dataset_num, index_particles, n_particles, n_particle_types)
+            for n in range(n_particle_types):
+                plt.scatter(embedding[index_particles[n], 0],
+                            embedding[index_particles[n], 1], color=cmap.color(n), s=5)
+            plt.tight_layout()
+            plt.xticks([])
+            plt.yticks([])
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/tmp_training/embedding/mesh_embedding_{dataset_name}_{epoch}_{N}.tif", dpi=300)
+            plt.close()
+
+
+            fig = plt.figure(figsize=(8, 8))
+            t = np.reshape(t, (100, 100))
+            plt.imshow(t, cmap='viridis')
+            plt.xticks([])
+            plt.yticks([])
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/tmp_training/embedding/mesh_map_{dataset_name}_{epoch}_{N}.tif", dpi=300)
+
+
+            fig = plt.figure(figsize=(8, 8))
+            with torch.no_grad():
+                f_list = []
+                for n in range(n_particles):
+                    embedding = model.a[1, n, :] * torch.ones((100, 2), device=device)
+                    u = torch.tensor(np.linspace(0, 1, 100)).to(device)
+                    u = u[:, None]
+                    in_features = torch.cat((u, u, u, u, u, u, embedding), dim=1)
+                    r = u
+                    h = model.lin_phi(in_features.float())
+                    h = h[:, 0]
+                    f_list.append(h)
+                    if n % 24 == 0:
+                        plt.plot(to_numpy(r),
+                                 to_numpy(h) * 0.35642778873443604, linewidth=1,
+                                 color='k', alpha=0.05)
+                f_list = torch.stack(f_list)
+                coeff_norm = to_numpy(f_list)
+
         case 'wave_mesh':
             rr = torch.tensor(np.linspace(-150, 150, 200)).to(device)
             popt_list = []
