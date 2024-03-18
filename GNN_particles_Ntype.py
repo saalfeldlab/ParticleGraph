@@ -44,7 +44,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
 
     print(f'Generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
-    radius = simulation_config.max_radius
+    max_radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
@@ -55,6 +55,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
     n_frames = simulation_config.n_frames
     cycle_length = None
     has_dropout = training_config.dropout > 0
+    noise_level = training_config.noise_level
     cmap = CustomColorMap(config=config)
     dataset_name = config.dataset
 
@@ -176,7 +177,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
  
             # compute connectivity rule
             distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
-            adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
+            adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
             edge_index = adj_t.nonzero().t().contiguous()
             dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
 
@@ -201,8 +202,14 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                         x_removed_list.append(x[inv_dropout_mask].clone().detach())
                         y_list.append(y[dropout_mask].clone().detach())
                     else:
-                        x_list.append(x.clone().detach())
-                        y_list.append(y.clone().detach())
+                        if noise_level > 0:
+                            y_ = y + noise_level * torch.randn_like(y) * torch.std(y)
+                            x_ = x + noise_level * torch.randn_like(x) * max_radius
+                            x_list.append(x_.clone().detach())
+                            y_list.append(y_.clone().detach())
+                        else:
+                            x_list.append(x.clone().detach())
+                            y_list.append(y.clone().detach())
                         if (run==1) & (it==200):
                             torch.save(x, f'graphs_data/graphs_{dataset_name}/x_200.pt')
                             torch.save(y, f'graphs_data/graphs_{dataset_name}/y_200.pt')
@@ -275,7 +282,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                     fig = plt.figure(figsize=(10, 10))
 
                     distance2 = torch.sum((x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
-                    adj_t2 = ((distance2 < radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
+                    adj_t2 = ((distance2 < max_radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
                     edge_index2 = adj_t2.nonzero().t().contiguous()
                     dataset2 = data.Data(x=x, edge_index=edge_index2)
                     pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
@@ -493,7 +500,7 @@ def data_train(config):
     print(f'Training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     n_epochs = train_config.n_epochs
-    radius = simulation_config.max_radius
+    max_radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
@@ -693,8 +700,8 @@ def data_train(config):
                 else:
                     if model.edges==[]:
                         distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
-                        adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                        t = torch.Tensor([radius ** 2])
+                        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                        t = torch.Tensor([max_radius ** 2])
                         edges = adj_t.nonzero().t().contiguous()
                         dataset = data.Data(x=x[:, :], edge_index=edges)
                     else:
@@ -812,11 +819,11 @@ def data_train(config):
 
             ax = fig.add_subplot(1, 6, 3)
             if model_config.particle_model_name == 'PDE_G':
-                rr = torch.tensor(np.linspace(0, radius * 1.3, 1000)).to(device)
+                rr = torch.tensor(np.linspace(0, max_radius * 1.3, 1000)).to(device)
             elif model_config.particle_model_name == 'PDE_GS':
                 rr = torch.tensor(np.logspace(7,9,1000)).to(device)
             else:
-                rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
+                rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
             if has_mesh==False:
                 func_list, proj_interaction = analyze_edge_function(rr=rr, vizualize=True, config=config,
                                                                 model_lin_edge=model.lin_edge, model_a=model.a, dataset_number = 1,
@@ -956,7 +963,7 @@ def data_train(config):
                         optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
                         for sub_epochs in range(20):
                             loss=0
-                            rr = torch.tensor(np.linspace(0, radius, 1000)).to(device)
+                            rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
                             pred=[]
                             optimizer.zero_grad()
                             for n in range(n_particles):
@@ -1032,7 +1039,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
     only_mesh = (config.graph_model.particle_model_name == '') & has_mesh
     has_division = simulation_config.has_cell_division
     has_ghost = config.training.n_ghosts > 0
-    radius = simulation_config.max_radius
+    max_radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
@@ -1204,8 +1211,8 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
                 x_ = torch.cat((x_, x_ghost), 0)
 
             distance = torch.sum(bc_dpos(x_[:, None, 1:3] - x_[None, :, 1:3]) ** 2, dim=2)
-            t = torch.Tensor([radius ** 2])  # threshold
-            adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
+            t = torch.Tensor([max_radius ** 2])  # threshold
+            adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
 
             edge_index = adj_t.nonzero().t().contiguous()
 
@@ -1323,7 +1330,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 if __name__ == '__main__':
 
 
-    config_list = ['arbitrary_32', 'arbitrary_64']
+    config_list = ['arbitrary_16_noise_01', 'arbitrary_16_noise_005']
 
     for config_file in config_list:
         # Load parameters from config file
