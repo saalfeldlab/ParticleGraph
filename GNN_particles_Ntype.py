@@ -203,8 +203,9 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                         y_list.append(y[dropout_mask].clone().detach())
                     else:
                         if noise_level > 0:
-                            y_ = y + noise_level * torch.randn_like(y) * torch.std(y)
-                            x_ = x + noise_level * torch.randn_like(x) * max_radius
+                            x_ = x.clone().detach()
+                            x_[:, 1:3] = bc_pos(x_[:, 1:3] + torch.randn_like(x_[:, 1:3]) * max_radius * noise_level)
+                            y_ = y.clone().detach() + torch.randn_like(y) * torch.std(y) * noise_level * 0
                             x_list.append(x_.clone().detach())
                             y_list.append(y_.clone().detach())
                         else:
@@ -1332,7 +1333,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 if __name__ == '__main__':
 
 
-    config_list = ['arbitrary_3_continuous']
+    config_list = ['arbitrary_16_noise_01','arbitrary_16_noise_005','arbitrary_16_noise_02']   # ['arbitrary_3_continuous']
 
     for config_file in config_list:
         # Load parameters from config file
