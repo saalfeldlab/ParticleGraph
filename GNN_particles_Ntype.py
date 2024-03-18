@@ -522,7 +522,8 @@ def data_train(config):
     print(f'Graph files N: {NGraphs}')
     logger.info(f'Graph files N: {NGraphs}')
 
-    print('Load data ...')
+
+
     x_list = []
     y_list = []
     for run in trange(NGraphs):
@@ -767,7 +768,8 @@ def data_train(config):
             total_loss += loss.item()
 
             visualize_embedding=True
-            if visualize_embedding & ( (epoch == 0) & (N < 100) & (N % 2 == 0)  |  (epoch==0)&(N<10000) & (N%200==0)  ):
+            if visualize_embedding & (epoch==0) & (N<10000) & (N%200==0)  :
+
                 plot_training(dataset_name=dataset_name, model_name=model_config.particle_model_name, log_dir=log_dir, epoch=epoch, N=N, x=x, model=model, dataset_num = 1,
                               index_particles=index_particles, n_particles=n_particles, n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, device=device)
 
@@ -1322,7 +1324,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 if __name__ == '__main__':
 
 
-    config_list = ['wave_logo']
+    config_list = ['boids_32', 'boids_64']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -1332,7 +1334,7 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        # data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 8, bSave=True)
+        data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 8, bSave=True)
         data_train(config)
         # data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=config.simulation.n_frames // 8)
 
