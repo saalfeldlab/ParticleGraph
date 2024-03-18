@@ -3,12 +3,12 @@ dataset: 'brain'
 
 simulation:
     connectivity_file: 'graphs_data/Brain.mat'
-    params: [[1,1]]
+    params: [[1,1],[1,1]]
     min_radius: 1.0
     max_radius: 1.0E6
     n_particles: 998
-    n_particle_types: 1
-    n_interactions: 1
+    n_particle_types: 2
+    n_interactions: 2
     n_frames: 1000
     delta_t: 1
     dpos_init:  0
