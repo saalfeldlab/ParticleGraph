@@ -767,59 +767,9 @@ def data_train(config):
             total_loss += loss.item()
 
             visualize_embedding=True
-            if visualize_embedding & ( (epoch == 0) & (N < 100) & (N % 2 == 0)  |  (epoch==0)&(N<10000) & (N%200==0)  |  (epoch==0)&(N%(Niter//100)==0)   | (epoch>0)&(N%(Niter//4)==0)):
-                plot_training(dataset_name=dataset_name, filename='embedding', log_dir=log_dir, epoch=epoch, N=N, x=x, model=model, dataset_num = 1,
+            if visualize_embedding & ( (epoch == 0) & (N < 100) & (N % 2 == 0)  |  (epoch==0)&(N<10000) & (N%200==0)  ):
+                plot_training(dataset_name=dataset_name, model_name=model_config.particle_model_name, log_dir=log_dir, epoch=epoch, N=N, x=x, model=model, dataset_num = 1,
                               index_particles=index_particles, n_particles=n_particles, n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, device=device)
-                if model_config.particle_model_name == 'PDE_GS':
-                    fig = plt.figure(figsize=(8, 4))
-                    ax = fig.add_subplot(1, 2, 1)
-                    rr = torch.tensor(np.logspace(7,9,1000)).to(device)
-                    for n in range(n_particles):
-                        embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
-                        in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None], rr[:, None] / simulation_config.max_radius, 10**embedding_), dim=1)
-                        func = model.lin_edge(in_features.float())
-                        func = func[:, 0]
-                        plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
-                                 color=cmap.color(to_numpy(x[n, 5]).astype(int)), linewidth=1)
-                    plt.xlabel('Distance [a.u]', fontsize=14)
-                    plt.ylabel('MLP [a.u]', fontsize=14)
-                    plt.xscale('log')
-                    plt.yscale('log')
-                    plt.tight_layout()
-                    ax = fig.add_subplot(1, 2, 2)
-                    plt.scatter(np.log(np.abs(to_numpy(y_batch[:, 0]))), np.log(np.abs(to_numpy(pred[:, 0]))), c='k', s=1, alpha=0.15)
-                    plt.scatter(np.log(np.abs(to_numpy(y_batch[:, 1]))), np.log(np.abs(to_numpy(pred[:, 1]))), c='k', s=1, alpha=0.15)
-                    plt.xlim([-10, 4])
-                    plt.ylim([-10, 4])
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_training/embedding/func_{dataset_name}_{epoch}_{N}.tif", dpi=300)
-                    plt.close()
-
-                if model_config.particle_model_name == 'PDE_B':
-                    x = x_list[1][3000].clone().detach()
-                    x[:, 2:5] = 0
-                    distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
-                    adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                    t = torch.Tensor([radius ** 2])
-                    edges = adj_t.nonzero().t().contiguous()
-                    dataset = data.Data(x=x[:, :], edge_index=edges)
-                    with torch.no_grad():
-                        y = model(dataset, data_id=1, training=False, vnorm=vnorm, phi=torch.zeros(1, device=device))  # acceleration estimation
-                        lin_edge_out = model.lin_edge_out * ynorm
-                        diffx = model.diffx
-                        particle_id = to_numpy(model.particle_id)
-                    type = to_numpy(type_list[particle_id])
-                    fig = plt.figure(figsize=(8, 8))
-                    for n in range(n_particle_types):
-                        pos = np.argwhere(type == n)
-                        pos = pos[:, 0].astype(int)
-                        plt.scatter(to_numpy(diffx[pos, 0]), to_numpy(lin_edge_out[pos, 0]), color=cmap.color(n), s=1, alpha=0.5)
-                    plt.xlim([-0.04, 0.04])
-                    plt.ylim([-5E-5, 5E-5])
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_training/embedding/func_{dataset_name}_{epoch}_{N}.tif",dpi=300)
-                    plt.close()
-                
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
@@ -1372,7 +1322,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 if __name__ == '__main__':
 
 
-    config_list = ['arbitrary_3']
+    config_list = ['wave_logo']
 
     for config_file in config_list:
         # Load parameters from config file
