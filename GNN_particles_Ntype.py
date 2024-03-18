@@ -119,7 +119,6 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
             X1 = X1_mesh.clone().detach()
             H1 = H1_mesh.clone().detach()
             T1 = T1_mesh.clone().detach()
-
         index_particles = []
         for n in range(n_particle_types):
             pos = torch.argwhere(T1 == n)
@@ -127,7 +126,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
             index_particles.append(pos)
 
         time.sleep(0.5)
-        for it in trange(simulation_config.start_frame, n_frames + 1):
+        for it in range(simulation_config.start_frame, n_frames + 1):
 
             # calculate cell division
             if (it >=0) & has_cell_division & (n_particles < 20000):
