@@ -210,7 +210,7 @@ def data_plot_training(config, mode, device):
 
 
             if True:
-
+                matplotlib.rcParams['savefig.pad_inches'] = 0
                 fig = plt.figure(figsize=(12, 12))
                 embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
                 # for n in range(n_particle_types):
@@ -218,11 +218,10 @@ def data_plot_training(config, mode, device):
                 #                 embedding[index_particles[n], 1], color=cmap.color(n), s=20)
                 for n in range(n_particle_types):
                     plt.scatter(embedding[n, 0],
-                                embedding[n, 1], s=20)
-                plt.xticks([])
-                plt.yticks([])
+                                embedding[n, 1], s=50)
+                plt.axis('off')
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.tif")
+                plt.savefig(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.tif",dpi=170.7)
                 plt.close()
 
                 fig = plt.figure(figsize=(12, 12))
