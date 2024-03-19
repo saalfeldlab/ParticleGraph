@@ -136,7 +136,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
             index_particles.append(pos)
 
         time.sleep(0.5)
-        for it in range(simulation_config.start_frame, n_frames + 1):
+        for it in trange(simulation_config.start_frame, n_frames + 1):
 
             # calculate cell division
             if (it >=0) & has_cell_division & (n_particles < 20000):
@@ -410,7 +410,16 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
 
                     else:
 
+                        matplotlib.rcParams['savefig.pad_inches'] = 0
                         fig = plt.figure(figsize=(12, 12))
+                        if (has_mesh | (simulation_config.boundary == 'periodic')):
+                            if (model_config.mesh_model_name != 'RD_RPS_Mesh'):
+                                ax = plt.axes([0, 0, 1, 1], frameon=False)
+                        else:
+                            ax = plt.axes([-2, -2, 2, 2], frameon=False)
+                        ax.get_xaxis().set_visible(False)
+                        ax.get_yaxis().set_visible(False)
+                        plt.autoscale(tight=True)
                         if has_mesh:
                             pts = x_mesh[:, 1:3].detach().cpu().numpy()
                             tri = Delaunay(pts)
@@ -446,32 +455,17 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                                     plt.yticks([])
                                     plt.axis('off')
                         else:
-                            s_p = 25
+                            s_p = 50
                             if simulation_config.has_cell_division:
-                                s_p = 10
-                            if config.simulation.non_discrete_level>0:
+                                s_p = 25
+                            if True: # config.simulation.non_discrete_level>0:
                                 plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=s_p, color='k')
                             else:
                                 for n in range(n_particle_types):
                                     plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]), s=s_p, color=cmap.color(n))
-
-
                             if training_config.dropout>0:
                                 plt.scatter(x[inv_dropout_mask, 1].detach().cpu().numpy(), x[inv_dropout_mask, 2].detach().cpu().numpy(), s=25, color='k', alpha=0.75)
                                 plt.plot(x[inv_dropout_mask, 1].detach().cpu().numpy(), x[inv_dropout_mask, 2].detach().cpu().numpy(), '+', color='w')
-
-
-                        if (has_mesh | (simulation_config.boundary == 'periodic')):
-                            if (model_config.mesh_model_name != 'RD_RPS_Mesh'):
-                                plt.xlim([0, 1])
-                                plt.ylim([0, 1])
-                        else:
-                            plt.xlim([-2, 2])
-                            plt.ylim([-2, 2])
-
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.tight_layout()
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
                         plt.close()
 
@@ -1347,7 +1341,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 if __name__ == '__main__':
 
 
-    config_list = ['arbitrary_96', 'arbitrary_128', 'Coulomb_6', 'arbitrary_3_dropout_10_no_ghost']
+    config_list = ['boids_16']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -1357,9 +1351,9 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 20, bSave=True)
-        data_train(config)
-        # data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=config.simulation.n_frames // 8)
+        data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 11, bSave=True)
+        # data_train(config)
+        data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=config.simulation.n_frames // 11)
 
 
 
