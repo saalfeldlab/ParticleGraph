@@ -1056,6 +1056,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
     n_particles = simulation_config.n_particles
     n_frames = simulation_config.n_frames
     delta_t = simulation_config.delta_t
+    cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
     print(f'Test data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
@@ -1263,7 +1264,17 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
             # plt.style.use('dark_background')
 
             # matplotlib.use("Qt5Agg")
+            matplotlib.rcParams['savefig.pad_inches'] = 0
             fig = plt.figure(figsize=(12, 12))
+            if (has_mesh | (simulation_config.boundary == 'periodic')) & (model_config.mesh_model_name != 'RD_RPS_Mesh'):
+                ax = plt.axes([0, 0, 1, 1], frameon=False)
+            if model_config.particle_model_name == 'PDE_G':
+                ax = plt.axes([-2, -2, 2, 2], frameon=False)
+            if model_config.particle_model_name == 'PDE_GS':
+                ax = plt.axes([-0.5E10, -0.5E10, 0.5E10, 0.5E10], frameon=False)
+            ax.get_xaxis().set_visible(False)
+            ax.get_yaxis().set_visible(False)
+            plt.autoscale(tight=True)
             if has_mesh:
                 pts = x[:, 1:3].detach().cpu().numpy()
                 tri = Delaunay(pts)
@@ -1298,25 +1309,13 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
                     plt.yticks([])
                     plt.axis('off')
             else:
-                s_p = 25
+                s_p = 50
                 if simulation_config.has_cell_division:
-                    s_p = 10
+                    s_p = 25
                 for n in range(n_particle_types):
                     plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                 x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
-            if (has_mesh | (simulation_config.boundary == 'periodic')) & (model_config.mesh_model_name != 'RD_RPS_Mesh'):
-                plt.xlim([0, 1])
-                plt.ylim([0, 1])
-            if model_config.particle_model_name == 'PDE_G':
-                plt.xlim([-4, 4])
-                plt.ylim([-4, 4])
-            if model_config.particle_model_name == 'PDE_GS':
-                plt.xlim([-0.5E10, 0.5E10])
-                plt.ylim([-0.5E10, 0.5E10])
 
-            plt.xticks([])
-            plt.yticks([])
-            plt.tight_layout()
             plt.savefig(f"./{log_dir}/tmp_recons/Fig_{dataset_name}_{it}.tif", dpi=170.7)
             plt.close()
 
@@ -1351,9 +1350,9 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 11, bSave=True)
+        data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 9, bSave=True)
         # data_train(config)
-        data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=config.simulation.n_frames // 11)
+        data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=config.simulation.n_frames // 9)
 
 
 
