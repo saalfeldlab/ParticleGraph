@@ -2,7 +2,7 @@ description: 'Coulomb model with three different particle types of charges being
 dataset: 'Coulomb_6'
 
 simulation:
-  params: [[2], [1], [-1]]
+  params: [[1], [-1], [2], [-2], [3], [-3]]
   min_radius: 0.001
   max_radius: 0.15
   n_particles: 960

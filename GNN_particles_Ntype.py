@@ -1347,7 +1347,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 if __name__ == '__main__':
 
 
-    config_list = ['brain']
+    config_list = ['arbitrary_96', 'arbitrary_128', 'Coulomb_6', 'arbitrary_3_dropout_10_no_ghost']
 
     for config_file in config_list:
         # Load parameters from config file

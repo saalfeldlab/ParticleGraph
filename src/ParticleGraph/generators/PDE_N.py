@@ -40,36 +40,13 @@ class PDE_N(pyg.nn.MessagePassing):
 
         msg = self.propagate(edge_index, u=u, edge_attr=edge_attr, indices=indices[:,None])
 
-        i = torch.argwhere(edge_index[1] == 0)
-        i = to_numpy(i)
-        i = i[:,0].astype(int)
-
-        j = to_numpy(edge_index[0,i])
-        j = j.astype(int)
-
-        edge_attr[i,None]
-        torch.tanh(u[j])
-        edge_attr[i, None] * torch.tanh(u[j])
-
-
-
         du = -b*u + c*torch.tanh(u) + msg
 
         return du
 
-    def message(self, u_j, edge_attr, indices_i, indices_j):
-
-        j = [  1,   2,   3,   4,  10,  11,  19,  20,  39,  40,  43,  46,  47, 493, 496]
-        i = [   15,    45,    65,    87,   226,   250,   437,   462,  1089,
-        1107,  1250,  1343,  1356, 17889, 17987]
+    def message(self, u_j, edge_attr):
 
         return edge_attr[:,None] * torch.tanh(u_j)
-
-        torch.sum(edge_attr[i, None] * torch.tanh(u_j[i]))
-        edge_attr[i, None]
-        torch.tanh(u_j[i])
-        edge_attr[i, None] * torch.tanh(u_j[i])
-
 
 
     def psi(self, r, p):
