@@ -235,6 +235,10 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                 X1[:, 0] = H1[:, 0] + (3/8) * mesh_data['size'] * torch.cos(H1[:, 2])
                 X1[:, 1] = H1[:, 1] + (3/8) * mesh_data['size'] * torch.sin(H1[:, 2])
                 X1 = bc_pos(X1)
+            if model_config.particle_model_name == 'PDE_N':
+                H1[:, 1] = y.squeeze()
+                H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
+
             else:
                 if model_config.prediction == '2nd_derivative':
                     V1 += y * delta_t
@@ -292,6 +296,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
 
                 # plt.style.use('dark_background')
+                # matplotlib.use("Qt5Agg")
 
                 if 'graph' in style:
                     fig = plt.figure(figsize=(10, 10))
@@ -361,7 +366,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
 
                         fig = plt.figure(figsize=(12, 12))
                         # plt.scatter(H1[:, 0].detach().cpu().numpy(), H1[:, 1].detach().cpu().numpy(), s=5, c='b')
-                        plt.scatter(X1[:, 0].detach().cpu().numpy(), X1[:, 1].detach().cpu().numpy(), s=10, c='lawngreen',
+                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=10, c='lawngreen',
                                     alpha=0.75)
                         plt.xlim([0, 1])
                         plt.ylim([0, 1])
@@ -369,6 +374,19 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                         plt.yticks([])
                         plt.tight_layout()
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Rot_{run}_Fig{it}.jpg", dpi=170.7)
+                        plt.close()
+
+                    elif model_config.particle_model_name == 'PDE_N':
+
+                        matplotlib.rcParams['savefig.pad_inches'] = 0
+                        fig = plt.figure(figsize=(12, 12))
+                        ax = plt.axes([0, 0, 1, 1], frameon=False)
+
+                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=30, c=to_numpy(H1[:, 0]), cmap='viridis')
+                        ax.get_xaxis().set_visible(False)
+                        ax.get_yaxis().set_visible(False)
+                        plt.autoscale(tight=True)
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
                         plt.close()
 
                     elif model_config.mesh_model_name == 'Chemotaxism_Mesh':
@@ -1335,10 +1353,11 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
                 plt.savefig(f"./{log_dir}/tmp_recons/Ghost_{dataset_name}_{it}.tif", dpi=170.7)
                 plt.close()
 
+
 if __name__ == '__main__':
 
 
-    config_list = ['boids_16_short']
+    config_list = ['brain']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -1348,8 +1367,8 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 8, bSave=True)
-        data_train(config)
+        data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, step=config.simulation.n_frames // 40, bSave=True)
+        # data_train(config)
         # data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=config.simulation.n_frames // 8)
 
 

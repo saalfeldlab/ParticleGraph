@@ -31,8 +31,8 @@ class PDE_N(pyg.nn.MessagePassing):
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         particle_type = to_numpy(x[:, 5])
         parameters = self.p[particle_type]
-        b = parameters[:, 0]
-        c = parameters[:, 1]
+        b = parameters[:, 0:1]
+        c = parameters[:, 1:2]
 
         u = x[:, 6:7]
 

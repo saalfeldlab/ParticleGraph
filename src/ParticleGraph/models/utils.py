@@ -24,16 +24,18 @@ def get_embedding(model_a=None, dataset_number = 0, index_particles=None, n_part
 
 def plot_training (dataset_name, model_name, log_dir, epoch, N, x, index_particles, n_particles, n_particle_types, model, dataset_num, ynorm, cmap, device):
 
-    fig = plt.figure(figsize=(8, 8))
+    matplotlib.rcParams['savefig.pad_inches'] = 0
+    fig = plt.figure(figsize=(12, 12))
     embedding = get_embedding(model.a, dataset_num, index_particles, n_particles, n_particle_types)
     if n_particle_types > 1000:
         plt.scatter(embedding[:, 0], embedding[:, 1], c=to_numpy(x[:, 5])/n_particles, s=5, cmap='viridis')
     else:
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0],
-                        embedding[index_particles[n], 1], color=cmap.color(n), s=5)  #
+                        embedding[index_particles[n], 1], color=cmap.color(n), s=25)  #
+    plt.axis('off')
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/embedding/{model_name}_{dataset_name}_{epoch}_{N}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/tmp_training/embedding/{model_name}_{dataset_name}_embedding_{epoch}_{N}.tif", dpi=170.7)
     plt.close()
 
     match model_name:
@@ -110,32 +112,28 @@ def plot_training (dataset_name, model_name, log_dir, epoch, N, x, index_particl
             plt.savefig(f"./{log_dir}/tmp_training/embedding/func_{dataset_name}_{epoch}_{N}.tif", dpi=300)
             plt.close()
 
-        # case 'PDE_B':
-        #         x = x_list[1][3000].clone().detach()
-        #         x[:, 2:5] = 0
-        #         distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
-        #         adj_t = ((distance < radius ** 2) & (distance > min_radius ** 2)).float() * 1
-        #         t = torch.Tensor([radius ** 2])
-        #         edges = adj_t.nonzero().t().contiguous()
-        #         dataset = data.Data(x=x[:, :], edge_index=edges)
-        #         with torch.no_grad():
-        #             y = model(dataset, data_id=1, training=False, vnorm=vnorm,
-        #                       phi=torch.zeros(1, device=device))  # acceleration estimation
-        #             lin_edge_out = model.lin_edge_out * ynorm
-        #             diffx = model.diffx
-        #             particle_id = to_numpy(model.particle_id)
-        #         type = to_numpy(type_list[particle_id])
-        #         fig = plt.figure(figsize=(8, 8))
-        #         for n in range(n_particle_types):
-        #             pos = np.argwhere(type == n)
-        #             pos = pos[:, 0].astype(int)
-        #             plt.scatter(to_numpy(diffx[pos, 0]), to_numpy(lin_edge_out[pos, 0]), color=cmap.color(n), s=1,
-        #                         alpha=0.5)
-        #         plt.xlim([-0.04, 0.04])
-        #         plt.ylim([-5E-5, 5E-5])
-        #         plt.tight_layout()
-        #         plt.savefig(f"./{log_dir}/tmp_training/embedding/func_{dataset_name}_{epoch}_{N}.tif", dpi=300)
-        #         plt.close()
+        case 'PDE_B':
+            max_radius = 0.04
+            fig = plt.figure(figsize=(12, 12))
+            rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
+            func_list = []
+            for n in range(n_particles):
+                embedding_ = model.a[1, n, :] * torch.ones((1000, 2), device=device)
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                         torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                         0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                with torch.no_grad():
+                    func = model.lin_edge(in_features.float())
+                func = func[:, 0]
+                func_list.append(func)
+                if n % 5 == 0:
+                    plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
+                             color=cmap.color(int(n // (n_particles / n_particle_types))), linewidth=2)
+            plt.ylim([-1E-4, 1E-4])
+            plt.axis('off')
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/tmp_training/embedding/{model_name}_{dataset_name}_function_{epoch}_{N}.tif",dpi=170.7)
+            plt.close()
 
         case 'interaction':
             fig = plt.figure(figsize=(8, 8))

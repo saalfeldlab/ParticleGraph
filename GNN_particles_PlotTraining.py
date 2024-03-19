@@ -213,12 +213,13 @@ def data_plot_training(config, mode, device):
                 matplotlib.rcParams['savefig.pad_inches'] = 0
                 fig = plt.figure(figsize=(12, 12))
                 embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
-                # for n in range(n_particle_types):
-                #     plt.scatter(embedding[index_particles[n], 0],
-                #                 embedding[index_particles[n], 1], color=cmap.color(n), s=20)
-                for n in range(n_particle_types):
-                    plt.scatter(embedding[n, 0],
-                                embedding[n, 1], s=50)
+                if n_particle_types > 1000:
+                    plt.scatter(embedding[:, 0], embedding[:, 1], c=to_numpy(x[:, 5]) / n_particles, s=5,
+                                cmap='viridis')
+                else:
+                    for n in range(n_particle_types):
+                        plt.scatter(embedding[index_particles[n], 0],
+                                    embedding[index_particles[n], 1], color=cmap.color(n), s=25)  #
                 plt.axis('off')
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.tif",dpi=170.7)
@@ -237,12 +238,11 @@ def data_plot_training(config, mode, device):
                     func = func[:, 0]
                     func_list.append(func)
                     if n % 5 == 0:
-                        plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm), linewidth=1)
-                # plt.ylim([0,3000])
-                plt.xticks([])
-                plt.yticks([])
+                        plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm), color=cmap.color(int(n//(n_particles/n_particle_types))), linewidth=2)
+                plt.ylim([-1E-4,1E-4])
+                plt.axis('off')
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.tif")
+                plt.savefig(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.tif",dpi=170.7)
                 plt.close()
 
 
@@ -644,7 +644,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list =['boids_16']  # ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos'] # ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']
+    config_list =['boids_16_short']  # ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos'] # ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']
 
     for config_file in config_list:
 
