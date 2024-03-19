@@ -226,12 +226,12 @@ def data_plot_training(config, mode, device):
                 plt.close()
 
                 fig = plt.figure(figsize=(12, 12))
-                rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
+                rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
                 func_list = []
                 for n in range(n_particles):
                     embedding_ = model.a[1, n, :] * torch.ones((1000, 2), device=device)
                     in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                             rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                             torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
                                              0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
                     with torch.no_grad():
                         func = model.lin_edge(in_features.float())
@@ -239,7 +239,7 @@ def data_plot_training(config, mode, device):
                     func_list.append(func)
                     if n % 5 == 0:
                         plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm), linewidth=1)
-                plt.ylim([0,3000])
+                # plt.ylim([0,3000])
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
@@ -645,7 +645,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list =['gravity_100']  # ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos'] # ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']
+    config_list =['boids_16']  # ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos'] # ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']
 
     for config_file in config_list:
 
