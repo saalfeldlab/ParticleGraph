@@ -1357,7 +1357,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 if __name__ == '__main__':
 
 
-    config_list = ['arbitrary_3_multi']
+    config_list = ['arbitrary_3']
 
     for config_file in config_list:
         # Load parameters from config file
