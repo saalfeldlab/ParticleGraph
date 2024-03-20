@@ -1358,7 +1358,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 if __name__ == '__main__':
 
 
-    config_list = ['arbitrary_3_continuous', 'arbitrary_32', 'arbitrary_64', 'arbitrary_96']
+    config_list = ['gravity_16_noise_1E-4','gravity_16_noise_1E-3','gravity_16_noise_1E-2','gravity_16_noise_1E-1']
 
     for config_file in config_list:
         # Load parameters from config file
