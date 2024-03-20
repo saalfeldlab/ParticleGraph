@@ -29,7 +29,7 @@ graph_model:
   update_type: 'none'
 
 plotting:
-  colormap: 'tab20'
+  colormap: 'tab10'
   arrow_length: 2
 
 training:

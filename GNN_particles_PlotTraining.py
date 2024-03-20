@@ -181,7 +181,34 @@ def data_plot_training(config, mode, device):
         state_dict = torch.load(net,map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
 
+
+
+        n_particle_types = 3
+        index_particles = []
+        for n in range(n_particle_types):
+            index_particles.append(
+                np.arange((n_particles // n_particle_types) * n, (n_particles // n_particle_types) * (n + 1)))
         fig = plt.figure(figsize=(12, 12))
+        ax = fig.add_subplot(1,1,1)
+        ax.xaxis.get_major_formatter()._usetex = False
+        ax.yaxis.get_major_formatter()._usetex = False
+        embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+        for n in range(n_particle_types):
+            plt.scatter(embedding[index_particles[n], 0],
+                        embedding[index_particles[n], 1], color=cmap.color(n), s=50)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+        plt.xticks(fontsize=32.0)
+        plt.yticks(fontsize=32.0)
+        plt.xlim([0,2])
+        plt.ylim([0, 2])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.tif",dpi=170.7)
+        plt.close()
+
+
+        fig = plt.figure(figsize=(12, 12))
+        ax = fig.add_subplot(1,1,1)
         if model_config.particle_model_name == 'PDE_G':
             rr = torch.tensor(np.linspace(0, max_radius * 1.3, 1000)).to(device)
         elif model_config.particle_model_name == 'PDE_GS':
@@ -309,7 +336,7 @@ def data_plot_training(config, mode, device):
         plt.xticks(fontsize=32)
         plt.yticks(fontsize=32)
         plt.xlim([0, max_radius])
-        plt.ylim([-0.04, 0.04])
+        plt.ylim([-0.04, 0.03])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.tif",dpi=170.7)
         plt.close()
@@ -330,7 +357,7 @@ def data_plot_training(config, mode, device):
         plt.xticks(fontsize=32)
         plt.yticks(fontsize=32)
         plt.xlim([0, max_radius])
-        plt.ylim([-0.04, 0.04])
+        plt.ylim([-0.04, 0.03])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/true_func_{dataset_name}.tif",dpi=170.7)
         plt.close()
@@ -344,7 +371,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list =['arbitrary_3']  # ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos'] # ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']
+    config_list =['arbitrary_3_continuous']
 
     for config_file in config_list:
 
