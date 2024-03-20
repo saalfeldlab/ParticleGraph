@@ -175,7 +175,7 @@ def data_plot_training(config, mode, device):
     plt.rcParams["font.sans-serif"] = ["Helvetica Neue", "HelveticaNeue", "Helvetica-Neue", "Helvetica", "Arial",
                                        "Liberation"]
 
-    epoch_list = np.arange(2)
+    epoch_list = [20]
     for epoch in epoch_list:
         net = f"./log/try_{dataset_name}/models/best_model_with_{epoch}_graphs.pt"
         print(f'network: {net}')
@@ -282,10 +282,10 @@ def data_plot_training(config, mode, device):
                 pos = np.argwhere(new_labels == n).squeeze().astype(int)
                 plt.scatter(embedding[pos[0], 0], embedding[pos[0], 1], color=cmap.color(n), s=200)
 
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=32)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=32)
-        plt.xticks(fontsize=18.0)
-        plt.yticks(fontsize=18.0)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+        plt.xticks(fontsize=32.0)
+        plt.yticks(fontsize=32.0)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.tif",dpi=170.7)
         plt.close()
@@ -307,12 +307,13 @@ def data_plot_training(config, mode, device):
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
                      color=cmap.color(n), linewidth=4)
-        plt.xlabel(r'$r_{ij}$', fontsize=32)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=32)
+        plt.xlabel(r'$r_{ij}$', fontsize=64)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=64)
         # xticks with sans serif font
-        plt.xticks(fontsize=18)
-        plt.yticks(fontsize=18)
+        plt.xticks(fontsize=32)
+        plt.yticks(fontsize=32)
         plt.ylim([-0.04, 0.03])
+        plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.tif",dpi=170.7)
         plt.close()
 
@@ -327,11 +328,12 @@ def data_plot_training(config, mode, device):
             p = torch.load(f'graphs_data/graphs_{dataset_name}/p.pt')
         for n in range(n_particle_types - 1, -1, -1):
             plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n), linewidth=4)
-        plt.xlabel(r'$r_{ij}$', fontsize=32)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=32)
-        plt.xticks(fontsize=18)
-        plt.yticks(fontsize=18)
+        plt.xlabel(r'$r_{ij}$', fontsize=64)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=64)
+        plt.xticks(fontsize=32)
+        plt.yticks(fontsize=32)
         plt.ylim([-0.04, 0.03])
+        plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/true_func_{dataset_name}.tif",dpi=170.7)
         plt.close()
 
@@ -344,7 +346,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list =['arbitrary_3']  # ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos'] # ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']
+    config_list =['arbitrary_16']  # ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos'] # ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']
 
     for config_file in config_list:
 
