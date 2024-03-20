@@ -175,7 +175,7 @@ def data_plot_training(config, mode, device):
     plt.rcParams["font.sans-serif"] = ["Helvetica Neue", "HelveticaNeue", "Helvetica-Neue", "Helvetica", "Arial",
                                        "Liberation"]
 
-    epoch_list = [19]
+    epoch_list = np.arange(2)
     for epoch in epoch_list:
         net = f"./log/try_{dataset_name}/models/best_model_with_{epoch}_graphs.pt"
         print(f'network: {net}')
