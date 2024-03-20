@@ -745,9 +745,19 @@ def data_plot_FIG8():
     model.load_state_dict(state_dict['model_state_dict'])
     model.eval()
 
+    matplotlib.use("Qt5Agg")
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-    matplotlib.use("Qt5Agg")
+    matplotlib.rcParams['savefig.pad_inches'] = 0
+    style = {
+        "pgf.rcfonts": False,
+        "pgf.texsystem": "pdflatex",
+        "text.usetex": True,
+        "font.family": "sans-serif"
+    }
+    matplotlib.rcParams.update(style)
+    plt.rcParams["font.sans-serif"] = ["Helvetica Neue", "HelveticaNeue", "Helvetica-Neue", "Helvetica", "Arial",
+                                       "Liberation"]
 
 
 
@@ -792,6 +802,7 @@ def data_plot_FIG8():
     plt.yticks(fontsize=10.0)
     plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
 
+
     ax = fig.add_subplot(3, 4, 6)
     print('10')
     plt.text(-0.25, 1.1, f'j)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
@@ -820,6 +831,39 @@ def data_plot_FIG8():
     plt.ylim([-0.15, 0.15])
     plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
 
+    fig = plt.figure(figsize=(12, 12))
+    ax = fig.add_subplot(1, 1, 1)
+    ax.xaxis.get_major_formatter()._usetex = False
+    ax.yaxis.get_major_formatter()._usetex = False
+    func_list = []
+    for n in range(n_particle_types):
+        pos = np.argwhere(new_labels == n).squeeze().astype(int)
+        embedding_1 = model.a[1, pos[0], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+        for m in range(n_particle_types):
+            pos = np.argwhere(new_labels == m).squeeze().astype(int)
+            embedding_2 = model.a[1, pos[0], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+
+            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                     rr[:, None] / max_radius, embedding_1, embedding_2), dim=1)
+            with torch.no_grad():
+                func = model.lin_edge(in_features.float())
+            func = func[:, 0]
+            func_list.append(func)
+            plt.plot(to_numpy(rr),
+                     to_numpy(func) * to_numpy(ynorm),
+                     color=cmap.color(n), linewidth=4)
+    plt.xlabel(r'$r_{ij}$', fontsize=64)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=64)
+    # xticks with sans serif font
+    plt.xticks(fontsize=32)
+    plt.yticks(fontsize=32)
+    plt.ylim([-0.15, 0.15])
+    plt.xlim([0, max_radius])
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.tif", dpi=170.7)
+    plt.close()
+
+
     ax = fig.add_subplot(3, 4, 7)
     print('11')
     plt.text(-0.25, 1.1, f'k)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
@@ -839,6 +883,26 @@ def data_plot_FIG8():
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.ylim([-0.15, 0.15])
+
+
+    fig = plt.figure(figsize=(12, 12))
+    ax = fig.add_subplot(1, 1, 1)
+    ax.xaxis.get_major_formatter()._usetex = False
+    ax.yaxis.get_major_formatter()._usetex = False
+    for n in range(n_particle_types):
+        for m in range(n_particle_types):
+            plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n,m], p[n,m])), color=cmap.color(n), linewidth=4)
+    plt.xlabel(r'$r_{ij}$', fontsize=64)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=64)
+    # xticks with sans serif font
+    plt.xticks(fontsize=32)
+    plt.yticks(fontsize=32)
+    plt.ylim([-0.15, 0.15])
+    plt.xlim([0, max_radius])
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/true_func_{dataset_name}.tif", dpi=170.7)
+    plt.close()
+
 
     # find last image file in logdir
     ax = fig.add_subplot(3, 4, 12)
@@ -3536,5 +3600,5 @@ if __name__ == '__main__':
     print(f'device {device}')
 
 
-    data_plot_FIG2()
+    data_plot_FIG8()
 

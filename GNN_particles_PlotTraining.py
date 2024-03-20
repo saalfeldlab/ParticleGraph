@@ -180,7 +180,6 @@ def data_plot_training(config, mode, device):
         print(f'network: {net}')
         state_dict = torch.load(net,map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
-        p = model.p.clone().detach()
 
         fig = plt.figure(figsize=(12, 12))
         if model_config.particle_model_name == 'PDE_G':
@@ -309,7 +308,8 @@ def data_plot_training(config, mode, device):
         # xticks with sans serif font
         plt.xticks(fontsize=32)
         plt.yticks(fontsize=32)
-        plt.ylim([-0.04, 0.03])
+        plt.xlim([0, max_radius])
+        plt.ylim([-0.04, 0.04])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.tif",dpi=170.7)
         plt.close()
@@ -329,7 +329,8 @@ def data_plot_training(config, mode, device):
         plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=64)
         plt.xticks(fontsize=32)
         plt.yticks(fontsize=32)
-        plt.ylim([-0.04, 0.03])
+        plt.xlim([0, max_radius])
+        plt.ylim([-0.04, 0.04])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/true_func_{dataset_name}.tif",dpi=170.7)
         plt.close()
@@ -343,7 +344,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list =['arbitrary_32','arbitrary_64','arbitrary_96']  # ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos'] # ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']
+    config_list =['arbitrary_3']  # ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos'] # ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']
 
     for config_file in config_list:
 
