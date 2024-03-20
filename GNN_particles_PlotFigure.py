@@ -696,7 +696,7 @@ def data_plot_FIG2():
 
 def data_plot_FIG8():
 
-    config_name = 'arbitrary_3_3_2'
+    config_name = 'arbitrary_3_3'
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_name}.yaml')
 

@@ -46,7 +46,7 @@ def data_plot_training(config, mode, device):
     train_config = config.training
     model_config = config.graph_model
 
-    print(f'Training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+    print(f'Plot training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     n_epochs = train_config.n_epochs
     radius = simulation_config.max_radius
@@ -181,13 +181,35 @@ def data_plot_training(config, mode, device):
         state_dict = torch.load(net,map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
 
+        # n_particle_types = 3
+        # index_particles = []
+        # for n in range(n_particle_types):
+        #     index_particles.append(
+        #         np.arange((n_particles // n_particle_types) * n, (n_particles // n_particle_types) * (n + 1)))
+        # type = torch.zeros(int(n_particles / n_particle_types), device=device)
+        # for n in range(1, n_particle_types):
+        #     type = torch.cat((type, n * torch.ones(int(n_particles / n_particle_types), device=device)), 0)
+        # x[:,5]=type
 
-
-        n_particle_types = 3
-        index_particles = []
+        n_particles = int(n_particles * (1-train_config.dropout))
+        types = to_numpy(x[:, 5])
+        fig = plt.figure(figsize=(12, 12))
+        ax = fig.add_subplot(1,1,1)
+        ax.xaxis.get_major_formatter()._usetex = False
+        ax.yaxis.get_major_formatter()._usetex = False
+        embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
         for n in range(n_particle_types):
-            index_particles.append(
-                np.arange((n_particles // n_particle_types) * n, (n_particles // n_particle_types) * (n + 1)))
+            pos = np.argwhere(types == n)
+            plt.scatter(embedding[pos, 0],
+                        embedding[pos, 1], color=cmap.color(n), s=50)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+        plt.xticks(fontsize=32.0)
+        plt.yticks(fontsize=32.0)
+        plt.xlim([0,2])
+        plt.ylim([0, 2])
+        plt.tight_layout()
+
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(1,1,1)
         ax.xaxis.get_major_formatter()._usetex = False
@@ -203,9 +225,8 @@ def data_plot_training(config, mode, device):
         plt.xlim([0,2])
         plt.ylim([0, 2])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.tif",dpi=170.7)
+        # plt.savefig(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.tif",dpi=170.7)
         plt.close()
-
 
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(1,1,1)
@@ -221,6 +242,17 @@ def data_plot_training(config, mode, device):
                                                                 n_particles=n_particles, ynorm=ynorm,
                                                                 types=to_numpy(x[:, 5]),
                                                                 cmap=cmap, device=device)
+        plt.xlabel(r'$r_{ij}$', fontsize=64)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=64)
+        # xticks with sans serif font
+        plt.xticks(fontsize=32)
+        plt.yticks(fontsize=32)
+        plt.xlim([0, max_radius])
+        plt.ylim([-0.04, 0.03])
+        plt.tight_layout()
+        # plt.savefig(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.tif",dpi=170.7)
+        plt.close()
+
         plt.close()
 
         match train_config.cluster_method:
@@ -336,7 +368,7 @@ def data_plot_training(config, mode, device):
         plt.xticks(fontsize=32)
         plt.yticks(fontsize=32)
         plt.xlim([0, max_radius])
-        plt.ylim([-0.04, 0.03])
+        plt.ylim([-0.03, 0.04])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.tif",dpi=170.7)
         plt.close()
@@ -357,7 +389,7 @@ def data_plot_training(config, mode, device):
         plt.xticks(fontsize=32)
         plt.yticks(fontsize=32)
         plt.xlim([0, max_radius])
-        plt.ylim([-0.04, 0.03])
+        plt.ylim([-0.03, 0.04])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/true_func_{dataset_name}.tif",dpi=170.7)
         plt.close()
@@ -371,7 +403,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list =['arbitrary_3_continuous']
+    config_list =['arbitrary_3_dropout_30_pos']
 
     for config_file in config_list:
 

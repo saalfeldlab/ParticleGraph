@@ -82,7 +82,7 @@ class TrainingConfig(BaseModel):
     clamp: float = 0
     pred_limit: float = 1.E+10
     sparsity: Literal['none', 'replace_embedding', 'replace_embedding_function'] = 'none'
-    dropout: float = 0
+    particle_dropout: float = 0
     n_ghosts: int = 0
     ghost_method: Literal['none', 'tensor', 'MLP'] = 'none'
 

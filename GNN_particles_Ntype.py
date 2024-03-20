@@ -56,7 +56,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
     has_cell_division = simulation_config.has_cell_division
     n_frames = simulation_config.n_frames
     cycle_length = None
-    has_dropout = training_config.dropout > 0
+    has_particle_dropout = training_config.particle_dropout > 0
     noise_level = training_config.noise_level
     cmap = CustomColorMap(config=config)
     dataset_name = config.dataset
@@ -87,14 +87,14 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
     index_particles = []
     for n in range(n_particle_types):
         index_particles.append(np.arange((n_particles // n_particle_types) * n, (n_particles // n_particle_types) * (n + 1)))
-    if has_dropout:
+    if has_particle_dropout:
         draw = np.random.permutation(np.arange(n_particles))
-        cut = int(n_particles * (1-training_config.dropout))
-        dropout_mask = draw[0:cut]
-        inv_dropout_mask = draw[cut:]
+        cut = int(n_particles * (1-training_config.particle_dropout))
+        particle_dropout_mask = draw[0:cut]
+        inv_particle_dropout_mask = draw[cut:]
         x_removed_list = []
     else:
-        dropout_mask = np.arange(n_particles)
+        particle_dropout_mask = np.arange(n_particles)
     if has_adjacency_matrix:
         mat = scipy.io.loadmat(simulation_config.connectivity_file)
         adjacency = torch.tensor(mat['A'],device=device)
@@ -207,14 +207,14 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                     y_ = torch.concatenate((y,y_timer[:, None], y_division[:, None]), 1)
                     y_list.append(y_.clone().detach())
                 else:
-                    if has_dropout:
-                        x_ = x[dropout_mask].clone().detach()
+                    if has_particle_dropout:
+                        x_ = x[particle_dropout_mask].clone().detach()
                         x_[:,0] = torch.arange(len(x_), device=device)
                         x_list.append(x_)
-                        x_ = x[inv_dropout_mask].clone().detach()
+                        x_ = x[inv_particle_dropout_mask].clone().detach()
                         x_[:,0] = torch.arange(len(x_), device=device)
-                        x_removed_list.append(x[inv_dropout_mask].clone().detach())
-                        y_list.append(y[dropout_mask].clone().detach())
+                        x_removed_list.append(x[inv_particle_dropout_mask].clone().detach())
+                        y_list.append(y[particle_dropout_mask].clone().detach())
                     else:
                         if noise_level > 0:
                             x_ = x.clone().detach()
@@ -481,9 +481,9 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                             else:
                                 for n in range(n_particle_types):
                                     plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]), s=s_p, color=cmap.color(n))
-                            if training_config.dropout>0:
-                                plt.scatter(x[inv_dropout_mask, 1].detach().cpu().numpy(), x[inv_dropout_mask, 2].detach().cpu().numpy(), s=25, color='k', alpha=0.75)
-                                plt.plot(x[inv_dropout_mask, 1].detach().cpu().numpy(), x[inv_dropout_mask, 2].detach().cpu().numpy(), '+', color='w')
+                            if training_config.particle_dropout>0:
+                                plt.scatter(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(), x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), s=25, color='k', alpha=0.75)
+                                plt.plot(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(), x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), '+', color='w')
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
                         plt.close()
 
@@ -509,15 +509,16 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
 
         if bSave:
             torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
-            if has_dropout:
+            if has_particle_dropout:
                 torch.save(x_removed_list, f'graphs_data/graphs_{dataset_name}/x_removed_list_{run}.pt')
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
             torch.save(x_mesh_list, f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt')
             torch.save(y_mesh_list, f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt')
             torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
             torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
-            torch.save(p, f'graphs_data/graphs_{dataset_name}/p.pt')
-
+            torch.save(model.p, f'graphs_data/graphs_{dataset_name}/p.pt')
+            np.save(f'graphs_data/graphs_{dataset_name}/particle_dropout_mask.npy', particle_dropout_mask)
+            np.save(f'graphs_data/graphs_{dataset_name}/inv_particle_dropout_mask.npy', inv_particle_dropout_mask)
 
 
 def data_train(config):
@@ -644,7 +645,7 @@ def data_train(config):
     logger.info(f'initial batch_size: {batch_size}')
 
     print ('Update variables ...')
-    # update variable if dropout, cell_division, etc ...
+    # update variable if particle_dropout, cell_division, etc ...
     x = x_list[1][n_frames-1].clone().detach()
     type_list = x[:, 5:6].clone().detach()
     n_particles = x.shape[0]
@@ -1358,7 +1359,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 if __name__ == '__main__':
 
 
-    config_list = ['arbitrary_3_continuous','arbitrary_3_32','arbitrary_3_64']
+    config_list = ['arbitrary_3_dropout_10_pos','arbitrary_3_dropout_10_pos_no_ghost','arbitrary_3_dropout_20_pos','arbitrary_3_dropout_30_pos','arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos']
 
     for config_file in config_list:
         # Load parameters from config file

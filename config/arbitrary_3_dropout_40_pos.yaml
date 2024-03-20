@@ -36,7 +36,7 @@ training:
   batch_size: 8
   small_init_batch_size: False
   n_runs: 2
-  dropout: 0.4
+  particle_dropout: 0.4
   ghost_method: 'tensor'
   n_ghosts: 2250
   sparsity: 'replace_embedding_function'
