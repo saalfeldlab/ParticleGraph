@@ -1359,7 +1359,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 if __name__ == '__main__':
 
 
-    config_list = ['arbitrary_3_dropout_10_pos','arbitrary_3_dropout_10_pos_no_ghost','arbitrary_3_dropout_20_pos','arbitrary_3_dropout_30_pos','arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos']
+    config_list = ['arbitrary_3_continuous', 'arbitrary_32', 'arbitrary_64', 'arbitrary_96']
 
     for config_file in config_list:
         # Load parameters from config file
