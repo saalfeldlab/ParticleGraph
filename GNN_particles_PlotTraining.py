@@ -141,9 +141,6 @@ def data_plot_training(config, mode, device):
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
-    lr_embedding = train_config.learning_rate_embedding_start
-    lr = train_config.learning_rate_start
-    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
 
     if  has_cell_division:
         model_division = Division_Predictor(config, device)
@@ -177,13 +174,13 @@ def data_plot_training(config, mode, device):
 
     epoch_list = [20]
     for epoch in epoch_list:
-        net = f"./log/try_{dataset_name}/models/best_model_with_{epoch}_graphs.pt"
-        print(f'network: {net}')
+
 
         net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_{epoch}.pt"
+        print(f'network: {net}')
         state_dict = torch.load(net,map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
-
+        p = model.p.clone().detach()
 
         fig = plt.figure(figsize=(12, 12))
         if model_config.particle_model_name == 'PDE_G':
@@ -346,7 +343,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list =['arbitrary_16']  # ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos'] # ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']
+    config_list =['arbitrary_32','arbitrary_64','arbitrary_96']  # ['arbitrary_3_dropout_40_pos','arbitrary_3_dropout_50_pos'] # ['arbitrary_3_3', 'arbitrary_3', 'gravity_16']
 
     for config_file in config_list:
 

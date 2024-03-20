@@ -516,6 +516,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
             torch.save(y_mesh_list, f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt')
             torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
             torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
+            torch.save(p, f'graphs_data/graphs_{dataset_name}/p.pt')
 
 
 
@@ -1357,7 +1358,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 if __name__ == '__main__':
 
 
-    config_list = ['arbitrary_3']
+    config_list = ['arbitrary_3_conitnous','arbitrary_3_32','arbitrary_3_64']
 
     for config_file in config_list:
         # Load parameters from config file
