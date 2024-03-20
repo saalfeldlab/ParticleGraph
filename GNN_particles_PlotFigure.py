@@ -3536,5 +3536,5 @@ if __name__ == '__main__':
     print(f'device {device}')
 
 
-    data_plot_FIG7()
+    data_plot_FIG2()
 
