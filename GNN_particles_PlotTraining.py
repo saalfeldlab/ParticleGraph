@@ -191,24 +191,24 @@ def data_plot_training(config, mode, device):
         #     type = torch.cat((type, n * torch.ones(int(n_particles / n_particle_types), device=device)), 0)
         # x[:,5]=type
 
-        n_particles = int(n_particles * (1-train_config.dropout))
-        types = to_numpy(x[:, 5])
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(1,1,1)
-        ax.xaxis.get_major_formatter()._usetex = False
-        ax.yaxis.get_major_formatter()._usetex = False
-        embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
-        for n in range(n_particle_types):
-            pos = np.argwhere(types == n)
-            plt.scatter(embedding[pos, 0],
-                        embedding[pos, 1], color=cmap.color(n), s=50)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
-        plt.xlim([0,2])
-        plt.ylim([0, 2])
-        plt.tight_layout()
+        # n_particles = int(n_particles * (1-train_config.dropout))
+        # types = to_numpy(x[:, 5])
+        # fig = plt.figure(figsize=(12, 12))
+        # ax = fig.add_subplot(1,1,1)
+        # ax.xaxis.get_major_formatter()._usetex = False
+        # ax.yaxis.get_major_formatter()._usetex = False
+        # embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+        # for n in range(n_particle_types):
+        #     pos = np.argwhere(types == n)
+        #     plt.scatter(embedding[pos, 0],
+        #                 embedding[pos, 1], color=cmap.color(n), s=50)
+        # plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
+        # plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+        # plt.xticks(fontsize=32.0)
+        # plt.yticks(fontsize=32.0)
+        # plt.xlim([0,2])
+        # plt.ylim([0, 2])
+        # plt.tight_layout()
 
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(1,1,1)
@@ -335,7 +335,8 @@ def data_plot_training(config, mode, device):
         else:
             for n in range(n_particle_types):
                 pos = np.argwhere(new_labels == n).squeeze().astype(int)
-                plt.scatter(embedding[pos[0], 0], embedding[pos[0], 1], color=cmap.color(n), s=200)
+                if pos.size>0:
+                    plt.scatter(embedding[pos[0], 0], embedding[pos[0], 1], color=cmap.color(n), s=200)
 
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
@@ -352,47 +353,48 @@ def data_plot_training(config, mode, device):
         func_list = []
         for n in range(n_particle_types):
             pos = np.argwhere(new_labels == n).squeeze().astype(int)
-            embedding = model.a[1, pos[0], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                     rr[:, None] / max_radius, embedding), dim=1)
-            with torch.no_grad():
-                func = model.lin_edge(in_features.float())
-            func = func[:, 0]
-            func_list.append(func)
-            plt.plot(to_numpy(rr),
-                     to_numpy(func) * to_numpy(ynorm),
-                     color=cmap.color(n), linewidth=4)
+            if pos.size > 0:
+                embedding = model.a[1, pos[0], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                         rr[:, None] / max_radius, embedding), dim=1)
+                with torch.no_grad():
+                    func = model.lin_edge(in_features.float())
+                func = func[:, 0]
+                func_list.append(func)
+                plt.plot(to_numpy(rr),
+                         to_numpy(func) * to_numpy(ynorm),
+                         color=cmap.color(n), linewidth=4)
         plt.xlabel(r'$r_{ij}$', fontsize=64)
         plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=64)
         # xticks with sans serif font
         plt.xticks(fontsize=32)
         plt.yticks(fontsize=32)
         plt.xlim([0, max_radius])
-        plt.ylim([-0.03, 0.04])
+        plt.ylim([-0.08, 0.08])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.tif",dpi=170.7)
         plt.close()
 
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(1,1,1)
-        ax.xaxis.get_major_formatter()._usetex = False
-        ax.yaxis.get_major_formatter()._usetex = False
-        p = config.simulation.params
-        if len(p) > 0:
-            p = torch.tensor(p, device=device)
-        else:
-            p = torch.load(f'graphs_data/graphs_{dataset_name}/p.pt')
-        for n in range(n_particle_types - 1, -1, -1):
-            plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n), linewidth=4)
-        plt.xlabel(r'$r_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=64)
-        plt.xticks(fontsize=32)
-        plt.yticks(fontsize=32)
-        plt.xlim([0, max_radius])
-        plt.ylim([-0.03, 0.04])
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/true_func_{dataset_name}.tif",dpi=170.7)
-        plt.close()
+        # fig = plt.figure(figsize=(12, 12))
+        # ax = fig.add_subplot(1,1,1)
+        # ax.xaxis.get_major_formatter()._usetex = False
+        # ax.yaxis.get_major_formatter()._usetex = False
+        # p = config.simulation.params
+        # if len(p) > 0:
+        #     p = torch.tensor(p, device=device)
+        # else:
+        #     p = torch.load(f'graphs_data/graphs_{dataset_name}/p.pt')
+        # for n in range(n_particle_types - 1, -1, -1):
+        #     plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n), linewidth=4)
+        # plt.xlabel(r'$r_{ij}$', fontsize=64)
+        # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=64)
+        # plt.xticks(fontsize=32)
+        # plt.yticks(fontsize=32)
+        # plt.xlim([0, max_radius])
+        # plt.ylim([-0.03, 0.04])
+        # plt.tight_layout()
+        # plt.savefig(f"./{log_dir}/tmp_training/true_func_{dataset_name}.tif",dpi=170.7)
+        # plt.close()
 
 
 
@@ -403,7 +405,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list =['arbitrary_3_dropout_30_pos']
+    config_list =['arbitrary_32','arbitrary_64']
 
     for config_file in config_list:
 
