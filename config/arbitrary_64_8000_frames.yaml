@@ -1,5 +1,5 @@
 description: 'attraction-repulsion with 16 types particles'
-dataset: 'arbitrary_64'
+dataset: 'arbitrary_64_8000_frames'
 
 simulation:
   params: [[-1]]
