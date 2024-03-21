@@ -528,6 +528,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
             torch.save(y_mesh_list, f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt')
             torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
             torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
+            torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
 
 
 def data_train(config):
@@ -1077,6 +1078,7 @@ def data_train(config):
         plt.close()
 
 
+
 def data_test(config, visualize=False, verbose=True, best_model=20, step=5, ratio=1, run=1, test_simulation=False):
     print('')
 
@@ -1377,8 +1379,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 
 if __name__ == '__main__':
 
-    config_list = ['arbitrary_3_dropout_10_no_ghost', 'arbitrary_3_dropout_20', 'arbitrary_3_dropout_30',
-                   'arbitrary_3_dropout_40', 'arbitrary_3_dropout_50']
+    config_list = ['arbitrary_3_continuous','arbitrary_3_32','arbitrary_3_64','arbitrary_3_96']
 
     for config_file in config_list:
         # Load parameters from config file
