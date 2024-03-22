@@ -1057,12 +1057,12 @@ def data_train(config):
                         logger.info(f'regul_embedding: replaced')
                         plt.text(0, 1.1, f'Replaced', ha='left', va='top', transform=ax.transAxes, fontsize=10)
             else:
-                if (epoch > n_epochs - 3) & (replace_with_cluster):
-                    lr_embedding = 1E-5
-                    lr = train_config.learning_rate_end
-                    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-                    logger.info(f'Learning rates: {lr}, {lr_embedding}')
-                elif epoch > 3 * n_epochs // 4 + 1:
+                # if (epoch > n_epochs - 3) & (replace_with_cluster):
+                #     lr_embedding = 1E-5
+                #     lr = train_config.learning_rate_end
+                #     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                #     logger.info(f'Learning rates: {lr}, {lr_embedding}')
+                if epoch > 3 * n_epochs // 4 + 1:
                     lr_embedding = train_config.learning_rate_embedding_end
                     lr = train_config.learning_rate_end
                     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
@@ -1379,7 +1379,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 
 if __name__ == '__main__':
 
-    config_list = ['arbitrary_3_dropout_20_pos', 'arbitrary_3_dropout_30_pos', 'arbitrary_3_dropout_40_pos', 'arbitrary_3_dropout_50_pos']
+    config_list = ['arbitrary_3']
 
     for config_file in config_list:
         # Load parameters from config file
