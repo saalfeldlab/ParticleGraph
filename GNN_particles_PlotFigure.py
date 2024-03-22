@@ -592,7 +592,7 @@ def data_plot_FIG2():
     ax = fig.add_subplot(3, 4, 4)
     Accuracy = plot_confusion_matrix('d)', to_numpy(x[:,5:6]), new_labels, n_particle_types, 1, '$5.10^4$', fig, ax)
 
-    net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
+    net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_18.pt"
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
 
@@ -603,8 +603,26 @@ def data_plot_FIG2():
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
     func_list = plot_function(True,'f)', config.graph_model.particle_model_name, model.lin_edge, model.a, 1, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap,device)
 
+
+
     ax = fig.add_subplot(3, 4, 7)
     proj_interaction, new_labels, n_clusters = plot_umap('g)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap,device)
+
+    match config.training.cluster_method:
+        case 'kmeans_auto_plot':
+            labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
+        case 'kmeans_auto_embedding':
+            labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
+            proj_interaction = embedding
+        case 'distance_plot':
+            labels, n_clusters = embedding_cluster.get(proj_interaction, 'distance')
+        case 'distance_embedding':
+            labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=1.5)
+            proj_interaction = embedding
+        case 'distance_both':
+            new_projection = np.concatenate((proj_interaction, embedding), axis=-1)
+            labels, n_clusters = embedding_cluster.get(new_projection, 'distance')
+
 
     ax = fig.add_subplot(3, 4, 8)
     Accuracy = plot_confusion_matrix('h)', to_numpy(x[:,5:6]), new_labels, n_particle_types, 1, '$5.10^$4', fig, ax)
@@ -613,8 +631,9 @@ def data_plot_FIG2():
     model_a_ = model.a[1].clone().detach()
     for k in range(n_clusters):
         pos = np.argwhere(new_labels == k).squeeze().astype(int)
-        temp = model_a_[pos, :].clone().detach()
-        model_a_[pos, :] = torch.median(temp, dim=0).values.repeat((len(pos), 1))
+        if pos.size > 0:
+            temp = model_a_[pos, :].clone().detach()
+            model_a_[pos, :] = torch.median(temp, dim=0).values.repeat((len(pos), 1))
     with torch.no_grad():
         for n in range(model.a.shape[0]):
             model.a[n] = model_a_
@@ -692,6 +711,89 @@ def data_plot_FIG2():
     plt.tight_layout()
     # plt.savefig('Fig2.pdf', format="pdf", dpi=300)
     plt.savefig('Fig2.jpg', dpi=300)
+    plt.close()
+
+    fig = plt.figure(figsize=(12, 12))
+    ax = fig.add_subplot(1, 1, 1)
+    ax.xaxis.get_major_formatter()._usetex = False
+    ax.yaxis.get_major_formatter()._usetex = False
+    ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+    if n_particle_types > 1000:
+        plt.scatter(embedding[:, 0], embedding[:, 1], c=to_numpy(x[:, 5]) / n_particles, s=10,
+                    cmap='viridis')
+    else:
+        for n in range(n_particle_types):
+            pos = np.argwhere(new_labels == n).squeeze().astype(int)
+            if pos.size > 0:
+                plt.scatter(embedding[pos[0], 0], embedding[pos[0], 1], color=cmap.color(n), s=200)
+
+    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
+    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+    # xticks with 1 digit
+
+    plt.xticks(fontsize=32.0)
+    plt.yticks(fontsize=32.0)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.tif", dpi=170.7)
+    plt.close()
+
+
+
+
+
+
+    fig = plt.figure(figsize=(12, 12))
+    ax = fig.add_subplot(1, 1, 1)
+    # ax.xaxis.get_major_formatter()._usetex = False
+    # ax.yaxis.get_major_formatter()._usetex = False
+    func_list = []
+    for n in range(n_particle_types):
+        pos = np.argwhere(new_labels == n).squeeze().astype(int)
+        if pos.size > 0:
+            embedding = model.a[1, pos[0], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                     rr[:, None] / max_radius, embedding), dim=1)
+            with torch.no_grad():
+                func = model.lin_edge(in_features.float())
+            func = func[:, 0]
+            func_list.append(func)
+            plt.plot(to_numpy(rr),
+                     to_numpy(func) * to_numpy(ynorm),
+                     color=cmap.color(n), linewidth=4)
+    plt.xlabel(r'$d_{ij}$', fontsize=64)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+    # xticks with sans serif font
+    plt.xticks(fontsize=32)
+    plt.yticks(fontsize=32)
+    plt.xlim([0, max_radius])
+
+    plt.ylim([-0.15, 0.15])
+    # plt.ylim([-0.04, 0.03])
+    # plt.ylim([-0.08, 0.08])
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.tif", dpi=170.7)
+    plt.close()
+
+    fig = plt.figure(figsize=(12, 12))
+    ax = fig.add_subplot(1, 1, 1)
+    # ax.xaxis.get_major_formatter()._usetex = False
+    # ax.yaxis.get_major_formatter()._usetex = False
+    p = config.simulation.params
+    for n in range(n_particles):
+        plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n // 1600), linewidth=1,
+                 alpha=0.25)
+    plt.xlabel(r'$d_{ij}$', fontsize=64)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+    plt.xticks(fontsize=32)
+    plt.yticks(fontsize=32)
+    plt.xlim([0, max_radius])
+    # plt.ylim([-0.15, 0.15])
+    plt.ylim([-0.04, 0.03])
+    # plt.ylim([-0.08, 0.08])
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/true_func_{dataset_name}.tif", dpi=170.7)
     plt.close()
 
 
@@ -3624,5 +3726,5 @@ if __name__ == '__main__':
     print(f'device {device}')
 
 
-    data_plot_FIG8()
+    data_plot_FIG2()
 
