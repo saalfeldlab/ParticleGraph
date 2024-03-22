@@ -1,4 +1,5 @@
 import matplotlib.cm as cmplt
+from matplotlib.ticker import FormatStrFormatter
 from torch_geometric.nn import MessagePassing
 import torch_geometric.utils as pyg_utils
 import os
@@ -453,8 +454,8 @@ def plot_function(bVisu, index, model_name, model_MLP, model_a, dataset_number, 
     func_list = torch.stack(func_list)
     func_list = to_numpy(func_list)
     if bVisu:
-        plt.xlabel(r'$r_{ij} [a.u.]$', fontsize=12)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij}) [a.u.]$', fontsize=12)
+        plt.xlabel(r'$d_{ij} [a.u.]$', fontsize=12)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij} [a.u.]$', fontsize=12)
         plt.xticks(fontsize=10.0)
         plt.yticks(fontsize=10.0)
         # plt.ylim([-0.04, 0.03])
@@ -475,7 +476,7 @@ def plot_umap(index, func_list, log_dir, n_neighbors, index_particles, n_particl
         trans = umap.UMAP(n_neighbors=n_neighbors, n_components=2, transform_queue_size=0).fit(func_list[new_index])
         proj_interaction = trans.transform(func_list)
     np.save(os.path.join(log_dir, f'proj_interaction_{epoch}.npy'), proj_interaction)
-    plt.title(r'UMAP of $f(\ensuremath{\mathbf{a}}_i, r_{ij}$)', fontsize=12)
+    plt.title(r'UMAP of $f(\ensuremath{\mathbf{a}}_i, d_{ij}$)', fontsize=12)
 
     labels, n_clusters = embedding_cluster.get(proj_interaction, 'distance')
 
@@ -648,8 +649,8 @@ def data_plot_FIG2():
         plt.plot(to_numpy(rr),
                  to_numpy(func) * to_numpy(ynorm),
                  color=cmap.color(n), linewidth=1)
-    plt.xlabel(r'$r_{ij}$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
+    plt.xlabel(r'$d_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij}$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.ylim([-0.04, 0.03])
@@ -666,8 +667,8 @@ def data_plot_FIG2():
         p = torch.load(f'graphs_data/graphs_{dataset_name}/p.pt')
     for n in range(n_particle_types - 1, -1, -1):
         plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n), linewidth=1)
-    plt.xlabel(r'$r_{ij}$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
+    plt.xlabel(r'$d_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij}$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.ylim([-0.04, 0.03])
@@ -760,10 +761,6 @@ def data_plot_FIG8():
                                        "Liberation"]
 
 
-
-
-
-
     fig = plt.figure(figsize=(12.5, 9.6))
     plt.ion()
     ax = fig.add_subplot(3, 4, 1)
@@ -802,7 +799,6 @@ def data_plot_FIG8():
     plt.yticks(fontsize=10.0)
     plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
 
-
     ax = fig.add_subplot(3, 4, 6)
     print('10')
     plt.text(-0.25, 1.1, f'j)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
@@ -824,12 +820,83 @@ def data_plot_FIG8():
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
                      color=cmap.color(n), linewidth=1)
-    plt.xlabel(r'$r_{ij}$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
+    plt.xlabel(r'$d_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij}$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.ylim([-0.15, 0.15])
     plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
+
+    ax = fig.add_subplot(3, 4, 7)
+    print('11')
+    plt.text(-0.25, 1.1, f'k)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'Interaction functions (true)', fontsize=12)
+    p = config.simulation.params
+    p = torch.ones(n_particle_types, n_particle_types, 4, device=device)
+    params=config.simulation.params                                                                             
+    if params[0] != [-1]:
+        for n in range(n_particle_types):
+            for m in range(n_particle_types):
+                p[n, m] = torch.tensor(params[n * 3 + m])
+    for n in range(n_particle_types):
+        for m in range(n_particle_types):
+            plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n,m], p[n,m])), color=cmap.color(n), linewidth=1)
+    plt.xlabel(r'$d_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij}$', fontsize=12)
+    plt.xticks(fontsize=10.0)
+    plt.yticks(fontsize=10.0)
+    plt.ylim([-0.15, 0.15])
+
+    epoch=20
+
+
+    # find last image file in logdir
+    ax = fig.add_subplot(3, 4, 12)
+    files = glob.glob(os.path.join(log_dir, 'tmp_recons/Fig*.tif'))
+    files.sort(key=os.path.getmtime)
+    if len(files) > 0:
+        last_file = files[-1]
+        # load image file with imageio
+        image = imageio.imread(last_file)
+        print('12')
+        plt.text(-0.25, 1.1, f'l)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+        plt.title(r'Rollout inference (frame 250)', fontsize=12)
+        plt.imshow(image)
+        # rmove xtick
+        plt.xticks([])
+        plt.yticks([])
+
+    plt.tight_layout()
+    # plt.savefig('Fig8.pdf', format="pdf", dpi=300)
+    plt.savefig('Fig8.jpg', dpi=300)
+    plt.close()
+
+    fig = plt.figure(figsize=(12, 12))
+    ax = fig.add_subplot(1, 1, 1)
+    ax.xaxis.get_major_formatter()._usetex = False
+    ax.yaxis.get_major_formatter()._usetex = False
+    ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+    if n_particle_types > 1000:
+        plt.scatter(embedding[:, 0], embedding[:, 1], c=to_numpy(x[:, 5]) / n_particles, s=10,
+                    cmap='viridis')
+    else:
+        for n in range(n_particle_types):
+            pos = np.argwhere(new_labels == n).squeeze().astype(int)
+            if pos.size > 0:
+                plt.scatter(embedding[pos[0], 0], embedding[pos[0], 1], color=cmap.color(n), s=200)
+
+    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
+    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+    # xticks with 1 digit
+
+    plt.xticks(fontsize=32.0)
+    plt.yticks(fontsize=32.0)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.tif", dpi=170.7)
+    plt.close()
+
 
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(1, 1, 1)
@@ -852,8 +919,8 @@ def data_plot_FIG8():
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
                      color=cmap.color(n), linewidth=4)
-    plt.xlabel(r'$r_{ij}$', fontsize=64)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=64)
+    plt.xlabel(r'$d_{ij}$', fontsize=64)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
     # xticks with sans serif font
     plt.xticks(fontsize=32)
     plt.yticks(fontsize=32)
@@ -864,36 +931,15 @@ def data_plot_FIG8():
     plt.close()
 
 
-    ax = fig.add_subplot(3, 4, 7)
-    print('11')
-    plt.text(-0.25, 1.1, f'k)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-    plt.title(r'Interaction functions (true)', fontsize=12)
-    p = config.simulation.params
-    p = torch.ones(n_particle_types, n_particle_types, 4, device=device)
-    params=config.simulation.params                                                                             
-    if params[0] != [-1]:
-        for n in range(n_particle_types):
-            for m in range(n_particle_types):
-                p[n, m] = torch.tensor(params[n * 3 + m])
-    for n in range(n_particle_types):
-        for m in range(n_particle_types):
-            plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n,m], p[n,m])), color=cmap.color(n), linewidth=1)
-    plt.xlabel(r'$r_{ij}$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
-    plt.xticks(fontsize=10.0)
-    plt.yticks(fontsize=10.0)
-    plt.ylim([-0.15, 0.15])
-
-
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(1, 1, 1)
     ax.xaxis.get_major_formatter()._usetex = False
     ax.yaxis.get_major_formatter()._usetex = False
     for n in range(n_particle_types):
         for m in range(n_particle_types):
-            plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n,m], p[n,m])), color=cmap.color(n), linewidth=4)
-    plt.xlabel(r'$r_{ij}$', fontsize=64)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=64)
+            plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n, m], p[n, m])), color=cmap.color(n), linewidth=4)
+    plt.xlabel(r'$d_{ij}$', fontsize=64)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
     # xticks with sans serif font
     plt.xticks(fontsize=32)
     plt.yticks(fontsize=32)
@@ -901,28 +947,6 @@ def data_plot_FIG8():
     plt.xlim([0, max_radius])
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/true_func_{dataset_name}.tif", dpi=170.7)
-    plt.close()
-
-
-    # find last image file in logdir
-    ax = fig.add_subplot(3, 4, 12)
-    files = glob.glob(os.path.join(log_dir, 'tmp_recons/Fig*.tif'))
-    files.sort(key=os.path.getmtime)
-    if len(files) > 0:
-        last_file = files[-1]
-        # load image file with imageio
-        image = imageio.imread(last_file)
-        print('12')
-        plt.text(-0.25, 1.1, f'l)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-        plt.title(r'Rollout inference (frame 250)', fontsize=12)
-        plt.imshow(image)
-        # rmove xtick
-        plt.xticks([])
-        plt.yticks([])
-
-    plt.tight_layout()
-    # plt.savefig('Fig8.pdf', format="pdf", dpi=300)
-    plt.savefig('Fig8.jpg', dpi=300)
     plt.close()
 
 
@@ -1036,8 +1060,8 @@ def data_plot_FIG3():
         plt.plot(to_numpy(rr),
                  to_numpy(func) * to_numpy(ynorm),
                  color=cmap.color(n), linewidth=1)
-    plt.xlabel(r'$r_{ij}$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
+    plt.xlabel(r'$d_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij}$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.xlim([0, 0.02])
@@ -1052,8 +1076,8 @@ def data_plot_FIG3():
     p = torch.tensor(p, device=device)
     for n in range(n_particle_types - 1, -1, -1):
         plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n), linewidth=1)
-    plt.xlabel(r'$r_{ij}$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
+    plt.xlabel(r'$d_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij}$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.xlim([0, 0.02])
@@ -1270,8 +1294,8 @@ def data_plot_FIG9():
         plt.plot(to_numpy(rr),
                  to_numpy(func) * to_numpy(ynorm),
                  color=cmap.color(n), linewidth=1)
-    plt.xlabel(r'$r_{ij}$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
+    plt.xlabel(r'$d_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij}$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.xlim([0, 0.02])
@@ -1286,8 +1310,8 @@ def data_plot_FIG9():
     p = torch.tensor(p, device=device)
     for n in range(n_particle_types - 1, -1, -1):
         plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n), linewidth=1)
-    plt.xlabel(r'$r_{ij}$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
+    plt.xlabel(r'$d_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij}$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.xlim([0, 0.02])
@@ -1484,8 +1508,8 @@ def data_plot_FIG4():
             plt.plot(to_numpy(rr),
                      to_numpy(acc) * to_numpy(ynorm),
                      linewidth=1)
-    plt.xlabel(r'$r_{ij}$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, r_{ij})$', fontsize=12)
+    plt.xlabel(r'$d_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij}$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.xlim([0, 0.02])
@@ -1507,8 +1531,8 @@ def data_plot_FIG4():
             plt.plot(to_numpy(rr), np.array(temp.cpu()), linewidth=1)
     plt.xlim([0, 0.02])
     plt.ylim([-0.5E6, 0.5E6])
-    plt.xlabel(r'$r_{ij}$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, r_{ij})$', fontsize=12)
+    plt.xlabel(r'$d_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij}$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
 
@@ -1732,9 +1756,9 @@ def data_plot_FIG5():
         plt.scatter(to_numpy(diffx[pos,0]), to_numpy(lin_edge_out[pos, 0]), color=cmap.color(n), s=1, alpha=1)
     plt.ylim([-0.08, 0.08])
     plt.ylim([-5E-5, 5E-5])
-    plt.xlabel(r'$r_{ij}$', fontsize=12)
+    plt.xlabel(r'$d_{ij}$', fontsize=12)
     plt.ylabel(
-        r'$\left| \left| f(\ensuremath{\mathbf{a}}_i, x_j-x_i, \dot{x}_i, \dot{x}_j, r_{ij}) \right| \right|[a.u.]$',
+        r'$\left| \left| f(\ensuremath{\mathbf{a}}_i, x_j-x_i, \dot{x}_i, \dot{x}_j, d_{ij} \right| \right|[a.u.]$',
         fontsize=12)
 
     xs = torch.linspace(0, 1, 400)
@@ -2014,9 +2038,9 @@ def data_plot_FIG5_time():
         pos = pos[:, 0].astype(int)
         plt.scatter(to_numpy(r[pos]), to_numpy(torch.norm(lin_edge_out[pos, :], dim=1)), color=cmap.color(n), s=1)
     plt.ylim([0, 5E-5])
-    plt.xlabel(r'$r_{ij}$', fontsize=12)
+    plt.xlabel(r'$d_{ij}$', fontsize=12)
     plt.ylabel(
-        r'$\left| \left| f(\ensuremath{\mathbf{a}}_i, x_j-x_i, \dot{x}_i, \dot{x}_j, r_{ij}) \right| \right|[a.u.]$',
+        r'$\left| \left| f(\ensuremath{\mathbf{a}}_i, x_j-x_i, \dot{x}_i, \dot{x}_j, d_{ij} \right| \right|[a.u.]$',
         fontsize=12)
     ax = fig.add_subplot(3, 3, 5)
     print('6')
@@ -2027,9 +2051,9 @@ def data_plot_FIG5_time():
         pos = pos[:, 0].astype(int)
         plt.scatter(to_numpy(r[pos]), to_numpy(torch.norm(sum[pos, :], dim=1)), color=cmap.color(n), s=1, alpha=1)
     plt.ylim([0, 5E-5])
-    plt.xlabel(r'$r_{ij}$', fontsize=12)
+    plt.xlabel(r'$d_{ij}$', fontsize=12)
     plt.ylabel(
-        r'$\left| \left| f(\ensuremath{\mathbf{a}}_i, x_j-x_i, \dot{x}_i, \dot{x}_j, r_{ij}) \right| \right|[a.u.]$',
+        r'$\left| \left| f(\ensuremath{\mathbf{a}}_i, x_j-x_i, \dot{x}_i, \dot{x}_j, d_{ij} \right| \right|[a.u.]$',
         fontsize=12)
 
     # find last image file in logdir
@@ -2269,7 +2293,7 @@ def data_plot_FIG3_continous():
     ax = fig.add_subplot(2, 3, 2)
     print('2 UMAP ...')
     plt.text(-0.25, 1.1, f'b)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-    plt.title(r'UMAP of $f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
+    plt.title(r'UMAP of $f(\ensuremath{\mathbf{a}}_i, d_{ij}$', fontsize=12)
     if os.path.exists(os.path.join(log_dir, f'proj_interaction_20.npy')):
         proj_interaction = np.load(os.path.join(log_dir, f'proj_interaction_20.npy'))
     else:
@@ -2315,8 +2339,8 @@ def data_plot_FIG3_continous():
                  color=colors[n], linewidth=1, alpha=0.25)
     plt.xlim([0, 0.02])
     plt.ylim([0, 0.5E6])
-    plt.xlabel(r'$r_{ij}$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, r_{ij})$', fontsize=12)
+    plt.xlabel(r'$d_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, d_{ij}$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.text(.2, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
@@ -2333,8 +2357,8 @@ def data_plot_FIG3_continous():
         plt.plot(to_numpy(rr), np.array(psi_output[n].cpu()), linewidth=1, color=colors[n])
     plt.xlim([0, 0.02])
     plt.ylim([0, 0.5E6])
-    plt.xlabel(r'$r_{ij}$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, r_{ij})$', fontsize=12)
+    plt.xlabel(r'$d_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_j, d_{ij}$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
 
@@ -3092,7 +3116,7 @@ def data_plot_FIG7():
     ax = fig.add_subplot(3, 3, 2)
     print('2 UMAP ...')
     plt.text(-0.25, 1.1, f'b)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-    plt.title(r'UMAP of $f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
+    plt.title(r'UMAP of $f(\ensuremath{\mathbf{a}}_i, d_{ij}$', fontsize=12)
 
     if os.path.exists(os.path.join(log_dir, f'proj_interaction_20.npy')):
         proj_interaction = np.load(os.path.join(log_dir, f'proj_interaction_20.npy'))
@@ -3545,8 +3569,8 @@ def data_plot_suppFIG1():
         plt.plot(to_numpy(rr),
                  to_numpy(func) * to_numpy(ynorm),
                  color=cmap.color(n), linewidth=1)
-    plt.xlabel(r'$r_{ij}$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
+    plt.xlabel(r'$d_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij}$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.ylim([-0.04, 0.03])
@@ -3563,8 +3587,8 @@ def data_plot_suppFIG1():
         p = torch.load(f'graphs_data/graphs_{dataset_name}/p.pt')
     for n in range(n_particle_types - 1, -1, -1):
         plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n), linewidth=1)
-    plt.xlabel(r'$r_{ij}$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, r_{ij})$', fontsize=12)
+    plt.xlabel(r'$d_{ij}$', fontsize=12)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij}$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.ylim([-0.04, 0.03])
