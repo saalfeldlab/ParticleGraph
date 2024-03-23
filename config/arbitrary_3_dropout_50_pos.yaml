@@ -39,7 +39,7 @@ training:
   particle_dropout: 0.5
   ghost_method: 'tensor'
   n_ghosts: 2600
-  sparsity: 'replace_embedding_function'
+  sparsity: 'none'
   cluster_method: 'kmeans_auto_plot'
   data_augmentation: True
   data_augmentation_loop: 100

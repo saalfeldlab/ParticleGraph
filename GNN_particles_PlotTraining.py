@@ -369,9 +369,27 @@ def data_plot_training(config, mode, device):
         for n in range(n_particle_types):
             pos = np.argwhere(new_labels == n).squeeze().astype(int)
             if pos.size > 0:
-                embedding = model.a[1, pos[0], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                         rr[:, None] / max_radius, embedding), dim=1)
+                embedding_ = model.a[1, pos[0], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                match config.graph_model.particle_model_name:
+                    case 'PDE_A':
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / max_radius, embedding_), dim=1)
+                    case 'PDE_A_bis':
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / max_radius, embedding_, embedding_), dim=1)
+                    case 'PDE_B' | 'PDE_B_bis':
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                                 0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                    case 'PDE_G':
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                                 0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                    case 'PDE_GS':
+                        in_features = torch.cat((rr[:, None] / max_radius, embedding_), dim=1)
+                    case 'PDE_E':
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / max_radius, embedding_, embedding_), dim=-1)
                 with torch.no_grad():
                     func = model.lin_edge(in_features.float())
                 func = func[:, 0]
@@ -386,7 +404,7 @@ def data_plot_training(config, mode, device):
         plt.xlim([0, max_radius])
         # plt.ylim([-0.15, 0.15])
         # plt.ylim([-0.04, 0.03])
-        plt.ylim([-0.1, 0.06])
+        plt.ylim([-0.1, 0.1])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.tif",dpi=170.7)
         plt.close()
@@ -410,7 +428,7 @@ def data_plot_training(config, mode, device):
         plt.xlim([0, max_radius])
         # plt.ylim([-0.15, 0.15])
         # plt.ylim([-0.04, 0.03])
-        plt.ylim([-0.1, 0.06])
+        plt.ylim([-0.1, 0.1])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/true_func_{dataset_name}.tif",dpi=170.7)
         plt.close()
@@ -1033,7 +1051,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list =['arbitrary_32']
+    config_list =['gravity_16']
 
     for config_file in config_list:
 
