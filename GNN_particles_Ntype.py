@@ -1379,7 +1379,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 
 if __name__ == '__main__':
 
-    config_list = ['gravity_16']
+    config_list = ['wave_slit']
 
     for config_file in config_list:
         # Load parameters from config file

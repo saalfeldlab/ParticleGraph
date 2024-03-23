@@ -16,4 +16,7 @@ class PDE_Z(MessagePassing):
         super(PDE_Z, self).__init__(aggr='add')
 
     def forward(self, data):
-        return torch.zeros_like(data.x)
+
+        pred = torch.zeros_like(data.x)
+
+        return pred[:,0:2]
