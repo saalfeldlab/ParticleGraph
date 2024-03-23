@@ -128,7 +128,7 @@ def choose_model(config, device):
                     p[n] = torch.tensor(params[n])
             model = PDE_N(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
         case _:
-            model = PDE_Z()
+            model = PDE_Z(device=device)
 
     return model, bc_pos, bc_dpos
 

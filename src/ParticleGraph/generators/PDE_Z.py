@@ -12,11 +12,10 @@ class PDE_Z(MessagePassing):
         an array of zeros (dimension 2)
     """
 
-    def __init__(self):
+    def __init__(self, device=[]):
         super(PDE_Z, self).__init__(aggr='add')
+        self.device = device
 
     def forward(self, data):
 
-        pred = torch.zeros_like(data.x)
-
-        return pred[:,0:2]
+        return torch.zeros((data.x.shape[0],2), device=self.device, dtype=torch.float32)
