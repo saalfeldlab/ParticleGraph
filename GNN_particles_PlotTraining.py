@@ -159,7 +159,7 @@ def data_plot_training(config, mode, device):
     time.sleep(0.5)
 
 
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     matplotlib.rcParams['savefig.pad_inches'] = 0
@@ -403,8 +403,8 @@ def data_plot_training(config, mode, device):
         plt.yticks(fontsize=32)
         plt.xlim([0, max_radius])
         # plt.ylim([-0.15, 0.15])
-        # plt.ylim([-0.04, 0.03])
-        plt.ylim([-0.1, 0.1])
+        plt.ylim([-0.04, 0.03])
+        # plt.ylim([-0.1, 0.1])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.tif",dpi=170.7)
         plt.close()
@@ -416,7 +416,7 @@ def data_plot_training(config, mode, device):
         ax.xaxis.set_major_locator(plt.MaxNLocator(3))
         ax.yaxis.set_major_locator(plt.MaxNLocator(3))
         if os.path.exists(f'graphs_data/graphs_{dataset_name}/model_p.pt'):
-            p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt')
+            p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt',map_location=device)
         else:
             p = config.simulation.params
         for n in range(n_particle_types):
@@ -427,8 +427,8 @@ def data_plot_training(config, mode, device):
         plt.yticks(fontsize=32)
         plt.xlim([0, max_radius])
         # plt.ylim([-0.15, 0.15])
-        # plt.ylim([-0.04, 0.03])
-        plt.ylim([-0.1, 0.1])
+        plt.ylim([-0.04, 0.03])
+        # plt.ylim([-0.1, 0.1])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/true_func_{dataset_name}.tif",dpi=170.7)
         plt.close()
@@ -1051,7 +1051,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list =['gravity_16']
+    config_list =['arbitrary_3']
 
     for config_file in config_list:
 

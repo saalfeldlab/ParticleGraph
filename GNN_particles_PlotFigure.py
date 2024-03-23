@@ -18,7 +18,7 @@ from GNN_particles_Ntype import *
 from ParticleGraph.embedding_cluster import *
 from ParticleGraph.utils import to_numpy, CustomColorMap, choose_boundary_values
 
-matplotlib.use("Qt5Agg")
+# matplotlib.use("Qt5Agg")
 
 
 class Interaction_Particles_extract(MessagePassing):

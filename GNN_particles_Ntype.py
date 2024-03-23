@@ -479,10 +479,10 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                                     plt.yticks([])
                                     plt.axis('off')
                         else:
-                            s_p = 50
+                            s_p = 100
                             if simulation_config.has_cell_division:
                                 s_p = 25
-                            if True:  # config.simulation.non_discrete_level>0:
+                            if False:  # config.simulation.non_discrete_level>0:
                                 plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=s_p, color='k')
                             else:
                                 for n in range(n_particle_types):
@@ -1379,8 +1379,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 
 if __name__ == '__main__':
 
-    config_list = ['arbitrary_3_2400_augmentation_200',  'arbitrary_3_1200_augmentation_400', 'arbitrary_3_600_augmentation_800',
-                   'arbitrary_3_300_augmentation_1600', 'arbitrary_3_90_augmentation_4800', 'arbitrary_3_30_augmentation_14400']
+    config_list = ['gravity_16']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -1390,8 +1389,8 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, step=5, bSave=True) # config.simulation.n_frames // 5
-        data_train(config)
+        data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7) # config.simulation.n_frames // 5
+        # data_train(config)
         # data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=config.simulation.n_frames // 8)
 
 
