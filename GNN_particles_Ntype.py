@@ -1379,7 +1379,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 
 if __name__ == '__main__':
 
-    config_list = ['arbitrary_3_10_frames_augmentation_2500', 'arbitrary_3_25_frames_augmentation_1000', 'arbitrary_3_50_frames_augmentation_500', 'arbitrary_3_100_frames_augmentation_250', 'arbitrary_3_200_frames_augmentation_125']
+    config_list = ['arbitrary_3_2400',  'arbitrary_3_1200', 'arbitrary_3_600', 'arbitrary_3_300', 'arbitrary_3_90', 'arbitrary_3_30']
 
     for config_file in config_list:
         # Load parameters from config file
