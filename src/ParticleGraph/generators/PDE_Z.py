@@ -15,6 +15,7 @@ class PDE_Z(MessagePassing):
     def __init__(self, device=[]):
         super(PDE_Z, self).__init__(aggr='add')
         self.device = device
+        self.p = torch.tensor([0, 0], device=device)
 
     def forward(self, data):
 

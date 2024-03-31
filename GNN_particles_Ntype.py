@@ -188,75 +188,75 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                 dataset_mesh = data.Data(x=x_mesh, edge_index=mesh_data['edge_index'],
                                          edge_attr=mesh_data['edge_weight'], device=device)
 
-            # compute connectivity rule
-            if has_adjacency_matrix:
-                adj_t = adjacency > 0
-                edge_index = adj_t.nonzero().t().contiguous()
-                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr)
-            else:
-                distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
-                adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                edge_index = adj_t.nonzero().t().contiguous()
-                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
-
-            # model prediction
-            with torch.no_grad():
-                y = model(dataset)
-
-            # append list
-            if (it >= 0) & bSave:
-
-                if has_cell_division:
-                    x_list.append(x.clone().detach())
-                    y_ = torch.concatenate((y, y_timer[:, None], y_division[:, None]), 1)
-                    y_list.append(y_.clone().detach())
+            if not(only_mesh):
+                # compute connectivity rule
+                if has_adjacency_matrix:
+                    adj_t = adjacency > 0
+                    edge_index = adj_t.nonzero().t().contiguous()
+                    dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr)
                 else:
-                    if has_particle_dropout:
-                        x_ = x[particle_dropout_mask].clone().detach()
-                        x_[:, 0] = torch.arange(len(x_), device=device)
-                        x_list.append(x_)
-                        x_ = x[inv_particle_dropout_mask].clone().detach()
-                        x_[:, 0] = torch.arange(len(x_), device=device)
-                        x_removed_list.append(x[inv_particle_dropout_mask].clone().detach())
-                        y_list.append(y[particle_dropout_mask].clone().detach())
+                    distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
+                    adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                    edge_index = adj_t.nonzero().t().contiguous()
+                    dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+
+                # model prediction
+                with torch.no_grad():
+                    y = model(dataset)
+
+                # append list
+                if (it >= 0) & bSave:
+
+                    if has_cell_division:
+                        x_list.append(x.clone().detach())
+                        y_ = torch.concatenate((y, y_timer[:, None], y_division[:, None]), 1)
+                        y_list.append(y_.clone().detach())
                     else:
-                        if noise_level > 0:
-                            x_ = x.clone().detach()
-                            x_[:, 1:3] = bc_pos(x_[:, 1:3] + torch.randn_like(x_[:, 1:3]) * max_radius * noise_level)
-                            y_ = y.clone().detach() + torch.randn_like(y) * torch.std(y) * noise_level * 0
-                            x_list.append(x_.clone().detach())
-                            y_list.append(y_.clone().detach())
+                        if has_particle_dropout:
+                            x_ = x[particle_dropout_mask].clone().detach()
+                            x_[:, 0] = torch.arange(len(x_), device=device)
+                            x_list.append(x_)
+                            x_ = x[inv_particle_dropout_mask].clone().detach()
+                            x_[:, 0] = torch.arange(len(x_), device=device)
+                            x_removed_list.append(x[inv_particle_dropout_mask].clone().detach())
+                            y_list.append(y[particle_dropout_mask].clone().detach())
                         else:
-                            x_list.append(x.clone().detach())
-                            y_list.append(y.clone().detach())
-                        if (run == 1) & (it == 200):
-                            torch.save(x, f'graphs_data/graphs_{dataset_name}/x_200.pt')
-                            torch.save(y, f'graphs_data/graphs_{dataset_name}/y_200.pt')
+                            if noise_level > 0:
+                                x_ = x.clone().detach()
+                                x_[:, 1:3] = bc_pos(x_[:, 1:3] + torch.randn_like(x_[:, 1:3]) * max_radius * noise_level)
+                                y_ = y.clone().detach() + torch.randn_like(y) * torch.std(y) * noise_level * 0
+                                x_list.append(x_.clone().detach())
+                                y_list.append(y_.clone().detach())
+                            else:
+                                x_list.append(x.clone().detach())
+                                y_list.append(y.clone().detach())
+                            if (run == 1) & (it == 200):
+                                torch.save(x, f'graphs_data/graphs_{dataset_name}/x_200.pt')
+                                torch.save(y, f'graphs_data/graphs_{dataset_name}/y_200.pt')
 
-            # Particle update
-            if model_config.particle_model_name == 'PDE_O':
-                H1[:, 2] = H1[:, 2] + y.squeeze() * delta_t
-                X1[:, 0] = H1[:, 0] + (3 / 8) * mesh_data['size'] * torch.cos(H1[:, 2])
-                X1[:, 1] = H1[:, 1] + (3 / 8) * mesh_data['size'] * torch.sin(H1[:, 2])
-                X1 = bc_pos(X1)
-            if model_config.particle_model_name == 'PDE_N':
-                H1[:, 1] = y.squeeze()
-                H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
-
-            else:
-                if model_config.prediction == '2nd_derivative':
-                    V1 += y * delta_t
+                # Particle update
+                if model_config.particle_model_name == 'PDE_O':
+                    H1[:, 2] = H1[:, 2] + y.squeeze() * delta_t
+                    X1[:, 0] = H1[:, 0] + (3 / 8) * mesh_data['size'] * torch.cos(H1[:, 2])
+                    X1[:, 1] = H1[:, 1] + (3 / 8) * mesh_data['size'] * torch.sin(H1[:, 2])
+                    X1 = bc_pos(X1)
+                if model_config.particle_model_name == 'PDE_N':
+                    H1[:, 1] = y.squeeze()
+                    H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
                 else:
-                    V1 = y
-                X1 = bc_pos(X1 + V1 * delta_t)
-                if config.graph_model.mesh_model_name == 'Chemotaxism_Mesh':
-                    grad = grads2D(torch.reshape(H1_mesh[:, 0], (300, 300)))
-                    x_ = np.clip(to_numpy(X1[:, 0]) * 300, 0, 299)
-                    y_ = np.clip(to_numpy(X1[:, 1]) * 300, 0, 299)
-                    X1[:, 0] += torch.clamp(grad[1][y_, x_] / 5E4, min=-0.5, max=0.5)
-                    X1[:, 1] += torch.clamp(grad[0][y_, x_] / 5E4, min=-0.5, max=0.5)
+                    if model_config.prediction == '2nd_derivative':
+                        V1 += y * delta_t
+                    else:
+                        V1 = y
+                    X1 = bc_pos(X1 + V1 * delta_t)
+                    if config.graph_model.mesh_model_name == 'Chemotaxism_Mesh':
+                        grad = grads2D(torch.reshape(H1_mesh[:, 0], (300, 300)))
+                        x_ = np.clip(to_numpy(X1[:, 0]) * 300, 0, 299)
+                        y_ = np.clip(to_numpy(X1[:, 1]) * 300, 0, 299)
+                        X1[:, 0] += torch.clamp(grad[1][y_, x_] / 5E4, min=-0.5, max=0.5)
+                        X1[:, 1] += torch.clamp(grad[0][y_, x_] / 5E4, min=-0.5, max=0.5)
 
-            A1 = A1 + delta_t
+                A1 = A1 + delta_t
 
             # Mesh update
             if has_mesh:
@@ -436,13 +436,13 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
 
                         matplotlib.rcParams['savefig.pad_inches'] = 0
                         fig = plt.figure(figsize=(12, 12))
-                        if (has_mesh | (simulation_config.boundary == 'periodic')):
-                            ax = plt.axes([0, 0, 1, 1], frameon=False)
-                        else:
-                            ax = plt.axes([-2, -2, 2, 2], frameon=False)
-                        ax.get_xaxis().set_visible(False)
-                        ax.get_yaxis().set_visible(False)
-                        plt.autoscale(tight=True)
+                        # if (has_mesh | (simulation_config.boundary == 'periodic')):
+                        #     ax = plt.axes([0, 0, 1, 1], frameon=False)
+                        # else:
+                        #     ax = plt.axes([-2, -2, 2, 2], frameon=False)
+                        # ax.get_xaxis().set_visible(False)
+                        # ax.get_yaxis().set_visible(False)
+                        # plt.autoscale(tight=True)
                         if has_mesh:
                             pts = x_mesh[:, 1:3].detach().cpu().numpy()
                             tri = Delaunay(pts)
@@ -493,6 +493,9 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                                             alpha=0.75)
                                 plt.plot(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
                                          x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), '+', color='w')
+                        plt.xlim([0,1])
+                        plt.ylim([0,1])
+                        plt.tight_layout()
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
                         plt.close()
 
@@ -1378,7 +1381,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 
 if __name__ == '__main__':
 
-    config_list = ['RD_RPS']
+    config_list = ['arbitrary_3_h64', 'arbitrary_3_h32', 'arbitrary_3_h16'] 
 
     for config_file in config_list:
         # Load parameters from config file
@@ -1389,7 +1392,7 @@ if __name__ == '__main__':
         print(f'device {device}')
 
         data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7) # config.simulation.n_frames // 5
-        # data_train(config)
+        data_train(config)
         # data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=config.simulation.n_frames // 8)
 
 
