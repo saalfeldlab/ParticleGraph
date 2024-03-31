@@ -1378,7 +1378,11 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 
 if __name__ == '__main__':
 
+<<<<<<< Updated upstream
     config_list = ['RD_RPS']
+=======
+    config_list = ['arbitrary_3_dt1',  'arbitrary_3_dt2', 'arbitrary_3_dt02', 'arbitrary_3_dt05', 'arbitrary_3_dt5']
+>>>>>>> Stashed changes
 
     for config_file in config_list:
         # Load parameters from config file
