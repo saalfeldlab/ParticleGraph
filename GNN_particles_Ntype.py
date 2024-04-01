@@ -1277,7 +1277,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
                 y = y0 / ynorm
             else:
                 with torch.no_grad():
-                    y = model(dataset, data_id=run, training=False, vnorm=vnorm,
+                    y = model(dataset, data_id=1, training=False, vnorm=vnorm,
                               phi=torch.zeros(1, device=device))  # acceleration estimation
 
             if has_ghost:
@@ -1382,7 +1382,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 if __name__ == '__main__':
 
 
-    config_list = ['arbitrary_3_h16l4', 'arbitrary_3_h16l3', 'arbitrary_3_h16l2']
+    config_list = ['arbitrary_3']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -1392,9 +1392,9 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7) # config.simulation.n_frames // 5
-        data_train(config)
-        # data_test(config, visualize=True, verbose=True, best_model=20, run=1, step=config.simulation.n_frames // 8)
+        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7) # config.simulation.n_frames // 5
+        # data_train(config)
+        data_test(config, visualize=True, verbose=True, best_model=20, run=0, step=config.simulation.n_frames // 8)
 
 
 
