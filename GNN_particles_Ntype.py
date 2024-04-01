@@ -1382,7 +1382,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 if __name__ == '__main__':
 
 
-    config_list = ['arbitrary_3_l4', 'arbitrary_3_l3', 'arbitrary_3_l2']
+    config_list = ['arbitrary_3_h16l4', 'arbitrary_3_h16l3', 'arbitrary_3_h16l2']
 
     for config_file in config_list:
         # Load parameters from config file
