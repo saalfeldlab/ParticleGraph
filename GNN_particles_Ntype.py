@@ -19,6 +19,7 @@ import scipy.io
 from sklearn import metrics
 from matplotlib import rc
 import matplotlib
+import networkx as nx
 # matplotlib.use("Qt5Agg")
 
 from ParticleGraph.config import ParticleGraphConfig
@@ -1235,11 +1236,15 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 
         # plt.scatter(x_, y_, s=2, c=to_numpy(mask_mesh))
 
+    rmserr_list= []
     time.sleep(1)
     for it in trange(n_frames - 1):
 
         x0 = x_list[0][it].clone().detach()
         y0 = y_list[0][it].clone().detach()
+
+        rmserr = torch.sqrt(torch.mean(torch.sum((x[:, 1:3] - x0[:, 1:3]) ** 2, axis=1)))
+        rmserr_list.append(rmserr.item())
 
         if has_mesh:
             x[:, 1:5] = x0[:, 1:5].clone().detach()
@@ -1358,7 +1363,9 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
                 for n in range(n_particle_types):
                     plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                 x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
-
+            plt.xlim([0, 1])
+            plt.ylim([0, 1])
+            plt.tight_layout()
             plt.savefig(f"./{log_dir}/tmp_recons/Fig_{dataset_name}_{it}.tif", dpi=170.7)
             plt.close()
 
@@ -1378,23 +1385,41 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
                 plt.savefig(f"./{log_dir}/tmp_recons/Ghost_{dataset_name}_{it}.tif", dpi=170.7)
                 plt.close()
 
+    print(f'RMS error: {np.round(np.mean(rmserr_list) * 100, 2)} +/- {np.round(np.std(rmserr_list) * 100, 2)}')
+    fig = plt.figure(figsize=(12, 12))
+    x0_next = x_list[0][it + 1].clone().detach()
+    temp1 = torch.cat((x, x0_next), 0)
+    temp2 = torch.tensor(np.arange(n_particles), device=device)
+    temp3 = torch.tensor(np.arange(n_particles) + n_particles, device=device)
+    temp4 = torch.concatenate((temp2[:, None], temp3[:, None]), 1)
+    temp4 = torch.t(temp4)
+    distance3 = torch.sqrt(torch.sum((x[:, 1:3] - x0_next[:, 1:3]) ** 2, 1))
+    p = torch.argwhere(distance3 < 0.3)
+    pos = dict(enumerate(np.array((temp1[:, 1:3]).detach().cpu()), 0))
+    dataset = data.Data(x=temp1[:, 1:3], edge_index=torch.squeeze(temp4[:, p]))
+    vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
+    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False)
+    plt.xlim([0, 1])
+    plt.ylim([0, 1])
+    plt.text(0,1.1,f'RMS error: {np.round(np.mean(rmserr_list) * 100, 2)} +/- {np.round(np.std(rmserr_list) * 100, 2)}')
+    plt.savefig(f"./{log_dir}/rmserr_{dataset_name}_{it}.tif", dpi=170.7)
 
 if __name__ == '__main__':
 
 
-    config_list = ['arbitrary_3']
+    config_list = ['arbitrary_3','arbitrary_3_3','arbitrary_3_continuous', 'arbitrary_16', 'arbitrary_32', 'arbitrary_64', 'arbitrary_96']
 
     for config_file in config_list:
         # Load parameters from config file
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        print(config.pretty())
+        # print(config.pretty())
 
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7) # config.simulation.n_frames // 5
+        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 8)
         # data_train(config)
-        data_test(config, visualize=True, verbose=True, best_model=20, run=0, step=config.simulation.n_frames // 8)
+        data_test(config, visualize=False, verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 8)
 
 
 
