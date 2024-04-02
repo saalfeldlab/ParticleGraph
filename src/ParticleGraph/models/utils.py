@@ -170,15 +170,19 @@ def plot_training (dataset_name, model_name, log_dir, epoch, N, x, index_particl
             plt.savefig(f"./{log_dir}/tmp_training/embedding/{model_name}_{dataset_name}_{epoch}_{N}.tif", dpi=300)
             plt.close()
 
-def analyze_edge_function(rr=None, vizualize=False, config=None, model_lin_edge=[], model_a=None, dataset_number = 0, n_particles=None, ynorm=None, types=None, cmap=None, device=None):
+def analyze_edge_function(rr=None, vizualize=False, config=None, model_lin_edge=[], model_a=None, dataset_number = 0, n_particles=None, ynorm=None, types=None, cmap=None, dimension=2, device=None):
     func_list = []
     for n in range(n_particles):
         embedding_ = model_a[dataset_number, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
         max_radius = config.simulation.max_radius
         match config.graph_model.particle_model_name:
             case 'PDE_A':
-                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                         rr[:, None] / max_radius, embedding_), dim=1)
+                if dimension==2:
+                    in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                             rr[:, None] / max_radius, embedding_), dim=1)
+                else:
+                    in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                             rr[:, None] / max_radius, embedding_), dim=1)
             case 'PDE_A_bis':
                 in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                          rr[:, None] / max_radius, embedding_, embedding_), dim=1)
@@ -233,6 +237,7 @@ def choose_training_model(model_config, device):
     aggr_type = model_config.graph_model.aggr_type
     n_particle_types = model_config.simulation.n_particle_types
     n_particles = model_config.simulation.n_particles
+    dimension = model_config.simulation.dimension
 
     bc_pos, bc_dpos = choose_boundary_values(model_config.simulation.boundary)
 
@@ -241,7 +246,7 @@ def choose_training_model(model_config, device):
 
     match model_name:
         case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G':
-            model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
+            model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
         case 'PDE_GS':
             model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)

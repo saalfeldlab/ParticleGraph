@@ -46,13 +46,25 @@ def symmetric_cutoff(x, percent=1):
     return x_lower, x_upper
 
 
-def norm_velocity(xx, device):
-    vx = torch.std(xx[:, 3])
-    vy = torch.std(xx[:, 4])
-    nvx = np.array(xx[:, 3].detach().cpu())
-    vx01, vx99 = symmetric_cutoff(nvx)
-    nvy = np.array(xx[:, 4].detach().cpu())
-    vy01, vy99 = symmetric_cutoff(nvy)
+def norm_velocity(xx, dimension, device):
+
+    if dimension == 2:
+        vx = torch.std(xx[:, 3])
+        vy = torch.std(xx[:, 4])
+        nvx = np.array(xx[:, 3].detach().cpu())
+        vx01, vx99 = symmetric_cutoff(nvx)
+        nvy = np.array(xx[:, 4].detach().cpu())
+        vy01, vy99 = symmetric_cutoff(nvy)
+    else:
+        vx = torch.std(xx[:, 4])
+        vy = torch.std(xx[:, 5])
+        vz = torch.std(xx[:, 6])
+        nvx = np.array(xx[:, 4].detach().cpu())
+        vx01, vx99 = symmetric_cutoff(nvx)
+        nvy = np.array(xx[:, 5].detach().cpu())
+        vy01, vy99 = symmetric_cutoff(nvy)
+        nvz = np.array(xx[:, 6].detach().cpu())
+        vz01, vz99 = symmetric_cutoff(nvz)
 
     return torch.tensor([vx01, vx99, vy01, vy99, vx, vy], device=device)
 

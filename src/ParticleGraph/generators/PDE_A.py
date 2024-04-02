@@ -24,19 +24,20 @@ class PDE_A(pyg.nn.MessagePassing):
         the speed of the particles (dimension 2)
     """
 
-    def __init__(self, aggr_type=[], p=[], sigma=[], bc_dpos=[]):
+    def __init__(self, aggr_type=[], p=[], sigma=[], bc_dpos=[], dimension=2):
         super(PDE_A, self).__init__(aggr=aggr_type)  # "mean" aggregation.
 
         self.p = p
         self.sigma = sigma
         self.bc_dpos = bc_dpos
+        self.dimension = dimension
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        particle_type = to_numpy(x[:, 5])
+        particle_type = to_numpy(x[:, 1 + 2*self.dimension])
         parameters = self.p[particle_type,:]
-        d_pos = self.propagate(edge_index, pos=x[:, 1:3], parameters=parameters, sigma=self.sigma)
+        d_pos = self.propagate(edge_index, pos=x[:, 1:self.dimension+1], parameters=parameters, sigma=self.sigma)
         return d_pos
 
     def message(self, pos_i, pos_j, parameters_i):

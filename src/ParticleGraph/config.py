@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 class SimulationConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
+    dimension: int = 2
     connectivity_file: str = ''
     params: list[list[float]]
     min_radius: Annotated[float, Field(ge=0)] = 0

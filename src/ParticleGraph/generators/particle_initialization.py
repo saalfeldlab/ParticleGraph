@@ -14,17 +14,18 @@ def init_particles(config, device, cycle_length=None):
     simulation_config = config.simulation
     n_particles = simulation_config.n_particles
     n_particle_types = simulation_config.n_particle_types
+    dimension = simulation_config.dimension
 
     dpos_init = simulation_config.dpos_init
 
     if cycle_length == None:
         cycle_length = torch.clamp(torch.abs(torch.ones(n_particle_types, 1, device=device) * 400 + torch.randn(n_particle_types, 1, device=device) * 50), min=100, max=700)
 
-    if simulation_config.boundary == 'periodic':
-        pos = torch.rand(n_particles, 2, device=device)
+    if (simulation_config.boundary == 'periodic'): # | (simulation_config.dimension == 3):
+        pos = torch.rand(n_particles, dimension, device=device)
     else:
-        pos = torch.randn(n_particles, 2, device=device) * 0.5
-    dpos = dpos_init * torch.randn((n_particles, 2), device=device)
+        pos = torch.randn(n_particles, dimension, device=device) * 0.5
+    dpos = dpos_init * torch.randn((n_particles, dimension), device=device)
     dpos = torch.clamp(dpos, min=-torch.std(dpos), max=+torch.std(dpos))
     type = torch.zeros(int(n_particles / n_particle_types), device=device)
     for n in range(1, n_particle_types):

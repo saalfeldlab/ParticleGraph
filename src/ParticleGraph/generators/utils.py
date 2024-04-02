@@ -26,6 +26,7 @@ def choose_model(config, device):
     n_particles = config.simulation.n_particles
     n_particle_types = config.simulation.n_particle_types
     bc_pos, bc_dpos = choose_boundary_values(config.simulation.boundary)
+    dimension = config.simulation.dimension
 
     params = config.simulation.params
 
@@ -51,7 +52,7 @@ def choose_model(config, device):
                 print(p)
             sigma = config.simulation.sigma
             p = p if n_particle_types == 1 else torch.squeeze(p)
-            model = PDE_A(aggr_type=aggr_type, p=torch.squeeze(p), sigma=sigma, bc_dpos=bc_dpos)
+            model = PDE_A(aggr_type=aggr_type, p=torch.squeeze(p), sigma=sigma, bc_dpos=bc_dpos, dimension=dimension)
             # matplotlib.use("Qt5Agg")
             # rr = torch.tensor(np.linspace(0, 0.075, 1000)).to(device)
             # for n in range(n_particles):

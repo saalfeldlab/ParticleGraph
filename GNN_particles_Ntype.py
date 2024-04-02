@@ -35,6 +35,8 @@ from ParticleGraph.utils import *
 from ParticleGraph.fitting_models import linear_model
 from ParticleGraph.embedding_cluster import *
 from ParticleGraph.models import Division_Predictor
+from ParticleGraph.Plot3D import *
+
 
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
@@ -47,6 +49,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
 
     print(f'Generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
+    dimension = simulation_config.dimension
     max_radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
@@ -196,7 +199,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                     edge_index = adj_t.nonzero().t().contiguous()
                     dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr)
                 else:
-                    distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
+                    distance = torch.sum(bc_dpos(x[:, None, 1:dimension+1] - x[None, :, 1:dimension+1]) ** 2, dim=2)
                     adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
                     edge_index = adj_t.nonzero().t().contiguous()
                     dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
@@ -433,6 +436,53 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                         # plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Boids_{it}.jpg", dpi=170.7)
                         # plt.close()
 
+                    elif (model_config.particle_model_name == 'PDE_A') & (dimension== 3):
+
+                        fig = plt.figure(figsize=(12, 12))
+                        ax = fig.add_subplot(111, projection='3d')
+                        for n in range(n_particle_types):
+                            ax.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 3]), s=50, color=cmap.color(n))
+                        ax.set_xlim([0, 1])
+                        ax.set_ylim([0, 1])
+                        ax.set_zlim([0, 1])
+
+                        # p = to_numpy(X1)* 10.0 - 5
+                        # p[:, 1] += 2.5
+                        # pos = jp.array(p)
+                        # c = np.zeros((n_particles, 3), dtype=np.float32)
+                        # for n in range(n_particles):
+                        #     cc = cmap.color(to_numpy(T1[n].squeeze()).astype(int))
+                        #     c[n] = cc[0:3]
+                        # color = jp.array(c)
+                        #
+                        # balls = Balls(pos, color)
+                        #
+                        # pl.figure(figsize=(8, 8))
+                        # w, h = 640, 640
+                        # pos0 = jp.float32([4, 25, 30])
+                        # # pos0 = jp.float32([2.5, 15, 17.5])
+                        # ray_dir = camera_rays(-pos0, view_size=(w, h))
+                        # sdf = partial(scene_sdf, balls)
+                        # hit_pos = jax.vmap(partial(raycast, sdf, pos0))(ray_dir)
+                        # # pl.imshow(hit_pos.reshape(h, w, 3)%1.0)
+                        # raw_normal = jax.vmap(jax.grad(sdf))(hit_pos)
+                        # # pl.imshow(raw_normal.reshape(h, w, 3))
+                        # light_dir = normalize(jp.array([1.1, 1.0, 0.2]))
+                        # shadow = jax.vmap(partial(cast_shadow, sdf, light_dir))(hit_pos)
+                        # # pl.imshow(shadow.reshape(h, w))
+                        # f = partial(shade_f, jp.ones(3), light_dir=light_dir)
+                        # frame = jax.vmap(f)(shadow, raw_normal, ray_dir)
+                        # frame = frame ** (1.0 / 2.2)  # gamma correction
+                        # # pl.imshow(frame.reshape(h, w, 3))
+                        # color_sdf = partial(scene_sdf, balls, with_color=True)
+                        # _, surf_color = jax.vmap(color_sdf)(hit_pos)
+                        # f = partial(shade_f, light_dir=light_dir)
+                        # frame = jax.vmap(f)(surf_color, shadow, raw_normal, ray_dir)
+                        # frame = frame ** (1.0 / 2.2)  # gamma correction
+                        # pl.imshow(frame.reshape(h, w, 3))
+                        pl.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
+                        plt.close()
+
                     else:
 
                         matplotlib.rcParams['savefig.pad_inches'] = 0
@@ -543,6 +593,7 @@ def data_train(config):
 
     print(f'Training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
+    dimension = simulation_config.dimension
     n_epochs = train_config.n_epochs
     max_radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
@@ -588,7 +639,7 @@ def data_train(config):
                 y = torch.cat((y, y_list[run][k].clone().detach()), 0)
         print(x_list[run][k].shape)
         time.sleep(0.5)
-    vnorm = norm_velocity(x, device)
+    vnorm = norm_velocity(x, dimension, device)
     ynorm = norm_acceleration(y, device)
     vnorm = vnorm[4]
     ynorm = ynorm[4]
@@ -658,14 +709,20 @@ def data_train(config):
     print('Update variables ...')
     # update variable if particle_dropout, cell_division, etc ...
     x = x_list[1][n_frames - 1].clone().detach()
-    type_list = x[:, 5:6].clone().detach()
+    if dimension == 2:
+        type_list = x[:, 5:6].clone().detach()
+    else:
+        type_list = x[:, 7:8].clone().detach()
     n_particles = x.shape[0]
     print(f'N particles: {n_particles}')
     logger.info(f'N particles: {n_particles}')
     config.simulation.n_particles = n_particles
     index_particles = []
     for n in range(n_particle_types):
-        index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
+        if dimension == 2:
+            index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
+        else:
+            index = np.argwhere(x[:, 7].detach().cpu().numpy() == n)
         index_particles.append(index.squeeze())
     if has_ghost:
         ghosts_particles = Ghost_Particles(config, n_particles, device)
@@ -741,7 +798,7 @@ def data_train(config):
                         y_batch = torch.cat((y_batch, y), dim=0)
                 else:
                     if model.edges == []:
-                        distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
+                        distance = torch.sum(bc_dpos(x[:, None, 1:dimension+1] - x[None, :, 1:dimension+1]) ** 2, dim=2)
                         adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
                         t = torch.Tensor([max_radius ** 2])
                         edges = adj_t.nonzero().t().contiguous()
@@ -878,7 +935,7 @@ def data_train(config):
                                                                     dataset_number=1,
                                                                     n_particles=n_particles, ynorm=ynorm,
                                                                     types=to_numpy(x[:, 5]),
-                                                                    cmap=cmap, device=device)
+                                                                    cmap=cmap, dimension=dimension, device=device)
             else:
                 func_list = []
                 popt_list = []
@@ -1099,6 +1156,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
     n_frames = simulation_config.n_frames
     delta_t = simulation_config.delta_t
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
+    dimension = simulation_config.dimension
 
     print(f'Test data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
@@ -1435,7 +1493,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 if __name__ == '__main__':
 
 
-    config_list = ['arbitrary_64_8000_frames_h256']
+    config_list = ['arbitrary_3_3D','arbitrary_3']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -1445,9 +1503,9 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=False, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 25)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 25)
         data_train(config)
-        data_test(config, visualize=False, verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 25)
+        # data_test(config, visualize=True, verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 25)
 
 
 

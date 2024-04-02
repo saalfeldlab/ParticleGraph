@@ -26,7 +26,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         the acceleration of the particles (dimension 2)
     """
 
-    def __init__(self, config, device, aggr_type=None, bc_dpos=None):
+    def __init__(self, config, device, aggr_type=None, bc_dpos=None, dimension=2):
 
         super(Interaction_Particles, self).__init__(aggr=aggr_type)  # "Add" aggregation.
 
@@ -53,6 +53,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         self.model = model_config.particle_model_name
         self.bc_dpos = bc_dpos
         self.n_ghosts = int(train_config.n_ghosts)
+        self.dimension = dimension
 
         if train_config.large_range:
             self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
@@ -85,8 +86,8 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
-        pos = x[:, 1:3]
-        d_pos = x[:, 3:5]
+        pos = x[:, 1:self.dimension+1]
+        d_pos = x[:, self.dimension+1:1+2*self.dimension]
         particle_id = x[:, 0:1]
 
         pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id)
@@ -108,6 +109,9 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         dpos_y_i = d_pos_i[:, 1] / self.vnorm
         dpos_x_j = d_pos_j[:, 0] / self.vnorm
         dpos_y_j = d_pos_j[:, 1] / self.vnorm
+        if self.dimension == 3:
+            dpos_z_i = d_pos_i[:, 2] / self.vnorm
+            dpos_z_j = d_pos_j[:, 2] / self.vnorm
 
         if self.data_augmentation & (self.training == True):
             new_delta_pos_x = self.cos_phi * delta_pos[:, 0] + self.sin_phi * delta_pos[:, 1]
