@@ -524,14 +524,13 @@ def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoc
 
 def data_plot_FIG2():
 
-    config_name = 'arbitrary_3'
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_name}.yaml')
 
     dataset_name = config.dataset
     embedding_cluster = EmbeddingCluster(config)
 
-    print(config.pretty())
+    # print(config.pretty())
 
     cmap = CustomColorMap(config=config)
     aggr_type = config.graph_model.aggr_type
@@ -769,7 +768,7 @@ def data_plot_FIG2():
     plt.yticks(fontsize=32)
     plt.xlim([0, max_radius])
 
-    plt.ylim([-0.15, 0.15])
+    plt.ylim([-0.04, 0.03])
     # plt.ylim([-0.04, 0.03])
     # plt.ylim([-0.08, 0.08])
     plt.tight_layout()
@@ -781,9 +780,10 @@ def data_plot_FIG2():
     # ax.xaxis.get_major_formatter()._usetex = False
     # ax.yaxis.get_major_formatter()._usetex = False
     p = config.simulation.params
-    for n in range(n_particles):
-        plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n // 1600), linewidth=1,
-                 alpha=0.25)
+    true_func_list = []
+    for n in range(n_particle_types):
+        plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n), linewidth=4,)
+        true_func_list.append(model.psi(rr, p[n], p[n]))
     plt.xlabel(r'$d_{ij}$', fontsize=64)
     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
     plt.xticks(fontsize=32)
@@ -796,6 +796,15 @@ def data_plot_FIG2():
     plt.savefig(f"./{log_dir}/tmp_training/true_func_{dataset_name}.tif", dpi=170.7)
     plt.close()
 
+    func_list = torch.stack(func_list)*ynorm
+    true_func_list = torch.stack(true_func_list)
+
+    rmserr = torch.sqrt(torch.mean((func_list - true_func_list) ** 2))
+    print(f'RMS error: {np.round(rmserr.item(),7)}')
+    rmserr = rmserr / ( torch.max(true_func_list) - torch.min(true_func_list))
+    print(f'RMS error / (max-min): {np.round(rmserr.item(), 7)}')
+
+
 
 def data_plot_FIG8():
 
@@ -806,7 +815,7 @@ def data_plot_FIG8():
     dataset_name = config.dataset
     embedding_cluster = EmbeddingCluster(config)
 
-    print(config.pretty())
+    # print(config.pretty())
 
     cmap = CustomColorMap(config=config)
     aggr_type = config.graph_model.aggr_type
@@ -3724,7 +3733,13 @@ if __name__ == '__main__':
 
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
+    #
+    # epoch=20
+    # config_name = 'arbitrary_32'
+    # data_plot_FIG2()
+
+    data_plot_FIG8()
 
 
-    data_plot_FIG3()
+
 

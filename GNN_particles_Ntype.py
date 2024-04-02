@@ -1386,7 +1386,23 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
                 plt.close()
 
     print(f'RMS error: {np.round(np.mean(rmserr_list) * 100, 2)} +/- {np.round(np.std(rmserr_list) * 100, 2)}')
+
+    plt.rcParams['text.usetex'] = True
+    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+    matplotlib.rcParams['savefig.pad_inches'] = 0
+
+    if n_particle_types>1000:
+        n_particle_types = 3
+    index_particles = []
+    for n in range(n_particle_types):
+        index_particles.append(
+            np.arange((n_particles // n_particle_types) * n, (n_particles // n_particle_types) * (n + 1)))
+    type = torch.zeros(int(n_particles / n_particle_types), device=device)
+    for n in range(1, n_particle_types):
+        type = torch.cat((type, n * torch.ones(int(n_particles / n_particle_types), device=device)), 0)
+
     fig = plt.figure(figsize=(12, 12))
+    ax = fig.add_subplot(1, 1, 1)
     x0_next = x_list[0][it + 1].clone().detach()
     temp1 = torch.cat((x, x0_next), 0)
     temp2 = torch.tensor(np.arange(n_particles), device=device)
@@ -1398,16 +1414,28 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
     pos = dict(enumerate(np.array((temp1[:, 1:3]).detach().cpu()), 0))
     dataset = data.Data(x=temp1[:, 1:3], edge_index=torch.squeeze(temp4[:, p]))
     vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False)
+    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,ax=ax,edge_color='r', width=4)
+    ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True)
+    for n in range(n_particle_types):
+        plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
+                    x[index_particles[n], 2].detach().cpu().numpy(), s=50, color=cmap.color(n))
     plt.xlim([0, 1])
     plt.ylim([0, 1])
-    plt.text(0,1.1,f'RMS error: {np.round(np.mean(rmserr_list) * 100, 2)} +/- {np.round(np.std(rmserr_list) * 100, 2)}')
-    plt.savefig(f"./{log_dir}/rmserr_{dataset_name}_{it}.tif", dpi=170.7)
+    plt.xticks(fontsize=32)
+    plt.yticks(fontsize=32)
+    plt.xlabel(r'$x$', fontsize=64)
+    plt.ylabel(r'$y$', fontsize=64)
+    # plt.text(0,0.9,f'RMS error: {np.round(np.mean(rmserr_list) * 100, 2)} +/- {np.round(np.std(rmserr_list) * 100, 2)} %')
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/rmserr_{dataset_name}_{it+2}.tif", dpi=170.7)
+
+
+
 
 if __name__ == '__main__':
 
 
-    config_list = ['arbitrary_3','arbitrary_3_3','arbitrary_3_continuous', 'arbitrary_16', 'arbitrary_32', 'arbitrary_64', 'arbitrary_96']
+    config_list = ['arbitrary_64_8000_frames_h256']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -1417,9 +1445,9 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 8)
-        # data_train(config)
-        data_test(config, visualize=False, verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 8)
+        data_generate(config, device=device, visualize=False, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 25)
+        data_train(config)
+        data_test(config, visualize=False, verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 25)
 
 
 

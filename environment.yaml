@@ -20,3 +20,4 @@ dependencies:
   - pip:
     - geomloss
     - torch_geometric
+    - ipython

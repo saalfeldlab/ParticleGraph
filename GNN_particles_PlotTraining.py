@@ -328,110 +328,137 @@ def data_plot_training(config, mode, device):
         with torch.no_grad():
             model.a[1] = model_a_.clone().detach()
 
+        if False:
 
+            matplotlib.use("Qt5Agg")
 
+            fig = plt.figure(figsize=(12, 12))
+            ax = fig.add_subplot(1,1,1)
+            # ax.xaxis.get_major_formatter()._usetex = False
+            # ax.yaxis.get_major_formatter()._usetex = False
+            ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+            ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+            ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+            ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+            embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+            if n_particle_types > 1000:
+                plt.scatter(embedding[:, 0], embedding[:, 1], c=to_numpy(x[:, 5]) / n_particles, s=10,
+                            cmap='viridis')
+            else:
+                for n in range(n_particle_types):
+                    pos = np.argwhere(new_labels == n).squeeze().astype(int)
+                    if pos.size>0:
+                        print(n, pos.size,pos[0])
+                        try:
+                            plt.scatter(embedding[pos[0], 0], embedding[pos[0], 1], color=cmap.color(n), s=400)
+                        except:
+                            print(f'error: {pos}')
 
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(1,1,1)
-        # ax.xaxis.get_major_formatter()._usetex = False
-        # ax.yaxis.get_major_formatter()._usetex = False
-        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-        ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
-        if n_particle_types > 1000:
-            plt.scatter(embedding[:, 0], embedding[:, 1], c=to_numpy(x[:, 5]) / n_particles, s=10,
-                        cmap='viridis')
-        else:
-            for n in range(n_particle_types):
+            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
+            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+            # xticks with 1 digit
+
+            plt.xticks(fontsize=32.0)
+            plt.yticks(fontsize=32.0)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.tif",dpi=170.7)
+            plt.close()
+
+            fig = plt.figure(figsize=(12, 12))
+            ax = fig.add_subplot(1,1,1)
+            # ax.xaxis.get_major_formatter()._usetex = False
+            # ax.yaxis.get_major_formatter()._usetex = False
+            ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+            ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+            func_list = []
+            for n in range(n_particles):
                 pos = np.argwhere(new_labels == n).squeeze().astype(int)
-                if pos.size>0:
-                    plt.scatter(embedding[pos[0], 0], embedding[pos[0], 1], color=cmap.color(n), s=400)
+                if pos.size > 0:
+                    embedding_ = model.a[1, pos[0], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                    match config.graph_model.particle_model_name:
+                        case 'PDE_A':
+                            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                     rr[:, None] / max_radius, embedding_), dim=1)
+                        case 'PDE_A_bis':
+                            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                     rr[:, None] / max_radius, embedding_, embedding_), dim=1)
+                        case 'PDE_B' | 'PDE_B_bis':
+                            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                     rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                                     0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                        case 'PDE_G':
+                            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                     rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                                     0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                        case 'PDE_GS':
+                            in_features = torch.cat((rr[:, None] / max_radius, embedding_), dim=1)
+                        case 'PDE_E':
+                            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                     rr[:, None] / max_radius, embedding_, embedding_), dim=-1)
+                    with torch.no_grad():
+                        func = model.lin_edge(in_features.float())
+                    func = func[:, 0]
+                    func_list.append(func)
+                    plt.plot(to_numpy(rr),
+                             to_numpy(func) * to_numpy(ynorm),
+                             color=cmap.color(n), linewidth=8)
+                    # plt.plot(to_numpy(rr),
+                    #          to_numpy(model.psi(rr, p[n], p[n])),
+                    #          color=cmap.color(n), linewidth=1)
+            plt.xlabel(r'$d_{ij}$', fontsize=64)
+            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+            plt.xticks(fontsize=32)
+            plt.yticks(fontsize=32)
+            plt.xlim([0, max_radius])
+            # # plt.ylim([-0.15, 0.15])
+            # plt.ylim([-0.04, 0.03])
+            plt.ylim([-0.1, 0.1])
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.tif",dpi=170.7)
+            plt.close()
 
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
-        # xticks with 1 digit
 
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.tif",dpi=170.7)
-        plt.close()
 
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(1,1,1)
-        # ax.xaxis.get_major_formatter()._usetex = False
-        # ax.yaxis.get_major_formatter()._usetex = False
-        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-        func_list = []
-        for n in range(n_particle_types):
-            pos = np.argwhere(new_labels == n).squeeze().astype(int)
-            if pos.size > 0:
-                embedding_ = model.a[1, pos[0], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-                match config.graph_model.particle_model_name:
-                    case 'PDE_A':
-                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                                 rr[:, None] / max_radius, embedding_), dim=1)
-                    case 'PDE_A_bis':
-                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                                 rr[:, None] / max_radius, embedding_, embedding_), dim=1)
-                    case 'PDE_B' | 'PDE_B_bis':
-                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                                 rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
-                                                 0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-                    case 'PDE_G':
-                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                                 rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
-                                                 0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-                    case 'PDE_GS':
-                        in_features = torch.cat((rr[:, None] / max_radius, embedding_), dim=1)
-                    case 'PDE_E':
-                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                                 rr[:, None] / max_radius, embedding_, embedding_), dim=-1)
-                with torch.no_grad():
-                    func = model.lin_edge(in_features.float())
-                func = func[:, 0]
-                func_list.append(func)
-                plt.plot(to_numpy(rr),
-                         to_numpy(func) * to_numpy(ynorm),
-                         color=cmap.color(n), linewidth=8)
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
-        plt.xticks(fontsize=32)
-        plt.yticks(fontsize=32)
-        plt.xlim([0, max_radius])
-        # plt.ylim([-0.15, 0.15])
-        plt.ylim([-0.04, 0.03])
-        # plt.ylim([-0.1, 0.1])
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.tif",dpi=170.7)
-        plt.close()
+            func_list = torch.stack(func_list) * ynorm
 
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(1,1,1)
-        # ax.xaxis.get_major_formatter()._usetex = False
-        # ax.yaxis.get_major_formatter()._usetex = False
-        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-        if os.path.exists(f'graphs_data/graphs_{dataset_name}/model_p.pt'):
-            p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt',map_location=device)
-        else:
-            p = config.simulation.params
-        for n in range(n_particle_types):
+            true_func_list = []
+            for n in range(n_particles):
+                pos = np.argwhere(new_labels == n).squeeze().astype(int)
+                if pos.size > 0:
+                    true_func_list.append(model.psi(rr, p[n], p[n]))
+            true_func_list = torch.stack(true_func_list)
+            rmserr = torch.sqrt(torch.mean((func_list - true_func_list) ** 2))
+            print(f'RMS error: {np.round(rmserr.item(), 7)}')
+
+
+
+
+            fig = plt.figure(figsize=(12, 12))
+            ax = fig.add_subplot(1,1,1)
+            # ax.xaxis.get_major_formatter()._usetex = False
+            # ax.yaxis.get_major_formatter()._usetex = False
+            ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+            ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+            if os.path.exists(f'graphs_data/graphs_{dataset_name}/model_p.pt'):
+                p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt',map_location=device)
+            else:
+                p = config.simulation.params
+            for n in range(n_particle_types):
                 plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n), linewidth=8)
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
-        plt.xticks(fontsize=32)
-        plt.yticks(fontsize=32)
-        plt.xlim([0, max_radius])
-        # plt.ylim([-0.15, 0.15])
-        plt.ylim([-0.04, 0.03])
-        # plt.ylim([-0.1, 0.1])
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/true_func_{dataset_name}.tif",dpi=170.7)
-        plt.close()
+
+            plt.xlabel(r'$d_{ij}$', fontsize=64)
+            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+            plt.xticks(fontsize=32)
+            plt.yticks(fontsize=32)
+            plt.xlim([0, max_radius])
+            # # plt.ylim([-0.15, 0.15])
+            # plt.ylim([-0.04, 0.03])
+            plt.ylim([-0.1, 0.1])
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/tmp_training/true_func_{dataset_name}.tif",dpi=170.7)
+            plt.close()
+
+
 
 def data_plot_training_asym(config, mode, device):
     print('')
@@ -782,7 +809,7 @@ def data_plot_training_asym(config, mode, device):
         # xticks with sans serif font
         plt.xticks(fontsize=32)
         plt.yticks(fontsize=32)
-        plt.ylim([-0.15, 0.15])
+        plt.ylim([-0.03, 0.03])
         plt.xlim([0, max_radius])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.tif", dpi=170.7)
@@ -800,19 +827,27 @@ def data_plot_training_asym(config, mode, device):
         # ax.yaxis.get_major_formatter()._usetex = False
         ax.xaxis.set_major_locator(plt.MaxNLocator(3))
         ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+        true_func_list=[]
         for n in range(n_particle_types):
             for m in range(n_particle_types):
                 plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[3*n + m], p[n*3 +m])), color=cmap.color(n), linewidth=8)
+                true_func_list.append(model.psi(rr, p[3*n + m], p[n*3 +m]))
         plt.xlabel(r'$d_{ij}$', fontsize=64)
         plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
         # xticks with sans serif font
         plt.xticks(fontsize=32)
         plt.yticks(fontsize=32)
-        plt.ylim([-0.15, 0.15])
+        plt.ylim([-0.03, 0.03])
         plt.xlim([0, max_radius])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/true_func_{dataset_name}.tif", dpi=170.7)
         plt.close()
+
+        func_list = torch.stack(func_list) * ynorm
+        true_func_list = torch.stack(true_func_list)
+
+        rmserr = torch.sqrt(torch.mean((func_list - true_func_list) ** 2))
+        print(f'RMS error: {np.round(rmserr.item(), 7)}')
 
 def data_plot_training_continuous(config, mode, device):
     print('')
@@ -950,7 +985,7 @@ def data_plot_training_continuous(config, mode, device):
     # plt.rcParams["font.sans-serif"] = ["Helvetica Neue", "HelveticaNeue", "Helvetica-Neue", "Helvetica", "Arial",
     #                                    "Liberation"]
 
-    epoch_list = [18]
+    epoch_list = [20]
     for epoch in epoch_list:
 
         net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_{epoch}.pt"
@@ -1030,8 +1065,11 @@ def data_plot_training_continuous(config, mode, device):
             p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt')
         else:
             p = config.simulation.params
+        true_func_list = []
         for n in range(n_particles):
-                plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n//1600), linewidth=8,alpha=0.1)
+            plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n//1600), linewidth=8,alpha=0.1)
+            true_func_list.append(model.psi(rr, p[n], p[n]))
+
         plt.xlabel(r'$d_{ij}$', fontsize=64)
         plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
         plt.xticks(fontsize=32)
@@ -1044,6 +1082,12 @@ def data_plot_training_continuous(config, mode, device):
         plt.savefig(f"./{log_dir}/tmp_training/true_func_{dataset_name}.tif",dpi=170.7)
         plt.close()
 
+        func_list = torch.stack(func_list) * ynorm
+        true_func_list = torch.stack(true_func_list)
+
+        rmserr = torch.sqrt(torch.mean((func_list - true_func_list) ** 2))
+        print(f'RMS error: {np.round(rmserr.item(), 7)}')
+
 
 if __name__ == '__main__':
 
@@ -1051,13 +1095,13 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list =['arbitrary_3']
+    config_list = ['arbitrary_64_8000_frames']
 
     for config_file in config_list:
 
         # Load parameters from config file
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        print(config.pretty())
+        # print(config.pretty())
 
         device = set_device(config.training.device)
         print(f'device {device}')
