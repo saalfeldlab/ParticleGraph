@@ -21,7 +21,7 @@ class PDE_N(pyg.nn.MessagePassing):
     """
 
     def __init__(self, aggr_type=[], p=[], bc_dpos=[]):
-        super(PDE_N, self).__init__(aggr=aggr_type)  # "mean" aggregation.
+        super(PDE_N, self).__init__(aggr=aggr_type)
 
         self.p = p
         self.bc_dpos = bc_dpos

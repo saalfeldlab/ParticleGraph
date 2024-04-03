@@ -49,6 +49,7 @@ def data_plot_training(config, mode, device):
 
     print(f'Plot training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
+    dimension = simulation_config.dimension
     n_epochs = train_config.n_epochs
     radius = simulation_config.max_radius
     n_particle_types = simulation_config.n_particle_types
@@ -99,7 +100,7 @@ def data_plot_training(config, mode, device):
                 x = torch.cat((x,x_list[run][k].clone().detach()),0)
                 y = torch.cat((y,y_list[run][k].clone().detach()),0)
         print(x_list[run][k].shape)
-    vnorm = norm_velocity(x, device)
+    vnorm = norm_velocity(x, dimension, device)
     ynorm = norm_acceleration(y, device)
     vnorm = vnorm[4]
     ynorm = ynorm[4]
@@ -1095,7 +1096,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_64_8000_frames']
+    config_list = ['arbitrary_3']
 
     for config_file in config_list:
 

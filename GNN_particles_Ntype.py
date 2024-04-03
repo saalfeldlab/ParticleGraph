@@ -35,7 +35,7 @@ from ParticleGraph.utils import *
 from ParticleGraph.fitting_models import linear_model
 from ParticleGraph.embedding_cluster import *
 from ParticleGraph.models import Division_Predictor
-from ParticleGraph.Plot3D import *
+# from ParticleGraph.Plot3D import *
 
 
 
@@ -106,7 +106,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
         adjacency = torch.tensor(mat['A'], device=device)
         adj_t = adjacency > 0
         edge_index = adj_t.nonzero().t().contiguous()
-        edge_attr = adjacency[adj_t]
+        edge_attr_adjacency = adjacency[adj_t]
 
     for run in range(config.training.n_runs):
 
@@ -197,7 +197,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                 if has_adjacency_matrix:
                     adj_t = adjacency > 0
                     edge_index = adj_t.nonzero().t().contiguous()
-                    dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr)
+                    dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
                 else:
                     distance = torch.sum(bc_dpos(x[:, None, 1:dimension+1] - x[None, :, 1:dimension+1]) ** 2, dim=2)
                     adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
@@ -605,6 +605,7 @@ def data_train(config):
     data_augmentation = train_config.data_augmentation
     data_augmentation_loop = train_config.data_augmentation_loop
     target_batch_size = train_config.batch_size
+    has_adjacency_matrix = (simulation_config.connectivity_file != '')
     has_mesh = (config.graph_model.mesh_model_name != '')
     replace_with_cluster = 'replace' in train_config.sparsity
     has_ghost = train_config.n_ghosts > 0
@@ -639,10 +640,14 @@ def data_train(config):
                 y = torch.cat((y, y_list[run][k].clone().detach()), 0)
         print(x_list[run][k].shape)
         time.sleep(0.5)
-    vnorm = norm_velocity(x, dimension, device)
-    ynorm = norm_acceleration(y, device)
-    vnorm = vnorm[4]
-    ynorm = ynorm[4]
+    if (model_config.particle_model_name == 'PDE_N'):
+        vnorm = torch.tensor(1.0, device=device)
+        ynorm = torch.tensor(1.0, device=device)
+    else:
+        vnorm = norm_velocity(x, dimension, device)
+        ynorm = norm_acceleration(y, device)
+        vnorm = vnorm[4]
+        ynorm = ynorm[4]
     torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
     torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
     time.sleep(0.5)
@@ -735,6 +740,13 @@ def data_train(config):
         mask_ghost = np.argwhere(mask_ghost == 1)
         mask_ghost = mask_ghost[:, 0].astype(int)
 
+    if has_adjacency_matrix:
+        mat = scipy.io.loadmat(simulation_config.connectivity_file)
+        adjacency = torch.tensor(mat['A'], device=device)
+        adj_t = adjacency > 0
+        edge_index = adj_t.nonzero().t().contiguous()
+        model.edges = edge_index
+
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
@@ -763,7 +775,7 @@ def data_train(config):
         if (has_mesh) & (batch_size == 1):
             Niter = Niter // 4
 
-        for N in range(Niter):
+        for N in trange(Niter):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -797,17 +809,18 @@ def data_train(config):
                     else:
                         y_batch = torch.cat((y_batch, y), dim=0)
                 else:
-                    if model.edges == []:
+                    if has_adjacency_matrix:
+                        dataset = data.Data(x=x[:, :], edge_index=model.edges)
+                    else:
                         distance = torch.sum(bc_dpos(x[:, None, 1:dimension+1] - x[None, :, 1:dimension+1]) ** 2, dim=2)
                         adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
                         t = torch.Tensor([max_radius ** 2])
                         edges = adj_t.nonzero().t().contiguous()
                         dataset = data.Data(x=x[:, :], edge_index=edges)
-                    else:
-                        dataset = data.Data(x=x[:, :], edge_index=model.edges)
+
                     dataset_batch.append(dataset)
                     y = y_list[run][k].clone().detach()
-                    if model_config.prediction == '2nd_derivative':
+                    if (model_config.prediction == '2nd_derivative') | (model_config.particle_model_name == 'PDE_N'):
                         y = y / ynorm
                     else:
                         y = y / vnorm
@@ -920,7 +933,15 @@ def data_train(config):
         plt.xlabel('Embedding 0', fontsize=12)
         plt.ylabel('Embedding 1', fontsize=12)
 
-        if (simulation_config.n_interactions < 100) & (simulation_config.has_cell_division == False):
+        if (model_config.particle_model_name == 'PDE_N'):
+            ax = fig.add_subplot(1, 6, 3)
+            gt_weight = to_numpy(adjacency[adj_t])
+            pred_weight = to_numpy(model.weight_ij[adj_t])
+            plt.scatter(gt_weight, pred_weight, s=0.1,c='k')
+            plt.xlabel('gt weight', fontsize=12)
+            plt.ylabel('predicted weight', fontsize=12)
+
+        elif (simulation_config.n_interactions < 100) & (simulation_config.has_cell_division == False):
 
             ax = fig.add_subplot(1, 6, 3)
             if model_config.particle_model_name == 'PDE_G':
@@ -1145,6 +1166,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
     dataset_name = config.dataset
     simulation_config = config.simulation
     model_config = config.graph_model
+    has_adjacency_matrix = (simulation_config.connectivity_file != '')
     has_mesh = (config.graph_model.mesh_model_name != '')
     only_mesh = (config.graph_model.particle_model_name == '') & has_mesh
     has_division = simulation_config.has_cell_division
@@ -1174,6 +1196,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
         net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_{best_model}.pt"
     print('Graph files N: ', NGraphs - 1)
     print(f'network: {net}')
+
     model, bc_pos, bc_dpos = choose_training_model(config, device)
     table = PrettyTable(["Modules", "Parameters"])
     total_params = 0
@@ -1186,25 +1209,26 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
     if verbose:
         print(table)
         print(f"Total Trainable Params: {total_params}")
-    if has_mesh:
-        mesh_model, bc_pos, bc_dpos = choose_training_model(config, device)
-        state_dict = torch.load(net, map_location=device)
-        mesh_model.load_state_dict(state_dict['model_state_dict'])
-        mesh_model.eval()
-    else:
-        state_dict = torch.load(net, map_location=device)
-        model.load_state_dict(state_dict['model_state_dict'])
-        model.eval()
-        mesh_model = None
-    if has_division:
-        model_division = Division_Predictor(config, device)
-        net = f"./log/try_{dataset_name}/models/best_model_division_with_{NGraphs - 1}_graphs_20.pt"
-        state_dict = torch.load(net, map_location=device)
-        model_division.load_state_dict(state_dict['model_state_dict'])
-        model_division.eval()
-    if os.path.isfile(os.path.join(log_dir, f'labels_{best_model}.pt')):
-        print('Use learned labels')
-        labels = torch.load(os.path.join(log_dir, f'labels_{best_model}.pt'))
+    if test_simulation==False:
+        if has_mesh:
+            mesh_model, bc_pos, bc_dpos = choose_training_model(config, device)
+            state_dict = torch.load(net, map_location=device)
+            mesh_model.load_state_dict(state_dict['model_state_dict'])
+            mesh_model.eval()
+        else:
+            state_dict = torch.load(net, map_location=device)
+            model.load_state_dict(state_dict['model_state_dict'])
+            model.eval()
+            mesh_model = None
+        if has_division:
+            model_division = Division_Predictor(config, device)
+            net = f"./log/try_{dataset_name}/models/best_model_division_with_{NGraphs - 1}_graphs_20.pt"
+            state_dict = torch.load(net, map_location=device)
+            model_division.load_state_dict(state_dict['model_state_dict'])
+            model_division.eval()
+        if os.path.isfile(os.path.join(log_dir, f'labels_{best_model}.pt')):
+            print('Use learned labels')
+            labels = torch.load(os.path.join(log_dir, f'labels_{best_model}.pt'))
 
     # nparticles larger than initially
     if ratio > 1:
@@ -1293,6 +1317,12 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
         mask_mesh = torch.tensor(mask_mesh, dtype=torch.bool, device=device)
 
         # plt.scatter(x_, y_, s=2, c=to_numpy(mask_mesh))
+    if has_adjacency_matrix:
+        mat = scipy.io.loadmat(simulation_config.connectivity_file)
+        adjacency = torch.tensor(mat['A'], device=device)
+        adj_t = adjacency > 0
+        edge_index = adj_t.nonzero().t().contiguous()
+        edge_attr_adjacency = adjacency[adj_t]
 
     rmserr_list= []
     time.sleep(1)
@@ -1301,7 +1331,10 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
         x0 = x_list[0][it].clone().detach()
         y0 = y_list[0][it].clone().detach()
 
-        rmserr = torch.sqrt(torch.mean(torch.sum((x[:, 1:3] - x0[:, 1:3]) ** 2, axis=1)))
+        if model_config.particle_model_name == 'PDE_N':
+            rmserr = torch.sqrt(torch.mean(torch.sum((x[:, 6:7] - x0[:, 6:7]) ** 2, axis=1)))
+        else:
+            rmserr = torch.sqrt(torch.mean(torch.sum((x[:, 1:3] - x0[:, 1:3]) ** 2, axis=1)))
         rmserr_list.append(rmserr.item())
 
         if has_mesh:
@@ -1328,13 +1361,13 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
                 x_ghost = model_ghost.get_pos(dataset_id=run, frame=it)
                 x_ = torch.cat((x_, x_ghost), 0)
 
-            distance = torch.sum(bc_dpos(x_[:, None, 1:3] - x_[None, :, 1:3]) ** 2, dim=2)
-            t = torch.Tensor([max_radius ** 2])  # threshold
-            adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-
-            edge_index = adj_t.nonzero().t().contiguous()
-
-            dataset = data.Data(x=x_, edge_index=edge_index)
+            if has_adjacency_matrix:
+                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+            else:
+                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                edge_index = adj_t.nonzero().t().contiguous()
+                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
 
             if test_simulation:
                 y = y0 / ynorm
@@ -1351,7 +1384,10 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
                 x[:, 3:5] = x[:, 3:5] + y  # speed update
             else:
                 y = y * vnorm
-                x[:, 3:5] = y
+                if model_config.particle_model_name == 'PDE_N':
+                    x[:, 6:7] += y * delta_t    # signal update
+                else:
+                    x[:, 3:5] = y
 
             if has_division:
                 x_time = torch.concatenate((x[:, 0:1], torch.ones_like(x[:, 0:1], device=device) * it), dim=1)
@@ -1371,12 +1407,13 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
             # matplotlib.use("Qt5Agg")
             matplotlib.rcParams['savefig.pad_inches'] = 0
             fig = plt.figure(figsize=(12, 12))
-            if (has_mesh | (simulation_config.boundary == 'periodic')) & (
-                    model_config.mesh_model_name != 'RD_RPS_Mesh'):
+            if  (model_config.particle_model_name == 'PDE_N'):
+                ax = fig.add_subplot(1, 1, 1)
+            elif (has_mesh | (simulation_config.boundary == 'periodic')) & (model_config.mesh_model_name != 'RD_RPS_Mesh'):
                 ax = plt.axes([0, 0, 1, 1], frameon=False)
-            if model_config.particle_model_name == 'PDE_G':
+            elif model_config.particle_model_name == 'PDE_G':
                 ax = plt.axes([-2, -2, 2, 2], frameon=False)
-            if model_config.particle_model_name == 'PDE_GS':
+            elif model_config.particle_model_name == 'PDE_GS':
                 ax = plt.axes([-0.5E10, -0.5E10, 0.5E10, 0.5E10], frameon=False)
             ax.get_xaxis().set_visible(False)
             ax.get_yaxis().set_visible(False)
@@ -1414,6 +1451,15 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
                     plt.xticks([])
                     plt.yticks([])
                     plt.axis('off')
+            elif model_config.particle_model_name == 'PDE_N':
+                # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=30, c=to_numpy(x[:,6]), cmap='viridis')
+                plt.plot(to_numpy(x0[:, 6:7]), to_numpy(x[:, 6:7]), '.')
+                plt.plot(to_numpy(y0[:, 0]), to_numpy(y[:, 0]), '.')
+                plt.xlim([-1,1])
+                plt.ylim([-1,1])
+                ax.get_xaxis().set_visible(False)
+                ax.get_yaxis().set_visible(False)
+                plt.autoscale(tight=True)
             else:
                 s_p = 50
                 if simulation_config.has_cell_division:
@@ -1421,8 +1467,6 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
                 for n in range(n_particle_types):
                     plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                 x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
-            plt.xlim([0, 1])
-            plt.ylim([0, 1])
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/tmp_recons/Fig_{dataset_name}_{it}.tif", dpi=170.7)
             plt.close()
@@ -1493,7 +1537,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 if __name__ == '__main__':
 
 
-    config_list = ['arbitrary_3_3D','arbitrary_3']
+    config_list = ['signal_N']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -1503,9 +1547,9 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 25)
+        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 200)
         data_train(config)
-        # data_test(config, visualize=True, verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 25)
+        # data_test(config, visualize=True, verbose=False, best_model=1, run=1, step=config.simulation.n_frames // 25, test_simulation=False)
 
 
 
