@@ -50,9 +50,7 @@ class Signal_Propagation(pyg.nn.MessagePassing):
         self.lin_phi = MLP(input_size=self.input_size_update, output_size=self.output_size, nlayers=self.n_layers_update,
                            hidden_size=self.hidden_dim_update, device=self.device)
 
-        self.a = nn.Parameter(
-            torch.ones((int(self.n_dataset), int(self.n_particles), self.embedding_dim), device=self.device,
-                         requires_grad=True, dtype=torch.float32))
+        self.a = nn.Parameter(torch.zeros((self.n_dataset,int(self.n_particles), self.embedding_dim), device=self.device, requires_grad=True, dtype=torch.float32))
 
         self.vals = nn.Parameter(torch.zeros((int(self.n_particles*(self.n_particles+1)/2)), device=self.device, requires_grad=True, dtype=torch.float32))
 
@@ -65,7 +63,7 @@ class Signal_Propagation(pyg.nn.MessagePassing):
         msg = self.propagate(edge_index, u=u)
 
         particle_id = to_numpy(x[:, 0])
-        embedding = self.a[self.data_id, particle_id, :]
+        embedding = self.a[1, particle_id, :]   # common embedding for all dataset
 
         input_phi = torch.cat((msg, u, embedding), dim=-1)
 

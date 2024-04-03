@@ -1,5 +1,5 @@
 description: 'Gravity model with 16 different particle types'
-dataset: 'signal_N_10'
+dataset: 'signal_N_100'
 
 simulation:
     connectivity_file: 'graphs_data/Brain.mat'
@@ -39,7 +39,7 @@ training:
     n_epochs: 20
     batch_size: 1
     small_init_batch_size: False
-    n_runs: 10
+    n_runs: 100
     large_range: False
     learning_rate_start: 0.000001
     learning_rate_end: 0.0000005
@@ -47,7 +47,7 @@ training:
     learning_rate_embedding_end: 0.0001
     sparsity: 'none'
     data_augmentation: False
-    data_augmentation_loop: 10
+    data_augmentation_loop: 100
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'

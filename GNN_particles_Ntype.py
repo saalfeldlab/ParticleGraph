@@ -775,7 +775,7 @@ def data_train(config):
         if (has_mesh) & (batch_size == 1):
             Niter = Niter // 4
 
-        for N in trange(Niter):
+        for N in range(Niter):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -951,11 +951,15 @@ def data_train(config):
             else:
                 rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
             if has_mesh == False:
+                if dimension == 2:
+                    column_dimension = 5
+                if dimension == 3:
+                    column_dimension = 7
                 func_list, proj_interaction = analyze_edge_function(rr=rr, vizualize=True, config=config,
                                                                     model_lin_edge=model.lin_edge, model_a=model.a,
                                                                     dataset_number=1,
                                                                     n_particles=n_particles, ynorm=ynorm,
-                                                                    types=to_numpy(x[:, 5]),
+                                                                    types=to_numpy(x[:,column_dimension]),
                                                                     cmap=cmap, dimension=dimension, device=device)
             else:
                 func_list = []
@@ -1404,7 +1408,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 
             # plt.style.use('dark_background')
 
-            # matplotlib.use("Qt5Agg")
+            matplotlib.use("Qt5Agg")
             matplotlib.rcParams['savefig.pad_inches'] = 0
             fig = plt.figure(figsize=(12, 12))
             if  (model_config.particle_model_name == 'PDE_N'):
@@ -1455,11 +1459,11 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
                 # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=30, c=to_numpy(x[:,6]), cmap='viridis')
                 plt.plot(to_numpy(x0[:, 6:7]), to_numpy(x[:, 6:7]), '.')
                 plt.plot(to_numpy(y0[:, 0]), to_numpy(y[:, 0]), '.')
-                plt.xlim([-1,1])
-                plt.ylim([-1,1])
+                plt.xlim([0,1])
+                plt.ylim([0,1])
                 ax.get_xaxis().set_visible(False)
                 ax.get_yaxis().set_visible(False)
-                plt.autoscale(tight=True)
+                # plt.autoscale(tight=True)
             else:
                 s_p = 50
                 if simulation_config.has_cell_division:
@@ -1487,7 +1491,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
                 plt.savefig(f"./{log_dir}/tmp_recons/Ghost_{dataset_name}_{it}.tif", dpi=170.7)
                 plt.close()
 
-    print(f'RMS error: {np.round(np.mean(rmserr_list) * 100, 2)} +/- {np.round(np.std(rmserr_list) * 100, 2)}')
+    print(f'RMS error: {np.round(np.mean(rmserr_list), 4)} +/- {np.round(np.std(rmserr_list), 4)}')
 
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
@@ -1548,8 +1552,8 @@ if __name__ == '__main__':
         print(f'device {device}')
 
         # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 200)
-        data_train(config)
-        # data_test(config, visualize=True, verbose=False, best_model=1, run=1, step=config.simulation.n_frames // 25, test_simulation=False)
+        # data_train(config)
+        data_test(config, visualize=True, verbose=False, best_model=11, run=0, step=config.simulation.n_frames // 25, test_simulation=False)
 
 
 
