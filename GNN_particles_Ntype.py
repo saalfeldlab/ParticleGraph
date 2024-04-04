@@ -226,15 +226,8 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                             x_removed_list.append(x[inv_particle_dropout_mask].clone().detach())
                             y_list.append(y[particle_dropout_mask].clone().detach())
                         else:
-                            if noise_level > 0:
-                                x_ = x.clone().detach()
-                                x_[:, 1:3] = bc_pos(x_[:, 1:3] + torch.randn_like(x_[:, 1:3]) * max_radius * noise_level)
-                                y_ = y.clone().detach() + torch.randn_like(y) * torch.std(y) * noise_level * 0
-                                x_list.append(x_.clone().detach())
-                                y_list.append(y_.clone().detach())
-                            else:
-                                x_list.append(x.clone().detach())
-                                y_list.append(y.clone().detach())
+                            x_list.append(x.clone().detach())
+                            y_list.append(y.clone().detach())
                             if (run == 1) & (it == 200):
                                 torch.save(x, f'graphs_data/graphs_{dataset_name}/x_200.pt')
                                 torch.save(y, f'graphs_data/graphs_{dataset_name}/y_200.pt')
@@ -392,11 +385,14 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                         matplotlib.rcParams['savefig.pad_inches'] = 0
                         fig = plt.figure(figsize=(12, 12))
                         ax = plt.axes([0, 0, 1, 1], frameon=False)
-
-                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=30, c=to_numpy(H1[:, 0]), cmap='viridis')
+                        pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
+                        vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
+                        nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False, alpha=0.025)
+                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=100, c=to_numpy(H1[:, 0]), cmap='viridis')
                         ax.get_xaxis().set_visible(False)
                         ax.get_yaxis().set_visible(False)
-                        plt.autoscale(tight=True)
+                        plt.xlim([-1.5, 1.5])
+                        plt.ylim([-1.5, 1.5])
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
                         plt.close()
 
@@ -437,7 +433,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                         # plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Boids_{it}.jpg", dpi=170.7)
                         # plt.close()
 
-                    elif (model_config.particle_model_name == 'PDE_A') & (dimension== 3):
+                    elif (model_config.particle_model_name == 'PDE_A') & (dimension == 3):
 
                         fig = plt.figure(figsize=(12, 12))
                         ax = fig.add_subplot(111, projection='3d')
@@ -488,13 +484,13 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
 
                         matplotlib.rcParams['savefig.pad_inches'] = 0
                         fig = plt.figure(figsize=(12, 12))
-                        # if (has_mesh | (simulation_config.boundary == 'periodic')):
-                        #     ax = plt.axes([0, 0, 1, 1], frameon=False)
-                        # else:
-                        #     ax = plt.axes([-2, -2, 2, 2], frameon=False)
-                        # ax.get_xaxis().set_visible(False)
-                        # ax.get_yaxis().set_visible(False)
-                        # plt.autoscale(tight=True)
+                        if (has_mesh | (simulation_config.boundary == 'periodic')):
+                            ax = plt.axes([0, 0, 1, 1], frameon=False)
+                        else:
+                            ax = plt.axes([-2, -2, 2, 2], frameon=False)
+                        ax.get_xaxis().set_visible(False)
+                        ax.get_yaxis().set_visible(False)
+                        plt.autoscale(tight=True)
                         if has_mesh:
                             pts = x_mesh[:, 1:3].detach().cpu().numpy()
                             tri = Delaunay(pts)
@@ -585,6 +581,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
             torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
 
 
+
 def data_train(config, device):
 
     has_mesh = (config.graph_model.mesh_model_name != '')
@@ -596,6 +593,7 @@ def data_train(config, device):
         data_train_signal(config, device)
     else:
         data_train_particles(config, device)
+
 
 
 def data_train_particles(config, device):
@@ -612,6 +610,8 @@ def data_train_particles(config, device):
     max_radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
+    delta_t = simulation_config.delta_t
+    noise_level = train_config.noise_level
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
     has_cell_division = simulation_config.has_cell_division
@@ -753,8 +753,19 @@ def data_train_particles(config, device):
 
             for batch in range(batch_size):
 
-                k = np.random.randint(n_frames - 1)
+                k = 1 + np.random.randint(n_frames - 2)
                 x = x_list[run][k].clone().detach()
+
+                if noise_level > 0:
+                    x_prev = x_list[run][k-1].clone().detach()
+                    x_next = x_list[run][k+1].clone().detach()
+                    x[:, 1:dimension + 1] += torch.randn_like(x[:, 1:dimension + 1]) * noise_level
+                    x_prev[:, 1:dimension + 1] += torch.randn_like(x_prev[:, 1:dimension + 1]) * noise_level
+                    x_next[:, 1:dimension + 1] += torch.randn_like(x_next[:, 1:dimension + 1]) * noise_level
+                    if dimension == 2:
+                        x[:, 3:5] =  (x[:, 1:3] - x_prev[:, 1:3]) / delta_t
+                    else:
+                        x[:, 4:7] =  (x[:, 1:4] - x_prev[:, 1:4]) / delta_t
 
                 if has_ghost:
                     if train_config.ghost_method == 'MLP':
@@ -763,15 +774,20 @@ def data_train_particles(config, device):
                         x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k)
                     x = torch.cat((x, x_ghost), 0)
 
-                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2,
-                                     dim=2)
+                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
                 adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
                 t = torch.Tensor([max_radius ** 2])
                 edges = adj_t.nonzero().t().contiguous()
                 dataset = data.Data(x=x[:, :], edge_index=edges)
-
                 dataset_batch.append(dataset)
+
                 y = y_list[run][k].clone().detach()
+                if noise_level > 0:
+                    if model_config.prediction == '2nd_derivative':
+                        y = (x_next[:, 1:dimension + 1] - 2*x[0:n_particles, 1:dimension + 1] + x_prev[:, 1:dimension + 1]) / (delta_t**2)
+                    else:
+                        y = (x_next[:, 1:dimension + 1] - x[0:n_particles, 1:dimension + 1]) / (delta_t)
+
                 y = y / ynorm
 
                 if data_augmentation:
@@ -1681,7 +1697,6 @@ def data_train_signal(config, device):
 
 
 
-
 def data_test(config, visualize=False, verbose=True, best_model=20, step=5, ratio=1, run=1, test_simulation=False):
     print('')
 
@@ -2054,11 +2069,10 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 
 
 
-
 if __name__ == '__main__':
 
 
-    config_list = ['RD_RPS']
+    config_list = ['arbitrary_16_noise_1E-4_ghost','arbitrary_16_noise_1E-5_ghost']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -2068,7 +2082,7 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 200)
+        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
         data_train(config, device)
         # data_test(config, visualize=True, verbose=False, best_model=8, run=0, step=config.simulation.n_frames // 25, test_simulation=False, device=device)
 
