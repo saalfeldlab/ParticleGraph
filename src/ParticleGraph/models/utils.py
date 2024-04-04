@@ -40,7 +40,7 @@ def plot_training (dataset_name, model_name, log_dir, epoch, N, x, index_particl
 
     match model_name:
 
-        case 'WaveMesh' | 'RD_RPS_Mesh':
+        case 'WaveMesh':
             rr = torch.tensor(np.linspace(-150, 150, 200)).to(device)
             popt_list = []
             for n in range(n_particles):

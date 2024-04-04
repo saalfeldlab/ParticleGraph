@@ -22,6 +22,7 @@ def generate_from_data(config, device, visualize=True, folder=None, step=None):
 
 def choose_model(config, device):
     particle_model_name = config.graph_model.particle_model_name
+    model_signal_name = config.graph_model.signal_model_name
     aggr_type = config.graph_model.aggr_type
     n_particles = config.simulation.n_particles
     n_particle_types = config.simulation.n_particle_types
@@ -122,14 +123,19 @@ def choose_model(config, device):
             for n in range(n_particle_types):
                 p[n] = torch.tensor(params[n])
             model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
+        case _:
+            model = PDE_Z(device=device)
+
+    match model_signal_name:
+
         case 'PDE_N':
             p = torch.rand(n_particle_types, 2, device=device) * 100  # comprised between 10 and 50
             if params[0] != [-1]:
                 for n in range(n_particle_types):
                     p[n] = torch.tensor(params[n])
             model = PDE_N(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
-        case _:
-            model = PDE_Z(device=device)
+
+
 
     return model, bc_pos, bc_dpos
 
