@@ -243,13 +243,9 @@ def choose_training_model(model_config, device):
 
     model=[]
     model_name = model_config.graph_model.particle_model_name
-
     match model_name:
         case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G':
             model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
-            model.edges = []
-        case 'PDE_N':
-            model = Signal_Propagation(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
         case 'PDE_GS':
             model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
@@ -268,6 +264,11 @@ def choose_training_model(model_config, device):
             model.edges = []
         case 'RD_RPS_Mesh':
             model = Mesh_RPS(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
+            model.edges = []
+    model_name = model_config.graph_model.signal_model_name
+    match model_name:
+        case 'PDE_N':
+            model = Signal_Propagation(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
   
     if model==[]:

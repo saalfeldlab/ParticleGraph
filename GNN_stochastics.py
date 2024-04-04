@@ -98,6 +98,7 @@ def elbo(y_pred, y, mu, log_var):
     return (likelihood + log_prior - log_p_q).mean()
 
 def det_loss(y_pred, y, mu, log_var):
+
     return -elbo(y_pred, y, mu, log_var)
 
 def det_loss_KL(y_pred, y, mu, log_var):
@@ -249,6 +250,11 @@ if __name__ == '__main__':
     m = EM(2)
     residual = y_i - y_pred.squeeze().detach().cpu().numpy()
     m.fit(residual)
+
+    plt.figure(figsize=(6, 6))
+
+    plt.scatter(t_i, residual, c=np.array(['C0', 'C1'])[z_i])
+
 
     fitted_m = [stats.norm(mu, std) for mu, std in zip(m.mu, m.std)]
 
