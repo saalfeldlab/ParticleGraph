@@ -38,7 +38,7 @@ training:
   small_init_batch_size: False
   n_runs: 2
   ghost_method: 'tensor'
-  n_ghosts: 2000
+  n_ghosts: 480
   sparsity: 'none'
   cluster_method: 'distance_plot'
   data_augmentation: True

@@ -1697,7 +1697,7 @@ def data_train_signal(config, device):
 
 
 
-def data_test(config, visualize=False, verbose=True, best_model=20, step=5, ratio=1, run=1, test_simulation=False):
+def data_test(config, visualize=False, verbose=True, best_model=20, step=5, ratio=1, run=1, test_simulation=False, device):
     print('')
 
     dataset_name = config.dataset
@@ -2072,7 +2072,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 if __name__ == '__main__':
 
 
-    config_list = ['arbitrary_16_noise_1E-4_ghost','arbitrary_16_noise_1E-5_ghost']
+    config_list = ['arbitrary_16_noise_1E-4_ghost_1000']
 
     for config_file in config_list:
         # Load parameters from config file
