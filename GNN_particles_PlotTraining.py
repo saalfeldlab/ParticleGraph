@@ -329,9 +329,9 @@ def data_plot_training(config, mode, device):
         with torch.no_grad():
             model.a[1] = model_a_.clone().detach()
 
-        if False:
+        if True:
 
-            matplotlib.use("Qt5Agg")
+            # matplotlib.use("Qt5Agg")
 
             fig = plt.figure(figsize=(12, 12))
             ax = fig.add_subplot(1,1,1)
@@ -429,7 +429,7 @@ def data_plot_training(config, mode, device):
                     true_func_list.append(model.psi(rr, p[n], p[n]))
             true_func_list = torch.stack(true_func_list)
             rmserr = torch.sqrt(torch.mean((func_list - true_func_list) ** 2))
-            print(f'RMS error: {np.round(rmserr.item(), 7)}')
+            print(f'function RMS error: {np.round(rmserr.item(), 7)}')
 
 
 
@@ -1096,7 +1096,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3']
+    config_list = ['arbitrary_3_dropout_10_no_ghost']
 
     for config_file in config_list:
 

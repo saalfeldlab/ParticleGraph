@@ -36,7 +36,7 @@ from ParticleGraph.fitting_models import linear_model
 from ParticleGraph.embedding_cluster import *
 from ParticleGraph.models import Division_Predictor
 # from ParticleGraph.Plot3D import *
-
+from GNN_particles_PlotTraining import *
 
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
@@ -756,16 +756,16 @@ def data_train_particles(config, device):
                 k = 1 + np.random.randint(n_frames - 2)
                 x = x_list[run][k].clone().detach()
 
-                if noise_level > 0:
-                    x_prev = x_list[run][k-1].clone().detach()
-                    x_next = x_list[run][k+1].clone().detach()
-                    x[:, 1:dimension + 1] += torch.randn_like(x[:, 1:dimension + 1]) * noise_level
-                    x_prev[:, 1:dimension + 1] += torch.randn_like(x_prev[:, 1:dimension + 1]) * noise_level
-                    x_next[:, 1:dimension + 1] += torch.randn_like(x_next[:, 1:dimension + 1]) * noise_level
-                    if dimension == 2:
-                        x[:, 3:5] =  (x[:, 1:3] - x_prev[:, 1:3]) / delta_t
-                    else:
-                        x[:, 4:7] =  (x[:, 1:4] - x_prev[:, 1:4]) / delta_t
+                # if noise_level > 0:
+                #     x_prev = x_list[run][k-1].clone().detach()
+                #     x_next = x_list[run][k+1].clone().detach()
+                #     x[:, 1:dimension + 1] += torch.randn_like(x[:, 1:dimension + 1]) * noise_level
+                #     x_prev[:, 1:dimension + 1] += torch.randn_like(x_prev[:, 1:dimension + 1]) * noise_level
+                #     x_next[:, 1:dimension + 1] += torch.randn_like(x_next[:, 1:dimension + 1]) * noise_level
+                #     if dimension == 2:
+                #         x[:, 3:5] =  (x[:, 1:3] - x_prev[:, 1:3]) / delta_t
+                #     else:
+                #         x[:, 4:7] =  (x[:, 1:4] - x_prev[:, 1:4]) / delta_t
 
                 if has_ghost:
                     if train_config.ghost_method == 'MLP':
@@ -783,10 +783,7 @@ def data_train_particles(config, device):
 
                 y = y_list[run][k].clone().detach()
                 if noise_level > 0:
-                    if model_config.prediction == '2nd_derivative':
-                        y = (x_next[:, 1:dimension + 1] - 2*x[0:n_particles, 1:dimension + 1] + x_prev[:, 1:dimension + 1]) / (delta_t**2)
-                    else:
-                        y = (x_next[:, 1:dimension + 1] - x[0:n_particles, 1:dimension + 1]) / (delta_t)
+                    y = y * (1 + torch.randn_like(y) * noise_level)
 
                 y = y / ynorm
 
@@ -1697,7 +1694,7 @@ def data_train_signal(config, device):
 
 
 
-def data_test(config, visualize=False, verbose=True, best_model=20, step=5, ratio=1, run=1, test_simulation=False, device):
+def data_test(config, visualize=False, verbose=True, best_model=20, step=5, ratio=1, run=1, test_simulation=False, device=[]):
     print('')
 
     dataset_name = config.dataset
@@ -2072,7 +2069,8 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 if __name__ == '__main__':
 
 
-    config_list = ['arbitrary_16_noise_1E-4_ghost_1000']
+    config_list = ['arbitrary_3_dropout_10_no_ghost']
+
 
     for config_file in config_list:
         # Load parameters from config file
@@ -2083,8 +2081,8 @@ if __name__ == '__main__':
         print(f'device {device}')
 
         # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
-        data_train(config, device)
-        # data_test(config, visualize=True, verbose=False, best_model=8, run=0, step=config.simulation.n_frames // 25, test_simulation=False, device=device)
-
+        # data_train(config, device)
+        data_test(config, visualize=True, verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 25, test_simulation=False, device=device)
+        data_plot_training(config, mode='figures', device=device)
 
 
