@@ -92,7 +92,8 @@ def plot_training (dataset_name, model_name, log_dir, epoch, N, x, index_particl
                 embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
                 in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                          rr[:, None] / simulation_config.max_radius, 10 ** embedding_), dim=1)
-                func = model.lin_edge(in_features.float())
+                with torch.no_grad():
+                    func = model.lin_edge(in_features.float())
                 func = func[:, 0]
                 plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
                          color=cmap.color(to_numpy(x[n, 5]).astype(int)), linewidth=1)
@@ -159,7 +160,8 @@ def plot_training (dataset_name, model_name, log_dir, epoch, N, x, index_particl
                                              rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                              0 * rr[:, None],
                                              0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-                func = model.lin_edge(in_features.float())
+                with torch.no_grad():
+                    func = model.lin_edge(in_features.float())
                 func = func[:, 0]
                 if n % 5 == 0:
                     plt.plot(to_numpy(rr),
@@ -200,7 +202,8 @@ def analyze_edge_function(rr=None, vizualize=False, config=None, model_lin_edge=
             case 'PDE_E':
                 in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                          rr[:, None] / max_radius, embedding_, embedding_), dim=1)
-        func = model_lin_edge(in_features.float())
+        with torch.no_grad():
+            func = model_lin_edge(in_features.float())
         func = func[:, 0]
         func_list.append(func)
         if ((n % 5 == 0) | (config.graph_model.particle_model_name=='PDE_GS')) & vizualize:
@@ -217,6 +220,7 @@ def analyze_edge_function(rr=None, vizualize=False, config=None, model_lin_edge=
     else:
         trans = umap.UMAP(n_neighbors=100, n_components=2, transform_queue_size=0).fit(coeff_norm)
         proj_interaction = trans.transform(coeff_norm)
+
     if vizualize:
         if config.graph_model.particle_model_name == 'PDE_GS':
             plt.xscale('log')

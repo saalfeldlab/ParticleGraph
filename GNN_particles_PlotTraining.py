@@ -57,10 +57,8 @@ def data_plot_training(config, mode, device):
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
     has_cell_division = simulation_config.has_cell_division
-    has_ghost = config.training.n_ghosts > 0
-    has_particle_dropout = training_config.particle_dropout > 0
-    data_augmentation = train_config.data_augmentation
-    data_augmentation_loop = train_config.data_augmentation_loop
+    has_ghost = train_config.n_ghosts > 0
+    has_particle_dropout = train_config.particle_dropout > 0
     target_batch_size = train_config.batch_size
     has_mesh = (config.graph_model.mesh_model_name != '')
     only_mesh = (config.graph_model.particle_model_name == '') & has_mesh
@@ -183,6 +181,7 @@ def data_plot_training(config, mode, device):
         print(f'network: {net}')
         state_dict = torch.load(net,map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
+        model.eval()
 
         # n_particle_types = 3
         # index_particles = []
@@ -212,6 +211,8 @@ def data_plot_training(config, mode, device):
         # plt.xlim([0,2])
         # plt.ylim([0, 2])
         # plt.tight_layout()
+
+        matplotlib.use("Qt5Agg")
 
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(1,1,1)
@@ -251,7 +252,7 @@ def data_plot_training(config, mode, device):
         func_list, proj_interaction = analyze_edge_function(rr=rr, vizualize=True, config=config,
                                                                 model_lin_edge=model.lin_edge, model_a=model.a,
                                                                 dataset_number=1,
-                                                                n_particles=n_particles, ynorm=ynorm,
+                                                                n_particles=int(n_particles*(1-train_config.particle_dropout)), ynorm=ynorm,
                                                                 types=to_numpy(x[:, 5]),
                                                                 cmap=cmap, device=device)
         # plt.xlabel(r'$d_{ij}$', fontsize=64)
@@ -265,8 +266,9 @@ def data_plot_training(config, mode, device):
         # plt.savefig(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.tif",dpi=170.7)
         plt.close()
 
-
         match train_config.cluster_method:
+            case 'kmeans':
+                labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans')
             case 'kmeans_auto_plot':
                 labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
             case 'kmeans_auto_embedding':
@@ -286,6 +288,7 @@ def data_plot_training(config, mode, device):
             pos = np.argwhere(labels == n)
             pos = np.array(pos)
             if pos.size > 0:
+                print(f'cluster {n}  {len(pos)}')
                 plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=5)
         label_list = []
         for n in range(n_particle_types):
@@ -331,6 +334,8 @@ def data_plot_training(config, mode, device):
         plt.yticks(fontsize=10.0)
         plt.close()
 
+        model_a_first = model.a.clone().detach()
+
         with torch.no_grad():
             model.a[1] = model_a_.clone().detach()
 
@@ -370,14 +375,69 @@ def data_plot_training(config, mode, device):
             plt.savefig(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.tif",dpi=170.7)
             plt.close()
 
+            p = config.simulation.params
+            if len(p) > 0:
+                p = torch.tensor(p, device=device)
+            else:
+                p = torch.load(f'graphs_data/graphs_{dataset_name}/p.pt')
+
+            rmserr_list = []
+            fig = plt.figure(figsize=(12, 12))
+            ax = fig.add_subplot(1,1,1)
+            ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+            ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+            for n in range(int(n_particles*(1-train_config.particle_dropout))):
+                embedding_ = model_a_first[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                match config.graph_model.particle_model_name:
+                    case 'PDE_A':
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / max_radius, embedding_), dim=1)
+                    case 'PDE_A_bis':
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / max_radius, embedding_, embedding_), dim=1)
+                    case 'PDE_B' | 'PDE_B_bis':
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                                 0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                    case 'PDE_G':
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                                 0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                    case 'PDE_GS':
+                        in_features = torch.cat((rr[:, None] / max_radius, embedding_), dim=1)
+                    case 'PDE_E':
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / max_radius, embedding_, embedding_), dim=-1)
+                with torch.no_grad():
+                    func = model.lin_edge(in_features.float())
+                func = func[:, 0]
+
+                true_func = model.psi(rr, p[new_labels[n]], p[new_labels[n]])
+                rmserr_list.append(torch.sqrt(torch.mean((func * ynorm - true_func) ** 2)))
+                plt.plot(to_numpy(rr),
+                         to_numpy(func) * to_numpy(ynorm),
+                         color=cmap.color(new_labels[n]), linewidth=0.1)
+            plt.xticks(fontsize=32)
+            plt.yticks(fontsize=32)
+            plt.xlim([0, max_radius])
+            # plt.ylim([-0.15, 0.15])
+            plt.ylim([-0.04, 0.03])
+            # plt.ylim([-0.1, 0.1])
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/tmp_training/func_all_{dataset_name}_{epoch}.tif",dpi=170.7)
+            plt.close()
+            rmserr_list = torch.stack(rmserr_list)
+            rmserr_list = to_numpy(rmserr_list)
+            print(f'all function RMS error: {np.round(np.mean(rmserr_list), 7)}+/-{np.round(np.std(rmserr_list), 7)}')
+
+            func_list = []
             fig = plt.figure(figsize=(12, 12))
             ax = fig.add_subplot(1,1,1)
             # ax.xaxis.get_major_formatter()._usetex = False
             # ax.yaxis.get_major_formatter()._usetex = False
             ax.xaxis.set_major_locator(plt.MaxNLocator(3))
             ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-            func_list = []
-            for n in range(n_particles):
+            for n in range(n_particle_types):
                 pos = np.argwhere(new_labels == n).squeeze().astype(int)
                 if pos.size > 0:
                     embedding_ = model.a[1, pos[0], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
@@ -404,6 +464,7 @@ def data_plot_training(config, mode, device):
                     with torch.no_grad():
                         func = model.lin_edge(in_features.float())
                     func = func[:, 0]
+
                     func_list.append(func)
                     plt.plot(to_numpy(rr),
                              to_numpy(func) * to_numpy(ynorm),
@@ -425,7 +486,6 @@ def data_plot_training(config, mode, device):
 
 
             func_list = torch.stack(func_list) * ynorm
-
             true_func_list = []
             for n in range(n_particles):
                 pos = np.argwhere(new_labels == n).squeeze().astype(int)
@@ -433,9 +493,7 @@ def data_plot_training(config, mode, device):
                     true_func_list.append(model.psi(rr, p[n], p[n]))
             true_func_list = torch.stack(true_func_list)
             rmserr = torch.sqrt(torch.mean((func_list - true_func_list) ** 2))
-            print(f'function RMS error: {np.round(rmserr.item(), 7)}')
-
-
+            print(f'function unique RMS error: {np.round(rmserr.item(), 7)}')
 
 
             fig = plt.figure(figsize=(12, 12))
@@ -444,13 +502,8 @@ def data_plot_training(config, mode, device):
             # ax.yaxis.get_major_formatter()._usetex = False
             ax.xaxis.set_major_locator(plt.MaxNLocator(3))
             ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-            if os.path.exists(f'graphs_data/graphs_{dataset_name}/model_p.pt'):
-                p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt',map_location=device)
-            else:
-                p = config.simulation.params
             for n in range(n_particle_types):
                 plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n), linewidth=8)
-
             # plt.xlabel(r'$d_{ij}$', fontsize=64)
             # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
             plt.xticks(fontsize=32)
@@ -462,8 +515,6 @@ def data_plot_training(config, mode, device):
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/tmp_training/true_func_{dataset_name}.tif",dpi=170.7)
             plt.close()
-
-
 
 def data_plot_training_asym(config, mode, device):
     print('')
@@ -1100,7 +1151,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3_dropout_10_no_ghost']
+    config_list = ['arbitrary_16_noise_1E-2','arbitrary_16_noise_1E-1']
 
     for config_file in config_list:
 

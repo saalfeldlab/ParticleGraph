@@ -6,8 +6,8 @@ from sklearn.metrics import silhouette_score
 
 
 class EmbeddingCluster:
-    def __init__(self, n_interactions):
-        self.n_interactions = n_interactions
+    def __init__(self, config):
+        self.n_interactions = config.simulation.n_interactions
 
     def get(self, data, method, thresh=2.5):
         match method:

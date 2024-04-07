@@ -38,6 +38,7 @@ from ParticleGraph.models import Division_Predictor
 # from ParticleGraph.Plot3D import *
 
 
+
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
     print('')
@@ -2069,7 +2070,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 if __name__ == '__main__':
 
 
-    config_list = ['arbitrary_3_dropout_10']
+    config_list = ['arbitrary_16_noise_1E-2','arbitrary_16_noise_1E-1']
 
 
     for config_file in config_list:
@@ -2082,7 +2083,7 @@ if __name__ == '__main__':
 
         # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
         # data_train(config, device)
-        data_test(config, visualize=True, verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 25, test_simulation=False, device=device)
-        # data_plot_training(config, mode='figures', device=device)
+        data_test(config, visualize=False, verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 25, test_simulation=False, device=device)
+
 
 

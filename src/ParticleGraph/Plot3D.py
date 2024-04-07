@@ -1,6 +1,6 @@
 
-import jax
-import jax.numpy as jp
+# import jax
+# import jax.numpy as jp
 
 def norm(v, axis=-1, keepdims=False, eps=0.0):
   return jp.sqrt((v*v).sum(axis, keepdims=keepdims).clip(eps))
@@ -19,7 +19,7 @@ import PIL
 import numpy as np
 import matplotlib.pylab as pl
 
-from IPython.display import display, Image, HTML
+# from IPython.display import display, Image, HTML
 
 def np2pil(a):
   if a.dtype in [np.float32, np.float64]:
