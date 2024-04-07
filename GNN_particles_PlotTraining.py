@@ -57,6 +57,8 @@ def data_plot_training(config, mode, device):
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
     has_cell_division = simulation_config.has_cell_division
+    has_ghost = config.training.n_ghosts > 0
+    has_particle_dropout = training_config.particle_dropout > 0
     data_augmentation = train_config.data_augmentation
     data_augmentation_loop = train_config.data_augmentation_loop
     target_batch_size = train_config.batch_size
@@ -161,8 +163,8 @@ def data_plot_training(config, mode, device):
 
 
     # matplotlib.use("Qt5Agg")
-    plt.rcParams['text.usetex'] = True
-    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+    # plt.rcParams['text.usetex'] = True
+    # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     matplotlib.rcParams['savefig.pad_inches'] = 0
     # style = {
     #     "pgf.rcfonts": False,
@@ -223,8 +225,8 @@ def data_plot_training(config, mode, device):
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0],
                         embedding[index_particles[n], 1], color=cmap.color(n), s=50)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+        # plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
+        # plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
         plt.xlim([0,2])
@@ -243,14 +245,17 @@ def data_plot_training(config, mode, device):
             rr = torch.tensor(np.logspace(7, 9, 1000)).to(device)
         else:
             rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+
+        print(n_particles)
+
         func_list, proj_interaction = analyze_edge_function(rr=rr, vizualize=True, config=config,
                                                                 model_lin_edge=model.lin_edge, model_a=model.a,
                                                                 dataset_number=1,
                                                                 n_particles=n_particles, ynorm=ynorm,
                                                                 types=to_numpy(x[:, 5]),
                                                                 cmap=cmap, device=device)
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+        # plt.xlabel(r'$d_{ij}$', fontsize=64)
+        # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
         # xticks with sans serif font
         plt.xticks(fontsize=32)
         plt.yticks(fontsize=32)
@@ -355,8 +360,8 @@ def data_plot_training(config, mode, device):
                         except:
                             print(f'error: {pos}')
 
-            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+            # plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
+            # plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
             # xticks with 1 digit
 
             plt.xticks(fontsize=32.0)
@@ -406,18 +411,17 @@ def data_plot_training(config, mode, device):
                     # plt.plot(to_numpy(rr),
                     #          to_numpy(model.psi(rr, p[n], p[n])),
                     #          color=cmap.color(n), linewidth=1)
-            plt.xlabel(r'$d_{ij}$', fontsize=64)
-            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+            # plt.xlabel(r'$d_{ij}$', fontsize=64)
+            # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
             plt.xticks(fontsize=32)
             plt.yticks(fontsize=32)
             plt.xlim([0, max_radius])
-            # # plt.ylim([-0.15, 0.15])
-            # plt.ylim([-0.04, 0.03])
-            plt.ylim([-0.1, 0.1])
+            # plt.ylim([-0.15, 0.15])
+            plt.ylim([-0.04, 0.03])
+            # plt.ylim([-0.1, 0.1])
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.tif",dpi=170.7)
             plt.close()
-
 
 
             func_list = torch.stack(func_list) * ynorm
@@ -447,14 +451,14 @@ def data_plot_training(config, mode, device):
             for n in range(n_particle_types):
                 plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n), linewidth=8)
 
-            plt.xlabel(r'$d_{ij}$', fontsize=64)
-            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+            # plt.xlabel(r'$d_{ij}$', fontsize=64)
+            # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
             plt.xticks(fontsize=32)
             plt.yticks(fontsize=32)
             plt.xlim([0, max_radius])
-            # # plt.ylim([-0.15, 0.15])
-            # plt.ylim([-0.04, 0.03])
-            plt.ylim([-0.1, 0.1])
+            # plt.ylim([-0.15, 0.15])
+            plt.ylim([-0.04, 0.03])
+            # plt.ylim([-0.1, 0.1])
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/tmp_training/true_func_{dataset_name}.tif",dpi=170.7)
             plt.close()
