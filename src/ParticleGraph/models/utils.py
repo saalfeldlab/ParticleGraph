@@ -13,6 +13,8 @@ import umap
 
 import matplotlib.pyplot as plt
 import matplotlib
+from matplotlib.ticker import FormatStrFormatter
+from matplotlib import rc
 # matplotlib.use("Qt5Agg")
 
 def get_embedding(model_a=None, dataset_number = 0, index_particles=None, n_particles=None, n_particle_types=None):
@@ -22,10 +24,31 @@ def get_embedding(model_a=None, dataset_number = 0, index_particles=None, n_part
 
     return embedding
 
-def plot_training (dataset_name, model_name, log_dir, epoch, N, x, index_particles, n_particles, n_particle_types, model, dataset_num, ynorm, cmap, device):
+def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index_particles, n_particles, n_particle_types, model, dataset_num, ynorm, cmap, axis, device):
+
+    simulation_config = config.simulation
+    train_config = config.training
+    model_config = config.graph_model
+
+    plt.rcParams['text.usetex'] = True
+    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
     matplotlib.rcParams['savefig.pad_inches'] = 0
     fig = plt.figure(figsize=(12, 12))
+    if axis:
+        ax = fig.add_subplot(1,1,1)
+        # ax.xaxis.get_major_formatter()._usetex = False
+        # ax.yaxis.get_major_formatter()._usetex = False
+        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+        ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+        ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+        plt.xticks(fontsize=32.0)
+        plt.yticks(fontsize=32.0)
+    else:
+        plt.axis('off')
     embedding = get_embedding(model.a, dataset_num, index_particles, n_particles, n_particle_types)
     if n_particle_types > 1000:
         plt.scatter(embedding[:, 0], embedding[:, 1], c=to_numpy(x[:, 5])/n_particles, s=5, cmap='viridis')
@@ -33,7 +56,7 @@ def plot_training (dataset_name, model_name, log_dir, epoch, N, x, index_particl
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0],
                         embedding[index_particles[n], 1], color=cmap.color(n), s=25)  #
-    plt.axis('off')
+
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/embedding/{model_name}_{dataset_name}_embedding_{epoch}_{N}.tif", dpi=170.7)
     plt.close()
@@ -136,9 +159,26 @@ def plot_training (dataset_name, model_name, log_dir, epoch, N, x, index_particl
             plt.savefig(f"./{log_dir}/tmp_training/embedding/{model_name}_{dataset_name}_function_{epoch}_{N}.tif",dpi=170.7)
             plt.close()
 
-        case 'interaction':
-            fig = plt.figure(figsize=(8, 8))
-            rr = torch.tensor(np.linspace(0, radius, 200)).to(device)
+        case 'PDE_A'| 'PDE_A_bis' | 'PDE_E' | 'PDE_B':
+            fig = plt.figure(figsize=(12, 12))
+
+            if axis:
+                ax = fig.add_subplot(1, 1, 1)
+                # ax.xaxis.get_major_formatter()._usetex = False
+                # ax.yaxis.get_major_formatter()._usetex = False
+                ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+                plt.xlabel(r'$d_{ij}$', fontsize=64)
+                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+                plt.xticks(fontsize=32)
+                plt.yticks(fontsize=32)
+                plt.xlim([0, simulation_config.max_radius])
+                # plt.ylim([-0.15, 0.15])
+                # plt.ylim([-0.04, 0.03])
+                # plt.ylim([-0.1, 0.1])
+                plt.tight_layout()
+
+            rr = torch.tensor(np.linspace(0, simulation_config.max_radius, 200)).to(device)
             for n in range(n_particles):
                 embedding_ = model.a[dataset_num, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
                 if (model_config.particle_model_name == 'PDE_A'):
@@ -169,7 +209,7 @@ def plot_training (dataset_name, model_name, log_dir, epoch, N, x, index_particl
                              linewidth=1,
                              color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/embedding/{model_name}_{dataset_name}_{epoch}_{N}.tif", dpi=300)
+            plt.savefig(f"./{log_dir}/tmp_training/embedding/{model_name}_{dataset_name}_function_{epoch}_{N}.tif", dpi=300)
             plt.close()
 
 def analyze_edge_function(rr=None, vizualize=False, config=None, model_lin_edge=[], model_a=None, dataset_number = 0, n_particles=None, ynorm=None, types=None, cmap=None, dimension=2, device=None):

@@ -832,6 +832,13 @@ def data_train_particles(config, device):
                 else:
                     loss = ((pred - y_batch) / (y_batch)).norm(2) / 1E9
 
+            visualize_embedding = True
+            if visualize_embedding & (((epoch == 0) & (N < 10000) & (N % 200 == 0)) | (N==0)):
+                plot_training(config=config, dataset_name=dataset_name, model_name=model_config.particle_model_name, log_dir=log_dir,
+                              epoch=epoch, N=N, x=x, model=model, dataset_num=1,
+                              index_particles=index_particles, n_particles=n_particles,
+                              n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
+
             loss.backward()
             optimizer.step()
 
@@ -844,13 +851,6 @@ def data_train_particles(config, device):
                     plt.close()
 
             total_loss += loss.item()
-
-            visualize_embedding = True
-            if visualize_embedding & (epoch == 0) & (N < 10000) & (N % 200 == 0):
-                plot_training(dataset_name=dataset_name, model_name=model_config.particle_model_name, log_dir=log_dir,
-                              epoch=epoch, N=N, x=x, model=model, dataset_num=1,
-                              index_particles=index_particles, n_particles=n_particles,
-                              n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, device=device)
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
@@ -2070,7 +2070,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 if __name__ == '__main__':
 
 
-    config_list = ['arbitrary_16_noise_1E-2','arbitrary_16_noise_1E-1']
+    config_list = ['arbitrary_3']
 
 
     for config_file in config_list:
@@ -2082,8 +2082,8 @@ if __name__ == '__main__':
         print(f'device {device}')
 
         # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
-        # data_train(config, device)
-        data_test(config, visualize=False, verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 25, test_simulation=False, device=device)
+        data_train(config, device)
+        # data_test(config, visualize=False, verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 25, test_simulation=False, device=device)
 
 
 
