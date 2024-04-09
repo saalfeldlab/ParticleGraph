@@ -36,7 +36,7 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
         self.a2 = 5E-4
         self.a3 = 1E-8
 
-        self.a4 = 1E-8
+        self.a4 = 5E-7
 
         self.a5 = 0.5E-5
         self.a6 = 1E-8
@@ -70,10 +70,14 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
         dd_u = torch.clamp(self.beta * laplacian_u, -10, 10) + self.pos_rate * u[0:self.n_nodes] - self.neg_rate * d_u_neg
 
         dd_pos = self.propagate(edge_index=edge_all, u=u, edge_attr=edge_attr, mode ='particle-particle', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze())
+        deg_particle[deg_particle==0]=1
         dd_pos = dd_pos[self.n_nodes:] / deg_particle[:, None].repeat(1,2)
 
         drift = self.propagate(edge_index=edge_all, u=u, edge_attr=edge_attr, mode ='particle-field', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze())
-        drift = drift[self.n_nodes:]
+        node_neighbour = drift[self.n_nodes:,2:4]
+        node_neighbour[node_neighbour==0]=1
+        drift = drift[self.n_nodes:,0:2]
+        drift = drift/node_neighbour
 
         return dd_pos, drift, dd_u
 
@@ -98,8 +102,9 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
             distance_squared = torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, axis=1) # distance squared
 
             cohesion_field = parameters_i[:, 3, None] * self.a4 * torch.clamp(u_j,0,10000) * self.bc_dpos(pos_j - pos_i) * (particle_type_j == -1).float()
+            node_neighbour = (particle_type_j == -1).float()
 
-            return cohesion_field   #    (separation + alignment + cohesion_particle)
+            return torch.cat((cohesion_field,node_neighbour.repeat(1,2)),1)
 
         elif mode == 'particle-particle':
 
