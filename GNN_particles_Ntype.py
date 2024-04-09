@@ -444,55 +444,31 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                         ax.set_xlim([0, 1])
                         ax.set_ylim([0, 1])
                         ax.set_zlim([0, 1])
-
-                        # p = to_numpy(X1)* 10.0 - 5
-                        # p[:, 1] += 2.5
-                        # pos = jp.array(p)
-                        # c = np.zeros((n_particles, 3), dtype=np.float32)
-                        # for n in range(n_particles):
-                        #     cc = cmap.color(to_numpy(T1[n].squeeze()).astype(int))
-                        #     c[n] = cc[0:3]
-                        # color = jp.array(c)
-                        #
-                        # balls = Balls(pos, color)
-                        #
-                        # pl.figure(figsize=(8, 8))
-                        # w, h = 640, 640
-                        # pos0 = jp.float32([4, 25, 30])
-                        # # pos0 = jp.float32([2.5, 15, 17.5])
-                        # ray_dir = camera_rays(-pos0, view_size=(w, h))
-                        # sdf = partial(scene_sdf, balls)
-                        # hit_pos = jax.vmap(partial(raycast, sdf, pos0))(ray_dir)
-                        # # pl.imshow(hit_pos.reshape(h, w, 3)%1.0)
-                        # raw_normal = jax.vmap(jax.grad(sdf))(hit_pos)
-                        # # pl.imshow(raw_normal.reshape(h, w, 3))
-                        # light_dir = normalize(jp.array([1.1, 1.0, 0.2]))
-                        # shadow = jax.vmap(partial(cast_shadow, sdf, light_dir))(hit_pos)
-                        # # pl.imshow(shadow.reshape(h, w))
-                        # f = partial(shade_f, jp.ones(3), light_dir=light_dir)
-                        # frame = jax.vmap(f)(shadow, raw_normal, ray_dir)
-                        # frame = frame ** (1.0 / 2.2)  # gamma correction
-                        # # pl.imshow(frame.reshape(h, w, 3))
-                        # color_sdf = partial(scene_sdf, balls, with_color=True)
-                        # _, surf_color = jax.vmap(color_sdf)(hit_pos)
-                        # f = partial(shade_f, light_dir=light_dir)
-                        # frame = jax.vmap(f)(surf_color, shadow, raw_normal, ray_dir)
-                        # frame = frame ** (1.0 / 2.2)  # gamma correction
-                        # pl.imshow(frame.reshape(h, w, 3))
                         pl.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
                         plt.close()
 
                     else:
+                        # matplotlib.use("Qt5Agg")
+
+                        plt.rcParams['text.usetex'] = True
+                        rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
                         matplotlib.rcParams['savefig.pad_inches'] = 0
                         fig = plt.figure(figsize=(12, 12))
-                        if (has_mesh | (simulation_config.boundary == 'periodic')):
-                            ax = plt.axes([0, 0, 1, 1], frameon=False)
-                        else:
-                            ax = plt.axes([-2, -2, 2, 2], frameon=False)
-                        ax.get_xaxis().set_visible(False)
-                        ax.get_yaxis().set_visible(False)
-                        plt.autoscale(tight=True)
+                        ax = fig.add_subplot(1, 1, 1)
+                        # ax.xaxis.get_major_formatter()._usetex = False
+                        # ax.yaxis.get_major_formatter()._usetex = False
+                        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+                        ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                        # if (has_mesh | (simulation_config.boundary == 'periodic')):
+                        #     ax = plt.axes([0, 0, 1, 1], frameon=False)
+                        # else:
+                        #     ax = plt.axes([-2, -2, 2, 2], frameon=False)
+                        # ax.get_xaxis().set_visible(False)
+                        # ax.get_yaxis().set_visible(False)
+                        # plt.autoscale(tight=True)
                         if has_mesh:
                             pts = x_mesh[:, 1:3].detach().cpu().numpy()
                             tri = Delaunay(pts)
@@ -543,8 +519,12 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                                             alpha=0.75)
                                 plt.plot(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
                                          x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), '+', color='w')
-                        plt.xlim([0,1])
-                        plt.ylim([0,1])
+                        plt.xlim([-2,2])
+                        plt.ylim([-2,2])
+                        plt.xlabel(r'$x$', fontsize=64)
+                        plt.ylabel(r'$y$', fontsize=64)
+                        plt.xticks(fontsize=32.0)
+                        plt.yticks(fontsize=32.0)
                         plt.tight_layout()
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
                         plt.close()
@@ -2194,20 +2174,29 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 
             # plt.style.use('dark_background')
 
-            matplotlib.use("Qt5Agg")
+            # matplotlib.use("Qt5Agg")
+            plt.rcParams['text.usetex'] = True
+            rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+
             matplotlib.rcParams['savefig.pad_inches'] = 0
+
             fig = plt.figure(figsize=(12, 12))
-            if  (model_config.signal_model_name == 'PDE_N'):
-                ax = fig.add_subplot(1, 1, 1)
-            elif (has_mesh | (simulation_config.boundary == 'periodic')) & (model_config.mesh_model_name != 'RD_RPS_Mesh'):
-                ax = plt.axes([0, 0, 1, 1], frameon=False)
-            elif model_config.particle_model_name == 'PDE_G':
-                ax = plt.axes([-2, -2, 2, 2], frameon=False)
-            elif model_config.particle_model_name == 'PDE_GS':
-                ax = plt.axes([-0.5E10, -0.5E10, 0.5E10, 0.5E10], frameon=False)
-            ax.get_xaxis().set_visible(False)
-            ax.get_yaxis().set_visible(False)
-            plt.autoscale(tight=True)
+            # if  (model_config.signal_model_name == 'PDE_N'):
+            #     ax = fig.add_subplot(1, 1, 1)
+            # elif (has_mesh | (simulation_config.boundary == 'periodic')) & (model_config.mesh_model_name != 'RD_RPS_Mesh'):
+            #     ax = plt.axes([0, 0, 1, 1], frameon=False)
+            # elif model_config.particle_model_name == 'PDE_G':
+            #     ax = plt.axes([-2, -2, 2, 2], frameon=False)
+            # elif model_config.particle_model_name == 'PDE_GS':
+            #     ax = plt.axes([-0.5E10, -0.5E10, 0.5E10, 0.5E10], frameon=False)
+            # ax.get_xaxis().set_visible(False)
+            # ax.get_yaxis().set_visible(False)
+            # plt.autoscale(tight=True)
+            ax = fig.add_subplot(1, 1, 1)
+            ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+            ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+            ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+            ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
             if has_mesh:
                 pts = x[:, 1:3].detach().cpu().numpy()
                 tri = Delaunay(pts)
@@ -2251,12 +2240,18 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
                 ax.get_yaxis().set_visible(False)
                 # plt.autoscale(tight=True)
             else:
-                s_p = 50
+                s_p = 100
                 if simulation_config.has_cell_division:
                     s_p = 25
                 for n in range(n_particle_types):
                     plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                 x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
+            plt.xlim([-2, 2])
+            plt.ylim([-2, 2])
+            plt.xlabel(r'$x$', fontsize=64)
+            plt.ylabel(r'$y$', fontsize=64)
+            plt.xticks(fontsize=32.0)
+            plt.yticks(fontsize=32.0)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/tmp_recons/Fig_{dataset_name}_{it}.tif", dpi=170.7)
             plt.close()
@@ -2326,7 +2321,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 if __name__ == '__main__':
 
 
-    config_list = ['particle_field_high','particle_field_low']
+    config_list = ['gravity_16']
 
 
     for config_file in config_list:
@@ -2338,9 +2333,9 @@ if __name__ == '__main__':
         print(f'device {device}')
 
         # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
-        data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 500)
-        # data_train(config, device)
-        # data_test(config, visualize=False, verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 25, test_simulation=False, device=device)
+        # data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 500)
+        data_train(config, device)
+        # data_test(config, visualize=True, verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, device=device)
 
 
 

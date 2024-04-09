@@ -1123,15 +1123,14 @@ def data_plot_FIG3():
 
     ax = fig.add_subplot(3, 3, 2)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-    func_list = plot_function(False, 'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap,device)
+    func_list = plot_function(False, 'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, 1, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap, device)
     proj_interaction, new_labels, n_clusters = plot_umap('b)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(3, 3, 3)
     Accuracy = plot_confusion_matrix('c)', to_numpy(x[:,5:6]), new_labels, n_particle_types, 20, '$10^6$', fig, ax)
     plt.tight_layout()
 
-    model_a_ = model.a.clone().detach()
-    model_a_ = torch.reshape(model_a_, (model_a_.shape[0] * model_a_.shape[1], model_a_.shape[2]))
+    model_a_ = model.a[1].clone().detach()
     for k in range(n_clusters):
         pos = np.argwhere(new_labels == k).squeeze().astype(int)
         temp = model_a_[pos, :].clone().detach()
@@ -1139,7 +1138,7 @@ def data_plot_FIG3():
     with torch.no_grad():
         for n in range(model.a.shape[0]):
             model.a[n] = model_a_
-    embedding, embedding_particle = get_embedding(model.a, index_particles, n_particles, n_particle_types)
+    embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
 
     ax = fig.add_subplot(3, 3, 4)
     plt.text(-0.25, 1.1, f'd)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
@@ -3738,7 +3737,7 @@ if __name__ == '__main__':
     # config_name = 'arbitrary_32'
     # data_plot_FIG2()
 
-    data_plot_FIG8()
+    data_plot_FIG3()
 
 
 

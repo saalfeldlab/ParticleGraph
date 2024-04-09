@@ -13,7 +13,7 @@ simulation:
   n_node_types: 1
   pos_rate: 8.0E-4
   neg_rate: 7.5E-5
-  n_frames: 10000
+  n_frames: 12500
   delta_t: 0.5
   dpos_init: 1.0E-4
   boundary: 'periodic'

@@ -213,6 +213,8 @@ def data_plot_training(config, mode, device):
         # plt.tight_layout()
 
         matplotlib.use("Qt5Agg")
+        plt.rcParams['text.usetex'] = True
+        rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(1,1,1)
@@ -368,7 +370,10 @@ def data_plot_training(config, mode, device):
             # plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
             # plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
             # xticks with 1 digit
-
+            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
+            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+            plt.xticks(fontsize=32.0)
+            plt.yticks(fontsize=32.0)
             plt.xticks(fontsize=32.0)
             plt.yticks(fontsize=32.0)
             plt.tight_layout()
@@ -512,6 +517,9 @@ def data_plot_training(config, mode, device):
             # plt.ylim([-0.15, 0.15])
             plt.ylim([-0.04, 0.03])
             # plt.ylim([-0.1, 0.1])
+
+            plt.xlabel(r'$d_{ij}$', fontsize=64)
+            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/tmp_training/true_func_{dataset_name}.tif",dpi=170.7)
             plt.close()
@@ -1151,7 +1159,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_16_noise_1E-2','arbitrary_16_noise_1E-1']
+    config_list = ['arbitrary_3']
 
     for config_file in config_list:
 
