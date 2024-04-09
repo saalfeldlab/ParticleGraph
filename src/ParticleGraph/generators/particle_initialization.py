@@ -43,7 +43,6 @@ def init_particles(config, device, cycle_length=None):
 
     return pos, dpos, type, features, cycle_duration, particle_id, cycle_length, cycle_length_distrib
 
-
 def init_mesh(config, device):
     simulation_config = config.simulation
     n_nodes = simulation_config.n_nodes

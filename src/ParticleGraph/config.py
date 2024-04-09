@@ -24,6 +24,8 @@ class SimulationConfig(BaseModel):
     non_discrete_level: float = 0
     n_nodes: Optional[int] = None
     n_node_types: Optional[int] = None
+    pos_rate: float = 0
+    neg_rate: float = 0
     has_cell_division: bool = False
     n_frames: int = 1000
     sigma: float = 0.005

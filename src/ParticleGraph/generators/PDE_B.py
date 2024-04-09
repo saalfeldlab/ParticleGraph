@@ -35,6 +35,7 @@ class PDE_B(pyg.nn.MessagePassing):
         self.a5 = 1E-8
 
     def forward(self, data):
+
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         particle_type = to_numpy(x[:, 5])
