@@ -53,7 +53,6 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
         edge_all, _ = pyg_utils.remove_self_loops(edge_all)
 
         deg_particle = pyg_utils.degree(edge_particle[0, :].squeeze(), self.n_particles)
-        edge_particle = pyg_utils.remove_self_loops(edge_particle)
 
         u = x[:, 6:7]
         particle_type = x[:, 5:6]
@@ -63,17 +62,17 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
         d_pos = x[:, 3:5]
 
         # edge_attr = torch.clamp(edge_attr, -1, 1)
-        laplacian_u = self.propagate(edge_index=edge_mesh, u=u, edge_attr=edge_attr, mode ='laplacian', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze()) # , parameters=parameters, particle_type=particle_type)
+        laplacian_u = self.propagate(edge_index=edge_mesh, u=u, discrete_laplacian=edge_attr, mode ='laplacian', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze()) # , parameters=parameters, particle_type=particle_type)
         laplacian_u = laplacian_u[0:self.n_nodes]
-        d_u_neg = self.propagate(edge_index=edge_all, u=u, edge_attr=edge_attr, mode ='mesh_neg', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze())
+        d_u_neg = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode ='mesh_neg', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze())
         d_u_neg = d_u_neg[0:self.n_nodes]
         dd_u = torch.clamp(self.beta * laplacian_u, -10, 10) + self.pos_rate * u[0:self.n_nodes] - self.neg_rate * d_u_neg
 
-        dd_pos = self.propagate(edge_index=edge_all, u=u, edge_attr=edge_attr, mode ='particle-particle', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze())
+        dd_pos = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode ='particle-particle', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze())
         deg_particle[deg_particle==0]=1
         dd_pos = dd_pos[self.n_nodes:] / deg_particle[:, None].repeat(1,2)
 
-        drift = self.propagate(edge_index=edge_all, u=u, edge_attr=edge_attr, mode ='particle-field', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze())
+        drift = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode ='particle-field', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze())
         node_neighbour = drift[self.n_nodes:,2:4]
         node_neighbour[node_neighbour==0]=1
         drift = drift[self.n_nodes:,0:2]
@@ -82,11 +81,11 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
         return dd_pos, drift, dd_u
 
 
-    def message(self, u_j, edge_attr, mode, pos_i, pos_j, d_pos_i, d_pos_j, particle_type_i, particle_type_j, parameters_i, parameters_j):
+    def message(self, u_j, discrete_laplacian, mode, pos_i, pos_j, d_pos_i, d_pos_j, particle_type_i, particle_type_j, parameters_i, parameters_j):
 
         if mode == 'laplacian':
 
-            L = edge_attr[:,None] * u_j
+            L = discrete_laplacian[:,None] * u_j
 
             return L
 

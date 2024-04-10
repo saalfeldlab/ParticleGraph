@@ -1,8 +1,8 @@
 description: 'maze mode, diffusion chemical  and boids'
-dataset: 'particle_field'
+dataset: 'particle_field_no_field'
 
 simulation:
-  params: [[27.6, 92.5, 48.2, 10], [32.0, 51.8, 29.8, 10], [23.6, 35.0, 13.5, 10], [3.3, 76.4, 13.0, 10], [94.0, 78.7, 30.8, 10], [81.4, 34.6, 2.2, 10], [3.1, 40.5, 17.0, 10], [88.8, 7.2, 29.8, 10], [32.7, 76.8, 26.1, 10], [14.5, 56.8, 27.6, 10], [63.3, 99.9, 13.9, 10], [32.5, 25.2, 24.4, 10], [97.6, 56.5, 12.1, 10], [62.2, 9.1, 28.3, 10], [76.4, 52.9, 32.0, 10], [48.1, 54.4, 30.7, 10]]
+  params: [[27.6, 92.5, 48.2, 0], [32.0, 51.8, 29.8, 0], [23.6, 35.0, 13.5, 0], [3.3, 76.4, 13.0, 0], [94.0, 78.7, 30.8, 0], [81.4, 34.6, 2.2, 0], [3.1, 40.5, 17.0, 0], [88.8, 7.2, 29.8, 0], [32.7, 76.8, 26.1, 0], [14.5, 56.8, 27.6, 0], [63.3, 99.9, 13.9, 0], [32.5, 25.2, 24.4, 0], [97.6, 56.5, 12.1, 10], [62.2, 9.1, 28.3, 0], [76.4, 52.9, 32.0, 0], [48.1, 54.4, 30.7, 0]]
   min_radius: 0.001
   max_radius: 0.04
   diffusion_coefficients: [[1],[1],[1],[1]]
@@ -11,21 +11,20 @@ simulation:
   n_interactions: 16
   n_nodes: 10000
   n_node_types: 1
-  pos_rate: 8.0E-4
-  neg_rate: 5.0E-5
-  n_frames: 10000
+  pos_rate: 0
+  neg_rate: 0
+  n_frames: 12500
   delta_t: 0.5
   dpos_init: 1.0E-4
   boundary: 'periodic'
   node_value_map: 'pattern_22.tif'
   node_type_map: 'pattern_17.tif'
-  beta: 1.0E-2
+  beta: 0
   start_frame: 0
 
 graph_model:
   particle_model_name: 'PDE_ParticleField'
-  mesh_model_name: 'Chemotaxism_Mesh'
-  inter_model_name: 'Chemotaxism_Inter'
+  mesh_model_name: 'Particle_Mesh'
   prediction: '2nd_derivative'
   input_size: 9
   output_size: 2
@@ -37,13 +36,17 @@ graph_model:
   update_type: 'none'
 
 plotting:
-  colormap: 'tab10'
+  colormap: 'tab20'
   arrow_length: 10
 
 training:
   n_epochs: 20
   batch_size: 8
-  n_runs: 1
   sparsity: 'none'
+  small_init_batch_size: True
+  n_runs: 2
+  noise_level: 0
+  data_augmentation: True
+  data_augmentation_loop: 10
   cluster_method: 'distance_plot'
   device: 'auto'

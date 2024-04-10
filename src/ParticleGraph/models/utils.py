@@ -1,6 +1,6 @@
 import torch
 from prettytable import PrettyTable
-from ParticleGraph.models import Interaction_Particles, Signal_Propagation, Mesh_Laplacian, Mesh_RPS
+from ParticleGraph.models import Interaction_Particles, Interaction_Particle_Field, Signal_Propagation, Mesh_Laplacian, Mesh_RPS
 from ParticleGraph.utils import choose_boundary_values
 from ParticleGraph.utils import to_numpy
 import numpy as np
@@ -24,18 +24,17 @@ def get_embedding(model_a=None, dataset_number = 0, index_particles=None, n_part
 
     return embedding
 
-def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index_particles, n_particles, n_particle_types, model, dataset_num, ynorm, cmap, axis, device):
+def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index_particles, n_particles, n_particle_types, model, n_nodes, dataset_num, ynorm, cmap, axis, device):
 
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
 
-    plt.rcParams['text.usetex'] = True
-    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-
     matplotlib.rcParams['savefig.pad_inches'] = 0
     fig = plt.figure(figsize=(12, 12))
     if axis:
+        # plt.rcParams['text.usetex'] = True
+        # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
         ax = fig.add_subplot(1,1,1)
         # ax.xaxis.get_major_formatter()._usetex = False
         # ax.yaxis.get_major_formatter()._usetex = False
@@ -43,13 +42,14 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
         ax.yaxis.set_major_locator(plt.MaxNLocator(3))
         ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
         ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+        # plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
+        # plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
     else:
         plt.axis('off')
     embedding = get_embedding(model.a, dataset_num, index_particles, n_particles, n_particle_types)
+    embedding = embedding[n_nodes:,:]
     if n_particle_types > 1000:
         plt.scatter(embedding[:, 0], embedding[:, 1], c=to_numpy(x[:, 5])/n_particles, s=5, cmap='viridis')
     else:
@@ -204,7 +204,7 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
                 ax.xaxis.set_major_locator(plt.MaxNLocator(3))
                 ax.yaxis.set_major_locator(plt.MaxNLocator(3))
                 plt.xlabel(r'$d_{ij}$', fontsize=64)
-                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+                # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
                 plt.xticks(fontsize=32)
                 plt.yticks(fontsize=32)
                 plt.xlim([0, simulation_config.max_radius])
@@ -323,6 +323,8 @@ def choose_training_model(model_config, device):
     model=[]
     model_name = model_config.graph_model.particle_model_name
     match model_name:
+        case 'PDE_ParticleField':
+            model = Interaction_Particle_Field(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
         case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G':
             model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
