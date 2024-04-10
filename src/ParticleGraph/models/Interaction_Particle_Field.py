@@ -114,9 +114,9 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         drift = drift[self.n_nodes:,0:2]
         drift = drift/node_neighbour
 
-        return dd_pos
+        # return dd_pos
 
-        # return torch.cat((dd_pos, drift), 1)
+        return torch.cat((dd_pos, drift), 1)
 
     def message(self, u_j, discrete_laplacian, mode, pos_i, pos_j, d_pos_i, d_pos_j, particle_type_i, particle_type_j, particle_id_i, particle_id_j):
 

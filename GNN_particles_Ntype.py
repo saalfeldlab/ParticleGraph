@@ -746,14 +746,14 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     else:
                         x_list.append(x.clone().detach())
 
-                        y = y*delta_t**2 + drift
+                        yp = y.clone().detach() + drift.clone().detach() / delta_t
 
-                        y_list.append(y.clone().detach())
+                        y_list.append(yp.clone().detach())
 
             # Particle update
 
-            V1 += y * delta_t
-            X1 = bc_pos(X1 + V1 * delta_t + drift)
+            V1 += y * delta_t + drift
+            X1 = bc_pos(X1 + V1 * delta_t)
 
             A1 = A1 + delta_t
 
@@ -986,17 +986,6 @@ def data_train_particles(config, device):
 
                 k = 1 + np.random.randint(n_frames - 2)
                 x = x_list[run][k].clone().detach()
-
-                # if noise_level > 0:
-                #     x_prev = x_list[run][k-1].clone().detach()
-                #     x_next = x_list[run][k+1].clone().detach()
-                #     x[:, 1:dimension + 1] += torch.randn_like(x[:, 1:dimension + 1]) * noise_level
-                #     x_prev[:, 1:dimension + 1] += torch.randn_like(x_prev[:, 1:dimension + 1]) * noise_level
-                #     x_next[:, 1:dimension + 1] += torch.randn_like(x_next[:, 1:dimension + 1]) * noise_level
-                #     if dimension == 2:
-                #         x[:, 3:5] =  (x[:, 1:3] - x_prev[:, 1:3]) / delta_t
-                #     else:
-                #         x[:, 4:7] =  (x[:, 1:4] - x_prev[:, 1:4]) / delta_t
 
                 if has_ghost:
                     if train_config.ghost_method == 'MLP':
@@ -1550,6 +1539,8 @@ def data_train_particle_field(config, device):
             for batch in batch_loader:
                 pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi)
 
+                pred_p = pred[:,0:2] + pred[:,2:4] / delta_t
+
             if has_cell_division:
                 pred_division = model_division(time_batch, data_id=run)
                 loss_division = (pred_division - y_batch_division).norm(2)
@@ -1558,12 +1549,10 @@ def data_train_particle_field(config, device):
                 total_loss_division += loss_division.item()
 
             if has_ghost:
-                loss = ((pred[mask_ghost] - y_batch)).norm(2)
+                loss = ((pred_p[mask_ghost] - y_batch)).norm(2)
             else:
-                if not (has_large_range):
-                    loss = (pred - y_batch).norm(2)
-                else:
-                    loss = ((pred - y_batch) / (y_batch)).norm(2) / 1E9
+                loss = (pred_p - y_batch).norm(2)
+
 
             loss.backward()
             optimizer.step()
@@ -2823,7 +2812,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 if __name__ == '__main__':
 
 
-    config_list = ['particle_field_no_field']
+    config_list = ['particle_field_high']
 
 
     for config_file in config_list:
@@ -2835,7 +2824,7 @@ if __name__ == '__main__':
         print(f'device {device}')
 
         # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
-        # data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 500)
+        data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 500)
         data_train(config, device)
         # data_test(config, visualize=True, verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, device=device)
 
