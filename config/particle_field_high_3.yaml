@@ -11,13 +11,13 @@ simulation:
   n_interactions: 16
   n_nodes: 10000
   n_node_types: 4
-  pos_rate: [[2.0E-4],[4.0E-4],[8.0E-4],[12.00E-4]]
+  pos_rate: [[4.0E-4],[6.0E-4],[9.0E-4],[12.0E-4]]
   neg_rate: 7.5E-5
   n_frames: 12500
   delta_t: 0.5
   dpos_init: 1.0E-4
   boundary: 'periodic'
-  node_value_map: 'pattern_22.tif'
+  node_value_map: 'pattern_18.tif'
   node_type_map: 'pattern_15.tif'
   beta: 1.0E-2
   start_frame: 0
@@ -33,7 +33,10 @@ graph_model:
   aggr_type: 'add'
   mesh_aggr_type: 'add'
   embedding_dim: 2
-  update_type: 'none'
+  input_size_update: 5
+  n_layers_update: 3
+  hidden_dim_update: 64
+  ouput_size_update: 1
 
 plotting:
   colormap: 'tab20'
@@ -47,6 +50,6 @@ training:
   n_runs: 2
   noise_level: 0
   data_augmentation: True
-  data_augmentation_loop: 2
+  data_augmentation_loop: 5
   cluster_method: 'distance_plot'
   device: 'auto'

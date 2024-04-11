@@ -1052,7 +1052,7 @@ def data_train_particles(config, device):
             visualize_embedding = True
             if visualize_embedding & (((epoch == 0) & (N < 10000) & (N % 200 == 0)) | (N==0)):
                 plot_training(config=config, dataset_name=dataset_name, model_name=model_config.particle_model_name, log_dir=log_dir,
-                              epoch=epoch, N=N, x=x, model=model, n_nodes=0, dataset_num=1,
+                              epoch=epoch, N=N, x=x, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
                               index_particles=index_particles, n_particles=n_particles,
                               n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
 
@@ -1311,6 +1311,7 @@ def data_train_particle_field(config, device):
     delta_t = simulation_config.delta_t
     noise_level = train_config.noise_level
     n_nodes = simulation_config.n_nodes
+    n_node_types = simulation_config.n_node_types
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
     has_cell_division = simulation_config.has_cell_division
@@ -1435,6 +1436,11 @@ def data_train_particle_field(config, device):
         mask_ghost = np.tile(mask_ghost, batch_size)
         mask_ghost = np.argwhere(mask_ghost == 1)
         mask_ghost = mask_ghost[:, 0].astype(int)
+    index_nodes = []
+    x_mesh = x_mesh_list[1][0].clone().detach()
+    for n in range(n_node_types):
+        index = np.argwhere(x_mesh[:, 5].detach().cpu().numpy() == -n - 1)
+        index_nodes.append(index.squeeze())
 
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
@@ -1449,8 +1455,7 @@ def data_train_particle_field(config, device):
         logger.info(f'batch_size: {batch_size}')
         if epoch == 1:
             repeat_factor = batch_size // old_batch_size
-            if has_mesh:
-                mask_mesh = mask_mesh.repeat(repeat_factor, 1)
+            mask_mesh = mask_mesh.repeat(repeat_factor, 1)
             if has_ghost:
                 mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
                 mask_ghost = np.tile(mask_ghost, batch_size)
@@ -1578,10 +1583,10 @@ def data_train_particle_field(config, device):
 
             visualize_embedding = True
 
-            if visualize_embedding & (((epoch == 0) & (N % 1000 == 0)) | (N == 0)):
+            if visualize_embedding & ( (N % 1000 == 0) | (N == 0) ) :
                 plot_training(config=config, dataset_name=dataset_name, model_name=model_config.particle_model_name,
                               log_dir=log_dir,
-                              epoch=epoch, N=N, x=x, model=model, n_nodes=n_nodes, dataset_num=1,
+                              epoch=epoch, N=N, x=x, model=model, n_nodes=n_nodes, n_node_types=n_node_types, index_nodes=index_nodes, dataset_num=1,
                               index_particles=index_particles, n_particles=n_particles,
                               n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
 
@@ -2656,7 +2661,7 @@ if __name__ == '__main__':
         print(f'device {device}')
 
         # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
-        # data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 500)
+        data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 500)
         data_train(config, device)
         # data_test(config, visualize=True, verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, device=device)
 
