@@ -48,6 +48,7 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         self.n_dataset = train_config.n_runs
         self.prediction = model_config.prediction
         self.update_type = model_config.update_type
+        self.input_size_update = model_config.input_size_update
         self.n_layers_update = model_config.n_layers_update
         self.hidden_dim_update = model_config.hidden_dim_update
         self.sigma = simulation_config.sigma
@@ -66,8 +67,11 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         self.lin_particle_mesh = MLP(input_size=self.input_size-3, output_size=self.output_size, nlayers=self.n_layers,
                             hidden_size=self.hidden_dim, device=self.device)
 
-        self.lin_mesh = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
+        self.lin_mesh = MLP(input_size=1, output_size=1, nlayers=self.n_layers,
                             hidden_size=self.hidden_dim, device=self.device)
+
+        self.lin_phi = MLP(input_size=self.input_size_update, output_size=1, nlayers=self.n_layers_update,
+                           hidden_size=self.hidden_dim_update, device=self.device)
 
         if simulation_config.has_cell_division :
             self.a = nn.Parameter(
@@ -78,11 +82,6 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
                 torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + int(self.n_nodes) + self.n_ghosts, self.embedding_dim)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
 
-
-
-        if self.update_type != 'none':
-            self.lin_update = MLP(input_size=self.output_size + self.embedding_dim + 2, output_size=self.output_size,
-                                  nlayers=self.n_layers_update, hidden_size=self.hidden_dim_update, device=self.device)
 
     def forward(self, data, data_id, training, vnorm, phi):
 
@@ -114,9 +113,15 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         drift = drift[self.n_nodes:,0:2]
         drift = drift/node_neighbour
 
-        # return dd_pos
+        mesh_msg = self.propagate(edge_index=edge_mesh, u=u, discrete_laplacian=edge_attr, mode ='mesh', pos=pos, d_pos=d_pos, particle_type=particle_type, particle_id = particle_id)
+        mesh_msg = mesh_msg[0:self.n_nodes]
+        particle_id = to_numpy(x[0:self.n_nodes, 0:1])
+        embedding = self.a[self.data_id, particle_id, :].squeeze()
 
-        return torch.cat((dd_pos, drift), 1)
+        input_phi = torch.cat((u[0:self.n_nodes,0:1], mesh_msg, embedding), dim=-1)
+        du = self.lin_phi(input_phi)
+
+        return dd_pos + drift, du
 
     def message(self, u_j, discrete_laplacian, mode, pos_i, pos_j, d_pos_i, d_pos_j, particle_type_i, particle_type_j, particle_id_i, particle_id_j):
 
@@ -124,7 +129,8 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
 
             L = discrete_laplacian[:, None] * u_j
 
-            in_features = torch.cat((delta_pos, r[:, None]), dim=-1) * ((particle_type_j > -1) & (particle_type_i == -1)).float()
+            r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
+            in_features = r[:, None] * ((particle_type_j > -1) & (particle_type_i < 0)).float()
 
             out = self.lin_mesh(in_features)
 
@@ -168,9 +174,9 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
                 return out
 
             elif mode == 'particle-field':
-                in_features = torch.cat((delta_pos, r[:, None], u_j, embedding_i), dim=-1) * (particle_type_j == -1).float()
+                in_features = torch.cat((delta_pos, r[:, None], u_j, embedding_i), dim=-1) * (particle_type_j < 0).float()
                 out = self.lin_particle_mesh(in_features)
-                node_neighbour = (particle_type_j == -1).float()
+                node_neighbour = (particle_type_j < 0).float()
 
                 return torch.cat((out, node_neighbour.repeat(1, 2)), 1)
 

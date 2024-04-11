@@ -247,10 +247,10 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
             plt.savefig(f"./{log_dir}/tmp_training/embedding/{model_name}_{dataset_name}_function_{epoch}_{N}.tif", dpi=300)
             plt.close()
 
-def analyze_edge_function(rr=None, vizualize=False, config=None, model_lin_edge=[], model_a=None, dataset_number = 0, n_particles=None, ynorm=None, types=None, cmap=None, dimension=2, device=None):
+def analyze_edge_function(rr=None, vizualize=False, config=None, model_lin_edge=[], model_a=None, n_nodes=0, dataset_number = 0, n_particles=None, ynorm=None, types=None, cmap=None, dimension=2, device=None):
     func_list = []
     for n in range(n_particles):
-        embedding_ = model_a[dataset_number, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+        embedding_ = model_a[dataset_number, n_nodes+n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
         max_radius = config.simulation.max_radius
         match config.graph_model.particle_model_name:
             case 'PDE_A':

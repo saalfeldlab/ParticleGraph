@@ -66,7 +66,15 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
         laplacian_u = laplacian_u[0:self.n_nodes]
         d_u_neg = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode ='mesh_neg', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze())
         d_u_neg = d_u_neg[0:self.n_nodes]
-        dd_u = torch.clamp(self.beta * laplacian_u, -10, 10) + self.pos_rate * u[0:self.n_nodes] - self.neg_rate * d_u_neg
+
+        node_type = to_numpy(data.x[0:self.n_nodes, 5]) * -1 - 1
+        node_type = node_type.astype(int)
+        pos_rate = self.pos_rate[node_type]
+        pos_rate= pos_rate[:, None]
+
+
+        dd_u = torch.clamp(self.beta * laplacian_u, -10, 10) + pos_rate * u[0:self.n_nodes] - self.neg_rate * d_u_neg
+
 
         dd_pos = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode ='particle-particle', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze())
         deg_particle[deg_particle==0]=1
@@ -92,7 +100,7 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
         elif mode == 'mesh_neg':
 
             distance_squared = torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, axis=1)  # distance squared
-            degradation = 1 / distance_squared[:, None] * ((particle_type_j > -1) & (particle_type_i == -1)).float()
+            degradation = 1 / distance_squared[:, None] * ((particle_type_j > -1) & (particle_type_i < 0)).float()
 
             return degradation
 
@@ -100,8 +108,8 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
 
             distance_squared = torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, axis=1) # distance squared
 
-            cohesion_field = parameters_i[:, 3, None] * self.a4 * torch.clamp(u_j,0,10000) * self.bc_dpos(pos_j - pos_i) * (particle_type_j == -1).float()
-            node_neighbour = (particle_type_j == -1).float()
+            cohesion_field = parameters_i[:, 3, None] * self.a4 * torch.clamp(u_j,0,10000) * self.bc_dpos(pos_j - pos_i) * (particle_type_j < 0).float()
+            node_neighbour = (particle_type_j < 0).float()
 
             return torch.cat((cohesion_field,node_neighbour.repeat(1,2)),1)
 

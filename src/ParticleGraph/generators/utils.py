@@ -25,6 +25,7 @@ def choose_model(config, device):
     model_signal_name = config.graph_model.signal_model_name
     aggr_type = config.graph_model.aggr_type
     n_particles = config.simulation.n_particles
+    n_node_types = config.simulation.n_node_types
     n_nodes = config.simulation.n_nodes
     n_particle_types = config.simulation.n_particle_types
     bc_pos, bc_dpos = choose_boundary_values(config.simulation.boundary)
@@ -34,13 +35,16 @@ def choose_model(config, device):
 
     match particle_model_name:
         case 'PDE_ParticleField':
+            pos_rate = torch.ones(n_node_types, device=device)*8E-4
+            for n in range(n_node_types):
+                pos_rate[n] = torch.tensor(config.simulation.pos_rate[n])
             p = torch.rand(n_particle_types, 4, device=device) * 100  # comprised between 10 and 50
             if params[0] != [-1]:
                 for n in range(n_particle_types):
                     p[n] = torch.tensor(params[n])
             else:
                 print(p)
-            model = PDE_ParticleField(aggr_type=aggr_type,  pos_rate=config.simulation.pos_rate, neg_rate=config.simulation.neg_rate, beta=config.simulation.beta, delta_t=config.simulation.delta_t,  p=torch.squeeze(p), bc_dpos=bc_dpos, n_particles=n_particles, n_nodes=n_nodes)
+            model = PDE_ParticleField(aggr_type=aggr_type,  pos_rate=pos_rate, neg_rate=config.simulation.neg_rate, beta=config.simulation.beta, delta_t=config.simulation.delta_t,  p=torch.squeeze(p), bc_dpos=bc_dpos, n_particles=n_particles, n_nodes=n_nodes)
         case 'PDE_A':
             p = torch.ones(n_particle_types, 4, device=device) + torch.rand(n_particle_types, 4, device=device)
             if config.simulation.non_discrete_level>0:

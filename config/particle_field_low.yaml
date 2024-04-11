@@ -36,13 +36,17 @@ graph_model:
   update_type: 'none'
 
 plotting:
-  colormap: 'tab10'
+  colormap: 'tab20'
   arrow_length: 10
 
 training:
   n_epochs: 20
   batch_size: 8
-  n_runs: 1
   sparsity: 'none'
+  small_init_batch_size: True
+  n_runs: 2
+  noise_level: 0
+  data_augmentation: True
+  data_augmentation_loop: 10
   cluster_method: 'distance_plot'
   device: 'auto'
