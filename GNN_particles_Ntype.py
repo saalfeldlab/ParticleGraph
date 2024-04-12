@@ -1583,7 +1583,7 @@ def data_train_particle_field(config, device):
 
             visualize_embedding = True
 
-            if visualize_embedding & ( (N % 1000 == 0) | (N == 0) ) :
+            if visualize_embedding & (((epoch == 0) & (N % 1000 == 0)) | (N == 0)):
                 plot_training(config=config, dataset_name=dataset_name, model_name=model_config.particle_model_name,
                               log_dir=log_dir,
                               epoch=epoch, N=N, x=x, model=model, n_nodes=n_nodes, n_node_types=n_node_types, index_nodes=index_nodes, dataset_num=1,

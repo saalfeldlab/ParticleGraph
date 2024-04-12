@@ -72,7 +72,6 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
         pos_rate = self.pos_rate[node_type]
         pos_rate= pos_rate[:, None]
 
-
         dd_u = torch.clamp(self.beta * laplacian_u, -10, 10) + pos_rate * u[0:self.n_nodes] - self.neg_rate * d_u_neg
 
 
@@ -80,22 +79,22 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
         deg_particle[deg_particle==0]=1
         dd_pos = dd_pos[self.n_nodes:] / deg_particle[:, None].repeat(1,2)
 
-        drift = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode ='particle-field', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze())
-        node_neighbour = drift[self.n_nodes:,2:4]
+        chemotaxism = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode ='particle-field', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze())
+        node_neighbour = chemotaxism[self.n_nodes:,2:4]
         node_neighbour[node_neighbour==0]=1
-        drift = drift[self.n_nodes:,0:2]
-        drift = drift/node_neighbour
+        chemotaxism = chemotaxism[self.n_nodes:,0:2]
+        chemotaxism_dd_pos = chemotaxism/node_neighbour
 
-        return dd_pos, drift, dd_u
+        return dd_pos, chemotaxism_dd_pos, dd_u
 
 
     def message(self, u_j, discrete_laplacian, mode, pos_i, pos_j, d_pos_i, d_pos_j, particle_type_i, particle_type_j, parameters_i, parameters_j):
 
         if mode == 'laplacian':
 
-            L = discrete_laplacian[:,None] * u_j
+            Laplacian_component = discrete_laplacian[:,None] * u_j
 
-            return L
+            return Laplacian_component
 
         elif mode == 'mesh_neg':
 
@@ -108,10 +107,10 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
 
             distance_squared = torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, axis=1) # distance squared
 
-            cohesion_field = parameters_i[:, 3, None] * self.a4 * torch.clamp(u_j,0,10000) * self.bc_dpos(pos_j - pos_i) * (particle_type_j < 0).float()
+            del_component = parameters_i[:, 3, None] * self.a4 * torch.clamp(u_j,0,10000) * self.bc_dpos(pos_j - pos_i) * (particle_type_j < 0).float()
             node_neighbour = (particle_type_j < 0).float()
 
-            return torch.cat((cohesion_field,node_neighbour.repeat(1,2)),1)
+            return torch.cat((del_component,node_neighbour.repeat(1,2)),1)
 
         elif mode == 'particle-particle':
 

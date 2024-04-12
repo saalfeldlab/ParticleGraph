@@ -107,11 +107,11 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         deg_particle[deg_particle == 0] = 1
         dd_pos = dd_pos[self.n_nodes:,0:2] / deg_particle[:, None].repeat(1, 2)
 
-        drift = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode='particle-field', pos=pos, d_pos=d_pos, particle_type=particle_type, particle_id = particle_id)
-        node_neighbour = drift[self.n_nodes:,2:4]
+        chemotaxism = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode='particle-field', pos=pos, d_pos=d_pos, particle_type=particle_type, particle_id = particle_id)
+        node_neighbour = chemotaxism[self.n_nodes:,2:4]
         node_neighbour[node_neighbour==0]=1
-        drift = drift[self.n_nodes:,0:2]
-        drift = drift/node_neighbour
+        chemotaxism = chemotaxism[self.n_nodes:,0:2]
+        chemotaxism_dd_pos = chemotaxism/node_neighbour
 
         mesh_msg = self.propagate(edge_index=edge_mesh, u=u, discrete_laplacian=edge_attr, mode ='mesh', pos=pos, d_pos=d_pos, particle_type=particle_type, particle_id = particle_id)
         mesh_msg = mesh_msg[0:self.n_nodes]
@@ -121,7 +121,7 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         input_phi = torch.cat((u[0:self.n_nodes,0:1], mesh_msg, embedding), dim=-1)
         du = self.lin_phi(input_phi)
 
-        return dd_pos + drift, du
+        return dd_pos + chemotaxism_dd_pos, du
 
     def message(self, u_j, discrete_laplacian, mode, pos_i, pos_j, d_pos_i, d_pos_j, particle_type_i, particle_type_j, particle_id_i, particle_id_j):
 
