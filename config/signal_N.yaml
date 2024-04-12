@@ -19,7 +19,6 @@ graph_model:
     signal_model_name: 'PDE_N'
     particle_model_name: ''
     mesh_model_name: ''
-    inter_model_name: ''
     prediction: 'first_derivative'
     input_size: 1
     output_size: 1

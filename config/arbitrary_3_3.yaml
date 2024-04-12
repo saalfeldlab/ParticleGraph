@@ -25,7 +25,6 @@ simulation:
 graph_model:
   particle_model_name: 'PDE_A_bis'
   mesh_model_name: ''
-  inter_model_name: ''
   prediction: 'first_derivative'
   input_size: 7
   output_size: 2

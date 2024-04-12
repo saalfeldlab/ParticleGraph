@@ -121,7 +121,9 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         input_phi = torch.cat((u[0:self.n_nodes,0:1], mesh_msg, embedding), dim=-1)
         du = self.lin_phi(input_phi)
 
-        return dd_pos + chemotaxism_dd_pos, du
+        # return dd_pos + chemotaxism_dd_pos, du
+
+        return torch.cat((du.repeat(1, 2),(dd_pos + chemotaxism_dd_pos)), dim=0)
 
     def message(self, u_j, discrete_laplacian, mode, pos_i, pos_j, d_pos_i, d_pos_j, particle_type_i, particle_type_j, particle_id_i, particle_id_j):
 

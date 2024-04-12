@@ -1550,7 +1550,13 @@ def data_train_particle_field(config, device):
                 optimizer_division.zero_grad()
 
             for batch in batch_loader:
-                pred_y, pred_du = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi)
+                batch
+
+            for batch in batch_loader:
+                pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi)
+
+            pred_y = pred[n_nodes:]
+            pred_du = pred[:n_nodes,0:1]
 
             if has_cell_division:
                 pred_division = model_division(time_batch, data_id=run)
@@ -2649,7 +2655,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 if __name__ == '__main__':
 
 
-    config_list = ['particle_field_high_3']
+    config_list = ['gravity_16','gravity_16_noise_1E-5','gravity_16_noise_1E-4','gravity_16_noise_1E-3','gravity_16_noise_1E-2','gravity_16_noise_1E-1']
 
 
     for config_file in config_list:
@@ -2661,9 +2667,9 @@ if __name__ == '__main__':
         print(f'device {device}')
 
         # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
-        data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 500)
-        data_train(config, device)
-        # data_test(config, visualize=True, verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, device=device)
+        # data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 500)
+        # data_train(config, device)
+        data_test(config, visualize=False, verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, device=device)
 
 
 

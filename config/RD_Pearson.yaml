@@ -21,7 +21,6 @@ simulation:
 graph_model:
   particle_model_name: ''
   mesh_model_name: 'RD_Pearson_Mesh'
-  inter_model_name: ''
   prediction: 'First_derivative'
   input_size: 8
   output_size: 3
