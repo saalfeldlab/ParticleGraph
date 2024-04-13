@@ -25,7 +25,7 @@ class SimulationConfig(BaseModel):
     n_nodes: Optional[int] = None
     n_node_types: Optional[int] = None
     pos_rate: list[list[float]] = None
-    neg_rate: float = 0
+    neg_rate: list[list[float]] = None
     has_cell_division: bool = False
     n_frames: int = 1000
     sigma: float = 0.005

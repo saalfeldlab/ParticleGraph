@@ -41,6 +41,8 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
         self.a5 = 0.5E-5
         self.a6 = 1E-8
 
+        self.a7 = 0.09
+
         self.pos_rate = pos_rate
         self.neg_rate = neg_rate
         self.beta = beta
@@ -71,8 +73,10 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
         node_type = node_type.astype(int)
         pos_rate = self.pos_rate[node_type]
         pos_rate= pos_rate[:, None]
+        neg_rate = self.neg_rate[node_type]
+        neg_rate= neg_rate[:, None]
 
-        dd_u = torch.clamp(self.beta * laplacian_u, -10, 10) + pos_rate * u[0:self.n_nodes] - self.neg_rate * d_u_neg
+        dd_u = torch.clamp(self.beta * laplacian_u, -10, 10) + pos_rate * u[0:self.n_nodes] - neg_rate * d_u_neg
 
 
         dd_pos = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode ='particle-particle', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze())
@@ -99,7 +103,7 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
         elif mode == 'mesh_neg':
 
             distance_squared = torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, axis=1)  # distance squared
-            degradation = 1 / distance_squared[:, None] * ((particle_type_j > -1) & (particle_type_i < 0)).float()
+            degradation = self.a7 / distance_squared[:, None] * ((particle_type_j > -1) & (particle_type_i < 0)).float()
 
             return degradation
 

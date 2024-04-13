@@ -67,7 +67,7 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         self.lin_particle_mesh = MLP(input_size=self.input_size-3, output_size=self.output_size, nlayers=self.n_layers,
                             hidden_size=self.hidden_dim, device=self.device)
 
-        self.lin_mesh = MLP(input_size=1, output_size=1, nlayers=self.n_layers,
+        self.lin_mesh = MLP(input_size=3, output_size=1, nlayers=self.n_layers,
                             hidden_size=self.hidden_dim, device=self.device)
 
         self.lin_phi = MLP(input_size=self.input_size_update, output_size=1, nlayers=self.n_layers_update,
@@ -121,9 +121,7 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         input_phi = torch.cat((u[0:self.n_nodes,0:1], mesh_msg, embedding), dim=-1)
         du = self.lin_phi(input_phi)
 
-        # return dd_pos + chemotaxism_dd_pos, du
-
-        return torch.cat((du.repeat(1, 2),(dd_pos + chemotaxism_dd_pos)), dim=0)
+        return dd_pos + chemotaxism_dd_pos, du
 
     def message(self, u_j, discrete_laplacian, mode, pos_i, pos_j, d_pos_i, d_pos_j, particle_type_i, particle_type_j, particle_id_i, particle_id_j):
 
@@ -132,7 +130,8 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
             L = discrete_laplacian[:, None] * u_j
 
             r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
-            in_features = r[:, None] * ((particle_type_j > -1) & (particle_type_i < 0)).float()
+            embedding_j = self.a[self.data_id, to_numpy(particle_id_j), :].squeeze()
+            in_features = torch.cat((r[:, None], embedding_j), dim=-1) * ((particle_type_j > -1) & (particle_type_i < 0)).float()
 
             out = self.lin_mesh(in_features)
 

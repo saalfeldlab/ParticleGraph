@@ -1390,7 +1390,7 @@ def data_train_particle_field(config, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_4.pt"
+    # net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_0.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
 
@@ -1453,6 +1453,7 @@ def data_train_particle_field(config, device):
         old_batch_size = batch_size
         batch_size = get_batch_size(epoch)
         logger.info(f'batch_size: {batch_size}')
+
         if epoch == 1:
             repeat_factor = batch_size // old_batch_size
             mask_mesh = mask_mesh.repeat(repeat_factor, 1)
@@ -1553,10 +1554,7 @@ def data_train_particle_field(config, device):
                 batch
 
             for batch in batch_loader:
-                pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi)
-
-            pred_y = pred[n_nodes:]
-            pred_du = pred[:n_nodes,0:1]
+                pred_y, pred_du = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi)
 
             if has_cell_division:
                 pred_division = model_division(time_batch, data_id=run)
@@ -1588,6 +1586,11 @@ def data_train_particle_field(config, device):
             total_loss_mesh += loss_mesh.item()
 
             visualize_embedding = True
+
+            if epoch>0:
+                with torch.no_grad():
+                    model.a[1][n_nodes:, :] = fixed_cluster_embedding
+
 
             if visualize_embedding & (((epoch == 0) & (N % 1000 == 0)) | (N == 0)):
                 plot_training(config=config, dataset_name=dataset_name, model_name=model_config.particle_model_name,
@@ -1642,6 +1645,41 @@ def data_train_particle_field(config, device):
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
         plt.close()
+
+        if epoch == 0:
+
+            embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+            embedding = embedding[n_nodes:]
+            for n in range(n_particle_types):
+                plt.scatter(embedding[index_particles[n], 0],
+                            embedding[index_particles[n], 1], color=cmap.color(n), s=0.1)
+
+            match train_config.cluster_method:
+                case 'kmeans_auto_embedding':
+                    labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
+                    proj_interaction = embedding
+                case 'distance_embedding':
+                    labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=0.1)
+                    proj_interaction = embedding
+            logger.info(f'n_clusters: {n_clusters}')
+
+            model_a_ = model.a[1].clone().detach()
+            for n in range(n_clusters):
+                pos = np.argwhere(labels == n).squeeze().astype(int)
+                pos = np.array(pos)
+                if pos.size > 0:
+                    median_center = model_a_[n_nodes+pos, :]
+                    median_center = torch.median(median_center, dim=0).values
+                    model_a_[n_nodes+pos, :] = median_center
+
+            match train_config.sparsity:
+                case 'replace_embedding':
+                    with torch.no_grad():
+                        model.a[1][n_nodes:, :] = model_a_[n_nodes:].clone().detach()
+                    fixed_cluster_embedding = model_a_[n_nodes:].clone().detach()
+                    print(f'regul_embedding: replaced')
+                    logger.info(f'regul_embedding: replaced')
+
 
 
 
@@ -2027,11 +2065,6 @@ def data_train_mesh(config, device):
                         logger.info(f'regul_embedding: replaced')
                         plt.text(0, 1.1, f'Replaced', ha='left', va='top', transform=ax.transAxes, fontsize=10)
             else:
-                # if (epoch > n_epochs - 3) & (replace_with_cluster):
-                #     lr_embedding = 1E-5
-                #     lr = train_config.learning_rate_end
-                #     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-                #     logger.info(f'Learning rates: {lr}, {lr_embedding}')
                 if epoch > 3 * n_epochs // 4 + 1:
                     lr_embedding = train_config.learning_rate_embedding_end
                     lr = train_config.learning_rate_end
@@ -2655,7 +2688,9 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
 if __name__ == '__main__':
 
 
-    config_list = ['gravity_16','gravity_16_noise_1E-5','gravity_16_noise_1E-4','gravity_16_noise_1E-3','gravity_16_noise_1E-2','gravity_16_noise_1E-1']
+    # config_list = ['boids_16_dropout_10_no_ghost','boids_16_dropout_20','boids_16_dropout_30','boids_16_dropout_40']
+    config_list = ['boids_16_noise_1E-1','boids_16_noise_1E-2','boids_16_noise_1E-3']
+    # config_list = ['particle_field_5']
 
 
     for config_file in config_list:
@@ -2668,8 +2703,8 @@ if __name__ == '__main__':
 
         # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
         # data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 500)
-        # data_train(config, device)
-        data_test(config, visualize=False, verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, device=device)
+        data_train(config, device)
+        # data_test(config, visualize=False, verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, device=device)
 
 
 
