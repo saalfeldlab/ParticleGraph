@@ -1152,6 +1152,219 @@ def data_plot_training_continuous(config, mode, device):
         rmserr = torch.sqrt(torch.mean((func_list - true_func_list) ** 2))
         print(f'RMS error: {np.round(rmserr.item(), 7)}')
 
+def data_plot_training_particle_field(config, mode, device):
+    print('')
+
+    # plt.rcParams['text.usetex'] = True
+    # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+
+    simulation_config = config.simulation
+    train_config = config.training
+    model_config = config.graph_model
+
+    dimension = simulation_config.dimension
+    n_epochs = train_config.n_epochs
+    max_radius = simulation_config.max_radius
+    min_radius = simulation_config.min_radius
+    n_particle_types = simulation_config.n_particle_types
+    n_particles = simulation_config.n_particles
+    delta_t = simulation_config.delta_t
+    noise_level = train_config.noise_level
+    n_nodes = simulation_config.n_nodes
+    n_node_types = simulation_config.n_node_types
+    dataset_name = config.dataset
+    n_frames = simulation_config.n_frames
+    has_cell_division = simulation_config.has_cell_division
+    data_augmentation = train_config.data_augmentation
+    data_augmentation_loop = train_config.data_augmentation_loop
+    target_batch_size = train_config.batch_size
+    replace_with_cluster = 'replace' in train_config.sparsity
+    has_ghost = train_config.n_ghosts > 0
+    has_large_range = train_config.large_range
+    if train_config.small_init_batch_size:
+        get_batch_size = increasing_batch_size(target_batch_size)
+    else:
+        get_batch_size = constant_batch_size(target_batch_size)
+    batch_size = get_batch_size(0)
+    cmap = CustomColorMap(config=config)  # create colormap for given model_config
+    embedding_cluster = EmbeddingCluster(config)
+
+
+    l_dir = os.path.join('.', 'log')
+    log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
+    print('log_dir: {}'.format(log_dir))
+
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
+    NGraphs = len(graph_files)
+
+    x_list = []
+    y_list = []
+    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_1.pt', map_location=device))
+    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_1.pt', map_location=device))
+    ynorm = torch.load(f'./log/try_{dataset_name}/ynorm.pt', map_location=device).to(device)
+    vnorm = torch.load(f'./log/try_{dataset_name}/vnorm.pt', map_location=device).to(device)
+
+    x_mesh_list = []
+    y_mesh_list = []
+    x_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/x_mesh_list_1.pt', map_location=device)
+    x_mesh_list.append(x_mesh)
+    y_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_1.pt', map_location=device)
+    y_mesh_list.append(y_mesh)
+    hnorm = torch.load(f'./log/try_{dataset_name}/hnorm.pt', map_location=device).to(device)
+
+    mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_1.pt', map_location=device)
+    mask_mesh = mesh_data['mask']
+    mask_mesh = mask_mesh.repeat(batch_size, 1)
+
+    print('Create models ...')
+    model, bc_pos, bc_dpos = choose_training_model(config, device)
+
+    index_particles = []
+    x = x_list[0][0].clone().detach()
+    for n in range(n_particle_types):
+        index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
+        index_particles.append(index.squeeze())
+    if has_ghost:
+        ghosts_particles = Ghost_Particles(config, n_particles, device)
+        if train_config.ghost_method == 'MLP':
+            optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.data], lr=5E-4)
+        else:
+            optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.ghost_pos], lr=1E-4)
+        mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
+        mask_ghost = np.tile(mask_ghost, batch_size)
+        mask_ghost = np.argwhere(mask_ghost == 1)
+        mask_ghost = mask_ghost[:, 0].astype(int)
+    index_nodes = []
+    x_mesh = x_mesh_list[0][0].clone().detach()
+    for n in range(n_node_types):
+        index = np.argwhere(x_mesh[:, 5].detach().cpu().numpy() == -n - 1)
+        index_nodes.append(index.squeeze())
+
+    for epoch in trange (14, 20):
+
+        net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_{epoch}.pt"
+        state_dict = torch.load(net,map_location=device)
+        model.load_state_dict(state_dict['model_state_dict'])
+
+        # matplotlib.use("Qt5Agg")
+        fig = plt.figure(figsize=(10, 10))
+        ax = fig.add_subplot(3, 3, 1)
+        embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+        embedding = embedding[n_nodes:]
+        for n in range(n_particle_types):
+            plt.scatter(embedding[index_particles[n], 0],
+                        embedding[index_particles[n], 1], color=cmap.color(n), s=10)
+        plt.xlabel('Embedding 0', fontsize=12)
+        plt.ylabel('Embedding 1', fontsize=12)
+        plt.title('Particle embedding', fontsize=12)
+
+        match train_config.cluster_method:
+            case 'kmeans_auto_embedding':
+                labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
+                proj_interaction = embedding
+            case 'distance_embedding':
+                labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=0.1)
+                proj_interaction = embedding
+        print(f'n_clusters: {n_clusters}')
+
+        model_a_ = model.a[1].clone().detach()
+        for n in range(n_clusters):
+            pos = np.argwhere(labels == n).squeeze().astype(int)
+            pos = np.array(pos)
+            if pos.size > 0:
+                median_center = model_a_[n_nodes + pos, :]
+                median_center = torch.median(median_center, dim=0).values
+                model_a_[n_nodes + pos, :] = median_center
+
+        with torch.no_grad():
+            model.a[1][n_nodes:, :] = model_a_[n_nodes:].clone().detach()
+
+        ax = fig.add_subplot(3, 3, 2)
+        embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+        embedding = embedding[n_nodes:]
+        for n in range(n_particle_types):
+            plt.scatter(embedding[index_particles[n], 0],
+                        embedding[index_particles[n], 1], color=cmap.color(n), s=25)
+        plt.xlabel('Embedding 0', fontsize=12)
+        plt.ylabel('Embedding 1', fontsize=12)
+        plt.title('Clustered particle embedding', fontsize=12)
+
+        ax = fig.add_subplot(3, 3, 3)
+        embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+        embedding = embedding[:n_nodes, :]
+        for n in range(n_node_types):
+                plt.scatter(embedding[index_nodes[n], 0],
+                            embedding[index_nodes[n], 1], color=cmap.color(n), s=25)
+        plt.xlabel('Embedding 0', fontsize=12)
+        plt.ylabel('Embedding 1', fontsize=12)
+        plt.title('Field embedding', fontsize=12)
+
+        ax = fig.add_subplot(3, 3, 4)
+        plt.title('Pos rate', fontsize=12)
+        uu = torch.tensor(np.linspace(0, 7500, 200)).to(device)
+        popt_list = []
+        for n in range(n_nodes):
+            embedding_ = model.a[1, n, :] * torch.ones((200, 2), device=device)
+            in_features = torch.cat((uu[:, None], uu[:, None]*0, uu[:, None]*0, embedding_), dim=1)
+            h = model.lin_phi(in_features.float())
+            h = h[:, 0]
+            popt, pcov = curve_fit(linear_model, to_numpy(uu.squeeze()), to_numpy(h.squeeze()))
+            popt_list.append(popt)
+            if n%50:
+                t = x_mesh[n,5:6]
+                cc = cmap.color(int(to_numpy(-t)))
+                plt.plot(to_numpy(uu), to_numpy(h), color=cc, linewidth=2,alpha=0.01)
+        ax = fig.add_subplot(3, 3, 5)
+        plt.title('Pos rate', fontsize=12)
+        t = np.array(popt_list)
+        t = t[:, 0]
+        t = np.reshape(t, (100, 100))
+        plt.imshow(t, cmap='viridis')
+        plt.xticks([])
+        plt.yticks([])
+
+        ax = fig.add_subplot(3, 3, 7)
+        plt.title('Neg rate', fontsize=12)
+        popt_list0 = []
+        popt_list1 = []
+        r = torch.tensor(np.linspace(0, 1/0.04, 200)).to(device)
+        for n in range(n_nodes):
+            embedding_ = model.a[1, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
+            in_features = torch.cat((r[:, None], embedding_), dim=1)
+            with torch.no_grad():
+                h = model.lin_mesh(in_features.float())
+                h = h[:, 0]
+                popt_list0.append(torch.mean(h))
+                popt, pcov = curve_fit(linear_model, to_numpy(r.squeeze()), to_numpy(h.squeeze()))
+                popt_list1.append(popt)
+                if n % 50:
+                    t = x_mesh[n, 5:6]
+                    cc = cmap.color(int(to_numpy(-t)))
+                    plt.plot(to_numpy(r),
+                             to_numpy(h),
+                             color=cc, linewidth=2,alpha=0.0025)
+
+        ax = fig.add_subplot(3, 3, 8)
+        plt.title('Neg rate', fontsize=12)
+        t = torch.stack(popt_list0)
+        t = to_numpy(t)
+        t = t[:, None]
+        t = np.reshape(t, (100, 100))
+        plt.imshow(t, cmap='viridis')
+        plt.xticks([])
+        plt.yticks([])
+
+        ax = fig.add_subplot(3, 3, 9)
+        t = np.array(popt_list1)
+        t = t[:, 0]
+        t = np.reshape(t, (100, 100))
+        plt.imshow(t, cmap='viridis')
+        plt.xticks([])
+        plt.yticks([])
+        plt.tight_layout()
+        fig.savefig(f"./{log_dir}/tmp_training/Analysis_{dataset_name}_{epoch}.tif",dpi=170.7)
+        plt.close()
+
 
 if __name__ == '__main__':
 
@@ -1159,7 +1372,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3']
+    config_list = ['particle_field_5']
 
     for config_file in config_list:
 
@@ -1172,7 +1385,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_plot_training(config, mode='figures' , device=device)
+        data_plot_training_particle_field(config, mode='figures' , device=device)
 
 
 
