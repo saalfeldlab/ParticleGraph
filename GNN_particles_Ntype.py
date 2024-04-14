@@ -450,8 +450,8 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                     else:
                         # matplotlib.use("Qt5Agg")
 
-                        plt.rcParams['text.usetex'] = True
-                        rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+                        # plt.rcParams['text.usetex'] = True
+                        # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
                         matplotlib.rcParams['savefig.pad_inches'] = 0
                         fig = plt.figure(figsize=(12, 12))
@@ -521,8 +521,8 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                                          x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), '+', color='w')
                         plt.xlim([-2,2])
                         plt.ylim([-2,2])
-                        plt.xlabel(r'$x$', fontsize=64)
-                        plt.ylabel(r'$y$', fontsize=64)
+                        # plt.xlabel(r'$x$', fontsize=64)
+                        # plt.ylabel(r'$y$', fontsize=64)
                         plt.xticks(fontsize=32.0)
                         plt.yticks(fontsize=32.0)
                         plt.tight_layout()
@@ -1682,7 +1682,6 @@ def data_train_particle_field(config, device):
 
 
 
-
 def data_train_mesh(config, device):
 
     print('')
@@ -2701,7 +2700,7 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
+        data_generate(config, device=device, visualize=False, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
         # data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 500)
         data_train(config, device)
         # data_test(config, visualize=False, verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, device=device)

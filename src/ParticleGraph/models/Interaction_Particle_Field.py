@@ -130,8 +130,8 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
             L = discrete_laplacian[:, None] * u_j
 
             r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
-            embedding_j = self.a[self.data_id, to_numpy(particle_id_j), :].squeeze()
-            in_features = torch.cat((r[:, None], embedding_j), dim=-1) * ((particle_type_j > -1) & (particle_type_i < 0)).float()
+            embedding_i = self.a[self.data_id, to_numpy(particle_id_i), :].squeeze()
+            in_features = torch.cat((r[:, None], embedding_i), dim=-1) * ((particle_type_j > -1) & (particle_type_i < 0)).float()
 
             out = self.lin_mesh(in_features)
 
