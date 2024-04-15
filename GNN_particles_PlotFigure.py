@@ -1130,6 +1130,8 @@ def data_plot_FIG3():
     Accuracy = plot_confusion_matrix('c)', to_numpy(x[:,5:6]), new_labels, n_particle_types, 20, '$10^6$', fig, ax)
     plt.tight_layout()
 
+    model_a_first = model.a.clone().detach()
+
     model_a_ = model.a[1].clone().detach()
     for k in range(n_clusters):
         pos = np.argwhere(new_labels == k).squeeze().astype(int)
@@ -1139,6 +1141,30 @@ def data_plot_FIG3():
         for n in range(model.a.shape[0]):
             model.a[n] = model_a_
     embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+
+    fig_ = plt.figure(figsize=(12, 12))
+    axf = fig_.add_subplot(1, 1, 1)
+    axf.xaxis.set_major_locator(plt.MaxNLocator(3))
+    axf.yaxis.set_major_locator(plt.MaxNLocator(3))
+    axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    csv_=[]
+    for n in range(n_particle_types):
+        pos = np.argwhere(new_labels == n).squeeze().astype(int)
+        plt.scatter(embedding[pos[0], 0], embedding[pos[0], 1], color=cmap.color(n), s=400)
+        csv_.append(embedding[pos[0], :])
+    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
+    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+    plt.xticks(fontsize=32.0)
+    plt.yticks(fontsize=32.0)
+    plt.xticks(fontsize=32.0)
+    plt.yticks(fontsize=32.0)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/Fig3_a_{dataset_name}.tif", dpi=300)
+    csv_ = np.array(csv_)
+    np.save(f"./{log_dir}/tmp_training/Fig3_a_{dataset_name}.npy", csv_)
+    np.savetxt(f"./{log_dir}/tmp_training/Fig3_a_{dataset_name}.txt", csv_)
+    plt.close()
 
     ax = fig.add_subplot(3, 3, 4)
     plt.text(-0.25, 1.1, f'd)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
@@ -1178,6 +1204,55 @@ def data_plot_FIG3():
     plt.ylim([0, 0.5E6])
     plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
 
+    func_list = []
+    fig_ = plt.figure(figsize=(12, 12))
+    ax = fig_.add_subplot(1, 1, 1)
+    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+    func_list = []
+    csv_ = []
+    csv_.append(to_numpy(rr))
+    for n in range(n_particle_types):
+        pos = np.argwhere(new_labels == n).squeeze().astype(int)
+        embedding = model.a[0, pos[0], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                 rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                 0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
+        with torch.no_grad():
+            func = model.lin_edge(in_features.float())
+        func = func[:, 0]
+        func_list.append(func)
+        plt.plot(to_numpy(rr),
+                 to_numpy(func) * to_numpy(ynorm),
+                 color=cmap.color(n), linewidth=8)
+        csv_.append(to_numpy(func) * to_numpy(ynorm))
+    plt.xticks(fontsize=32)
+    plt.yticks(fontsize=32)
+    plt.xlim([0, 0.02])
+    plt.ylim([0, 0.5E6])
+    plt.xlabel(r'$d_{ij}$', fontsize=64)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/Fig3_b_{dataset_name}.tif", dpi=300)
+    csv_ = np.array(csv_)
+    np.save(f"./{log_dir}/tmp_training/Fig3_b_{dataset_name}.npy", csv_)
+    np.savetxt(f"./{log_dir}/tmp_training/Fig3_b_{dataset_name}.txt", csv_)
+    plt.close()
+
+    p = np.linspace(0.5, 5, n_particle_types)
+    p = torch.tensor(p, device=device)
+
+    func_list = torch.stack(func_list) * ynorm
+    true_func_list = []
+    for n in range(n_particles):
+        pos = np.argwhere(new_labels == n).squeeze().astype(int)
+        if pos.size > 0:
+            true_func_list.append(model.psi(rr, p[n], p[n]))
+    true_func_list = torch.stack(true_func_list)
+    rmserr = torch.sqrt(torch.mean((func_list - true_func_list.squeeze()) ** 2))
+    print(f'function unique RMS error: {np.round(rmserr.item(), 7)}')
+
+
     ax = fig.add_subplot(3, 3, 6)
     print('6')
     plt.text(-0.25, 1.1, f'k)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
@@ -1192,6 +1267,31 @@ def data_plot_FIG3():
     plt.yticks(fontsize=10.0)
     plt.xlim([0, 0.02])
     plt.ylim([0, 0.5E6])
+
+
+    fig_ = plt.figure(figsize=(12, 12))
+    ax = fig_.add_subplot(1, 1, 1)
+    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+    p = np.linspace(0.5, 5, n_particle_types)
+    p = torch.tensor(p, device=device)
+    csv_ = []
+    csv_.append(to_numpy(rr))
+    for n in range(n_particle_types - 1, -1, -1):
+        plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n), linewidth=8)
+        csv_.append(to_numpy(model.psi(rr, p[n], p[n]).squeeze()))
+    plt.xticks(fontsize=32)
+    plt.yticks(fontsize=32)
+    plt.xlim([0, 0.02])
+    plt.ylim([0, 0.5E6])
+    plt.xlabel(r'$d_{ij}$', fontsize=64)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/Fig3_c_{dataset_name}.tif", dpi=300)
+    csv_ = np.array(csv_)
+    np.save(f"./{log_dir}/tmp_training/Fig3_c_{dataset_name}.npy", csv_)
+    np.savetxt(f"./{log_dir}/tmp_training/Fig3_c_{dataset_name}.txt", csv_)
+    plt.close()
 
     plot_list = []
     for n in range(n_particle_types):
@@ -1235,6 +1335,28 @@ def data_plot_FIG3():
     r_squared = 1 - (ss_res / ss_tot)
     plt.text(0.5, 4.5, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
 
+    fig_ = plt.figure(figsize=(12, 12))
+    ax = fig_.add_subplot(1, 1, 1)
+    ax.xaxis.set_major_locator(plt.MaxNLocator(5))
+    ax.yaxis.set_major_locator(plt.MaxNLocator(5))
+    csv_ = []
+    csv_.append(p)
+    csv_.append(popt_list[:, 0])
+    plt.plot(p, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+    plt.scatter(p, popt_list[:, 0], color='k', s=400)
+    plt.xticks(fontsize=32)
+    plt.yticks(fontsize=32)
+    plt.xlabel(r'True mass ', fontsize=64)
+    plt.ylabel(r'Reconstructed mass ', fontsize=64)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/Fig3_d_{dataset_name}.tif", dpi=300)
+    csv_ = np.array(csv_)
+    np.save(f"./{log_dir}/tmp_training/Fig3_d_{dataset_name}.npy", csv_)
+    np.savetxt(f"./{log_dir}/tmp_training/Fig3_d_{dataset_name}.txt", csv_)
+
+
+
+
     ax = fig.add_subplot(3, 3, 8)
     print('8')
     plt.text(-0.25, 1.1, f'h)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
@@ -1246,6 +1368,31 @@ def data_plot_FIG3():
     plt.ylabel(r'Exponent fit ', fontsize=12)
     plt.text(0.5, -0.5, f"Exponent: {np.round(np.mean(-popt_list[:, 1]), 3)}+/-{np.round(np.std(popt_list[:, 1]), 3)}",
              fontsize=10)
+
+
+
+    fig_ = plt.figure(figsize=(12, 12))
+    ax = fig_.add_subplot(1, 1, 1)
+    ax.xaxis.set_major_locator(plt.MaxNLocator(5))
+    ax.yaxis.set_major_locator(plt.MaxNLocator(5))
+    csv_ = []
+    csv_.append(p)
+    csv_.append(-popt_list[:, 1])
+    plt.plot(p, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+    plt.scatter(p, -popt_list[:, 1], color='k', s=400)
+    plt.xlim([0, 5.5])
+    plt.ylim([-4, 0])
+    plt.xticks(fontsize=32)
+    plt.yticks(fontsize=32)
+    plt.xlabel(r'Reconstructed exponent', fontsize=64)
+    plt.ylabel(r'True mass', fontsize=64)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/Fig3_e_{dataset_name}.tif", dpi=300)
+    csv_ = np.array(csv_)
+    np.save(f"./{log_dir}/tmp_training/Fig3_e_{dataset_name}.npy", csv_)
+    np.savetxt(f"./{log_dir}/tmp_training/Fig3_e_{dataset_name}.txt", csv_)
+    plt.close()
+
 
     # find last image file in logdir
     ax = fig.add_subplot(3, 3, 9)
@@ -3961,11 +4108,12 @@ if __name__ == '__main__':
     # data_plot_FIG2()
 
     # config_list = ['gravity_16','gravity_16_noise_1E-5','gravity_16_noise_1E-4','gravity_16_noise_1E-3','gravity_16_noise_1E-2','gravity_16_noise_1E-1']
-    config_list = ['gravity_16_dropout_10_no_ghost', 'gravity_16_dropout_10', 'gravity_16_dropout_20', 'gravity_16_dropout_30', 'gravity_16_dropout_40', 'gravity_16_dropout_50']
+    # config_list = ['gravity_16_dropout_10_no_ghost', 'gravity_16_dropout_10', 'gravity_16_dropout_20', 'gravity_16_dropout_30', 'gravity_16_dropout_40', 'gravity_16_dropout_50']
+    config_list = ['gravity_16']
 
     for config_name in config_list:
 
-        data_plot_FIG3_dropout()
+        data_plot_FIG3()
 
 
 
