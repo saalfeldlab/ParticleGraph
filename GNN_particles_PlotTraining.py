@@ -351,9 +351,8 @@ def data_plot_training(config, mode, device):
             axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
             csv_ = []
             for n in range(n_particle_types):
-                pos = np.argwhere(new_labels == n).squeeze().astype(int)
-                plt.scatter(embedding[pos[0], 0], embedding[pos[0], 1], color=cmap.color(n), s=400)
-                csv_.append(embedding[pos[0], :])
+                plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n), s=400, alpha=0.1)
+                csv_.append(embedding[index_particles[n], :])
             plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
             plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
             plt.xticks(fontsize=32.0)
@@ -361,17 +360,18 @@ def data_plot_training(config, mode, device):
             plt.xticks(fontsize=32.0)
             plt.yticks(fontsize=32.0)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/Fig3_a_{dataset_name}.tif", dpi=300)
             csv_ = np.array(csv_)
-            np.save(f"./{log_dir}/tmp_training/Fig3_a_{dataset_name}.npy", csv_)
-            np.savetxt(f"./{log_dir}/tmp_training/Fig3_a_{dataset_name}.txt", csv_)
+            plt.savefig(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.tif", dpi=300)
+            np.save(f"./{log_dir}/tmp_training/embedding_{dataset_name}.npy", csv_)
+            csv_= np.reshape(csv_,(csv_.shape[0]*csv_.shape[1],2))
+            np.savetxt(f"./{log_dir}/tmp_training/embedding_{dataset_name}.txt", csv_)
             plt.close()
 
             p = config.simulation.params
             if len(p) > 1:
                 p = torch.tensor(p, device=device)
             else:
-                p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt')
+                p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt',map_location=device)
 
 
             rmserr_list = []
@@ -1396,7 +1396,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3']
+    config_list = ['arbitrary_64']
 
     for config_file in config_list:
 
