@@ -52,7 +52,7 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
         popt_list = []
         for n in range(n_nodes):
             embedding_ = model.a[dataset_num, n, :] * torch.ones((200, 2), device=device)
-            in_features = torch.cat((uu[:, None], uu[:, None]*0, uu[:, None]*0, embedding_), dim=1)
+            in_features = torch.cat((uu[:, None], uu[:, None]*0, embedding_), dim=1)
             h = model.lin_phi(in_features.float())
             h = h[:, 0]
             popt, pcov = curve_fit(linear_model, to_numpy(uu.squeeze()), to_numpy(h.squeeze()))

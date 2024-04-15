@@ -118,8 +118,8 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         particle_id = to_numpy(x[0:self.n_nodes, 0:1])
         embedding = self.a[self.data_id, particle_id, :].squeeze()
 
-        input_phi = torch.cat((u[0:self.n_nodes,0:1], mesh_msg, embedding), dim=-1)
-        du = self.lin_phi(input_phi)
+        input_phi = torch.cat((u[0:self.n_nodes,0:1], mesh_msg[:,0:1], embedding), dim=-1)
+        du = self.lin_phi(input_phi) + mesh_msg[:,1:2]
 
         return dd_pos + chemotaxism_dd_pos, du
 
@@ -133,7 +133,7 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
             embedding_i = self.a[self.data_id, to_numpy(particle_id_i), :].squeeze()
             in_features = torch.cat((r[:, None], embedding_i), dim=-1) * ((particle_type_j > -1) & (particle_type_i < 0)).float()
 
-            out = self.lin_mesh(in_features)
+            out = torch.relu(self.lin_mesh(in_features))
 
             return torch.cat((L, out), 1)
 

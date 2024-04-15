@@ -41,7 +41,7 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
         self.a5 = 0.5E-5
         self.a6 = 1E-8
 
-        self.a7 = 0.09
+        self.a7 = 0.085
 
         self.pos_rate = pos_rate
         self.neg_rate = neg_rate
@@ -90,6 +90,9 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
         chemotaxism_dd_pos = chemotaxism/node_neighbour
 
         return dd_pos, chemotaxism_dd_pos, dd_u
+
+        fig = plt.figure(figsize=(10, 10))
+        plt.hist(to_numpy(self.beta * laplacian_u), 100)
 
 
     def message(self, u_j, discrete_laplacian, mode, pos_i, pos_j, d_pos_i, d_pos_j, particle_type_i, particle_type_j, parameters_i, parameters_j):

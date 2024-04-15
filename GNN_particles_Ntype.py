@@ -764,6 +764,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             # y_mesh_list.append(new_pred)
 
             H1_mesh[:, 0:1] += y_mesh * delta_t
+            H1_mesh[:, 0:1] = torch.clamp(H1_mesh[:, 0:1], min=0, max=7500)
             y_mesh_list.append(y_mesh)
 
             # output plots
@@ -777,7 +778,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 tri = Delaunay(pts)
                 colors = torch.sum(H1_mesh[tri.simplices, 0], dim=1) / 3.0
                 plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                              facecolors=to_numpy(colors), vmin=0, vmax=5000)
+                              facecolors=to_numpy(colors), vmin=0, vmax=7500)
                 # H1_IM = torch.reshape(H1_mesh[:, 0], (100, 100))
                 # plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=5000, cmap='viridis')
                 for n in range(n_particle_types):
@@ -1447,6 +1448,8 @@ def data_train_particle_field(config, device):
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
 
     list_loss = []
+    list_loss2 = []
+    list_loss3 = []
     time.sleep(1)
     for epoch in range(n_epochs + 1):
 
@@ -1591,7 +1594,6 @@ def data_train_particle_field(config, device):
                 with torch.no_grad():
                     model.a[1][n_nodes:, :] = fixed_cluster_embedding
 
-
             if visualize_embedding & (((epoch == 0) & (N % 1000 == 0)) | (N == 0)):
                 plot_training(config=config, dataset_name=dataset_name, model_name=model_config.particle_model_name,
                               log_dir=log_dir,
@@ -1608,6 +1610,8 @@ def data_train_particle_field(config, device):
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs_{epoch}.pt'))
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
+        list_loss2.append(total_loss_particle / (N + 1) / n_particles / batch_size)
+        list_loss3.append(total_loss_mesh / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
         if has_cell_division:
@@ -1628,7 +1632,9 @@ def data_train_particle_field(config, device):
         # plt.style.use('classic')
 
         ax = fig.add_subplot(1, 2, 1)
-        plt.plot(list_loss, color='k')
+        plt.plot(np.log(list_loss), color='k')
+        plt.plot(np.log(list_loss2), color='r')
+        plt.plot(np.log(list_loss3), color='g')
         plt.xlim([0, n_epochs])
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
@@ -2688,8 +2694,8 @@ if __name__ == '__main__':
 
 
     # config_list = ['boids_16_dropout_10_no_ghost','boids_16_dropout_20','boids_16_dropout_30','boids_16_dropout_40']
-    config_list = ['boids_16_noise_1E-1','boids_16_noise_1E-2','boids_16_noise_1E-3']
-    # config_list = ['particle_field_5']
+    # config_list = ['boids_16_noise_1E-1','boids_16_noise_1E-2','boids_16_noise_1E-3']
+    config_list = ['particle_field_7']
 
 
     for config_file in config_list:
@@ -2700,7 +2706,7 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=False, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
+        # data_generate(config, device=device, visualize=False, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
         # data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 500)
         data_train(config, device)
         # data_test(config, visualize=False, verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, device=device)

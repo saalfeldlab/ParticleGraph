@@ -1240,7 +1240,7 @@ def data_plot_training_particle_field(config, mode, device):
         index = np.argwhere(x_mesh[:, 5].detach().cpu().numpy() == -n - 1)
         index_nodes.append(index.squeeze())
 
-    for epoch in trange (14, 20):
+    for epoch in trange (0, 20):
 
         net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_{epoch}.pt"
         state_dict = torch.load(net,map_location=device)
@@ -1301,7 +1301,7 @@ def data_plot_training_particle_field(config, mode, device):
 
         ax = fig.add_subplot(3, 3, 4)
         plt.title('Pos rate', fontsize=12)
-        uu = torch.tensor(np.linspace(0, 7500, 200)).to(device)
+        uu = torch.tensor(np.linspace(500, 7500, 200)).to(device)
         popt_list = []
         for n in range(n_nodes):
             embedding_ = model.a[1, n, :] * torch.ones((200, 2), device=device)
@@ -1327,7 +1327,7 @@ def data_plot_training_particle_field(config, mode, device):
         plt.title('Neg rate', fontsize=12)
         popt_list0 = []
         popt_list1 = []
-        r = torch.tensor(np.linspace(0, 1/0.04, 200)).to(device)
+        r = torch.tensor(np.linspace(0, 1, 200)).to(device)
         for n in range(n_nodes):
             embedding_ = model.a[1, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
             in_features = torch.cat((r[:, None], embedding_), dim=1)
@@ -1372,7 +1372,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['particle_field_5']
+    config_list = ['particle_field_7']
 
     for config_file in config_list:
 

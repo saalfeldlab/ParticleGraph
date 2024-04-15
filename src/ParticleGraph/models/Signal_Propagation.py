@@ -65,7 +65,7 @@ class Signal_Propagation(pyg.nn.MessagePassing):
         particle_id = to_numpy(x[:, 0])
         embedding = self.a[1, particle_id, :]   # common embedding for all dataset
 
-        input_phi = torch.cat((msg, u, embedding), dim=-1)
+        input_phi = torch.cat((u, embedding), dim=-1) + msg
 
         pred = self.lin_phi(input_phi)
 
