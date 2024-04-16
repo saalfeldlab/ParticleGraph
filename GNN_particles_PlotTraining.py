@@ -735,7 +735,7 @@ def data_plot_training_asym(config, mode, device):
                                                                 types=to_numpy(x[:, 5]),
                                                                 cmap=cmap, device=device)
         plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=64)
         # xticks with sans serif font
         plt.xticks(fontsize=32)
         plt.yticks(fontsize=32)
@@ -839,8 +839,6 @@ def data_plot_training_asym(config, mode, device):
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.tif", dpi=170.7)
         plt.close()
@@ -873,7 +871,7 @@ def data_plot_training_asym(config, mode, device):
                          to_numpy(func) * to_numpy(ynorm),
                          color=cmap.color(n), linewidth=8)
         plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=64)
         # xticks with sans serif font
         plt.xticks(fontsize=32)
         plt.yticks(fontsize=32)
@@ -906,7 +904,7 @@ def data_plot_training_asym(config, mode, device):
                 true_func_list.append(model.psi(rr, p[3*n + m], p[n*3 +m]))
                 csv_.append(to_numpy(model.psi(rr, p[3*n + m], p[n*3 +m]).squeeze()))
         plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=64)
         # xticks with sans serif font
         plt.xticks(fontsize=32)
         plt.yticks(fontsize=32)
@@ -1396,7 +1394,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_64']
+    config_list = ['arbitrary_3_3']
 
     for config_file in config_list:
 
@@ -1409,7 +1407,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_plot_training(config, mode='figures' , device=device)
+        data_plot_training_asym(config, mode='figures' , device=device)
 
 
 

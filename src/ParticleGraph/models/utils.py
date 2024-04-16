@@ -207,8 +207,6 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
                 # ax.yaxis.get_major_formatter()._usetex = False
                 ax.xaxis.set_major_locator(plt.MaxNLocator(3))
                 ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-                plt.xlabel(r'$d_{ij}$', fontsize=64)
-                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
                 plt.xticks(fontsize=32)
                 plt.yticks(fontsize=32)
                 plt.xlim([0, simulation_config.max_radius])
@@ -324,7 +322,7 @@ def analyze_edge_function(rr=None, vizualize=False, config=None, model_lin_edge=
         if ((n % 5 == 0) | (config.graph_model.particle_model_name=='PDE_GS')) & vizualize:
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
-                     color=cmap.color(types[n].astype(int)), linewidth=1, alpha=0.25)
+                     color=cmap.color(types[n].astype(int)), linewidth=8, alpha=0.25)
     func_list = torch.stack(func_list)
     coeff_norm = to_numpy(func_list)
     if coeff_norm.shape[0] > 1000:
