@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 # matplotlib.use("Qt5Agg")
 from ParticleGraph.generators import PDE_ParticleField, PDE_A, PDE_B, PDE_B_bis, PDE_E, PDE_G, PDE_GS, PDE_N, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, \
-    Laplacian_A, PDE_O
+    PDE_Laplacian, PDE_O
 from ParticleGraph.utils import choose_boundary_values
 from ParticleGraph.data_loaders import load_solar_system
 
@@ -165,17 +165,17 @@ def choose_mesh_model(config, device):
         case 'RD_RPS_Mesh':
             mesh_model = RD_RPS(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
         case 'DiffMesh' | 'WaveMesh':
-            mesh_model = Laplacian_A(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
+            mesh_model = PDE_Laplacian(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
         case 'Chemotaxism_Mesh':
             c = initialize_random_values(n_node_types, device)
             for n in range(n_node_types):
                 c[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
-            mesh_model = Laplacian_A(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
+            mesh_model = PDE_Laplacian(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
         case 'PDE_O_Mesh':
             c = initialize_random_values(n_node_types, device)
             for n in range(n_node_types):
                 c[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
-            mesh_model = Laplacian_A(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
+            mesh_model = PDE_Laplacian(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
         case _:
             raise ValueError(f'Unknown model {model_name}')
 

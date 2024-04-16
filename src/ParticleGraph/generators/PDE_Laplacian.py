@@ -4,7 +4,7 @@ import torch_geometric.utils as pyg_utils
 import matplotlib.pyplot as plt
 
 
-class Laplacian_A(pyg.nn.MessagePassing):
+class PDE_Laplacian(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
@@ -23,7 +23,7 @@ class Laplacian_A(pyg.nn.MessagePassing):
     """
 
     def __init__(self, aggr_type=[], c=[], beta=[], bc_dpos=[]):
-        super(Laplacian_A, self).__init__(aggr='add')  # "mean" aggregation.
+        super(PDE_Laplacian, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.c = c
         self.beta = beta

@@ -1,4 +1,4 @@
-from .Laplacian_A import Laplacian_A
+from .PDE_Laplacian import PDE_Laplacian
 from .PDE_A import PDE_A
 from .PDE_B import PDE_B
 from .PDE_B_bis import PDE_B_bis
@@ -14,4 +14,4 @@ from .RD_Gray_Scott import RD_Gray_Scott
 from .RD_RPS import RD_RPS
 from .utils import choose_model, choose_mesh_model
 
-__all__ = [Laplacian_A, PDE_ParticleField, PDE_A,PDE_B, PDE_B_bis, PDE_E, PDE_G, PDE_GS, PDE_N, PDE_O, PDE_Z, RD_FitzHugh_Nagumo, RD_Gray_Scott, RD_RPS, choose_model, choose_mesh_model]
+__all__ = [PDE_Laplacian, PDE_ParticleField, PDE_A,PDE_B, PDE_B_bis, PDE_E, PDE_G, PDE_GS, PDE_N, PDE_O, PDE_Z, RD_FitzHugh_Nagumo, RD_Gray_Scott, RD_RPS, choose_model, choose_mesh_model]
