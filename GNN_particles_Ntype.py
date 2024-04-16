@@ -24,7 +24,7 @@ import networkx as nx
 # matplotlib.use("Qt5Agg")
 
 from ParticleGraph.config import ParticleGraphConfig
-from ParticleGraph.generators.particle_initialization import init_particles, init_mesh
+from ParticleGraph.generators.generator_initialization import init_particles, init_mesh
 from ParticleGraph.generators.utils import choose_model, choose_mesh_model, generate_from_data
 from ParticleGraph.models.utils import *
 from ParticleGraph.models.Ghost_Particles import Ghost_Particles
