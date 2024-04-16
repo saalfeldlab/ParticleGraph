@@ -1983,6 +1983,7 @@ def data_plot_FIG4():
     np.savetxt(f"./{log_dir}/tmp_training/function_ai_ai_{dataset_name}_{epoch}.txt", csv_)
     plt.close()
 
+    train_config.cluster_method = 'kmeans_auto_embedding'
     match train_config.cluster_method:
         case 'kmeans_auto_plot':
             labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
@@ -2124,7 +2125,7 @@ def data_plot_FIG4():
     ax.yaxis.set_major_locator(plt.MaxNLocator(3))
     ax.xaxis.set_major_formatter(FormatStrFormatter('%.3f'))
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
-    plot_list_pairwise=[]
+    func_list=[]
     for n in range(n_particle_types):
         pos = np.argwhere(new_labels == n).squeeze().astype(int)
         embedding0 = model.a[1, pos[0], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
@@ -2139,20 +2140,20 @@ def data_plot_FIG4():
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
                      linewidth=8, alpha=0.5)
-            plot_list_pairwise.append(func * ynorm)
+            func_list.append(func * ynorm)
             # temp = model.psi(rr, p[n], p[m])
             # plt.plot(to_numpy(rr), np.array(temp.cpu()), linewidth=1)
             popt, pocv = curve_fit(power_model, to_numpy(rr), to_numpy(func * ynorm), bounds=([0, 1.5], [5., 2.5]))
             print(n,m, popt[0])
-    plt.xlim([0, 0.02])
-    plt.ylim([-0.5E6, 0.5E6])
+    plt.xlim([0, 0.01])
+    plt.ylim([-2E6, 2E6])
     plt.xlabel(r'$d_{ij}$', fontsize=64)
     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij}$', fontsize=64)
     plt.xticks(fontsize=32)
     plt.yticks(fontsize=32)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.tif", dpi=170.7)
-    csv_ = to_numpy(torch.stack(plot_list_pairwise))
+    csv_ = to_numpy(torch.stack(func_list))
     csv_ = np.concatenate((csv_,to_numpy(rr[None,:])))
     np.save(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.npy", csv_)
     np.savetxt(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.txt", csv_)
@@ -2179,6 +2180,39 @@ def data_plot_FIG4():
     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij}$', fontsize=12)
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
+
+
+    fig_ = plt.figure(figsize=(12,12))
+    ax = fig_.add_subplot(1, 1, 1)
+    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+    ax.xaxis.set_major_formatter(FormatStrFormatter('%.3f'))
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+    csv_ = []
+    csv_.append(to_numpy(rr))
+    true_func_list = []
+    for n in range(n_particle_types):
+        for m in range(n_particle_types):
+            temp = model.psi(rr, p[n], p[m])
+            true_func_list.append(temp)
+            plt.plot(to_numpy(rr), np.array(temp.cpu()), linewidth=8, alpha=0.5)
+            csv_.append(to_numpy(temp.squeeze()))
+    plt.xlim([0, 0.01])
+    plt.ylim([-2E6, 2E6])
+    plt.xlabel(r'$d_{ij}$', fontsize=64)
+    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij}$', fontsize=64)
+    plt.xticks(fontsize=32)
+    plt.yticks(fontsize=32)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/true_func_{dataset_name}_{epoch}.tif", dpi=170.7)
+    np.save(f"./{log_dir}/tmp_training/true_func_{dataset_name}_{epoch}.npy", csv_)
+    np.savetxt(f"./{log_dir}/tmp_training/true_func_{dataset_name}_{epoch}.txt", csv_)
+    plt.close()
+
+    func_list = torch.stack(func_list)
+    true_func_list = torch.stack(true_func_list)
+    rmserr = torch.sqrt(torch.mean((func_list - true_func_list) ** 2))
+    print(f'RMS error: {np.round(rmserr.item(), 7)}')
 
 
     p = [2, 1, -1]
