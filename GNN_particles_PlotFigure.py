@@ -1480,23 +1480,9 @@ def data_plot_gravity_continuous():
 
     ax = fig.add_subplot(3, 3, 2)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-    func_list = plot_function(False, 'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, 1, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap, device)
-    proj_interaction, new_labels, n_clusters = plot_umap('b)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap,device)
-
-    ax = fig.add_subplot(3, 3, 3)
-    Accuracy = plot_confusion_matrix('c)', to_numpy(x[:,5:6]), new_labels, n_particle_types, 20, '$10^6$', fig, ax)
-    plt.tight_layout()
+    func_list = plot_function(True, 'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, 1, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap, device)
 
     model_a_first = model.a.clone().detach()
-
-    model_a_ = model.a[1].clone().detach()
-    for k in range(n_clusters):
-        pos = np.argwhere(new_labels == k).squeeze().astype(int)
-        temp = model_a_[pos, :].clone().detach()
-        model_a_[pos, :] = torch.median(temp, dim=0).values.repeat((len(pos), 1))
-    with torch.no_grad():
-        for n in range(model.a.shape[0]):
-            model.a[n] = model_a_
 
     embedding = get_embedding(model_a_first, 1, index_particles, n_particles, n_particle_types)
 
@@ -1508,7 +1494,7 @@ def data_plot_gravity_continuous():
     axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
     csv_ = []
     for n in range(n_particle_types):
-        plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n), s=400,
+        plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n%256), s=400,
                     alpha=0.1)
         csv_.append(embedding[index_particles[n], :])
     plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
@@ -1517,56 +1503,14 @@ def data_plot_gravity_continuous():
     plt.yticks(fontsize=32.0)
     csv_ = np.array(csv_)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/Fig3_a_{dataset_name}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/tmp_training/embedding_{dataset_name}.tif", dpi=300)
     csv_ = np.array(csv_)
     csv_ = np.reshape(csv_, (csv_.shape[0]*csv_.shape[1], 2))
-    np.save(f"./{log_dir}/tmp_training/Fig3_a_{dataset_name}.npy", csv_)
-    np.savetxt(f"./{log_dir}/tmp_training/Fig3_a_{dataset_name}.txt", csv_)
+    np.save(f"./{log_dir}/tmp_training/embedding_{dataset_name}.npy", csv_)
+    np.savetxt(f"./{log_dir}/tmp_training/embedding_{dataset_name}.txt", csv_)
     plt.close()
 
-    ax = fig.add_subplot(3, 3, 4)
-    plt.text(-0.25, 1.1, f'd)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-    plt.title(r'Clustered particle embedding', fontsize=12)
-    for n in range(n_particle_types):
-        pos = np.argwhere(new_labels == n).squeeze().astype(int)
-        plt.scatter(embedding[pos[0], 0], embedding[pos[0], 1], color=cmap.color(n), s=6)
-    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=12)
-    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=12)
-    plt.xticks(fontsize=10.0)
-    plt.yticks(fontsize=10.0)
-    plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
-
-    ax = fig.add_subplot(3, 3, 5)
-    print('5')
-    plt.text(-0.25, 1.1, f'e)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-    plt.title(r'Interaction functions (model)', fontsize=12)
-    func_list = []
-    for n in range(n_particle_types):
-        pos = np.argwhere(new_labels == n).squeeze().astype(int)
-        embedding = model.a[0, pos[0], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                 rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
-                                 0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
-        with torch.no_grad():
-            func = model.lin_edge(in_features.float())
-        func = func[:, 0]
-        func_list.append(func)
-        plt.plot(to_numpy(rr),
-                 to_numpy(func) * to_numpy(ynorm),
-                 color=cmap.color(n), linewidth=1)
-    plt.xlabel(r'$d_{ij}$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij}$', fontsize=12)
-    plt.xticks(fontsize=10.0)
-    plt.yticks(fontsize=10.0)
-    plt.xlim([0, 0.02])
-    plt.ylim([0, 0.5E6])
-    plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
-
-    p = config.simulation.params
-    if len(p) > 1:
-        p = torch.tensor(p, device=device)
-    else:
-        p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
+    p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
 
     type_list = x[:, 5:6].clone().detach()
     rmserr_list = []
@@ -1590,7 +1534,7 @@ def data_plot_gravity_continuous():
         rmserr_list.append(torch.sqrt(torch.mean((func * ynorm - true_func.squeeze()) ** 2)))
         plt.plot(to_numpy(rr),
                  to_numpy(func) * to_numpy(ynorm),
-                 color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
+                 color=cmap.color(n%256), linewidth=8, alpha=0.1)
     plt.xticks(fontsize=32)
     plt.yticks(fontsize=32)
     plt.xlabel(r'$d_{ij}$', fontsize=64)
@@ -1599,16 +1543,15 @@ def data_plot_gravity_continuous():
     plt.xlim([0, 0.02])
     plt.ylim([0, 0.5E6])
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/Fig3_b_{dataset_name}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/tmp_training/func_{dataset_name}.tif", dpi=300)
     csv_ = np.array(csv_)
-    np.save(f"./{log_dir}/tmp_training/Fig3_b_{dataset_name}.npy", csv_)
-    np.savetxt(f"./{log_dir}/tmp_training/Fig3_b_{dataset_name}.txt", csv_)
+    np.save(f"./{log_dir}/tmp_training/func_{dataset_name}.npy", csv_)
+    np.savetxt(f"./{log_dir}/tmp_training/func_{dataset_name}.txt", csv_)
     plt.close()
 
     rmserr_list = torch.stack(rmserr_list)
     rmserr_list = to_numpy(rmserr_list)
     print(f'all function RMS error: {np.round(np.mean(rmserr_list), 7)}+/-{np.round(np.std(rmserr_list), 7)}')
-
 
 
     ax = fig.add_subplot(3, 3, 6)
@@ -1636,7 +1579,7 @@ def data_plot_gravity_continuous():
     csv_ = []
     csv_.append(to_numpy(rr))
     for n in range(n_particle_types - 1, -1, -1):
-        plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n), linewidth=8)
+        plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n%256), linewidth=8)
         csv_.append(to_numpy(model.psi(rr, p[n], p[n]).squeeze()))
     plt.xticks(fontsize=32)
     plt.yticks(fontsize=32)
@@ -1645,10 +1588,10 @@ def data_plot_gravity_continuous():
     plt.xlabel(r'$d_{ij}$', fontsize=64)
     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/Fig3_c_{dataset_name}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/tmp_training/true_func_{dataset_name}.tif", dpi=300)
     csv_ = np.array(csv_)
-    np.save(f"./{log_dir}/tmp_training/Fig3_c_{dataset_name}.npy", csv_)
-    np.savetxt(f"./{log_dir}/tmp_training/Fig3_c_{dataset_name}.txt", csv_)
+    np.save(f"./{log_dir}/tmp_training/true_func_{dataset_name}.npy", csv_)
+    np.savetxt(f"./{log_dir}/tmp_training/true_func_{dataset_name}.txt", csv_)
     plt.close()
 
     plot_list = []
@@ -1675,8 +1618,11 @@ def data_plot_gravity_continuous():
     plt.text(-0.25, 1.1, f'g)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     x_data = p_list.squeeze()
     y_data = popt_list[:, 0]
+    x_data =np.delete(x_data,726)   # manual removal of one outlier which mess up the linear fit
+    y_data =np.delete(y_data,726)
+
     lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-    plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
+    plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
     plt.scatter(p_list, popt_list[:, 0], color='k', s=20)
     plt.title(r'Reconstructed masses', fontsize=12)
     plt.xlabel(r'True mass ', fontsize=12)
@@ -1695,24 +1641,27 @@ def data_plot_gravity_continuous():
     ax.xaxis.set_major_locator(plt.MaxNLocator(5))
     ax.yaxis.set_major_locator(plt.MaxNLocator(5))
     csv_ = []
-    csv_.append(p_list)
-    csv_.append(popt_list[:, 0])
-    plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-    plt.scatter(p_list, popt_list[:, 0], color='k', s=400)
+    csv_.append(x_data)
+    csv_.append(y_data)
+    plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+    for n in range(n_particles):
+        plt.scatter(p_list[n], popt_list[n, 0], color=cmap.color(n%256), s=400, alpha=0.1)
     plt.xticks(fontsize=32)
     plt.yticks(fontsize=32)
+    plt.xlim([0, 6])
+    plt.ylim([0, 6])
     plt.xlabel(r'True mass ', fontsize=64)
     plt.ylabel(r'Reconstructed mass ', fontsize=64)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/Fig3_d_{dataset_name}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/tmp_training/mass_{dataset_name}.tif", dpi=300)
     csv_ = np.array(csv_)
-    np.save(f"./{log_dir}/tmp_training/Fig3_d_{dataset_name}.npy", csv_)
-    np.savetxt(f"./{log_dir}/tmp_training/Fig3_d_{dataset_name}.txt", csv_)
+    np.save(f"./{log_dir}/tmp_training/mass_{dataset_name}.npy", csv_)
+    np.savetxt(f"./{log_dir}/tmp_training/mass__{dataset_name}.txt", csv_)
     plt.close()
 
-    relative_error = np.abs(popt_list[:, 0] - p_list.squeeze()) / p_list.squeeze() * 100
+    relative_error = np.abs(x_data - y_data) / x_data * 100
 
-    print (f'all mass relative error: {np.round(np.mean(relative_error), 3)}+/-{np.round(np.std(relative_error), 3)}')
+    print (f'all mass relative error: {np.round(np.mean(relative_error), 4)}+/-{np.round(np.std(relative_error), 4)}')
 
 
 
@@ -1728,6 +1677,8 @@ def data_plot_gravity_continuous():
     plt.text(0.5, -0.5, f"Exponent: {np.round(np.mean(-popt_list[:, 1]), 3)}+/-{np.round(np.std(popt_list[:, 1]), 3)}",
              fontsize=10)
 
+    print(f"Exponent: {np.round(np.mean(-popt_list[:, 1]), 3)}+/-{np.round(np.std(popt_list[:, 1]), 3)}")
+
 
 
     fig_ = plt.figure(figsize=(12, 12))
@@ -1738,7 +1689,6 @@ def data_plot_gravity_continuous():
     csv_.append(p_list.squeeze())
     csv_.append(-popt_list[:, 1])
     csv_ = np.array(csv_)
-    plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
     plt.scatter(p_list, -popt_list[:, 1], color='k', s=400)
     plt.xlim([0, 5.5])
     plt.ylim([-4, 0])
@@ -1747,9 +1697,9 @@ def data_plot_gravity_continuous():
     plt.xlabel(r'True mass', fontsize=64)
     plt.ylabel(r'Reconstructed exponent', fontsize=64)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/Fig3_e_{dataset_name}.tif", dpi=300)
-    np.save(f"./{log_dir}/tmp_training/Fig3_e_{dataset_name}.npy", csv_)
-    np.savetxt(f"./{log_dir}/tmp_training/Fig3_e_{dataset_name}.txt", csv_)
+    plt.savefig(f"./{log_dir}/tmp_training/exponent_{dataset_name}.tif", dpi=300)
+    np.save(f"./{log_dir}/tmp_training/exponent_{dataset_name}.npy", csv_)
+    np.savetxt(f"./{log_dir}/tmp_training/exponent_{dataset_name}.txt", csv_)
     plt.close()
 
 
@@ -4483,11 +4433,11 @@ if __name__ == '__main__':
 
     # config_list = ['gravity_16','gravity_16_noise_1E-5','gravity_16_noise_1E-4','gravity_16_noise_1E-3','gravity_16_noise_1E-2','gravity_16_noise_1E-1']
     # config_list = ['gravity_16_dropout_10_no_ghost', 'gravity_16_dropout_10', 'gravity_16_dropout_20', 'gravity_16_dropout_30', 'gravity_16_dropout_40', 'gravity_16_dropout_50']
-    config_list = ['gravity_100']   #['boids_16']
+    config_list = ['Coulomb_3_256']   #['boids_16']
 
     for config_name in config_list:
 
-        data_plot_gravity_continuous()
+        data_plot_Coulomb()
 
 
 
