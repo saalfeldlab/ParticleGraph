@@ -2695,7 +2695,7 @@ if __name__ == '__main__':
 
     # config_list = ['boids_16_dropout_10_no_ghost','boids_16_dropout_20','boids_16_dropout_30','boids_16_dropout_40']
     # config_list = ['boids_16_noise_1E-1','boids_16_noise_1E-2','boids_16_noise_1E-3']
-    config_list = ['gravity_100']
+    config_list = ['arbitrary_64_256']
 
 
     for config_file in config_list:
