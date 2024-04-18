@@ -2332,11 +2332,7 @@ def data_plot_boids():
 
     print(f'PDE_B')
 
-    p = config.simulation.params
-    if len(p) > 1:
-        p = torch.tensor(p, device=device)
-    else:
-        p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
+    p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
 
     model_B = PDE_B_extract(aggr_type=config.graph_model.aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
     psi_output = []
