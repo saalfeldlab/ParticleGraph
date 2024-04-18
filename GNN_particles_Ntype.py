@@ -450,8 +450,8 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                     else:
                         # matplotlib.use("Qt5Agg")
 
-                        # plt.rcParams['text.usetex'] = True
-                        # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+                        plt.rcParams['text.usetex'] = True
+                        rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
                         matplotlib.rcParams['savefig.pad_inches'] = 0
                         fig = plt.figure(figsize=(12, 12))
@@ -519,8 +519,8 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                                             alpha=0.75)
                                 plt.plot(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
                                          x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), '+', color='w')
-                        plt.xlim([-2,2])
-                        plt.ylim([-2,2])
+                        plt.xlim([0,1])
+                        plt.ylim([0,1])
                         # plt.xlabel(r'$x$', fontsize=64)
                         # plt.ylabel(r'$y$', fontsize=64)
                         plt.xticks(fontsize=32.0)
@@ -2621,8 +2621,8 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
                 for n in range(n_particle_types):
                     plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                 x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
-            plt.xlim([-2, 2])
-            plt.ylim([-2, 2])
+            plt.xlim([0, 1])
+            plt.ylim([0, 1])
             plt.xlabel(r'$x$', fontsize=64)
             plt.ylabel(r'$y$', fontsize=64)
             plt.xticks(fontsize=32.0)
@@ -2698,7 +2698,7 @@ if __name__ == '__main__':
 
     # config_list = ['boids_16_dropout_10_no_ghost','boids_16_dropout_20','boids_16_dropout_30','boids_16_dropout_40']
     # config_list = ['boids_16_noise_1E-1','boids_16_noise_1E-2','boids_16_noise_1E-3']
-    config_list = ['boids_32']
+    config_list = ['arbitrary_3']
 
 
     for config_file in config_list:
@@ -2709,10 +2709,10 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 100)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
         # data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 500)
-        data_train(config, device)
-        # data_test(config, visualize=False, verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, device=device)
+        # data_train(config, device)
+        data_test(config, visualize=False, verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, device=device)
 
 
 
