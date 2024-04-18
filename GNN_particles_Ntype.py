@@ -521,8 +521,8 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                                          x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), '+', color='w')
                         plt.xlim([0,1])
                         plt.ylim([0,1])
-                        # plt.xlabel(r'$x$', fontsize=64)
-                        # plt.ylabel(r'$y$', fontsize=64)
+                        plt.xlabel(r'$x$', fontsize=64)
+                        plt.ylabel(r'$y$', fontsize=64)
                         plt.xticks(fontsize=32.0)
                         plt.yticks(fontsize=32.0)
                         plt.tight_layout()
@@ -2712,7 +2712,7 @@ if __name__ == '__main__':
         data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
         # data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 500)
         # data_train(config, device)
-        data_test(config, visualize=False, verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, device=device)
+        data_test(config, visualize=True, verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, device=device)
 
 
 
