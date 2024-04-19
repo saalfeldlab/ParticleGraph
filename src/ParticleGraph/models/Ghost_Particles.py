@@ -31,9 +31,11 @@ class Ghost_Particles(torch.nn.Module):
         self.device = device
 
         self.ghost_pos = nn.Parameter(torch.rand((self.n_dataset, self.n_frames, self.n_ghosts, 2), device=device, requires_grad=True))
-
-        self.data = nn.Parameter(0*torch.randn((self.n_dataset, 32, self.n_ghosts, 128), device=device), requires_grad=True)
-        
+        if model_config.graph_model.particle_model_name == 'PDE_B':
+            self.ghost_Dpos = nn.Parameter(torch.rand((self.n_dataset, self.n_frames, self.n_ghosts, 2), device=device, requires_grad=True))
+            self.boids = True
+        else:
+            self.boids = False
         self.N1 = torch.arange(n_particles,n_particles+self.n_ghosts, device=device, requires_grad=False)
         self.V1 = torch.zeros((self.n_ghosts,2), device=device, requires_grad=False)
         self.T1 = torch.zeros(self.n_ghosts, device=device, requires_grad=False)
@@ -47,8 +49,13 @@ class Ghost_Particles(torch.nn.Module):
 
     def get_pos (self, dataset_id, frame):
 
-        return torch.concatenate((self.N1[:,None], self.ghost_pos[dataset_id, frame:frame+1,:,:].squeeze(),self.V1,self.T1[:,None],self.H1,self.A1[:,None]), 1)
-    
+        if self.boids:
+            out = torch.concatenate((self.N1[:,None], self.ghost_pos[dataset_id, frame:frame+1,:,:].squeeze(), self.ghost_pos[dataset_id, frame:frame+1,:,:].squeeze(), self.T1[:,None],self.H1,self.A1[:,None]), 1)
+        else:
+            out = torch.concatenate((self.N1[:,None], self.ghost_pos[dataset_id, frame:frame+1,:,:].squeeze(),self.V1,self.T1[:,None],self.H1,self.A1[:,None]), 1)
+
+        return out
+
     def get_pos_t(self, dataset_id, frame):
 
         t0 = np.floor(128*frame/self.n_frames).astype(int)
@@ -57,9 +64,9 @@ class Ghost_Particles(torch.nn.Module):
 
         sample = self.data[dataset_id, :, :, t0] * alpha + self.data[dataset_id, :, :, t1] * (1-alpha)
         sample = sample.permute(1, 0)
-        
+
         pos = self.renderer(sample)
-        
+
         return torch.concatenate((self.N1[:,None], pos,self.V1,self.T1[:,None],self.H1,self.A1[:,None]), 1)
     
     

@@ -2598,6 +2598,423 @@ def data_plot_boids():
     np.savetxt(f"./{log_dir}/tmp_training/separation_{dataset_name}.txt", csv_)
     plt.close()
 
+def data_plot_boids_dropout():
+    # config_name = 'boids_16'
+    # Load parameters from config file
+    config = ParticleGraphConfig.from_yaml(f'./config/{config_name}.yaml')
+
+    dataset_name = config.dataset
+    embedding_cluster = EmbeddingCluster(config)
+
+    # print(config.pretty())
+
+    cmap = CustomColorMap(config=config)
+
+    simulation_config = config.simulation
+    train_config = config.training
+    model_config = config.graph_model
+    dimension = simulation_config.dimension
+
+    max_radius = config.simulation.max_radius
+    min_radius = config.simulation.min_radius
+    n_particle_types = config.simulation.n_particle_types
+    n_particles = config.simulation.n_particles
+    nrun = config.training.n_runs
+
+    l_dir = os.path.join('.', 'log')
+    log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
+    print('log_dir: {}'.format(log_dir))
+
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
+    n_graphs = len(graph_files)
+    print('Graph files N: ', n_graphs - 1)
+    time.sleep(0.5)
+
+    x_list = []
+    y_list = []
+    print('Load normalizations ...')
+    time.sleep(1)
+    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device))
+    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_0.pt', map_location=device))
+    vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
+    ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
+    x = x_list[0][0].clone().detach()
+
+    index_particles = []
+    for n in range(n_particle_types):
+        if dimension == 2:
+            index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
+        elif dimension == 3:
+            index = np.argwhere(x[:, 7].detach().cpu().numpy() == n)
+        index_particles.append(index.squeeze())
+
+    model, bc_pos, bc_dpos = choose_training_model(config, device)
+    model = Interaction_Particles_extract(config, device, aggr_type=config.graph_model.aggr_type, bc_dpos=bc_dpos)
+
+    net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
+    state_dict = torch.load(net, map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
+    model.eval()
+
+    plt.rcParams['text.usetex'] = True
+    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+    matplotlib.use("Qt5Agg")
+
+    fig = plt.figure(figsize=(10.5, 9.6))
+    plt.ion()
+    ax = fig.add_subplot(3, 3, 1)
+    embedding = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax,
+                               cmap, device)
+
+    fig_ = plt.figure(figsize=(12, 12))
+    ax = fig_.add_subplot(1, 1, 1)
+    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+    ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+    csv_ = embedding
+    for n in range(n_particle_types):
+        plt.scatter(embedding[index_particles[n], 0],
+                    embedding[index_particles[n], 1], color=cmap.color(n), s=400)
+    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
+    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+    plt.xticks(fontsize=32.0)
+    plt.yticks(fontsize=32.0)
+    plt.tight_layout()
+    csv_ = np.array(csv_)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/embedding_{dataset_name}.tif", dpi=300)
+    np.save(f"./{log_dir}/tmp_training/embedding_{dataset_name}.npy", csv_)
+    np.savetxt(f"./{log_dir}/tmp_training/embedding_{dataset_name}.txt", csv_)
+    plt.close()
+
+    ax = fig.add_subplot(3, 3, 2)
+    rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
+    func_list = plot_function(False, 'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, 1,
+                              to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles,
+                              n_particle_types, 20, '$10^6$', fig, ax, cmap, device)
+
+    proj_interaction, new_labels, n_clusters = plot_umap('b)', func_list, log_dir, 500, index_particles, n_particles,
+                                                         n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax,
+                                                         cmap, device)
+
+    match train_config.cluster_method:
+        case 'kmeans_auto_plot':
+            labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
+        case 'kmeans_auto_embedding':
+            labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
+            proj_interaction = embedding
+        case 'distance_plot':
+            labels, n_clusters = embedding_cluster.get(proj_interaction, 'distance')
+        case 'distance_embedding':
+            labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=1.5)
+            proj_interaction = embedding
+        case 'distance_both':
+            new_projection = np.concatenate((proj_interaction, embedding), axis=-1)
+            labels, n_clusters = embedding_cluster.get(new_projection, 'distance')
+
+    ax = fig.add_subplot(3, 3, 3)
+    Accuracy = plot_confusion_matrix('c)', to_numpy(x[:, 5:6]), new_labels, n_particle_types, 20, '$10^6$', fig, ax)
+    plt.tight_layout()
+    print(f'Accuracy: {Accuracy}  n_clusters: {n_clusters}')
+
+    # model_a_ = model.a[1].clone().detach()
+    # for k in range(n_clusters):
+    #     pos = np.argwhere(new_labels == k).squeeze().astype(int)
+    #     if len(pos)>0:
+    #         temp = model_a_[pos, :].clone().detach()
+    #         model_a_[pos, :] = torch.median(temp, dim=0).values.repeat((len(pos), 1))
+    # with torch.no_grad():
+    #     for n in range(model.a.shape[0]):
+    #         model.a[n] = model_a_
+
+    embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+
+    it = 7000
+
+    x = x_list[0][it].clone().detach()
+
+    distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
+    t = torch.Tensor([max_radius ** 2])  # threshold
+    adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
+    edge_index = adj_t.nonzero().t().contiguous()
+    dataset = data.Data(x=x, edge_index=edge_index)
+
+    with torch.no_grad():
+        y, in_features, lin_edge_out = model(dataset, data_id=1, training=False, vnorm=vnorm,
+                                             phi=torch.zeros(1, device=device))  # acceleration estimation
+    y = y * ynorm
+    lin_edge_out = lin_edge_out * ynorm
+
+    print(f'PDE_B')
+
+    p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
+
+    model_B = PDE_B_extract(aggr_type=config.graph_model.aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
+    psi_output = []
+    for n in range(n_particle_types):
+        psi_output.append(model.psi(rr, torch.squeeze(p[n])))
+        print(f'p{n}: {np.round(to_numpy(torch.squeeze(p[n])), 4)}')
+    with torch.no_grad():
+        y_B, sum, cohesion, alignment, separation, diffx, diffv, r, type = model_B(dataset)  # acceleration estimation
+    type = to_numpy(type)
+
+    ax = fig.add_subplot(3, 3, 4)
+    print('5')
+    plt.text(-0.25, 1.1, 'e)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'Clustered particle embedding', fontsize=12)
+    for n in range(n_particle_types):
+        pos = np.argwhere(type == n)
+        pos = pos[:, 0].astype(int)
+        plt.scatter(embedding[pos[0], 0], embedding[pos[0], 1], color=cmap.color(n), s=6)
+    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=12)
+    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=12)
+    plt.xticks(fontsize=10.0)
+    plt.yticks(fontsize=10.0)
+    plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
+
+    ax = fig.add_subplot(3, 3, 5)
+    print('6')
+    plt.text(-0.25, 1.1, f'e)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
+    plt.title(r'Interaction functions (model)', fontsize=12)
+    for n in range(n_particle_types):
+        pos = np.argwhere(type == n)
+        pos = pos[:, 0].astype(int)
+        plt.scatter(to_numpy(diffx[pos, 0]), to_numpy(lin_edge_out[pos, 0]), color=cmap.color(n), s=50, alpha=0.5)
+    plt.ylim([-0.08, 0.08])
+    plt.ylim([-5E-5, 5E-5])
+    plt.xlabel(r'$d_{ij}$', fontsize=12)
+    plt.ylabel(r'$\left| \left| f(\ensuremath{\mathbf{a}}_i, x_j-x_i, \dot{x}_i, \dot{x}_j, d_{ij} \right| \right|[a.u.]$',fontsize=12)
+    plt.savefig(f"./{log_dir}/tmp_training/embedding_{dataset_name}.tif", dpi=300)
+    np.save(f"./{log_dir}/tmp_training/embedding_{dataset_name}.npy", csv_)
+    np.savetxt(f"./{log_dir}/tmp_training/embedding_{dataset_name}.txt", csv_)
+
+
+    # fig_ = plt.figure(figsize=(18, 18))
+    # for nn in range(n_particle_types):
+    #     ax = fig_.add_subplot(6, 6, nn+1)
+    #     ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+    #     ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+    #     pos = np.argwhere(type == nn)
+    #     pos = pos[:, 0].astype(int)
+    #     plt.scatter(to_numpy(diffx[pos, 0]), to_numpy(lin_edge_out[pos, 0]), color='k', s=10, alpha=0.5)
+    #     plt.ylim([-0.08, 0.08])
+    #     plt.ylim([-5E-5, 5E-5])
+    # plt.tight_layout()
+    # plt.savefig(f"./{log_dir}/tmp_training/func_{dataset_name}.tif", dpi=300)
+    # plt.close()
+
+    fig_ = plt.figure(figsize=(12, 12))
+    ax = fig_.add_subplot(1, 1, 1)
+    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+    for n in range(n_particle_types):
+        pos = np.argwhere(type == n)
+        pos = pos[:, 0].astype(int)
+        plt.scatter(to_numpy(diffx[pos, 0]), to_numpy(sum[pos, 0]), color=cmap.color(n), s=50, alpha=0.5)
+    plt.ylim([-0.08, 0.08])
+    plt.ylim([-5E-5, 5E-5])
+    plt.xlabel(r'$x_j-x_i$', fontsize=64)
+    plt.ylabel( r'$f_{ij,x}$',fontsize=64)
+    plt.xticks(fontsize=32.0)
+    plt.yticks(fontsize=32.0)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/true_func_{dataset_name}.tif", dpi=300)
+    plt.close()
+
+    rmserr_list = []
+    for n in range(n_particles):
+        rmserr_list.append(torch.sqrt(torch.mean((lin_edge_out[n] - sum[n].squeeze()) ** 2)))
+    rmserr_list = torch.stack(rmserr_list)
+    rmserr_list = to_numpy(rmserr_list)
+    print(f'all function RMS error: {np.round(np.mean(rmserr_list), 7)}+/-{np.round(np.std(rmserr_list), 10)}')
+
+    xs = torch.linspace(0, 1, 400)
+    ys = torch.linspace(-1, 1, 400)
+    xv, yv = torch.meshgrid([xs, ys], indexing="ij")
+    xy = torch.stack((yv.flatten(), xv.flatten())).t()
+
+    # fig = plt.figure(figsize=(8, 8))
+    # plt.hist(to_numpy(r),100)
+
+    # find last image file in logdir
+    ax = fig.add_subplot(3, 3, 6)
+    files = glob.glob(os.path.join(log_dir, 'tmp_recons/Fig*.tif'))
+    files.sort(key=os.path.getmtime)
+    if len(files) > 0:
+        last_file = files[-1]
+        # load image file with imageio
+        image = imageio.imread(last_file)
+        print('12')
+        plt.text(-0.25, 1.1, f'f)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+        plt.title(r'Rollout inference (frame 8000)', fontsize=12)
+        plt.imshow(image)
+        # rmove xtick
+        plt.xticks([])
+        plt.yticks([])
+
+    cohesion_GT = np.zeros(n_particle_types)
+    alignment_GT = np.zeros(n_particle_types)
+    separation_GT = np.zeros(n_particle_types)
+    cohesion_fit = np.zeros(n_particle_types)
+    alignment_fit = np.zeros(n_particle_types)
+    separation_fit = np.zeros(n_particle_types)
+
+    for n in range(n_particle_types):
+        pos = np.argwhere(type == n)
+        pos = pos[:, 0].astype(int)
+        xdiff = to_numpy(diffx[pos, :])
+        vdiff = to_numpy(diffv[pos, :])
+        rdiff = to_numpy(r[pos])
+        x_data = np.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
+        y_data = to_numpy(torch.norm(lin_edge_out[pos, :], dim=1))
+        lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox')
+        cohesion_fit[n] = lin_fit[0]
+        alignment_fit[n] = lin_fit[1]
+        separation_fit[n] = lin_fit[2]
+    p00 = [np.mean(cohesion_fit), np.mean(alignment_fit), np.mean(separation_fit)]
+    for n in range(n_particle_types):
+        pos = np.argwhere(type == n)
+        pos = pos[:, 0].astype(int)
+        xdiff = to_numpy(diffx[pos, :])
+        vdiff = to_numpy(diffv[pos, :])
+        rdiff = to_numpy(r[pos])
+        x_data = np.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
+        y_data = to_numpy(torch.norm(lin_edge_out[pos, :], dim=1))
+        lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox', p0=p00)
+        cohesion_fit[n] = lin_fit[0]
+        alignment_fit[n] = lin_fit[1]
+        separation_fit[n] = lin_fit[2]
+
+    ax = fig.add_subplot(3, 3, 7)
+    print('7')
+    plt.text(-0.25, 1.1, f'g)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
+    x_data = np.abs(to_numpy(p[:, 0]) * 0.5E-5)
+    y_data = np.abs(cohesion_fit)
+    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+    plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
+    for n in range(n_particle_types):
+        plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=20)
+    plt.xlabel(r'True cohesion coeff. ', fontsize=12)
+    plt.ylabel(r'Predicted cohesion coeff. ', fontsize=12)
+    plt.text(4E-5, 4.5E-4, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
+    residuals = y_data - linear_model(x_data, *lin_fit)
+    ss_res = np.sum(residuals ** 2)
+    ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+    r_squared = 1 - (ss_res / ss_tot)
+    plt.text(4E-5, 4.1E-4, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
+
+    ax = fig.add_subplot(3, 3, 8)
+    print('8')
+    plt.text(-0.25, 1.1, f'h)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
+    x_data = np.abs(to_numpy(p[:, 1]) * 5E-4)
+    y_data = alignment_fit
+    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+    plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
+    for n in range(n_particle_types):
+        plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=20)
+    plt.xlabel(r'True alignment coeff. ', fontsize=12)
+    plt.ylabel(r'Predicted alignment coeff. ', fontsize=12)
+    plt.text(5e-3, 0.046, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
+    residuals = y_data - linear_model(x_data, *lin_fit)
+    ss_res = np.sum(residuals ** 2)
+    ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+    r_squared = 1 - (ss_res / ss_tot)
+    plt.text(5e-3, 0.042, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
+
+    ax = fig.add_subplot(3, 3, 9)
+    print('9')
+    plt.text(-0.25, 1.1, f'i)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
+    x_data = np.abs(to_numpy(p[:, 2]) * 1E-8)
+    y_data = separation_fit
+    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+    plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
+    for n in range(n_particle_types):
+        plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=20)
+    plt.xlabel(r'True separation coeff. ', fontsize=12)
+    plt.ylabel(r'Predicted separation coeff. ', fontsize=12)
+    plt.text(5e-8, 4.4E-7, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
+    residuals = y_data - linear_model(x_data, *lin_fit)
+    ss_res = np.sum(residuals ** 2)
+    ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+    r_squared = 1 - (ss_res / ss_tot)
+    plt.text(5e-8, 4E-7, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
+
+    time.sleep(1)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/Fig5.jpg", dpi=300)
+    plt.close()
+
+    fig_ = plt.figure(figsize=(12, 12))
+    ax = fig_.add_subplot(1, 1, 1)
+    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+    ax.yaxis.set_major_locator(plt.MaxNLocator(6))
+    x_data = np.abs(to_numpy(p[:, 0]) * 0.5E-5)
+    y_data = np.abs(cohesion_fit)
+    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+    plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+    for n in range(n_particle_types):
+        plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=400)
+    plt.xlabel(r'True cohesion coeff. ', fontsize=56)
+    plt.ylabel(r'Reconstructed cohesion coeff. ', fontsize=56)
+    plt.xticks(fontsize=32.0)
+    plt.yticks(fontsize=32.0)
+    plt.tight_layout()
+    csv_=[]
+    csv_.append(x_data)
+    csv_.append(y_data)
+    plt.savefig(f"./{log_dir}/tmp_training/cohesion_{dataset_name}.tif", dpi=300)
+    np.save(f"./{log_dir}/tmp_training/cohesion_{dataset_name}.npy", csv_)
+    np.savetxt(f"./{log_dir}/tmp_training/cohesion_{dataset_name}.txt", csv_)
+    plt.close()
+
+    fig_ = plt.figure(figsize=(12, 12))
+    ax = fig_.add_subplot(1, 1, 1)
+    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+    ax.yaxis.set_major_locator(plt.MaxNLocator(6))
+    x_data = np.abs(to_numpy(p[:, 1]) * 5E-4)
+    y_data = alignment_fit
+    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+    plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+    for n in range(n_particle_types):
+        plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=400)
+    plt.xlabel(r'True alignement coeff. ', fontsize=56)
+    plt.ylabel(r'Reconstructed alignement coeff. ', fontsize=56)
+    plt.xticks(fontsize=32.0)
+    plt.yticks(fontsize=32.0)
+    plt.tight_layout()
+    csv_=[]
+    csv_.append(x_data)
+    csv_.append(y_data)
+    plt.savefig(f"./{log_dir}/tmp_training/alignment_{dataset_name}.tif", dpi=300)
+    np.save(f"./{log_dir}/tmp_training/alignment_{dataset_name}.npy", csv_)
+    np.savetxt(f"./{log_dir}/tmp_training/alignement_{dataset_name}.txt", csv_)
+    plt.close()
+
+    fig_ = plt.figure(figsize=(12, 12))
+    ax = fig_.add_subplot(1, 1, 1)
+    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+    ax.yaxis.set_major_locator(plt.MaxNLocator(6))
+    x_data = np.abs(to_numpy(p[:, 2]) * 1E-8)
+    y_data = separation_fit
+    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+    plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+    for n in range(n_particle_types):
+        plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=400)
+    plt.xlabel(r'True separation coeff. ', fontsize=56)
+    plt.ylabel(r'Reconstructed separation coeff. ', fontsize=56)
+    plt.xticks(fontsize=32.0)
+    plt.yticks(fontsize=32.0)
+    plt.tight_layout()
+    csv_=[]
+    csv_.append(x_data)
+    csv_.append(y_data)
+    plt.savefig(f"./{log_dir}/tmp_training/separation_{dataset_name}.tif", dpi=300)
+    np.save(f"./{log_dir}/tmp_training/separation_{dataset_name}.npy", csv_)
+    np.savetxt(f"./{log_dir}/tmp_training/separation_{dataset_name}.txt", csv_)
+    plt.close()
+
 
 
 
@@ -4591,7 +5008,7 @@ if __name__ == '__main__':
 
     # config_list = ['gravity_16','gravity_16_noise_1E-5','gravity_16_noise_1E-4','gravity_16_noise_1E-3','gravity_16_noise_1E-2','gravity_16_noise_1E-1']
     # config_list = ['gravity_16_dropout_10_no_ghost', 'gravity_16_dropout_10', 'gravity_16_dropout_20', 'gravity_16_dropout_30', 'gravity_16_dropout_40', 'gravity_16_dropout_50']
-    config_list = ['boids_32']
+    config_list = ['boids_32_256','boids_64_256']
 
     for config_name in config_list:
 
