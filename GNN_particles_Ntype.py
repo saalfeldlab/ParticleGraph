@@ -2303,8 +2303,7 @@ def data_train_signal(config, device):
         plt.close()
 
 
-
-def data_test(config, visualize=False, verbose=True, best_model=20, step=5, ratio=1, run=1, test_simulation=False, device=[]):
+def data_test(config, visualize=False, verbose=True, best_model=20, step=5, ratio=1, run=1, test_simulation=False, sample_embedding = False, device=[]):
     print('')
 
     dataset_name = config.dataset
@@ -2419,6 +2418,12 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
     ynorm = torch.load(f'./log/try_{dataset_name}/ynorm.pt', map_location=device).to(device)
     vnorm = torch.load(f'./log/try_{dataset_name}/vnorm.pt', map_location=device).to(device)
     x = x_list[0][0].clone().detach()
+    n_sub_population = n_particles // n_particle_types
+    first_embedding = model.a[1].data.clone().detach()
+    first_index_particles = []
+    for n in range(n_particle_types):
+        index = np.arange(n_particles * n // n_particle_types, n_particles * (n + 1) // n_particle_types)
+        first_index_particles.append(index)
     n_particles = x.shape[0]
     config.simulation.n_particles = n_particles
     print(f'N particles: {n_particles}')
@@ -2426,6 +2431,27 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
     for n in range(n_particle_types):
         index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
         index_particles.append(index.squeeze())
+
+    if sample_embedding:
+
+        model_a_ = nn.Parameter(
+            torch.tensor(np.ones((int(n_particles), model.embedding_dim)),
+                         device=device,
+                         requires_grad=False, dtype=torch.float32))
+        for n in range(n_particles):
+            t = to_numpy(x[n,5]).astype(int)
+            index=first_index_particles[t][np.random.randint(n_sub_population)]
+            with torch.no_grad():
+                model_a_[n] = first_embedding[index].clone().detach()
+        model.a = nn.Parameter(
+            torch.tensor(np.ones((model.n_dataset,int(n_particles), model.embedding_dim)),
+                         device=device,
+                         requires_grad=False, dtype=torch.float32))
+        with torch.no_grad():
+            for n in range(model.a.shape[0]):
+                model.a[n] = model_a_
+
+
     if has_ghost:
         model_ghost = Ghost_Particles(config, n_particles, device)
         net = f"./log/try_{dataset_name}/models/best_ghost_particles_with_{NGraphs - 1}_graphs_20.pt"
@@ -2646,7 +2672,7 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
                 plt.savefig(f"./{log_dir}/tmp_recons/Ghost_{dataset_name}_{it}.tif", dpi=170.7)
                 plt.close()
 
-    print(f'RMS error: {np.round(np.mean(rmserr_list), 4)} +/- {np.round(np.std(rmserr_list), 4)}')
+    print(f'RMSE = {np.round(np.mean(rmserr_list), 4)} +/- {np.round(np.std(rmserr_list), 4)}')
 
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
@@ -2656,11 +2682,8 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
         n_particle_types = 3
     index_particles = []
     for n in range(n_particle_types):
-        index_particles.append(
-            np.arange((n_particles // n_particle_types) * n, (n_particles // n_particle_types) * (n + 1)))
-    type = torch.zeros(int(n_particles / n_particle_types), device=device)
-    for n in range(1, n_particle_types):
-        type = torch.cat((type, n * torch.ones(int(n_particles / n_particle_types), device=device)), 0)
+        index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
+        index_particles.append(index.squeeze())
 
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(1, 1, 1)
@@ -2697,7 +2720,7 @@ if __name__ == '__main__':
 
     # config_list = ['boids_16_dropout_10_no_ghost','boids_16_dropout_20','boids_16_dropout_30','boids_16_dropout_40']
     # config_list = ['boids_16_noise_1E-1','boids_16_noise_1E-2','boids_16_noise_1E-3']
-    config_list = ['boids_16']
+    config_list = ['arbitrary_3']
 
 
     for config_file in config_list:
@@ -2708,10 +2731,10 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=False, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
         # data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 500)
         # data_train(config, device)
-        data_test(config, visualize=True, verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, device=device)
+        data_test(config, visualize=True, verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, sample_embedding=True, device=device)
 
 
 

@@ -41,6 +41,28 @@ def init_particles(config, device, cycle_length=None):
     particle_id = torch.arange(n_particles, device=device)
     particle_id = particle_id[:, None]
 
+    scenario = ''
+
+    match scenario:
+        case 'pattern':
+            i0 = imread(f'graphs_data/pattern_0.tif')
+            type = np.round(i0[(to_numpy(pos[:, 0]) * 255).astype(int), (to_numpy(pos[:, 1]) * 255).astype(int)] / 255 * n_particle_types-1).astype(int)
+            type = torch.tensor(type, device=device)
+            type = type[:, None]
+        case 'uniform':
+            type = torch.ones(n_particles, device=device)*0
+            type =  type[:, None]
+        case 'stripes':
+            l = n_particles//n_particle_types
+            for n in range(n_particle_types):
+                index = np.arange(n*l, (n+1)*l)
+                pos[index, 0:1] = torch.rand(l, 1, device=device) * (1/n_particle_types) + n/n_particle_types
+        case _:
+            pass
+
+
+
+
     return pos, dpos, type, features, cycle_duration, particle_id, cycle_length, cycle_length_distrib
 
 def init_mesh(config, device):
