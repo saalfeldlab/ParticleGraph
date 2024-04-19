@@ -23,16 +23,17 @@ class Renderer(nn.Module):
 
 class Ghost_Particles(torch.nn.Module):
 
-    def __init__(self, model_config, n_particles, device):
+    def __init__(self, model_config, n_particles, vnorm, device):
         super(Ghost_Particles, self).__init__()
         self.n_ghosts = model_config.training.n_ghosts
         self.n_frames = model_config.simulation.n_frames
         self.n_dataset = model_config.training.n_runs
+        self.vnorm = vnorm
         self.device = device
 
         self.ghost_pos = nn.Parameter(torch.rand((self.n_dataset, self.n_frames, self.n_ghosts, 2), device=device, requires_grad=True))
         if model_config.graph_model.particle_model_name == 'PDE_B':
-            self.ghost_Dpos = nn.Parameter(torch.rand((self.n_dataset, self.n_frames, self.n_ghosts, 2), device=device, requires_grad=True))
+            self.ghost_dpos = nn.Parameter(torch.zeros((self.n_dataset, self.n_frames, self.n_ghosts, 2), device=device, requires_grad=True))
             self.boids = True
         else:
             self.boids = False
@@ -50,7 +51,7 @@ class Ghost_Particles(torch.nn.Module):
     def get_pos (self, dataset_id, frame):
 
         if self.boids:
-            out = torch.concatenate((self.N1[:,None], self.ghost_pos[dataset_id, frame:frame+1,:,:].squeeze(), self.ghost_pos[dataset_id, frame:frame+1,:,:].squeeze(), self.T1[:,None],self.H1,self.A1[:,None]), 1)
+            out = torch.concatenate((self.N1[:,None], self.ghost_pos[dataset_id, frame:frame+1,:,:].squeeze(), self.vnorm * self.ghost_dpos[dataset_id, frame:frame+1,:,:].squeeze(), self.T1[:,None],self.H1,self.A1[:,None]), 1)
         else:
             out = torch.concatenate((self.N1[:,None], self.ghost_pos[dataset_id, frame:frame+1,:,:].squeeze(),self.V1,self.T1[:,None],self.H1,self.A1[:,None]), 1)
 

@@ -40,10 +40,10 @@ training:
   noise_level: 0
   particle_dropout: 0.1
   ghost_method: 'tensor'
-  n_ghosts: 180
+  n_ghosts: 250
   sparsity: 'none'
   data_augmentation: True
-  data_augmentation_loop: 100
-  fix_cluster_embedding: True
+  data_augmentation_loop: 200
+  fix_cluster_embedding: False
   device: 'auto'
 

@@ -103,41 +103,49 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         pos = x[:, 1:3]
         d_pos = x[:, 3:5]
 
-        dd_pos = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode='particle-particle', pos=pos, d_pos=d_pos, particle_type=particle_type, particle_id = particle_id)
+        dd_pos = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode='particle_to_particle', pos=pos, d_pos=d_pos, particle_type=particle_type, particle_id = particle_id)
         deg_particle[deg_particle == 0] = 1
         dd_pos = dd_pos[self.n_nodes:,0:2] / deg_particle[:, None].repeat(1, 2)
 
-        chemotaxism = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode='particle-field', pos=pos, d_pos=d_pos, particle_type=particle_type, particle_id = particle_id)
-        node_neighbour = chemotaxism[self.n_nodes:,2:4]
+        dd_pos_field_to_particle = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode='field_to_particle', pos=pos, d_pos=d_pos, particle_type=particle_type, particle_id = particle_id)
+        dd_pos_field_to_particle = dd_pos_field_to_particle[self.n_nodes:,0:2]
+        node_neighbour = dd_pos_field_to_particle[self.n_nodes:,2:4]
         node_neighbour[node_neighbour==0]=1
-        chemotaxism = chemotaxism[self.n_nodes:,0:2]
-        chemotaxism_dd_pos = chemotaxism/node_neighbour
+        dd_pos_field_to_particle = dd_pos_field_to_particle/node_neighbour
 
-        mesh_msg = self.propagate(edge_index=edge_mesh, u=u, discrete_laplacian=edge_attr, mode ='mesh', pos=pos, d_pos=d_pos, particle_type=particle_type, particle_id = particle_id)
-        mesh_msg = mesh_msg[0:self.n_nodes]
+        dd_pos = dd_pos + dd_pos_field_to_particle
+
+        laplacian_u = self.propagate(edge_index=edge_mesh, u=u, discrete_laplacian=edge_attr, mode ='field_to_field_laplacian', pos=pos, d_pos=d_pos, particle_type=particle_type, particle_id = particle_id)
+        laplacian_u = laplacian_u[0:self.n_nodes]
         particle_id = to_numpy(x[0:self.n_nodes, 0:1])
         embedding = self.a[self.data_id, particle_id, :].squeeze()
+        input_phi = torch.cat(laplacian_u[:,0:1], (u[0:self.n_nodes,0:1], embedding), dim=-1)
+        d_u_particle_to_field = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode ='particle_to_field', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze())
+        d_u_particle_to_field = d_u_particle_to_field[0:self.n_nodes]
 
-        input_phi = torch.cat((u[0:self.n_nodes,0:1], mesh_msg[:,0:1], embedding), dim=-1)
-        du = self.lin_phi(input_phi) + mesh_msg[:,1:2]
+        du = self.lin_phi(input_phi) + d_u_particle_to_field
 
-        return dd_pos + chemotaxism_dd_pos, du
+        return dd_pos, du
 
     def message(self, u_j, discrete_laplacian, mode, pos_i, pos_j, d_pos_i, d_pos_j, particle_type_i, particle_type_j, particle_id_i, particle_id_j):
 
-        if mode == 'mesh':
+        if mode == 'field_to_field_laplacian':
 
-            L = discrete_laplacian[:, None] * u_j
+            Laplacian_component = discrete_laplacian[:, None] * u_j
+
+            return Laplacian_component
+
+        elif mode == 'particle_to_field':
 
             r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
             embedding_i = self.a[self.data_id, to_numpy(particle_id_i), :].squeeze()
             in_features = torch.cat((r[:, None], embedding_i), dim=-1) * ((particle_type_j > -1) & (particle_type_i < 0)).float()
 
-            out = torch.relu(self.lin_mesh(in_features))
+            msg = torch.relu(self.lin_mesh(in_features))
 
-            return torch.cat((L, out), 1)
+            return msg
 
-        else:
+        elif (mode == 'particle_to_particle') | (mode == 'field_to_particle'):
 
             # squared distance
             r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
@@ -167,21 +175,20 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
             embedding_i = self.a[self.data_id, to_numpy(particle_id_i), :].squeeze()
             embedding_j = self.a[self.data_id, to_numpy(particle_id_j), :].squeeze()
 
-            if mode == 'particle-particle':
+            if mode == 'particle_to_particle':
                 in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None],
                                                            dpos_x_j[:, None], dpos_y_j[:, None], embedding_i),
                                                           dim=-1) * (particle_type_j > -1).float()
-                out = self.lin_particle(in_features)
-                return out
+                msg = self.lin_particle(in_features)
 
-            elif mode == 'particle-field':
+            elif mode == 'field_to_particle':
                 in_features = torch.cat((delta_pos, r[:, None], u_j, embedding_i), dim=-1) * (particle_type_j < 0).float()
                 out = self.lin_particle_mesh(in_features)
                 node_neighbour = (particle_type_j < 0).float()
 
-                return torch.cat((out, node_neighbour.repeat(1, 2)), 1)
+                msg =  torch.cat((out, node_neighbour.repeat(1, 2)), 1)
 
-
+            return msg
 
 
     def update(self, aggr_out):

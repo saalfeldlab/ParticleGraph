@@ -971,7 +971,7 @@ def data_train_particles(config, device):
             index = np.argwhere(x[:, 7].detach().cpu().numpy() == n)
         index_particles.append(index.squeeze())
     if has_ghost:
-        ghosts_particles = Ghost_Particles(config, n_particles, device)
+        ghosts_particles = Ghost_Particles(config, n_particles, vnorm, device)
         if train_config.ghost_method == 'MLP':
             optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.data], lr=5E-4)
         else:
@@ -2754,10 +2754,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
 
 if __name__ == '__main__':
 
-
-    # config_list = ['boids_16_dropout_10_no_ghost','boids_16_dropout_20','boids_16_dropout_30','boids_16_dropout_40']
-    # config_list = ['boids_16_noise_1E-1','boids_16_noise_1E-2','boids_16_noise_1E-3']
-    config_list = ['boids_16']
+    config_list = ['boids_16_dropout_10']
 
 
     for config_file in config_list:
@@ -2768,9 +2765,9 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=False, run_vizualized=0, style='bw', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
+        # data_generate(config, device=device, visualize=False, run_vizualized=0, style='bw', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
         # data_generate_particle_field(config, device=device, visualize=False, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
-        # data_train(config, device)
+        data_train(config, device)
         # data_test(config, visualize=True, style='color', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, sample_embedding=True, device=device)
 
 

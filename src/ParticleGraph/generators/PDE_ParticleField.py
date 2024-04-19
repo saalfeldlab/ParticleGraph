@@ -64,7 +64,7 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
         d_pos = x[:, 3:5]
 
         # edge_attr = torch.clamp(edge_attr, -1, 1)
-        laplacian_u = self.propagate(edge_index=edge_mesh, u=u, discrete_laplacian=edge_attr, mode ='laplacian', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze()) # , parameters=parameters, particle_type=particle_type)
+        laplacian_u = self.propagate(edge_index=edge_mesh, u=u, discrete_laplacian=edge_attr, mode ='field_to_field_laplacian', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze()) # , parameters=parameters, particle_type=particle_type)
         laplacian_u = laplacian_u[0:self.n_nodes]
         d_u_particle_to_field = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode ='particle_to_field', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze())
         d_u_particle_to_field = d_u_particle_to_field[0:self.n_nodes]
@@ -98,7 +98,7 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
 
     def message(self, u_j, discrete_laplacian, mode, pos_i, pos_j, d_pos_i, d_pos_j, particle_type_i, particle_type_j, parameters_i, parameters_j):
 
-        if mode == 'laplacian':
+        if mode == 'field_to_field_laplacian':
 
             Laplacian_component = discrete_laplacian[:,None] * u_j
 
