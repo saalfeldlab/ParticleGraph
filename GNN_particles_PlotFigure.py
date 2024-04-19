@@ -2338,7 +2338,7 @@ def data_plot_boids():
     psi_output = []
     for n in range(n_particle_types):
         psi_output.append(model.psi(rr, torch.squeeze(p[n])))
-        print(f'p{n}: {np.round(to_numpy(torch.squeeze(p[n])), 4)}')
+        # print(f'p{n}: {np.round(to_numpy(torch.squeeze(p[n])), 4)}')
     with torch.no_grad():
         y_B, sum, cohesion, alignment, separation, diffx, diffv, r, type = model_B(dataset)  # acceleration estimation
     type = to_numpy(type)
@@ -2411,7 +2411,7 @@ def data_plot_boids():
         rmserr_list.append(torch.sqrt(torch.mean((lin_edge_out[n] - sum[n].squeeze()) ** 2)))
     rmserr_list = torch.stack(rmserr_list)
     rmserr_list = to_numpy(rmserr_list)
-    print(f'all function RMS error: {np.round(np.mean(rmserr_list), 7)}+/-{np.round(np.std(rmserr_list), 10)}')
+    print(f'all function RMS error: {np.round(np.mean(rmserr_list)*1E5, 4)}+/-{np.round(np.std(rmserr_list)*1E5, 4)}')
 
     xs = torch.linspace(0, 1, 400)
     ys = torch.linspace(-1, 1, 400)
@@ -5008,7 +5008,7 @@ if __name__ == '__main__':
 
     # config_list = ['gravity_16','gravity_16_noise_1E-5','gravity_16_noise_1E-4','gravity_16_noise_1E-3','gravity_16_noise_1E-2','gravity_16_noise_1E-1']
     # config_list = ['gravity_16_dropout_10_no_ghost', 'gravity_16_dropout_10', 'gravity_16_dropout_20', 'gravity_16_dropout_30', 'gravity_16_dropout_40', 'gravity_16_dropout_50']
-    config_list = ['boids_32_256','boids_64_256']
+    config_list = ['boids_16','boids_32','boids_64']
 
     for config_name in config_list:
 

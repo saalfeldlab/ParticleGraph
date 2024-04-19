@@ -66,30 +66,31 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
         # edge_attr = torch.clamp(edge_attr, -1, 1)
         laplacian_u = self.propagate(edge_index=edge_mesh, u=u, discrete_laplacian=edge_attr, mode ='laplacian', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze()) # , parameters=parameters, particle_type=particle_type)
         laplacian_u = laplacian_u[0:self.n_nodes]
-        d_u_neg = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode ='mesh_neg', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze())
-        d_u_neg = d_u_neg[0:self.n_nodes]
+        d_u_particle_to_field = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode ='particle_to_field', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze())
+        d_u_particle_to_field = d_u_particle_to_field[0:self.n_nodes]
 
-        node_type = to_numpy(data.x[0:self.n_nodes, 5]) * -1 - 1
+        node_type = to_numpy(data.x[0:self.n_nodes, 5])*(-1) - 1
         node_type = node_type.astype(int)
         pos_rate = self.pos_rate[node_type]
         pos_rate= pos_rate[:, None]
         neg_rate = self.neg_rate[node_type]
         neg_rate= neg_rate[:, None]
 
-        dd_u = torch.clamp(self.beta * laplacian_u, -10, 10) + pos_rate * u[0:self.n_nodes] - neg_rate * d_u_neg
+        dd_u = torch.clamp(self.beta * laplacian_u, -10, 10) + pos_rate * u[0:self.n_nodes] - neg_rate * d_u_particle_to_field
 
 
         dd_pos = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode ='particle-particle', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze())
-        deg_particle[deg_particle==0]=1
+        deg_particle[deg_particle==0] = 1
         dd_pos = dd_pos[self.n_nodes:] / deg_particle[:, None].repeat(1,2)
 
-        chemotaxism = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode ='particle-field', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze())
-        node_neighbour = chemotaxism[self.n_nodes:,2:4]
+        # chemotaxism
+        dd_pos_field_to_particle = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode ='field_to_particle', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze())
+        node_neighbour = dd_pos_field_to_particle[self.n_nodes:,2:4]
         node_neighbour[node_neighbour==0]=1
-        chemotaxism = chemotaxism[self.n_nodes:,0:2]
-        chemotaxism_dd_pos = chemotaxism/node_neighbour
+        dd_pos_field_to_particle = dd_pos_field_to_particle[self.n_nodes:,0:2]
+        dd_pos_field_to_particle_dd_pos = dd_pos_field_to_particle/node_neighbour
 
-        return dd_pos, chemotaxism_dd_pos, dd_u
+        return dd_pos, dd_pos_field_to_particle_dd_pos, dd_u
 
         fig = plt.figure(figsize=(10, 10))
         plt.hist(to_numpy(self.beta * laplacian_u), 100)
@@ -103,21 +104,21 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
 
             return Laplacian_component
 
-        elif mode == 'mesh_neg':
+        elif mode == 'particle_to_field':
 
             distance_squared = torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, axis=1)  # distance squared
-            degradation = self.a7 / distance_squared[:, None] * ((particle_type_j > -1) & (particle_type_i < 0)).float()
+            msg = self.a7 / distance_squared[:, None] * ((particle_type_j > -1) & (particle_type_i < 0)).float()
 
-            return degradation
+            return msg
 
-        elif mode == 'particle-field':
+        elif mode == 'field_to_particle':
 
             distance_squared = torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, axis=1) # distance squared
 
-            del_component = parameters_i[:, 3, None] * self.a4 * torch.clamp(u_j,0,10000) * self.bc_dpos(pos_j - pos_i) * (particle_type_j < 0).float()
+            msg = parameters_i[:, 3, None] * self.a4 * torch.clamp(u_j,0,10000) * self.bc_dpos(pos_j - pos_i) * (particle_type_j < 0).float()
             node_neighbour = (particle_type_j < 0).float()
 
-            return torch.cat((del_component,node_neighbour.repeat(1,2)),1)
+            return torch.cat((msg,node_neighbour.repeat(1,2)),1)
 
         elif mode == 'particle-particle':
 

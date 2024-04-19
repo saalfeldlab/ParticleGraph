@@ -354,6 +354,34 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                     plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_g_color_{it}.tif", dpi=300)
                     plt.close()
 
+                if 'bw' in style:
+
+                    matplotlib.rcParams['savefig.pad_inches'] = 0
+                    fig = plt.figure(figsize=(12, 12))
+                    ax = fig.add_subplot(1, 1, 1)
+                    s_p = 50
+                    if simulation_config.has_cell_division:
+                        s_p = 25
+                    if False:  # config.simulation.non_discrete_level>0:
+                        plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=s_p, color='k')
+                    else:
+                        for n in range(n_particle_types):
+                            plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                                        s=s_p, color='k')
+                    if training_config.particle_dropout > 0:
+                        plt.scatter(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
+                                    x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), s=25, color='k',
+                                    alpha=0.75)
+                        plt.plot(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
+                                 x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), '+', color='w')
+                    plt.xlim([0, 1])
+                    plt.ylim([0, 1])
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
+                    plt.close()
+
                 if 'color' in style:
 
                     if model_config.particle_model_name == 'PDE_O':
@@ -521,10 +549,14 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                                          x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), '+', color='w')
                         plt.xlim([0,1])
                         plt.ylim([0,1])
-                        plt.xlabel(r'$x$', fontsize=64)
-                        plt.ylabel(r'$y$', fontsize=64)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
+                        if 'frame' in style:
+                            plt.xlabel(r'$x$', fontsize=64)
+                            plt.ylabel(r'$y$', fontsize=64)
+                            plt.xticks(fontsize=32.0)
+                            plt.yticks(fontsize=32.0)
+                        else:
+                            plt.xticks([])
+                            plt.yticks([])
                         plt.tight_layout()
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
                         plt.close()
@@ -783,7 +815,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 # plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=5000, cmap='viridis')
                 for n in range(n_particle_types):
                     plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                x[index_particles[n], 2].detach().cpu().numpy(), s=10, color='w')
+                                x[index_particles[n], 2].detach().cpu().numpy(), s=50, color='w')
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
                 plt.xticks([])
@@ -2303,7 +2335,7 @@ def data_train_signal(config, device):
         plt.close()
 
 
-def data_test(config, visualize=False, verbose=True, best_model=20, step=5, ratio=1, run=1, test_simulation=False, sample_embedding = False, device=[]):
+def data_test(config, visualize=False, style='color', verbose=True, best_model=20, step=5, ratio=1, run=1, test_simulation=False, sample_embedding = False, device=[]):
     print('')
 
     dataset_name = config.dataset
@@ -2646,12 +2678,17 @@ def data_test(config, visualize=False, verbose=True, best_model=20, step=5, rati
                 for n in range(n_particle_types):
                     plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                 x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
+            if 'frame' in style:
+                plt.xlabel(r'$x$', fontsize=64)
+                plt.ylabel(r'$y$', fontsize=64)
+                plt.xticks(fontsize=32.0)
+                plt.yticks(fontsize=32.0)
+            else:
+                plt.xticks([])
+                plt.yticks([])
             plt.xlim([0, 1])
             plt.ylim([0, 1])
-            plt.xlabel(r'$x$', fontsize=64)
-            plt.ylabel(r'$y$', fontsize=64)
-            plt.xticks(fontsize=32.0)
-            plt.yticks(fontsize=32.0)
+
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/tmp_recons/Fig_{dataset_name}_{it}.tif", dpi=170.7)
             plt.close()
@@ -2720,7 +2757,7 @@ if __name__ == '__main__':
 
     # config_list = ['boids_16_dropout_10_no_ghost','boids_16_dropout_20','boids_16_dropout_30','boids_16_dropout_40']
     # config_list = ['boids_16_noise_1E-1','boids_16_noise_1E-2','boids_16_noise_1E-3']
-    config_list = ['arbitrary_3']
+    config_list = ['boids_16']
 
 
     for config_file in config_list:
@@ -2731,10 +2768,10 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
-        # data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 500)
+        data_generate(config, device=device, visualize=False, run_vizualized=0, style='bw', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
+        # data_generate_particle_field(config, device=device, visualize=False, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
         # data_train(config, device)
-        data_test(config, visualize=True, verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, sample_embedding=True, device=device)
+        # data_test(config, visualize=True, style='color', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, sample_embedding=True, device=device)
 
 
 

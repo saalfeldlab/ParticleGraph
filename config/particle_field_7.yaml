@@ -20,7 +20,7 @@ simulation:
   node_value_map: 'pattern_18.tif'
   node_type_map: 'pattern_15.tif'
   beta: 1.0E-2
-  start_frame: 0
+  start_frame: -500
 
 graph_model:
   particle_model_name: 'PDE_ParticleField'
