@@ -4,7 +4,7 @@ import torch.nn as nn
 
 class Ghost_Particles(torch.nn.Module):
 
-    def __init__(self, model_config, n_particles, vnorm, model_siren, device):
+    def __init__(self, model_config, n_particles, vnorm, device):
         super(Ghost_Particles, self).__init__()
         self.n_ghosts = model_config.training.n_ghosts
         self.n_frames = model_config.simulation.n_frames

@@ -978,7 +978,7 @@ def data_train_particles(config, device):
         index_particles.append(index.squeeze())
     if has_ghost:
 
-        if model_config.particle_model_name == 'PDE_B':
+        if model_config.particle_model_name == 'B':
             print('Train SIREN model ...')
 
             run = 1 + np.random.randint(NGraphs - 1)
@@ -1003,7 +1003,7 @@ def data_train_particles(config, device):
                 # target = load_image(image_file, crop_width=image_width, device=device)
 
                 target = torch.zeros((2, image_width, image_width), device=device)
-                target[0,pos_coords[:, 0].long(), pos_coords[:, 1].long()] = y[:,0].squeeze()
+                target[0,pos_coords[:, 0].long(), pos_coords[:, 1].long()] = -y[:,0].squeeze()
                 target[0:1,:,:] = GaussianBlur(51,10)(target[0:1,:,:])
                 target[1,pos_coords[:, 0].long(), pos_coords[:, 1].long()] = y[:,1].squeeze()
                 target[1:2,:,:] = GaussianBlur(51,10)(target[1:2,:,:])
@@ -1035,16 +1035,16 @@ def data_train_particles(config, device):
                 # matplotlib.use("Qt5Agg")
 
                 fig = plt.figure(figsize=(16, 8))
-                ax = fig.add_subplot(2, 4, 1)
+                ax = fig.add_subplot(2, 4, 2)
                 plt.imshow(to_numpy(target[0, :, :].squeeze()),vmin=-0.1,vmax=0.1)
-                plt.title('Velocity_field_x')
+                plt.title('Velocity_field_y')
                 plt.scatter(to_numpy(pos_coords[:, 1]), to_numpy(pos_coords[:, 0]), s=0.1, color='w')
                 plt.xlim([0, image_width])
                 plt.ylim([0, image_width])
                 plt.xticks([])
                 plt.yticks([])
                 ax.invert_yaxis()
-                ax = fig.add_subplot(2, 4, 2)
+                ax = fig.add_subplot(2, 4, 1)
                 plt.imshow(to_numpy(target[1, :, :].squeeze()),vmin=-0.1,vmax=0.1)
                 plt.scatter(to_numpy(pos_coords[:, 1]), to_numpy(pos_coords[:, 0]), s=0.1, color='w')
                 plt.xlim([0, image_width])
@@ -1052,9 +1052,10 @@ def data_train_particles(config, device):
                 plt.xticks([])
                 plt.yticks([])
                 ax.invert_yaxis()
-                plt.title('Velocity_field_y')
+                plt.title('Velocity_field_x')
                 ax = fig.add_subplot(1, 2, 2)
-                plt.imshow(model_output.cpu().view(image_width,image_width).detach().numpy())
+                temp = -model_output.cpu().view(image_width,image_width).permute(1,0).detach().numpy()
+                plt.imshow(temp)
                 plt.scatter(to_numpy(pos_coords[:, 1]), to_numpy(pos_coords[:, 0]), s=1, color='w')
                 plt.xlim([0, image_width])
                 plt.ylim([0, image_width])
@@ -1062,17 +1063,8 @@ def data_train_particles(config, device):
                 plt.yticks([])
                 ax.invert_yaxis()
                 plt.title('Reconstructed potential')
-                ax = fig.add_subplot(2, 4, 5)
-                plt.imshow(img_grad_[:, 1].cpu().view(image_width, image_width).detach().numpy())
-                plt.scatter(to_numpy(pos_coords[:, 1]), to_numpy(pos_coords[:, 0]), s=0.1, color='w')
-                plt.xlim([0, image_width])
-                plt.ylim([0, image_width])
-                plt.xticks([])
-                plt.yticks([])
-                ax.invert_yaxis()
-                plt.title('Gradient_x from potential')
                 ax = fig.add_subplot(2, 4, 6)
-                plt.imshow(img_grad_[:, 0].cpu().view(image_width, image_width).detach().numpy())
+                plt.imshow(img_grad_[:, 1].cpu().view(image_width, image_width).detach().numpy(),vmin=-0.1,vmax=0.1)
                 plt.scatter(to_numpy(pos_coords[:, 1]), to_numpy(pos_coords[:, 0]), s=0.1, color='w')
                 plt.xlim([0, image_width])
                 plt.ylim([0, image_width])
@@ -1080,6 +1072,15 @@ def data_train_particles(config, device):
                 plt.yticks([])
                 ax.invert_yaxis()
                 plt.title('Gradient_y from potential')
+                ax = fig.add_subplot(2, 4, 5)
+                plt.imshow(img_grad_[:, 0].cpu().view(image_width, image_width).detach().numpy(),vmin=-0.1,vmax=0.1)
+                plt.scatter(to_numpy(pos_coords[:, 1]), to_numpy(pos_coords[:, 0]), s=0.1, color='w')
+                plt.xlim([0, image_width])
+                plt.ylim([0, image_width])
+                plt.xticks([])
+                plt.yticks([])
+                ax.invert_yaxis()
+                plt.title('Gradient_x from potential')
                 plt.tight_layout()
                 plt.savefig(f"{log_dir}/tmp_training/siren/siren_{frame}.jpg", dpi=170.7)
                 plt.close()
@@ -1088,20 +1089,12 @@ def data_train_particles(config, device):
                         'optimizer_state_dict': optimizer.state_dict()},
                        os.path.join(log_dir, 'models', f'Siren_model'))
 
-
-
-        else:
-            model_siren = []
-
-        ghosts_particles = Ghost_Particles(config, n_particles, vnorm, model_siren, device)
+        ghosts_particles = Ghost_Particles(config, n_particles, vnorm, device)
         optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.ghost_pos], lr=1E-4)
         mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
         mask_ghost = np.tile(mask_ghost, batch_size)
         mask_ghost = np.argwhere(mask_ghost == 1)
         mask_ghost = mask_ghost[:, 0].astype(int)
-
-            # NOTE: higher omega can represent higher frequency signals
-
 
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
