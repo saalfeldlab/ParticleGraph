@@ -972,10 +972,7 @@ def data_train_particles(config, device):
         index_particles.append(index.squeeze())
     if has_ghost:
         ghosts_particles = Ghost_Particles(config, n_particles, vnorm, device)
-        if train_config.ghost_method == 'MLP':
-            optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.data], lr=5E-4)
-        else:
-            optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.ghost_pos], lr=1E-4)
+        optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.ghost_pos], lr=1E-4)
         mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
         mask_ghost = np.tile(mask_ghost, batch_size)
         mask_ghost = np.argwhere(mask_ghost == 1)
@@ -2755,7 +2752,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
 
 if __name__ == '__main__':
 
-    config_list = ['boids_16_4000_dropout_10']
+    config_list = ['boids_16_dropout_10_small_LR']
 
 
     for config_file in config_list:
