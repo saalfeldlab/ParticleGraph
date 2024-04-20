@@ -6,6 +6,10 @@ import os
 import glob
 import logging
 from shutil import copyfile
+from torchvision.transforms import Resize, Compose, ToTensor, Normalize, CenterCrop, GaussianBlur
+import numpy as np
+import matplotlib.pyplot as plt
+import imageio
 
 
 def to_numpy(tensor: torch.Tensor) -> np.ndarray:
@@ -117,7 +121,7 @@ def grads2D(params):
     return [sx,sy]
 
 
-def tv2d(params):
+def tv2D(params):
     nb_voxel = (params.shape[0]) * (params.shape[1])
     sx,sy= grads2D(params)
 
@@ -166,6 +170,41 @@ class CustomColorMap:
                 color = color_map(index)
 
         return color
+
+
+
+def load_image(path, crop_width=None, device='cpu'):
+    target = imageio.imread(path).astype(np.float32)
+    target = target / np.max(target)
+    target = torch.tensor(target).unsqueeze(0).to(device)
+    if crop_width is not None:
+        target = CenterCrop(crop_width)(target)
+    return target
+
+def get_mgrid(sidelen, dim=2):
+    '''Generates a flattened grid of (x,y,...) coordinates in a range of -1 to 1.
+    sidelen: int
+    dim: int'''
+    tensors = tuple(dim * [torch.linspace(-1, 1, steps=sidelen)])
+    mgrid = torch.stack(torch.meshgrid(*tensors), dim=-1)
+    mgrid = mgrid.reshape(-1, dim)
+    return mgrid
+
+def divergence(y, x):
+    div = 0.
+    for i in range(y.shape[-1]):
+        div += torch.autograd.grad(y[..., i], x, torch.ones_like(y[..., i]), create_graph=True)[0][..., i:i+1]
+    return div
+
+def gradient(y, x, grad_outputs=None):
+    if grad_outputs is None:
+        grad_outputs = torch.ones_like(y)
+    grad = torch.autograd.grad(y, [x], grad_outputs=grad_outputs, create_graph=True)[0]
+    return grad
+
+def laplace(y, x):
+    grad = gradient(y, x)
+    return divergence(grad, x)
     
     
 
@@ -177,11 +216,13 @@ def create_log_dir(config, dataset_name):
     os.makedirs(os.path.join(log_dir, 'models'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'tmp_training'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'tmp_training/embedding'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'tmp_training/siren'), exist_ok=True)
     files = glob.glob(f"{log_dir}/tmp_training/embedding/*")
     for f in files:
-        if (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (
-                f != 'generation_code.py'):
-            os.remove(f)
+        os.remove(f)
+    files = glob.glob(f"{log_dir}/tmp_training/siren/*")
+    for f in files:
+        os.remove(f)
     os.makedirs(os.path.join(log_dir, 'tmp_recons'), exist_ok=True)
     copyfile(os.path.realpath(__file__), os.path.join(log_dir, 'training_code.py'))
     logging.basicConfig(filename=os.path.join(log_dir, 'training.log'),

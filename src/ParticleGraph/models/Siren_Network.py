@@ -70,6 +70,8 @@ class Siren_Network(nn.Module):
         
         self.net = nn.Sequential(*self.net)
 
+        self.net = self.net.to(device)
+
     @property
     def values(self):
         # Call forward method
