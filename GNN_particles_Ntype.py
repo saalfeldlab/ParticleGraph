@@ -309,21 +309,20 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                 # matplotlib.use("Qt5Agg")
 
                 if 'graph' in style:
-                    fig = plt.figure(figsize=(10, 10))
 
-                    distance2 = torch.sum((x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
-                    adj_t2 = ((distance2 < max_radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
-                    edge_index2 = adj_t2.nonzero().t().contiguous()
-                    dataset2 = data.Data(x=x, edge_index=edge_index2)
-                    pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
-                    vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
+                    fig = plt.figure(figsize=(10, 10))
+                    # distance2 = torch.sum((x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
+                    # adj_t2 = ((distance2 < max_radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
+                    # edge_index2 = adj_t2.nonzero().t().contiguous()
+                    # dataset2 = data.Data(x=x, edge_index=edge_index2)
+                    # pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
+                    # vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
                     # nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False, alpha=alpha)
 
-                    if model_config.particle_model_name == 'PDE_G':
-                        for n in range(n_particle_types):
-                            plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                        x[index_particles[n], 2].detach().cpu().numpy(), s=40, color=cmap.color(n))
-                    elif has_mesh:
+                    if model_config.mesh_model_name == 'RD_RPS_Mesh':
+                        H1_IM = torch.reshape(x_mesh[:, 6:9], (100, 100, 3))
+                        plt.imshow(to_numpy(H1_IM), vmin=0, vmax=1)
+                    elif model_config.mesh_model_name == 'Wave_Mesh':
                         pts = x_mesh[:, 1:3].detach().cpu().numpy()
                         tri = Delaunay(pts)
                         colors = torch.sum(x_mesh[tri.simplices, 6], dim=1) / 3.0
@@ -334,6 +333,12 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                         else:
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                           facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=0, vmax=2500)
+                        plt.xlim([0, 1])
+                        plt.ylim([0, 1])
+                    elif model_config.particle_model_name == 'PDE_G':
+                        for n in range(n_particle_types):
+                            plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
+                                        x[index_particles[n], 2].detach().cpu().numpy(), s=40, color=cmap.color(n))
                     elif model_config.particle_model_name == 'PDE_E':
                         for n in range(n_particle_types):
                             g = 40
@@ -348,12 +353,6 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                         x[index_particles[n], 2].detach().cpu().numpy(), s=25, color=cmap.color(n),
                                         alpha=0.5)
-                    if has_mesh | (simulation_config.boundary == 'periodic'):
-                        plt.xlim([0, 1])
-                        plt.ylim([0, 1])
-                    else:
-                        plt.xlim([-0.5, 0.5])
-                        plt.ylim([-0.5, 0.5])
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
@@ -2019,7 +2018,7 @@ def data_train_mesh(config, device):
 
             total_loss += loss.item()
 
-            visualize_embedding = True
+            visualize_embedding = False
             if visualize_embedding & (epoch == 0) & (N < 10000) & (N % 200 == 0):
                 plot_training(config=config, dataset_name=dataset_name, model_name='WaveMesh',
                               log_dir=log_dir,
@@ -2895,7 +2894,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
 
 if __name__ == '__main__':
 
-    config_list = ['wave_logo']
+    config_list = ['RD_RPS']
 
 
     for config_file in config_list:
@@ -2906,7 +2905,7 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='graph', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 20)
+        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='graph', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 20)
         # data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 20)
         data_train(config, device)
         # data_test(config, visualize=True, style='color', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, sample_embedding=True, device=device)
