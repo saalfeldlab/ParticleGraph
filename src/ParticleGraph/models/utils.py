@@ -69,9 +69,6 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
         plt.yticks([])
 
 
-
-
-
         # uu = torch.tensor(np.linspace(0, 7500, 200)).to(device)
         # popt_list = []
         # for n in range(n_nodes):
@@ -93,7 +90,7 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
         plt.close()
 
 
-    else:
+    elif not('Mesh' in model_name):
 
         fig = plt.figure(figsize=(12, 12))
         if axis:

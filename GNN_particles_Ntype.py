@@ -324,9 +324,9 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                         x[index_particles[n], 2].detach().cpu().numpy(), s=40, color=cmap.color(n))
                     elif has_mesh:
-                        pts = x[:, 1:3].detach().cpu().numpy()
+                        pts = x_mesh[:, 1:3].detach().cpu().numpy()
                         tri = Delaunay(pts)
-                        colors = torch.sum(x[tri.simplices, 6], dim=1) / 3.0
+                        colors = torch.sum(x_mesh[tri.simplices, 6], dim=1) / 3.0
                         if model_config.mesh_model_name == 'WaveMesh':
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                           facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=-2500,
@@ -2021,16 +2021,11 @@ def data_train_mesh(config, device):
 
             visualize_embedding = True
             if visualize_embedding & (epoch == 0) & (N < 10000) & (N % 200 == 0):
-                plot_training(dataset_name=dataset_name, model_name=model_config.mesh_model_name, log_dir=log_dir,
-                              epoch=epoch, N=N, x=x_mesh, model=model, dataset_num=1,
-                              index_particles=index_particles, n_particles=n_nodes,
-                              n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, device=device)
-
-                plot_training(config=config, dataset_name=dataset_name, model_name=model_config.particle_model_name,
+                plot_training(config=config, dataset_name=dataset_name, model_name='WaveMesh',
                               log_dir=log_dir,
-                              epoch=epoch, N=N, x=x, model=model, n_nodes=n_nodes, n_node_types=n_node_types, index_nodes=index_nodes, dataset_num=1,
-                              index_particles=index_particles, n_particles=n_particles,
-                              n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
+                              epoch=epoch, N=N, x=x_mesh, model=model, n_nodes=n_nodes, n_node_types=n_node_types, index_nodes=index_nodes, dataset_num=1,
+                              index_particles=index_nodes, n_particles=n_nodes,
+                              n_particle_types=n_node_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_nodes / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_nodes / batch_size))
@@ -2911,7 +2906,7 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        # data_generate(config, device=device, visualize=False, run_vizualized=0, style='bw', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='graph', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 20)
         # data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 20)
         data_train(config, device)
         # data_test(config, visualize=True, style='color', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, sample_embedding=True, device=device)
