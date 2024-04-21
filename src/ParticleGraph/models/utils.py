@@ -40,13 +40,13 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
         embedding = embedding[n_nodes:, :]
         for n in range(n_particle_types):
                 plt.scatter(embedding[index_particles[n], 0],
-                            embedding[index_particles[n], 1], color=cmap.color(n), s=200)
+                            embedding[index_particles[n], 1], color=cmap.color(n), s=10)
         ax=fig.add_subplot(2, 2, 2)
         embedding = get_embedding(model.a, dataset_num, index_particles, n_particles, n_particle_types)
         embedding = embedding[:n_nodes, :]
         for n in range(n_node_types):
                 plt.scatter(embedding[index_nodes[n], 0],
-                            embedding[index_nodes[n], 1], c='k', s=5)
+                            embedding[index_nodes[n], 1], color=cmap.color(n), s=10)
 
         uu = torch.tensor(np.linspace(-1000, 1000, 200)).to(device)
         popt_list = []
