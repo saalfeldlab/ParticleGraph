@@ -40,7 +40,7 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
         embedding = embedding[n_nodes:, :]
         for n in range(n_particle_types):
                 plt.scatter(embedding[index_particles[n], 0],
-                            embedding[index_particles[n], 1], color=cmap.color(n), s=10)
+                            embedding[index_particles[n], 1], color=cmap.color(n), s=1)
         ax=fig.add_subplot(2, 2, 2)
         embedding = get_embedding(model.a, dataset_num, index_particles, n_particles, n_particle_types)
         embedding = embedding[:n_nodes, :]
@@ -48,6 +48,7 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
                 plt.scatter(embedding[index_nodes[n], 0],
                             embedding[index_nodes[n], 1], color=cmap.color(n), s=10)
 
+        ax = fig.add_subplot(2, 2, 4)
         uu = torch.tensor(np.linspace(-1000, 1000, 200)).to(device)
         popt_list = []
         for n in range(n_nodes):
@@ -55,6 +56,8 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
             in_features = torch.cat((uu[:, None], embedding_), dim=1)
             h = model.lin_phi1(in_features.float())
             h = h[:, 0]
+            if n % 50 == 0:
+                plt.scatter(to_numpy(uu), to_numpy(h), s=1, c='k')
             popt, pcov = curve_fit(linear_model, to_numpy(uu.squeeze()), to_numpy(h.squeeze()))
             popt_list.append(popt)
         t = np.array(popt_list)
@@ -64,22 +67,27 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
         plt.imshow(t/np.mean(t), cmap='viridis')
         plt.xticks([])
         plt.yticks([])
-        uu = torch.tensor(np.linspace(0, 7500, 200)).to(device)
-        popt_list = []
-        for n in range(n_nodes):
-            embedding_ = model.a[dataset_num, n, :] * torch.ones((200, 2), device=device)
-            in_features = torch.cat((uu[:, None], embedding_), dim=1)
-            h = model.lin_phi2(in_features.float())
-            h = h[:, 0]
-            popt, pcov = curve_fit(linear_model, to_numpy(uu.squeeze()), to_numpy(h.squeeze()))
-            popt_list.append(popt)
-        t = np.array(popt_list)
-        t = t[:, 0]
-        ax = fig.add_subplot(2, 2, 4)
-        t = np.reshape(t, (100, 100))
-        plt.imshow(t/np.mean(t), cmap='viridis')
-        plt.xticks([])
-        plt.yticks([])
+
+
+
+
+
+        # uu = torch.tensor(np.linspace(0, 7500, 200)).to(device)
+        # popt_list = []
+        # for n in range(n_nodes):
+        #     embedding_ = model.a[dataset_num, n, :] * torch.ones((200, 2), device=device)
+        #     in_features = torch.cat((uu[:, None], embedding_), dim=1)
+        #     h = model.lin_phi2(in_features.float())
+        #     h = h[:, 0]
+        #     popt, pcov = curve_fit(linear_model, to_numpy(uu.squeeze()), to_numpy(h.squeeze()))
+        #     popt_list.append(popt)
+        # t = np.array(popt_list)
+        # t = t[:, 0]
+        # ax = fig.add_subplot(2, 2, 4)
+        # t = np.reshape(t, (100, 100))
+        # plt.imshow(t/np.mean(t), cmap='viridis')
+        # plt.xticks([])
+        # plt.yticks([])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/embedding/{model_name}_{dataset_name}_embedding_{epoch}_{N}.tif", dpi=170.7)
         plt.close()

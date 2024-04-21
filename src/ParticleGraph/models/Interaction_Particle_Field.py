@@ -118,6 +118,7 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
 
         laplacian_u = self.propagate(edge_index=edge_mesh, u=u, discrete_laplacian=edge_attr, mode ='field_to_field_laplacian', pos=pos, d_pos=d_pos, particle_type=particle_type, particle_id = particle_id)
         laplacian_u = laplacian_u[0:self.n_nodes]
+
         particle_id = to_numpy(x[0:self.n_nodes, 0:1])
         embedding = self.a[self.data_id, particle_id, :].squeeze()
         input_phi1 = torch.cat((laplacian_u[:,0:1], embedding), dim=-1)

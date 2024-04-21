@@ -1869,6 +1869,8 @@ def data_train_mesh(config, device):
     max_radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
+    n_nodes = simulation_config.n_nodes
+    n_node_types = simulation_config.n_node_types
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
     has_cell_division = simulation_config.has_cell_division
@@ -1961,6 +1963,11 @@ def data_train_mesh(config, device):
     for n in range(n_particle_types):
         index = np.argwhere(x_mesh[:, 5].detach().cpu().numpy() == n)
         index_particles.append(index.squeeze())
+    index_nodes = []
+    x_mesh = x_mesh_list[1][0].clone().detach()
+    for n in range(n_node_types):
+        index = np.argwhere(x_mesh[:, 5].detach().cpu().numpy() == -n - 1)
+        index_nodes.append(index.squeeze())
 
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
@@ -2018,6 +2025,12 @@ def data_train_mesh(config, device):
                               epoch=epoch, N=N, x=x_mesh, model=model, dataset_num=1,
                               index_particles=index_particles, n_particles=n_nodes,
                               n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, device=device)
+
+                plot_training(config=config, dataset_name=dataset_name, model_name=model_config.particle_model_name,
+                              log_dir=log_dir,
+                              epoch=epoch, N=N, x=x, model=model, n_nodes=n_nodes, n_node_types=n_node_types, index_nodes=index_nodes, dataset_num=1,
+                              index_particles=index_particles, n_particles=n_particles,
+                              n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_nodes / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_nodes / batch_size))
@@ -2887,7 +2900,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
 
 if __name__ == '__main__':
 
-    config_list = ['particle_field_2']
+    config_list = ['wave_logo']
 
 
     for config_file in config_list:
