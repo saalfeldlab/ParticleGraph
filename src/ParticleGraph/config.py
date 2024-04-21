@@ -58,7 +58,7 @@ class GraphModelConfig(BaseModel):
     input_size_update: int = 3
     n_layers_update: int = 3
     hidden_dim_update: int = 64
-    ouput_size_update: int = 1
+    output_size_update: int = 1
 
     division_predictor_input_size: int = 3
     division_predictor_output_size: int = 1

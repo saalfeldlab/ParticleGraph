@@ -64,13 +64,15 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
             self.lin_particle = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device)
 
-        self.lin_particle_mesh = MLP(input_size=self.input_size-3, output_size=self.output_size, nlayers=self.n_layers,
+        self.lin_field_to_particle = MLP(input_size=self.input_size-3, output_size=self.output_size, nlayers=self.n_layers,
                             hidden_size=self.hidden_dim, device=self.device)
 
-        self.lin_mesh = MLP(input_size=1, output_size=1, nlayers=3,
+        self.lin_particle_to_field = MLP(input_size=1, output_size=1, nlayers=3,
                             hidden_size=32, device=self.device)
 
-        self.lin_phi = MLP(input_size=self.input_size_update, output_size=1, nlayers=self.n_layers_update,
+        self.lin_phi1 = MLP(input_size=self.input_size_update, output_size=1, nlayers=self.n_layers_update,
+                           hidden_size=self.hidden_dim_update, device=self.device)
+        self.lin_phi2 = MLP(input_size=self.input_size_update, output_size=1, nlayers=self.n_layers_update,
                            hidden_size=self.hidden_dim_update, device=self.device)
 
         if simulation_config.has_cell_division :
@@ -108,10 +110,9 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         dd_pos = dd_pos[self.n_nodes:,0:2] / deg_particle[:, None].repeat(1, 2)
 
         dd_pos_field_to_particle = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode='field_to_particle', pos=pos, d_pos=d_pos, particle_type=particle_type, particle_id = particle_id)
-        dd_pos_field_to_particle = dd_pos_field_to_particle[self.n_nodes:,0:2]
         node_neighbour = dd_pos_field_to_particle[self.n_nodes:,2:4]
         node_neighbour[node_neighbour==0]=1
-        dd_pos_field_to_particle = dd_pos_field_to_particle/node_neighbour
+        dd_pos_field_to_particle = dd_pos_field_to_particle[self.n_nodes:,0:2]/node_neighbour
 
         dd_pos = dd_pos + dd_pos_field_to_particle
 
@@ -119,11 +120,13 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         laplacian_u = laplacian_u[0:self.n_nodes]
         particle_id = to_numpy(x[0:self.n_nodes, 0:1])
         embedding = self.a[self.data_id, particle_id, :].squeeze()
-        input_phi = torch.cat(laplacian_u[:,0:1], (u[0:self.n_nodes,0:1], embedding), dim=-1)
-        d_u_particle_to_field = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode ='particle_to_field', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze())
+        input_phi1 = torch.cat((laplacian_u[:,0:1], embedding), dim=-1)
+        input_phi2 = torch.cat((u[0:self.n_nodes,0:1], embedding), dim=-1)
+        d_u_field_to_field = self.lin_phi1(input_phi1) + torch.relu(self.lin_phi2(input_phi2))
+        d_u_particle_to_field = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode ='particle_to_field', pos=pos, d_pos=d_pos, particle_type=particle_type, particle_id = particle_id)
         d_u_particle_to_field = d_u_particle_to_field[0:self.n_nodes]
 
-        du = self.lin_phi(input_phi) + d_u_particle_to_field
+        du = d_u_field_to_field + d_u_particle_to_field
 
         return dd_pos, du
 
@@ -131,7 +134,7 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
 
         if mode == 'field_to_field_laplacian':
 
-            Laplacian_component = discrete_laplacian[:, None] * u_j
+            Laplacian_component = discrete_laplacian[:, None] * u_j * ((particle_type_j < 0) & (particle_type_i < 0)).float()
 
             return Laplacian_component
 
@@ -140,7 +143,7 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
             r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
             in_features = r[:, None] * ((particle_type_j > -1) & (particle_type_i < 0)).float()
 
-            msg = torch.relu(self.lin_mesh(in_features))
+            msg = -torch.relu(self.lin_particle_to_field(in_features))
 
             return msg
 
@@ -181,7 +184,7 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
 
             elif mode == 'field_to_particle':
                 in_features = torch.cat((delta_pos, r[:, None], u_j, embedding_i), dim=-1) * ((particle_type_i > -1)&(particle_type_j < 0)).float()
-                out = self.lin_particle_mesh(in_features)
+                out = self.lin_field_to_particle(in_features)
                 node_neighbour = (particle_type_j < 0).float()
 
                 msg =  torch.cat((out, node_neighbour.repeat(1, 2)), 1)

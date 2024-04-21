@@ -704,7 +704,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         index = np.round(i0[(to_numpy(X1_mesh[:, 0]) * 255).astype(int), (to_numpy(X1_mesh[:, 1]) * 255).astype(int)]).astype(int)
         pos_rate = a2 * np.array(config.simulation.pos_rate)[index]
         model.pos_rate = torch.tensor(pos_rate, device=device)
-        model.neg_rate = - torch.ones_like(model.pos_rate) * a3
+        model.neg_rate = - torch.ones_like(model.pos_rate) * a3 * torch.tensor(config.simulation.pos_rate[0], device=device)
 
         # matplotlib.use("Qt5Agg")
         # fig = plt.figure(figsize=(12, 12))
@@ -1760,10 +1760,6 @@ def data_train_particle_field(config, device):
 
             visualize_embedding = True
 
-            if epoch>0:
-                with torch.no_grad():
-                    model.a[1][n_nodes:, :] = fixed_cluster_embedding
-
             if visualize_embedding & (((epoch == 0) & (N % 1000 == 0)) | (N == 0)):
                 plot_training(config=config, dataset_name=dataset_name, model_name=model_config.particle_model_name,
                               log_dir=log_dir,
@@ -1822,7 +1818,7 @@ def data_train_particle_field(config, device):
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
         plt.close()
 
-        if epoch == 0:
+        if False:
 
             embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
             embedding = embedding[n_nodes:]
@@ -2891,7 +2887,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
 
 if __name__ == '__main__':
 
-    config_list = ['particle_field_1']
+    config_list = ['particle_field_2']
 
 
     for config_file in config_list:
@@ -2903,8 +2899,8 @@ if __name__ == '__main__':
         print(f'device {device}')
 
         # data_generate(config, device=device, visualize=False, run_vizualized=0, style='bw', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
-        # data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 20)
-        data_train(config, device)
+        data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 20)
+        # data_train(config, device)
         # data_test(config, visualize=True, style='color', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, sample_embedding=True, device=device)
 
 

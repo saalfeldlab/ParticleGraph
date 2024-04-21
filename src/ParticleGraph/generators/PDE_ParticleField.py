@@ -94,7 +94,7 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
 
         if mode == 'field_to_field_laplacian':
 
-            Laplacian_component = discrete_laplacian[:,None] * u_j
+            Laplacian_component = discrete_laplacian[:,None] * u_j * ((particle_type_j < 0) & (particle_type_i < 0)).float()
 
             return Laplacian_component
 

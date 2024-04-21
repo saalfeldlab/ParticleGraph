@@ -46,20 +46,36 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
         embedding = embedding[:n_nodes, :]
         for n in range(n_node_types):
                 plt.scatter(embedding[index_nodes[n], 0],
-                            embedding[index_nodes[n], 1], color=cmap.color(n), s=200)
+                            embedding[index_nodes[n], 1], c='k', s=5)
 
-        uu = torch.tensor(np.linspace(0, 50000, 200)).to(device)
+        uu = torch.tensor(np.linspace(-1000, 1000, 200)).to(device)
         popt_list = []
         for n in range(n_nodes):
             embedding_ = model.a[dataset_num, n, :] * torch.ones((200, 2), device=device)
-            in_features = torch.cat((uu[:, None], uu[:, None]*0, embedding_), dim=1)
-            h = model.lin_phi(in_features.float())
+            in_features = torch.cat((uu[:, None], embedding_), dim=1)
+            h = model.lin_phi1(in_features.float())
             h = h[:, 0]
             popt, pcov = curve_fit(linear_model, to_numpy(uu.squeeze()), to_numpy(h.squeeze()))
             popt_list.append(popt)
         t = np.array(popt_list)
         t = t[:, 0]
         ax = fig.add_subplot(2, 2, 3)
+        t = np.reshape(t, (100, 100))
+        plt.imshow(t/np.mean(t), cmap='viridis')
+        plt.xticks([])
+        plt.yticks([])
+        uu = torch.tensor(np.linspace(0, 7500, 200)).to(device)
+        popt_list = []
+        for n in range(n_nodes):
+            embedding_ = model.a[dataset_num, n, :] * torch.ones((200, 2), device=device)
+            in_features = torch.cat((uu[:, None], embedding_), dim=1)
+            h = model.lin_phi2(in_features.float())
+            h = h[:, 0]
+            popt, pcov = curve_fit(linear_model, to_numpy(uu.squeeze()), to_numpy(h.squeeze()))
+            popt_list.append(popt)
+        t = np.array(popt_list)
+        t = t[:, 0]
+        ax = fig.add_subplot(2, 2, 4)
         t = np.reshape(t, (100, 100))
         plt.imshow(t/np.mean(t), cmap='viridis')
         plt.xticks([])
