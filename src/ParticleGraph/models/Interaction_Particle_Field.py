@@ -67,8 +67,8 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         self.lin_particle_mesh = MLP(input_size=self.input_size-3, output_size=self.output_size, nlayers=self.n_layers,
                             hidden_size=self.hidden_dim, device=self.device)
 
-        self.lin_mesh = MLP(input_size=3, output_size=1, nlayers=self.n_layers,
-                            hidden_size=self.hidden_dim, device=self.device)
+        self.lin_mesh = MLP(input_size=1, output_size=1, nlayers=3,
+                            hidden_size=32, device=self.device)
 
         self.lin_phi = MLP(input_size=self.input_size_update, output_size=1, nlayers=self.n_layers_update,
                            hidden_size=self.hidden_dim_update, device=self.device)
@@ -138,8 +138,7 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         elif mode == 'particle_to_field':
 
             r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
-            embedding_i = self.a[self.data_id, to_numpy(particle_id_i), :].squeeze()
-            in_features = torch.cat((r[:, None], embedding_i), dim=-1) * ((particle_type_j > -1) & (particle_type_i < 0)).float()
+            in_features = r[:, None] * ((particle_type_j > -1) & (particle_type_i < 0)).float()
 
             msg = torch.relu(self.lin_mesh(in_features))
 
@@ -173,16 +172,15 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
                 dpos_y_j = new_dpos_y_j
 
             embedding_i = self.a[self.data_id, to_numpy(particle_id_i), :].squeeze()
-            embedding_j = self.a[self.data_id, to_numpy(particle_id_j), :].squeeze()
 
             if mode == 'particle_to_particle':
                 in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None],
                                                            dpos_x_j[:, None], dpos_y_j[:, None], embedding_i),
-                                                          dim=-1) * (particle_type_j > -1).float()
+                                                          dim=-1) * ((particle_type_i > -1)&(particle_type_j > -1)).float()
                 msg = self.lin_particle(in_features)
 
             elif mode == 'field_to_particle':
-                in_features = torch.cat((delta_pos, r[:, None], u_j, embedding_i), dim=-1) * (particle_type_j < 0).float()
+                in_features = torch.cat((delta_pos, r[:, None], u_j, embedding_i), dim=-1) * ((particle_type_i > -1)&(particle_type_j < 0)).float()
                 out = self.lin_particle_mesh(in_features)
                 node_neighbour = (particle_type_j < 0).float()
 

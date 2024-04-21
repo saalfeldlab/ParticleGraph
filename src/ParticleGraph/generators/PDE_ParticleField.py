@@ -22,7 +22,7 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
         the Laplacian
     """
 
-    def __init__(self, aggr_type=[],  pos_rate=[], neg_rate=[], beta=[], delta_t=[], p=[], bc_dpos=[], n_particles=0, n_nodes=0):
+    def __init__(self, aggr_type=[],  pos_rate=[], neg_rate=[], coeff_diff=[], delta_t=[], p=[], bc_dpos=[], n_particles=0, n_nodes=0):
 
         super(PDE_ParticleField, self).__init__(aggr=aggr_type)  # "mean" aggregation.
 
@@ -35,17 +35,12 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
         self.a1 = 0.5E-5
         self.a2 = 5E-4
         self.a3 = 1E-8
-
         self.a4 = 5E-7
 
-        self.a5 = 0.5E-5
-        self.a6 = 1E-8
-
-        self.a7 = 0.085
-
+        self.coeff_diff = coeff_diff
         self.pos_rate = pos_rate
         self.neg_rate = neg_rate
-        self.beta = beta
+
         self.delta_t = delta_t
 
     def forward(self, data):
@@ -57,6 +52,8 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
         deg_particle = pyg_utils.degree(edge_particle[0, :].squeeze(), self.n_particles)
 
         u = x[:, 6:7]
+        particle_id = to_numpy(x[0:self.n_nodes, 0])
+        particle_id = particle_id.astype(int)
         particle_type = x[:, 5:6]
         parameters = self.p[to_numpy(particle_type), :]
 
@@ -69,14 +66,11 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
         d_u_particle_to_field = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode ='particle_to_field', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze())
         d_u_particle_to_field = d_u_particle_to_field[0:self.n_nodes]
 
-        node_type = to_numpy(data.x[0:self.n_nodes, 5])*(-1) - 1
-        node_type = node_type.astype(int)
-        pos_rate = self.pos_rate[node_type]
-        pos_rate= pos_rate[:, None]
-        neg_rate = self.neg_rate[node_type]
-        neg_rate= neg_rate[:, None]
+        coeff_diff = self.coeff_diff[particle_id]
+        pos_rate = self.pos_rate[particle_id]
+        neg_rate = self.neg_rate[particle_id]
 
-        dd_u = torch.clamp(self.beta * laplacian_u, -10, 10) + pos_rate * u[0:self.n_nodes] - neg_rate * d_u_particle_to_field
+        dd_u = torch.clamp(coeff_diff * laplacian_u, -10, 10) + pos_rate * u[0:self.n_nodes] + neg_rate * d_u_particle_to_field
 
 
         dd_pos = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode ='particle-particle', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze())
@@ -107,18 +101,9 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
         elif mode == 'particle_to_field':
 
             distance_squared = torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, axis=1)  # distance squared
-            msg = self.a7 / distance_squared[:, None] * ((particle_type_j > -1) & (particle_type_i < 0)).float()
+            msg = 1 / distance_squared[:, None] * ((particle_type_j > -1) & (particle_type_i < 0)).float()
 
             return msg
-
-        elif mode == 'field_to_particle':
-
-            distance_squared = torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, axis=1) # distance squared
-
-            msg = parameters_i[:, 3, None] * self.a4 * torch.clamp(u_j,0,10000) * self.bc_dpos(pos_j - pos_i) * (particle_type_j < 0).float()
-            node_neighbour = (particle_type_j < 0).float()
-
-            return torch.cat((msg,node_neighbour.repeat(1,2)),1)
 
         elif mode == 'particle-particle':
 
@@ -129,6 +114,15 @@ class PDE_ParticleField(pyg.nn.MessagePassing):
             separation = - parameters_i[:,2,None] * self.a3 * self.bc_dpos(pos_j - pos_i) / distance_squared[:, None] * (particle_type_j > -1).float()
 
             return (separation + alignment + cohesion_particle)
+
+        elif mode == 'field_to_particle':
+
+            distance_squared = torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, axis=1) # distance squared
+
+            msg = parameters_i[:, 3, None] * self.a4 * torch.clamp(u_j,0,10000) * self.bc_dpos(pos_j - pos_i) * (particle_type_j < 0).float()
+            node_neighbour = (particle_type_j < 0).float()
+
+            return torch.cat((msg,node_neighbour.repeat(1,2)),1)
 
 
     def psi(self, I, p):

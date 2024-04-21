@@ -1,24 +1,26 @@
 description: 'maze mode, diffusion chemical  and boids'
-dataset: 'particle_field_6'
+dataset: 'particle_field_1'
 
 simulation:
   params: [[27.6, 92.5, 48.2, 0.1], [32.0, 51.8, 29.8, 0.1], [23.6, 35.0, 13.5, 1], [3.3, 76.4, 13.0, 0.1], [94.0, 78.7, 30.8, 0.1], [81.4, 34.6, 2.2, 0.1], [3.1, 40.5, 17.0, 0.1], [88.8, 7.2, 29.8, 0.1], [32.7, 76.8, 26.1, 1], [14.5, 56.8, 27.6, 0.1], [63.3, 99.9, 13.9, 0.1], [32.5, 25.2, 24.4, 1], [97.6, 56.5, 12.1, 0.1], [62.2, 9.1, 28.3, 0.1], [76.4, 52.9, 32.0, 0.1], [48.1, 54.4, 30.7, 0.1]]
   min_radius: 0.001
   max_radius: 0.04
-  diffusion_coefficients: [[1],[1],[1],[1]]
   n_particles: 1792
   n_particle_types: 16
   n_interactions: 16
   n_nodes: 10000
-  n_node_types: 4
-  pos_rate: [[4.8E-4],[7.1E-4],[10.0E-4],[13.0E-4]]
-  neg_rate: [[7.5],[10],[10],[5]]
+  n_node_types: 5
+  diffusion_coefficients: [[1],[1],[1.5],[1.2],[1.75]]
+  pos_rate: [[4.8],[7.1],[10.0],[13.0]]
+  neg_rate: [[7.5],[7.5],[7.5],[7.5]]
   n_frames: 12500
   delta_t: 0.5
   dpos_init: 1.0E-4
   boundary: 'periodic'
   node_value_map: 'pattern_18.tif'
-  node_type_map: 'pattern_15.tif'
+  node_type_map: 'pattern_8.tif'
+  node_diffusion_map: 'pattern_8.tif'
+  node_proliferation_map: 'pattern_15.tif'
   beta: 1.0E-2
   start_frame: 0
 

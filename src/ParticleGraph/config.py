@@ -32,8 +32,10 @@ class SimulationConfig(BaseModel):
     delta_t: float = 1
     dpos_init: float = 0
     boundary: Literal['periodic', 'no'] = 'periodic'
-    node_value_map: Optional[str] = None
     node_type_map: Optional[str] = None
+    node_value_map: Optional[str] = None
+    node_diffusion_map: Optional[str] = None
+    node_proliferation_map: Optional[str] = None
     beta: Optional[float] = None
     start_frame: int = 0
 

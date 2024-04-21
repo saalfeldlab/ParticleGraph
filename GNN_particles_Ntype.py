@@ -692,6 +692,27 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         torch.save(mesh_data, f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt')
         mask_mesh = mesh_data['mask'].squeeze()
 
+        a1 = 1E-2  # diffusion coefficient
+        a2 = 8E-5  # positive rate coefficient
+        a3 = 6.65E-5  # negative rate coefficient
+
+        i0 = imread(f'graphs_data/{config.simulation.node_diffusion_map}')
+        index = np.round(i0[(to_numpy(X1_mesh[:, 0]) * 255).astype(int), (to_numpy(X1_mesh[:, 1]) * 255).astype(int)] ).astype(int)
+        coeff_diff = a1 * np.array(config.simulation.diffusion_coefficients)[index]
+        model.coeff_diff = torch.tensor(coeff_diff, device=device)
+        i0 = imread(f'graphs_data/{config.simulation.node_proliferation_map}')
+        index = np.round(i0[(to_numpy(X1_mesh[:, 0]) * 255).astype(int), (to_numpy(X1_mesh[:, 1]) * 255).astype(int)]).astype(int)
+        pos_rate = a2 * np.array(config.simulation.pos_rate)[index]
+        model.pos_rate = torch.tensor(pos_rate, device=device)
+        model.neg_rate = - torch.ones_like(model.pos_rate) * a3
+
+        # matplotlib.use("Qt5Agg")
+        # fig = plt.figure(figsize=(12, 12))
+        # plt.imshow(i0)
+        # plt.imshow(np.reshape(proliferation_rate, (100, 100)), cmap='viridis')
+        # plt.colorbar()
+
+
         index_particles = []
         for n in range(n_particle_types):
             pos = torch.argwhere(T1 == n)
@@ -821,7 +842,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 # plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=5000, cmap='viridis')
                 for n in range(n_particle_types):
                     plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                x[index_particles[n], 2].detach().cpu().numpy(), s=50, color='w')
+                                x[index_particles[n], 2].detach().cpu().numpy(), s=0.5, color='w')
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
                 plt.xticks([])
@@ -2870,7 +2891,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
 
 if __name__ == '__main__':
 
-    config_list = ['boids_16_dropout_10']
+    config_list = ['particle_field_1']
 
 
     for config_file in config_list:
@@ -2882,7 +2903,7 @@ if __name__ == '__main__':
         print(f'device {device}')
 
         # data_generate(config, device=device, visualize=False, run_vizualized=0, style='bw', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
-        # data_generate_particle_field(config, device=device, visualize=False, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
+        # data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 20)
         data_train(config, device)
         # data_test(config, visualize=True, style='color', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, sample_embedding=True, device=device)
 

@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 # matplotlib.use("Qt5Agg")
+from tifffile import imread
 from ParticleGraph.generators import PDE_ParticleField, PDE_A, PDE_B, PDE_B_bis, PDE_E, PDE_G, PDE_GS, PDE_N, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, \
     PDE_Laplacian, PDE_O
 from ParticleGraph.utils import choose_boundary_values
@@ -35,19 +36,15 @@ def choose_model(config, device):
 
     match particle_model_name:
         case 'PDE_ParticleField':
-            pos_rate = torch.ones(n_node_types, device=device)*8E-4
-            for n in range(n_node_types):
-                pos_rate[n] = torch.tensor(config.simulation.pos_rate[n])
-            neg_rate = torch.ones(n_node_types, device=device)*8E-4
-            for n in range(n_node_types):
-                neg_rate[n] = torch.tensor(config.simulation.pos_rate[n])
+            # particle parameters
             p = torch.rand(n_particle_types, 4, device=device) * 100  # comprised between 10 and 50
             if params[0] != [-1]:
                 for n in range(n_particle_types):
                     p[n] = torch.tensor(params[n])
             else:
                 print(p)
-            model = PDE_ParticleField(aggr_type=aggr_type,  pos_rate=pos_rate, neg_rate=neg_rate, beta=config.simulation.beta, delta_t=config.simulation.delta_t,  p=torch.squeeze(p), bc_dpos=bc_dpos, n_particles=n_particles, n_nodes=n_nodes)
+
+            model = PDE_ParticleField(aggr_type=aggr_type,  pos_rate=[], neg_rate=[], coeff_diff=[], delta_t=config.simulation.delta_t,  p=torch.squeeze(p), bc_dpos=bc_dpos, n_particles=n_particles, n_nodes=n_nodes)
         case 'PDE_A':
             p = torch.ones(n_particle_types, 4, device=device) + torch.rand(n_particle_types, 4, device=device)
             if config.simulation.non_discrete_level>0:
