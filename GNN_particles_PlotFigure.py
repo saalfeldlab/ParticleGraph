@@ -509,7 +509,6 @@ def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoc
 
     print(f'plot confusion matrix epoch:{epoch} it: {it}')
     plt.text(-0.25, 1.1, f'{index}', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-    plt.title(r'Particle classification', fontsize=12)
     confusion_matrix = metrics.confusion_matrix(true_labels, new_labels)  # , normalize='true')
     cm_display = metrics.ConfusionMatrixDisplay(confusion_matrix=confusion_matrix)
     if n_particle_types > 8:
@@ -517,6 +516,7 @@ def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoc
     else:
         cm_display.plot(ax=fig.gca(), cmap='Blues', include_values=True, values_format='d', colorbar=False)
     Accuracy = metrics.accuracy_score(true_labels, new_labels)
+    plt.title(f'Accuracy: {np.round(Accuracy,3)}', fontsize=12)
     print(f'Accuracy: {np.round(Accuracy,3)}')
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
@@ -1418,7 +1418,7 @@ def data_plot_gravity():
     time.sleep(1)
     plt.tight_layout()
     # plt.savefig('Fig3.pdf', format="pdf", dpi=300)
-    plt.savefig(f'Fig3_{config_name}.jpg', dpi=300)
+    plt.savefig(f'/log/try_{dataset_name}/Fig_3.jpg', dpi=300)
     plt.close()
 
 def data_plot_gravity_continuous():
@@ -1945,7 +1945,7 @@ def data_plot_gravity_dropout():
     time.sleep(1)
     plt.tight_layout()
     # plt.savefig('Fig3.pdf', format="pdf", dpi=300)
-    plt.savefig(f'/log/try_{dataset_name}/Fig_{config_name}.jpg', dpi=300)
+    plt.savefig(f'./log/try_{dataset_name}/Fig_3.jpg', dpi=300)
     plt.close()
 
 def data_plot_gravity_solar_system():
@@ -5008,11 +5008,11 @@ if __name__ == '__main__':
 
     # config_list = ['gravity_16','gravity_16_noise_1E-5','gravity_16_noise_1E-4','gravity_16_noise_1E-3','gravity_16_noise_1E-2','gravity_16_noise_1E-1']
     # config_list = ['gravity_16_dropout_10_no_ghost', 'gravity_16_dropout_10', 'gravity_16_dropout_20', 'gravity_16_dropout_30', 'gravity_16_dropout_40', 'gravity_16_dropout_50']
-    config_list = ['gravity_16_dropout_10_no_ghost', 'gravity_16_dropout_10','gravity_16_dropout_20','gravity_16_dropout_30']
+    config_list = ['gravity_16_dropout_10_no_ghost'] #, 'gravity_16_dropout_10','gravity_16_dropout_20','gravity_16_dropout_30', 'gravity_16']
 
     for config_name in config_list:
 
-        data_plot_gravity_dropout()
+        data_plot_gravity()
 
 
 
