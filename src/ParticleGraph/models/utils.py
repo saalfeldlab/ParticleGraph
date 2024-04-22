@@ -127,7 +127,7 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
         case 'WaveMesh' | 'DiffMesh':
             rr = torch.tensor(np.linspace(-150, 150, 200)).to(device)
             popt_list = []
-            for n in range(n_particles):
+            for n in range(n_nodes):
                 embedding_ = model.a[dataset_num, n, :] * torch.ones((200, 2), device=device)
                 in_features = torch.cat((rr[:, None], embedding_), dim=1)
                 h = model.lin_phi(in_features.float())

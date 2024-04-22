@@ -2011,10 +2011,6 @@ def data_train_particle_field(config, device):
 
 
 
-
-
-
-
 def data_train_mesh(config, device):
 
     print('')
@@ -2029,12 +2025,10 @@ def data_train_mesh(config, device):
     n_epochs = train_config.n_epochs
     max_radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
-    n_particle_types = simulation_config.n_particle_types
     n_nodes = simulation_config.n_nodes
     n_node_types = simulation_config.n_node_types
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
-    has_cell_division = simulation_config.has_cell_division
     data_augmentation = train_config.data_augmentation
     data_augmentation_loop = train_config.data_augmentation_loop
     target_batch_size = train_config.batch_size
@@ -2116,13 +2110,9 @@ def data_train_mesh(config, device):
     x_mesh = x_mesh_list[1][n_frames - 1].clone().detach()
     type_list = x_mesh[:, 5:6].clone().detach()
     n_nodes = x_mesh.shape[0]
-    print(f'N particles: {n_nodes}')
-    logger.info(f'N particles: {n_nodes}')
-    config.simulation.n_particles = n_nodes
-    index_particles = []
-    for n in range(n_particle_types):
-        index = np.argwhere(x_mesh[:, 5].detach().cpu().numpy() == n)
-        index_particles.append(index.squeeze())
+    print(f'N nodes: {n_nodes}')
+    logger.info(f'N nodes: {n_nodes}')
+
     index_nodes = []
     x_mesh = x_mesh_list[1][0].clone().detach()
     for n in range(n_node_types):
@@ -2184,7 +2174,7 @@ def data_train_mesh(config, device):
                 plot_training(config=config, dataset_name=dataset_name, model_name='WaveMesh',
                               log_dir=log_dir,
                               epoch=epoch, N=N, x=x_mesh, model=model, n_nodes=n_nodes, n_node_types=n_node_types, index_nodes=index_nodes, dataset_num=1,
-                              index_particles=index_nodes, n_particles=n_nodes,
+                              index_particles=[], n_particles=[],
                               n_particle_types=n_node_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_nodes / batch_size))
@@ -2207,8 +2197,8 @@ def data_train_mesh(config, device):
         plt.xlabel('Epochs', fontsize=12)
 
         ax = fig.add_subplot(1, 6, 2)
-        embedding = get_embedding(model.a, 1, index_particles, n_nodes, n_particle_types)
-        for n in range(n_particle_types):
+        embedding = get_embedding(model.a, 1, index_nodes, n_nodes, n_node_types)
+        for n in range(n_node_types):
             plt.scatter(embedding[index_particles[n], 0],
                         embedding[index_particles[n], 1], color=cmap.color(n), s=0.1)
         plt.xlabel('Embedding 0', fontsize=12)
@@ -2217,8 +2207,6 @@ def data_train_mesh(config, device):
         if (simulation_config.n_interactions < 100):
 
             ax = fig.add_subplot(1, 6, 3)
-            rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
-
             func_list = []
             popt_list = []
             for n in range(n_nodes):
@@ -2275,7 +2263,7 @@ def data_train_mesh(config, device):
                 if pos.size > 0:
                     plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=5)
             label_list = []
-            for n in range(n_particle_types):
+            for n in range(n_node_types):
                 tmp = labels[index_particles[n]]
                 label_list.append(np.round(np.median(tmp)))
             label_list = np.array(label_list)
@@ -2286,7 +2274,7 @@ def data_train_mesh(config, device):
 
             ax = fig.add_subplot(1, 6, 5)
             new_labels = labels.copy()
-            for n in range(n_particle_types):
+            for n in range(n_node_types):
                 new_labels[labels == label_list[n]] = n
                 pos = np.argwhere(labels == label_list[n])
                 pos = np.array(pos)
@@ -3050,7 +3038,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
 
 if __name__ == '__main__':
 
-    config_list = ['particle_field_2']
+    config_list = ['wave_logo']
 
 
     for config_file in config_list:
@@ -3062,8 +3050,8 @@ if __name__ == '__main__':
         print(f'device {device}')
 
         # data_generate(config, device=device, visualize=True, run_vizualized=0, style='graph', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 20)
-        data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 20)
-        # data_train(config, device)
+        # data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 20)
+        data_train(config, device)
         # data_test(config, visualize=True, style='color', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, sample_embedding=True, device=device)
 
 
