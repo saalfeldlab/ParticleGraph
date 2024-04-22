@@ -918,6 +918,7 @@ def data_train_particles(config, device):
     target_batch_size = train_config.batch_size
     replace_with_cluster = 'replace' in train_config.sparsity
     has_ghost = train_config.n_ghosts > 0
+    n_ghosts = train_config.n_ghosts
     has_large_range = train_config.large_range
     if train_config.small_init_batch_size:
         get_batch_size = increasing_batch_size(target_batch_size)
@@ -1166,11 +1167,10 @@ def data_train_particles(config, device):
                 x = x_list[run][k].clone().detach()
 
                 if has_ghost:
-                    if train_config.ghost_method == 'MLP':
-                        x_ghost = ghosts_particles.get_pos_t(dataset_id=run, frame=k)
-                    else:
-                        x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k)
+                    x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k)
                     x = torch.cat((x, x_ghost), 0)
+                    with torch.no_grad():
+                        model.a[run,n_particles:n_particles+n_ghosts] = model.a[run,ghosts_particles.embedding_index].clone().detach()   # sample ghost embedding
 
                 distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
                 adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
@@ -1224,6 +1224,9 @@ def data_train_particles(config, device):
 
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
+                # if simulation_config.boundary == 'no':
+                #     loss += 1E2 * (torch.std(x_ghost[:, 1:3], dim=0) - torch.std(x[:, 1:3].clone().detach(), dim=0)).norm(2)  # loss_ghost_distribution
+
             else:
                 if not (has_large_range):
                     loss = (pred - y_batch).norm(2)
@@ -3036,7 +3039,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
 
 if __name__ == '__main__':
 
-    config_list = ['wave_logo']
+    config_list = ['gravity_16_dropout_10']
 
 
     for config_file in config_list:

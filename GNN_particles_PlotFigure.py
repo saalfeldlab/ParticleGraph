@@ -1129,6 +1129,7 @@ def data_plot_gravity():
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
     func_list = plot_function(False, 'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, 1, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, int(n_particles*(1-train_config.particle_dropout)), n_particle_types, 20, '$10^6$', fig, ax, cmap, device)
     proj_interaction, new_labels, n_clusters = plot_umap('b)', func_list, log_dir, 500, index_particles, int(n_particles*(1-train_config.particle_dropout)), n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap,device)
+    print(f'n_clusters: {n_clusters}')
 
     ax = fig.add_subplot(3, 3, 3)
     Accuracy = plot_confusion_matrix('c)', to_numpy(x[:,5:6]), new_labels, n_particle_types, 20, '$10^6$', fig, ax)
@@ -1332,12 +1333,12 @@ def data_plot_gravity():
     plt.xlim([0, 5.5])
     plt.ylim([0, 5.5])
 
-
+    threshold = 0.2
     relative_error = (y_data-x_data)/x_data
-    print(f'outliers: {np.sum(relative_error>0.2)} / {n_particles}')
+    print(f'outliers: {np.sum(relative_error>threshold)} / {n_particles}')
 
-    pos = np.argwhere(relative_error<0.2)
-    pos_outliers = np.argwhere(relative_error>0.2)
+    pos = np.argwhere(relative_error<threshold)
+    pos_outliers = np.argwhere(relative_error>threshold)
 
     x_data_ = x_data[pos[:,0]]
     y_data_ = y_data[pos[:,0]]
@@ -4801,7 +4802,7 @@ if __name__ == '__main__':
 
     # config_list = ['gravity_16','gravity_16_noise_1E-5','gravity_16_noise_1E-4','gravity_16_noise_1E-3','gravity_16_noise_1E-2','gravity_16_noise_1E-1']
     # config_list = ['gravity_16_dropout_10_no_ghost', 'gravity_16_dropout_10', 'gravity_16_dropout_20', 'gravity_16_dropout_30', 'gravity_16_dropout_40', 'gravity_16_dropout_50']
-    config_list = ['gravity_16_dropout_10_no_ghost', 'gravity_16_dropout_10','gravity_16_dropout_20','gravity_16_dropout_30', 'gravity_16_dropout_30', 'gravity_16']
+    config_list = ['gravity_16', 'gravity_16_dropout_10_no_ghost', 'gravity_16_dropout_10','gravity_16_dropout_20','gravity_16_dropout_30', 'gravity_16_dropout_40']
 
     for config_name in config_list:
 

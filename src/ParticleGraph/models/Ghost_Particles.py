@@ -10,7 +10,7 @@ class Ghost_Particles(torch.nn.Module):
         self.n_frames = model_config.simulation.n_frames
         self.n_dataset = model_config.training.n_runs
         self.vnorm = vnorm
-        self.model_siren = model_siren
+        # self.model_siren = model_siren
         self.device = device
 
         self.ghost_pos = nn.Parameter(torch.rand((self.n_dataset, self.n_frames, self.n_ghosts, 2), device=device, requires_grad=True))
@@ -24,6 +24,11 @@ class Ghost_Particles(torch.nn.Module):
         self.T1 = torch.zeros(self.n_ghosts, device=device, requires_grad=False)
         self.H1 = torch.zeros((self.n_ghosts,2), device=device, requires_grad=False)
         self.A1 = torch.zeros(self.n_ghosts, device=device, requires_grad=False)
+
+        embedding_index = int(n_particles)
+        embedding_index = np.arange(embedding_index)
+        embedding_index = np.random.permutation(embedding_index)
+        self.embedding_index = embedding_index[:self.n_ghosts]
 
     def get_pos (self, dataset_id, frame):
 

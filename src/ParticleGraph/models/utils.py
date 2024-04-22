@@ -36,13 +36,13 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
 
         fig = plt.figure(figsize=(12, 12))
         ax=fig.add_subplot(2, 2, 1)
-        embedding = get_embedding(model.a, dataset_num, index_particles, n_particles, n_particle_types)
+        embedding = get_embedding(model.a, dataset_num)
         embedding = embedding[n_nodes:, :]
         for n in range(n_particle_types):
                 plt.scatter(embedding[index_particles[n], 0],
                             embedding[index_particles[n], 1], color=cmap.color(n), s=1)
         ax=fig.add_subplot(2, 2, 2)
-        embedding = get_embedding(model.a, dataset_num, index_particles, n_particles, n_particle_types)
+        embedding = get_embedding(model.a, dataset_num)
         embedding = embedding[:n_nodes, :]
         for n in range(n_node_types):
                 plt.scatter(embedding[index_nodes[n], 0],
@@ -109,7 +109,7 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
             plt.yticks(fontsize=32.0)
         else:
             plt.axis('off')
-        embedding = get_embedding(model.a, dataset_num, index_particles, n_particles, n_particle_types)
+        embedding = get_embedding(model.a, dataset_num)
         embedding = embedding[n_nodes:,:]
         if n_particle_types > 1000:
             plt.scatter(embedding[:, 0], embedding[:, 1], c=to_numpy(x[:, 5])/n_particles, s=5, cmap='viridis')
