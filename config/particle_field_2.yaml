@@ -10,11 +10,11 @@ simulation:
   n_interactions: 16
   n_nodes: 10000
   n_node_types: 5
-  diffusion_coefficients: [[1],[0.2],[0.8],[1],[0.6]]
+  diffusion_coefficients: [[0],[0.6],[0.8],[1],[0.4]]
   pos_rate: [[0.],[0.],[0.],[0.]]
   neg_rate: [[0.],[0.],[0.],[0.]]
-  n_frames: 12500
-  delta_t: 0.5
+  n_frames: 8000
+  delta_t: 0.125
   dpos_init: 1.0E-4
   boundary: 'periodic'
   node_value_map: 'pattern_23.tif'
@@ -46,13 +46,14 @@ plotting:
 
 training:
   n_epochs: 20
-  batch_size: 1
-  sparsity: 'replace_embedding'
-  fix_cluster_embedding: True
+  noise_level: 0
+  batch_size: 8
   small_init_batch_size: True
   n_runs: 2
-  noise_level: 0
+  sparsity: 'replace_embedding'
   data_augmentation: True
-  data_augmentation_loop: 2
-  cluster_method: 'distance_embedding'
-  device: 'auto'
+  cluster_method: 'kmeans_auto_plot'
+  fix_cluster_embedding: True
+
+
+

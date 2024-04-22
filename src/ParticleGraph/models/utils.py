@@ -49,14 +49,14 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
                             embedding[index_nodes[n], 1], color=cmap.color(n), s=10)
 
         ax = fig.add_subplot(2, 2, 4)
-        uu = torch.tensor(np.linspace(-1000, 1000, 200)).to(device)
+        uu = torch.tensor(np.linspace(-150, 150, 100)).to(device)
         popt_list = []
         for n in range(n_nodes):
-            embedding_ = model.a[dataset_num, n, :] * torch.ones((200, 2), device=device)
+            embedding_ = model.a[dataset_num, n, :] * torch.ones((100, 2), device=device)
             in_features = torch.cat((uu[:, None], embedding_), dim=1)
             h = model.lin_phi1(in_features.float())
             h = h[:, 0]
-            if n % 50 == 0:
+            if n % 24 == 0:
                 plt.scatter(to_numpy(uu), to_numpy(h), s=1, c='k')
             popt, pcov = curve_fit(linear_model, to_numpy(uu.squeeze()), to_numpy(h.squeeze()))
             popt_list.append(popt)

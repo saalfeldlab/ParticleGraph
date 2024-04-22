@@ -832,11 +832,22 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 # matplotlib.use("Qt5Agg")
 
                 fig = plt.figure(figsize=(10, 10))
-                pts = to_numpy(X1_mesh)
+                pts = x_mesh[:, 1:3].detach().cpu().numpy()
                 tri = Delaunay(pts)
-                colors = torch.sum(H1_mesh[tri.simplices, 0], dim=1) / 3.0
-                plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                              facecolors=to_numpy(colors), vmin=0, vmax=7500)
+                colors = torch.sum(x_mesh[tri.simplices, 6], dim=1) / 3.0
+                if model_config.mesh_model_name == 'WaveMesh':
+                    plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                  facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=-2500,
+                                  vmax=2500)
+                else:
+                    plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                  facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=0, vmax=5000)
+                plt.xlim([0, 1])
+                plt.ylim([0, 1])
+
+
+
+
                 # H1_IM = torch.reshape(H1_mesh[:, 0], (100, 100))
                 # plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=5000, cmap='viridis')
                 for n in range(n_particle_types):
@@ -847,7 +858,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
-                plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/All__{run}_{it}.jpg", dpi=170.7)
+                plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/All_{run}_{it}.jpg", dpi=170.7)
                 plt.close()
 
 
@@ -1792,11 +1803,11 @@ def data_train_particle_field(config, device):
                        os.path.join(log_dir, 'models', f'best_ghost_particles_with_{NGraphs - 1}_graphs_{epoch}.pt'))
 
         # matplotlib.use("Qt5Agg")
-        fig = plt.figure(figsize=(10, 5))
+        fig = plt.figure(figsize=(22, 4))
         # white background
         # plt.style.use('classic')
 
-        ax = fig.add_subplot(1, 2, 1)
+        ax = fig.add_subplot(1, 6, 1)
         plt.plot(np.log(list_loss), color='k')
         plt.plot(np.log(list_loss2), color='r')
         plt.plot(np.log(list_loss3), color='g')
@@ -1804,7 +1815,7 @@ def data_train_particle_field(config, device):
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
 
-        ax = fig.add_subplot(1, 2, 2)
+        ax = fig.add_subplot(1, 6, 2)
         embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
         embedding = embedding[n_nodes:]
         for n in range(n_particle_types):
@@ -1813,43 +1824,194 @@ def data_train_particle_field(config, device):
         plt.xlabel('Embedding 0', fontsize=12)
         plt.ylabel('Embedding 1', fontsize=12)
 
+        ax = fig.add_subplot(1, 6, 3)
+        rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+
+        func_list = []
+        popt_list = []
+        for n in range(n_nodes):
+            embedding_ = model.a[1, n, :] * torch.ones((100, model_config.embedding_dim), device=device)
+            r = torch.tensor(np.linspace(-150, 150, 100)).to(device)
+            in_features = torch.cat((r[:, None], embedding_), dim=1)
+            h = model.lin_phi(in_features.float())
+            popt, pcov = curve_fit(linear_model, to_numpy(r.squeeze()), to_numpy(h.squeeze()))
+            popt_list.append(popt)
+            h = h[:, 0]
+            func_list.append(h)
+            if (n % 24):
+                plt.plot(to_numpy(r),
+                         to_numpy(h) * to_numpy(hnorm), linewidth=1,
+                         color='k', alpha=0.05)
+        func_list = torch.stack(func_list)
+        coeff_norm = to_numpy(func_list)
+        popt_list = np.array(popt_list)
+        proj_interaction = popt_list
+        proj_interaction[:, 1] = proj_interaction[:, 0]
+
+        ax = fig.add_subplot(1, 6, 4)
+        match train_config.cluster_method:
+            case 'kmeans_auto_plot':
+                labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
+            case 'kmeans_auto_embedding':
+                labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
+                proj_interaction = embedding
+            case 'distance_plot':
+                labels, n_clusters = embedding_cluster.get(proj_interaction, 'distance')
+            case 'distance_embedding':
+                labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=1.5)
+                proj_interaction = embedding
+            case 'distance_both':
+                new_projection = np.concatenate((proj_interaction, embedding), axis=-1)
+                labels, n_clusters = embedding_cluster.get(new_projection, 'distance')
+
+        for n in range(n_clusters):
+            pos = np.argwhere(labels == n)
+            pos = np.array(pos)
+            if pos.size > 0:
+                plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=5)
+        label_list = []
+        for n in range(n_particle_types):
+            tmp = labels[index_particles[n]]
+            label_list.append(np.round(np.median(tmp)))
+        label_list = np.array(label_list)
+
+        plt.xlabel('proj 0', fontsize=12)
+        plt.ylabel('proj 1', fontsize=12)
+        plt.text(0., 1.1, f'Nclusters: {n_clusters}', ha='left', va='top', transform=ax.transAxes)
+
+        ax = fig.add_subplot(1, 6, 5)
+        new_labels = labels.copy()
+        for n in range(n_particle_types):
+            new_labels[labels == label_list[n]] = n
+            pos = np.argwhere(labels == label_list[n])
+            pos = np.array(pos)
+            if pos.size > 0:
+                plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1],
+                            color=cmap.color(n), s=0.1)
+        Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
+        plt.text(0, 1.1, f'Accuracy: {np.round(Accuracy, 3)}', ha='left', va='top', transform=ax.transAxes,
+                 fontsize=10)
+        print(f'Accuracy: {np.round(Accuracy, 3)}   n_clusters: {n_clusters}')
+        logger.info(f'Accuracy: {np.round(Accuracy, 3)}    n_clusters: {n_clusters}')
+
+        ax = fig.add_subplot(1, 6, 6)
+        model_a_ = model.a[1].clone().detach()
+        for n in range(n_clusters):
+            pos = np.argwhere(labels == n).squeeze().astype(int)
+            pos = np.array(pos)
+            if pos.size > 0:
+                median_center = model_a_[pos, :]
+                median_center = torch.median(median_center, dim=0).values
+                plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='r', alpha=0.25)
+                model_a_[pos, :] = median_center
+                plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='k')
+        for n in np.unique(new_labels):
+            pos = np.argwhere(new_labels == n).squeeze().astype(int)
+            pos = np.array(pos)
+            if pos.size > 0:
+                plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), color='k', s=5)
+        plt.xlabel('ai0', fontsize=12)
+        plt.ylabel('ai1', fontsize=12)
+        plt.xticks(fontsize=10.0)
+        plt.yticks(fontsize=10.0)
+
+        if (replace_with_cluster) & (
+                (epoch == 1 * n_epochs // 4) | (epoch == 2 * n_epochs // 4) | (epoch == 3 * n_epochs // 4)):
+            match train_config.sparsity:
+                case 'replace_embedding':
+                    # Constrain embedding domain
+                    with torch.no_grad():
+                        model.a[1] = model_a_.clone().detach()
+                    print(f'regul_embedding: replaced')
+                    logger.info(f'regul_embedding: replaced')
+                    plt.text(0, 1.1, f'Replaced', ha='left', va='top', transform=ax.transAxes, fontsize=10)
+                    if train_config.fix_cluster_embedding:
+                        lr_embedding = 1E-8
+                        lr = train_config.learning_rate_end
+                        optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                        logger.info(f'Learning rates: {lr}, {lr_embedding}')
+                case 'replace_embedding_function':
+                    logger.info(f'replace_embedding_function')
+                    # Constrain function domain
+                    y_func_list = func_list * 0
+                    for n in range(n_nodes):
+                        pos = np.argwhere(new_labels == n)
+                        pos = pos.squeeze()
+                        if pos.size > 0:
+                            target_func = torch.median(func_list[pos, :], dim=0).values.squeeze()
+                            y_func_list[pos] = target_func
+                    lr_embedding = 1E-8
+                    if has_ghost:
+                        lr = 1E-8
+                    else:
+                        lr = train_config.learning_rate_end
+                    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                    for sub_epochs in range(20):
+                        loss = 0
+                        rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+                        pred = []
+                        optimizer.zero_grad()
+                        for n in range(n_nodes):
+                            embedding_ = model.a[1, n, :].clone().detach() * torch.ones(
+                                (1000, model_config.embedding_dim), device=device)
+                            match model_config.particle_model_name:
+                                case 'PDE_A':
+                                    in_features = torch.cat(
+                                        (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                         rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
+                                case 'PDE_A_bis':
+                                    in_features = torch.cat(
+                                        (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                         rr[:, None] / simulation_config.max_radius, embedding_, embedding_),
+                                        dim=1)
+                                case 'PDE_B':
+                                    in_features = torch.cat(
+                                        (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                         rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                         0 * rr[:, None],
+                                         0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                                case 'PDE_G':
+                                    in_features = torch.cat(
+                                        (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                         rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                         0 * rr[:, None],
+                                         0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                                case 'PDE_E':
+                                    in_features = torch.cat(
+                                        (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                         rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
+                            pred.append(model.lin_edge(in_features.float()))
+
+                        pred = torch.stack(pred)
+                        loss = (pred[:, :, 0] - y_func_list.clone().detach()).norm(2)
+                        logger.info(f'    loss: {np.round(loss.item() / n_nodes, 3)}')
+                        loss.backward()
+                        optimizer.step()
+                    # Constrain embedding domain
+                    with torch.no_grad():
+                        model.a[1] = model_a_.clone().detach()
+                    print(f'regul_embedding: replaced')
+                    logger.info(f'regul_embedding: replaced')
+                    plt.text(0, 1.1, f'Replaced', ha='left', va='top', transform=ax.transAxes, fontsize=10)
+        else:
+            if epoch > 3 * n_epochs // 4 + 1:
+                lr_embedding = train_config.learning_rate_embedding_end
+                lr = train_config.learning_rate_end
+                optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                logger.info(f'Learning rates: {lr}, {lr_embedding}')
+            else:
+                lr_embedding = train_config.learning_rate_embedding_start
+                lr = train_config.learning_rate_start
+                optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                logger.info(f'Learning rates: {lr}, {lr_embedding}')
+
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
         plt.close()
 
-        if False:
 
-            embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
-            embedding = embedding[n_nodes:]
-            for n in range(n_particle_types):
-                plt.scatter(embedding[index_particles[n], 0],
-                            embedding[index_particles[n], 1], color=cmap.color(n), s=0.1)
 
-            match train_config.cluster_method:
-                case 'kmeans_auto_embedding':
-                    labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
-                    proj_interaction = embedding
-                case 'distance_embedding':
-                    labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=0.1)
-                    proj_interaction = embedding
-            logger.info(f'n_clusters: {n_clusters}')
 
-            model_a_ = model.a[1].clone().detach()
-            for n in range(n_clusters):
-                pos = np.argwhere(labels == n).squeeze().astype(int)
-                pos = np.array(pos)
-                if pos.size > 0:
-                    median_center = model_a_[n_nodes+pos, :]
-                    median_center = torch.median(median_center, dim=0).values
-                    model_a_[n_nodes+pos, :] = median_center
-
-            match train_config.sparsity:
-                case 'replace_embedding':
-                    with torch.no_grad():
-                        model.a[1][n_nodes:, :] = model_a_[n_nodes:].clone().detach()
-                    fixed_cluster_embedding = model_a_[n_nodes:].clone().detach()
-                    print(f'regul_embedding: replaced')
-                    logger.info(f'regul_embedding: replaced')
 
 
 
@@ -2055,12 +2217,7 @@ def data_train_mesh(config, device):
         if (simulation_config.n_interactions < 100):
 
             ax = fig.add_subplot(1, 6, 3)
-            if model_config.particle_model_name == 'PDE_G':
-                rr = torch.tensor(np.linspace(0, max_radius * 1.3, 1000)).to(device)
-            elif model_config.particle_model_name == 'PDE_GS':
-                rr = torch.tensor(np.logspace(7, 9, 1000)).to(device)
-            else:
-                rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+            rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
 
             func_list = []
             popt_list = []
@@ -2893,7 +3050,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
 
 if __name__ == '__main__':
 
-    config_list = ['diffusion']
+    config_list = ['particle_field_2']
 
 
     for config_file in config_list:
@@ -2905,8 +3062,8 @@ if __name__ == '__main__':
         print(f'device {device}')
 
         # data_generate(config, device=device, visualize=True, run_vizualized=0, style='graph', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 20)
-        # data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 20)
-        data_train(config, device)
+        data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 20)
+        # data_train(config, device)
         # data_test(config, visualize=True, style='color', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, sample_embedding=True, device=device)
 
 
