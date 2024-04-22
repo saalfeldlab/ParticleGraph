@@ -1331,12 +1331,25 @@ def data_plot_gravity():
     plt.ylabel(r'Predicted mass ', fontsize=12)
     plt.xlim([0, 5.5])
     plt.ylim([0, 5.5])
-    plt.text(0.5, 5, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
-    residuals = y_data - linear_model(x_data, *lin_fit)
+
+
+    relative_error = (y_data-x_data)/x_data
+    print(f'outliers: {np.sum(relative_error>0.2)} / {n_particles}')
+
+    pos = np.argwhere(relative_error<0.2)
+    pos_outliers = np.argwhere(relative_error>0.2)
+
+    x_data_ = x_data[pos[:,0]]
+    y_data_ = y_data[pos[:,0]]
+    lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
+    residuals = y_data_ - linear_model(x_data_, *lin_fit)
     ss_res = np.sum(residuals ** 2)
-    ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+    ss_tot = np.sum((y_data - np.mean(y_data_)) ** 2)
     r_squared = 1 - (ss_res / ss_tot)
-    plt.text(0.5, 4.5, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
+    plt.text(0.5, 4.5, f"$R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error>0.2)} / {n_particles}", fontsize=10)
+    plt.text(0.5, 5, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
+    print(f'R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error>0.2)} / {n_particles} {100*np.sum(relative_error>0.2)/n_particles}')
+    print(f"Slope: {np.round(lin_fit[0], 2)}")
 
     fig_ = plt.figure(figsize=(12, 12))
     ax = fig_.add_subplot(1, 1, 1)
@@ -1346,11 +1359,14 @@ def data_plot_gravity():
     csv_.append(p_list)
     csv_.append(popt_list[:, 0])
     plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-    plt.scatter(p_list, popt_list[:, 0], color='k', s=400)
+    plt.scatter(p_list, popt_list[:, 0], color='k', s=50, alpha=0.5)
+    plt.scatter(p_list[pos_outliers[:,0]], popt_list[pos_outliers[:,0], 0], color='r', s=50)
     plt.xticks(fontsize=32)
     plt.yticks(fontsize=32)
     plt.xlabel(r'True mass ', fontsize=64)
     plt.ylabel(r'Reconstructed mass ', fontsize=64)
+    plt.xlim([0, 5.5])
+    plt.ylim([0, 5.5])
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/mass{dataset_name}.tif", dpi=300)
     # csv_ = np.array(csv_)
@@ -1361,6 +1377,7 @@ def data_plot_gravity():
     relative_error = np.abs(popt_list[:, 0] - p_list.squeeze()) / p_list.squeeze() * 100
 
     print (f'all mass relative error: {np.round(np.mean(relative_error), 3)}+/-{np.round(np.std(relative_error), 3)}')
+    print (f'all mass relative error wo outliers: {np.round(np.mean(relative_error[pos[:,0]]), 3)}+/-{np.round(np.std(relative_error[pos[:,0]]), 3)}')
 
 
     ax = fig.add_subplot(3, 3, 8)
@@ -1384,7 +1401,7 @@ def data_plot_gravity():
     csv_.append(-popt_list[:, 1])
     csv_ = np.array(csv_)
     plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-    plt.scatter(p_list, -popt_list[:, 1], color='k', s=400)
+    plt.scatter(p_list, -popt_list[:, 1], color='k', s=50, alpha=0.5)
     plt.xlim([0, 5.5])
     plt.ylim([-4, 0])
     plt.xticks(fontsize=32)
@@ -1392,9 +1409,9 @@ def data_plot_gravity():
     plt.xlabel(r'True mass', fontsize=64)
     plt.ylabel(r'Reconstructed exponent', fontsize=64)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/Fig3_e_{dataset_name}.tif", dpi=300)
-    np.save(f"./{log_dir}/tmp_training/Fig3_e_{dataset_name}.npy", csv_)
-    np.savetxt(f"./{log_dir}/tmp_training/Fig3_e_{dataset_name}.txt", csv_)
+    plt.savefig(f"./{log_dir}/tmp_training/exponent_{dataset_name}.tif", dpi=300)
+    np.save(f"./{log_dir}/tmp_training/exponent_{dataset_name}.npy", csv_)
+    np.savetxt(f"./{log_dir}/tmp_training/exponent_{dataset_name}.txt", csv_)
     plt.close()
 
 
@@ -4784,7 +4801,7 @@ if __name__ == '__main__':
 
     # config_list = ['gravity_16','gravity_16_noise_1E-5','gravity_16_noise_1E-4','gravity_16_noise_1E-3','gravity_16_noise_1E-2','gravity_16_noise_1E-1']
     # config_list = ['gravity_16_dropout_10_no_ghost', 'gravity_16_dropout_10', 'gravity_16_dropout_20', 'gravity_16_dropout_30', 'gravity_16_dropout_40', 'gravity_16_dropout_50']
-    config_list = ['gravity_16_dropout_10_no_ghost', 'gravity_16_dropout_10','gravity_16_dropout_20','gravity_16_dropout_30', 'gravity_16']
+    config_list = ['gravity_16_dropout_10_no_ghost', 'gravity_16_dropout_10','gravity_16_dropout_20','gravity_16_dropout_30', 'gravity_16_dropout_30', 'gravity_16']
 
     for config_name in config_list:
 
