@@ -1282,7 +1282,7 @@ def data_train_particles(config, device):
         plt.xlabel('Epochs', fontsize=12)
 
         ax = fig.add_subplot(1, 6, 2)
-        embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+        embedding = get_embedding(model.a, 1)
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0],
                         embedding[index_particles[n], 1], color=cmap.color(n), s=0.1)
@@ -1816,7 +1816,7 @@ def data_train_particle_field(config, device):
         plt.xlabel('Epochs', fontsize=12)
 
         ax = fig.add_subplot(1, 6, 2)
-        embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+        embedding = get_embedding(model.a, 1)
         embedding = embedding[n_nodes:]
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0],
@@ -2264,7 +2264,7 @@ def data_train_mesh(config, device):
                     plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=5)
             label_list = []
             for n in range(n_node_types):
-                tmp = labels[index_particles[n]]
+                tmp = labels[index_nodes[n]]
                 label_list.append(np.round(np.median(tmp)))
             label_list = np.array(label_list)
 
@@ -2400,7 +2400,6 @@ def data_train_mesh(config, device):
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
         plt.close()
-
 
 
 def data_train_signal(config, device):
@@ -2598,7 +2597,7 @@ def data_train_signal(config, device):
         plt.xlabel('Epochs', fontsize=12)
 
         ax = fig.add_subplot(1, 6, 2)
-        embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+        embedding = get_embedding(model.a, 1)
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0],
                         embedding[index_particles[n], 1], color=cmap.color(n), s=0.1)

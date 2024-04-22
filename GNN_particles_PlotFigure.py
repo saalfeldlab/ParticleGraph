@@ -401,7 +401,7 @@ class Mesh_RPS_learn(torch.nn.Module):
 def plot_embedding(index, model_a, dataset_number, index_particles, n_particles, n_particle_types, epoch, it, fig, ax, cmap, device):
 
     print(f'plot embedding epoch:{epoch} it: {it}')
-    embedding = get_embedding(model_a, dataset_number, index_particles, n_particles, n_particle_types)
+    embedding = get_embedding(model_a, dataset_number)
 
     plt.text(-0.25, 1.1, f'{index}', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     plt.title(r'Particle embedding', fontsize=12)
@@ -640,7 +640,7 @@ def data_plot_attraction_repulsion():
     with torch.no_grad():
         for n in range(model.a.shape[0]):
             model.a[n] = model_a_
-    embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+    embedding = get_embedding(model.a, 1)
 
     ax = fig.add_subplot(3, 4, 9)
     plt.text(-0.25, 1.1, f'i)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
@@ -722,7 +722,7 @@ def data_plot_attraction_repulsion():
     ax.yaxis.get_major_formatter()._usetex = False
     ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-    embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+    embedding = get_embedding(model.a, 1)
     if n_particle_types > 1000:
         plt.scatter(embedding[:, 0], embedding[:, 1], c=to_numpy(x[:, 5]) / n_particles, s=10,
                     cmap='viridis')
@@ -893,7 +893,7 @@ def data_plot_attraction_repulsion_asym():
     with torch.no_grad():
         for n in range(model.a.shape[0]):
             model.a[n] = model_a_
-    embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+    embedding = get_embedding(model.a, 1)
 
     ax = fig.add_subplot(3, 4, 5)
     plt.text(-0.25, 1.1, f'i)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
@@ -985,7 +985,7 @@ def data_plot_attraction_repulsion_asym():
     ax.yaxis.get_major_formatter()._usetex = False
     ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-    embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+    embedding = get_embedding(model.a, 1)
     if n_particle_types > 1000:
         plt.scatter(embedding[:, 0], embedding[:, 1], c=to_numpy(x[:, 5]) / n_particles, s=10,
                     cmap='viridis')
@@ -1144,7 +1144,7 @@ def data_plot_gravity():
         for n in range(model.a.shape[0]):
             model.a[n] = model_a_
 
-    embedding = get_embedding(model_a_first, 1, index_particles, n_particles, n_particle_types)
+    embedding = get_embedding(model_a_first, 1)
 
     fig_ = plt.figure(figsize=(12, 12))
     axf = fig_.add_subplot(1, 1, 1)
@@ -1491,7 +1491,7 @@ def data_plot_gravity_continuous():
 
     model_a_first = model.a.clone().detach()
 
-    embedding = get_embedding(model_a_first, 1, index_particles, n_particles, n_particle_types)
+    embedding = get_embedding(model_a_first, 1)
 
     fig_ = plt.figure(figsize=(12, 12))
     axf = fig_.add_subplot(1, 1, 1)
@@ -1813,7 +1813,7 @@ def data_plot_gravity_dropout():
     with torch.no_grad():
         for n in range(model.a.shape[0]):
             model.a[n] = model_a_
-    embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+    embedding = get_embedding(model.a, 1)
 
     ax = fig.add_subplot(3, 3, 4)
     plt.text(-0.25, 1.1, f'd)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
@@ -1945,7 +1945,7 @@ def data_plot_gravity_dropout():
     time.sleep(1)
     plt.tight_layout()
     # plt.savefig('Fig3.pdf', format="pdf", dpi=300)
-    plt.savefig(f'Fig3_{config_name}.jpg', dpi=300)
+    plt.savefig(f'/log/try_{dataset_name}/Fig_{config_name}.jpg', dpi=300)
     plt.close()
 
 def data_plot_gravity_solar_system():
@@ -2050,7 +2050,7 @@ def data_plot_gravity_solar_system():
     with torch.no_grad():
         for n in range(model.a.shape[0]):
             model.a[n] = model_a_
-    embedding, embedding_particle = get_embedding(model.a, index_particles, n_particles, n_particle_types)
+    embedding, embedding_particle = get_embedding(model.a, 1)
 
     ax = fig.add_subplot(3, 3, 4)
     plt.text(-0.25, 1.1, f'd)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
@@ -2255,7 +2255,7 @@ def data_plot_boids():
     ax.yaxis.set_major_locator(plt.MaxNLocator(3))
     ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-    embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+    embedding = get_embedding(model.a, 1)
     csv_ = embedding
     for n in range(n_particle_types):
         plt.scatter(embedding[index_particles[n], 0],
@@ -2312,7 +2312,7 @@ def data_plot_boids():
     #     for n in range(model.a.shape[0]):
     #         model.a[n] = model_a_
 
-    embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+    embedding = get_embedding(model.a, 1)
 
     it = 7000
 
@@ -2672,7 +2672,7 @@ def data_plot_boids_dropout():
     ax.yaxis.set_major_locator(plt.MaxNLocator(3))
     ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-    embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+    embedding = get_embedding(model.a, 1)
     csv_ = embedding
     for n in range(n_particle_types):
         plt.scatter(embedding[index_particles[n], 0],
@@ -2729,7 +2729,7 @@ def data_plot_boids_dropout():
     #     for n in range(model.a.shape[0]):
     #         model.a[n] = model_a_
 
-    embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+    embedding = get_embedding(model.a, 1)
 
     it = 7000
 
@@ -3163,7 +3163,7 @@ def data_plot_Coulomb():
     ax.yaxis.set_major_locator(plt.MaxNLocator(3))
     ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-    embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+    embedding = get_embedding(model.a, 1)
     csv_ = embedding
     np.save(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.npy", csv_)
     np.savetxt(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.txt", csv_)
@@ -3219,7 +3219,7 @@ def data_plot_Coulomb():
     with torch.no_grad():
         for n in range(model.a.shape[0]):
             model.a[n] = model_a_
-    embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+    embedding = get_embedding(model.a, 1)
 
     ax = fig.add_subplot(3, 3, 4)
     plt.text(-0.25, 1.1, f'd)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
@@ -3626,7 +3626,7 @@ def data_plot_FIG5_time():
     with torch.no_grad():
         for n in range(model.a.shape[0]):
             model.a[n] = model_a_
-    embedding, embedding_particle = get_embedding(model.a, index_particles, n_particles, n_particle_types)
+    embedding, embedding_particle = get_embedding(model.a, 1)
 
     it = 300
     x0 = x_list[0][it].clone().detach()
@@ -4917,7 +4917,7 @@ def data_plot_suppFIG1():
     with torch.no_grad():
         for n in range(model.a.shape[0]):
             model.a[n] = model_a_
-    embedding, embedding_particle = get_embedding(model.a, index_particles, n_particles, n_particle_types)
+    embedding, embedding_particle = get_embedding(model.a, 1)
 
     ax = fig.add_subplot(3, 4, 9)
     plt.text(-0.25, 1.1, f'i)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
@@ -5008,11 +5008,11 @@ if __name__ == '__main__':
 
     # config_list = ['gravity_16','gravity_16_noise_1E-5','gravity_16_noise_1E-4','gravity_16_noise_1E-3','gravity_16_noise_1E-2','gravity_16_noise_1E-1']
     # config_list = ['gravity_16_dropout_10_no_ghost', 'gravity_16_dropout_10', 'gravity_16_dropout_20', 'gravity_16_dropout_30', 'gravity_16_dropout_40', 'gravity_16_dropout_50']
-    config_list = ['boids_16','boids_32','boids_64']
+    config_list = ['gravity_16_dropout_10_no_ghost', 'gravity_16_dropout_10','gravity_16_dropout_20','gravity_16_dropout_30']
 
     for config_name in config_list:
 
-        data_plot_boids()
+        data_plot_gravity_dropout()
 
 
 
