@@ -17,7 +17,7 @@ from matplotlib.ticker import FormatStrFormatter
 from matplotlib import rc
 # matplotlib.use("Qt5Agg")
 
-def get_embedding(model_a=None, dataset_number = 0, index_particles=None, n_particles=None, n_particle_types=None):
+def get_embedding(model_a=None, dataset_number = 0):
     embedding = []
     embedding.append(model_a[dataset_number])
     embedding = to_numpy(torch.stack(embedding).squeeze())

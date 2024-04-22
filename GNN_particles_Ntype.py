@@ -2086,9 +2086,9 @@ def data_train_mesh(config, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_4.pt"
-    # state_dict = torch.load(net,map_location=device)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_7.pt"
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -2116,7 +2116,7 @@ def data_train_mesh(config, device):
     index_nodes = []
     x_mesh = x_mesh_list[1][0].clone().detach()
     for n in range(n_node_types):
-        index = np.argwhere(x_mesh[:, 5].detach().cpu().numpy() == -n - 1)
+        index = np.argwhere(x_mesh[:, 5].detach().cpu().numpy() == n)
         index_nodes.append(index.squeeze())
 
     print("Start training ...")
@@ -2175,7 +2175,7 @@ def data_train_mesh(config, device):
                               log_dir=log_dir,
                               epoch=epoch, N=N, x=x_mesh, model=model, n_nodes=n_nodes, n_node_types=n_node_types, index_nodes=index_nodes, dataset_num=1,
                               index_particles=[], n_particles=[],
-                              n_particle_types=n_node_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
+                              n_particle_types=[], ynorm=ynorm, cmap=cmap, axis=True, device=device)
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_nodes / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_nodes / batch_size))
@@ -2197,10 +2197,10 @@ def data_train_mesh(config, device):
         plt.xlabel('Epochs', fontsize=12)
 
         ax = fig.add_subplot(1, 6, 2)
-        embedding = get_embedding(model.a, 1, index_nodes, n_nodes, n_node_types)
+        embedding = get_embedding(model.a, 1)
         for n in range(n_node_types):
-            plt.scatter(embedding[index_particles[n], 0],
-                        embedding[index_particles[n], 1], color=cmap.color(n), s=0.1)
+            plt.scatter(embedding[index_nodes[n], 0],
+                        embedding[index_nodes[n], 1], color=cmap.color(n), s=0.1)
         plt.xlabel('Embedding 0', fontsize=12)
         plt.ylabel('Embedding 1', fontsize=12)
 
@@ -2308,8 +2308,7 @@ def data_train_mesh(config, device):
             plt.xticks(fontsize=10.0)
             plt.yticks(fontsize=10.0)
 
-            if (replace_with_cluster) & (
-                    (epoch == 1 * n_epochs // 4) | (epoch == 2 * n_epochs // 4) | (epoch == 3 * n_epochs // 4)):
+            if (replace_with_cluster) & ((epoch == 1 * n_epochs // 4) | (epoch == 2 * n_epochs // 4) | (epoch == 3 * n_epochs // 4)):
                 match train_config.sparsity:
                     case 'replace_embedding':
                         # Constrain embedding domain
