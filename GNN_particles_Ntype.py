@@ -272,7 +272,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                         with torch.no_grad():
                             pred = mesh_model(dataset_mesh)
                             H1[mask_mesh, 1:2] = pred[mask_mesh]
-                        H1_mesh[mask_mesh, 0:1] += pred[:] * delta_t
+                        H1_mesh[mask_mesh, 0:1] += pred[mask_mesh, 0:1] * delta_t
                         new_pred = torch.zeros_like(pred)
                         new_pred[mask_mesh] = pred[mask_mesh]
                         pred = new_pred
@@ -322,17 +322,17 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                     if model_config.mesh_model_name == 'RD_RPS_Mesh':
                         H1_IM = torch.reshape(x_mesh[:, 6:9], (100, 100, 3))
                         plt.imshow(to_numpy(H1_IM), vmin=0, vmax=1)
-                    elif model_config.mesh_model_name == 'Wave_Mesh':
+                    elif (model_config.mesh_model_name == 'Wave_Mesh') | (model_config.mesh_model_name =='DiffMesh') :
                         pts = x_mesh[:, 1:3].detach().cpu().numpy()
                         tri = Delaunay(pts)
                         colors = torch.sum(x_mesh[tri.simplices, 6], dim=1) / 3.0
-                        if model_config.mesh_model_name == 'WaveMesh':
+                        if model_config.mesh_model_name == 'WaveMesh' :
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                           facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=-2500,
                                           vmax=2500)
                         else:
                             plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                          facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=0, vmax=2500)
+                                          facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=0, vmax=5000)
                         plt.xlim([0, 1])
                         plt.ylim([0, 1])
                     elif model_config.particle_model_name == 'PDE_G':
@@ -1895,7 +1895,6 @@ def data_train_mesh(config, device):
     print(f'Graph files N: {NGraphs}')
     logger.info(f'Graph files N: {NGraphs}')
 
-
     vnorm = torch.tensor(1.0, device=device)
     ynorm = torch.tensor(1.0, device=device)
     torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
@@ -2018,8 +2017,8 @@ def data_train_mesh(config, device):
 
             total_loss += loss.item()
 
-            visualize_embedding = False
-            if visualize_embedding & (epoch == 0) & (N < 10000) & (N % 200 == 0):
+            visualize_embedding = True
+            if visualize_embedding & (((epoch == 0) & (N < 50000) & (N % 200 == 0)) | (N==0)):
                 plot_training(config=config, dataset_name=dataset_name, model_name='WaveMesh',
                               log_dir=log_dir,
                               epoch=epoch, N=N, x=x_mesh, model=model, n_nodes=n_nodes, n_node_types=n_node_types, index_nodes=index_nodes, dataset_num=1,
@@ -2894,7 +2893,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
 
 if __name__ == '__main__':
 
-    config_list = ['RD_RPS']
+    config_list = ['diffusion']
 
 
     for config_file in config_list:
