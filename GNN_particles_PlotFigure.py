@@ -2562,8 +2562,8 @@ def data_plot_Coulomb():
     np.save(f"./{log_dir}/tmp_training/function_ai_ai_{dataset_name}_{epoch}.npy", csv_)
     np.savetxt(f"./{log_dir}/tmp_training/function_ai_ai_{dataset_name}_{epoch}.txt", csv_)
     plt.close()
-
-    train_config.cluster_method = 'kmeans_auto_embedding'
+    #
+    # train_config.cluster_method = 'kmeans_auto_embedding'
     match train_config.cluster_method:
         case 'kmeans_auto_plot':
             labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
@@ -2791,8 +2791,9 @@ def data_plot_Coulomb():
 
     func_list = torch.stack(func_list)
     true_func_list = torch.stack(true_func_list)
-    rmserr = torch.sqrt(torch.mean((func_list - true_func_list) ** 2))
-    print(f'RMS error: {np.round(rmserr.item(), 7)}')
+    rmserr_list = torch.sqrt(torch.mean((func_list - true_func_list) ** 2, axis=1))
+    rmserr_list = to_numpy(rmserr_list)
+    print(f'all function RMS error: {np.round(np.mean(rmserr_list), 7)}+/-{np.round(np.std(rmserr_list), 7)}')
 
 
     p = [2, 1, -1]
@@ -2842,7 +2843,7 @@ def data_plot_Coulomb():
 
     relative_error = np.abs(popt_list[:, 0] - ptrue_list.squeeze()) / np.abs(ptrue_list.squeeze()) * 100
 
-    print (f'all mass relative error: {np.round(np.mean(relative_error), 3)}+/-{np.round(np.std(relative_error), 3)}')
+    print (f'all charge relative error: {np.round(np.mean(relative_error), 3)}+/-{np.round(np.std(relative_error), 3)}')
 
     # row_sum = np.sum(M_p,0)
     # A,B,C = row_sum[0], row_sum[1], row_sum[2]
@@ -4448,11 +4449,11 @@ if __name__ == '__main__':
 
     # config_list = ['gravity_16','gravity_16_noise_1E-5','gravity_16_noise_1E-4','gravity_16_noise_1E-3','gravity_16_noise_1E-2','gravity_16_noise_1E-1']
     # config_list = ['gravity_16_dropout_10_no_ghost', 'gravity_16_dropout_10', 'gravity_16_dropout_20', 'gravity_16_dropout_30', 'gravity_16_dropout_40', 'gravity_16_dropout_50']
-    config_list = ['boids_32']
+    config_list = ['gravity_16_dropout_10']
 
     for config_name in config_list:
 
-        data_plot_boids()
+        data_plot_gravity()
 
 
 

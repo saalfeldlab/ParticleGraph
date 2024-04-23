@@ -696,6 +696,8 @@ def data_plot_training_asym(config, mode, device):
         # plt.ylim([0, 2])
         # plt.tight_layout()
 
+        matplotlib.use("Qt5Agg")
+
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(1,1,1)
         # ax.xaxis.get_major_formatter()._usetex = False
@@ -712,8 +714,6 @@ def data_plot_training_asym(config, mode, device):
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
-        plt.xlim([0,2])
-        plt.ylim([0, 2])
         plt.tight_layout()
         # plt.savefig(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.tif",dpi=170.7)
         plt.close()
@@ -919,7 +919,8 @@ def data_plot_training_asym(config, mode, device):
         func_list = torch.stack(func_list) * ynorm
         true_func_list = torch.stack(true_func_list)
 
-        rmserr_list = torch.sqrt(torch.mean((func_list - true_func_list) ** 2))
+        rmserr_list = torch.sqrt(torch.mean((func_list - true_func_list) ** 2,axis=1))
+        rmserr_list = to_numpy(rmserr_list)
         print(f'all function RMS error: {np.round(np.mean(rmserr_list), 7)}+/-{np.round(np.std(rmserr_list), 7)}')
 
 def data_plot_training_continuous(config, mode, device):
@@ -1171,8 +1172,9 @@ def data_plot_training_continuous(config, mode, device):
         func_list = torch.stack(func_list) * ynorm
         true_func_list = torch.stack(true_func_list)
 
-        rmserr = torch.sqrt(torch.mean((func_list - true_func_list) ** 2))
-        print(f'RMS error: {np.round(rmserr.item(), 7)}')
+        rmserr_list = torch.sqrt(torch.mean((func_list - true_func_list) ** 2,axis=1))
+        rmserr_list = to_numpy(rmserr_list)
+        print(f'all function RMS error: {np.round(np.mean(rmserr_list), 7)}+/-{np.round(np.std(rmserr_list), 7)}')
 
 def data_plot_training_particle_field(config, mode, device):
     print('')
@@ -1394,7 +1396,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3_3']
+    config_list = ['Coulomb_3']
 
     for config_file in config_list:
 
