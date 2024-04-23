@@ -3138,7 +3138,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
 
 if __name__ == '__main__':
 
-    config_list = ['arbitrary_3_dropout_10_']
+    config_list = ['']
 
 
     for config_file in config_list:

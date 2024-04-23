@@ -53,7 +53,6 @@ class Signal_Propagation(pyg.nn.MessagePassing):
         self.a = nn.Parameter(torch.zeros((self.n_dataset,int(self.n_particles), self.embedding_dim), device=self.device, requires_grad=True, dtype=torch.float32))
 
         self.vals = nn.Parameter(torch.zeros((int(self.n_particles*(self.n_particles+1)/2)), device=self.device, requires_grad=True, dtype=torch.float32))
-
     def forward(self, data, data_id):
         self.data_id = data_id
         x, edge_index = data.x, data.edge_index
@@ -65,12 +64,11 @@ class Signal_Propagation(pyg.nn.MessagePassing):
         particle_id = to_numpy(x[:, 0])
         embedding = self.a[1, particle_id, :]   # common embedding for all dataset
 
-        input_phi = torch.cat((u, embedding), dim=-1) + msg
+        input_phi = torch.cat((msg, u, embedding), dim=-1)
 
         pred = self.lin_phi(input_phi)
 
         return pred
-
     def message(self, edge_index_i, edge_index_j, u_j):
 
         A = torch.zeros(self.n_particles, self.n_particles, device=self.device, requires_grad=False, dtype=torch.float32)
