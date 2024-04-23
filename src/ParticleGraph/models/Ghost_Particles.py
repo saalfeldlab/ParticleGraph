@@ -2,7 +2,11 @@ import numpy as np
 import torch
 import torch.nn as nn
 
+
+
+
 class Ghost_Particles(torch.nn.Module):
+
 
     def __init__(self, model_config, n_particles, vnorm, device):
         super(Ghost_Particles, self).__init__()
@@ -25,10 +29,12 @@ class Ghost_Particles(torch.nn.Module):
         self.H1 = torch.zeros((self.n_ghosts,2), device=device, requires_grad=False)
         self.A1 = torch.zeros(self.n_ghosts, device=device, requires_grad=False)
 
+
         embedding_index = int(n_particles)
         embedding_index = np.arange(embedding_index)
         embedding_index = np.random.permutation(embedding_index)
         self.embedding_index = embedding_index[:self.n_ghosts]
+
 
     def get_pos (self, dataset_id, frame, bc_pos):
 

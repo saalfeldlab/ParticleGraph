@@ -12,7 +12,7 @@ from ParticleGraph.utils import to_numpy
 
 def init_particles(config, device, cycle_length=None):
     simulation_config = config.simulation
-    n_particles = simulation_config.n_particles * 4
+    n_particles = simulation_config.n_particles
     n_particle_types = simulation_config.n_particle_types
     dimension = simulation_config.dimension
 
@@ -41,7 +41,7 @@ def init_particles(config, device, cycle_length=None):
     particle_id = torch.arange(n_particles, device=device)
     particle_id = particle_id[:, None]
 
-    scenario = 'uniform'
+    scenario = ''
 
     match scenario:
         case 'pattern':
