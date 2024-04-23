@@ -2053,7 +2053,7 @@ def data_plot_boids():
     csv_ = embedding
     for n in range(n_particle_types):
         plt.scatter(embedding[index_particles[n], 0],
-                    embedding[index_particles[n], 1], color=cmap.color(n), s=400)
+                    embedding[index_particles[n], 1], color=cmap.color(n), s=10)
     plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
     plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
     plt.xticks(fontsize=32.0)
@@ -2105,6 +2105,15 @@ def data_plot_boids():
     # with torch.no_grad():
     #     for n in range(model.a.shape[0]):
     #         model.a[n] = model_a_
+
+    label_list = []
+    for n in range(n_particle_types):
+        tmp = labels[index_particles[n]]
+        label_list.append(np.round(np.median(tmp)))
+    label_list = np.array(label_list)
+    new_labels = labels.copy()
+    for n in range(n_particle_types):
+        new_labels[labels == label_list[n]] = n
 
     embedding = get_embedding(model.a, 1)
 
@@ -2265,11 +2274,15 @@ def data_plot_boids():
         separation_fit[n] = lin_fit[2]
 
 
+    index_classified = np.unique(new_labels)
+
     ax = fig.add_subplot(3, 3, 7)
     print('7')
     plt.text(-0.25, 1.1, f'g)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
     x_data = np.abs(to_numpy(p[:, 0]) * 0.5E-5)
     y_data = np.abs(cohesion_fit)
+    x_data = x_data[index_classified]
+    y_data = y_data[index_classified]
 
     threshold = 0.15
 
@@ -2281,8 +2294,8 @@ def data_plot_boids():
     y_data_ = y_data[pos[:,0]]
     lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
     plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
-    for n in range(n_particle_types):
-        plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=20)
+    for id, n in enumerate(index_classified):
+        plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=20)
     plt.xlabel(r'True cohesion coeff. ', fontsize=12)
     plt.ylabel(r'Predicted cohesion coeff. ', fontsize=12)
     residuals = y_data_ - linear_model(x_data_, *lin_fit)
@@ -2299,6 +2312,8 @@ def data_plot_boids():
     plt.text(-0.25, 1.1, f'h)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
     x_data = np.abs(to_numpy(p[:, 1]) * 5E-4)
     y_data = alignment_fit
+    x_data = x_data[index_classified]
+    y_data = y_data[index_classified]
     relative_error = np.abs(y_data-x_data)/x_data
     print(f'alignment outliers: {np.sum(relative_error>threshold)} ')
     pos = np.argwhere(relative_error<threshold)
@@ -2307,8 +2322,8 @@ def data_plot_boids():
     y_data_ = y_data[pos[:,0]]
     lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
     plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
-    for n in range(n_particle_types):
-        plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=20)
+    for id, n in enumerate(index_classified):
+        plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=20)
     plt.xlabel(r'True alignment coeff. ', fontsize=12)
     plt.ylabel(r'Predicted alignment coeff. ', fontsize=12)
     plt.text(5e-3, 0.046, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
@@ -2325,6 +2340,8 @@ def data_plot_boids():
     plt.text(-0.25, 1.1, f'i)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
     x_data = np.abs(to_numpy(p[:, 2]) * 1E-8)
     y_data = separation_fit
+    x_data = x_data[index_classified]
+    y_data = y_data[index_classified]
     relative_error = np.abs(y_data-x_data)/x_data
     print(f'separation outliers: {np.sum(relative_error>threshold)} ')
     pos = np.argwhere(relative_error<threshold)
@@ -2333,8 +2350,8 @@ def data_plot_boids():
     y_data_ = y_data[pos[:,0]]
     lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
     plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
-    for n in range(n_particle_types):
-        plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=20)
+    for id, n in enumerate(index_classified):
+        plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=20)
     plt.xlabel(r'True separation coeff. ', fontsize=12)
     plt.ylabel(r'Predicted separation coeff. ', fontsize=12)
     plt.text(5e-8, 4.4E-7, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
@@ -2357,6 +2374,8 @@ def data_plot_boids():
     ax.yaxis.set_major_locator(plt.MaxNLocator(6))
     x_data = np.abs(to_numpy(p[:, 0]) * 0.5E-5)
     y_data = np.abs(cohesion_fit)
+    x_data = x_data[index_classified]
+    y_data = y_data[index_classified]
     relative_error = np.abs(y_data-x_data)/x_data
     pos = np.argwhere(relative_error<threshold)
     pos_outliers = np.argwhere(relative_error>threshold)
@@ -2364,8 +2383,8 @@ def data_plot_boids():
     y_data_ = y_data[pos[:,0]]
     lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
     plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-    for n in range(n_particle_types):
-        plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=400)
+    for id, n in enumerate(index_classified):
+        plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=400)
     plt.xlabel(r'True cohesion coeff. ', fontsize=56)
     plt.ylabel(r'Reconstructed cohesion coeff. ', fontsize=56)
     plt.xticks(fontsize=32.0)
@@ -2385,6 +2404,8 @@ def data_plot_boids():
     ax.yaxis.set_major_locator(plt.MaxNLocator(6))
     x_data = np.abs(to_numpy(p[:, 1]) * 5E-4)
     y_data = alignment_fit
+    x_data = x_data[index_classified]
+    y_data = y_data[index_classified]
     relative_error = np.abs(y_data-x_data)/x_data
     pos = np.argwhere(relative_error<threshold)
     pos_outliers = np.argwhere(relative_error>threshold)
@@ -2392,8 +2413,8 @@ def data_plot_boids():
     y_data_ = y_data[pos[:,0]]
     lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
     plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-    for n in range(n_particle_types):
-        plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=400)
+    for id, n in enumerate(index_classified):
+        plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=400)
     plt.xlabel(r'True alignement coeff. ', fontsize=56)
     plt.ylabel(r'Reconstructed alignement coeff. ', fontsize=56)
     plt.xticks(fontsize=32.0)
@@ -2413,6 +2434,8 @@ def data_plot_boids():
     ax.yaxis.set_major_locator(plt.MaxNLocator(6))
     x_data = np.abs(to_numpy(p[:, 2]) * 1E-8)
     y_data = separation_fit
+    x_data = x_data[index_classified]
+    y_data = y_data[index_classified]
     relative_error = np.abs(y_data-x_data)/x_data
     pos = np.argwhere(relative_error<threshold)
     pos_outliers = np.argwhere(relative_error>threshold)
@@ -2420,8 +2443,8 @@ def data_plot_boids():
     y_data_ = y_data[pos[:,0]]
     lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
     plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-    for n in range(n_particle_types):
-        plt.scatter(x_data[n], y_data[n], color=cmap.color(n), s=400)
+    for id, n in enumerate(index_classified):
+        plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=400)
     plt.xlabel(r'True separation coeff. ', fontsize=56)
     plt.ylabel(r'Reconstructed separation coeff. ', fontsize=56)
     plt.xticks(fontsize=32.0)
@@ -4425,11 +4448,11 @@ if __name__ == '__main__':
 
     # config_list = ['gravity_16','gravity_16_noise_1E-5','gravity_16_noise_1E-4','gravity_16_noise_1E-3','gravity_16_noise_1E-2','gravity_16_noise_1E-1']
     # config_list = ['gravity_16_dropout_10_no_ghost', 'gravity_16_dropout_10', 'gravity_16_dropout_20', 'gravity_16_dropout_30', 'gravity_16_dropout_40', 'gravity_16_dropout_50']
-    config_list = ['gravity_16_noise_1E-1','gravity_16_noise_1E-2']
+    config_list = ['boids_32']
 
     for config_name in config_list:
 
-        data_plot_gravity()
+        data_plot_boids()
 
 
 

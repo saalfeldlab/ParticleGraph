@@ -20,7 +20,7 @@ import matplotlib
 # matplotlib.use("Qt5Agg")
 
 from ParticleGraph.config import ParticleGraphConfig
-from ParticleGraph.generators.particle_initialization import init_particles, init_mesh
+from ParticleGraph.generators.generator_initialization import init_particles, init_mesh
 from ParticleGraph.generators.utils import choose_model, choose_mesh_model
 from ParticleGraph.models.utils import *
 from ParticleGraph.models.Ghost_Particles import Ghost_Particles
@@ -222,7 +222,7 @@ def data_plot_training(config, mode, device):
         ax.yaxis.set_major_locator(plt.MaxNLocator(3))
         ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
         ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+        embedding = get_embedding(model.a, 1)
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0],
                         embedding[index_particles[n], 1], color=cmap.color(n), s=50)
@@ -683,7 +683,7 @@ def data_plot_training_asym(config, mode, device):
         # ax = fig.add_subplot(1,1,1)
         # ax.xaxis.get_major_formatter()._usetex = False
         # ax.yaxis.get_major_formatter()._usetex = False
-        # embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+        # embedding = get_embedding(model.a, 1)
         # for n in range(n_particle_types):
         #     pos = np.argwhere(types == n)
         #     plt.scatter(embedding[pos, 0],
@@ -704,7 +704,7 @@ def data_plot_training_asym(config, mode, device):
         ax.yaxis.set_major_locator(plt.MaxNLocator(3))
         ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
         ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+        embedding = get_embedding(model.a, 1)
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0],
                         embedding[index_particles[n], 1], color=cmap.color(n), s=400)
@@ -824,7 +824,7 @@ def data_plot_training_asym(config, mode, device):
         ax.yaxis.set_major_locator(plt.MaxNLocator(3))
         ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
         ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        embedding = get_embedding(model_a_first, 1, index_particles, n_particles, n_particle_types)
+        embedding = get_embedding(model_a_first, 1)
         csv_ = embedding
         np.save(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.npy", csv_)
         np.savetxt(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.txt", csv_)
@@ -919,8 +919,8 @@ def data_plot_training_asym(config, mode, device):
         func_list = torch.stack(func_list) * ynorm
         true_func_list = torch.stack(true_func_list)
 
-        rmserr = torch.sqrt(torch.mean((func_list - true_func_list) ** 2))
-        print(f'RMS error: {np.round(rmserr.item(), 7)}')
+        rmserr_list = torch.sqrt(torch.mean((func_list - true_func_list) ** 2))
+        print(f'all function RMS error: {np.round(np.mean(rmserr_list), 7)}+/-{np.round(np.std(rmserr_list), 7)}')
 
 def data_plot_training_continuous(config, mode, device):
     print('')
@@ -1085,7 +1085,7 @@ def data_plot_training_continuous(config, mode, device):
         ax.yaxis.set_major_locator(plt.MaxNLocator(3))
         ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
         ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+        embedding = get_embedding(model.a, 1)
         csv_ = embedding
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0],
@@ -1271,7 +1271,7 @@ def data_plot_training_particle_field(config, mode, device):
         # matplotlib.use("Qt5Agg")
         fig = plt.figure(figsize=(10, 10))
         ax = fig.add_subplot(3, 3, 1)
-        embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+        embedding = get_embedding(model.a, 1)
         embedding = embedding[n_nodes:]
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0],
@@ -1302,7 +1302,7 @@ def data_plot_training_particle_field(config, mode, device):
             model.a[1][n_nodes:, :] = model_a_[n_nodes:].clone().detach()
 
         ax = fig.add_subplot(3, 3, 2)
-        embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+        embedding = get_embedding(model.a, 1)
         embedding = embedding[n_nodes:]
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0],
@@ -1312,7 +1312,7 @@ def data_plot_training_particle_field(config, mode, device):
         plt.title('Clustered particle embedding', fontsize=12)
 
         ax = fig.add_subplot(3, 3, 3)
-        embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
+        embedding = get_embedding(model.a, 1)
         embedding = embedding[:n_nodes, :]
         for n in range(n_node_types):
                 plt.scatter(embedding[index_nodes[n], 0],

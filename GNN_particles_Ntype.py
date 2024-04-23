@@ -3048,7 +3048,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
 
 if __name__ == '__main__':
 
-    config_list = ['gravity_16_dropout_30']
+    config_list = ['arbitrary_16']
 
 
     for config_file in config_list:
@@ -3059,9 +3059,9 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='graph', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 20)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='graph', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 20)
         # data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 20)
-        data_train(config, device)
+        # data_train(config, device)
         # data_test(config, visualize=True, style='color', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, sample_embedding=True, device=device)
 
 
