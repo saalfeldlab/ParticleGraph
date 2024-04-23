@@ -15,7 +15,7 @@ class Ghost_Particles(torch.nn.Module):
 
         self.ghost_pos = nn.Parameter(torch.rand((self.n_dataset, self.n_frames, self.n_ghosts, 2), device=device, requires_grad=True))
         if model_config.graph_model.particle_model_name == 'PDE_B':
-            self.ghost_dpos = nn.Parameter(torch.zeros((self.n_dataset, self.n_frames, self.n_ghosts, 2), device=device, requires_grad=True))
+            # self.ghost_dpos = nn.Parameter(torch.zeros((self.n_dataset, self.n_frames, self.n_ghosts, 2), device=device, requires_grad=True))
             self.boids = True
         else:
             self.boids = False
@@ -30,12 +30,9 @@ class Ghost_Particles(torch.nn.Module):
         embedding_index = np.random.permutation(embedding_index)
         self.embedding_index = embedding_index[:self.n_ghosts]
 
-    def get_pos (self, dataset_id, frame):
+    def get_pos (self, dataset_id, frame, bc_pos):
 
-        if self.boids:
-            out = torch.concatenate((self.N1[:,None], self.ghost_pos[dataset_id, frame:frame+1,:,:].squeeze(), self.vnorm * self.ghost_dpos[dataset_id, frame:frame+1,:,:].squeeze(), self.T1[:,None],self.H1,self.A1[:,None]), 1)
-        else:
-            out = torch.concatenate((self.N1[:,None], self.ghost_pos[dataset_id, frame:frame+1,:,:].squeeze(),self.V1,self.T1[:,None],self.H1,self.A1[:,None]), 1)
+        out = torch.concatenate((self.N1[:,None], bc_pos(self.ghost_pos[dataset_id, frame:frame+1,:,:].squeeze()),self.V1,self.T1[:,None],self.H1,self.A1[:,None]), 1)
 
         return out
 

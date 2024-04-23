@@ -1167,8 +1167,16 @@ def data_train_particles(config, device):
                 x = x_list[run][k].clone().detach()
 
                 if has_ghost:
-                    x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k)
+                    x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k, bc_pos=bc_pos)
+                    if ghosts_particles.boids:
+                        distance = torch.sum(bc_dpos(x_ghost[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                        dist_np = to_numpy(distance)
+                        ind_np = torch.min(distance,axis=1)[1]
+                        x_ghost[:,3:5] = x[ind_np, 3:5].clone().detach()
                     x = torch.cat((x, x_ghost), 0)
+
+
+
                     with torch.no_grad():
                         model.a[run,n_particles:n_particles+n_ghosts] = model.a[run,ghosts_particles.embedding_index].clone().detach()   # sample ghost embedding
 
@@ -1223,9 +1231,10 @@ def data_train_particles(config, device):
                 total_loss_division += loss_division.item()
 
             if has_ghost:
-                loss = ((pred[mask_ghost] - y_batch)).norm(2)
                 # if simulation_config.boundary == 'no':
-                #     loss += 1E2 * (torch.std(x_ghost[:, 1:3], dim=0) - torch.std(x[:, 1:3].clone().detach(), dim=0)).norm(2)  # loss_ghost_distribution
+                #     current_distribution = torch.std(x[:, 1:3], dim=0).clone().detach()
+                #     loss = ((pred[mask_ghost] - y_batch)).norm(2) + 1E2 * (torch.std(x_ghost[:, 1:3]) - current_distribution).norm(2)  # loss_ghost_distribution
+                loss = ((pred[mask_ghost] - y_batch)).norm(2)
 
             else:
                 if not (has_large_range):
@@ -3039,7 +3048,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
 
 if __name__ == '__main__':
 
-    config_list = ['gravity_16_dropout_10']
+    config_list = ['gravity_16_dropout_30']
 
 
     for config_file in config_list:
