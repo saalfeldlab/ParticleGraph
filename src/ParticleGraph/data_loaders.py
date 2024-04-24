@@ -318,6 +318,7 @@ def load_wanglab_salivary_gland(
     z = torch.tensor_split(raw_data['z'], time_jumps.tolist())
     id = torch.tensor_split(raw_data['track_id'], time_jumps.tolist())
 
+    # Combine the data into a TimeSeries object
     n_time_steps = len(time)
     data = []
     for i in range(n_time_steps):
@@ -332,5 +333,12 @@ def load_wanglab_salivary_gland(
         'pos': DerivedFieldDescriptor(description="concatenating", constituent_fields=[column_descriptors[key] for key in ['x', 'y', 'z']]),
         'track_id': column_descriptors['track_id'],
     }
+    time_series = TimeSeries(time, data, field_descriptors)
 
-    return TimeSeries(time, data, field_descriptors)
+    # Compute the velocity as the derivative of the position and add it to the time series
+    velocity = time_series.compute_derivative('pos', id_name='track_id')
+    for i in range(n_time_steps):
+        data[i].velocity = velocity[i]
+    time_series.fields['velocity'] = DerivedFieldDescriptor(description="differentiating", constituent_fields=[time_series.fields['pos']])
+
+    return time_series
