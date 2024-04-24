@@ -1,8 +1,11 @@
 import os
 from collections.abc import Sequence
+from typing import Dict
 
 import torch
 from torch_geometric.data import Data
+
+from ParticleGraph.field_descriptors import FieldDescriptor
 
 
 class TimeSeries(Sequence):
@@ -10,9 +13,11 @@ class TimeSeries(Sequence):
             self,
             time: torch.Tensor,
             data: Sequence[Data],
+            field_descriptors: Dict[str, FieldDescriptor] = None,
     ):
         self.time = time
         self._data = data
+        self.fields = field_descriptors
 
     def __len__(self) -> int:
         return len(self.time)
@@ -24,6 +29,7 @@ class TimeSeries(Sequence):
     @staticmethod
     def load(path: str) -> 'TimeSeries':
         try:
+            fields = torch.load(os.path.join(path, 'fields.pt'))
             time = torch.load(os.path.join(path, 'time.pt'))
 
             n_time_steps = len(time)
@@ -35,12 +41,13 @@ class TimeSeries(Sequence):
         except Exception as e:
             raise ValueError(f"Could not load data from {path}.") from e
 
-        return TimeSeries(time, data)
+        return TimeSeries(time, data, fields)
 
     @staticmethod
     def save(time_series: 'TimeSeries', path: str):
         try:
             os.makedirs(path, exist_ok=False)
+            torch.save(time_series.fields, os.path.join(path, 'fields.pt'))
             torch.save(time_series.time, os.path.join(path, 'time.pt'))
 
             n_time_steps = len(time_series)

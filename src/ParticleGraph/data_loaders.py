@@ -1,21 +1,14 @@
 """
 A collection of functions for loading data from various sources.
 """
-import abc
-import os
-from dataclasses import dataclass
 from typing import Dict
 
-import astropy
-import numpy as np
+import astropy.units as u
 import pandas as pd
-import torch
-from sklearn import metrics
-import matplotlib
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import torch
+from tqdm import trange
+
+from ParticleGraph.TimeSeries import TimeSeries
+from ParticleGraph.field_descriptors import CsvDescriptor
 from ParticleGraph.utils import *
 
 
@@ -263,19 +256,6 @@ def ensure_local_path_exists(path):
     return os.path.join(os.getcwd(), path)
 
 
-class FieldDescriptor(abc.ABC):
-    """A class to describe the origin of a field in a dataset."""
-
-
-@dataclass
-class CsvDescriptor(FieldDescriptor):
-    """A class to describe the origin of a field in a dataset as a column of a CSV file."""
-    filename: str
-    column_name: str
-    type: np.dtype
-    unit: astropy.units.Unit
-
-
 def load_csv_from_descriptors(
         column_descriptors: Dict[str, CsvDescriptor],
         **kwargs
@@ -286,7 +266,7 @@ def load_csv_from_descriptors(
     for file in different_files:
         dtypes = {descriptor.column_name: descriptor.type for descriptor in column_descriptors.values()
                   if descriptor.filename == file}
-        print(f"Loading data from {file}:")
+        print(f"Loading data from '{file}':")
         for column_name, type in dtypes.items():
             print(f"  - column {column_name} as {type}")
         columns.append(pd.read_csv(file, dtype=dtypes, usecols=list(dtypes.keys()), **kwargs))
