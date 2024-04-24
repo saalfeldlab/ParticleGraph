@@ -91,8 +91,10 @@ class TimeSeries(Sequence):
                 # Compute the difference quotient in the global id space
                 indices_current = indices[:len(id_current)]
                 indices_previous = indices[len(id_current):]
-                all_differences = torch.bincount(indices_current, x_current, minlength=len(counts))
-                all_differences -= torch.bincount(indices_previous, x_previous, minlength=len(counts))
+                all_differences = torch.zeros((len(counts), x_current.shape[1]), device=x_current.device)
+                for j in range(x_current.shape[1]):
+                    all_differences[:, j] = (torch.bincount(indices_current, x_current[:, j], minlength=len(counts))
+                                             - torch.bincount(indices_previous, x_previous[:, j], minlength=len(counts)))
 
                 # Only consider ids that are present in both time steps and map to current ids
                 all_differences[counts.ne(2)] = torch.nan
