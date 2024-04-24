@@ -5,10 +5,11 @@ from typing import Dict
 
 import astropy.units as u
 import pandas as pd
+from torch_geometric.data import Data
 from tqdm import trange
 
 from ParticleGraph.TimeSeries import TimeSeries
-from ParticleGraph.field_descriptors import CsvDescriptor
+from ParticleGraph.field_descriptors import CsvDescriptor, DerivedFieldDescriptor
 from ParticleGraph.utils import *
 
 
@@ -258,6 +259,8 @@ def ensure_local_path_exists(path):
 
 def load_csv_from_descriptors(
         column_descriptors: Dict[str, CsvDescriptor],
+        *,
+        device: str = 'cuda:0',
         **kwargs
 ) -> Dict[str, torch.Tensor]:
     different_files = set(descriptor.filename for descriptor in column_descriptors.values())
@@ -275,6 +278,59 @@ def load_csv_from_descriptors(
 
     tensors = {}
     for name, descriptor in column_descriptors.items():
-        tensors[name] = torch.tensor(entire_data[descriptor.column_name].values)
+        tensors[name] = torch.tensor(entire_data[descriptor.column_name].values, device=device)
 
     return tensors
+
+
+def load_wanglab_salivary_gland(
+        file_path: str,
+        *,
+        device: str = 'cuda:0'
+) -> TimeSeries:
+    """
+    Load the Wanglab salivary gland data from a CSV file and convert it to a pytorch_geometric Data object.
+
+    Args:
+        file_path (str): The path to the CSV file.
+        device (str): The PyTorch device to use for the tensor.
+
+    Returns:
+        time_series: (TimeSeries): A dataset containing the loaded data for each time point.
+    """
+
+    # Load the data of interest from the CSV file
+    column_descriptors = {
+        'x': CsvDescriptor(filename=file_path, column_name="Position X", type=np.float32, unit=u.micrometer),
+        'y': CsvDescriptor(filename=file_path, column_name="Position Y", type=np.float32, unit=u.micrometer),
+        'z': CsvDescriptor(filename=file_path, column_name="Position Z", type=np.float32, unit=u.micrometer),
+        't': CsvDescriptor(filename=file_path, column_name="Time", type=np.float32, unit=u.day),
+        'track_id': CsvDescriptor(filename=file_path, column_name="TrackID", type=np.int64, unit=u.dimensionless_unscaled),
+    }
+    raw_data = load_csv_from_descriptors(column_descriptors, device=device, skiprows=3)
+
+    # Split into individual data objects for each time point
+    t = raw_data['t']
+    time_jumps = torch.where(torch.diff(t) != 0)[0] + 1
+    time = torch.unique_consecutive(t)
+    x = torch.tensor_split(raw_data['x'], time_jumps.tolist())
+    y = torch.tensor_split(raw_data['y'], time_jumps.tolist())
+    z = torch.tensor_split(raw_data['z'], time_jumps.tolist())
+    id = torch.tensor_split(raw_data['track_id'], time_jumps.tolist())
+
+    n_time_steps = len(time)
+    data = []
+    for i in range(n_time_steps):
+        data.append(Data(
+            time=time[i],
+            pos=torch.stack([x[i], y[i], z[i]], dim=1),
+            track_id=id[i],
+        ))
+
+    field_descriptors = {
+        'time': column_descriptors['t'],
+        'pos': DerivedFieldDescriptor(description="concatenating", constituent_fields=[column_descriptors[key] for key in ['x', 'y', 'z']]),
+        'track_id': column_descriptors['track_id'],
+    }
+
+    return TimeSeries(time, data, field_descriptors)
