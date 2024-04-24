@@ -3,6 +3,7 @@ channels:
   - conda-forge
 dependencies:
   - pytorch
+  - torchvision
   - umap-learn
   - numpy
   - scipy
@@ -17,8 +18,8 @@ dependencies:
   - gputil
   - pip
   - imageio
+  - astropy
   - pip:
     - geomloss
     - torch_geometric
     - ipython
-    - torchvision
