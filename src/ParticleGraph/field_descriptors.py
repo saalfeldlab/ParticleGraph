@@ -19,7 +19,7 @@ class CsvDescriptor(FieldDescriptor):
     unit: Unit
 
     def __str__(self):
-        return f"Loaded column '{self.column_name}' as {self.type} with unit {self.unit} from '{self.column_name}'."
+        return f"Column '{self.column_name}' from '{self.filename}' as {self.type} with unit '{self.unit.__repr__()}'."
 
 
 @dataclass
