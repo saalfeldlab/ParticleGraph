@@ -78,7 +78,7 @@ class Signal_Propagation(pyg.nn.MessagePassing):
         A.T[i,j] = self.vals
 
         weight_ij =torch.relu(A[to_numpy(edge_index_i),to_numpy(edge_index_j),None])
-        self.weight_ij = weight_ij.clone().detach()
+        self.weight_ij = torch.relu(A).clone().detach()
 
         return weight_ij * self.lin_edge(u_j)
 

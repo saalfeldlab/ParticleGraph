@@ -225,7 +225,7 @@ def create_log_dir(config, dataset_name):
     for f in files:
         os.remove(f)
     os.makedirs(os.path.join(log_dir, 'tmp_recons'), exist_ok=True)
-    copyfile(os.path.realpath(__file__), os.path.join(log_dir, 'training_code.py'))
+
     logging.basicConfig(filename=os.path.join(log_dir, 'training.log'),
                         format='%(asctime)s %(message)s',
                         filemode='w')
