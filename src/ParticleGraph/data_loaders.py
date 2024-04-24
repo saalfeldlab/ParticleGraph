@@ -311,7 +311,7 @@ def load_wanglab_salivary_gland(
 
     # Split into individual data objects for each time point
     t = raw_data['t']
-    time_jumps = torch.where(torch.diff(t) != 0)[0] + 1
+    time_jumps = torch.where(torch.diff(t).ne(0))[0] + 1
     time = torch.unique_consecutive(t)
     x = torch.tensor_split(raw_data['x'], time_jumps.tolist())
     y = torch.tensor_split(raw_data['y'], time_jumps.tolist())
