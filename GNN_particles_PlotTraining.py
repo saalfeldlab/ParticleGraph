@@ -360,11 +360,11 @@ def data_plot_training(config, mode, device):
             plt.xticks(fontsize=32.0)
             plt.yticks(fontsize=32.0)
             plt.tight_layout()
-            csv_ = np.array(csv_)
+            # csv_ = np.array(csv_)
             plt.savefig(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.tif", dpi=300)
-            np.save(f"./{log_dir}/tmp_training/embedding_{dataset_name}.npy", csv_)
-            csv_= np.reshape(csv_,(csv_.shape[0]*csv_.shape[1],2))
-            np.savetxt(f"./{log_dir}/tmp_training/embedding_{dataset_name}.txt", csv_)
+            # np.save(f"./{log_dir}/tmp_training/embedding_{dataset_name}.npy", csv_)
+            # csv_= np.reshape(csv_,(csv_.shape[0]*csv_.shape[1],2))
+            # np.savetxt(f"./{log_dir}/tmp_training/embedding_{dataset_name}.txt", csv_)
             plt.close()
 
             p = config.simulation.params
@@ -1396,7 +1396,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['Coulomb_3']
+    config_list = ['arbitrary_3_dropout_10']
 
     for config_file in config_list:
 
@@ -1409,7 +1409,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_plot_training_asym(config, mode='figures' , device=device)
+        data_plot_training(config, mode='figures' , device=device)
 
 
 

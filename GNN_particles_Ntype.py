@@ -554,6 +554,8 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                                          x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), '+', color='w')
                         plt.xlim([0,1])
                         plt.ylim([0,1])
+                        # plt.xlim([-2,2])
+                        # plt.ylim([-2,2])
                         if 'frame' in style:
                             plt.xlabel(r'$x$', fontsize=64)
                             plt.ylabel(r'$y$', fontsize=64)
@@ -1008,7 +1010,7 @@ def data_train_particles(config, device):
         index_particles.append(index.squeeze())
     if has_ghost:
 
-        if model_config.particle_model_name == 'B':
+        if model_config.particle_model_name == 'B_potential':
             print('Train SIREN model ...')
 
             run = 1 + np.random.randint(NGraphs - 1)
@@ -1118,8 +1120,10 @@ def data_train_particles(config, device):
             torch.save({'model_state_dict': model_siren.state_dict(),
                         'optimizer_state_dict': optimizer.state_dict()},
                        os.path.join(log_dir, 'models', f'Siren_model'))
+
         ghosts_particles = Ghost_Particles(config, n_particles, vnorm, device)
-        optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.ghost_pos], lr=1E-4)
+        optimizer_ghost_particles = torch.optim.Adam(lr=1e-4, params=ghosts_particles.parameters())
+
         mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
         mask_ghost = np.tile(mask_ghost, batch_size)
         mask_ghost = np.argwhere(mask_ghost == 1)
@@ -1209,6 +1213,15 @@ def data_train_particles(config, device):
                             (x[:, 0:1], torch.ones_like(y[:, 2:3], device=device) * k), dim=1)), dim=0)
                         y_batch_division = torch.concatenate((y_batch_division, y[:, 3:4]), dim=0)
 
+                if has_ghost:
+                    if batch == 0:
+                        var_batch = torch.mean(ghosts_particles.var[run,k],dim=0)
+                        var_batch = var_batch[:,None]
+                    else:
+                        var = torch.mean(ghosts_particles.var[run,k],dim=0)
+                        var_batch = torch.cat((var_batch, var[:, None]), dim=0)
+
+
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
             if has_ghost:
@@ -1227,11 +1240,7 @@ def data_train_particles(config, device):
                 total_loss_division += loss_division.item()
 
             if has_ghost:
-                # if simulation_config.boundary == 'no':
-                #     current_distribution = torch.std(x[:, 1:3], dim=0).clone().detach()
-                #     loss = ((pred[mask_ghost] - y_batch)).norm(2) + 1E2 * (torch.std(x_ghost[:, 1:3]) - current_distribution).norm(2)  # loss_ghost_distribution
-                loss = ((pred[mask_ghost] - y_batch)).norm(2)
-
+                loss = ((pred[mask_ghost] - y_batch)).norm(2) + var_batch.mean()
             else:
                 if not (has_large_range):
                     loss = (pred - y_batch).norm(2)
@@ -1496,7 +1505,7 @@ def data_train_particles(config, device):
             # for n in range(n_ghosts):
             #     plt.scatter(embedding[n_particles + n, 0], embedding[n_particles + n, 1], color='k', s=0.1)
 
-            optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.ghost_pos], lr=1E-3)
+            optimizer_ghost_particles = torch.optim.Adam(lr=1e-4, params=ghosts_particles.parameters())
             for N in range(n_frames):
 
                 k = N
@@ -1543,15 +1552,16 @@ def data_train_particles(config, device):
                     for batch in batch_loader:
                         pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi)
 
-                    loss = ((pred[0:n_particles] - y_batch)).norm(2)
+                    loss = ((pred[0:n_particles] - y_batch)).norm(2) + ghosts_particles.var[run,N].mean()
 
                     loss.backward()
                     optimizer_ghost_particles.step()
 
-                    if ((k==80)|(k==0)|(k==200)) & (NN%10==0):
+                    if ((k==n_frames//4)|(k==0)|(k==n_frames//2)) & (NN%10==0):
                         # print(f'Loss: {loss.item()}')
                         fig = plt.figure(figsize=(8, 8))
                         plt.text(0.1,0.8,f'Loss: {np.round(loss.item(),1)}',fontsize=14,c='r')
+                        plt.text(0.1, 0.8, f'var: {np.round(to_numpy(ghosts_particles.var), 3)}', fontsize=14, c='r')
                         x_ghost_pos = x_ghost[:, 1:3]
                         plt.scatter(to_numpy(x_ghost_pos[:, 0]),
                                     to_numpy(x_ghost_pos[:, 1]), s=10, color='r')
@@ -1565,13 +1575,13 @@ def data_train_particles(config, device):
                         plt.xlim([0, 1])
                         plt.ylim([0, 1])
                         plt.tight_layout()
-                        fig.savefig(f"{log_dir}/tmp_training/ghost/ghosts_{epoch}_frame_{N}_{NN}.jpg", dpi=300)
+                        fig.savefig(f"{log_dir}/tmp_training/ghost/ghosts_frame_{N}_{epoch}_{NN}.jpg", dpi=300)
                         plt.close()
                         if (NN==0)|(NN==100):
                             logger.info(f'ghost loss: {loss.item()} {epoch}_frame_{N}_{NN}')
 
             model.train()
-            optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.ghost_pos], lr=1E-4)
+            optimizer_ghost_particles = torch.optim.Adam(lr=1e-4, params=ghosts_particles.parameters())
 
 
 def data_train_particle_field(config, device):
@@ -3126,8 +3136,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
 
 if __name__ == '__main__':
 
-    config_list = ['signal_N_100']
-
+    config_list = ['arbitrary_3_dropout_10_GD']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -3137,7 +3146,7 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        # data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, bSave=True, step=1) # config.simulation.n_frames // 7)
+        # data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, bSave=True, step=10) #config.simulation.n_frames // 7)
         # data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 20)
         data_train(config, device)
         # data_test(config, visualize=True, style='color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 40, test_simulation=False, sample_embedding=True, device=device)
