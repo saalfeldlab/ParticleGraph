@@ -876,7 +876,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
 
 
-
 def data_train(config, device):
 
     has_mesh = (config.graph_model.mesh_model_name != '')
@@ -891,7 +890,6 @@ def data_train(config, device):
         data_train_signal(config, device)
     else:
         data_train_particles(config, device)
-
 
 
 def data_train_particles(config, device):
@@ -2112,7 +2110,6 @@ def data_train_particle_field(config, device):
         plt.close()
 
 
-
 def data_train_mesh(config, device):
 
     print('')
@@ -2655,7 +2652,6 @@ def data_train_signal(config, device):
                 else:
                     y_batch = torch.cat((y_batch, y[:, 0:2]), dim=0)
 
-
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
 
@@ -2671,13 +2667,6 @@ def data_train_signal(config, device):
             optimizer.step()
 
             total_loss += loss.item()
-
-            visualize_embedding = True
-            if visualize_embedding & (epoch == 0) & (N < 10000) & (N % 200 == 0):
-                plot_training(dataset_name=dataset_name, model_name=model_config.signal_model_name, log_dir=log_dir,
-                              epoch=epoch, N=N, x=x, model=model, dataset_num=1,
-                              index_particles=index_particles, n_particles=n_particles,
-                              n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, device=device)
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
@@ -2716,7 +2705,6 @@ def data_train_signal(config, device):
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
         plt.close()
-
 
 
 def data_test(config, visualize=False, style='color', verbose=True, best_model=20, step=5, ratio=1, run=1, test_simulation=False, sample_embedding = False, device=[]):
@@ -3138,7 +3126,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
 
 if __name__ == '__main__':
 
-    config_list = ['']
+    config_list = ['signal_N_100']
 
 
     for config_file in config_list:
@@ -3149,7 +3137,7 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, bSave=True, step=1) # config.simulation.n_frames // 7)
+        # data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, bSave=True, step=1) # config.simulation.n_frames // 7)
         # data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 20)
         data_train(config, device)
         # data_test(config, visualize=True, style='color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 40, test_simulation=False, sample_embedding=True, device=device)
