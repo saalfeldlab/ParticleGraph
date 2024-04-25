@@ -1124,6 +1124,11 @@ def data_train_particles(config, device):
         ghosts_particles = Ghost_Particles(config, n_particles, vnorm, device)
         optimizer_ghost_particles = torch.optim.Adam(lr=1e-4, params=ghosts_particles.parameters())
 
+        mu = ghosts_particles.mu
+        optimizer_ghost_particles = torch.optim.Adam([mu], lr=1e-4)
+        var = ghosts_particles.var
+        optimizer_ghost_particles.add_param_group({'params': [var], 'lr': 1e-3})
+
         mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
         mask_ghost = np.tile(mask_ghost, batch_size)
         mask_ghost = np.argwhere(mask_ghost == 1)
@@ -1221,7 +1226,6 @@ def data_train_particles(config, device):
                         var = torch.mean(ghosts_particles.var[run,k],dim=0)
                         var_batch = torch.cat((var_batch, var[:, None]), dim=0)
 
-
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
             if has_ghost:
@@ -1247,7 +1251,7 @@ def data_train_particles(config, device):
                 else:
                     loss = ((pred - y_batch) / (y_batch)).norm(2) / 1E9
 
-            visualize_embedding = False
+            visualize_embedding = True
             if visualize_embedding & (((epoch == 0) & (N < 10000) & (N % 200 == 0)) | (N==0)):
                 plot_training(config=config, dataset_name=dataset_name, model_name=model_config.particle_model_name, log_dir=log_dir,
                               epoch=epoch, N=N, x=x, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
@@ -1485,18 +1489,14 @@ def data_train_particles(config, device):
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
         plt.close()
 
-
         if has_ghost:
-
-            print('Optimizing ghost position ... ')
-
+            # print('Optimizing ghost position ... ')
             torch.save({'model_state_dict': ghosts_particles.state_dict(),
                         'optimizer_state_dict': optimizer_ghost_particles.state_dict()}, os.path.join(log_dir, 'models', f'best_ghost_particles_with_{NGraphs - 1}_graphs_{epoch}.pt'))
             model.eval()
             run = 1 + np.random.randint(NGraphs - 1)
             with torch.no_grad():
                 model.a[run, n_particles:n_particles + n_ghosts] = model.a[run, ghosts_particles.embedding_index].clone().detach()
-
             # fig = plt.figure(figsize=(8, 8))
             # embedding = get_embedding(model.a, 1)
             # for n in range(n_particle_types):
@@ -1504,9 +1504,7 @@ def data_train_particles(config, device):
             #                 embedding[index_particles[n], 1], color=cmap.color(n), s=0.1)
             # for n in range(n_ghosts):
             #     plt.scatter(embedding[n_particles + n, 0], embedding[n_particles + n, 1], color='k', s=0.1)
-
-            optimizer_ghost_particles = torch.optim.Adam(lr=1e-4, params=ghosts_particles.parameters())
-            for N in range(n_frames):
+            for N in trange(n_frames):
 
                 k = N
                 x_ = x_list[run][k].clone().detach()
@@ -1557,32 +1555,43 @@ def data_train_particles(config, device):
                     loss.backward()
                     optimizer_ghost_particles.step()
 
-                    if ((k==n_frames//4)|(k==0)|(k==n_frames//2)) & (NN%10==0):
-                        # print(f'Loss: {loss.item()}')
+                    if ((k==n_frames//4)|(k==0)|(k==n_frames//2)):
+
+                        # logvar = ghosts_particles.var[run,k, :,0]
+                        # std = torch.exp(0.5 * logvar[:,None].repeat(1, 2))
+                        # eps = torch.randn_like(std)
+                        # noise = to_numpy(eps * std)
+                        # fig = plt.figure(figsize=(8, 8))
+                        # plt.scatter(0.5+noise[:,0],0.5+noise[:,1], color='r',alpha=0.1)
+                        # plt.xlim([0, 1])
+                        # plt.ylim([0, 1])
+
                         fig = plt.figure(figsize=(8, 8))
-                        plt.text(0.1,0.8,f'Loss: {np.round(loss.item(),1)}',fontsize=14,c='r')
-                        plt.text(0.1, 0.8, f'var: {np.round(to_numpy(ghosts_particles.var), 3)}', fontsize=14, c='r')
-                        x_ghost_pos = x_ghost[:, 1:3]
-                        plt.scatter(to_numpy(x_ghost_pos[:, 0]),
-                                    to_numpy(x_ghost_pos[:, 1]), s=10, color='r')
+                        plt.text(0.05,0.9,f'Loss: {np.round(loss.item(),1)}',fontsize=14,c='r')
+                        plt.text(0.05, 0.85, f'var: {np.round(to_numpy(torch.mean(ghosts_particles.var[run,N])), 3)}', fontsize=14, c='r')
+                        logvar = ghosts_particles.var[run,k, :,0]
+                        std = torch.exp(0.5 * logvar)
+                        plt.scatter(to_numpy(ghosts_particles.mu[run,k, :,0]),
+                                    to_numpy(ghosts_particles.mu[run,k, :,1]), s=2E4*to_numpy(std), color='r',alpha=0.25)
                         x_removed = x_removed_list[k]
                         plt.scatter(to_numpy(x_removed[:, 1]),
                                     to_numpy(x_removed[:, 2]), s=10, color='g')
-                        plt.scatter(to_numpy(x[:, 1]),
-                                    to_numpy(x[:, 2]), s=2, color='k')
+                        plt.scatter(to_numpy(x_[:, 1]),
+                                    to_numpy(x_[:, 2]), s=2, color='k')
                         plt.xticks([])
                         plt.yticks([])
-                        plt.xlim([0, 1])
-                        plt.ylim([0, 1])
+                        if (model_config.particle_model_name == 'PDE_G'):
+                            plt.xlim([-2, 2])
+                            plt.ylim([2, 2])
+                        else:
+                            plt.xlim([0, 1])
+                            plt.ylim([0, 1])
                         plt.tight_layout()
                         fig.savefig(f"{log_dir}/tmp_training/ghost/ghosts_frame_{N}_{epoch}_{NN}.jpg", dpi=300)
                         plt.close()
                         if (NN==0)|(NN==100):
                             logger.info(f'ghost loss: {loss.item()} {epoch}_frame_{N}_{NN}')
-
             model.train()
-            optimizer_ghost_particles = torch.optim.Adam(lr=1e-4, params=ghosts_particles.parameters())
-
 
 def data_train_particle_field(config, device):
     print('')
@@ -3136,7 +3145,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
 
 if __name__ == '__main__':
 
-    config_list = ['arbitrary_3_dropout_10_GD']
+    config_list = ['arbitrary_3_dropout_30_GD']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -3146,9 +3155,9 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        # data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, bSave=True, step=10) #config.simulation.n_frames // 7)
+        data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, bSave=True, step=10) #config.simulation.n_frames // 7)
         # data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 20)
-        data_train(config, device)
+        # data_train(config, device)
         # data_test(config, visualize=True, style='color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 40, test_simulation=False, sample_embedding=True, device=device)
 
 

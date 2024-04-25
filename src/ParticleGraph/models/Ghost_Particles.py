@@ -1,10 +1,6 @@
 import numpy as np
 import torch
 import torch.nn as nn
-
-
-
-
 class Ghost_Particles(torch.nn.Module):
 
 
@@ -29,8 +25,9 @@ class Ghost_Particles(torch.nn.Module):
         self.H1 = torch.zeros((self.n_ghosts,2), device=device, requires_grad=False)
         self.A1 = torch.zeros(self.n_ghosts, device=device, requires_grad=False)
 
-        self.mu = nn.Parameter(torch.randn((self.n_dataset, self.n_frames, self.n_ghosts, 2), device=device, requires_grad=True))
-        self.var = nn.Parameter(torch.ones((self.n_dataset, self.n_frames, self.n_ghosts, 1), device=device, requires_grad=True)*0.1)
+        self.mu = nn.Parameter(torch.rand((self.n_dataset, self.n_frames, self.n_ghosts, 2), device=device, requires_grad=True))
+        self.var = nn.Parameter(torch.ones((self.n_dataset, self.n_frames, self.n_ghosts, 1), device=device, requires_grad=True)*(-9))
+        # logvar = 7 -> std =0.03
 
         embedding_index = int(n_particles)
         embedding_index = np.arange(embedding_index)
