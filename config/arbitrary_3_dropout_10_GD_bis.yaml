@@ -1,11 +1,11 @@
 description: 'attraction-repulsion with 3 types particles'
-dataset: 'arbitrary_3_dropout_10_GD'
+dataset: 'arbitrary_3_dropout_10_GD_bis'
 
 simulation:
   params: [[1.6233, 1.0413, 1.6012, 1.5615], [1.7667, 1.8308, 1.0855, 1.9055], [1.7226, 1.7850, 1.0584, 1.8579]]
   min_radius: 0
   max_radius: 0.075
-  n_particles: 480
+  n_particles: 4800
   n_particle_types: 3
   n_interactions: 3
   n_frames: 250
@@ -31,13 +31,13 @@ plotting:
   arrow_length: 2
 
 training:
-  n_epochs: 20
+  n_epochs: 40
   batch_size: 8
   small_init_batch_size: False
   n_runs: 2
   particle_dropout: 0.1
   ghost_method: 'tensor'
-  n_ghosts: 50
+  n_ghosts: 480
   sparsity: 'replace_embedding_function'
   cluster_method: 'distance_plot'
   data_augmentation: True

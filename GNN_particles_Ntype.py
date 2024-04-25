@@ -1010,17 +1010,17 @@ def data_train_particles(config, device):
         index_particles.append(index.squeeze())
     if has_ghost:
 
-        if model_config.particle_model_name == 'B_potential':
+        if False:
             print('Train SIREN model ...')
 
-            run = 1 + np.random.randint(NGraphs - 1)
-            frame = 1 + np.random.randint(n_frames - 2)
+            run = 1 # + np.random.randint(NGraphs - 1)
+            frame = 62 #+ np.random.randint(n_frames - 2)
 
             image_width = 256
             model_input = get_mgrid(image_width, 2)
             model_input = model_input.cuda()
 
-            for frame in range(0,n_frames,50):
+            for frame in range(62,63): # range(0,n_frames,50):
 
 
                 model_siren = Siren_Network(image_width=image_width, in_features=2, out_features=1, hidden_features=256, hidden_layers=8, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.)
@@ -1068,7 +1068,7 @@ def data_train_particles(config, device):
 
                 fig = plt.figure(figsize=(16, 8))
                 ax = fig.add_subplot(2, 4, 2)
-                plt.imshow(to_numpy(target[0, :, :].squeeze()),vmin=-0.1,vmax=0.1)
+                plt.imshow(to_numpy(target[0, :, :].squeeze()))
                 plt.title('Velocity_field_y')
                 plt.scatter(to_numpy(pos_coords[:, 1]), to_numpy(pos_coords[:, 0]), s=0.1, color='w')
                 plt.xlim([0, image_width])
@@ -1077,7 +1077,7 @@ def data_train_particles(config, device):
                 plt.yticks([])
                 ax.invert_yaxis()
                 ax = fig.add_subplot(2, 4, 1)
-                plt.imshow(to_numpy(target[1, :, :].squeeze()),vmin=-0.1,vmax=0.1)
+                plt.imshow(to_numpy(target[1, :, :].squeeze()))
                 plt.scatter(to_numpy(pos_coords[:, 1]), to_numpy(pos_coords[:, 0]), s=0.1, color='w')
                 plt.xlim([0, image_width])
                 plt.ylim([0, image_width])
@@ -1096,7 +1096,7 @@ def data_train_particles(config, device):
                 ax.invert_yaxis()
                 plt.title('Reconstructed potential')
                 ax = fig.add_subplot(2, 4, 6)
-                plt.imshow(img_grad_[:, 1].cpu().view(image_width, image_width).detach().numpy(),vmin=-0.1,vmax=0.1)
+                plt.imshow(img_grad_[:, 1].cpu().view(image_width, image_width).detach().numpy())
                 plt.scatter(to_numpy(pos_coords[:, 1]), to_numpy(pos_coords[:, 0]), s=0.1, color='w')
                 plt.xlim([0, image_width])
                 plt.ylim([0, image_width])
@@ -1105,7 +1105,7 @@ def data_train_particles(config, device):
                 ax.invert_yaxis()
                 plt.title('Gradient_y from potential')
                 ax = fig.add_subplot(2, 4, 5)
-                plt.imshow(img_grad_[:, 0].cpu().view(image_width, image_width).detach().numpy(),vmin=-0.1,vmax=0.1)
+                plt.imshow(img_grad_[:, 0].cpu().view(image_width, image_width).detach().numpy())
                 plt.scatter(to_numpy(pos_coords[:, 1]), to_numpy(pos_coords[:, 0]), s=0.1, color='w')
                 plt.xlim([0, image_width])
                 plt.ylim([0, image_width])
@@ -1127,7 +1127,7 @@ def data_train_particles(config, device):
         mu = ghosts_particles.mu
         optimizer_ghost_particles = torch.optim.Adam([mu], lr=1e-4)
         var = ghosts_particles.var
-        optimizer_ghost_particles.add_param_group({'params': [var], 'lr': 1e-3})
+        optimizer_ghost_particles.add_param_group({'params': [var], 'lr': 1e-5})
 
         mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
         mask_ghost = np.tile(mask_ghost, batch_size)
@@ -1263,11 +1263,6 @@ def data_train_particles(config, device):
 
             if has_ghost:
                 optimizer_ghost_particles.step()
-                if (N > 0) & (N % 1000 == 0) & (train_config.ghost_method == 'MLP'):
-                    fig = plt.figure(figsize=(8, 8))
-                    plt.imshow(to_numpy(ghosts_particles.data[run, :, 120, :].squeeze()))
-                    fig.savefig(f"{log_dir}/tmp_training/embedding/ghosts_{N}.jpg", dpi=300)
-                    plt.close()
 
             total_loss += loss.item()
 
@@ -1567,8 +1562,9 @@ def data_train_particles(config, device):
                         # plt.ylim([0, 1])
 
                         fig = plt.figure(figsize=(8, 8))
-                        plt.text(0.05,0.9,f'Loss: {np.round(loss.item(),1)}',fontsize=14,c='r')
-                        plt.text(0.05, 0.85, f'var: {np.round(to_numpy(torch.mean(ghosts_particles.var[run,N])), 3)}', fontsize=14, c='r')
+                        plt.text(0.05,0.9,f'Loss: {np.round(loss.item(),3)}',fontsize=24,c='k',weight="bold")
+                        logvar = np.round(to_numpy(torch.mean(ghosts_particles.var[run, N])), 3)
+                        plt.text(0.05, 0.82, r'logvar {0:.3f}'.format(logvar), fontsize=24, c='k',weight="bold")
                         logvar = ghosts_particles.var[run,k, :,0]
                         std = torch.exp(0.5 * logvar)
                         plt.scatter(to_numpy(ghosts_particles.mu[run,k, :,0]),
@@ -1592,6 +1588,7 @@ def data_train_particles(config, device):
                         if (NN==0)|(NN==100):
                             logger.info(f'ghost loss: {loss.item()} {epoch}_frame_{N}_{NN}')
             model.train()
+
 
 def data_train_particle_field(config, device):
     print('')
@@ -3145,7 +3142,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
 
 if __name__ == '__main__':
 
-    config_list = ['arbitrary_3_dropout_30_GD']
+    config_list = ['arbitrary_3_dropout_10_GD']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -3155,9 +3152,9 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, bSave=True, step=10) #config.simulation.n_frames // 7)
+        # data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, bSave=True, step=10) #config.simulation.n_frames // 7)
         # data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 20)
-        # data_train(config, device)
+        data_train(config, device)
         # data_test(config, visualize=True, style='color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 40, test_simulation=False, sample_embedding=True, device=device)
 
 

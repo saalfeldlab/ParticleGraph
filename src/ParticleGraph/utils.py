@@ -213,12 +213,16 @@ def create_log_dir(config, dataset_name):
     os.makedirs(os.path.join(log_dir, 'models'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'tmp_training'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'tmp_training/embedding'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'tmp_training/siren'), exist_ok=True)
     if config.training.n_ghosts > 0:
         os.makedirs(os.path.join(log_dir, 'tmp_training/ghost'), exist_ok=True)
     files = glob.glob(f"{log_dir}/tmp_training/embedding/*")
     for f in files:
         os.remove(f)
     files = glob.glob(f"{log_dir}/tmp_training/siren/*")
+    for f in files:
+        os.remove(f)
+    files = glob.glob(f"{log_dir}/tmp_training/ghost/*")
     for f in files:
         os.remove(f)
     os.makedirs(os.path.join(log_dir, 'tmp_recons'), exist_ok=True)
