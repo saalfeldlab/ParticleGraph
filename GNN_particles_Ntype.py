@@ -219,9 +219,6 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                         else:
                             x_list.append(x.clone().detach())
                             y_list.append(y.clone().detach())
-                            if (run == 1) & (it == 200):
-                                torch.save(x, f'graphs_data/graphs_{dataset_name}/x_200.pt')
-                                torch.save(y, f'graphs_data/graphs_{dataset_name}/y_200.pt')
 
                 # Particle update
                 if model_config.particle_model_name == 'PDE_O':
@@ -670,32 +667,17 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
         # initialize particle and graph states
         X1, V1, T1, H1, A1, N1, cycle_length, cycle_length_distrib = init_particles(config, device=device, cycle_length=cycle_length)
-        X1_mesh, V1_mesh, T1_mesh, H1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
+        X1_mesh, V1_mesh, T1_mesh, H1_mesh, N1_mesh, mesh_data = init_mesh(config, model=model, device=device)
         T1_mesh = -1.0 + T1_mesh * -1.0
         A1_mesh = torch.zeros_like(T1_mesh)
         torch.save(mesh_data, f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt')
         mask_mesh = mesh_data['mask'].squeeze()
-
-        a1 = 1E-2  # diffusion coefficient
-        a2 = 8E-5  # positive rate coefficient
-        a3 = 6.65E-5  # negative rate coefficient
-
-        i0 = imread(f'graphs_data/{config.simulation.node_diffusion_map}')
-        index = np.round(i0[(to_numpy(X1_mesh[:, 0]) * 255).astype(int), (to_numpy(X1_mesh[:, 1]) * 255).astype(int)] ).astype(int)
-        coeff_diff = a1 * np.array(config.simulation.diffusion_coefficients)[index]
-        model.coeff_diff = torch.tensor(coeff_diff, device=device)
-        i0 = imread(f'graphs_data/{config.simulation.node_proliferation_map}')
-        index = np.round(i0[(to_numpy(X1_mesh[:, 0]) * 255).astype(int), (to_numpy(X1_mesh[:, 1]) * 255).astype(int)]).astype(int)
-        pos_rate = a2 * np.array(config.simulation.pos_rate)[index]
-        model.pos_rate = torch.tensor(pos_rate, device=device)
-        model.neg_rate = - torch.ones_like(model.pos_rate) * a3 * torch.tensor(config.simulation.pos_rate[0], device=device)
 
         # matplotlib.use("Qt5Agg")
         # fig = plt.figure(figsize=(12, 12))
         # plt.imshow(i0)
         # plt.imshow(np.reshape(proliferation_rate, (100, 100)), cmap='viridis')
         # plt.colorbar()
-
 
         index_particles = []
         for n in range(n_particle_types):
@@ -766,50 +748,62 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
             dataset = data.Data(x=x_particle_field, pos=x[:, 1:3], edge_index=edge_index, edge_particle=edge_particle, edge_mesh=mesh_data['edge_index'], edge_attr=mesh_data['edge_weight'])
 
-            # model prediction
-            with torch.no_grad():
-                y , drift, y_mesh  = model(dataset)
+            match config.graph_model.particle_model_name:
+                case 'PDE_ParticleField_A':
+                    with torch.no_grad():
+                        y, drift = model(dataset)
+                    if (it >= 0) & bSave:
+                        if has_cell_division:
+                            x_list.append(x.clone().detach())
+                            y_ = torch.concatenate((y, y_timer[:, None], y_division[:, None]), 1)
+                            y_list.append(y_.clone().detach())
+                        else:
+                            if has_particle_dropout:
+                                x_ = x[particle_dropout_mask].clone().detach()
+                                x_[:, 0] = torch.arange(len(x_), device=device)
+                                x_list.append(x_)
+                                x_ = x[inv_particle_dropout_mask].clone().detach()
+                                x_[:, 0] = torch.arange(len(x_), device=device)
+                                x_removed_list.append(x[inv_particle_dropout_mask].clone().detach())
+                                y_list.append(y[particle_dropout_mask].clone().detach())
+                            else:
+                                x_list.append(x.clone().detach())
+                                y_list.append(y.clone().detach())
+                    V1 = y + drift
+                    X1 = bc_pos(X1 + V1 * delta_t)
+                    x_mesh_list.append(x_mesh.clone().detach())
+                    y_mesh_list.append(x_mesh[:,1:3].clone().detach())
+                case 'PDE_ParticleField_B':
+                    with torch.no_grad():
+                        y , drift, y_mesh  = model(dataset)
+                    if (it >= 0) & bSave:
+                        if has_cell_division:
+                            x_list.append(x.clone().detach())
+                            y_ = torch.concatenate((y, y_timer[:, None], y_division[:, None]), 1)
+                            y_list.append(y_.clone().detach())
+                        else:
+                            if has_particle_dropout:
+                                x_ = x[particle_dropout_mask].clone().detach()
+                                x_[:, 0] = torch.arange(len(x_), device=device)
+                                x_list.append(x_)
+                                x_ = x[inv_particle_dropout_mask].clone().detach()
+                                x_[:, 0] = torch.arange(len(x_), device=device)
+                                x_removed_list.append(x[inv_particle_dropout_mask].clone().detach())
+                                y_list.append(y[particle_dropout_mask].clone().detach())
+                            else:
+                                x_list.append(x.clone().detach())
+                                y_list.append(y.clone().detach())
+                    V1 += (y + drift) * delta_t
+                    X1 = bc_pos(X1 + V1 * delta_t)
 
-            # append list
-            if (it >= 0) & bSave:
+                    x_mesh_list.append(x_mesh.clone().detach())
+                    H1_mesh[:, 0:1] += y_mesh * delta_t
+                    H1_mesh[:, 0:1] = torch.clamp(H1_mesh[:, 0:1], min=0, max=7500)
+                    y_mesh_list.append(y_mesh)
 
-                if has_cell_division:
-                    x_list.append(x.clone().detach())
-                    y_ = torch.concatenate((y, y_timer[:, None], y_division[:, None]), 1)
-                    y_list.append(y_.clone().detach())
-                else:
-                    if has_particle_dropout:
-                        x_ = x[particle_dropout_mask].clone().detach()
-                        x_[:, 0] = torch.arange(len(x_), device=device)
-                        x_list.append(x_)
-                        x_ = x[inv_particle_dropout_mask].clone().detach()
-                        x_[:, 0] = torch.arange(len(x_), device=device)
-                        x_removed_list.append(x[inv_particle_dropout_mask].clone().detach())
-                        y_list.append(y[particle_dropout_mask].clone().detach())
-                    else:
-                        x_list.append(x.clone().detach())
-                        y_list.append(y.clone().detach())
 
-            # Particle update
-
-            V1 += (y + drift) * delta_t
-            X1 = bc_pos(X1 + V1 * delta_t)
 
             A1 = A1 + delta_t
-
-            # Mesh update
-
-            x_mesh_list.append(x_mesh.clone().detach())
-
-            # H1_mesh[mask_mesh, 0:1] += y_mesh[mask_mesh] * delta_t
-            # new_pred = torch.zeros_like(y_mesh)
-            # new_pred[mask_mesh] = y_mesh[mask_mesh]
-            # y_mesh_list.append(new_pred)
-
-            H1_mesh[:, 0:1] += y_mesh * delta_t
-            H1_mesh[:, 0:1] = torch.clamp(H1_mesh[:, 0:1], min=0, max=7500)
-            y_mesh_list.append(y_mesh)
-
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
 
@@ -820,7 +814,10 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 pts = x_mesh[:, 1:3].detach().cpu().numpy()
                 tri = Delaunay(pts)
                 colors = torch.sum(x_mesh[tri.simplices, 6], dim=1) / 3.0
-                if model_config.mesh_model_name == 'WaveMesh':
+                if config.graph_model.particle_model_name == 'PDE_ParticleField_A':
+                    plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                  facecolors=colors.detach().cpu().numpy(), edgecolors='k')
+                elif model_config.mesh_model_name == 'WaveMesh':
                     plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                   facecolors=colors.detach().cpu().numpy(), edgecolors='k', vmin=-2500,
                                   vmax=2500)
@@ -831,13 +828,11 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 plt.ylim([0, 1])
 
 
-
-
                 # H1_IM = torch.reshape(H1_mesh[:, 0], (100, 100))
                 # plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=5000, cmap='viridis')
                 for n in range(n_particle_types):
                     plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                x[index_particles[n], 2].detach().cpu().numpy(), s=0.5, color='w')
+                                x[index_particles[n], 2].detach().cpu().numpy(), s=50)
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
                 plt.xticks([])
@@ -865,7 +860,7 @@ def data_train(config, device):
 
     has_mesh = (config.graph_model.mesh_model_name != '')
     has_signal = (config.graph_model.signal_model_name != '')
-    has_particle_field = (config.graph_model.particle_model_name == 'PDE_ParticleField')
+    has_particle_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
 
     if has_particle_field:
         data_train_particle_field(config, device)
@@ -1521,19 +1516,14 @@ def data_train_particles(config, device):
                             y_batch = y[:, 0:2]
                         else:
                             y_batch = torch.cat((y_batch, y[:, 0:2]), dim=0)
-
                     batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
                     optimizer_ghost_particles.zero_grad()
-
                     for batch in batch_loader:
                         pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi)
-
                     loss = ((pred[0:n_particles] - y_batch)).norm(2) + ghosts_particles.var[run,N].mean()
-
                     loss.backward()
                     optimizer_ghost_particles.step()
-
-                    if ((k==n_frames//4)|(k==0)|(k==n_frames//2)):
+                    if (k==n_frames//4):  #|(k==0)|(k==n_frames//2)):
 
                         # logvar = ghosts_particles.var[run,k, :,0]
                         # std = torch.exp(0.5 * logvar[:,None].repeat(1, 2))
@@ -1832,25 +1822,28 @@ def data_train_particle_field(config, device):
             if has_cell_division:
                 optimizer_division.zero_grad()
 
-            for batch in batch_loader:
-                batch
+            match config.graph_model.particle_model_name:
 
-            for batch in batch_loader:
-                pred_y, pred_du = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi)
+                case 'PDE_ParticleField_A':
+                    for batch in batch_loader:
+                        pred, u = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi)
+                    if has_ghost:
+                        loss = ((pred_y[mask_ghost] - y_batch)).norm(2)
+                    else:
+                        loss_particle = (pred_y - y_batch).norm(2)
+                    loss = loss_particle
+                    loss_particle = loss
+                    loss_mesh = 0 * loss_particle
 
-            if has_cell_division:
-                pred_division = model_division(time_batch, data_id=run)
-                loss_division = (pred_division - y_batch_division).norm(2)
-                loss_division.backward()
-                optimizer_division.step()
-                total_loss_division += loss_division.item()
-
-            if has_ghost:
-                loss = ((pred_y[mask_ghost] - y_batch)).norm(2) + (pred_du - y_mesh_batch).norm(2)
-            else:
-                loss_particle = (pred_y - y_batch).norm(2)
-                loss_mesh = (pred_du - y_mesh_batch).norm(2)
-                loss = loss_particle + loss_mesh
+                case 'PDE_ParticleField_B':
+                    for batch in batch_loader:
+                        pred_y, pred_du = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi)
+                    if has_ghost:
+                        loss = ((pred_y[mask_ghost] - y_batch)).norm(2) + (pred_du - y_mesh_batch).norm(2)
+                    else:
+                        loss_particle = (pred_y - y_batch).norm(2)
+                        loss_mesh = (pred_du - y_mesh_batch).norm(2)
+                        loss = loss_particle + loss_mesh
 
             loss.backward()
             optimizer.step()
@@ -3126,7 +3119,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
 if __name__ == '__main__':
 
 
-    config_list = ['arbitrary_3_dropout_10_GD']
+    config_list = ['arbitrary_3_field']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -3137,7 +3130,7 @@ if __name__ == '__main__':
         print(f'device {device}')
 
         # data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, bSave=True, step=10) #config.simulation.n_frames // 7)
-        # data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 20)
+        # data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=5) #config.simulation.n_frames // 20)
         data_train(config, device)
         # data_test(config, visualize=True, style='color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 40, test_simulation=False, sample_embedding=True, device=device)
 

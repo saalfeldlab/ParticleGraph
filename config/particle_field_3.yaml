@@ -25,8 +25,8 @@ simulation:
   start_frame: 0
 
 graph_model:
-  particle_model_name: 'PDE_ParticleField'
-  mesh_model_name: 'Particle_Mesh'
+  particle_model_name: 'PDE_ParticleField_B'
+  mesh_model_name: 'Particle_Mesh_B'
   prediction: '2nd_derivative'
   input_size: 9
   output_size: 2

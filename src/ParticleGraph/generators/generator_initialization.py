@@ -65,7 +65,7 @@ def init_particles(config, device, cycle_length=None):
 
     return pos, dpos, type, features, cycle_duration, particle_id, cycle_length, cycle_length_distrib
 
-def init_mesh(config, device):
+def init_mesh(config, model, device):
     simulation_config = config.simulation
     n_nodes = simulation_config.n_nodes
     n_particles = simulation_config.n_particles
@@ -102,7 +102,7 @@ def init_mesh(config, device):
             s = torch.sum(features_mesh, dim=1)
             for k in range(3):
                 features_mesh[:, k] = features_mesh[:, k] / s
-        case 'DiffMesh' | 'WaveMesh' | 'Particle_Mesh':
+        case 'DiffMesh' | 'WaveMesh' | 'Particle_Mesh_A' | 'Particle_Mesh_B':
             features_mesh = torch.zeros((n_nodes, 2), device=device)
             features_mesh[:, 0] = torch.tensor(values / 255 * 5000, device=device)
         case 'PDE_O_Mesh':
@@ -158,4 +158,26 @@ def init_mesh(config, device):
 
     mesh_data = {'mesh_pos': pos_3d, 'face': face, 'edge_index': edge_index_mesh, 'edge_weight': edge_weight_mesh,
                  'mask': mask_mesh, 'size': mesh_size}
+
+    if config.graph_model.particle_model_name == 'PDE_ParticleField_B':
+
+        a1 = 1E-2  # diffusion coefficient
+        a2 = 8E-5  # positive rate coefficient
+        a3 = 6.65E-5  # negative rate coefficient
+
+        i0 = imread(f'graphs_data/{config.simulation.node_diffusion_map}')
+        index = np.round(
+            i0[(to_numpy(x_mesh[:, 0]) * 255).astype(int), (to_numpy(x_mesh[:, 1]) * 255).astype(int)]).astype(int)
+        coeff_diff = a1 * np.array(config.simulation.diffusion_coefficients)[index]
+        model.coeff_diff = torch.tensor(coeff_diff, device=device)
+        i0 = imread(f'graphs_data/{config.simulation.node_proliferation_map}')
+        index = np.round(
+            i0[(to_numpy(x_mesh[:, 0]) * 255).astype(int), (to_numpy(x_mesh[:, 1]) * 255).astype(int)]).astype(int)
+        pos_rate = a2 * np.array(config.simulation.pos_rate)[index]
+        model.pos_rate = torch.tensor(pos_rate, device=device)
+        model.neg_rate = - torch.ones_like(model.pos_rate) * a3 * torch.tensor(config.simulation.pos_rate[0], device=device)
+
+
+
+
     return pos_mesh, dpos_mesh, type_mesh, features_mesh, node_id_mesh, mesh_data

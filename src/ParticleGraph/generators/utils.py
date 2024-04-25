@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 # matplotlib.use("Qt5Agg")
 from tifffile import imread
-from ParticleGraph.generators import PDE_ParticleField, PDE_A, PDE_B, PDE_B_bis, PDE_E, PDE_G, PDE_GS, PDE_N, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, \
+from ParticleGraph.generators import PDE_ParticleField_A, PDE_ParticleField_B, PDE_A, PDE_B, PDE_B_bis, PDE_E, PDE_G, PDE_GS, PDE_N, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, \
     PDE_Laplacian, PDE_O
 from ParticleGraph.utils import choose_boundary_values
 from ParticleGraph.data_loaders import load_solar_system
@@ -35,7 +35,14 @@ def choose_model(config, device):
     params = config.simulation.params
 
     match particle_model_name:
-        case 'PDE_ParticleField':
+        case 'PDE_ParticleField_A':
+            p = torch.ones(n_particle_types, 4, device=device) + torch.rand(n_particle_types, 4, device=device)
+            if params[0] != [-1]:
+                for n in range(n_particle_types):
+                    p[n] = torch.tensor(params[n])
+            sigma = config.simulation.sigma
+            model = PDE_ParticleField_A(aggr_type=aggr_type, p=torch.squeeze(p), sigma=sigma, bc_dpos=bc_dpos, dimension=dimension, n_particles=n_particles, n_nodes=n_nodes)
+        case 'PDE_ParticleField_B':
             # particle parameters
             p = torch.rand(n_particle_types, 4, device=device) * 100  # comprised between 10 and 50
             if params[0] != [-1]:
@@ -43,8 +50,7 @@ def choose_model(config, device):
                     p[n] = torch.tensor(params[n])
             else:
                 print(p)
-
-            model = PDE_ParticleField(aggr_type=aggr_type,  pos_rate=[], neg_rate=[], coeff_diff=[], delta_t=config.simulation.delta_t,  p=torch.squeeze(p), bc_dpos=bc_dpos, n_particles=n_particles, n_nodes=n_nodes)
+            model = PDE_ParticleField_B(aggr_type=aggr_type,  pos_rate=[], neg_rate=[], coeff_diff=[], delta_t=config.simulation.delta_t,  p=torch.squeeze(p), bc_dpos=bc_dpos, n_particles=n_particles, n_nodes=n_nodes)
         case 'PDE_A':
             p = torch.ones(n_particle_types, 4, device=device) + torch.rand(n_particle_types, 4, device=device)
             if config.simulation.non_discrete_level>0:
