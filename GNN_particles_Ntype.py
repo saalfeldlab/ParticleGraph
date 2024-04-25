@@ -1,50 +1,33 @@
-import glob
-import logging
 import time
 from shutil import copyfile
 
-import matplotlib.pyplot as plt
-import torch
+import networkx as nx
+import scipy.io
 # import networkx as nx
 import torch.nn as nn
 import torch_geometric.data as data
-import umap
-from prettytable import PrettyTable
-from scipy.optimize import curve_fit
-from scipy.spatial import Delaunay
+from sklearn import metrics
+from tifffile import imread
 from torch_geometric.loader import DataLoader
 from torch_geometric.utils.convert import to_networkx
-from tqdm import trange
-import os
-import scipy.io
-from sklearn import metrics
-from matplotlib import rc
-import matplotlib
-from tifffile import imread
-import networkx as nx
 # matplotlib.use("Qt5Agg")
 from torchvision.transforms import GaussianBlur
 
-from torchvision.transforms import Resize, Compose, ToTensor, Normalize, CenterCrop
-import imageio
-
 from ParticleGraph.config import ParticleGraphConfig
+from ParticleGraph.data_loaders import *
+from ParticleGraph.embedding_cluster import *
+from ParticleGraph.fitting_models import linear_model
 from ParticleGraph.generators.generator_initialization import init_particles, init_mesh
 from ParticleGraph.generators.utils import choose_model, choose_mesh_model, generate_from_data
-from ParticleGraph.models.utils import *
-from ParticleGraph.models.Ghost_Particles import Ghost_Particles
-
-# os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
-
-from ParticleGraph.data_loaders import *
-from ParticleGraph.utils import *
-from ParticleGraph.fitting_models import linear_model
-from ParticleGraph.embedding_cluster import *
 from ParticleGraph.models import Division_Predictor
 # from ParticleGraph.Plot3D import *
-from ParticleGraph.generators import PDE_B
 from ParticleGraph.models import Siren_Network
+from ParticleGraph.models.Ghost_Particles import Ghost_Particles
+from ParticleGraph.models.utils import *
+from ParticleGraph.utils import *
 
+
+# os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
@@ -3141,6 +3124,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
 
 
 if __name__ == '__main__':
+
 
     config_list = ['arbitrary_3_dropout_10_GD']
 
