@@ -1,36 +1,34 @@
 """
 A collection of functions for loading data from various sources.
 """
+from typing import Dict
 
-import os
+import astropy.units as u
+import pandas as pd
+from torch_geometric.data import Data
+from tqdm import trange
 
-import numpy as np
-import pandas as pd
-import torch
-from sklearn import metrics
-import matplotlib
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-import torch
+from ParticleGraph.TimeSeries import TimeSeries
+from ParticleGraph.field_descriptors import CsvDescriptor, DerivedFieldDescriptor
 from ParticleGraph.utils import *
+
 
 def skip_to(file, start_line):
     with open(file) as f:
         pos = 0
         cur_line = f.readline()
         while cur_line != start_line:
-            pos +=1
+            pos += 1
             cur_line = f.readline()
 
-        return pos+1
+        return pos + 1
+
 
 def convert_data(data, device, config, n_particle_types, n_frames):
-
     x_list = []
     y_list = []
 
-    for it in trange(n_frames-1):
+    for it in trange(n_frames - 1):
         for n in range(n_particle_types):
             # if (n==9):
             #     p=1
@@ -41,19 +39,20 @@ def convert_data(data, device, config, n_particle_types, n_frames):
             vy = data[n][it, 5].clone().detach()
             vz = data[n][it, 6].clone().detach()
 
-            tmp = torch.stack([torch.tensor(n), x, y, vx, vy, torch.tensor(n), torch.tensor(0), torch.tensor(0), torch.tensor(0)])
-            if n==0:
-                object_data = tmp[None,:]
+            tmp = torch.stack(
+                [torch.tensor(n), x, y, vx, vy, torch.tensor(n), torch.tensor(0), torch.tensor(0), torch.tensor(0)])
+            if n == 0:
+                object_data = tmp[None, :]
             else:
-                object_data = torch.cat((object_data, tmp[None,:]), 0)
+                object_data = torch.cat((object_data, tmp[None, :]), 0)
 
-            ax = data[n][it+1, 4]-data[n][it, 4]
-            ay = data[n][it+1, 5]-data[n][it, 5]
+            ax = data[n][it + 1, 4] - data[n][it, 4]
+            ay = data[n][it + 1, 5] - data[n][it, 5]
             tmp = torch.stack([ax, ay]) / config.simulation.delta_t
-            if n==0:
-                acc_data = tmp[None,:]
+            if n == 0:
+                acc_data = tmp[None, :]
             else:
-                acc_data = torch.cat((acc_data, tmp[None,:]), 0)
+                acc_data = torch.cat((acc_data, tmp[None, :]), 0)
 
         x_list.append(object_data.to(device))
         y_list.append(acc_data.to(device))
@@ -62,7 +61,6 @@ def convert_data(data, device, config, n_particle_types, n_frames):
 
 
 def load_solar_system(config, device=None, visualize=False, folder=None, step=1000):
-
     # create output folder, empty it if bErase=True, copy files into it
     dataset_name = config.data_folder_name
     simulation_config = config.simulation
@@ -74,15 +72,15 @@ def load_solar_system(config, device=None, visualize=False, folder=None, step=10
     # Stop = 2013 - 03 - 06
     # Step = 4(hours)
 
-    object_list = ['sun', 'mercury', 'venus', 'earth', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'pluto', 'io', 'europa',
-                   'ganymede', 'callisto', 'mimas', 'enceladus', 'tethys', 'dione', 'rhea', 'titan', 'hyperion', 'moon', 'phobos', 'deimos', 'charon']
+    object_list = ['sun', 'mercury', 'venus', 'earth', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'pluto', 'io',
+                   'europa',
+                   'ganymede', 'callisto', 'mimas', 'enceladus', 'tethys', 'dione', 'rhea', 'titan', 'hyperion', 'moon',
+                   'phobos', 'deimos', 'charon']
 
     # matplotlib.use("Qt5Agg")
     fig = plt.figure(figsize=(12, 12))
 
-
-
-    all_data=[]
+    all_data = []
 
     for id, object in enumerate(object_list):
 
@@ -118,27 +116,29 @@ def load_solar_system(config, device=None, visualize=False, folder=None, step=10
             vy[it] = torch.tensor(float(tmp_vy[it][0:-1]))
             vz[it] = torch.tensor(float(tmp_vz[it][0:-1]))
 
-        object_data = torch.cat((torch.ones_like(x[:,None]) * id, x[:,None], y[:,None], z[:,None], vx[:,None], vy[:,None], vz[:,None], torch.ones_like(x[:,None]) * id,
-                                 torch.zeros_like(x[:,None]), torch.zeros_like(x[:,None]), torch.zeros_like(x[:,None])), 1)
+        object_data = torch.cat((torch.ones_like(x[:, None]) * id, x[:, None], y[:, None], z[:, None], vx[:, None],
+                                 vy[:, None], vz[:, None], torch.ones_like(x[:, None]) * id,
+                                 torch.zeros_like(x[:, None]), torch.zeros_like(x[:, None]),
+                                 torch.zeros_like(x[:, None])), 1)
 
         all_data.append(object_data)
 
         plt.plot(to_numpy(y), to_numpy(x))
         plt.text(to_numpy(y[-1]), to_numpy(x[-1]), object, fontsize=6)
 
-    x_list, y_list = convert_data(all_data, device, config, n_particle_types, n_frames+1)
+    x_list, y_list = convert_data(all_data, device, config, n_particle_types, n_frames + 1)
 
     dataset_name = config.dataset
 
     if visualize:
-        for it in trange(n_frames-1):
+        for it in trange(n_frames - 1):
             if it % step == 0:
                 fig = plt.figure(figsize=(12, 12))
                 for id, object in enumerate(object_list):
                     plt.scatter(to_numpy(x_list[it][id, 1]), to_numpy(x_list[it][id, 2]), s=20)
                     if id < 10:
                         plt.text(to_numpy(x_list[it][id, 1]), to_numpy(x_list[it][id, 2]), object, fontsize=6)
-                    if id==9:
+                    if id == 9:
                         plt.arrow(to_numpy(x_list[it][id, 1]), to_numpy(x_list[it][id, 2]),
                                   to_numpy(y_list[it][id, 0]) * 1E14, to_numpy(y_list[it][id, 1]) * 1E14,
                                   head_width=0.5, head_length=0.7, fc='k', ec='k')
@@ -255,3 +255,90 @@ def ensure_local_path_exists(path):
     if not os.path.exists(path):
         os.makedirs(path)
     return os.path.join(os.getcwd(), path)
+
+
+def load_csv_from_descriptors(
+        column_descriptors: Dict[str, CsvDescriptor],
+        *,
+        device: str = 'cuda:0',
+        **kwargs
+) -> Dict[str, torch.Tensor]:
+    different_files = set(descriptor.filename for descriptor in column_descriptors.values())
+    columns = []
+
+    for file in different_files:
+        dtypes = {descriptor.column_name: descriptor.type for descriptor in column_descriptors.values()
+                  if descriptor.filename == file}
+        print(f"Loading data from '{file}':")
+        for column_name, type in dtypes.items():
+            print(f"  - column {column_name} as {type}")
+        columns.append(pd.read_csv(file, dtype=dtypes, usecols=list(dtypes.keys()), **kwargs))
+
+    entire_data = pd.concat(columns, axis='columns')
+
+    tensors = {}
+    for name, descriptor in column_descriptors.items():
+        tensors[name] = torch.tensor(entire_data[descriptor.column_name].values, device=device)
+
+    return tensors
+
+
+def load_wanglab_salivary_gland(
+        file_path: str,
+        *,
+        device: str = 'cuda:0'
+) -> TimeSeries:
+    """
+    Load the Wanglab salivary gland data from a CSV file and convert it to a pytorch_geometric Data object.
+
+    Args:
+        file_path (str): The path to the CSV file.
+        device (str): The PyTorch device to use for the tensor.
+
+    Returns:
+        time_series: (TimeSeries): A dataset containing the loaded data for each time point.
+    """
+
+    # Load the data of interest from the CSV file
+    column_descriptors = {
+        'x': CsvDescriptor(filename=file_path, column_name="Position X", type=np.float32, unit=u.micrometer),
+        'y': CsvDescriptor(filename=file_path, column_name="Position Y", type=np.float32, unit=u.micrometer),
+        'z': CsvDescriptor(filename=file_path, column_name="Position Z", type=np.float32, unit=u.micrometer),
+        't': CsvDescriptor(filename=file_path, column_name="Time", type=np.float32, unit=u.day),
+        'track_id': CsvDescriptor(filename=file_path, column_name="TrackID", type=np.int64, unit=u.dimensionless_unscaled),
+    }
+    raw_data = load_csv_from_descriptors(column_descriptors, device=device, skiprows=3)
+
+    # Split into individual data objects for each time point
+    t = raw_data['t']
+    time_jumps = torch.where(torch.diff(t).ne(0))[0] + 1
+    time = torch.unique_consecutive(t)
+    x = torch.tensor_split(raw_data['x'], time_jumps.tolist())
+    y = torch.tensor_split(raw_data['y'], time_jumps.tolist())
+    z = torch.tensor_split(raw_data['z'], time_jumps.tolist())
+    id = torch.tensor_split(raw_data['track_id'], time_jumps.tolist())
+
+    # Combine the data into a TimeSeries object
+    n_time_steps = len(time)
+    data = []
+    for i in range(n_time_steps):
+        data.append(Data(
+            time=time[i],
+            pos=torch.stack([x[i], y[i], z[i]], dim=1),
+            track_id=id[i],
+        ))
+
+    field_descriptors = {
+        'time': column_descriptors['t'],
+        'pos': DerivedFieldDescriptor(description="concatenating", constituent_fields=[column_descriptors[key] for key in ['x', 'y', 'z']]),
+        'track_id': column_descriptors['track_id'],
+    }
+    time_series = TimeSeries(time, data, field_descriptors)
+
+    # Compute the velocity as the derivative of the position and add it to the time series
+    velocity = time_series.compute_derivative('pos', id_name='track_id')
+    for i in range(n_time_steps):
+        data[i].velocity = velocity[i]
+    time_series.fields['velocity'] = DerivedFieldDescriptor(description="differentiating", constituent_fields=[time_series.fields['pos']])
+
+    return time_series

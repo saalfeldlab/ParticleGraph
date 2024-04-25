@@ -1,15 +1,13 @@
-import numpy as np
-import torch
-import GPUtil
-import matplotlib.pyplot as plt
-import os
 import glob
 import logging
-from shutil import copyfile
-from torchvision.transforms import Resize, Compose, ToTensor, Normalize, CenterCrop, GaussianBlur
-import numpy as np
-import matplotlib.pyplot as plt
+import os
+
+import GPUtil
 import imageio
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
+from torchvision.transforms import CenterCrop
 
 
 def to_numpy(tensor: torch.Tensor) -> np.ndarray:
@@ -51,7 +49,6 @@ def symmetric_cutoff(x, percent=1):
 
 
 def norm_velocity(xx, dimension, device):
-
     if dimension == 2:
         vx = torch.std(xx[:, 3])
         vy = torch.std(xx[:, 4])
@@ -92,11 +89,10 @@ def choose_boundary_values(bc_name):
         return torch.remainder(x, 1.0)  # in [0, 1)
 
     def shifted_periodic(x):
-        try :
+        try:
             return torch.remainder(x - 0.5, 1.0) - 0.5  # in [-0.5, 0.5)
         except:
             print('pb')
-
 
     match bc_name:
         case 'no':
@@ -108,7 +104,6 @@ def choose_boundary_values(bc_name):
 
 
 def grads2D(params):
-
     params_sx = torch.roll(params, -1, 0)
     params_sy = torch.roll(params, -1, 1)
 
@@ -118,12 +113,12 @@ def grads2D(params):
     sx[-1, :] = 0
     sy[:, -1] = 0
 
-    return [sx,sy]
+    return [sx, sy]
 
 
 def tv2D(params):
     nb_voxel = (params.shape[0]) * (params.shape[1])
-    sx,sy= grads2D(params)
+    sx, sy = grads2D(params)
 
     tvloss = torch.sqrt(sx.cuda() ** 2 + sy.cuda() ** 2 + 1e-8).sum()
     # tvloss += torch.nn.functional.relu(-params).norm(1) / 15
@@ -164,13 +159,12 @@ class CustomColorMap:
                 color = color_map(index / self.nmap)
         else:
             color_map = plt.colormaps.get_cmap(self.cmap_name)
-            if self.cmap_name== 'tab20':
-                color = color_map(index%20)
+            if self.cmap_name == 'tab20':
+                color = color_map(index % 20)
             else:
                 color = color_map(index)
 
         return color
-
 
 
 def load_image(path, crop_width=None, device='cpu'):
@@ -181,6 +175,7 @@ def load_image(path, crop_width=None, device='cpu'):
         target = CenterCrop(crop_width)(target)
     return target
 
+
 def get_mgrid(sidelen, dim=2):
     '''Generates a flattened grid of (x,y,...) coordinates in a range of -1 to 1.
     sidelen: int
@@ -190,11 +185,13 @@ def get_mgrid(sidelen, dim=2):
     mgrid = mgrid.reshape(-1, dim)
     return mgrid
 
+
 def divergence(y, x):
     div = 0.
     for i in range(y.shape[-1]):
-        div += torch.autograd.grad(y[..., i], x, torch.ones_like(y[..., i]), create_graph=True)[0][..., i:i+1]
+        div += torch.autograd.grad(y[..., i], x, torch.ones_like(y[..., i]), create_graph=True)[0][..., i:i + 1]
     return div
+
 
 def gradient(y, x, grad_outputs=None):
     if grad_outputs is None:
@@ -202,11 +199,11 @@ def gradient(y, x, grad_outputs=None):
     grad = torch.autograd.grad(y, [x], grad_outputs=grad_outputs, create_graph=True)[0]
     return grad
 
+
 def laplace(y, x):
     grad = gradient(y, x)
     return divergence(grad, x)
-    
-    
+
 
 def create_log_dir(config, dataset_name):
     l_dir = os.path.join('.', 'log')
