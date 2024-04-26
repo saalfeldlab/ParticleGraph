@@ -40,12 +40,11 @@ class PDE_ParticleField_A(pyg.nn.MessagePassing):
 
     def forward(self, data):
 
-        x, edge, edge_attr = data.x, data.edge, data.edge_attr
+        x, edge, field = data.x, data.edge, data.field
 
         edge, _ = pyg_utils.remove_self_loops(edge)
 
-        u = 0 * x[:, 6:7].clone().detach()
-        u = torch.reshape(u, (self.l_nodes, self.l_nodes))
+        field = torch.reshape(u, (self.l_nodes, self.l_nodes))
 
         particle_id = to_numpy(x[0:self.n_nodes, 0])
         particle_id = particle_id.astype(int)
@@ -55,12 +54,12 @@ class PDE_ParticleField_A(pyg.nn.MessagePassing):
         pos = x[:, 1:3]
         d_pos = x[:, 3:5]
 
-        dd_pos = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode ='particle-particle', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze())
+        dd_pos = self.propagate(edge_index=edge_all, u=field, discrete_laplacian=edge_attr, pos=pos, d_pos=d_pos, parameters=parameters.squeeze())
         deg_particle[deg_particle==0] = 1
         dd_pos = dd_pos[self.n_nodes:] / deg_particle[:, None].repeat(1,2)
 
         # chemotaxism
-        dd_pos_field_to_particle = self.propagate(edge_index=edge_all, u=u, discrete_laplacian=edge_attr, mode ='field_to_particle', pos=pos, d_pos=d_pos, particle_type=particle_type, parameters=parameters.squeeze())
+        dd_pos_field_to_particle = self.propagate(edge_index=edge_all, u=field, discrete_laplacian=edge_attr, mode ='field_to_particle', pos=pos, d_pos=d_pos, parameters=parameters.squeeze())
         node_neighbour = dd_pos_field_to_particle[self.n_nodes:,2:4]
         node_neighbour[node_neighbour==0]=1
         dd_pos_field_to_particle = dd_pos_field_to_particle[self.n_nodes:,0:2]
@@ -68,8 +67,6 @@ class PDE_ParticleField_A(pyg.nn.MessagePassing):
 
         return dd_pos, dd_pos_field_to_particle_dd_pos
 
-        fig = plt.figure(figsize=(10, 10))
-        plt.hist(to_numpy(self.beta * laplacian_u), 100)
 
 
     def message(self, u_j, discrete_laplacian, mode, pos_i, pos_j, d_pos_i, d_pos_j, particle_type_i, particle_type_j, parameters_i, parameters_j):

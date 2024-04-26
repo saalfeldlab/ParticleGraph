@@ -15,21 +15,23 @@ simulation:
   boundary: 'periodic'
   n_nodes: 10000
   n_node_types: 1
-  diffusion_coefficients: [ [ 0. ] ]
-  pos_rate: [ [ 0. ] ]
-  neg_rate: [ [ 0. ] ]
+  diffusion_coefficients: [[0]]
+  pos_rate: [[0]]
+  neg_rate: [[0]]
   node_value_map: 'pattern_16.tif'
-  node_type_map: 'pattern_8.tif'
+  node_type_map: 'pattern_Null.tif'
+  node_diffusion_map: 'pattern_Null.tif'
+  node_proliferation_map: 'pattern_Null.tif'
 
 graph_model:
   particle_model_name: 'PDE_ParticleField_A'
-  mesh_model_name: 'Particle_Mesh_A'
+  mesh_model_name: ''
   prediction: 'first_derivative'
   input_size: 5
   output_size: 2
   hidden_dim: 128
   n_mp_layers: 5
-  aggr_type: 'add'
+  aggr_type: 'mean'
   embedding_dim: 2
   update_type: 'none'
 
@@ -38,16 +40,22 @@ plotting:
   arrow_length: 2
 
 training:
-  n_epochs: 40
-  batch_size: 1
+  n_epochs: 20
+  batch_size: 8
   small_init_batch_size: False
   n_runs: 2
   sparsity: 'replace_embedding_function'
   cluster_method: 'distance_plot'
   data_augmentation: True
-  data_augmentation_loop: 200
+  data_augmentation_loop: 100
   fix_cluster_embedding: True
   device: 'auto'
+
+
+
+
+
+
 
 
 

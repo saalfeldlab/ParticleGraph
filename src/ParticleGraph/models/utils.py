@@ -254,44 +254,7 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
             plt.savefig(f"./{log_dir}/tmp_training/embedding/{model_name}_{dataset_name}_function_{epoch}_{N}.tif", dpi=300)
             plt.close()
 
-        case 'PDE_ParticleField_A':
-            fig = plt.figure(figsize=(12, 12))
-            if axis:
-                ax = fig.add_subplot(1, 1, 1)
-                # ax.xaxis.get_major_formatter()._usetex = False
-                # ax.yaxis.get_major_formatter()._usetex = False
-                ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-                ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-                plt.xlabel(r'$d_{ij}$', fontsize=64)
-                # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
-                plt.xticks(fontsize=32)
-                plt.yticks(fontsize=32)
-                plt.xlim([0, simulation_config.max_radius])
-                # plt.ylim([-0.15, 0.15])
-                plt.ylim([-0.04, 0.03])
-                # plt.ylim([-0.1, 0.1])
-                plt.tight_layout()
-            rr = torch.tensor(np.linspace(0, simulation_config.max_radius, 200)).to(device)
-            for n in range(n_particles):
-                embedding_ = model.a[dataset_num, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
-                in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                             rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
-                with torch.no_grad():
-                    func = model.lin_particle(in_features.float())
-                func = func[:, 0]
-                if n % 5 == 0:
-                    plt.plot(to_numpy(rr),
-                             to_numpy(func * ynorm),
-                             linewidth=8,
-                             color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
-                plt.ylim([-0.04, 0.03])
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/embedding/{model_name}_{dataset_name}_function_{epoch}_{N}.tif", dpi=300)
-            plt.close()
-
-
-
-        case 'PDE_A'| 'PDE_A_bis' | 'PDE_E' | 'PDE_B':
+        case 'PDE_A'| 'PDE_A_bis' | 'PDE_ParticleField_A' | 'PDE_E' | 'PDE_B':
             fig = plt.figure(figsize=(12, 12))
             if axis:
                 ax = fig.add_subplot(1, 1, 1)
@@ -311,7 +274,7 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
             rr = torch.tensor(np.linspace(0, simulation_config.max_radius, 200)).to(device)
             for n in range(n_particles):
                 embedding_ = model.a[dataset_num, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
-                if (model_config.particle_model_name == 'PDE_A'):
+                if (model_config.particle_model_name == 'PDE_A') | (model_config.particle_model_name == 'PDE_ParticleField_A'):
                     in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                              rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
                 elif (model_config.particle_model_name == 'PDE_A_bis'):
@@ -419,11 +382,7 @@ def choose_training_model(model_config, device):
     model=[]
     model_name = model_config.graph_model.particle_model_name
     match model_name:
-        case 'PDE_ParticleField_A':
-            model = Interaction_Particle_Scalar_Field(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
-        case 'PDE_ParticleField_B':
-            model = Interaction_Particle_Field(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
-        case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G':
+        case 'PDE_ParticleField_A' | 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G':
             model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
         case 'PDE_GS':

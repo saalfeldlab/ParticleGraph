@@ -35,13 +35,6 @@ def choose_model(config, device):
     params = config.simulation.params
 
     match particle_model_name:
-        case 'PDE_ParticleField_A':
-            p = torch.ones(n_particle_types, 4, device=device) + torch.rand(n_particle_types, 4, device=device)
-            if params[0] != [-1]:
-                for n in range(n_particle_types):
-                    p[n] = torch.tensor(params[n])
-            sigma = config.simulation.sigma
-            model = PDE_ParticleField_A(aggr_type=aggr_type, p=torch.squeeze(p), sigma=sigma, bc_dpos=bc_dpos, dimension=dimension, n_particles=n_particles, n_nodes=n_nodes)
         case 'PDE_ParticleField_B':
             # particle parameters
             p = torch.rand(n_particle_types, 4, device=device) * 100  # comprised between 10 and 50
@@ -51,7 +44,7 @@ def choose_model(config, device):
             else:
                 print(p)
             model = PDE_ParticleField_B(aggr_type=aggr_type,  pos_rate=[], neg_rate=[], coeff_diff=[], delta_t=config.simulation.delta_t,  p=torch.squeeze(p), bc_dpos=bc_dpos, n_particles=n_particles, n_nodes=n_nodes)
-        case 'PDE_A':
+        case 'PDE_A' | 'PDE_ParticleField_A' :
             p = torch.ones(n_particle_types, 4, device=device) + torch.rand(n_particle_types, 4, device=device)
             if config.simulation.non_discrete_level>0:
                 pp=[]
@@ -180,7 +173,7 @@ def choose_mesh_model(config, device):
                 c[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
             mesh_model = PDE_Laplacian(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
         case _:
-            raise ValueError(f'Unknown model {model_name}')
+            mesh_model = PDE_Z(device=device)
 
     return mesh_model
 
