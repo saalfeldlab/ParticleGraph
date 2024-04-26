@@ -1,12 +1,14 @@
 import glob
 import logging
 import os
+from typing import List
 
 import GPUtil
 import imageio
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from torch_geometric.data import Data
 from torchvision.transforms import CenterCrop
 
 
@@ -233,3 +235,13 @@ def create_log_dir(config, dataset_name):
     logger.info(config)
 
     return l_dir, log_dir, logger
+
+
+def bundle_fields(data: Data, *names: str) -> torch.Tensor:
+    tensors = []
+    for name in names:
+        tensor = data[name]
+        if tensor.dim() == 1:
+            tensor = tensor.unsqueeze(-1)
+        tensors.append(tensor)
+    return torch.concatenate(tensors, dim=-1)
