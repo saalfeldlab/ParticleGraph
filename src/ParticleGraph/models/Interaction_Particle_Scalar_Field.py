@@ -147,16 +147,13 @@ class Interaction_Particle_Scalar_Field(pyg.nn.MessagePassing):
         embedding_i = self.a[self.data_id, to_numpy(particle_id_i), :].squeeze()
 
         if mode == 'particle_to_particle':
-            in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None],
-                                                       dpos_x_j[:, None], dpos_y_j[:, None], embedding_i),
-                                                      dim=-1) * ((particle_type_i > -1)&(particle_type_j > -1)).float()
+            in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1) * ((particle_type_i > -1)&(particle_type_j > -1)).float()
             msg = self.lin_particle(in_features)
 
         elif mode == 'field_to_particle':
-            in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None],
-                                                       dpos_x_j[:, None], dpos_y_j[:, None], embedding_i),
-                                                      dim=-1) * ((particle_type_i > -1)&(particle_type_j > -1)).float()
+            in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1) * ((particle_type_i > -1)&(particle_type_j > -1)).float()
             out = u_j * self.lin_particle(in_features)
+            node_neighbour = (particle_type_j < 0).float()
 
             msg =  torch.cat((out, node_neighbour.repeat(1, 2)), 1)
 

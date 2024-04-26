@@ -29,6 +29,7 @@ class PDE_ParticleField_A(pyg.nn.MessagePassing):
 
         self.n_particles = n_particles
         self.n_nodes = n_nodes
+        self.l_nodes = int(np.sqrt(n_nodes))
 
         self.p = p
         self.bc_dpos = bc_dpos
@@ -39,19 +40,16 @@ class PDE_ParticleField_A(pyg.nn.MessagePassing):
 
     def forward(self, data):
 
-        x, edge_all, edge_particle, edge_mesh, edge_attr = data.x, data.edge_index, data.edge_particle, data.edge_mesh, data.edge_attr
+        x, edge, edge_attr = data.x, data.edge, data.edge_attr
 
-        edge_all, _ = pyg_utils.remove_self_loops(edge_all)
-
-        deg_particle = pyg_utils.degree(edge_particle[0, :].squeeze(), self.n_particles)
+        edge, _ = pyg_utils.remove_self_loops(edge)
 
         u = 0 * x[:, 6:7].clone().detach()
+        u = torch.reshape(u, (self.l_nodes, self.l_nodes))
 
         particle_id = to_numpy(x[0:self.n_nodes, 0])
         particle_id = particle_id.astype(int)
         particle_type = x[:, 5:6]
-        t = torch.relu(particle_type).squeeze().clone().detach()
-        t = to_numpy(t).astype(int)
         parameters = self.p[t, :]
 
         pos = x[:, 1:3]

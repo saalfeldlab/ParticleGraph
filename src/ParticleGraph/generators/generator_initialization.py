@@ -159,6 +159,10 @@ def init_mesh(config, model, device):
     mesh_data = {'mesh_pos': pos_3d, 'face': face, 'edge_index': edge_index_mesh, 'edge_weight': edge_weight_mesh,
                  'mask': mask_mesh, 'size': mesh_size}
 
+    if config.graph_model.particle_model_name == 'PDE_ParticleField_A':
+
+        type_mesh = 0 * type_mesh
+
     if config.graph_model.particle_model_name == 'PDE_ParticleField_B':
 
         a1 = 1E-2  # diffusion coefficient
@@ -177,7 +181,9 @@ def init_mesh(config, model, device):
         model.pos_rate = torch.tensor(pos_rate, device=device)
         model.neg_rate = - torch.ones_like(model.pos_rate) * a3 * torch.tensor(config.simulation.pos_rate[0], device=device)
 
+        type_mesh = -1.0 + type_mesh * -1.0
+
+    a_mesh = torch.zeros_like(type_mesh)
 
 
-
-    return pos_mesh, dpos_mesh, type_mesh, features_mesh, node_id_mesh, mesh_data
+    return pos_mesh, dpos_mesh, type_mesh, features_mesh, a_mesh, node_id_mesh, mesh_data

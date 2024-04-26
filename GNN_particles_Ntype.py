@@ -119,7 +119,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
         #     X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / n_particle_types
 
         if has_mesh:
-            X1_mesh, V1_mesh, T1_mesh, H1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
+            X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
             torch.save(mesh_data, f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt')
             mask_mesh = mesh_data['mask'].squeeze()
         if only_mesh | (model_config.particle_model_name == 'PDE_O'):
@@ -667,11 +667,9 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
         # initialize particle and graph states
         X1, V1, T1, H1, A1, N1, cycle_length, cycle_length_distrib = init_particles(config, device=device, cycle_length=cycle_length)
-        X1_mesh, V1_mesh, T1_mesh, H1_mesh, N1_mesh, mesh_data = init_mesh(config, model=model, device=device)
-        T1_mesh = -1.0 + T1_mesh * -1.0
-        A1_mesh = torch.zeros_like(T1_mesh)
+        X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, model=model, device=device)
+
         torch.save(mesh_data, f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt')
-        mask_mesh = mesh_data['mask'].squeeze()
 
         # matplotlib.use("Qt5Agg")
         # fig = plt.figure(figsize=(12, 12))
@@ -772,7 +770,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     V1 = y + drift
                     X1 = bc_pos(X1 + V1 * delta_t)
                     x_mesh_list.append(x_mesh.clone().detach())
-                    y_mesh_list.append(x_mesh[:,1:3].clone().detach())
+                    y_mesh_list.append(x_mesh[:,1:2].clone().detach())
                 case 'PDE_ParticleField_B':
                     with torch.no_grad():
                         y , drift, y_mesh  = model(dataset)
@@ -800,8 +798,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     H1_mesh[:, 0:1] += y_mesh * delta_t
                     H1_mesh[:, 0:1] = torch.clamp(H1_mesh[:, 0:1], min=0, max=7500)
                     y_mesh_list.append(y_mesh)
-
-
 
             A1 = A1 + delta_t
             # output plots
@@ -840,7 +836,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 plt.tight_layout()
                 plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/All_{run}_{it}.jpg", dpi=170.7)
                 plt.close()
-
 
         if bSave:
             torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
@@ -986,6 +981,7 @@ def data_train_particles(config, device):
         elif dimension == 3:
             index = np.argwhere(x[:, 7].detach().cpu().numpy() == n)
         index_particles.append(index.squeeze())
+
     if has_ghost:
 
         if False:
@@ -1105,7 +1101,7 @@ def data_train_particles(config, device):
         mu = ghosts_particles.mu
         optimizer_ghost_particles = torch.optim.Adam([mu], lr=1e-4)
         var = ghosts_particles.var
-        optimizer_ghost_particles.add_param_group({'params': [var], 'lr': 1e-5})
+        optimizer_ghost_particles.add_param_group({'params': [var], 'lr': 1e-4})
 
         mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
         mask_ghost = np.tile(mask_ghost, batch_size)
@@ -1823,10 +1819,9 @@ def data_train_particle_field(config, device):
                 optimizer_division.zero_grad()
 
             match config.graph_model.particle_model_name:
-
                 case 'PDE_ParticleField_A':
                     for batch in batch_loader:
-                        pred, u = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi)
+                        pred_y, u = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi)
                     if has_ghost:
                         loss = ((pred_y[mask_ghost] - y_batch)).norm(2)
                     else:
@@ -1917,28 +1912,47 @@ def data_train_particle_field(config, device):
         plt.ylabel('Embedding 1', fontsize=12)
 
         ax = fig.add_subplot(1, 6, 3)
-        rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
 
-        func_list = []
-        popt_list = []
-        for n in range(n_nodes):
-            embedding_ = model.a[1, n, :] * torch.ones((100, model_config.embedding_dim), device=device)
-            r = torch.tensor(np.linspace(-150, 150, 100)).to(device)
-            in_features = torch.cat((r[:, None], embedding_), dim=1)
-            h = model.lin_phi(in_features.float())
-            popt, pcov = curve_fit(linear_model, to_numpy(r.squeeze()), to_numpy(h.squeeze()))
-            popt_list.append(popt)
-            h = h[:, 0]
-            func_list.append(h)
-            if (n % 24):
-                plt.plot(to_numpy(r),
-                         to_numpy(h) * to_numpy(hnorm), linewidth=1,
-                         color='k', alpha=0.05)
-        func_list = torch.stack(func_list)
-        coeff_norm = to_numpy(func_list)
-        popt_list = np.array(popt_list)
-        proj_interaction = popt_list
-        proj_interaction[:, 1] = proj_interaction[:, 0]
+        match config.graph_model.particle_model_name:
+            case 'PDE_ParticleField_A':
+
+                rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+                if dimension == 2:
+                    column_dimension = 5
+                if dimension == 3:
+                    column_dimension = 7
+                func_list, proj_interaction = analyze_edge_function(rr=rr, vizualize=True, config=config,
+                                                                    model_lin_edge=model.lin_edge, model_a=model.a,
+                                                                    n_nodes = 0,
+                                                                    dataset_number=1,
+                                                                    n_particles=n_particles, ynorm=ynorm,
+                                                                    types=to_numpy(x[:, column_dimension]),
+                                                                    cmap=cmap, dimension=dimension, device=device)
+
+            case 'PDE_ParticleField_B':
+
+                rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+
+                func_list = []
+                popt_list = []
+                for n in range(n_nodes):
+                    embedding_ = model.a[1, n, :] * torch.ones((100, model_config.embedding_dim), device=device)
+                    r = torch.tensor(np.linspace(-150, 150, 100)).to(device)
+                    in_features = torch.cat((r[:, None], embedding_), dim=1)
+                    h = model.lin_phi(in_features.float())
+                    popt, pcov = curve_fit(linear_model, to_numpy(r.squeeze()), to_numpy(h.squeeze()))
+                    popt_list.append(popt)
+                    h = h[:, 0]
+                    func_list.append(h)
+                    if (n % 24):
+                        plt.plot(to_numpy(r),
+                                 to_numpy(h) * to_numpy(hnorm), linewidth=1,
+                                 color='k', alpha=0.05)
+                func_list = torch.stack(func_list)
+                coeff_norm = to_numpy(func_list)
+                popt_list = np.array(popt_list)
+                proj_interaction = popt_list
+                proj_interaction[:, 1] = proj_interaction[:, 0]
 
         ax = fig.add_subplot(1, 6, 4)
         match train_config.cluster_method:
