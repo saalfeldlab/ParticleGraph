@@ -1,7 +1,7 @@
 """
 A collection of functions for loading data from various sources.
 """
-from typing import Dict
+from typing import Dict, Tuple
 
 import astropy.units as u
 import pandas as pd
@@ -287,7 +287,7 @@ def load_wanglab_salivary_gland(
         file_path: str,
         *,
         device: str = 'cuda:0'
-) -> TimeSeries:
+) -> Tuple[TimeSeries, torch.Tensor]:
     """
     Load the Wanglab salivary gland data from a CSV file and convert it to a pytorch_geometric Data object.
 
@@ -316,7 +316,8 @@ def load_wanglab_salivary_gland(
     x = torch.tensor_split(raw_data['x'], time_jumps.tolist())
     y = torch.tensor_split(raw_data['y'], time_jumps.tolist())
     z = torch.tensor_split(raw_data['z'], time_jumps.tolist())
-    id = torch.tensor_split(raw_data['track_id'], time_jumps.tolist())
+    global_ids, id_indices = torch.unique(raw_data['track_id'], return_inverse=True)
+    id = torch.tensor_split(id_indices, time_jumps.tolist())
 
     # Combine the data into a TimeSeries object
     n_time_steps = len(time)
@@ -331,7 +332,7 @@ def load_wanglab_salivary_gland(
     field_descriptors = {
         'time': column_descriptors['t'],
         'pos': DerivedFieldDescriptor(description="concatenating", constituent_fields=[column_descriptors[key] for key in ['x', 'y', 'z']]),
-        'track_id': column_descriptors['track_id'],
+        'track_id': DerivedFieldDescriptor(description="finding indices of globally unique ids", constituent_fields=[column_descriptors['track_id']])
     }
     time_series = TimeSeries(time, data, field_descriptors)
 
@@ -341,4 +342,4 @@ def load_wanglab_salivary_gland(
         data[i].velocity = velocity[i]
     time_series.fields['velocity'] = DerivedFieldDescriptor(description="differentiating", constituent_fields=[time_series.fields['pos']])
 
-    return time_series
+    return time_series, global_ids
