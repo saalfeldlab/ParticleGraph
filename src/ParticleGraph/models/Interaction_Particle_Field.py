@@ -133,23 +133,9 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         # embedding_j = self.a[self.data_id, to_numpy(particle_id_j), :].squeeze()
 
         match self.model:
-            case 'PDE_A'|'PDE_ParticleField_A':
-                in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
-            case 'PDE_A_bis':
-                in_features = torch.cat((delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
-            case 'PDE_B' | 'PDE_B_bis':
-                in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
-                                         dpos_y_j[:, None], embedding_i), dim=-1)
-            case 'PDE_G':
-                in_features = torch.cat(
-                    (delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None], dpos_y_j[:, None],
-                     embedding_j),
-                    dim=-1)
-            case 'PDE_GS':
-                in_features = torch.cat((delta_pos, r[:, None], 10**embedding_j),dim=-1)
-            case 'PDE_E':
-                in_features = torch.cat(
-                    (delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
+            case 'PDE_ParticleField_A':
+                in_features = torch.cat((delta_pos, r[:, None], torch.zeros_like(r[:, None]), embedding_i), dim=-1)
+
 
         out = self.lin_edge(in_features)
 

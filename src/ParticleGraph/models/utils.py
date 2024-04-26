@@ -274,9 +274,12 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
             rr = torch.tensor(np.linspace(0, simulation_config.max_radius, 200)).to(device)
             for n in range(n_particles):
                 embedding_ = model.a[dataset_num, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
-                if (model_config.particle_model_name == 'PDE_A') | (model_config.particle_model_name == 'PDE_ParticleField_A'):
+                if (model_config.particle_model_name == 'PDE_A'):
                     in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                              rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
+                elif (model_config.particle_model_name == 'PDE_ParticleField_A'):
+                    in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                             rr[:, None] / simulation_config.max_radius, 0 * rr[:, None], embedding_), dim=1)
                 elif (model_config.particle_model_name == 'PDE_A_bis'):
                     in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                              rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
@@ -319,6 +322,13 @@ def analyze_edge_function(rr=None, vizualize=False, config=None, model_lin_edge=
                 else:
                     in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
                                              rr[:, None] / max_radius, embedding_), dim=1)
+            case 'PDE_ParticleField_A':
+                if dimension==2:
+                    in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                             rr[:, None] / max_radius, 0 * rr[:, None], embedding_), dim=1)
+                else:
+                    in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                             rr[:, None] / max_radius, 0 * rr[:, None], embedding_), dim=1)
             case 'PDE_A_bis':
                 in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                          rr[:, None] / max_radius, embedding_, embedding_), dim=1)
