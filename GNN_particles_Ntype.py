@@ -1127,9 +1127,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             torch.save(model_p_p.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
 
 
-
-
-
 def data_train(config, device):
 
     has_mesh = (config.graph_model.mesh_model_name != '')
@@ -2123,6 +2120,19 @@ def data_train_particle_field(config, device):
 
         old_batch_size = batch_size
         batch_size = get_batch_size(epoch)
+
+        f_p_mask=[]
+        for k in range(batch_size):
+            if k==0:
+                f_p_mask=np.zeros((n_nodes,1))
+                f_p_mask = np.concatenate((f_p_mask, np.ones((n_particles, 1))), axis=0)
+            else:
+                f_p_mask = np.concatenate((f_p_mask, np.zeros((n_nodes, 1))), axis=0)
+                f_p_mask = np.concatenate((f_p_mask, np.ones((n_particles, 1))), axis=0)
+        f_p_mask = np.argwhere(f_p_mask == 1)
+        f_p_mask = f_p_mask[:, 0]
+
+
         logger.info(f'batch_size: {batch_size}')
         if (epoch == 1) & (has_ghost):
             mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
@@ -2152,6 +2162,8 @@ def data_train_particle_field(config, device):
 
                 x = x_list[run][k].clone().detach()
                 x_mesh = x_mesh_list[run][k].clone().detach()
+
+                x_mesh [:,6:7] = model.field[run]
                 x_particle_field = torch.concatenate((x_mesh, x), dim=0)
 
                 if has_ghost:
@@ -2165,11 +2177,6 @@ def data_train_particle_field(config, device):
 
                     with torch.no_grad():
                         model.a[run,n_particles:n_particles+n_ghosts] = model.a[run,ghosts_particles.embedding_index].clone().detach()   # sample ghost embedding
-
-                # distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                # adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                # t = torch.Tensor([max_radius ** 2])
-                # edges = adj_t.nonzero().t().contiguous()
 
                 edges = edge_p_p_list[run][k]
                 dataset_p_p = data.Data(x=x[:, :], edge_index=edges)
@@ -2224,10 +2231,10 @@ def data_train_particle_field(config, device):
                 optimizer_division.zero_grad()
 
             for batch in batch_loader_p_p:
-                pred_p_p = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, field=False)
+                pred_p_p = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=False)
             for batch in batch_loader_f_p:
-                pred_f_p = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, field=True)
-                pred_f_p = pred_f_p[n_nodes:]
+                pred_f_p = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=True)
+            pred_f_p = pred_f_p[f_p_mask]
 
             if has_cell_division:
                 pred_division = model_division(time_batch, data_id=run)
@@ -2239,15 +2246,12 @@ def data_train_particle_field(config, device):
             if has_ghost:
                 loss = ((pred_p_p[mask_ghost] - y_batch)).norm(2) + var_batch.mean()
             else:
-                if not (has_large_range):
-                    loss = (pred_p_p - y_batch).norm(2)
-                else:
-                    loss = ((pred_p_p - y_batch) / (y_batch)).norm(2) / 1E9
+                loss = (pred_p_p + pred_f_p - y_batch).norm(2) + model.field.norm(2)
 
             visualize_embedding = True
             if visualize_embedding & (((epoch == 0) & (N < 10000) & (N % 200 == 0)) | (N==0)):
-                plot_training(config=config, dataset_name=dataset_name, model_name=model_config.particle_model_name, log_dir=log_dir,
-                              epoch=epoch, N=N, x=x, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
+                plot_training_particle_field(config=config, dataset_name=dataset_name, model_name=model_config.particle_model_name, log_dir=log_dir,
+                              epoch=epoch, N=N, x=x, model_field=model.field, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
                               index_particles=index_particles, n_particles=n_particles,
                               n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
 
@@ -2296,12 +2300,7 @@ def data_train_particle_field(config, device):
 
         if (simulation_config.n_interactions < 100) & (simulation_config.has_cell_division == False):
             ax = fig.add_subplot(1, 6, 3)
-            if model_config.particle_model_name == 'PDE_G':
-                rr = torch.tensor(np.linspace(0, max_radius * 1.3, 1000)).to(device)
-            elif model_config.particle_model_name == 'PDE_GS':
-                rr = torch.tensor(np.logspace(7, 9, 1000)).to(device)
-            else:
-                rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+            rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
             if dimension == 2:
                 column_dimension = 5
             if dimension == 3:
@@ -3595,7 +3594,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
 if __name__ == '__main__':
 
 
-    config_list = ['arbitrary_3_field']
+    config_list = ['arbitrary_3_field_1']
 
     for config_file in config_list:
         # Load parameters from config file
