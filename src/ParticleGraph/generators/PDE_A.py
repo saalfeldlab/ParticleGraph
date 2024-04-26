@@ -33,18 +33,31 @@ class PDE_A(pyg.nn.MessagePassing):
         self.dimension = dimension
 
     def forward(self, data):
-        x, edge_index = data.x, data.edge_index
+        x, edge_index, field = data.x, data.edge_index, data.field
+
+        if field == []:
+            field = torch.ones((x.shape[0], 1), device=x.device)
+
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         particle_type = to_numpy(x[:, 1 + 2*self.dimension])
         parameters = self.p[particle_type,:]
-        d_pos = self.propagate(edge_index, pos=x[:, 1:self.dimension+1], parameters=parameters, sigma=self.sigma)
+        d_pos = self.propagate(edge_index, pos=x[:, 1:self.dimension+1], parameters=parameters, field=field)
         return d_pos
 
-    def message(self, pos_i, pos_j, parameters_i):
+        import matplotlib
+        from matplotlib import pyplot as plt
+        matplotlib.use("Qt5Agg")
+        fig = plt.figure(figsize=(12, 12))
+        im = torch.reshape(field[0:10000, 0:1], (100, 100))
+        plt.imshow(to_numpy(im))
+
+    def message(self, pos_i, pos_j, parameters_i, field_j):
+
         distance_squared = torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, axis=1)  # squared distance
         psi = (parameters_i[:, 0] * torch.exp(-distance_squared ** parameters_i[:, 1] / (2 * self.sigma ** 2))
                - parameters_i[:, 2] * torch.exp(-distance_squared ** parameters_i[:, 3] / (2 * self.sigma ** 2)))
-        d_pos = psi[:, None] * self.bc_dpos(pos_j - pos_i)
+        d_pos = psi[:, None] * self.bc_dpos(pos_j - pos_i) * field_j
+
         return d_pos
 
     def psi(self, r, p):

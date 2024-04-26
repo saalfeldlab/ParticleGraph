@@ -18,7 +18,7 @@ simulation:
   diffusion_coefficients: [[0]]
   pos_rate: [[0]]
   neg_rate: [[0]]
-  node_value_map: 'pattern_16.tif'
+  node_value_map: 'pattern_Null.tif'
   node_type_map: 'pattern_Null.tif'
   node_diffusion_map: 'pattern_Null.tif'
   node_proliferation_map: 'pattern_Null.tif'

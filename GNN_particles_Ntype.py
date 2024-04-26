@@ -12,6 +12,7 @@ from torch_geometric.loader import DataLoader
 from torch_geometric.utils.convert import to_networkx
 # matplotlib.use("Qt5Agg")
 from torchvision.transforms import GaussianBlur
+from matplotlib import pyplot as plt
 
 from ParticleGraph.config import ParticleGraphConfig
 from ParticleGraph.data_loaders import *
@@ -29,8 +30,22 @@ from ParticleGraph.utils import *
 
 # os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
-
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
+                  scenario='none', device=None, bSave=True):
+
+    has_particle_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
+
+    if has_particle_field:
+        data_generate_particle_field(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5,
+                                     alpha=0.2, ratio=1,
+                                     scenario='none', device=None, bSave=True)
+    else:
+        data_generate_particle_particle(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5,
+                                        alpha=0.2, ratio=1,
+                                        scenario='none', device=None, bSave=True)
+
+
+def data_generate_particle_particle(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
     print('')
 
@@ -194,7 +209,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                     distance = torch.sum(bc_dpos(x[:, None, 1:dimension+1] - x[None, :, 1:dimension+1]) ** 2, dim=2)
                     adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
                     edge_index = adj_t.nonzero().t().contiguous()
-                    dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+                    dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=[])
 
                 # model prediction
                 with torch.no_grad():
@@ -597,6 +612,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
     min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
+    n_nodes = simulation_config.n_nodes
     delta_t = simulation_config.delta_t
     has_signal = (config.graph_model.signal_model_name != '')
     has_adjacency_matrix = (simulation_config.connectivity_file != '')
@@ -629,6 +645,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
     copyfile(os.path.realpath(__file__), os.path.join(folder, 'generation_code.py'))
 
     model_p_p, bc_pos, bc_dpos = choose_model(config, device=device)
+    model_f_p = model_p_p
 
     model_f_f = choose_mesh_model(config, device=device)
 
@@ -659,10 +676,20 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         y_list = []
         x_mesh_list = []
         y_mesh_list = []
+        edge_p_p_list = []
+        edge_p_f_list = []
+        edge_f_f_list = []
+        edge_f_p_list = []
+
 
         # initialize particle and mesh states
         X1, V1, T1, H1, A1, N1, cycle_length, cycle_length_distrib = init_particles(config, device=device,cycle_length=cycle_length)
         X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, model_mesh=model_f_f, device=device)
+
+        # matplotlib.use("Qt5Agg")
+        # fig = plt.figure(figsize=(12, 12))
+        # im = torch.reshape(H1_mesh[:,0:1],(100,100))
+        # plt.imshow(to_numpy(im))
 
         torch.save(mesh_data, f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt')
         mask_mesh = mesh_data['mask'].squeeze()
@@ -719,24 +746,35 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                                    H1.clone().detach(), A1.clone().detach()), 1)
             x_mesh = torch.concatenate(
                 (N1_mesh.clone().detach(), X1_mesh.clone().detach(), V1_mesh.clone().detach(),
-                 T1_mesh.clone().detach(), H1_mesh.clone().detach()), 1)
+                 T1_mesh.clone().detach(), H1_mesh.clone().detach(), A1_mesh.clone().detach()), 1)
+            x_particle_field = torch.concatenate((x_mesh, x), dim=0)
+
+
+            # compute connectivity rules
+
             dataset_mesh = data.Data(x=x_mesh, edge_index=mesh_data['edge_index'],
                                      edge_attr=mesh_data['edge_weight'], device=device)
 
-            # compute connectivity rule
-            if has_adjacency_matrix:
-                adj_t = adjacency > 0
-                edge_index = adj_t.nonzero().t().contiguous()
-                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
-            else:
-                distance = torch.sum(bc_dpos(x[:, None, 1:dimension+1] - x[None, :, 1:dimension+1]) ** 2, dim=2)
-                adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                edge_index = adj_t.nonzero().t().contiguous()
-                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+            distance = torch.sum(bc_dpos(x[:, None, 1:dimension+1] - x[None, :, 1:dimension+1]) ** 2, dim=2)
+            adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+            edge_index = adj_t.nonzero().t().contiguous()
+            dataset_p_p = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=[])
+            edge_p_p_list.append(edge_index)
+
+            distance = torch.sum(bc_dpos(x_particle_field[:, None, 1:dimension+1] - x_particle_field[None, :, 1:dimension+1]) ** 2, dim=2)
+            adj_t = ((distance < (max_radius/2) ** 2) & (distance > min_radius ** 2)).float() * 1
+            edge_index = adj_t.nonzero().t().contiguous()
+            pos = torch.argwhere((edge_index[1,:]>=n_nodes) & (edge_index[0,:]<n_nodes))
+            pos = to_numpy(pos[:,0])
+            edge_index = edge_index[:,pos]
+            dataset_f_p = data.Data(x=x_particle_field, pos=x_particle_field[:, 1:3], edge_index=edge_index, field=x_particle_field[:,6:7])
+            edge_f_p_list.append(edge_index)
 
             # model prediction
             with torch.no_grad():
-                y = model_p_p(dataset)
+                y0 = model_p_p(dataset_p_p)
+                y1 = model_f_p(dataset_f_p)[n_nodes:]
+                y = y0 + y1
 
             # append list
             if (it >= 0) & bSave:
@@ -784,7 +822,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
             # Mesh update
             x_mesh_list.append(x_mesh.clone().detach())
-            pred = []
+            pred = x_mesh[:,6:7]
             y_mesh_list.append(pred)
 
             # output plots
@@ -1082,6 +1120,8 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
             torch.save(x_mesh_list, f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt')
             torch.save(y_mesh_list, f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt')
+            torch.save(edge_p_p_list, f'graphs_data/graphs_{dataset_name}/edge_p_p_list{run}.pt')
+            torch.save(edge_f_p_list, f'graphs_data/graphs_{dataset_name}/edge_f_p_list{run}.pt')
             torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
             torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
             torch.save(model_p_p.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
@@ -1812,6 +1852,7 @@ def data_train_particle_field(config, device):
     max_radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
+    n_nodes = simulation_config.n_nodes
     delta_t = simulation_config.delta_t
     noise_level = train_config.noise_level
     dataset_name = config.dataset
@@ -1841,11 +1882,19 @@ def data_train_particle_field(config, device):
 
     x_list = []
     y_list = []
+    edge_p_p_list = []
+    edge_p_f_list = []
+    edge_f_f_list = []
+    edge_f_p_list = []
     for run in trange(NGraphs):
         x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
         y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
+        edge_p_p = torch.load(f'graphs_data/graphs_{dataset_name}/edge_p_p_list{run}.pt', map_location=device)
+        edge_f_p = torch.load(f'graphs_data/graphs_{dataset_name}/edge_f_p_list{run}.pt', map_location=device)
         x_list.append(x)
         y_list.append(y)
+        edge_p_p_list.append(edge_p_p)
+        edge_f_p_list.append(edge_f_p)
     x = x_list[0][0].clone().detach()
     y = y_list[0][0].clone().detach()
     for run in range(NGraphs):
@@ -1865,8 +1914,32 @@ def data_train_particle_field(config, device):
     print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
     logger.info(f'vnorm ynorm: {to_numpy(vnorm)} {to_numpy(ynorm)}')
 
+    x_mesh_list = []
+    y_mesh_list = []
+    time.sleep(0.5)
+    for run in trange(NGraphs):
+        x_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
+        x_mesh_list.append(x_mesh)
+        h = torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
+        y_mesh_list.append(h)
+    h = y_mesh_list[0][0].clone().detach()
+    for run in range(NGraphs):
+        for k in range(n_frames):
+            h = torch.cat((h, y_mesh_list[run][k].clone().detach()), 0)
+    hnorm = torch.std(h)
+    torch.save(hnorm, os.path.join(log_dir, 'hnorm.pt'))
+    print(f'hnorm: {to_numpy(hnorm)}')
+    logger.info(f'hnorm: {to_numpy(hnorm)}')
+    time.sleep(0.5)
+    mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_1.pt', map_location=device)
+    mask_mesh = mesh_data['mask']
+    mask_mesh = mask_mesh.repeat(batch_size, 1)
+    edge_index_mesh = mesh_data['edge_index']
+    edge_weight_mesh = mesh_data['edge_weight']
+
     x = []
     y = []
+    h = []
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
@@ -2069,7 +2142,8 @@ def data_train_particle_field(config, device):
 
             run = 1 + np.random.randint(NGraphs - 1)
 
-            dataset_batch = []
+            dataset_batch_p_p = []
+            dataset_batch_f_p = []
             time_batch = []
 
             for batch in range(batch_size):
@@ -2077,6 +2151,8 @@ def data_train_particle_field(config, device):
                 k = 1 + np.random.randint(n_frames - 2)
 
                 x = x_list[run][k].clone().detach()
+                x_mesh = x_mesh_list[run][k].clone().detach()
+                x_particle_field = torch.concatenate((x_mesh, x), dim=0)
 
                 if has_ghost:
                     x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k, bc_pos=bc_pos)
@@ -2090,12 +2166,18 @@ def data_train_particle_field(config, device):
                     with torch.no_grad():
                         model.a[run,n_particles:n_particles+n_ghosts] = model.a[run,ghosts_particles.embedding_index].clone().detach()   # sample ghost embedding
 
-                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                t = torch.Tensor([max_radius ** 2])
-                edges = adj_t.nonzero().t().contiguous()
-                dataset = data.Data(x=x[:, :], edge_index=edges)
-                dataset_batch.append(dataset)
+                # distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                # adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                # t = torch.Tensor([max_radius ** 2])
+                # edges = adj_t.nonzero().t().contiguous()
+
+                edges = edge_p_p_list[run][k]
+                dataset_p_p = data.Data(x=x[:, :], edge_index=edges)
+                dataset_batch_p_p.append(dataset_p_p)
+
+                edges = edge_f_p_list[run][k]
+                dataset_f_p = data.Data(x=x_particle_field[:, :], edge_index=edges)
+                dataset_batch_f_p.append(dataset_f_p)
 
                 y = y_list[run][k].clone().detach()
                 if noise_level > 0:
@@ -2131,15 +2213,21 @@ def data_train_particle_field(config, device):
                         var = torch.mean(ghosts_particles.var[run,k],dim=0)
                         var_batch = torch.cat((var_batch, var[:, None]), dim=0)
 
-            batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
+            batch_loader_p_p = DataLoader(dataset_batch_p_p, batch_size=batch_size, shuffle=False)
+            batch_loader_f_p = DataLoader(dataset_batch_f_p, batch_size=batch_size, shuffle=False)
+
             optimizer.zero_grad()
+
             if has_ghost:
                 optimizer_ghost_particles.zero_grad()
             if has_cell_division:
                 optimizer_division.zero_grad()
 
-            for batch in batch_loader:
-                pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi)
+            for batch in batch_loader_p_p:
+                pred_p_p = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, field=False)
+            for batch in batch_loader_f_p:
+                pred_f_p = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, field=True)
+                pred_f_p = pred_f_p[n_nodes:]
 
             if has_cell_division:
                 pred_division = model_division(time_batch, data_id=run)
@@ -2149,12 +2237,12 @@ def data_train_particle_field(config, device):
                 total_loss_division += loss_division.item()
 
             if has_ghost:
-                loss = ((pred[mask_ghost] - y_batch)).norm(2) + var_batch.mean()
+                loss = ((pred_p_p[mask_ghost] - y_batch)).norm(2) + var_batch.mean()
             else:
                 if not (has_large_range):
-                    loss = (pred - y_batch).norm(2)
+                    loss = (pred_p_p - y_batch).norm(2)
                 else:
-                    loss = ((pred - y_batch) / (y_batch)).norm(2) / 1E9
+                    loss = ((pred_p_p - y_batch) / (y_batch)).norm(2) / 1E9
 
             visualize_embedding = True
             if visualize_embedding & (((epoch == 0) & (N < 10000) & (N % 200 == 0)) | (N==0)):
@@ -3517,8 +3605,7 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        # data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, bSave=True, step=10) #config.simulation.n_frames // 7)
-        # data_generate_particle_field(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=10) #config.simulation.n_frames // 20)
+        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=10) #config.simulation.n_frames // 20)
         data_train(config, device)
         # data_test(config, visualize=True, style='color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 40, test_simulation=False, sample_embedding=True, device=device)
 

@@ -1,41 +1,20 @@
-import glob
-import logging
 import time
-from shutil import copyfile
 
+from matplotlib.ticker import FormatStrFormatter
 # import networkx as nx
-import torch.nn as nn
-import torch_geometric.data as data
-import umap
-from prettytable import PrettyTable
-from scipy.optimize import curve_fit
-from scipy.spatial import Delaunay
-from torch_geometric.loader import DataLoader
-from torch_geometric.utils.convert import to_networkx
-from tqdm import trange
-import os
 from sklearn import metrics
-from matplotlib import rc
-import matplotlib
-# matplotlib.use("Qt5Agg")
 
 from ParticleGraph.config import ParticleGraphConfig
-from ParticleGraph.generators.generator_initialization import init_particles, init_mesh
-from ParticleGraph.generators.utils import choose_model, choose_mesh_model
-from ParticleGraph.models.utils import *
-from ParticleGraph.models.Ghost_Particles import Ghost_Particles
-
-# os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
-
 from ParticleGraph.data_loaders import *
-from ParticleGraph.utils import *
-from ParticleGraph.fitting_models import linear_model
 from ParticleGraph.embedding_cluster import *
 from ParticleGraph.models import Division_Predictor
+from ParticleGraph.models.Ghost_Particles import Ghost_Particles
 from ParticleGraph.models.utils import *
-from matplotlib.ticker import FormatStrFormatter
+from ParticleGraph.utils import *
 
-from GNN_particles_PlotFigure import plot_embedding, plot_function, plot_umap, plot_confusion_matrix, Mesh_RPS_extract
+
+# matplotlib.use("Qt5Agg")
+# os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
 def data_plot_training(config, mode, device):
     print('')

@@ -1,6 +1,6 @@
 import torch
 from prettytable import PrettyTable
-from ParticleGraph.models import Interaction_Particles, Interaction_Particle_Scalar_Field, Interaction_Particle_Field, Signal_Propagation, Mesh_Laplacian, Mesh_RPS
+from ParticleGraph.models import Interaction_Particles, Interaction_Particle_Field, Signal_Propagation, Mesh_Laplacian, Mesh_RPS
 from ParticleGraph.utils import choose_boundary_values
 from ParticleGraph.utils import to_numpy
 import numpy as np
@@ -382,7 +382,12 @@ def choose_training_model(model_config, device):
     model=[]
     model_name = model_config.graph_model.particle_model_name
     match model_name:
-        case 'PDE_ParticleField_A' | 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G':
+
+        case 'PDE_ParticleField_A':
+            model = Interaction_Particle_Field(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos,
+                                          dimension=dimension)
+            model.edges = []
+        case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G':
             model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
         case 'PDE_GS':
