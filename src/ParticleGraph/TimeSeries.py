@@ -1,6 +1,6 @@
 import os
 from collections.abc import Sequence
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 import torch
 from torch_geometric.data import Data
@@ -62,15 +62,16 @@ class TimeSeries(Sequence):
             self,
             field_name: str,
             *,
-            id_name: str = None
-    ) -> List[torch.Tensor]:
+            id_name: str = None,
+    ) -> List[torch.Tensor] | Tuple[List[torch.Tensor], List[torch.Tensor]]:
         """
         Compute the backward difference quotient of a field in a time series.
         :param time_series: The time series over which to compute the difference quotient.
         :param field_name: The field for which to compute the difference quotient.
         :param id_name: If given, this field is used to match data points between time steps. Ids are assumed to be unique.
         :return: A list of tensors containing the difference quotient at each time step. Where the difference quotient could
-            not be computed, the corresponding entry is Nan.
+            not be computed, the corresponding entry is Nan. If id_name is given, a list of masks is also returned, indicating
+            which entries could not be computed.
         """
         difference_quotients = [torch.full_like(getattr(self[0], field_name), torch.nan)]
         for i in range(1, len(self)):
@@ -101,4 +102,9 @@ class TimeSeries(Sequence):
                 difference_quotient = all_differences[indices_current] / delta_t
                 difference_quotients.append(difference_quotient)
 
-        return difference_quotients
+        if id_name is None:
+            return difference_quotients
+        else:
+            # Compute a mask which entries could not be computed
+            mask = [torch.any(torch.isnan(dq), dim=1) for dq in difference_quotients]
+            return difference_quotients, mask

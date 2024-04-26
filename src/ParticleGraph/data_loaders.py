@@ -337,7 +337,7 @@ def load_wanglab_salivary_gland(
     time_series = TimeSeries(time, data, field_descriptors)
 
     # Compute the velocity as the derivative of the position and add it to the time series
-    velocity = time_series.compute_derivative('pos', id_name='track_id')
+    velocity, _ = time_series.compute_derivative('pos', id_name='track_id')
     for i in range(n_time_steps):
         data[i].velocity = velocity[i]
     time_series.fields['velocity'] = DerivedFieldDescriptor(description="differentiating", constituent_fields=[time_series.fields['pos']])
