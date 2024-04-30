@@ -119,6 +119,12 @@ def init_mesh(config, model_mesh, device):
     type_mesh = torch.tensor(values, device=device)
     type_mesh = type_mesh[:, None]
 
+    i0 = imread(f'graphs_data/{node_type_map}')
+    values = i0[(to_numpy(x_mesh[:, 0]) * 255).astype(int), (to_numpy(y_mesh[:, 0]) * 255).astype(int)]
+    values = np.round(values / np.max(values) * simulation_config.n_node_types) - 1
+    type_mesh = torch.tensor(values, device=device)
+    type_mesh = type_mesh[:, None]
+
     node_id_mesh = torch.arange(n_nodes, device=device)
     node_id_mesh = node_id_mesh[:, None]
     dpos_mesh = torch.zeros((n_nodes, 2), device=device)

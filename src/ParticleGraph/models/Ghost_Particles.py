@@ -7,11 +7,13 @@ class Ghost_Particles(torch.nn.Module):
     def __init__(self, model_config, n_particles, vnorm, device):
         super(Ghost_Particles, self).__init__()
         self.n_ghosts = model_config.training.n_ghosts
+        self.ghost_logvar = model_config.training.ghost_logvar
         self.n_frames = model_config.simulation.n_frames
         self.n_dataset = model_config.training.n_runs
         self.vnorm = vnorm
         # self.model_siren = model_siren
         self.device = device
+
 
         # self.ghost_pos = nn.Parameter(torch.rand((self.n_dataset, self.n_frames, self.n_ghosts, 2), device=device, requires_grad=True))
         if model_config.graph_model.particle_model_name == 'PDE_B':
@@ -26,8 +28,10 @@ class Ghost_Particles(torch.nn.Module):
         self.A1 = torch.zeros(self.n_ghosts, device=device, requires_grad=False)
 
         self.mu = nn.Parameter(torch.rand((self.n_dataset, self.n_frames, self.n_ghosts, 2), device=device, requires_grad=True))
-        self.var = nn.Parameter(torch.ones((self.n_dataset, self.n_frames, self.n_ghosts, 1), device=device, requires_grad=True)*(-6))
+        self.var = nn.Parameter(torch.tensor(self.ghost_logvar*np.ones((self.n_dataset, self.n_frames, self.n_ghosts, 1)), dtype=torch.float32 ,device=device, requires_grad=True))
         # logvar = 7 -> std =0.03
+        # transform var into self.var FloatTensor
+
 
         embedding_index = int(n_particles)
         embedding_index = np.arange(embedding_index)

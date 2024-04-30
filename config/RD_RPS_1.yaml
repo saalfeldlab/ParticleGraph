@@ -1,5 +1,5 @@
 description: 'Rock Paper Scissor model'
-dataset: 'RD_RPS'
+dataset: 'RD_RPS_1'
 
 simulation:
   params: [[0],[0],[0],[0]]
