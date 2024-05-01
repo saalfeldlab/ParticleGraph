@@ -5,6 +5,7 @@ import torch_geometric.utils as pyg_utils
 import os
 from ParticleGraph.MLP import MLP
 import imageio
+from matplotlib import rc
 
 
 from ParticleGraph.generators import RD_RPS
@@ -525,7 +526,6 @@ def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoc
 
     return Accuracy
 
-
 def data_plot_attraction_repulsion():
 
     # Load parameters from config file
@@ -605,8 +605,6 @@ def data_plot_attraction_repulsion():
     ax = fig.add_subplot(3, 4, 6)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
     func_list = plot_function(True,'f)', config.graph_model.particle_model_name, model.lin_edge, model.a, 1, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap,device)
-
-
 
     ax = fig.add_subplot(3, 4, 7)
     proj_interaction, new_labels, n_clusters = plot_umap('g)', func_list, log_dir, 500, index_particles, n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap,device)
@@ -1095,18 +1093,16 @@ def data_plot_gravity():
     y_list = []
     print('Load normalizations ...')
     time.sleep(1)
-    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device))
-    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_0.pt', map_location=device))
+    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_1.pt', map_location=device))
+    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_1.pt', map_location=device))
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     x = x_list[0][0].clone().detach()
 
+    type_list = x[:, 5:6].clone().detach()
     index_particles = []
     for n in range(n_particle_types):
-        if dimension == 2:
-            index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
-        elif dimension == 3:
-            index = np.argwhere(x[:, 7].detach().cpu().numpy() == n)
+        index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
         index_particles.append(index.squeeze())
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
@@ -1333,7 +1329,7 @@ def data_plot_gravity():
     plt.xlim([0, 5.5])
     plt.ylim([0, 5.5])
 
-    threshold = 0.2
+    threshold = 0.4
     relative_error = np.abs(y_data-x_data)/x_data
     print(f'outliers: {np.sum(relative_error>threshold)} / {n_particles}')
 
@@ -4449,12 +4445,9 @@ if __name__ == '__main__':
 
     # config_list = ['gravity_16','gravity_16_noise_1E-5','gravity_16_noise_1E-4','gravity_16_noise_1E-3','gravity_16_noise_1E-2','gravity_16_noise_1E-1']
     # config_list = ['gravity_16_dropout_10_no_ghost', 'gravity_16_dropout_10', 'gravity_16_dropout_20', 'gravity_16_dropout_30', 'gravity_16_dropout_40', 'gravity_16_dropout_50']
-    config_list = ['gravity_16_dropout_10']
+    config_list = ['gravity_16_dropout_20'] # ['gravity_16_dropout_10_no_ghost','gravity_16_dropout_10','gravity_16_dropout_20','gravity_16_dropout_30']
 
     for config_name in config_list:
 
         data_plot_gravity()
-
-
-
 

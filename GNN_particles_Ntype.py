@@ -469,8 +469,8 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
                     else:
                         # matplotlib.use("Qt5Agg")
 
-                        plt.rcParams['text.usetex'] = True
-                        rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+                        # plt.rcParams['text.usetex'] = True
+                        # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
                         matplotlib.rcParams['savefig.pad_inches'] = 0
                         fig = plt.figure(figsize=(12, 12))
@@ -490,6 +490,7 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
                         # plt.autoscale(tight=True)
                         if has_mesh:
                             pts = x_mesh[:, 1:3].detach().cpu().numpy()
+
                             tri = Delaunay(pts)
                             colors = torch.sum(x_mesh[tri.simplices, 6], dim=1) / 3.0
                             match model_config.mesh_model_name:
@@ -3580,7 +3581,12 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
 if __name__ == '__main__':
 
 
-    config_list = ['boids_64_bis']
+    # config_list = ['arbitrary_16_noise_0_2','arbitrary_16_noise_0_3','arbitrary_16_noise_0_4','arbitrary_16_noise_0_5']
+    # config_list = ['gravity_16_noise_0_2', 'gravity_16_noise_0_3', 'gravity_16_noise_0_4','gravity_16_noise_0_5']
+    # config_list = ['boids_16_noise_0_2', 'boids_16_noise_0_3', 'boids_16_noise_0_4', 'boids_16_noise_0_5']
+
+    config_list = ['wave_slit']
+
 
     for config_file in config_list:
         # Load parameters from config file
@@ -3590,8 +3596,8 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
-        data_train(config, device)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 2)
+        # data_train(config, device)
         # data_test(config, visualize=True, style='color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 40, test_simulation=False, sample_embedding=False, device=device)
 
 

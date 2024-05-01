@@ -198,13 +198,8 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
 
             if  model_config.embedding_dim == 3:
                 plt.close()
-                # ax = fig.add_subplot(1, 1, 1, projection='3d')
-                # for n in range(n_particle_types):
-                #     ax.scatter3D(embedding[index_particles[n], 0],
-                #                 embedding[index_particles[n], 1], embedding[index_particles[n], 2], color=cmap.color(n), s=200)  #
-
             # matplotlib.use("Qt5Agg")
-                canvas = vispy.scene.SceneCanvas(show=False)
+                canvas = vispy.scene.SceneCanvas(show=False,  bgcolor='w',) # show=False) keys='interactive', show=True)
                 view = canvas.central_widget.add_view()
                 # generate data
                 pos = embedding
