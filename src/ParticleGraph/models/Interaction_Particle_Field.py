@@ -56,6 +56,9 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         self.n_ghosts = int(train_config.n_ghosts)
         self.dimension = dimension
 
+        print('Model:', self.n_particles, self.n_ghosts)
+
+
         if train_config.large_range:
             self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device, activation='tanh')
@@ -132,6 +135,7 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
             new_dpos_y_j = -self.sin_phi * dpos_x_j + self.cos_phi * dpos_y_j
             dpos_x_j = new_dpos_x_j
             dpos_y_j = new_dpos_y_j
+
 
         embedding_i = self.a[self.data_id, to_numpy(particle_id_i), :].squeeze()
         # embedding_j = self.a[self.data_id, to_numpy(particle_id_j), :].squeeze()

@@ -1,21 +1,23 @@
+import matplotlib
+import matplotlib.pyplot as plt
+# matplotlib.use("Qt5Agg")
+import numpy as np
 import torch
-from prettytable import PrettyTable
-from ParticleGraph.models import Interaction_Particles, Interaction_Particle_Field, Signal_Propagation, Mesh_Laplacian, Mesh_RPS
+import umap
+import vispy.scene
+import vispy.plot as vp
+import vispy.io as io
+from matplotlib.ticker import FormatStrFormatter
+from scipy.optimize import curve_fit
+from vispy.scene import visuals
+
+from ParticleGraph.fitting_models import linear_model
+from ParticleGraph.models import Interaction_Particles, Interaction_Particle_Field, Signal_Propagation, Mesh_Laplacian, \
+    Mesh_RPS
 from ParticleGraph.utils import choose_boundary_values
 from ParticleGraph.utils import to_numpy
-import numpy as np
-import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
-from scipy.spatial import Delaunay
-from ParticleGraph.utils import to_numpy
-from ParticleGraph.fitting_models import linear_model
-import umap
 
-import matplotlib.pyplot as plt
-import matplotlib
-from matplotlib.ticker import FormatStrFormatter
-from matplotlib import rc
-# matplotlib.use("Qt5Agg")
+
 
 def get_embedding(model_a=None, dataset_number = 0):
     embedding = []
@@ -57,7 +59,7 @@ def plot_training_particle_field(config, dataset_name, model_name, log_dir, epoc
                         embedding[index_particles[n], 1], color=cmap.color(n), s=200)  #
 
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/embedding/{model_name}_{dataset_name}_embedding_{epoch}_{N}.tif", dpi=170.7)
+    plt.savefig(f"./{log_dir}/tmp_training/embedding/particle/{model_name}_{dataset_name}_embedding_{epoch}_{N}.tif", dpi=170.7)
     plt.close()
 
     fig = plt.figure(figsize=(12, 12))
@@ -67,7 +69,7 @@ def plot_training_particle_field(config, dataset_name, model_name, log_dir, epoc
         # ax.yaxis.get_major_formatter()._usetex = False
         ax.xaxis.set_major_locator(plt.MaxNLocator(3))
         ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
+        # plt.xlabel(r'$d_{ij}$', fontsize=64)
         # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
         plt.xticks(fontsize=32)
         plt.yticks(fontsize=32)
@@ -91,16 +93,16 @@ def plot_training_particle_field(config, dataset_name, model_name, log_dir, epoc
                      color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
     plt.ylim([-0.04, 0.03])
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/embedding/{model_name}_{dataset_name}_function_{epoch}_{N}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/tmp_training/embedding/function/{model_name}_{dataset_name}_function_{epoch}_{N}.tif", dpi=300)
     plt.close()
 
     fig = plt.figure(figsize=(12, 12))
     im = to_numpy(model_field[dataset_num])
     im = np.reshape(im, (100, 100))
     plt.imshow(im)
-    plt.colorbar()
+    plt.gca().invert_yaxis()
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/embedding/{model_name}_{dataset_name}_field_{epoch}_{N}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/tmp_training/embedding/field/{model_name}_{dataset_name}_field_{epoch}_{N}.tif", dpi=300)
     plt.close()
 
 def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
@@ -146,8 +148,6 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
         plt.imshow(t/np.mean(t), cmap='viridis')
         plt.xticks([])
         plt.yticks([])
-
-
         # uu = torch.tensor(np.linspace(0, 7500, 200)).to(device)
         # popt_list = []
         # for n in range(n_nodes):
@@ -188,18 +188,43 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
             plt.yticks(fontsize=32.0)
         else:
             plt.axis('off')
+
         embedding = get_embedding(model.a, dataset_num)
         embedding = embedding[n_nodes:,:]
+
         if n_particle_types > 1000:
             plt.scatter(embedding[:, 0], embedding[:, 1], c=to_numpy(x[:, 5])/n_particles, s=5, cmap='viridis')
         else:
-            for n in range(n_particle_types):
-                plt.scatter(embedding[index_particles[n], 0],
-                            embedding[index_particles[n], 1], color=cmap.color(n), s=200)  #
 
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/embedding/{model_name}_{dataset_name}_embedding_{epoch}_{N}.tif", dpi=170.7)
-        plt.close()
+            if  model_config.embedding_dim == 3:
+                plt.close()
+            # matplotlib.use("Qt5Agg")
+                canvas = vispy.scene.SceneCanvas(show=False,  bgcolor='w',) # show=False) keys='interactive', show=True)
+                view = canvas.central_widget.add_view()
+                # generate data
+                pos = embedding
+                for n in range(n_particle_types):
+                    scatter = visuals.Markers()
+                    c =cmap.color(n)
+                    scatter.set_data(pos[index_particles[n]], edge_width=0, face_color=c, size=10)
+                    view.add(scatter)
+                view.camera = 'turntable'  # or try 'arcball'
+                try:
+                    image = canvas.render()
+                    io.write_png( f"./{log_dir}/tmp_training/embedding/particle/{model_name}_{dataset_name}_embedding_{epoch}_{N}.tif", image)
+                    canvas.close()
+                except:
+                    print('Error in vispy')
+
+            else:
+                ax = fig.add_subplot(1, 1, 1)
+                for n in range(n_particle_types):
+                    plt.scatter(embedding[index_particles[n], 0],
+                                embedding[index_particles[n], 1], color=cmap.color(n), s=200)
+
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_training/embedding/particle/{model_name}_{dataset_name}_embedding_{epoch}_{N}.tif", dpi=170.7)
+                plt.close()
 
     match model_name:
 
@@ -230,7 +255,7 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
             plt.xticks([])
             plt.yticks([])
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/embedding/mesh_map_{dataset_name}_{epoch}_{N}.tif",
+            plt.savefig(f"./{log_dir}/tmp_training/embedding/function/mesh_map_{dataset_name}_{epoch}_{N}.tif",
                         dpi=300)
 
             # fig = plt.figure(figsize=(8, 8))
@@ -273,7 +298,7 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
             plt.xlim([-10, 4])
             plt.ylim([-10, 4])
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/embedding/func_{dataset_name}_{epoch}_{N}.tif", dpi=300)
+            plt.savefig(f"./{log_dir}/tmp_training/embedding/function/func_{dataset_name}_{epoch}_{N}.tif", dpi=300)
             plt.close()
 
         case 'PDE_B':
@@ -282,7 +307,7 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
             rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
             func_list = []
             for n in range(n_particles):
-                embedding_ = model.a[1, n, :] * torch.ones((1000, 2), device=device)
+                embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
                 in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                          torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
                                          0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
@@ -296,7 +321,7 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
             plt.ylim([-1E-4, 1E-4])
             plt.axis('off')
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/embedding/{model_name}_{dataset_name}_function_{epoch}_{N}.tif",dpi=170.7)
+            plt.savefig(f"./{log_dir}/tmp_training/embedding/function/{model_name}_{dataset_name}_function_{epoch}_{N}.tif",dpi=170.7)
             plt.close()
 
         case 'PDE_G':
@@ -330,7 +355,7 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
             plt.xlim([0, 0.02])
             plt.ylim([0, 0.5E6])
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/embedding/{model_name}_{dataset_name}_function_{epoch}_{N}.tif", dpi=300)
+            plt.savefig(f"./{log_dir}/tmp_training/embedding/function/{model_name}_{dataset_name}_function_{epoch}_{N}.tif", dpi=300)
             plt.close()
 
         case 'PDE_A'| 'PDE_A_bis' | 'PDE_ParticleField_A' | 'PDE_E' | 'PDE_B':
@@ -341,7 +366,7 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
                 # ax.yaxis.get_major_formatter()._usetex = False
                 ax.xaxis.set_major_locator(plt.MaxNLocator(3))
                 ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-                plt.xlabel(r'$d_{ij}$', fontsize=64)
+                # plt.xlabel(r'$d_{ij}$', fontsize=64)
                 # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
                 plt.xticks(fontsize=32)
                 plt.yticks(fontsize=32)
@@ -382,7 +407,7 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
                              color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
                 plt.ylim([-0.04, 0.03])
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/embedding/{model_name}_{dataset_name}_function_{epoch}_{N}.tif", dpi=300)
+            plt.savefig(f"./{log_dir}/tmp_training/embedding/function/{model_name}_{dataset_name}_function_{epoch}_{N}.tif", dpi=300)
             plt.close()
 
 def analyze_edge_function(rr=None, vizualize=False, config=None, model_lin_edge=[], model_a=None, n_nodes=0, dataset_number = 0, n_particles=None, ynorm=None, types=None, cmap=None, dimension=2, device=None):
@@ -392,11 +417,11 @@ def analyze_edge_function(rr=None, vizualize=False, config=None, model_lin_edge=
         max_radius = config.simulation.max_radius
         match config.graph_model.particle_model_name:
             case 'PDE_A':
-                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                          rr[:, None] / max_radius, embedding_), dim=1)
             case 'PDE_ParticleField_A':
-                in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                         rr[:, None] / simulation_config.max_radius, torch.ones_like(rr[:, None]),
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                         rr[:, None] / max_radius, torch.ones_like(rr[:, None]),
                                          embedding_), dim=1)
             case 'PDE_A_bis':
                 in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],

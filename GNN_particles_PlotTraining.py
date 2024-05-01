@@ -11,6 +11,7 @@ from ParticleGraph.models import Division_Predictor
 from ParticleGraph.models.Ghost_Particles import Ghost_Particles
 from ParticleGraph.models.utils import *
 from ParticleGraph.utils import *
+from matplotlib import rc
 
 
 # matplotlib.use("Qt5Agg")
@@ -19,8 +20,8 @@ from ParticleGraph.utils import *
 def data_plot_training(config, mode, device):
     print('')
 
-    # plt.rcParams['text.usetex'] = True
-    # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+    plt.rcParams['text.usetex'] = True
+    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
     simulation_config = config.simulation
     train_config = config.training
@@ -256,7 +257,7 @@ def data_plot_training(config, mode, device):
             case 'distance_plot':
                 labels, n_clusters = embedding_cluster.get(proj_interaction, 'distance')
             case 'distance_embedding':
-                labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=1.5)
+                labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=0.05)
                 proj_interaction = embedding
             case 'distance_both':
                 new_projection = np.concatenate((proj_interaction, embedding), axis=-1)
@@ -492,8 +493,8 @@ def data_plot_training(config, mode, device):
             plt.yticks(fontsize=32)
             plt.xlim([0, max_radius])
             # plt.ylim([-0.15, 0.15])
-            # plt.ylim([-0.04, 0.03])
-            plt.ylim([-0.1, 0.1])
+            plt.ylim([-0.04, 0.03])
+            # plt.ylim([-0.1, 0.1])
 
             plt.xlabel(r'$d_{ij}$', fontsize=64)
             plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
@@ -1375,7 +1376,9 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_3_dropout_10']
+    config_list = ['boids_64_bis']
+
+    # config_list = ['arbitrary_3_dropout_10_no_ghost','arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30','arbitrary_3_dropout_40']
 
     for config_file in config_list:
 

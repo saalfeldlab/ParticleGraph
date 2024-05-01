@@ -11,6 +11,8 @@ from tifffile import imread
 from torch_geometric.loader import DataLoader
 from torch_geometric.utils.convert import to_networkx
 # matplotlib.use("Qt5Agg")
+from scipy.optimize import curve_fit
+from scipy.spatial import Delaunay
 from torchvision.transforms import GaussianBlur
 from matplotlib import pyplot as plt
 
@@ -18,8 +20,7 @@ from ParticleGraph.config import ParticleGraphConfig
 from ParticleGraph.data_loaders import *
 from ParticleGraph.embedding_cluster import *
 from ParticleGraph.fitting_models import linear_model
-from ParticleGraph.generators.generator_initialization import init_particles, init_mesh
-from ParticleGraph.generators.utils import choose_model, choose_mesh_model, generate_from_data
+from ParticleGraph.generators.utils import *
 from ParticleGraph.models import Division_Predictor
 # from ParticleGraph.Plot3D import *
 from ParticleGraph.models import Siren_Network
@@ -40,12 +41,12 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                                      alpha=0.2, ratio=1,
                                      scenario='none', device=None, bSave=True)
     else:
-        data_generate_particle_particle(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5,
+        data_generate_node_node(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
                                         alpha=0.2, ratio=1,
-                                        scenario='none', device=None, bSave=True)
+                                        scenario=scenario, device=device, bSave=bSave)
 
 
-def data_generate_particle_particle(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
+def data_generate_node_node(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
     print('')
 
@@ -283,15 +284,6 @@ def data_generate_particle_particle(config, visualize=True, run_vizualized=0, st
                             pred = mesh_model(dataset_mesh)
                             H1_mesh[mesh_data['mask'].squeeze(), :] += pred[mesh_data['mask'].squeeze(), :] * delta_t
                             H1 = H1_mesh.clone().detach()
-                    case 'Chemotaxism_Mesh':
-                        with torch.no_grad():
-                            pred = mesh_model(dataset_mesh)
-                            H1_mesh[mesh_data['mask'].squeeze(), :] += pred[mesh_data['mask'].squeeze(), :] * delta_t
-                            distance = torch.sum(bc_dpos(x[:, None, 1:3] - x_mesh[None, :, 1:3]) ** 2, dim=2)
-                            distance = distance < 0.00015
-                            distance = torch.sum(distance, dim=0)
-                            H1_mesh = torch.relu(H1_mesh * 1.0012 - 2 * distance[:, None])
-                            H1_mesh = torch.clamp(H1_mesh, min=0, max=5000)
                     case 'PDE_O_Mesh':
                         pred = []
 
@@ -305,7 +297,7 @@ def data_generate_particle_particle(config, visualize=True, run_vizualized=0, st
 
                 if 'graph' in style:
 
-                    fig = plt.figure(figsize=(10, 10))
+                    fig = plt.figure(figsize=(12, 12))
                     # distance2 = torch.sum((x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
                     # adj_t2 = ((distance2 < max_radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
                     # edge_index2 = adj_t2.nonzero().t().contiguous()
@@ -414,54 +406,34 @@ def data_generate_particle_particle(config, visualize=True, run_vizualized=0, st
 
                         matplotlib.rcParams['savefig.pad_inches'] = 0
                         fig = plt.figure(figsize=(12, 12))
-                        ax = plt.axes([0, 0, 1, 1], frameon=False)
-                        pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
-                        vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-                        nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False, alpha=0.025)
-                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=100, c=to_numpy(H1[:, 0]), cmap='viridis')
-                        ax.get_xaxis().set_visible(False)
-                        ax.get_yaxis().set_visible(False)
+                        ax = fig.add_subplot(1, 1, 1)
+                        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+                        ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=100, c=to_numpy(H1[:, 0]), cmap='cool')
                         plt.xlim([-1.5, 1.5])
                         plt.ylim([-1.5, 1.5])
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
-                        plt.close()
-
-                    elif model_config.mesh_model_name == 'Chemotaxism_Mesh':
-
-                        # dx_ = to_numpy(grad[1][y_,x_])/100
-                        # dy_ = to_numpy(grad[0][y_,x_])/100
-                        # H1_IM = torch.reshape(H1_mesh[:, 0], (300, 300))
-                        # plt.imshow(to_numpy(grad[1]+grad[0]), cmap='viridis')
-                        # for i in range(1700):
-                        #     plt.arrow(x=x_[i],y=y_[i],dx=dx_[i],dy=dy_[i], head_width=2, length_includes_head=True, color='w')
-
-                        fig = plt.figure(figsize=(12, 12))
-                        H1_IM = torch.reshape(H1_mesh[:, 0], (300, 300))
-                        plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=5000, cmap='viridis')
-                        for n in range(n_particle_types):
-                            plt.scatter(x[index_particles[n], 1].detach().cpu().numpy() * 300,
-                                        x[index_particles[n], 2].detach().cpu().numpy() * 300, s=1, color='w')
-                        plt.xlim([0, 300])
-                        plt.ylim([0, 300])
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/All__{run}_{it}.jpg", dpi=170.7)
-                        plt.close()
 
-                        # fig = plt.figure(figsize=(12,12))
-                        # H1_IM = torch.reshape(distance, (300, 300))
-                        # plt.imshow(H1_IM.detach().cpu().numpy()*30, vmin=0, vmax=500)
-                        # for n in range(n_particle_types):
-                        #     plt.scatter(x[index_particles[n], 1].detach().cpu().numpy() * 300,
-                        #                 x[index_particles[n], 2].detach().cpu().numpy() * 300, s=1, color='w')
-                        # plt.xlim([0, 300])
-                        # plt.ylim([0, 300])
+                        # matplotlib.rcParams['savefig.pad_inches'] = 0
+                        # fig = plt.figure(figsize=(12, 12))
+                        # ax = plt.axes([0, 0, 1, 1], frameon=False)
+                        # pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
+                        # vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
+                        # # nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False, alpha=0.025)
+                        # plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=100, c=to_numpy(H1[:, 0]), cmap='cool',vmin=0,vmax=0.75)
+                        # # ax.get_xaxis().set_visible(False)
+                        # # ax.get_yaxis().set_visible(False)
+                        # plt.xlim([-1, 1.])
+                        # plt.ylim([-1, 1.])
                         # plt.xticks([])
                         # plt.yticks([])
                         # plt.tight_layout()
-                        # plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Boids_{it}.jpg", dpi=170.7)
-                        # plt.close()
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
+                        plt.close()
 
                     elif (model_config.particle_model_name == 'PDE_A') & (dimension == 3):
 
@@ -478,8 +450,8 @@ def data_generate_particle_particle(config, visualize=True, run_vizualized=0, st
                     else:
                         # matplotlib.use("Qt5Agg")
 
-                        plt.rcParams['text.usetex'] = True
-                        rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+                        # plt.rcParams['text.usetex'] = True
+                        # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
                         matplotlib.rcParams['savefig.pad_inches'] = 0
                         fig = plt.figure(figsize=(12, 12))
@@ -547,8 +519,8 @@ def data_generate_particle_particle(config, visualize=True, run_vizualized=0, st
                                             alpha=0.75)
                                 plt.plot(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
                                          x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), '+', color='w')
-                        plt.xlim([0,1])
-                        plt.ylim([0,1])
+                        # plt.xlim([0,1])
+                        # plt.ylim([0,1])
                         # plt.xlim([-2,2])
                         # plt.ylim([-2,2])
                         if 'frame' in style:
@@ -595,6 +567,20 @@ def data_generate_particle_particle(config, visualize=True, run_vizualized=0, st
             torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
             torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
             torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
+
+            # if model_config.signal_model_name == 'PDE_N' & (run == run_vizualized):
+            #     matplotlib.rcParams['savefig.pad_inches'] = 0
+            #     fig = plt.figure(figsize=(12, 12))
+            #     signal=[]
+            #     for k in range(len(x_list)):
+            #         signal.append(x_list[k][:,6:7])
+            #     signal = torch.stack(signal)
+            #     signal = to_numpy(signal.squeeze())
+            #     plt.imshow(signal, aspect='auto', cmap='viridis')
+            #     plt.xticks([])
+            #     plt.yticks([])
+
+
 
 
 def data_generate_particle_field(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
@@ -759,7 +745,8 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
             edge_index = adj_t.nonzero().t().contiguous()
             dataset_p_p = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=[])
-            edge_p_p_list.append(edge_index)
+            if not(has_particle_dropout):
+                edge_p_p_list.append(edge_index)
 
             distance = torch.sum(bc_dpos(x_particle_field[:, None, 1:dimension+1] - x_particle_field[None, :, 1:dimension+1]) ** 2, dim=2)
             adj_t = ((distance < (max_radius/2) ** 2) & (distance > min_radius ** 2)).float() * 1
@@ -768,7 +755,8 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             pos = to_numpy(pos[:,0])
             edge_index = edge_index[:,pos]
             dataset_f_p = data.Data(x=x_particle_field, pos=x_particle_field[:, 1:3], edge_index=edge_index, field=x_particle_field[:,6:7])
-            edge_f_p_list.append(edge_index)
+            if not (has_particle_dropout):
+                edge_f_p_list.append(edge_index)
 
             # model prediction
             with torch.no_grad():
@@ -785,13 +773,31 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     y_list.append(y_.clone().detach())
                 else:
                     if has_particle_dropout:
-                        x_ = x[particle_dropout_mask].clone().detach()
-                        x_[:, 0] = torch.arange(len(x_), device=device)
-                        x_list.append(x_)
+
                         x_ = x[inv_particle_dropout_mask].clone().detach()
                         x_[:, 0] = torch.arange(len(x_), device=device)
                         x_removed_list.append(x[inv_particle_dropout_mask].clone().detach())
+                        x_ = x[particle_dropout_mask].clone().detach()
+                        x_[:, 0] = torch.arange(len(x_), device=device)
+                        x_list.append(x_)
                         y_list.append(y[particle_dropout_mask].clone().detach())
+
+                        distance = torch.sum(bc_dpos(x_[:, None, 1:dimension + 1] - x_[None, :, 1:dimension + 1]) ** 2, dim=2)
+                        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                        edge_index = adj_t.nonzero().t().contiguous()
+                        edge_p_p_list.append(edge_index)
+
+                        x_particle_field = torch.concatenate((x_mesh, x_), dim=0)
+
+                        distance = torch.sum(bc_dpos(
+                            x_particle_field[:, None, 1:dimension + 1] - x_particle_field[None, :, 1:dimension + 1]) ** 2, dim=2)
+                        adj_t = ((distance < (max_radius / 2) ** 2) & (distance > min_radius ** 2)).float() * 1
+                        edge_index = adj_t.nonzero().t().contiguous()
+                        pos = torch.argwhere((edge_index[1, :] >= n_nodes) & (edge_index[0, :] < n_nodes))
+                        pos = to_numpy(pos[:, 0])
+                        edge_index = edge_index[:, pos]
+                        edge_f_p_list.append(edge_index)
+
                     else:
                         x_list.append(x.clone().detach())
                         y_list.append(y.clone().detach())
@@ -1215,7 +1221,7 @@ def data_train_particles(config, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_0.pt"
+    # net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_20.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
 
@@ -1580,7 +1586,7 @@ def data_train_particles(config, device):
                 case 'distance_plot':
                     labels, n_clusters = embedding_cluster.get(proj_interaction, 'distance')
                 case 'distance_embedding':
-                    labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=1.5)
+                    labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=0.05)
                     proj_interaction = embedding
                 case 'distance_both':
                     new_projection = np.concatenate((proj_interaction, embedding), axis=-1)
@@ -2230,10 +2236,11 @@ def data_train_particle_field(config, device):
             if has_cell_division:
                 optimizer_division.zero_grad()
 
-            for batch in batch_loader_p_p:
-                pred_p_p = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=False)
             for batch in batch_loader_f_p:
                 pred_f_p = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=True)
+            for batch in batch_loader_p_p:
+                pred_p_p = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=False)
+
             pred_f_p = pred_f_p[f_p_mask]
 
             if has_cell_division:
@@ -2244,7 +2251,7 @@ def data_train_particle_field(config, device):
                 total_loss_division += loss_division.item()
 
             if has_ghost:
-                loss = ((pred_p_p[mask_ghost] - y_batch)).norm(2) + var_batch.mean()
+                loss = ((pred_p_p[mask_ghost] + 0 * pred_f_p - y_batch)).norm(2) + var_batch.mean() + model.field.norm(2)
             else:
                 loss = (pred_p_p + pred_f_p - y_batch).norm(2) + model.field.norm(2)
 
@@ -2416,34 +2423,8 @@ def data_train_particle_field(config, device):
                             for n in range(n_particles):
                                 embedding_ = model.a[1, n, :].clone().detach() * torch.ones(
                                     (1000, model_config.embedding_dim), device=device)
-                                match model_config.particle_model_name:
-                                    case 'PDE_A':
-                                        in_features = torch.cat(
-                                            (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                             rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
-                                    case 'PDE_A_bis':
-                                        in_features = torch.cat(
-                                            (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                             rr[:, None] / simulation_config.max_radius, embedding_, embedding_),
-                                            dim=1)
-                                    case 'PDE_B':
-                                        in_features = torch.cat(
-                                            (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                             rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                             0 * rr[:, None],
-                                             0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-                                    case 'PDE_G':
-                                        in_features = torch.cat(
-                                            (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                             rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                             0 * rr[:, None],
-                                             0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-                                    case 'PDE_E':
-                                        in_features = torch.cat(
-                                            (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                             rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
+                                in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None], rr[:, None] / simulation_config.max_radius, torch.ones_like(rr[:, None]), embedding_), dim=1)
                                 pred.append(model.lin_edge(in_features.float()))
-
                             pred = torch.stack(pred)
                             loss = (pred[:, :, 0] - y_func_list.clone().detach()).norm(2)
                             logger.info(f'    loss: {np.round(loss.item() / n_particles, 3)}')
@@ -2652,9 +2633,9 @@ def data_train_mesh(config, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_7.pt"
-    state_dict = torch.load(net,map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
+    # net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_7.pt"
+    # state_dict = torch.load(net,map_location=device)
+    # model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -2735,7 +2716,7 @@ def data_train_mesh(config, device):
 
             total_loss += loss.item()
 
-            visualize_embedding = True
+            visualize_embedding = False
             if visualize_embedding & (((epoch == 0) & (N < 50000) & (N % 200 == 0)) | (N==0)):
                 plot_training(config=config, dataset_name=dataset_name, model_name='WaveMesh',
                               log_dir=log_dir,
@@ -3594,7 +3575,12 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
 if __name__ == '__main__':
 
 
-    config_list = ['arbitrary_3_field_1']
+    # config_list = ['arbitrary_16_noise_0_2','arbitrary_16_noise_0_3','arbitrary_16_noise_0_4','arbitrary_16_noise_0_5']
+    # config_list = ['gravity_16_noise_0_2', 'gravity_16_noise_0_3', 'gravity_16_noise_0_4','gravity_16_noise_0_5']
+    # config_list = ['boids_16_noise_0_2', 'boids_16_noise_0_3', 'boids_16_noise_0_4', 'boids_16_noise_0_5']
+
+    config_list = ['signal_N']
+
 
     for config_file in config_list:
         # Load parameters from config file
@@ -3604,9 +3590,9 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=10) #config.simulation.n_frames // 20)
-        data_train(config, device)
-        # data_test(config, visualize=True, style='color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 40, test_simulation=False, sample_embedding=True, device=device)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 2)
+        # data_train(config, device)
+        # data_test(config, visualize=True, style='color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 40, test_simulation=False, sample_embedding=False, device=device)
 
 
 

@@ -213,10 +213,24 @@ def create_log_dir(config, dataset_name):
     os.makedirs(os.path.join(log_dir, 'models'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'tmp_training'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'tmp_training/embedding'), exist_ok=True)
-    os.makedirs(os.path.join(log_dir, 'tmp_training/siren'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'tmp_training/embedding/particle'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'tmp_training/embedding/field'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'tmp_training/embedding/function'), exist_ok=True)
+    # os.makedirs(os.path.join(log_dir, 'tmp_training/embedding/siren'), exist_ok=True)
     if config.training.n_ghosts > 0:
         os.makedirs(os.path.join(log_dir, 'tmp_training/ghost'), exist_ok=True)
-    files = glob.glob(f"{log_dir}/tmp_training/embedding/*")
+    files = glob.glob(f"{log_dir}/tmp_training/embedding/particle/*")
+    for f in files:
+        if not(('particle' in f) | ('field' in f) | ('function' in f)):
+            os.remove(f)
+        os.remove(f)
+    files = glob.glob(f"{log_dir}/tmp_training/embedding/particle/*")
+    for f in files:
+        os.remove(f)
+    files = glob.glob(f"{log_dir}/tmp_training/embedding/field/*")
+    for f in files:
+        os.remove(f)
+    files = glob.glob(f"{log_dir}/tmp_training/embedding/function/*")
     for f in files:
         os.remove(f)
     files = glob.glob(f"{log_dir}/tmp_training/siren/*")

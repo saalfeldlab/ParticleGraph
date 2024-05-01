@@ -92,6 +92,7 @@ class TrainingConfig(BaseModel):
     particle_dropout: float = 0
     n_ghosts: int = 0
     ghost_method: Literal['none', 'tensor', 'MLP'] = 'none'
+    ghost_logvar: float = -12
 
     fix_cluster_embedding: bool = False
     loss_weight: bool = False

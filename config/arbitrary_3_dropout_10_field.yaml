@@ -15,21 +15,23 @@ simulation:
   boundary: 'periodic'
   n_nodes: 10000
   n_node_types: 1
-  diffusion_coefficients: [ [ 0. ] ]
-  pos_rate: [ [ 0. ] ]
-  neg_rate: [ [ 0. ] ]
-  node_value_map: 'pattern_15.tif'
-  node_type_map: 'pattern_8.tif'
+  diffusion_coefficients: [[0]]
+  pos_rate: [[0]]
+  neg_rate: [[0]]
+  node_value_map: 'pattern_Null.tif'
+  node_type_map: 'pattern_Null.tif'
+  node_diffusion_map: 'pattern_Null.tif'
+  node_proliferation_map: 'pattern_Null.tif'
 
 graph_model:
   particle_model_name: 'PDE_ParticleField_A'
-  mesh_model_name: 'Particle_Mesh_A'
+  mesh_model_name: ''
   prediction: 'first_derivative'
-  input_size: 5
+  input_size: 6
   output_size: 2
   hidden_dim: 128
   n_mp_layers: 5
-  aggr_type: 'add'
+  aggr_type: 'mean'
   embedding_dim: 2
   update_type: 'none'
 
@@ -44,7 +46,8 @@ training:
   n_runs: 2
   particle_dropout: 0.1
   ghost_method: 'tensor'
-  n_ghosts: 480
+  ghost_logvar: -9
+  n_ghosts: 0
   sparsity: 'replace_embedding_function'
   cluster_method: 'distance_plot'
   data_augmentation: True
