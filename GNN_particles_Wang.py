@@ -12,6 +12,11 @@ if __name__ == '__main__':
 
     time_series = load_wanglab_salivary_gland('/groups/wang/wanglab/GNN/240104-SMG-HisG-PNA-Cy3-001-SIL/1 - Denoised_Statistics/1 - Denoised_Position.csv')
 
+    print(time_series[0].node_attrs())
+
+    # time_series[0:180].velocity
+
+
     frame = 100
 
     n_particles = time_series[frame].num_nodes
@@ -21,10 +26,22 @@ if __name__ == '__main__':
     x[:, 1:4] = time_series[frame].pos
     x[:, 4:7] = time_series[frame].velocity
 
-    y = torch.zeros((n_particles, 3), device='cuda:0')
-    acceleration = time_series.compute_derivative('velocity', id_name='track_id')
+    # convert to single tensor X input of GNNN
 
-    y = acceleration[frame]
+    Y = torch.zeros((n_particles, 3), device='cuda:0')
+    mask, acceleration = time_series.compute_derivative('velocity', id_name='track_id')
+
+    Y = acceleration[frame]
+
+    all_acceleration = torch.stack(tuple(acc for acc in acceleration))
+    all_pos = torch.stack(tuple(data.pos for data in time_series))
+
+    # Sanity check on to one coresspondance between X and Y
+
+    # pred = GNN(X)
+    # loss = pred[mask] - Y[mask]
+
+
 
     acceleration = torch.vstack(acceleration)
     mask = torch.logical_not(torch.any(torch.isnan(acceleration), dim=1))
