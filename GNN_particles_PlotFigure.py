@@ -2174,24 +2174,23 @@ def data_plot_boids():
     plt.ylim([-5E-5, 5E-5])
     plt.xlabel(r'$d_{ij}$', fontsize=12)
     plt.ylabel(r'$\left| \left| f(\ensuremath{\mathbf{a}}_i, x_j-x_i, \dot{x}_i, \dot{x}_j, d_{ij} \right| \right|[a.u.]$',fontsize=12)
-    plt.savefig(f"./{log_dir}/tmp_training/embedding_{dataset_name}.tif", dpi=300)
+
+
+    fig_ = plt.figure(figsize=(12, 12))
+    ax = fig_.add_subplot(1, 1, 1)
+    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+    for n in range(n_particle_types):
+        pos = np.argwhere(type == n)
+        pos = pos[:, 0].astype(int)
+        plt.scatter(to_numpy(diffx[pos, 0]), to_numpy(lin_edge_out[pos, 0]), color=cmap.color(n), s=50, alpha=0.5)
+    plt.ylim([-5E-5, 5E-5])
+    plt.xlabel(r'$x_j-x_i$', fontsize=64)
+    plt.ylabel( r'$f_{ij,x}$',fontsize=64)
+    plt.savefig(f"./{log_dir}/tmp_training/func_all_{dataset_name}.tif", dpi=300)
     np.save(f"./{log_dir}/tmp_training/embedding_{dataset_name}.npy", csv_)
     np.savetxt(f"./{log_dir}/tmp_training/embedding_{dataset_name}.txt", csv_)
-
-
-    # fig_ = plt.figure(figsize=(18, 18))
-    # for nn in range(n_particle_types):
-    #     ax = fig_.add_subplot(6, 6, nn+1)
-    #     ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-    #     ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-    #     pos = np.argwhere(type == nn)
-    #     pos = pos[:, 0].astype(int)
-    #     plt.scatter(to_numpy(diffx[pos, 0]), to_numpy(lin_edge_out[pos, 0]), color='k', s=10, alpha=0.5)
-    #     plt.ylim([-0.08, 0.08])
-    #     plt.ylim([-5E-5, 5E-5])
-    # plt.tight_layout()
-    # plt.savefig(f"./{log_dir}/tmp_training/func_{dataset_name}.tif", dpi=300)
-    # plt.close()
+    
 
     fig_ = plt.figure(figsize=(12, 12))
     ax = fig_.add_subplot(1, 1, 1)
