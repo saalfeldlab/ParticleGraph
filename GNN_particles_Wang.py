@@ -16,6 +16,7 @@ if __name__ == '__main__':
     frame_data = time_series[frame]
 
     # IDs are in the range 0, ..., N-1; global ids are stored separately
+    print(f"fields of frames: {frame_data.node_attrs()}")
     print(f"number of particles in frame {frame}: {frame_data.num_nodes}")
     print(f"local ids: {frame_data.track_id}")
     print(f"global ids: {global_ids[frame_data.track_id]}")
@@ -27,6 +28,10 @@ if __name__ == '__main__':
     acceleration, mask = time_series.compute_derivative('velocity', id_name='track_id')
     Y = acceleration[frame]
     Y = Y[mask[frame], :]
+
+    # Sanity-check one to one correspondence between X and Y
+    #   pred = GNN(X)
+    #   loss = pred[mask] - Y[mask]
 
     # stack all the accelerations / masks
     acceleration = torch.vstack(acceleration)
