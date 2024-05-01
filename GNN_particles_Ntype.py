@@ -406,15 +406,32 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
 
                         matplotlib.rcParams['savefig.pad_inches'] = 0
                         fig = plt.figure(figsize=(12, 12))
-                        ax = plt.axes([0, 0, 1, 1], frameon=False)
-                        pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
-                        vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-                        nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False, alpha=0.025)
-                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=100, c=to_numpy(H1[:, 0]), cmap='viridis')
-                        ax.get_xaxis().set_visible(False)
-                        ax.get_yaxis().set_visible(False)
+                        ax = fig.add_subplot(1, 1, 1)
+                        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+                        ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=100, c=to_numpy(H1[:, 0]), cmap='cool')
                         plt.xlim([-1.5, 1.5])
                         plt.ylim([-1.5, 1.5])
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+
+                        # matplotlib.rcParams['savefig.pad_inches'] = 0
+                        # fig = plt.figure(figsize=(12, 12))
+                        # ax = plt.axes([0, 0, 1, 1], frameon=False)
+                        # pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
+                        # vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
+                        # # nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False, alpha=0.025)
+                        # plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=100, c=to_numpy(H1[:, 0]), cmap='cool',vmin=0,vmax=0.75)
+                        # # ax.get_xaxis().set_visible(False)
+                        # # ax.get_yaxis().set_visible(False)
+                        # plt.xlim([-1, 1.])
+                        # plt.ylim([-1, 1.])
+                        # plt.xticks([])
+                        # plt.yticks([])
+                        # plt.tight_layout()
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
                         plt.close()
 
@@ -502,8 +519,8 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
                                             alpha=0.75)
                                 plt.plot(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
                                          x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), '+', color='w')
-                        plt.xlim([0,1])
-                        plt.ylim([0,1])
+                        # plt.xlim([0,1])
+                        # plt.ylim([0,1])
                         # plt.xlim([-2,2])
                         # plt.ylim([-2,2])
                         if 'frame' in style:
@@ -550,6 +567,20 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
             torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
             torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
             torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
+
+            # if model_config.signal_model_name == 'PDE_N' & (run == run_vizualized):
+            #     matplotlib.rcParams['savefig.pad_inches'] = 0
+            #     fig = plt.figure(figsize=(12, 12))
+            #     signal=[]
+            #     for k in range(len(x_list)):
+            #         signal.append(x_list[k][:,6:7])
+            #     signal = torch.stack(signal)
+            #     signal = to_numpy(signal.squeeze())
+            #     plt.imshow(signal, aspect='auto', cmap='viridis')
+            #     plt.xticks([])
+            #     plt.yticks([])
+
+
 
 
 def data_generate_particle_field(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
@@ -3548,7 +3579,7 @@ if __name__ == '__main__':
     # config_list = ['gravity_16_noise_0_2', 'gravity_16_noise_0_3', 'gravity_16_noise_0_4','gravity_16_noise_0_5']
     # config_list = ['boids_16_noise_0_2', 'boids_16_noise_0_3', 'boids_16_noise_0_4', 'boids_16_noise_0_5']
 
-    config_list = ['wave_slit']
+    config_list = ['signal_N']
 
 
     for config_file in config_list:

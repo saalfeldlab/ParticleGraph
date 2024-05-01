@@ -257,7 +257,7 @@ def data_plot_training(config, mode, device):
             case 'distance_plot':
                 labels, n_clusters = embedding_cluster.get(proj_interaction, 'distance')
             case 'distance_embedding':
-                labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=1.5)
+                labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=0.05)
                 proj_interaction = embedding
             case 'distance_both':
                 new_projection = np.concatenate((proj_interaction, embedding), axis=-1)
@@ -1376,7 +1376,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['boids_16_dropout_10']
+    config_list = ['boids_64_bis']
 
     # config_list = ['arbitrary_3_dropout_10_no_ghost','arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30','arbitrary_3_dropout_40']
 
