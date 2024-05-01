@@ -15,6 +15,8 @@ from scipy.optimize import curve_fit
 from scipy.spatial import Delaunay
 from torchvision.transforms import GaussianBlur
 from matplotlib import pyplot as plt
+from matplotlib import rc
+from prettytable import PrettyTable
 
 from ParticleGraph.config import ParticleGraphConfig
 from ParticleGraph.data_loaders import *
@@ -3579,7 +3581,7 @@ if __name__ == '__main__':
     # config_list = ['gravity_16_noise_0_2', 'gravity_16_noise_0_3', 'gravity_16_noise_0_4','gravity_16_noise_0_5']
     # config_list = ['boids_16_noise_0_2', 'boids_16_noise_0_3', 'boids_16_noise_0_4', 'boids_16_noise_0_5']
 
-    config_list = ['signal_N']
+    config_list = ['arbitrary_16_noise_0_3']
 
 
     for config_file in config_list:
@@ -3592,7 +3594,7 @@ if __name__ == '__main__':
 
         data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 2)
         # data_train(config, device)
-        # data_test(config, visualize=True, style='color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 40, test_simulation=False, sample_embedding=False, device=device)
+        data_test(config, visualize=False, style='color', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 50, test_simulation=False, sample_embedding=False, device=device)
 
 
 

@@ -263,21 +263,29 @@ def data_plot_training(config, mode, device):
                 new_projection = np.concatenate((proj_interaction, embedding), axis=-1)
                 labels, n_clusters = embedding_cluster.get(new_projection, 'distance')
 
-        fig = plt.figure(figsize=(12, 12))
+        fig_ = plt.figure(figsize=(12, 12))
+        axf = fig_.add_subplot(1, 1, 1)
+        axf.xaxis.set_major_locator(plt.MaxNLocator(3))
+        axf.yaxis.set_major_locator(plt.MaxNLocator(3))
+        axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
         for n in range(n_clusters):
             pos = np.argwhere(labels == n)
             pos = np.array(pos)
             if pos.size > 0:
                 print(f'cluster {n}  {len(pos)}')
-                plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=5)
+                plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=100,alpha=0.1)
         label_list = []
         for n in range(n_particle_types):
             tmp = labels[index_particles[n]]
             label_list.append(np.round(np.median(tmp)))
         label_list = np.array(label_list)
-
-        plt.xlabel('proj 0', fontsize=12)
-        plt.ylabel('proj 1', fontsize=12)
+        plt.xlabel(r'UMAP-proj 0', fontsize=64)
+        plt.ylabel(r'UMAP-proj 1', fontsize=64)
+        plt.xticks(fontsize=32.0)
+        plt.yticks(fontsize=32.0)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/UMAP_{dataset_name}_{epoch}.tif", dpi=300)
         plt.close()
 
         fig = plt.figure(figsize=(12, 12))
@@ -337,8 +345,6 @@ def data_plot_training(config, mode, device):
             plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
             plt.xticks(fontsize=32.0)
             plt.yticks(fontsize=32.0)
-            plt.xticks(fontsize=32.0)
-            plt.yticks(fontsize=32.0)
             plt.tight_layout()
             # csv_ = np.array(csv_)
             plt.savefig(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.tif", dpi=300)
@@ -395,7 +401,7 @@ def data_plot_training(config, mode, device):
             plt.xticks(fontsize=32)
             plt.yticks(fontsize=32)
             plt.xlabel(r'$d_{ij}$', fontsize=64)
-            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij}$', fontsize=64)
+            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
             plt.xlim([0, max_radius])
             # plt.ylim([-0.15, 0.15])
             # plt.ylim([-0.04, 0.03])
@@ -1376,7 +1382,7 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['boids_64_bis']
+    config_list = ['arbitrary_16','arbitrary_16_noise_1E-1','arbitrary_16_noise_0_2','arbitrary_16_noise_0_3']
 
     # config_list = ['arbitrary_3_dropout_10_no_ghost','arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30','arbitrary_3_dropout_40']
 
