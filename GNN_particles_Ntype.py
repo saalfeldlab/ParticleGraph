@@ -490,7 +490,6 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
                         # plt.autoscale(tight=True)
                         if has_mesh:
                             pts = x_mesh[:, 1:3].detach().cpu().numpy()
-
                             tri = Delaunay(pts)
                             colors = torch.sum(x_mesh[tri.simplices, 6], dim=1) / 3.0
                             match model_config.mesh_model_name:
