@@ -88,7 +88,7 @@ def load_solar_system(config, device=None, visualize=False, folder=None, step=10
         filename = os.path.join(dataset_name, f'{object}.txt')
 
         df = skip_to(filename, "$$SOE\n")
-        data = pd.read_csv(filename, header=None, skiprows=df, sep='\s+', nrows=n_step)
+        data = pd.read_csv(filename, header=None, skiprows=df, sep='', nrows=n_step)
         tmp_x = data.iloc[:, 4:5].values
         tmp_y = data.iloc[:, 5:6].values
         tmp_z = data.iloc[:, 6:7].values

@@ -297,7 +297,7 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
 
                 if 'graph' in style:
 
-                    fig = plt.figure(figsize=(10, 10))
+                    fig = plt.figure(figsize=(12, 12))
                     # distance2 = torch.sum((x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
                     # adj_t2 = ((distance2 < max_radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
                     # edge_index2 = adj_t2.nonzero().t().contiguous()
@@ -418,43 +418,6 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
                         plt.close()
 
-                    elif model_config.mesh_model_name == 'Chemotaxism_Mesh':
-
-                        # dx_ = to_numpy(grad[1][y_,x_])/100
-                        # dy_ = to_numpy(grad[0][y_,x_])/100
-                        # H1_IM = torch.reshape(H1_mesh[:, 0], (300, 300))
-                        # plt.imshow(to_numpy(grad[1]+grad[0]), cmap='viridis')
-                        # for i in range(1700):
-                        #     plt.arrow(x=x_[i],y=y_[i],dx=dx_[i],dy=dy_[i], head_width=2, length_includes_head=True, color='w')
-
-                        fig = plt.figure(figsize=(12, 12))
-                        H1_IM = torch.reshape(H1_mesh[:, 0], (300, 300))
-                        plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=5000, cmap='viridis')
-                        for n in range(n_particle_types):
-                            plt.scatter(x[index_particles[n], 1].detach().cpu().numpy() * 300,
-                                        x[index_particles[n], 2].detach().cpu().numpy() * 300, s=1, color='w')
-                        plt.xlim([0, 300])
-                        plt.ylim([0, 300])
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/All__{run}_{it}.jpg", dpi=170.7)
-                        plt.close()
-
-                        # fig = plt.figure(figsize=(12,12))
-                        # H1_IM = torch.reshape(distance, (300, 300))
-                        # plt.imshow(H1_IM.detach().cpu().numpy()*30, vmin=0, vmax=500)
-                        # for n in range(n_particle_types):
-                        #     plt.scatter(x[index_particles[n], 1].detach().cpu().numpy() * 300,
-                        #                 x[index_particles[n], 2].detach().cpu().numpy() * 300, s=1, color='w')
-                        # plt.xlim([0, 300])
-                        # plt.ylim([0, 300])
-                        # plt.xticks([])
-                        # plt.yticks([])
-                        # plt.tight_layout()
-                        # plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Boids_{it}.jpg", dpi=170.7)
-                        # plt.close()
-
                     elif (model_config.particle_model_name == 'PDE_A') & (dimension == 3):
 
                         fig = plt.figure(figsize=(12, 12))
@@ -539,8 +502,8 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
                                             alpha=0.75)
                                 plt.plot(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
                                          x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), '+', color='w')
-                        # plt.xlim([0,1])
-                        # plt.ylim([0,1])
+                        plt.xlim([0,1])
+                        plt.ylim([0,1])
                         # plt.xlim([-2,2])
                         # plt.ylim([-2,2])
                         if 'frame' in style:

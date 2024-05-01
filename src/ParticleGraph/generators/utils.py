@@ -297,14 +297,14 @@ def init_mesh(config, model_mesh, device):
             pos_mesh[:, 0] = features_mesh[:, 0] + (3 / 8) * mesh_size * torch.cos(features_mesh[:, 2])
             pos_mesh[:, 1] = features_mesh[:, 1] + (3 / 8) * mesh_size * torch.sin(features_mesh[:, 2])
 
-    i0 = imread(f'graphs_data/{node_type_map}')
-    values = i0[(to_numpy(x_mesh[:, 0]) * 255).astype(int), (to_numpy(y_mesh[:, 0]) * 255).astype(int)]
-    type_mesh = torch.tensor(values, device=device)
-    type_mesh = type_mesh[:, None]
+    # i0 = imread(f'graphs_data/{node_type_map}')
+    # values = i0[(to_numpy(x_mesh[:, 0]) * 255).astype(int), (to_numpy(y_mesh[:, 0]) * 255).astype(int)]
+    # type_mesh = torch.tensor(values, device=device)
+    # type_mesh = type_mesh[:, None]
 
     i0 = imread(f'graphs_data/{node_type_map}')
     values = i0[(to_numpy(x_mesh[:, 0]) * 255).astype(int), (to_numpy(y_mesh[:, 0]) * 255).astype(int)]
-    values = np.round(values / np.max(values) * simulation_config.n_node_types) - 1
+    values = np.round(values / np.max(values) * (simulation_config.n_node_types-1))
     type_mesh = torch.tensor(values, device=device)
     type_mesh = type_mesh[:, None]
 
