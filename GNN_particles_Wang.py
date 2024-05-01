@@ -10,32 +10,31 @@ from GNN_particles_Ntype import *
 
 if __name__ == '__main__':
 
-    time_series = load_wanglab_salivary_gland('/groups/wang/wanglab/GNN/240104-SMG-HisG-PNA-Cy3-001-SIL/1 - Denoised_Statistics/1 - Denoised_Position.csv')
+    time_series, global_ids = load_wanglab_salivary_gland('/groups/wang/wanglab/GNN/240104-SMG-HisG-PNA-Cy3-001-SIL/1 - Denoised_Statistics/1 - Denoised_Position.csv', device='cpu')
 
     frame = 100
+    frame_data = time_series[frame]
 
-    n_particles = time_series[frame].num_nodes
+    # IDs are in the range 0, ..., N-1; global ids are stored separately
+    print(f"number of particles in frame {frame}: {frame_data.num_nodes}")
+    print(f"local ids: {frame_data.track_id}")
+    print(f"global ids: {global_ids[frame_data.track_id]}")
 
-    x = torch.zeros((n_particles, 7),device='cuda:0')
-    x[:, 0] = time_series[frame].track_id
-    x[:, 1:4] = time_series[frame].pos
-    x[:, 4:7] = time_series[frame].velocity
+    # summarize some of the fields in a particular dataset
+    X = bundle_fields(frame_data, "track_id", "pos", "velocity")
 
-    y = torch.zeros((n_particles, 3), device='cuda:0')
-    acceleration = time_series.compute_derivative('velocity', id_name='track_id')
+    # compute the acceleration and a mask to filter out NaN values
+    acceleration, mask = time_series.compute_derivative('velocity', id_name='track_id')
+    Y = acceleration[frame]
+    Y = Y[mask[frame], :]
 
-    y = acceleration[frame]
-
+    # stack all the accelerations / masks
     acceleration = torch.vstack(acceleration)
-    mask = torch.logical_not(torch.any(torch.isnan(acceleration), dim=1))
+    mask = torch.hstack(mask)
     std = torch.std(acceleration[mask, :], dim=0)
 
-
-
-
-
-
-
+    # get velocity for all time steps
+    velocity = torch.vstack([frame.velocity for frame in time_series])
 
 
     #
