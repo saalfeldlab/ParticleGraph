@@ -72,18 +72,8 @@ def data_plot_training(config, mode, device):
         x_list.append(x)
         y_list.append(y)
 
-    x = x_list[0][0].clone().detach()
-    y = y_list[0][0].clone().detach()
-    for run in range(NGraphs):
-        for k in trange(n_frames):
-            if (k%10 == 0) | (n_frames<1000):
-                x = torch.cat((x,x_list[run][k].clone().detach()),0)
-                y = torch.cat((y,y_list[run][k].clone().detach()),0)
-        print(x_list[run][k].shape)
-    vnorm = norm_velocity(x, dimension, device)
-    ynorm = norm_acceleration(y, device)
-    vnorm = vnorm[4]
-    ynorm = ynorm[4]
+    vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
+    ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     time.sleep(0.5)
     print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
     if has_mesh:
@@ -221,7 +211,7 @@ def data_plot_training(config, mode, device):
         ax.xaxis.get_major_formatter()._usetex = False
         ax.yaxis.get_major_formatter()._usetex = False
         if model_config.particle_model_name == 'PDE_G':
-            rr = torch.tensor(np.linspace(0, max_radius * 1.3, 1000)).to(device)
+            rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
         elif model_config.particle_model_name == 'PDE_GS':
             rr = torch.tensor(np.logspace(7, 9, 1000)).to(device)
         else:
@@ -393,8 +383,8 @@ def data_plot_training(config, mode, device):
                     func = model.lin_edge(in_features.float())
                 func = func[:, 0]
                 csv_.append(to_numpy(func))
-                true_func = model.psi(rr, p[to_numpy(type_list[n]).astype(int),:].squeeze(), p[to_numpy(type_list[n]).astype(int),:].squeeze())
-                rmserr_list.append(torch.sqrt(torch.mean((func * ynorm - true_func) ** 2)))
+                true_func = model.psi(rr, p[to_numpy(type_list[n]).astype(int)].squeeze(), p[to_numpy(type_list[n]).astype(int)].squeeze())
+                rmserr_list.append(torch.sqrt(torch.mean((func * ynorm - true_func.squeeze()) ** 2)))
                 plt.plot(to_numpy(rr),
                          to_numpy(func) * to_numpy(ynorm),
                          color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
@@ -416,70 +406,6 @@ def data_plot_training(config, mode, device):
             np.savetxt(f"./{log_dir}/tmp_training/func_all_{dataset_name}_{epoch}.txt", csv_)
             plt.close()
 
-            # func_list = []
-            # fig = plt.figure(figsize=(12, 12))
-            # ax = fig.add_subplot(1,1,1)
-            # # ax.xaxis.get_major_formatter()._usetex = False
-            # # ax.yaxis.get_major_formatter()._usetex = False
-            # ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-            # ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-            # for n in range(n_particle_types):
-            #     pos = np.argwhere(new_labels == n).squeeze().astype(int)
-            #     if pos.size > 0:
-            #         embedding_ = model.a[1, pos[0], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            #         match config.graph_model.particle_model_name:
-            #             case 'PDE_A':
-            #                 in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-            #                                          rr[:, None] / max_radius, embedding_), dim=1)
-            #             case 'PDE_A_bis':
-            #                 in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-            #                                          rr[:, None] / max_radius, embedding_, embedding_), dim=1)
-            #             case 'PDE_B' | 'PDE_B_bis':
-            #                 in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-            #                                          rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
-            #                                          0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-            #             case 'PDE_G':
-            #                 in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-            #                                          rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
-            #                                          0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-            #             case 'PDE_GS':
-            #                 in_features = torch.cat((rr[:, None] / max_radius, embedding_), dim=1)
-            #             case 'PDE_E':
-            #                 in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-            #                                          rr[:, None] / max_radius, embedding_, embedding_), dim=-1)
-            #         with torch.no_grad():
-            #             func = model.lin_edge(in_features.float())
-            #         func = func[:, 0]
-            #
-            #         func_list.append(func)
-            #         plt.plot(to_numpy(rr),
-            #                  to_numpy(func) * to_numpy(ynorm),
-            #                  color=cmap.color(n), linewidth=8)
-            #         # plt.plot(to_numpy(rr),
-            #         #          to_numpy(model.psi(rr, p[n], p[n])),
-            #         #          color=cmap.color(n), linewidth=1)
-            # # plt.xlabel(r'$d_{ij}$', fontsize=64)
-            # # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
-            # plt.xticks(fontsize=32)
-            # plt.yticks(fontsize=32)
-            # plt.xlim([0, max_radius])
-            # # plt.ylim([-0.15, 0.15])
-            # # plt.ylim([-0.04, 0.03])
-            # plt.ylim([-0.1, 0.1])
-            # plt.tight_layout()
-            # plt.savefig(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.tif",dpi=170.7)
-            # plt.close()
-
-
-            # func_list = torch.stack(func_list) * ynorm
-            # true_func_list = []
-            # for n in range(n_particles):
-            #     pos = np.argwhere(new_labels == n).squeeze().astype(int)
-            #     if pos.size > 0:
-            #         true_func_list.append(model.psi(rr, p[n], p[n]))
-            # true_func_list = torch.stack(true_func_list)
-            # rmserr = torch.sqrt(torch.mean((func_list - true_func_list) ** 2))
-            # print(f'function unique RMS error: {np.round(rmserr.item(), 7)}')
 
 
             fig = plt.figure(figsize=(12, 12))
@@ -488,19 +414,75 @@ def data_plot_training(config, mode, device):
             # ax.yaxis.get_major_formatter()._usetex = False
             ax.xaxis.set_major_locator(plt.MaxNLocator(3))
             ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-            csv_ = []
-            csv_.append(to_numpy(rr))
+
+            plots = []
+            rr = torch.tensor(np.linspace(0, 1.5*max_radius, 1000)).to(device)
+            plots.append(rr)
+            for n in range(n_particle_types):
+                embedding_ = model.a[1, index_particles[n][0], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                match config.graph_model.particle_model_name:
+                    case 'PDE_A':
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / max_radius, embedding_), dim=1)
+                    case 'PDE_A_bis':
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / max_radius, embedding_, embedding_), dim=1)
+                    case 'PDE_B' | 'PDE_B_bis':
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                                 0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                    case 'PDE_G':
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                                 0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                    case 'PDE_GS':
+                        in_features = torch.cat((rr[:, None] / max_radius, embedding_), dim=1)
+                    case 'PDE_E':
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / max_radius, embedding_, embedding_), dim=-1)
+                with torch.no_grad():
+                    func = model.lin_edge(in_features.float())
+                func = func[:, 0]
+                plots.append(func)
+                plt.plot(to_numpy(rr),
+                         to_numpy(func) * to_numpy(ynorm), linewidth=8, alpha=1)
+            plt.xticks(fontsize=32)
+            plt.yticks(fontsize=32)
+            plt.xlabel(r'$d_{ij}$', fontsize=64)
+            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+            plt.xlim([0, 2*max_radius])
+            # plt.ylim([-0.15, 0.15])
+            plt.ylim([-0.04, 0.03])
+            # plt.ylim([-0.1, 0.1])
+            # plt.ylim([-0.03, 0.03])
+            plt.tight_layout()
+
+            torch.save(plots,f"./{log_dir}/tmp_training/plots_{dataset_name}_{epoch}.pt")
+
+            # plt.ylim([-0.04, 0.03])
+
+            rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+            fig = plt.figure(figsize=(12, 12))
+            ax = fig.add_subplot(1,1,1)
+            # ax.xaxis.get_major_formatter()._usetex = False
+            # ax.yaxis.get_major_formatter()._usetex = False
+            ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+            ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+            plots = []
+            plots.append(rr)
             for n in range(n_particle_types):
                 plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n), linewidth=8)
-                csv_.append(to_numpy(model.psi(rr, p[n], p[n]).squeeze()))
+                plots.append(model.psi(rr, p[n], p[n]).squeeze())
             # plt.xlabel(r'$d_{ij}$', fontsize=64)
             # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
             plt.xticks(fontsize=32)
             plt.yticks(fontsize=32)
             plt.xlim([0, max_radius])
             # plt.ylim([-0.15, 0.15])
-            plt.ylim([-0.04, 0.03])
+            # plt.ylim([-0.04, 0.03])
             # plt.ylim([-0.1, 0.1])
+            plt.xlim([0, 0.02])
+            plt.ylim([0, 0.5E6])
 
             plt.xlabel(r'$d_{ij}$', fontsize=64)
             plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
@@ -509,6 +491,36 @@ def data_plot_training(config, mode, device):
             plt.close()
             np.save(f"./{log_dir}/tmp_training/true_func_{dataset_name}_{epoch}.npy", csv_)
             np.savetxt(f"./{log_dir}/tmp_training/true_func_{dataset_name}_{epoch}.txt", csv_)
+
+            rr = torch.tensor(np.linspace(-1.5 * max_radius, 1.5 * max_radius, 2000)).to(device)
+            fig = plt.figure(figsize=(12, 12))
+            ax = fig.add_subplot(1, 1, 1)
+            # ax.xaxis.get_major_formatter()._usetex = False
+            # ax.yaxis.get_major_formatter()._usetex = False
+            ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+            ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+            plots = []
+            plots.append(rr)
+            for n in range(n_particle_types):
+                t = model.psi(rr, p[n], p[n])
+                plt.plot(to_numpy(rr), to_numpy(t), color=cmap.color(n), linewidth=8)
+                plots.append(model.psi(rr, p[n], p[n]).squeeze())
+            # plt.xlabel(r'$d_{ij}$', fontsize=64)
+            # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+            plt.xticks(fontsize=32)
+            plt.yticks(fontsize=32)
+            plt.xlim([-max_radius * 1.5, max_radius * 1.5])
+            # plt.ylim([-0.15, 0.15])
+            # plt.ylim([-0.04, 0.03])
+            # plt.ylim([-0.1, 0.1])
+            plt.xlim([0, 0.02])
+            plt.ylim([0, 0.5E6])
+
+            plt.xlabel(r'$d_{ij}$', fontsize=64)
+            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+            plt.tight_layout()
+            torch.save(plots, f"./{log_dir}/tmp_training/plots_true_{dataset_name}_{epoch}.pt")
+            plt.close()
 
 def data_plot_training_asym(config, mode, device):
     print('')
@@ -565,18 +577,9 @@ def data_plot_training_asym(config, mode, device):
         x_list.append(x)
         y_list.append(y)
 
-    x = x_list[0][0].clone().detach()
-    y = y_list[0][0].clone().detach()
-    for run in range(NGraphs):
-        for k in trange(n_frames):
-            if (k%10 == 0) | (n_frames<1000):
-                x = torch.cat((x,x_list[run][k].clone().detach()),0)
-                y = torch.cat((y,y_list[run][k].clone().detach()),0)
-        print(x_list[run][k].shape)
-    vnorm = norm_velocity(x, dimension, device)
-    ynorm = norm_acceleration(y, device)
-    vnorm = vnorm[4]
-    ynorm = ynorm[4]
+    vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
+    ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
+
     time.sleep(0.5)
     print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
     if has_mesh:
@@ -964,20 +967,8 @@ def data_plot_training_continuous(config, mode, device):
         x_list.append(x)
         y_list.append(y)
 
-    x = x_list[0][0].clone().detach()
-    y = y_list[0][0].clone().detach()
-    for run in range(NGraphs):
-        for k in trange(n_frames):
-            if (k%10 == 0) | (n_frames<1000):
-                x = torch.cat((x,x_list[run][k].clone().detach()),0)
-                y = torch.cat((y,y_list[run][k].clone().detach()),0)
-        print(x_list[run][k].shape)
-    vnorm = norm_velocity(x, dimension, device)
-    ynorm = norm_acceleration(y, device)
-    vnorm = vnorm[4]
-    ynorm = ynorm[4]
-    torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
-    torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
+    vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
+    ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     time.sleep(0.5)
     print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
     if has_mesh:
@@ -1382,9 +1373,13 @@ if __name__ == '__main__':
     print('version 0.2.0 240111')
     print('')
 
-    config_list = ['arbitrary_16','arbitrary_16_noise_1E-1','arbitrary_16_noise_0_2','arbitrary_16_noise_0_3']
+    # config_list = ['arbitrary_16_noise_0_5']
+    config_list = ['gravity_16', 'gravity_16_noise_1E-1', 'gravity_16_noise_0_2', 'gravity_16_noise_0_3',
+                   'gravity_16_noise_0_4', 'gravity_16_noise_0_5']
 
-    # config_list = ['arbitrary_3_dropout_10_no_ghost','arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30','arbitrary_3_dropout_40']
+    # config_list = ['arbitrary_3', 'arbitrary_3_dropout_10_no_ghost', 'arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30','arbitrary_3_dropout_40']
+    # config_list = ['arbitrary_16_noise_0_4','arbitrary_16_noise_0_5']# ['arbitrary_16','arbitrary_16_noise_1E-1','arbitrary_16_noise_0_2','arbitrary_16_noise_0_3']
+    config_list = ['arbitrary_3_dropout_10_no_ghost','arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30','arbitrary_3_dropout_40']
 
     for config_file in config_list:
 

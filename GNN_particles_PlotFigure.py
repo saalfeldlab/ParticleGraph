@@ -571,7 +571,9 @@ def data_plot_attraction_repulsion():
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
-    net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_0.pt"
+    epoch = 20
+
+    net = f"./log/try_{dataset_name}/models/best_model_with_{nrun - 1}_graphs_20.pt"
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
     model.eval()
@@ -4451,10 +4453,11 @@ if __name__ == '__main__':
     # config_list = ['gravity_16','gravity_16_noise_1E-5','gravity_16_noise_1E-4','gravity_16_noise_1E-3','gravity_16_noise_1E-2','gravity_16_noise_1E-1']
     # config_list = ['gravity_16_dropout_10_no_ghost', 'gravity_16_dropout_10', 'gravity_16_dropout_20', 'gravity_16_dropout_30', 'gravity_16_dropout_40', 'gravity_16_dropout_50']
     # config_list = ['gravity_16_dropout_20'] # ['gravity_16_dropout_10_no_ghost','gravity_16_dropout_10','gravity_16_dropout_20','gravity_16_dropout_30']
-    config_list = ['arbitrary_3_noise_1E-1']
+    config_list = ['arbitrary_16']
+    # config_list = ['gravity_16'] #, 'gravity_16_noise_1E-1', 'gravity_16_noise_0_2', 'gravity_16_noise_0_3', 'gravity_16_noise_0_4', 'gravity_16_noise_0_5']
 
 
     for config_name in config_list:
 
-        data_plot_boids()
+        data_plot_attraction_repulsion()
 

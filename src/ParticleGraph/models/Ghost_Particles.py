@@ -27,8 +27,11 @@ class Ghost_Particles(torch.nn.Module):
         self.H1 = torch.zeros((self.n_ghosts,2), device=device, requires_grad=False)
         self.A1 = torch.zeros(self.n_ghosts, device=device, requires_grad=False)
 
-        self.mu = nn.Parameter(torch.rand((self.n_dataset, self.n_frames, self.n_ghosts, 2), device=device, requires_grad=True))
-        self.var = nn.Parameter(torch.tensor(self.ghost_logvar*np.ones((self.n_dataset, self.n_frames, self.n_ghosts, 1)), dtype=torch.float32 ,device=device, requires_grad=True))
+        self.ghost_pos = nn.Parameter(torch.rand((self.n_dataset, self.n_frames, self.n_ghosts, 2), device=device, requires_grad=True))
+
+        # self.mu = nn.Parameter(torch.rand((self.n_dataset, self.n_frames, self.n_ghosts, 2), device=device, requires_grad=True))
+        # self.var = nn.Parameter(torch.tensor(self.ghost_logvar*np.ones((self.n_dataset, self.n_frames, self.n_ghosts, 1)), dtype=torch.float32 ,device=device, requires_grad=True))
+
         # logvar = 7 -> std =0.03
         # transform var into self.var FloatTensor
 
@@ -41,8 +44,8 @@ class Ghost_Particles(torch.nn.Module):
 
     def get_pos (self, dataset_id, frame, bc_pos):
 
-        mu = self.mu[dataset_id,frame:frame+1,:]
-        logvar = self.var[dataset_id,frame:frame+1,:]
+        # mu = self.mu[dataset_id,frame:frame+1,:]
+        # logvar = self.var[dataset_id,frame:frame+1,:]
 
         # Reparameterization trick to sample from N(mu, var) from
         # N(0,1).
@@ -50,10 +53,12 @@ class Ghost_Particles(torch.nn.Module):
         # :param logvar: (Tensor) Standard deviation of the latent Gaussian [B x D]
         # :return: (Tensor) [B x D]
 
-        std = torch.exp(0.5 * logvar.repeat(1,1,2)).squeeze()
-        eps = torch.randn_like(std)
-        ghost_pos = eps * std + mu.squeeze()
-        ghost_pos = bc_pos(ghost_pos)
+        # std = torch.exp(0.5 * logvar.repeat(1,1,2)).squeeze()
+        # eps = torch.randn_like(std)
+        # ghost_pos = eps * std + mu.squeeze()
+        # ghost_pos = bc_pos(ghost_pos)
+
+        ghost_pos = self.ghost_pos[dataset_id,frame:frame+1,:]
 
         out = torch.concatenate((self.N1[:,None],ghost_pos ,self.V1,self.T1[:,None],self.H1,self.A1[:,None]), 1)
 

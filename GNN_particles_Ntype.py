@@ -3356,9 +3356,9 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
         y0 = y_list[0][it].clone().detach()
 
         if model_config.signal_model_name == 'PDE_N':
-            rmserr = torch.sqrt(torch.mean(torch.sum((x[:, 6:7] - x0[:, 6:7]) ** 2, axis=1)))
+            rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 6:7] - x0[:, 6:7]) ** 2, axis=1)))
         else:
-            rmserr = torch.sqrt(torch.mean(torch.sum((x[:, 1:3] - x0[:, 1:3]) ** 2, axis=1)))
+            rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 1:3] - x0[:, 1:3]) ** 2, axis=1)))
         rmserr_list.append(rmserr.item())
 
         if has_mesh:
@@ -3382,7 +3382,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
 
             x_ = x
             if has_ghost:
-                x_ghost = model_ghost.get_pos(dataset_id=run, frame=it)
+                x_ghost = model_ghost.get_pos(dataset_id=run, frame=it, bc_pos=bc_pos)
                 x_ = torch.cat((x_, x_ghost), 0)
 
             if has_adjacency_matrix:
@@ -3544,6 +3544,14 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
         index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
         index_particles.append(index.squeeze())
 
+
+    # fig = plt.figure(figsize=(12, 12))
+    # ax = fig.add_subplot(1, 1, 1)
+    # x0_next = x_list[0][it + 1].clone().detach()
+    # plt.scatter(x[:, 1].detach().cpu().numpy(), x[:, 2].detach().cpu().numpy(), s=50)
+    # plt.scatter(x0_next[:, 1].detach().cpu().numpy(), x0_next[:, 2].detach().cpu().numpy(), s=50)
+
+
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(1, 1, 1)
     x0_next = x_list[0][it + 1].clone().detach()
@@ -3552,18 +3560,21 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
     temp3 = torch.tensor(np.arange(n_particles) + n_particles, device=device)
     temp4 = torch.concatenate((temp2[:, None], temp3[:, None]), 1)
     temp4 = torch.t(temp4)
-    distance3 = torch.sqrt(torch.sum((x[:, 1:3] - x0_next[:, 1:3]) ** 2, 1))
-    p = torch.argwhere(distance3 < 0.3)
+    distance3 = torch.sqrt(torch.sum(bc_dpos(x[:, 1:3] - x0_next[:, 1:3]) ** 2, 1))
+    distance4 = torch.sqrt(torch.sum((x[:, 1:3] - x0_next[:, 1:3]) ** 2, 1))
+    p = torch.argwhere(distance4 < 0.3)
     pos = dict(enumerate(np.array((temp1[:, 1:3]).detach().cpu()), 0))
     dataset = data.Data(x=temp1[:, 1:3], edge_index=torch.squeeze(temp4[:, p]))
     vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,ax=ax,edge_color='r', width=4)
+    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,ax=ax,edge_color='r', width=2)
     ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True)
     for n in range(n_particle_types):
         plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                     x[index_particles[n], 2].detach().cpu().numpy(), s=50, color=cmap.color(n))
     plt.xlim([0, 1])
     plt.ylim([0, 1])
+    # plt.xlim([-2, 2])
+    # plt.ylim([-2, 2])
     plt.xticks(fontsize=32)
     plt.yticks(fontsize=32)
     plt.xlabel(r'$x$', fontsize=64)
@@ -3581,7 +3592,9 @@ if __name__ == '__main__':
     # config_list = ['gravity_16_noise_0_2', 'gravity_16_noise_0_3', 'gravity_16_noise_0_4','gravity_16_noise_0_5']
     # config_list = ['boids_16_noise_0_2', 'boids_16_noise_0_3', 'boids_16_noise_0_4', 'boids_16_noise_0_5']
 
-    config_list = ['arbitrary_16_noise_0_3']
+    # config_list = ['arbitrary_16','arbitrary_16_noise_1E-1','arbitrary_16_noise_0_2', 'arbitrary_16_noise_0_3', 'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5']
+    # config_list = ['gravity_16', 'gravity_16_noise_1E-1', 'gravity_16_noise_0_2', 'gravity_16_noise_0_3', 'gravity_16_noise_0_4', 'gravity_16_noise_0_5']
+    config_list = ['arbitrary_3'] # ['arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30','arbitrary_3_dropout_40']  #,
 
 
     for config_file in config_list:
@@ -3592,9 +3605,9 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 2)
+        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 2)
         # data_train(config, device)
-        data_test(config, visualize=False, style='color', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 50, test_simulation=False, sample_embedding=False, device=device)
+        data_test(config, visualize=True, style='color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 5, test_simulation=False, sample_embedding=False, device=device)
 
 
 
