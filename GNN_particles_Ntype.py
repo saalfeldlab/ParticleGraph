@@ -533,6 +533,8 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
                         else:
                             plt.xticks([])
                             plt.yticks([])
+                        plt.xlim([0, 1])
+                        plt.ylim([0, 1])
                         plt.tight_layout()
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
                         plt.close()
@@ -3435,17 +3437,6 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
             matplotlib.rcParams['savefig.pad_inches'] = 0
 
             fig = plt.figure(figsize=(12, 12))
-            # if  (model_config.signal_model_name == 'PDE_N'):
-            #     ax = fig.add_subplot(1, 1, 1)
-            # elif (has_mesh | (simulation_config.boundary == 'periodic')) & (model_config.mesh_model_name != 'RD_RPS_Mesh'):
-            #     ax = plt.axes([0, 0, 1, 1], frameon=False)
-            # elif model_config.particle_model_name == 'PDE_G':
-            #     ax = plt.axes([-2, -2, 2, 2], frameon=False)
-            # elif model_config.particle_model_name == 'PDE_GS':
-            #     ax = plt.axes([-0.5E10, -0.5E10, 0.5E10, 0.5E10], frameon=False)
-            # ax.get_xaxis().set_visible(False)
-            # ax.get_yaxis().set_visible(False)
-            # plt.autoscale(tight=True)
             ax = fig.add_subplot(1, 1, 1)
             ax.xaxis.set_major_locator(plt.MaxNLocator(3))
             ax.yaxis.set_major_locator(plt.MaxNLocator(3))
@@ -3494,7 +3485,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
                 ax.get_yaxis().set_visible(False)
                 # plt.autoscale(tight=True)
             else:
-                s_p = 100
+                s_p = 200
                 if simulation_config.has_cell_division:
                     s_p = 25
                 for n in range(n_particle_types):
@@ -3516,25 +3507,85 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
             plt.close()
 
             if has_ghost:
-                fig = plt.figure(figsize=(12, 12))
+
+                x0 = x_list[0][it+1].clone().detach()
                 x_ghost_pos = bc_pos(x_ghost[:, 1:3])
-                plt.scatter(x_ghost_pos[:, 0].detach().cpu().numpy(),
-                            x_ghost_pos[:, 1].detach().cpu().numpy(), s=s_p / 2, color='k')
                 x_removed = x_removed_list[it]
-                plt.scatter(x_removed[:, 1].detach().cpu().numpy(),
-                            x_removed[:, 2].detach().cpu().numpy(), s=s_p / 2, color='g')
-                plt.xticks([])
-                plt.yticks([])
+                x_all = torch.cat((x, x_removed), 0)
+
+                fig = plt.figure(figsize=(12, 12))
+                ax = fig.add_subplot(1, 1, 1)
+                ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+                ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                for n in range(n_particle_types):
+                    plt.scatter(x0[index_particles[n], 1].detach().cpu().numpy(),
+                                x0[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
+                if 'frame' in style:
+                    plt.xlabel(r'$x$', fontsize=64)
+                    plt.ylabel(r'$y$', fontsize=64)
+                    plt.xticks(fontsize=32.0)
+                    plt.yticks(fontsize=32.0)
+                else:
+                    plt.xticks([])
+                    plt.yticks([])
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_recons/Ghost_{dataset_name}_{it}.tif", dpi=170.7)
+                plt.savefig(f"./{log_dir}/tmp_recons/Ghost1_{dataset_name}_{it}.tif", dpi=170.7)
+                plt.close()
+                fig = plt.figure(figsize=(12, 12))
+                ax = fig.add_subplot(1, 1, 1)
+                ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+                ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                plt.scatter(x_ghost_pos[:, 0].detach().cpu().numpy(),
+                            x_ghost_pos[:, 1].detach().cpu().numpy(), s=s_p, color='g')
+                if 'frame' in style:
+                    plt.xlabel(r'$x$', fontsize=64)
+                    plt.ylabel(r'$y$', fontsize=64)
+                    plt.xticks(fontsize=32.0)
+                    plt.yticks(fontsize=32.0)
+                else:
+                    plt.xticks([])
+                    plt.yticks([])
+                plt.xlim([0, 1])
+                plt.ylim([0, 1])
+                plt.xticks(fontsize=32.0)
+                plt.yticks(fontsize=32.0)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_recons/Ghost2_{dataset_name}_{it}.tif", dpi=170.7)
+                plt.close()
+                fig = plt.figure(figsize=(12, 12))
+                ax = fig.add_subplot(1, 1, 1)
+                ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+                ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                plt.scatter(x_removed[:, 1].detach().cpu().numpy(),
+                            x_removed[:, 2].detach().cpu().numpy(), s=s_p, color='r')
+                if 'frame' in style:
+                    plt.xlabel(r'$x$', fontsize=64)
+                    plt.ylabel(r'$y$', fontsize=64)
+                    plt.xticks(fontsize=32.0)
+                    plt.yticks(fontsize=32.0)
+                else:
+                    plt.xticks([])
+                    plt.yticks([])
+                plt.xlim([0, 1])
+                plt.ylim([0, 1])
+                plt.xticks(fontsize=32.0)
+                plt.yticks(fontsize=32.0)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_recons/Ghost3_{dataset_name}_{it}.tif", dpi=170.7)
                 plt.close()
 
     print(f'RMSE = {np.round(np.mean(rmserr_list), 4)} +/- {np.round(np.std(rmserr_list), 4)}')
 
-    plt.rcParams['text.usetex'] = True
-    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+    # plt.rcParams['text.usetex'] = True
+    # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     matplotlib.rcParams['savefig.pad_inches'] = 0
 
     if n_particle_types>1000:
@@ -3551,50 +3602,79 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
     # plt.scatter(x[:, 1].detach().cpu().numpy(), x[:, 2].detach().cpu().numpy(), s=50)
     # plt.scatter(x0_next[:, 1].detach().cpu().numpy(), x0_next[:, 2].detach().cpu().numpy(), s=50)
 
+    if True:
+        fig = plt.figure(figsize=(12, 12))
+        ax = fig.add_subplot(1, 1, 1)
+        x0_next = x_list[0][it + 1].clone().detach()
+        temp1 = torch.cat((x, x0_next), 0)
+        temp2 = torch.tensor(np.arange(n_particles), device=device)
+        temp3 = torch.tensor(np.arange(n_particles) + n_particles, device=device)
+        temp4 = torch.concatenate((temp2[:, None], temp3[:, None]), 1)
+        temp4 = torch.t(temp4)
+        distance3 = torch.sqrt(torch.sum(bc_dpos(x[:, 1:3] - x0_next[:, 1:3]) ** 2, 1))
+        distance4 = torch.sqrt(torch.sum((x[:, 1:3] - x0_next[:, 1:3]) ** 2, 1))
+        p = torch.argwhere(distance4 < 0.3)
+        pos = dict(enumerate(np.array((temp1[:, 1:3]).detach().cpu()), 0))
+        dataset = data.Data(x=temp1[:, 1:3], edge_index=torch.squeeze(temp4[:, p]))
+        vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
+        nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,ax=ax,edge_color='r', width=4)
+        ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True)
+        for n in range(n_particle_types):
+            plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
+                        x[index_particles[n], 2].detach().cpu().numpy(), s=50, color=cmap.color(n))
+        plt.xlim([0, 1])
+        plt.ylim([0, 1])
+        # plt.xlim([-2, 2])
+        # plt.ylim([-2, 2])
+        plt.xticks(fontsize=32)
+        plt.yticks(fontsize=32)
+        plt.xlabel(r'$x$', fontsize=64)
+        plt.ylabel(r'$y$', fontsize=64)
+        # plt.text(0,0.9,f'RMS error: {np.round(np.mean(rmserr_list) * 100, 2)} +/- {np.round(np.std(rmserr_list) * 100, 2)} %')
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/rmserr_{dataset_name}_{it+2}.tif", dpi=170.7)
 
-    fig = plt.figure(figsize=(12, 12))
-    ax = fig.add_subplot(1, 1, 1)
-    x0_next = x_list[0][it + 1].clone().detach()
-    temp1 = torch.cat((x, x0_next), 0)
-    temp2 = torch.tensor(np.arange(n_particles), device=device)
-    temp3 = torch.tensor(np.arange(n_particles) + n_particles, device=device)
-    temp4 = torch.concatenate((temp2[:, None], temp3[:, None]), 1)
-    temp4 = torch.t(temp4)
-    distance3 = torch.sqrt(torch.sum(bc_dpos(x[:, 1:3] - x0_next[:, 1:3]) ** 2, 1))
-    distance4 = torch.sqrt(torch.sum((x[:, 1:3] - x0_next[:, 1:3]) ** 2, 1))
-    p = torch.argwhere(distance4 < 0.3)
-    pos = dict(enumerate(np.array((temp1[:, 1:3]).detach().cpu()), 0))
-    dataset = data.Data(x=temp1[:, 1:3], edge_index=torch.squeeze(temp4[:, p]))
-    vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,ax=ax,edge_color='r', width=2)
-    ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True)
-    for n in range(n_particle_types):
-        plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                    x[index_particles[n], 2].detach().cpu().numpy(), s=50, color=cmap.color(n))
-    plt.xlim([0, 1])
-    plt.ylim([0, 1])
-    # plt.xlim([-2, 2])
-    # plt.ylim([-2, 2])
-    plt.xticks(fontsize=32)
-    plt.yticks(fontsize=32)
-    plt.xlabel(r'$x$', fontsize=64)
-    plt.ylabel(r'$y$', fontsize=64)
-    # plt.text(0,0.9,f'RMS error: {np.round(np.mean(rmserr_list) * 100, 2)} +/- {np.round(np.std(rmserr_list) * 100, 2)} %')
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/rmserr_{dataset_name}_{it+2}.tif", dpi=170.7)
+    if True:
+
+
+        loss_ctrl = torch.load ('./log/try_arbitrary_3/loss.pt')
+        loss_no_ghost = torch.load('./log/try_arbitrary_3_dropout_10_no_ghost/loss.pt')
+        loss_with_ghost = torch.load('./log/try_arbitrary_3_dropout_10/loss.pt')
+        loss_with_ghost20 = torch.load('./log/try_arbitrary_3_dropout_20/loss.pt')
+        loss_with_ghost30 = torch.load('./log/try_arbitrary_3_dropout_30/loss.pt')
+        loss_with_ghost40 = torch.load('./log/try_arbitrary_3_dropout_40/loss.pt')
+
+        fig = plt.figure(figsize=(12, 12))
+        ax = fig.add_subplot(1, 1, 1)
+        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        plt.plot(loss_ctrl, label='No removal', linewidth=4)
+        plt.plot(loss_no_ghost, label=r'10$\%$ removal, no ghost', linewidth=4)
+        plt.plot(loss_with_ghost, label=r'10$\%$ removal, with ghost', linewidth=4)
+        plt.plot(loss_with_ghost20, label=r'20$\%$ removal, with ghost', linewidth=4)
+        plt.plot(loss_with_ghost30, label=r'30$\%$ removal, with ghost', linewidth=4)
+        plt.plot(loss_with_ghost40, label=r'40$\%$ removal, with ghost', linewidth=4)
+        plt.xlabel(r'$Epochs$', fontsize=64)
+        plt.ylabel(r'$Loss$', fontsize=64)
+        plt.xticks(fontsize=32)
+        plt.yticks(fontsize=32)
+        plt.legend(fontsize=24)
+        plt.xlim([0, 20])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/loss_{dataset_name}_{it+2}.tif", dpi=170.7)
+
+
 
 
 
 if __name__ == '__main__':
 
-
-    # config_list = ['arbitrary_16_noise_0_2','arbitrary_16_noise_0_3','arbitrary_16_noise_0_4','arbitrary_16_noise_0_5']
-    # config_list = ['gravity_16_noise_0_2', 'gravity_16_noise_0_3', 'gravity_16_noise_0_4','gravity_16_noise_0_5']
-    # config_list = ['boids_16_noise_0_2', 'boids_16_noise_0_3', 'boids_16_noise_0_4', 'boids_16_noise_0_5']
-
+    # config_list = ['arbitrary_3','arbitrary_3_3', 'arbitrary_3_continuous', 'arbitrary_16','arbitrary_32','arbitrary_64']
     # config_list = ['arbitrary_16','arbitrary_16_noise_1E-1','arbitrary_16_noise_0_2', 'arbitrary_16_noise_0_3', 'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5']
+    # config_list = ['arbitrary_3', 'arbitrary_3_dropout_10_no_ghost', 'arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30', 'arbitrary_3_dropout_40']
     # config_list = ['gravity_16', 'gravity_16_noise_1E-1', 'gravity_16_noise_0_2', 'gravity_16_noise_0_3', 'gravity_16_noise_0_4', 'gravity_16_noise_0_5']
-    config_list = ['arbitrary_3'] # ['arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30','arbitrary_3_dropout_40']  #,
+    # config_list = ['arbitrary_3_dropout_10_no_ghost','arbitrary_3_dropout_20','arbitrary_3_dropout_30', 'arbitrary_3_dropout_40']
+    # config_list = ['arbitrary_3_dropout_10']
+    config_list = ['arbitrary_3_field_1_']
 
 
     for config_file in config_list:
@@ -3605,9 +3685,9 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 2)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
         # data_train(config, device)
-        data_test(config, visualize=True, style='color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 5, test_simulation=False, sample_embedding=False, device=device)
+        # data_test(config, visualize=True, style='color frame', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 21, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
 
 

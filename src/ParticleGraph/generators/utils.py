@@ -12,7 +12,7 @@ from time import sleep
 import numpy as np
 import torch
 from scipy.spatial import Delaunay
-from tifffile import imread
+from tifffile import imread, imsave
 from torch_geometric.utils import get_mesh_laplacian
 from tqdm import trange
 
@@ -233,7 +233,7 @@ def init_particles(config, device, cycle_length=None):
             type = torch.tensor(type, device=device)
             type = type[:, None]
         case 'uniform':
-            type = torch.ones(n_particles, device=device)*0
+            type = torch.ones(n_particles, device=device)*7
             type =  type[:, None]
         case 'stripes':
             l = n_particles//n_particle_types
@@ -267,6 +267,8 @@ def init_mesh(config, model_mesh, device):
 
     i0 = imread(f'graphs_data/{node_value_map}')
     values = i0[(to_numpy(pos_mesh[:, 0]) * 255).astype(int), (to_numpy(pos_mesh[:, 1]) * 255).astype(int)]
+
+    imsave(f"target.tif", np.reshape(values,(n_nodes_per_axis,n_nodes_per_axis)))
 
     mask_mesh = (x_mesh > torch.min(x_mesh) + 0.02) & (x_mesh < torch.max(x_mesh) - 0.02) & (y_mesh > torch.min(y_mesh) + 0.02) & (y_mesh < torch.max(y_mesh) - 0.02)
 
@@ -304,7 +306,8 @@ def init_mesh(config, model_mesh, device):
 
     i0 = imread(f'graphs_data/{node_type_map}')
     values = i0[(to_numpy(x_mesh[:, 0]) * 255).astype(int), (to_numpy(y_mesh[:, 0]) * 255).astype(int)]
-    values = np.round(values / np.max(values) * (simulation_config.n_node_types-1))
+    if np.max(values) > 0:
+        values = np.round(values / np.max(values) * (simulation_config.n_node_types-1))
     type_mesh = torch.tensor(values, device=device)
     type_mesh = type_mesh[:, None]
 

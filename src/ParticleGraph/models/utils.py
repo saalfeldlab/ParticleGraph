@@ -98,12 +98,22 @@ def plot_training_particle_field(config, dataset_name, model_name, log_dir, epoc
 
     fig = plt.figure(figsize=(12, 12))
     im = to_numpy(model_field[dataset_num])
-    im = np.reshape(im, (100, 100))
+    im = np.reshape(im, (256, 256))
     plt.imshow(im)
     plt.gca().invert_yaxis()
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/embedding/field/{model_name}_{dataset_name}_field_{epoch}_{N}.tif", dpi=300)
     plt.close()
+
+    plt.imshow(pts, cmap='viridis')
+    plt.gca().invert_yaxis()
+    plt.xlabel(r'$x$', fontsize=64)
+    plt.ylabel(r'$y$', fontsize=64)
+    plt.xticks(fontsize=32.0)
+    plt.yticks(fontsize=32.0)
+    plt.tight_layout()
+    # save image
+    io.imsave(f"./{log_dir}/tmp_training/field_{dataset_name}_{epoch}.tif", pts)
 
 def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 

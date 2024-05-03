@@ -173,7 +173,7 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
 
     def psi(self, r, p1, p2):
 
-        if (self.model == 'PDE_A') | (self.model =='PDE_A_bis'):
+        if (self.model == 'PDE_A') | (self.model =='PDE_A_bis')  | (self.model=='PDE_ParticleField_A'):
             return r * (p1[0] * torch.exp(-r ** (2 * p1[1]) / (2 * self.sigma ** 2)) - p1[2] * torch.exp(-r ** (2 * p1[3]) / (2 * self.sigma ** 2)))
         if self.model == 'PDE_B':
             cohesion = p1[0] * 0.5E-5 * r
