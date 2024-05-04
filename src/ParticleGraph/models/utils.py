@@ -10,7 +10,6 @@ import vispy.io as io
 from matplotlib.ticker import FormatStrFormatter
 from scipy.optimize import curve_fit
 from vispy.scene import visuals
-
 from ParticleGraph.fitting_models import linear_model
 from ParticleGraph.models import Interaction_Particles, Interaction_Particle_Field, Signal_Propagation, Mesh_Laplacian, \
     Mesh_RPS
@@ -32,13 +31,12 @@ def plot_training_particle_field(config, dataset_name, model_name, log_dir, epoc
     train_config = config.training
     model_config = config.graph_model
 
+    n_nodes = simulation_config.n_nodes
+    n_nodes_per_axis = int(np.sqrt(n_nodes))
+
     fig = plt.figure(figsize=(12, 12))
     if axis:
-        # plt.rcParams['text.usetex'] = True
-        # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
         ax = fig.add_subplot(1, 1, 1)
-        # ax.xaxis.get_major_formatter()._usetex = False
-        # ax.yaxis.get_major_formatter()._usetex = False
         ax.xaxis.set_major_locator(plt.MaxNLocator(3))
         ax.yaxis.set_major_locator(plt.MaxNLocator(3))
         ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
@@ -50,7 +48,6 @@ def plot_training_particle_field(config, dataset_name, model_name, log_dir, epoc
     else:
         plt.axis('off')
     embedding = get_embedding(model.a, dataset_num)
-    embedding = embedding[n_nodes:, :]
     if n_particle_types > 1000:
         plt.scatter(embedding[:, 0], embedding[:, 1], c=to_numpy(x[:, 5]) / n_particles, s=5, cmap='viridis')
     else:
@@ -98,22 +95,16 @@ def plot_training_particle_field(config, dataset_name, model_name, log_dir, epoc
 
     fig = plt.figure(figsize=(12, 12))
     im = to_numpy(model_field[dataset_num])
-    im = np.reshape(im, (256, 256))
-    plt.imshow(im)
+    im = np.reshape(np.abs(im), (n_nodes_per_axis, n_nodes_per_axis))
+    plt.imshow(im,vmin=0, vmax=0.1)
     plt.gca().invert_yaxis()
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/embedding/field/{model_name}_{dataset_name}_field_{epoch}_{N}.tif", dpi=300)
     plt.close()
 
-    plt.imshow(pts, cmap='viridis')
-    plt.gca().invert_yaxis()
-    plt.xlabel(r'$x$', fontsize=64)
-    plt.ylabel(r'$y$', fontsize=64)
-    plt.xticks(fontsize=32.0)
-    plt.yticks(fontsize=32.0)
-    plt.tight_layout()
-    # save image
-    io.imsave(f"./{log_dir}/tmp_training/field_{dataset_name}_{epoch}.tif", pts)
+    pts = to_numpy(torch.reshape(model_field[dataset_num], (n_nodes_per_axis, n_nodes_per_axis)))
+    pts = np.flipud(pts)
+    io.imsave(f"./{log_dir}/tmp_training/embedding/field_pic_{dataset_name}_{epoch}_{N}.tif", pts)
 
 def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 

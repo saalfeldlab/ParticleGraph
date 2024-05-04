@@ -585,8 +585,6 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
             #     plt.yticks([])
 
 
-
-
 def data_generate_particle_field(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
     print('')
@@ -1015,10 +1013,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
                     else:
                         # matplotlib.use("Qt5Agg")
-
-                        plt.rcParams['text.usetex'] = True
-                        rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-
                         matplotlib.rcParams['savefig.pad_inches'] = 0
                         fig = plt.figure(figsize=(12, 12))
                         ax = fig.add_subplot(1, 1, 1)
@@ -1090,6 +1084,8 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                         # plt.xlim([-2,2])
                         # plt.ylim([-2,2])
                         if 'frame' in style:
+                            plt.rcParams['text.usetex'] = True
+                            rc('font', **{'family': 'serif', 'serif': ['Palatino']})
                             plt.xlabel(r'$x$', fontsize=64)
                             plt.ylabel(r'$y$', fontsize=64)
                             plt.xticks(fontsize=32.0)
@@ -1504,7 +1500,7 @@ def data_train_particles(config, device):
                 total_loss_division += loss_division.item()
 
             if has_ghost:
-                loss = ((pred[mask_ghost] - y_batch)).norm(2) + var_batch.mean()
+                loss = ((pred[mask_ghost] - y_batch)).norm(2) + 0 * var_batch.mean()
             else:
                 if not (has_large_range):
                     loss = (pred - y_batch).norm(2)
@@ -2172,8 +2168,10 @@ def data_train_particle_field(config, device):
 
                 x = x_list[run][k].clone().detach()
                 x_mesh = x_mesh_list[run][k].clone().detach()
-
-                x_mesh [:,6:7] = model.field[run]
+                if epoch<2:
+                    x_mesh [:,6:7] = model.field[run]
+                else:
+                    x_mesh[:, 6:7] = torch.clamp(model.field[run], min=0, max=0.25)
                 x_particle_field = torch.concatenate((x_mesh, x), dim=0)
 
                 if has_ghost:
@@ -2257,10 +2255,14 @@ def data_train_particle_field(config, device):
             if has_ghost:
                 loss = ((pred_p_p[mask_ghost] + 0 * pred_f_p - y_batch)).norm(2) + var_batch.mean() + model.field.norm(2)
             else:
-                loss = (pred_p_p + pred_f_p - y_batch).norm(2) + model.field.norm(2)
+                if epoch<5:
+                    loss = ((pred_p_p + pred_f_p - y_batch)).norm(2) + model.field.norm(2)
+                else:
+                    loss = (pred_p_p + pred_f_p - y_batch).norm(2) # + model.field.norm(2)
+
 
             visualize_embedding = True
-            if visualize_embedding & (((epoch == 0) & (N < 10000) & (N % 200 == 0)) | (N==0)):
+            if visualize_embedding & (((epoch < 3 ) & (N < 10000) & (N % 200 == 0)) | (N==0)):
                 plot_training_particle_field(config=config, dataset_name=dataset_name, model_name=model_config.particle_model_name, log_dir=log_dir,
                               epoch=epoch, N=N, x=x, model_field=model.field, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
                               index_particles=index_particles, n_particles=n_particles,
@@ -3646,24 +3648,22 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
 
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(1, 1, 1)
-        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        plt.plot(loss_ctrl, label='No removal', linewidth=4)
-        plt.plot(loss_no_ghost, label=r'10$\%$ removal, no ghost', linewidth=4)
-        plt.plot(loss_with_ghost, label=r'10$\%$ removal, with ghost', linewidth=4)
-        plt.plot(loss_with_ghost20, label=r'20$\%$ removal, with ghost', linewidth=4)
-        plt.plot(loss_with_ghost30, label=r'30$\%$ removal, with ghost', linewidth=4)
-        plt.plot(loss_with_ghost40, label=r'40$\%$ removal, with ghost', linewidth=4)
+        ax.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+        plt.plot(np.array(loss_ctrl)*1E6, label='No removal', linewidth=4)
+        plt.plot(np.array(loss_no_ghost)*1E6, label=r'10$\%$ removal, no ghost', linewidth=4)
+        plt.plot(np.array(loss_with_ghost)*1E6, label=r'10$\%$ removal, with ghost', linewidth=4)
+        plt.plot(np.array(loss_with_ghost20)*1E6, label=r'20$\%$ removal, with ghost', linewidth=4)
+        plt.plot(np.array(loss_with_ghost30)*1E6, label=r'30$\%$ removal, with ghost', linewidth=4)
+        plt.plot(np.array(loss_with_ghost40)*1E6, label=r'40$\%$ removal, with ghost', linewidth=4)
         plt.xlabel(r'$Epochs$', fontsize=64)
         plt.ylabel(r'$Loss$', fontsize=64)
         plt.xticks(fontsize=32)
         plt.yticks(fontsize=32)
         plt.legend(fontsize=24)
         plt.xlim([0, 20])
+        plt.ylim([-1000, 5000])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/loss_{dataset_name}_{it+2}.tif", dpi=170.7)
-
-
-
 
 
 if __name__ == '__main__':
@@ -3672,9 +3672,15 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_16','arbitrary_16_noise_1E-1','arbitrary_16_noise_0_2', 'arbitrary_16_noise_0_3', 'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5']
     # config_list = ['arbitrary_3', 'arbitrary_3_dropout_10_no_ghost', 'arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30', 'arbitrary_3_dropout_40']
     # config_list = ['gravity_16', 'gravity_16_noise_1E-1', 'gravity_16_noise_0_2', 'gravity_16_noise_0_3', 'gravity_16_noise_0_4', 'gravity_16_noise_0_5']
-    # config_list = ['arbitrary_3_dropout_10_no_ghost','arbitrary_3_dropout_20','arbitrary_3_dropout_30', 'arbitrary_3_dropout_40']
-    # config_list = ['arbitrary_3_dropout_10']
-    config_list = ['arbitrary_3_field_1_']
+    # config_list = ['arbitrary_3_dropout_10_no_ghost','arbitrary_3_dropout_10']
+    # config_list = ['arbitrary_3_dropout_20']
+    config_list = ['arbitrary_3_dropout_30', 'arbitrary_3_dropout_40']
+    # config_list = ['arbitrary_3_field_1_new_training']
+    # config_list = ['arbitrary_3_field_1_new_training']
+    # config_list = ['arbitrary_3_field_3_new_training']
+    # config_list = ['arbitrary_3_field_1_boats']
+    # config_list = ['arbitrary_3_field_1_triangles']
+
 
 
     for config_file in config_list:
@@ -3685,8 +3691,8 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
-        # data_train(config, device)
+        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
+        data_train(config, device)
         # data_test(config, visualize=True, style='color frame', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 21, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
 
