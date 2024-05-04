@@ -5,6 +5,7 @@ import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
 from ParticleGraph.MLP import MLP
 from ParticleGraph.utils import to_numpy
+from ParticleGraph.models import Siren_Network
 
 
 class Interaction_Particle_Field(pyg.nn.MessagePassing):
@@ -41,6 +42,7 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         self.n_layers = model_config.n_mp_layers
         self.n_particles = simulation_config.n_particles
         self.n_nodes = simulation_config.n_nodes
+        self.n_nodes_per_axis = int(np.sqrt(self.n_nodes))
         self.max_radius = simulation_config.max_radius
         self.data_augmentation = train_config.data_augmentation
         self.noise_level = train_config.noise_level
@@ -75,8 +77,20 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
                 torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
 
-        self.field = nn.Parameter(
-                torch.tensor(np.zeros((self.n_dataset, int(self.n_nodes), 1)), device=self.device, requires_grad=True, dtype=torch.float32))
+        if (model_config.field_method == 'tensor'):
+            self.field = nn.Parameter(
+                    torch.tensor(np.zeros((self.n_dataset, int(self.n_nodes), 1)), device=self.device, requires_grad=True, dtype=torch.float32))
+        elif (model_config.field_method == 'Siren_wo_time'):
+            self.field=[]
+            for n in range(self.n_dataset):
+                image_width = self.n_nodes_per_axis
+                self.field.append(Siren_Network(image_width=image_width, in_features=2, out_features=1, hidden_features=256, hidden_layers=8, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.))
+        elif (model_config.field_method == 'Siren_with_time'):
+            self.field = []
+            for n in range(self.n_dataset):
+                image_width = self.n_nodes_per_axis
+                self.field.append(Siren_Network(image_width=image_width, in_features=2, out_features=1, hidden_features=256, hidden_layers=8, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.))
+
 
 
         if self.update_type != 'none':

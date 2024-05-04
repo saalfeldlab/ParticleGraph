@@ -678,6 +678,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         # fig = plt.figure(figsize=(12, 12))
         # im = torch.reshape(H1_mesh[:,0:1],(100,100))
         # plt.imshow(to_numpy(im))
+        # plt.colorbar()
 
         torch.save(mesh_data, f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt')
         mask_mesh = mesh_data['mask'].squeeze()
@@ -689,6 +690,11 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
         time.sleep(0.5)
         for it in trange(simulation_config.start_frame, n_frames + 1):
+
+            if model_config.field_method == 'Siren_with_time':
+                H1_mesh = rotate_init_mesh(it, config, device=device)
+                im = torch.reshape(H1_mesh[:, 0:1], (100, 100))
+                io.imsave(f"graphs_data/graphs_{dataset_name}/generated_data/rotated_image_{it}.tif", to_numpy(im))
 
             # calculate cell division
             if (it >= 0) & has_cell_division & (n_particles < 20000):
@@ -2168,10 +2174,22 @@ def data_train_particle_field(config, device):
 
                 x = x_list[run][k].clone().detach()
                 x_mesh = x_mesh_list[run][k].clone().detach()
-                if epoch<2:
-                    x_mesh [:,6:7] = model.field[run]
-                else:
-                    x_mesh[:, 6:7] = torch.clamp(model.field[run], min=0, max=0.25)
+
+                match  simulation_config.field_method:
+                    case 'tensor':
+                        x_mesh[:, 6:7] = model.field[run]
+
+                    case 'Siren_wo_time':
+                        x_mesh[:, 6:7] = model_siren()
+
+                    case 'Siren_with_time':
+                        x_mesh[:, 6:7] = model_siren()
+
+
+
+
+                if epoch>2:
+                    x_mesh[:, 6:7] = torch.clamp(x_mesh[:, 6:7], min=0, max=0.25)
                 x_particle_field = torch.concatenate((x_mesh, x), dim=0)
 
                 if has_ghost:
@@ -2255,7 +2273,7 @@ def data_train_particle_field(config, device):
             if has_ghost:
                 loss = ((pred_p_p[mask_ghost] + 0 * pred_f_p - y_batch)).norm(2) + var_batch.mean() + model.field.norm(2)
             else:
-                if epoch<5:
+                if True: # epoch<5:
                     loss = ((pred_p_p + pred_f_p - y_batch)).norm(2) + model.field.norm(2)
                 else:
                     loss = (pred_p_p + pred_f_p - y_batch).norm(2) # + model.field.norm(2)
@@ -3674,12 +3692,14 @@ if __name__ == '__main__':
     # config_list = ['gravity_16', 'gravity_16_noise_1E-1', 'gravity_16_noise_0_2', 'gravity_16_noise_0_3', 'gravity_16_noise_0_4', 'gravity_16_noise_0_5']
     # config_list = ['arbitrary_3_dropout_10_no_ghost','arbitrary_3_dropout_10']
     # config_list = ['arbitrary_3_dropout_20']
-    config_list = ['arbitrary_3_dropout_30', 'arbitrary_3_dropout_40']
+    # config_list = ['arbitrary_3_dropout_30', 'arbitrary_3_dropout_40']
     # config_list = ['arbitrary_3_field_1_new_training']
     # config_list = ['arbitrary_3_field_1_new_training']
     # config_list = ['arbitrary_3_field_3_new_training']
     # config_list = ['arbitrary_3_field_1_boats']
     # config_list = ['arbitrary_3_field_1_triangles']
+    # config_list = ['arbitrary_3_field_1_boats_','arbitrary_3_field_1_triangles_']
+    config_list = ['arbitrary_3_field_1_Siren_with_time']
 
 
 
@@ -3691,8 +3711,8 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
-        data_train(config, device)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
+        # data_train(config, device)
         # data_test(config, visualize=True, style='color frame', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 21, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
 

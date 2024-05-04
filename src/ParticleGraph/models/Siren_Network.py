@@ -52,6 +52,11 @@ class Siren_Network(nn.Module):
         self.net.append(SineLayer(in_features, hidden_features, 
                                   is_first=True, omega_0=first_omega_0))
 
+        if in_features == 2:
+            self.has_time = False
+        else:
+            self.has_time = True
+
         for i in range(hidden_layers):
             self.net.append(SineLayer(hidden_features, hidden_features, 
                                       is_first=False, omega_0=hidden_omega_0))
@@ -93,9 +98,16 @@ class Siren_Network(nn.Module):
         mgrid = mgrid.reshape(-1, dim)
         return mgrid
 
-    def forward(self, coords=None):
+    def forward(self, coords=None, time = 0):
+
         if coords is None:
-            coords = self.get_mgrid(self.image_width, dim=2).to(self.device)
+            if self.has_time:
+                coords = self.get_mgrid(self.image_width, dim=3).to(self.device)
+                coords[:,3] = torch.tensor(time).to(self.device).repeat(coords.shape[0], 1)
+            else:
+                coords = self.get_mgrid(self.image_width, dim=2).to(self.device)
         coords = coords.clone().detach().requires_grad_(True) # allows to take derivative w.r.t. input
         output = self.net(coords)
-        return output, coords
+        output = output.view(output.shape[0], self.image_width, self.image_width, -1)
+
+        return output

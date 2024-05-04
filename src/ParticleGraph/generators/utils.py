@@ -17,6 +17,8 @@ from torch_geometric.utils import get_mesh_laplacian
 from tqdm import trange
 
 from ParticleGraph.utils import to_numpy
+from torchvision.transforms import v2
+from scipy import ndimage
 
 
 def generate_from_data(config, device, visualize=True, folder=None, step=None):
@@ -245,6 +247,32 @@ def init_particles(config, device, cycle_length=None):
 
     return pos, dpos, type, features, cycle_duration, particle_id, cycle_length, cycle_length_distrib
 
+def rotate_init_mesh(angle, config, device):
+    simulation_config = config.simulation
+    n_nodes = simulation_config.n_nodes
+    node_value_map = simulation_config.node_value_map
+
+    n_nodes_per_axis = int(np.sqrt(n_nodes))
+    xs = torch.linspace(1 / (2 * n_nodes_per_axis), 1 - 1 / (2 * n_nodes_per_axis), steps=n_nodes_per_axis)
+    ys = torch.linspace(1 / (2 * n_nodes_per_axis), 1 - 1 / (2 * n_nodes_per_axis), steps=n_nodes_per_axis)
+    x_mesh, y_mesh = torch.meshgrid(xs, ys, indexing='xy')
+    x_mesh = torch.reshape(x_mesh, (n_nodes_per_axis ** 2, 1))
+    y_mesh = torch.reshape(y_mesh, (n_nodes_per_axis ** 2, 1))
+    pos_mesh = torch.zeros((n_nodes, 2), device=device)
+    pos_mesh[0:n_nodes, 0:1] = x_mesh[0:n_nodes]
+    pos_mesh[0:n_nodes, 1:2] = y_mesh[0:n_nodes]
+
+    i0 = imread(f'graphs_data/{node_value_map}')
+    values = i0[(to_numpy(pos_mesh[:, 0]) * 255).astype(int), (to_numpy(pos_mesh[:, 1]) * 255).astype(int)]
+    values = np.reshape(values, (n_nodes_per_axis, n_nodes_per_axis))
+    values = ndimage.rotate(values, angle, reshape=False)
+    values = np.reshape(values, (n_nodes_per_axis*n_nodes_per_axis))
+    features_mesh = torch.zeros((n_nodes, 2), device=device)
+    features_mesh[:, 0] = torch.tensor(values / 255 * 5000, device=device)
+
+    return features_mesh
+
+
 
 
 def init_mesh(config, model_mesh, device):
@@ -267,8 +295,6 @@ def init_mesh(config, model_mesh, device):
 
     i0 = imread(f'graphs_data/{node_value_map}')
     values = i0[(to_numpy(pos_mesh[:, 0]) * 255).astype(int), (to_numpy(pos_mesh[:, 1]) * 255).astype(int)]
-
-    imsave(f"target.tif", np.reshape(values,(n_nodes_per_axis,n_nodes_per_axis)))
 
     mask_mesh = (x_mesh > torch.min(x_mesh) + 0.02) & (x_mesh < torch.max(x_mesh) - 0.02) & (y_mesh > torch.min(y_mesh) + 0.02) & (y_mesh < torch.max(y_mesh) - 0.02)
 

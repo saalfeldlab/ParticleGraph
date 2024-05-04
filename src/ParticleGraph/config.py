@@ -60,6 +60,8 @@ class GraphModelConfig(BaseModel):
     hidden_dim_update: int = 64
     output_size_update: int = 1
 
+    field_method: Literal['none', 'tensor', 'Siren_wo_time', 'Siren_with_time'] = 'tensor'
+
     division_predictor_input_size: int = 3
     division_predictor_output_size: int = 1
     division_predictor_hidden_dim: int = 64
