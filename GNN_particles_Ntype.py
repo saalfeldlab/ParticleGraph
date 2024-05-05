@@ -2419,7 +2419,7 @@ def data_train_particle_field(config, device):
                             for n in range(n_particles):
                                 embedding_ = model.a[1, n, :].clone().detach() * torch.ones(
                                     (1000, model_config.embedding_dim), device=device)
-                                in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None], rr[:, None] / simulation_config.max_radius, torch.ones_like(rr[:, None]), embedding_), dim=1)
+                                in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None], rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
                                 pred.append(model.lin_edge(in_features.float()))
                             pred = torch.stack(pred)
                             loss = (pred[:, :, 0] - y_func_list.clone().detach()).norm(2)
