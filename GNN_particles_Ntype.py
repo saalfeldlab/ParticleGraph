@@ -3675,12 +3675,10 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_dropout_10_no_ghost','arbitrary_3_dropout_10']
     # config_list = ['arbitrary_3_dropout_20']
     # config_list = ['arbitrary_3_dropout_30', 'arbitrary_3_dropout_40']
-    config_list = ['arbitrary_3_field_1']
-    config_list = ['arbitrary_3_field_3']
-    config_list = ['arbitrary_3_field_1_boats']
+    # config_list = ['arbitrary_3_field_1']
+    # config_list = ['arbitrary_3_field_3']
+    # config_list = ['arbitrary_3_field_1_boats']
     config_list = ['arbitrary_3_field_1_triangles']
-
-
 
     for config_file in config_list:
         # Load parameters from config file
