@@ -690,6 +690,11 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         time.sleep(0.5)
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
+            if model_config.field_type == 'siren_with_time':
+                H1_mesh = rotate_init_mesh(it, config, device=device)
+                im = torch.reshape(H1_mesh[:, 0:1], (100, 100))
+                io.imsave(f"graphs_data/graphs_{dataset_name}/generated_data/rotated_image_{it}.tif", to_numpy(im))
+
             # calculate cell division
             if (it >= 0) & has_cell_division & (n_particles < 20000):
                 pos = torch.argwhere(A1.squeeze() > cycle_length_distrib)
@@ -3378,7 +3383,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_3']
     # config_list = ['arbitrary_3_field_1_boats']
     # config_list = ['arbitrary_3_field_3']
-    config_list = ['arbitrary_3_field_1_siren_with_time']
+    config_list = ['arbitrary_3_field_2_siren_with_time']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -3388,7 +3393,7 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
         data_train(config, device)
         # data_test(config, visualize=True, style='color frame', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 21, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
