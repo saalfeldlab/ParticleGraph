@@ -143,12 +143,15 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         match self.model:
             case 'PDE_ParticleField_A':
                 if self.has_field:
-                    in_features = torch.cat((delta_pos, r[:, None], field_j , embedding_i), dim=-1)
+                    in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
+                    out = field_j * self.lin_edge(in_features)
                 else:
-                    in_features = torch.cat((delta_pos, r[:, None], torch.ones_like(r[:, None]), embedding_i), dim=-1)
+                    # in_features = torch.cat((delta_pos, r[:, None], torch.ones_like(r[:, None]), embedding_i), dim=-1)
+                    in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
+                    out = self.lin_edge(in_features)
 
 
-        out = self.lin_edge(in_features)
+        # out = self.lin_edge(in_features)
 
         if self.model == 'PDE_B':
             self.diffx = delta_pos * self.max_radius

@@ -79,7 +79,7 @@ def plot_training_particle_field(config, dataset_name, model_name, log_dir, epoc
     for n in range(n_particles):
         embedding_ = model.a[dataset_num, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
         in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                 rr[:, None] / simulation_config.max_radius, torch.ones_like(rr[:, None]), embedding_), dim=1)
+                                 rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
         with torch.no_grad():
             func = model.lin_edge(in_features.float())
         func = func[:, 0]
@@ -422,8 +422,7 @@ def analyze_edge_function(rr=None, vizualize=False, config=None, model_lin_edge=
                                          rr[:, None] / max_radius, embedding_), dim=1)
             case 'PDE_ParticleField_A':
                 in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                         rr[:, None] / max_radius, torch.ones_like(rr[:, None]),
-                                         embedding_), dim=1)
+                                         rr[:, None] / max_radius, embedding_), dim=1)
             case 'PDE_A_bis':
                 in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                          rr[:, None] / max_radius, embedding_, embedding_), dim=1)

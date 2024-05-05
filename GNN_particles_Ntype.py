@@ -2171,7 +2171,7 @@ def data_train_particle_field(config, device):
                 if epoch<2:
                     x_mesh [:,6:7] = model.field[run]
                 else:
-                    x_mesh[:, 6:7] = torch.clamp(model.field[run], min=0, max=0.25)
+                    x_mesh[:, 6:7] = torch.clamp(model.field[run], min=0, max=5)
                 x_particle_field = torch.concatenate((x_mesh, x), dim=0)
 
                 if has_ghost:
@@ -2255,10 +2255,10 @@ def data_train_particle_field(config, device):
             if has_ghost:
                 loss = ((pred_p_p[mask_ghost] + 0 * pred_f_p - y_batch)).norm(2) + var_batch.mean() + model.field.norm(2)
             else:
-                if epoch<5:
-                    loss = ((pred_p_p + pred_f_p - y_batch)).norm(2) + model.field.norm(2)
-                else:
-                    loss = (pred_p_p + pred_f_p - y_batch).norm(2) # + model.field.norm(2)
+                # if epoch<5:
+                #     loss = ((pred_p_p + pred_f_p - y_batch)).norm(2) + model.field.norm(2)
+                # else:
+                loss = (pred_p_p + pred_f_p - y_batch).norm(2) # + model.field.norm(2)
 
 
             visualize_embedding = True
@@ -3674,12 +3674,11 @@ if __name__ == '__main__':
     # config_list = ['gravity_16', 'gravity_16_noise_1E-1', 'gravity_16_noise_0_2', 'gravity_16_noise_0_3', 'gravity_16_noise_0_4', 'gravity_16_noise_0_5']
     # config_list = ['arbitrary_3_dropout_10_no_ghost','arbitrary_3_dropout_10']
     # config_list = ['arbitrary_3_dropout_20']
-    config_list = ['arbitrary_3_dropout_30', 'arbitrary_3_dropout_40']
-    # config_list = ['arbitrary_3_field_1_new_training']
-    # config_list = ['arbitrary_3_field_1_new_training']
-    # config_list = ['arbitrary_3_field_3_new_training']
-    # config_list = ['arbitrary_3_field_1_boats']
-    # config_list = ['arbitrary_3_field_1_triangles']
+    # config_list = ['arbitrary_3_dropout_30', 'arbitrary_3_dropout_40']
+    config_list = ['arbitrary_3_field_1']
+    config_list = ['arbitrary_3_field_3']
+    config_list = ['arbitrary_3_field_1_boats']
+    config_list = ['arbitrary_3_field_1_triangles']
 
 
 
