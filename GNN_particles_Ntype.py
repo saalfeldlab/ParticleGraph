@@ -1807,6 +1807,9 @@ def data_train_particle_field(config, device):
 
     list_loss = []
     time.sleep(1)
+
+    torch.autograd.set_detect_anomaly(True)
+
     for epoch in range(n_epochs + 1):
 
         old_batch_size = batch_size
@@ -1837,6 +1840,8 @@ def data_train_particle_field(config, device):
 
         for N in range(Niter):
 
+            print(f'N: {N} epoch: {epoch}')
+
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
             sin_phi = torch.sin(phi)
@@ -1860,8 +1865,6 @@ def data_train_particle_field(config, device):
                         x_mesh[:, 6:7] = model_f()**2
                     case 'siren_with_time':
                         x_mesh[:, 6:7] = model_f(time=k/n_frames)**2
-                if epoch>=2:
-                    x_mesh[:, 6:7] = torch.clamp(x_mesh[:, 6:7], min=0, max=5)
                 x_particle_field = torch.concatenate((x_mesh, x), dim=0)
 
                 if has_ghost:
