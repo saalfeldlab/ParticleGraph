@@ -1247,7 +1247,7 @@ def data_plot_training_particle_field(config, mode, device):
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
-    epoch_list = [20]
+    epoch_list = [5]
     for epoch in epoch_list:
         print(f'epoch: {epoch}')
 
@@ -1364,8 +1364,7 @@ def data_plot_training_particle_field(config, mode, device):
             match config.graph_model.particle_model_name:
                 case 'PDE_ParticleField_A':
                     in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                         rr[:, None] / max_radius, torch.ones_like(rr[:, None]),
-                                         embedding_), dim=1)
+                                         rr[:, None] / max_radius, embedding_), dim=1)
             with torch.no_grad():
                 func = model.lin_edge(in_features.float())
             func = func[:, 0]
@@ -1460,8 +1459,8 @@ if __name__ == '__main__':
     # config_list = ['gravity_16', 'gravity_16_noise_1E-1', 'gravity_16_noise_0_2', 'gravity_16_noise_0_3', 'gravity_16_noise_0_4', 'gravity_16_noise_0_5']
     # config_list = ['arbitrary_3', 'arbitrary_3_dropout_10_no_ghost', 'arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30','arbitrary_3_dropout_40']
     # config_list = ['arbitrary_16_noise_0_4','arbitrary_16_noise_0_5']# ['arbitrary_16','arbitrary_16_noise_1E-1','arbitrary_16_noise_0_2','arbitrary_16_noise_0_3']
-    config_list = ['arbitrary_3_dropout_10_no_ghost','arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30','arbitrary_3_dropout_40']
-    # config_list = ['arbitrary_3_field_1'] # ['arbitrary_3_field_0','arbitrary_3_field_1','arbitrary_3_field_2','arbitrary_3_field_3']
+    # config_list = ['arbitrary_3_dropout_10_no_ghost','arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30','arbitrary_3_dropout_40']
+    config_list = ['arbitrary_3_field_1'] # ['arbitrary_3_field_0','arbitrary_3_field_1','arbitrary_3_field_2','arbitrary_3_field_3']
 
 
 
@@ -1476,7 +1475,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_plot_training(config, mode='figures' , device=device)
+        data_plot_training_particle_field(config, mode='figures' , device=device)
 
 
 
