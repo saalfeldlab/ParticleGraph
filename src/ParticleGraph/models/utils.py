@@ -25,7 +25,7 @@ def get_embedding(model_a=None, dataset_number = 0):
 
     return embedding
 
-def plot_training_particle_field(config, dataset_name, model_name, log_dir, epoch, N, x, model_field, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
+def plot_training_particle_field(config, has_siren, dataset_name, model_name, log_dir, epoch, N, x, x_mesh, model_field, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -94,17 +94,19 @@ def plot_training_particle_field(config, dataset_name, model_name, log_dir, epoc
     plt.close()
 
     fig = plt.figure(figsize=(12, 12))
-    im = to_numpy(model_field[dataset_num])
-    im = np.reshape(np.abs(im), (n_nodes_per_axis, n_nodes_per_axis))
-    plt.imshow(im,vmin=0, vmax=0.1)
+    if has_siren:
+        im = to_numpy(x_mesh[:,6:7])
+    else:
+        im = to_numpy(model_field[dataset_num])
+    im = np.reshape(im, (n_nodes_per_axis, n_nodes_per_axis))
+    plt.imshow(im)
     plt.gca().invert_yaxis()
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/embedding/field/{model_name}_{dataset_name}_field_{epoch}_{N}.tif", dpi=300)
     plt.close()
 
-    pts = to_numpy(torch.reshape(model_field[dataset_num], (n_nodes_per_axis, n_nodes_per_axis)))
-    pts = np.flipud(pts)
-    io.imsave(f"./{log_dir}/tmp_training/embedding/field_pic_{dataset_name}_{epoch}_{N}.tif", pts)
+    im = np.flipud(im)
+    io.imsave(f"./{log_dir}/tmp_training/embedding/field_pic_{dataset_name}_{epoch}_{N}.tif", im)
 
 def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 

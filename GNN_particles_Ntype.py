@@ -737,7 +737,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                  T1_mesh.clone().detach(), H1_mesh.clone().detach(), A1_mesh.clone().detach()), 1)
             x_particle_field = torch.concatenate((x_mesh, x), dim=0)
 
-
             # compute connectivity rules
 
             dataset_mesh = data.Data(x=x_mesh, edge_index=mesh_data['edge_index'],
@@ -1266,117 +1265,6 @@ def data_train_particles(config, device):
 
     if has_ghost:
 
-        if False:
-            print('Train SIREN model ...')
-
-            run = 1 # + np.random.randint(NGraphs - 1)
-            frame = 62 #+ np.random.randint(n_frames - 2)
-
-            image_width = 256
-            model_input = get_mgrid(image_width, 2)
-            model_input = model_input.cuda()
-
-            for frame in range(62,63): # range(0,n_frames,50):
-
-
-                model_siren = Siren_Network(image_width=image_width, in_features=2, out_features=1, hidden_features=256, hidden_layers=8, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.)
-                x = x_list[run][frame].clone().detach()
-
-                pos_coords = x[:, 1:3].clone().detach() * image_width
-                t_coords = k / n_frames * torch.ones_like(pos_coords[:, 0:1], device=device)
-                coords = pos_coords  # torch.cat((pos_coords, t_coords), 1)
-                y = x[:, 3:5].clone().detach() / vnorm
-
-                # image_file = './graphs_data/pattern_1.tif'  # boat_512.tif, beads_abb.tif, beads_gt.tif
-                # target = load_image(image_file, crop_width=image_width, device=device)
-
-                target = torch.zeros((2, image_width, image_width), device=device)
-                target[0,pos_coords[:, 0].long(), pos_coords[:, 1].long()] = -y[:,0].squeeze()
-                target[0:1,:,:] = GaussianBlur(51,10)(target[0:1,:,:])
-                target[1,pos_coords[:, 0].long(), pos_coords[:, 1].long()] = y[:,1].squeeze()
-                target[1:2,:,:] = GaussianBlur(51,10)(target[1:2,:,:])
-
-                # matplotlib.use("Qt5Agg")
-                # fig = plt.figure(figsize=(8, 8))
-                # plt.scatter(to_numpy(pos_coords[:, 1]), to_numpy(pos_coords[:, 0]), s=20, c=to_numpy(y[:,0].squeeze()))
-                # fig = plt.figure(figsize=(8, 8))
-                # plt.imshow(to_numpy(target[0, :, :].squeeze()))
-                # plt.scatter(to_numpy(pos_coords[:, 1]), to_numpy(pos_coords[:, 0]), s=20, c=to_numpy(y[:, 0].squeeze()))
-
-                total_steps = 1000
-                steps_til_summary = 200
-                optim = torch.optim.Adam(lr=1e-4, params=model_siren.parameters())
-
-                for step in trange(total_steps + 1):
-                    model_output, coords = model_siren()
-                    img_grad_ = gradient(model_output, coords)
-                    # loss = ((model_output - ground_truth) ** 2).mean()
-                    loss = (img_grad_[:,1].view(image_width, image_width) - target[0]).norm(2) + (img_grad_[:,0].view(image_width, image_width) - target[1]).norm(2)
-
-                    # if not step % steps_til_summary:
-                    #     print("Step %d, Total loss %0.6f" % (step, loss))
-
-                    optim.zero_grad()
-                    loss.backward()
-                    optim.step()
-
-                # matplotlib.use("Qt5Agg")
-
-                fig = plt.figure(figsize=(16, 8))
-                ax = fig.add_subplot(2, 4, 2)
-                plt.imshow(to_numpy(target[0, :, :].squeeze()))
-                plt.title('Velocity_field_y')
-                plt.scatter(to_numpy(pos_coords[:, 1]), to_numpy(pos_coords[:, 0]), s=0.1, color='w')
-                plt.xlim([0, image_width])
-                plt.ylim([0, image_width])
-                plt.xticks([])
-                plt.yticks([])
-                ax.invert_yaxis()
-                ax = fig.add_subplot(2, 4, 1)
-                plt.imshow(to_numpy(target[1, :, :].squeeze()))
-                plt.scatter(to_numpy(pos_coords[:, 1]), to_numpy(pos_coords[:, 0]), s=0.1, color='w')
-                plt.xlim([0, image_width])
-                plt.ylim([0, image_width])
-                plt.xticks([])
-                plt.yticks([])
-                ax.invert_yaxis()
-                plt.title('Velocity_field_x')
-                ax = fig.add_subplot(1, 2, 2)
-                temp = -model_output.cpu().view(image_width,image_width).permute(1,0).detach().numpy()
-                plt.imshow(temp)
-                plt.scatter(to_numpy(pos_coords[:, 1]), to_numpy(pos_coords[:, 0]), s=1, color='w')
-                plt.xlim([0, image_width])
-                plt.ylim([0, image_width])
-                plt.xticks([])
-                plt.yticks([])
-                ax.invert_yaxis()
-                plt.title('Reconstructed potential')
-                ax = fig.add_subplot(2, 4, 6)
-                plt.imshow(img_grad_[:, 1].cpu().view(image_width, image_width).detach().numpy())
-                plt.scatter(to_numpy(pos_coords[:, 1]), to_numpy(pos_coords[:, 0]), s=0.1, color='w')
-                plt.xlim([0, image_width])
-                plt.ylim([0, image_width])
-                plt.xticks([])
-                plt.yticks([])
-                ax.invert_yaxis()
-                plt.title('Gradient_y from potential')
-                ax = fig.add_subplot(2, 4, 5)
-                plt.imshow(img_grad_[:, 0].cpu().view(image_width, image_width).detach().numpy())
-                plt.scatter(to_numpy(pos_coords[:, 1]), to_numpy(pos_coords[:, 0]), s=0.1, color='w')
-                plt.xlim([0, image_width])
-                plt.ylim([0, image_width])
-                plt.xticks([])
-                plt.yticks([])
-                ax.invert_yaxis()
-                plt.title('Gradient_x from potential')
-                plt.tight_layout()
-                plt.savefig(f"{log_dir}/tmp_training/siren/siren_{frame}.jpg", dpi=170.7)
-                plt.close()
-
-            torch.save({'model_state_dict': model_siren.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict()},
-                       os.path.join(log_dir, 'models', f'Siren_model'))
-
         ghosts_particles = Ghost_Particles(config, n_particles, vnorm, device)
         optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.ghost_pos], lr=1E-4)
         mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
@@ -1746,10 +1634,13 @@ def data_train_particle_field(config, device):
     min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
     n_nodes = simulation_config.n_nodes
+    n_nodes_per_axis = int(np.sqrt(n_nodes))
     delta_t = simulation_config.delta_t
     noise_level = train_config.noise_level
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
+    has_siren = 'siren' in model_config.field_type
+    has_siren_time = 'siren_with_time' in model_config.field_type
     has_cell_division = simulation_config.has_cell_division
     data_augmentation = train_config.data_augmentation
     data_augmentation_loop = train_config.data_augmentation_loop
@@ -1879,118 +1770,22 @@ def data_train_particle_field(config, device):
             index = np.argwhere(x[:, 7].detach().cpu().numpy() == n)
         index_particles.append(index.squeeze())
 
+    if has_siren:
+
+        image_width = n_nodes_per_axis = int(np.sqrt(n_nodes))
+        if has_siren_time:
+            model_f = Siren_Network(image_width=image_width, in_features=3, out_features=1, hidden_features=64,
+                                        hidden_layers=4, outermost_linear=True, device=device, first_omega_0=80,
+                                        hidden_omega_0=80.)
+        else:
+            model_f = Siren_Network(image_width=image_width, in_features=2, out_features=1, hidden_features=64,
+                                        hidden_layers=3, outermost_linear=True, device=device, first_omega_0=80,
+                                        hidden_omega_0=80.)
+        model_f.to(device=device)
+        model_f.train()
+        optimizer_f = torch.optim.Adam(lr=1e-4, params=model_f.parameters())
+
     if has_ghost:
-
-        if False:
-            print('Train SIREN model ...')
-
-            run = 1 # + np.random.randint(NGraphs - 1)
-            frame = 62 #+ np.random.randint(n_frames - 2)
-
-            image_width = 256
-            model_input = get_mgrid(image_width, 2)
-            model_input = model_input.cuda()
-
-            for frame in range(62,63): # range(0,n_frames,50):
-
-
-                model_siren = Siren_Network(image_width=image_width, in_features=2, out_features=1, hidden_features=256, hidden_layers=8, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.)
-                x = x_list[run][frame].clone().detach()
-
-                pos_coords = x[:, 1:3].clone().detach() * image_width
-                t_coords = k / n_frames * torch.ones_like(pos_coords[:, 0:1], device=device)
-                coords = pos_coords  # torch.cat((pos_coords, t_coords), 1)
-                y = x[:, 3:5].clone().detach() / vnorm
-
-                # image_file = './graphs_data/pattern_1.tif'  # boat_512.tif, beads_abb.tif, beads_gt.tif
-                # target = load_image(image_file, crop_width=image_width, device=device)
-
-                target = torch.zeros((2, image_width, image_width), device=device)
-                target[0,pos_coords[:, 0].long(), pos_coords[:, 1].long()] = -y[:,0].squeeze()
-                target[0:1,:,:] = GaussianBlur(51,10)(target[0:1,:,:])
-                target[1,pos_coords[:, 0].long(), pos_coords[:, 1].long()] = y[:,1].squeeze()
-                target[1:2,:,:] = GaussianBlur(51,10)(target[1:2,:,:])
-
-                # matplotlib.use("Qt5Agg")
-                # fig = plt.figure(figsize=(8, 8))
-                # plt.scatter(to_numpy(pos_coords[:, 1]), to_numpy(pos_coords[:, 0]), s=20, c=to_numpy(y[:,0].squeeze()))
-                # fig = plt.figure(figsize=(8, 8))
-                # plt.imshow(to_numpy(target[0, :, :].squeeze()))
-                # plt.scatter(to_numpy(pos_coords[:, 1]), to_numpy(pos_coords[:, 0]), s=20, c=to_numpy(y[:, 0].squeeze()))
-
-                total_steps = 1000
-                steps_til_summary = 200
-                optim = torch.optim.Adam(lr=1e-4, params=model_siren.parameters())
-
-                for step in trange(total_steps + 1):
-                    model_output, coords = model_siren()
-                    img_grad_ = gradient(model_output, coords)
-                    # loss = ((model_output - ground_truth) ** 2).mean()
-                    loss = (img_grad_[:,1].view(image_width, image_width) - target[0]).norm(2) + (img_grad_[:,0].view(image_width, image_width) - target[1]).norm(2)
-
-                    # if not step % steps_til_summary:
-                    #     print("Step %d, Total loss %0.6f" % (step, loss))
-
-                    optim.zero_grad()
-                    loss.backward()
-                    optim.step()
-
-                # matplotlib.use("Qt5Agg")
-
-                fig = plt.figure(figsize=(16, 8))
-                ax = fig.add_subplot(2, 4, 2)
-                plt.imshow(to_numpy(target[0, :, :].squeeze()))
-                plt.title('Velocity_field_y')
-                plt.scatter(to_numpy(pos_coords[:, 1]), to_numpy(pos_coords[:, 0]), s=0.1, color='w')
-                plt.xlim([0, image_width])
-                plt.ylim([0, image_width])
-                plt.xticks([])
-                plt.yticks([])
-                ax.invert_yaxis()
-                ax = fig.add_subplot(2, 4, 1)
-                plt.imshow(to_numpy(target[1, :, :].squeeze()))
-                plt.scatter(to_numpy(pos_coords[:, 1]), to_numpy(pos_coords[:, 0]), s=0.1, color='w')
-                plt.xlim([0, image_width])
-                plt.ylim([0, image_width])
-                plt.xticks([])
-                plt.yticks([])
-                ax.invert_yaxis()
-                plt.title('Velocity_field_x')
-                ax = fig.add_subplot(1, 2, 2)
-                temp = -model_output.cpu().view(image_width,image_width).permute(1,0).detach().numpy()
-                plt.imshow(temp)
-                plt.scatter(to_numpy(pos_coords[:, 1]), to_numpy(pos_coords[:, 0]), s=1, color='w')
-                plt.xlim([0, image_width])
-                plt.ylim([0, image_width])
-                plt.xticks([])
-                plt.yticks([])
-                ax.invert_yaxis()
-                plt.title('Reconstructed potential')
-                ax = fig.add_subplot(2, 4, 6)
-                plt.imshow(img_grad_[:, 1].cpu().view(image_width, image_width).detach().numpy())
-                plt.scatter(to_numpy(pos_coords[:, 1]), to_numpy(pos_coords[:, 0]), s=0.1, color='w')
-                plt.xlim([0, image_width])
-                plt.ylim([0, image_width])
-                plt.xticks([])
-                plt.yticks([])
-                ax.invert_yaxis()
-                plt.title('Gradient_y from potential')
-                ax = fig.add_subplot(2, 4, 5)
-                plt.imshow(img_grad_[:, 0].cpu().view(image_width, image_width).detach().numpy())
-                plt.scatter(to_numpy(pos_coords[:, 1]), to_numpy(pos_coords[:, 0]), s=0.1, color='w')
-                plt.xlim([0, image_width])
-                plt.ylim([0, image_width])
-                plt.xticks([])
-                plt.yticks([])
-                ax.invert_yaxis()
-                plt.title('Gradient_x from potential')
-                plt.tight_layout()
-                plt.savefig(f"{log_dir}/tmp_training/siren/siren_{frame}.jpg", dpi=170.7)
-                plt.close()
-
-            torch.save({'model_state_dict': model_siren.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict()},
-                       os.path.join(log_dir, 'models', f'Siren_model'))
 
         ghosts_particles = Ghost_Particles(config, n_particles, vnorm, device)
         optimizer_ghost_particles = torch.optim.Adam(lr=1e-4, params=ghosts_particles.parameters())
@@ -2058,10 +1853,15 @@ def data_train_particle_field(config, device):
 
                 x = x_list[run][k].clone().detach()
                 x_mesh = x_mesh_list[run][k].clone().detach()
-                if epoch<2:
-                    x_mesh [:,6:7] = model.field[run]
-                else:
-                    x_mesh[:, 6:7] = torch.clamp(model.field[run], min=0, max=5)
+                match model_config.field_type:
+                    case 'tensor':
+                        x_mesh [:,6:7] = model.field[run]
+                    case 'siren':
+                        x_mesh[:, 6:7] = model_f()**2
+                    case 'siren_with_time':
+                        x_mesh[:, 6:7] = model_f(time=k/n_frames)**2
+                if epoch>=2:
+                    x_mesh[:, 6:7] = torch.clamp(x_mesh[:, 6:7], min=0, max=5)
                 x_particle_field = torch.concatenate((x_mesh, x), dim=0)
 
                 if has_ghost:
@@ -2123,6 +1923,8 @@ def data_train_particle_field(config, device):
 
             optimizer.zero_grad()
 
+            if has_siren:
+                optimizer_f.zero_grad()
             if has_ghost:
                 optimizer_ghost_particles.zero_grad()
             if has_cell_division:
@@ -2141,26 +1943,24 @@ def data_train_particle_field(config, device):
                 loss_division.backward()
                 optimizer_division.step()
                 total_loss_division += loss_division.item()
-
             if has_ghost:
                 loss = ((pred_p_p[mask_ghost] + 0 * pred_f_p - y_batch)).norm(2) + var_batch.mean() + model.field.norm(2)
             else:
-                # if epoch<5:
-                #     loss = ((pred_p_p + pred_f_p - y_batch)).norm(2) + model.field.norm(2)
-                # else:
                 loss = (pred_p_p + pred_f_p - y_batch).norm(2) # + model.field.norm(2)
 
-
             visualize_embedding = True
-            if visualize_embedding & (((epoch < 3 ) & (N < 10000) & (N % 200 == 0)) | (N==0)):
-                plot_training_particle_field(config=config, dataset_name=dataset_name, model_name=model_config.particle_model_name, log_dir=log_dir,
-                              epoch=epoch, N=N, x=x, model_field=model.field, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
+
+            if visualize_embedding & (((epoch < 3 ) & (N < 10000) & (N % 100 == 0)) | (N==0)):
+                print(N)
+                plot_training_particle_field(config=config, has_siren=has_siren, dataset_name=dataset_name, model_name=model_config.particle_model_name, log_dir=log_dir,
+                              epoch=epoch, N=N, x=x, x_mesh=x_mesh, model_field=model.field, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
                               index_particles=index_particles, n_particles=n_particles,
                               n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
 
             loss.backward()
             optimizer.step()
-
+            if has_siren:
+                optimizer_f.step()
             if has_ghost:
                 optimizer_ghost_particles.step()
 
@@ -2171,6 +1971,10 @@ def data_train_particle_field(config, device):
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()},
                    os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs_{epoch}.pt'))
+        if has_siren:
+            torch.save({'model_state_dict': model_f.state_dict(),
+                        'optimizer_state_dict': optimizer_f.state_dict()},
+                       os.path.join(log_dir, 'models', f'best_model_f_with_{NGraphs - 1}_graphs_{epoch}.pt'))
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
@@ -3563,14 +3367,15 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3', 'arbitrary_3_dropout_10_no_ghost', 'arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30', 'arbitrary_3_dropout_40']
     # config_list = ['gravity_16', 'gravity_16_noise_1E-1', 'gravity_16_noise_0_2', 'gravity_16_noise_0_3', 'gravity_16_noise_0_4', 'gravity_16_noise_0_5']
     # config_list = ['arbitrary_3_dropout_10_no_ghost']
-    config_list = ['arbitrary_3_dropout_10']
-    config_list = ['arbitrary_3_dropout_20']
-    config_list = ['arbitrary_3_dropout_30']
-    config_list = ['arbitrary_3_dropout_40']
+    # config_list = ['arbitrary_3_dropout_10']
+    # config_list = ['arbitrary_3_dropout_20']
+    # config_list = ['arbitrary_3_dropout_30']
+    # config_list = ['arbitrary_3_dropout_40']
     # config_list = ['arbitrary_3_field_1']
     # config_list = ['arbitrary_3_field_3']
     # config_list = ['arbitrary_3_field_1_boats']
     # config_list = ['arbitrary_3_field_3']
+    config_list = ['arbitrary_3_field_1_siren_with_time']
 
     for config_file in config_list:
         # Load parameters from config file

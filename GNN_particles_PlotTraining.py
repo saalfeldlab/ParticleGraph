@@ -1473,10 +1473,10 @@ def data_plot_training_particle_field(config, mode, cc, device):
         pos = np.argwhere(relative_error < threshold)
         pos_outliers = np.argwhere(relative_error > threshold)
 
-        # x_data_ = x_data[pos].squeeze()
-        # y_data_ = y_data[pos].squeeze()
-        x_data_ = x_data.squeeze()
-        y_data_ = y_data.squeeze()
+        x_data_ = x_data[pos].squeeze()
+        y_data_ = y_data[pos].squeeze()
+        # x_data_ = x_data.squeeze()
+        # y_data_ = y_data.squeeze()
 
         lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
         residuals = y_data_ - linear_model(x_data_, *lin_fit)
@@ -1484,8 +1484,7 @@ def data_plot_training_particle_field(config, mode, cc, device):
         ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
         r_squared = 1 - (ss_res / ss_tot)
 
-        print(
-            f'R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > 0.2)} / {n_nodes} {100 * np.sum(relative_error > 0.2) / n_particles}')
+        print(f'R^2$: {np.round(r_squared, 3)} ')
         print(f"Slope: {np.round(lin_fit[0], 2)}")
 
         plt.plot(x_data_, linear_model(x_data_, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
@@ -1508,7 +1507,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3', 'arbitrary_3_dropout_10_no_ghost', 'arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30','arbitrary_3_dropout_40']
     # config_list = ['arbitrary_16_noise_0_4','arbitrary_16_noise_0_5']# ['arbitrary_16','arbitrary_16_noise_1E-1','arbitrary_16_noise_0_2','arbitrary_16_noise_0_3']
     # config_list = ['arbitrary_3_dropout_10_no_ghost','arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30','arbitrary_3_dropout_40']
-    config_list = ['arbitrary_3_field_1_triangles']# ,['arbitrary_3_field_1_triangles'] # ['arbitrary_3_field_1','arbitrary_3_field_3','arbitrary_3_field_1_boats']
+    config_list = ['arbitrary_3_field_3']# ,['arbitrary_3_field_1_triangles'] # ['arbitrary_3_field_1','arbitrary_3_field_3','arbitrary_3_field_1_boats']
 
 
 
@@ -1523,7 +1522,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_plot_training_particle_field(config, mode='figures', cc = 'jet', device=device)
+        data_plot_training_particle_field(config, mode='figures', cc = 'viridis', device=device)
 
 
 

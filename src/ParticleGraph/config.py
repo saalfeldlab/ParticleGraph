@@ -65,6 +65,8 @@ class GraphModelConfig(BaseModel):
     division_predictor_hidden_dim: int = 64
     division_predictor_n_layers: int = 3
 
+    field_type: str = 'tensor'
+
 
     # def get_instance(self, **kwargs):
     #     return GraphModel(**self.model_dump(), **kwargs)
