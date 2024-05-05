@@ -14,6 +14,8 @@ from ParticleGraph.utils import *
 from matplotlib import rc
 from tifffile import imread, imsave
 from scipy.spatial import Delaunay
+from scipy.optimize import curve_fit
+from ParticleGraph.fitting_models import linear_model
 
 # matplotlib.use("Qt5Agg")
 # os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
@@ -821,7 +823,7 @@ def data_plot_training_asym(config, mode, device):
         np.savetxt(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.txt", csv_)
         if n_particle_types > 1000:
             plt.scatter(embedding[:, 0], embedding[:, 1], c=to_numpy(x[:, 5]) / n_particles, s=10,
-                        cmap='viridis')
+                        cmap=cc)
         else:
             for n in range(n_particle_types):
                 plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n),
@@ -1155,7 +1157,7 @@ def data_plot_training_continuous(config, mode, device):
         rmserr_list = to_numpy(rmserr_list)
         print(f'all function RMS error: {np.round(np.mean(rmserr_list), 7)}+/-{np.round(np.std(rmserr_list), 7)}')
 
-def data_plot_training_particle_field(config, mode, device):
+def data_plot_training_particle_field(config, mode, cc, device):
     print('')
 
     # plt.rcParams['text.usetex'] = True
@@ -1219,6 +1221,40 @@ def data_plot_training_particle_field(config, mode, device):
     mask_mesh = mesh_data['mask']
     mask_mesh = mask_mesh.repeat(batch_size, 1)
 
+
+    matplotlib.use("Qt5Agg")
+    plt.rcParams['text.usetex'] = True
+    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+
+    x_mesh = x_mesh_list[0][0].clone().detach()
+    node_value_map = simulation_config.node_value_map
+    n_nodes_per_axis = int(np.sqrt(n_nodes))
+    i0 = imread(f'graphs_data/{node_value_map}')
+    target = i0[(to_numpy(x_mesh[:, 1]) * 255).astype(int), (to_numpy(x_mesh[:, 2]) * 255).astype(int)] * 5000/255
+    target = np.reshape(target, (n_nodes_per_axis, n_nodes_per_axis))
+    target = np.flipud(target)
+    # target = imread(f"./{log_dir}/target.tif")
+    vm = np.max(target)
+    if vm == 0:
+        vm = 0.01
+    fig_ = plt.figure(figsize=(12, 12))
+    axf = fig_.add_subplot(1, 1, 1)
+    axf.xaxis.set_major_locator(plt.MaxNLocator(3))
+    axf.yaxis.set_major_locator(plt.MaxNLocator(3))
+    axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    plt.imshow(target, cmap=cc, vmin=0, vmax=vm)
+    plt.xlabel(r'$x$', fontsize=64)
+    plt.ylabel(r'$y$', fontsize=64)
+    plt.xticks(fontsize=32.0)
+    plt.yticks(fontsize=32.0)
+    cbar = plt.colorbar(shrink=0.5)
+    cbar.ax.tick_params(labelsize=32)
+    # cbar.set_label(r'$Coupling$',fontsize=64)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/target_field.tif", dpi=300)
+    plt.close()
+
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
@@ -1243,11 +1279,8 @@ def data_plot_training_particle_field(config, mode, device):
         index = np.argwhere(x_mesh[:, 5].detach().cpu().numpy() == -n - 1)
         index_nodes.append(index.squeeze())
 
-    matplotlib.use("Qt5Agg")
-    plt.rcParams['text.usetex'] = True
-    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
-    epoch_list = [5]
+    epoch_list = [3]
     for epoch in epoch_list:
         print(f'epoch: {epoch}')
 
@@ -1390,29 +1423,6 @@ def data_plot_training_particle_field(config, mode, device):
         print(f'all function RMS error: {np.round(np.mean(rmserr_list), 7)}+/-{np.round(np.std(rmserr_list), 7)}')
         plt.close()
 
-
-        target = imread(f"./{log_dir}/target.tif")
-        vm=np.max(target)
-        if vm == 0:
-            vm = 0.01
-        fig_ = plt.figure(figsize=(12, 12))
-        axf = fig_.add_subplot(1, 1, 1)
-        axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-        axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-        axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        plt.imshow(target, cmap='viridis',vmin=0,vmax=vm)
-        plt.xlabel(r'$x$', fontsize=64)
-        plt.ylabel(r'$y$', fontsize=64)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
-        cbar = plt.colorbar(shrink=0.5)
-        cbar.ax.tick_params(labelsize=32)
-        # cbar.set_label(r'$Coupling$',fontsize=64)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/target_field.tif", dpi=300)
-        plt.close()
-
         fig_ = plt.figure(figsize=(12, 12))
         axf = fig_.add_subplot(1, 1, 1)
         axf.xaxis.set_major_locator(plt.MaxNLocator(3))
@@ -1421,7 +1431,7 @@ def data_plot_training_particle_field(config, mode, device):
         axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
         pts = to_numpy(torch.reshape(model.field[1],(100,100)))
         pts = np.flipud(pts)
-        plt.imshow(pts, cmap='viridis',vmin=0,vmax=vm)
+        plt.imshow(pts, cmap=cc,vmin=0,vmax=vm)
         plt.xlabel(r'$x$', fontsize=64)
         plt.ylabel(r'$y$', fontsize=64)
         plt.xticks(fontsize=32.0)
@@ -1436,6 +1446,8 @@ def data_plot_training_particle_field(config, mode, device):
         # csv_= np.reshape(csv_,(csv_.shape[0]*csv_.shape[1],2))
         # np.savetxt(f"./{log_dir}/tmp_training/embedding_{dataset_name}.txt", csv_)
         plt.close()
+        rmse = np.sqrt(np.mean((target-pts)**2))
+        print(f'RMSE: {rmse}')
 
         fig_ = plt.figure(figsize=(12, 12))
         axf = fig_.add_subplot(1, 1, 1)
@@ -1443,8 +1455,44 @@ def data_plot_training_particle_field(config, mode, device):
         axf.yaxis.set_major_locator(plt.MaxNLocator(3))
         axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
         axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        plt.scatter(target,pts,s=1,c='k')
+        plt.scatter(target,pts,c='k',s=100, alpha=0.1)
+        plt.xlabel(r'Reconstructed coupling', fontsize=32)
+        plt.ylabel(r'True coupling', fontsize=32)
+        plt.xticks(fontsize=32.0)
+        plt.yticks(fontsize=32.0)
+        plt.xlim([-vm*0.1, vm*1.5])
+        plt.ylim([-vm*0.1, vm*1.5])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/field_scatter_{dataset_name}_{epoch}.tif", dpi=300)
 
+        x_data = np.reshape(pts,(n_nodes))
+        y_data = np.reshape(target,(n_nodes))
+        threshold = 0.25
+        relative_error = np.abs(y_data - x_data)
+        print(f'outliers: {np.sum(relative_error > threshold)} / {n_particles}')
+        pos = np.argwhere(relative_error < threshold)
+        pos_outliers = np.argwhere(relative_error > threshold)
+
+        # x_data_ = x_data[pos].squeeze()
+        # y_data_ = y_data[pos].squeeze()
+        x_data_ = x_data.squeeze()
+        y_data_ = y_data.squeeze()
+
+        lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
+        residuals = y_data_ - linear_model(x_data_, *lin_fit)
+        ss_res = np.sum(residuals ** 2)
+        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot)
+
+        print(
+            f'R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > 0.2)} / {n_nodes} {100 * np.sum(relative_error > 0.2) / n_particles}')
+        print(f"Slope: {np.round(lin_fit[0], 2)}")
+
+        plt.plot(x_data_, linear_model(x_data_, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+        plt.xlim([-vm*0.1, vm*1.1])
+        plt.ylim([-vm*0.1, vm*1.1])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/field_scatter_{dataset_name}_{epoch}.tif", dpi=300)
 
 
 
@@ -1460,7 +1508,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3', 'arbitrary_3_dropout_10_no_ghost', 'arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30','arbitrary_3_dropout_40']
     # config_list = ['arbitrary_16_noise_0_4','arbitrary_16_noise_0_5']# ['arbitrary_16','arbitrary_16_noise_1E-1','arbitrary_16_noise_0_2','arbitrary_16_noise_0_3']
     # config_list = ['arbitrary_3_dropout_10_no_ghost','arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30','arbitrary_3_dropout_40']
-    config_list = ['arbitrary_3_field_1'] # ['arbitrary_3_field_0','arbitrary_3_field_1','arbitrary_3_field_2','arbitrary_3_field_3']
+    config_list = ['arbitrary_3_field_1_triangles']# ,['arbitrary_3_field_1_triangles'] # ['arbitrary_3_field_1','arbitrary_3_field_3','arbitrary_3_field_1_boats']
 
 
 
@@ -1475,7 +1523,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_plot_training_particle_field(config, mode='figures' , device=device)
+        data_plot_training_particle_field(config, mode='figures', cc = 'jet', device=device)
 
 
 
