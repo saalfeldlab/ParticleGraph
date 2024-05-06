@@ -1280,7 +1280,7 @@ def data_plot_training_particle_field(config, mode, cc, device):
         index_nodes.append(index.squeeze())
 
 
-    epoch_list = [3]
+    epoch_list = [4]
     for epoch in epoch_list:
         print(f'epoch: {epoch}')
 
@@ -1456,8 +1456,8 @@ def data_plot_training_particle_field(config, mode, cc, device):
         axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
         axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
         plt.scatter(target,pts,c='k',s=100, alpha=0.1)
-        plt.xlabel(r'Reconstructed coupling', fontsize=32)
-        plt.ylabel(r'True coupling', fontsize=32)
+        plt.ylabel(r'Reconstructed coupling', fontsize=32)
+        plt.xlabel(r'True coupling', fontsize=32)
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
         plt.xlim([-vm*0.1, vm*1.5])
@@ -1507,7 +1507,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3', 'arbitrary_3_dropout_10_no_ghost', 'arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30','arbitrary_3_dropout_40']
     # config_list = ['arbitrary_16_noise_0_4','arbitrary_16_noise_0_5']# ['arbitrary_16','arbitrary_16_noise_1E-1','arbitrary_16_noise_0_2','arbitrary_16_noise_0_3']
     # config_list = ['arbitrary_3_dropout_10_no_ghost','arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30','arbitrary_3_dropout_40']
-    config_list = ['arbitrary_3_field_3']# ,['arbitrary_3_field_1_triangles'] # ['arbitrary_3_field_1','arbitrary_3_field_3','arbitrary_3_field_1_boats']
+    config_list = ['arbitrary_3_field_1_boats'] # ,['arbitrary_3_field_1_triangles'] # ['arbitrary_3_field_1','arbitrary_3_field_3','arbitrary_3_field_1_boats']
 
 
 
@@ -1522,7 +1522,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_plot_training_particle_field(config, mode='figures', cc = 'viridis', device=device)
+        data_plot_training_particle_field(config, mode='figures', cc = 'grey', device=device)
 
 
 

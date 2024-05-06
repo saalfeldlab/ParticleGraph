@@ -8,7 +8,7 @@ simulation:
   n_particles: 4800
   n_particle_types: 3
   n_interactions: 3
-  n_frames: 250
+  n_frames: 360
   sigma: 0.005
   delta_t: 0.1
   dpos_init: 0
@@ -48,7 +48,7 @@ training:
   sparsity: 'none'
   cluster_method: 'distance_plot'
   data_augmentation: True
-  data_augmentation_loop: 1
+  data_augmentation_loop: 200
   fix_cluster_embedding: True
   device: 'auto'
 

@@ -1780,7 +1780,7 @@ def data_train_particle_field(config, device):
         image_width = n_nodes_per_axis = int(np.sqrt(n_nodes))
         if has_siren_time:
             model_f = Siren_Network(image_width=image_width, in_features=3, out_features=1, hidden_features=64,
-                                        hidden_layers=4, outermost_linear=True, device=device, first_omega_0=80,
+                                        hidden_layers=5, outermost_linear=True, device=device, first_omega_0=80,
                                         hidden_omega_0=80.)
         else:
             model_f = Siren_Network(image_width=image_width, in_features=2, out_features=1, hidden_features=64,
@@ -1844,8 +1844,6 @@ def data_train_particle_field(config, device):
         Niter = n_frames * data_augmentation_loop // batch_size
 
         for N in range(Niter):
-
-            print(f'N: {N} epoch: {epoch}')
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -3374,7 +3372,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_16','arbitrary_16_noise_1E-1','arbitrary_16_noise_0_2', 'arbitrary_16_noise_0_3', 'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5']
     # config_list = ['arbitrary_3', 'arbitrary_3_dropout_10_no_ghost', 'arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30', 'arbitrary_3_dropout_40']
     # config_list = ['gravity_16', 'gravity_16_noise_1E-1', 'gravity_16_noise_0_2', 'gravity_16_noise_0_3', 'gravity_16_noise_0_4', 'gravity_16_noise_0_5']
-    # config_list = ['arbitrary_3_dropout_10_no_ghost']
+    config_list = ['arbitrary_3_dropout_10_no_ghost']
     # config_list = ['arbitrary_3_dropout_10']
     # config_list = ['arbitrary_3_dropout_20']
     # config_list = ['arbitrary_3_dropout_30']
@@ -3383,7 +3381,11 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_3']
     # config_list = ['arbitrary_3_field_1_boats']
     # config_list = ['arbitrary_3_field_3']
-    config_list = ['arbitrary_3_field_2_siren_with_time']
+    # config_list = ['arbitrary_3_field_1_siren_with_time']
+    # # config_list = ['Coulomb_3_noise_0_2']
+    # config_list = ['Coulomb_3_noise_0_3']
+    # config_list = ['Coulomb_3_noise_0_4']
+    # config_list = ['Coulomb_3_noise_0_5']
 
     for config_file in config_list:
         # Load parameters from config file
