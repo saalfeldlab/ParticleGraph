@@ -205,9 +205,9 @@ def laplace(y, x):
     return divergence(grad, x)
 
 
-def create_log_dir(config, dataset_name):
+def create_log_dir(config, config_file):
     l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
+    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'models'), exist_ok=True)
