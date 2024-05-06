@@ -1137,23 +1137,23 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             torch.save(model_p_p.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
 
 
-def data_train(config, device):
+def data_train(config, config_file, device):
 
     has_mesh = (config.graph_model.mesh_model_name != '')
     has_signal = (config.graph_model.signal_model_name != '')
     has_particle_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
 
     if has_particle_field:
-        data_train_particle_field(config, device)
+        data_train_particle_field(config, config_file, device)
     elif has_mesh:
-        data_train_mesh(config, device)
+        data_train_mesh(config, config_file, device)
     elif has_signal:
-        data_train_signal(config, device)
+        data_train_signal(config, config_file, device)
     else:
-        data_train_particles(config, device)
+        data_train_particles(config, config_file, device)
 
 
-def data_train_particles(config, device):
+def data_train_particles(config, config_file, device):
     print('')
 
     simulation_config = config.simulation
@@ -1187,7 +1187,7 @@ def data_train_particles(config, device):
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     embedding_cluster = EmbeddingCluster(config)
 
-    l_dir, log_dir, logger = create_log_dir(config, dataset_name)
+    l_dir, log_dir, logger = create_log_dir(config, config_file)
     graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     NGraphs = len(graph_files)
     print(f'Graph files N: {NGraphs}')
@@ -1420,6 +1420,9 @@ def data_train_particles(config, device):
             torch.save({'model_state_dict': model_division.state_dict(),
                         'optimizer_state_dict': optimizer_division.state_dict()},
                        os.path.join(log_dir, 'models', f'best_model_division_with_{NGraphs - 1}_graphs_{epoch}.pt'))
+        if has_ghost:
+            torch.save({'model_state_dict': ghosts_particles.state_dict(),
+                        'optimizer_state_dict': optimizer_ghost_particles.state_dict()}, os.path.join(log_dir, 'models', f'best_ghost_particles_with_{NGraphs - 1}_graphs_{epoch}.pt'))
 
         # matplotlib.use("Qt5Agg")
         fig = plt.figure(figsize=(22, 4))
@@ -1624,7 +1627,8 @@ def data_train_particles(config, device):
         plt.close()
 
 
-def data_train_particle_field(config, device):
+
+def data_train_particle_field(config, config_file, device):
     print('')
 
     simulation_config = config.simulation
@@ -1662,7 +1666,7 @@ def data_train_particle_field(config, device):
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     embedding_cluster = EmbeddingCluster(config)
 
-    l_dir, log_dir, logger = create_log_dir(config, dataset_name)
+    l_dir, log_dir, logger = create_log_dir(config, config_file)
     graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     NGraphs = len(graph_files)
     print(f'Graph files N: {NGraphs}')
@@ -1779,7 +1783,7 @@ def data_train_particle_field(config, device):
 
         image_width = n_nodes_per_axis = int(np.sqrt(n_nodes))
         if has_siren_time:
-            model_f = Siren_Network(image_width=image_width, in_features=3, out_features=1, hidden_features=64,
+            model_f = Siren_Network(image_width=image_width, in_features=3, out_features=1, hidden_features=128,
                                         hidden_layers=5, outermost_linear=True, device=device, first_omega_0=80,
                                         hidden_omega_0=80.)
         else:
@@ -1991,6 +1995,9 @@ def data_train_particle_field(config, device):
             torch.save({'model_state_dict': model_division.state_dict(),
                         'optimizer_state_dict': optimizer_division.state_dict()},
                        os.path.join(log_dir, 'models', f'best_model_division_with_{NGraphs - 1}_graphs_{epoch}.pt'))
+        if has_ghost:
+            torch.save({'model_state_dict': ghosts_particles.state_dict(),
+                        'optimizer_state_dict': optimizer_ghost_particles.state_dict()}, os.path.join(log_dir, 'models', f'best_ghost_particles_with_{NGraphs - 1}_graphs_{epoch}.pt'))
 
         # matplotlib.use("Qt5Agg")
         fig = plt.figure(figsize=(22, 4))
@@ -2163,108 +2170,11 @@ def data_train_particle_field(config, device):
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
         plt.close()
 
-        if has_ghost:
-            # print('Optimizing ghost position ... ')
-            torch.save({'model_state_dict': ghosts_particles.state_dict(),
-                        'optimizer_state_dict': optimizer_ghost_particles.state_dict()}, os.path.join(log_dir, 'models', f'best_ghost_particles_with_{NGraphs - 1}_graphs_{epoch}.pt'))
-            model.eval()
-            run = 1 + np.random.randint(NGraphs - 1)
-            with torch.no_grad():
-                model.a[run, n_particles:n_particles + n_ghosts] = model.a[run, ghosts_particles.embedding_index].clone().detach()
-            # fig = plt.figure(figsize=(8, 8))
-            # embedding = get_embedding(model.a, 1)
-            # for n in range(n_particle_types):
-            #     plt.scatter(embedding[index_particles[n], 0],
-            #                 embedding[index_particles[n], 1], color=cmap.color(n), s=0.1)
-            # for n in range(n_ghosts):
-            #     plt.scatter(embedding[n_particles + n, 0], embedding[n_particles + n, 1], color='k', s=0.1)
-            for N in trange(n_frames):
-
-                k = N
-                x_ = x_list[run][k].clone().detach()
-
-                for NN in trange(101):
-                    dataset_batch = []
-                    for batch in range(1):
-                        phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
-                        cos_phi = torch.cos(phi)
-                        sin_phi = torch.sin(phi)
-                        x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k, bc_pos=bc_pos)
-                        if ghosts_particles.boids:
-                            distance = torch.sum(
-                                bc_dpos(x_ghost[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                            dist_np = to_numpy(distance)
-                            ind_np = torch.min(distance, axis=1)[1]
-                            x_ghost[:, 3:5] = x[ind_np, 3:5].clone().detach()
-                        x = torch.cat((x_, x_ghost), 0)
-
-                        distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                        t = torch.Tensor([max_radius ** 2])
-                        edges = adj_t.nonzero().t().contiguous()
-                        dataset = data.Data(x=x[:, :], edge_index=edges)
-                        dataset_batch.append(dataset)
-                        y = y_list[run][k].clone().detach()
-                        if noise_level > 0:
-                            y = y * (1 + torch.randn_like(y) * noise_level)
-                        y = y / ynorm
-                        if data_augmentation:
-                            new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
-                            new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
-                            y[:, 0] = new_x
-                            y[:, 1] = new_y
-                        if batch == 0:
-                            y_batch = y[:, 0:2]
-                        else:
-                            y_batch = torch.cat((y_batch, y[:, 0:2]), dim=0)
-                    batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
-                    optimizer_ghost_particles.zero_grad()
-                    for batch in batch_loader:
-                        pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi)
-                    loss = ((pred[0:n_particles] - y_batch)).norm(2) + ghosts_particles.var[run,N].mean()
-                    loss.backward()
-                    optimizer_ghost_particles.step()
-                    if (k==n_frames//4):  #|(k==0)|(k==n_frames//2)):
-
-                        # logvar = ghosts_particles.var[run,k, :,0]
-                        # std = torch.exp(0.5 * logvar[:,None].repeat(1, 2))
-                        # eps = torch.randn_like(std)
-                        # noise = to_numpy(eps * std)
-                        # fig = plt.figure(figsize=(8, 8))
-                        # plt.scatter(0.5+noise[:,0],0.5+noise[:,1], color='r',alpha=0.1)
-                        # plt.xlim([0, 1])
-                        # plt.ylim([0, 1])
-
-                        fig = plt.figure(figsize=(8, 8))
-                        plt.text(0.05,0.9,f'Loss: {np.round(loss.item(),3)}',fontsize=24,c='k',weight="bold")
-                        logvar = np.round(to_numpy(torch.mean(ghosts_particles.var[run, N])), 3)
-                        plt.text(0.05, 0.82, r'logvar {0:.3f}'.format(logvar), fontsize=24, c='k',weight="bold")
-                        logvar = ghosts_particles.var[run,k, :,0]
-                        std = torch.exp(0.5 * logvar)
-                        plt.scatter(to_numpy(ghosts_particles.mu[run,k, :,0]),
-                                    to_numpy(ghosts_particles.mu[run,k, :,1]), s=2E4*to_numpy(std), color='r',alpha=0.25)
-                        x_removed = x_removed_list[k]
-                        plt.scatter(to_numpy(x_removed[:, 1]),
-                                    to_numpy(x_removed[:, 2]), s=10, color='g')
-                        plt.scatter(to_numpy(x_[:, 1]),
-                                    to_numpy(x_[:, 2]), s=2, color='k')
-                        plt.xticks([])
-                        plt.yticks([])
-                        if (model_config.particle_model_name == 'PDE_G'):
-                            plt.xlim([-2, 2])
-                            plt.ylim([2, 2])
-                        else:
-                            plt.xlim([0, 1])
-                            plt.ylim([0, 1])
-                        plt.tight_layout()
-                        fig.savefig(f"{log_dir}/tmp_training/ghost/ghosts_frame_{N}_{epoch}_{NN}.jpg", dpi=300)
-                        plt.close()
-                        if (NN==0)|(NN==100):
-                            logger.info(f'ghost loss: {loss.item()} {epoch}_frame_{N}_{NN}')
-            model.train()
 
 
-def data_train_mesh(config, device):
+
+
+def data_train_mesh(config, config_file, device):
 
     print('')
 
@@ -2298,7 +2208,7 @@ def data_train_mesh(config, device):
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     embedding_cluster = EmbeddingCluster(config)
 
-    l_dir, log_dir, logger = create_log_dir(config, dataset_name)
+    l_dir, log_dir, logger = create_log_dir(config, config_file)
     graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     NGraphs = len(graph_files)
     print(f'Graph files N: {NGraphs}')
@@ -2655,7 +2565,7 @@ def data_train_mesh(config, device):
         plt.close()
 
 
-def data_train_signal(config, device):
+def data_train_signal(config, config_file, device):
 
     print('')
 
@@ -2690,7 +2600,7 @@ def data_train_signal(config, device):
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     embedding_cluster = EmbeddingCluster(config)
 
-    l_dir, log_dir, logger = create_log_dir(config, dataset_name)
+    l_dir, log_dir, logger = create_log_dir(config, config_file)
     graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     NGraphs = len(graph_files)
     print(f'Graph files N: {NGraphs}')
@@ -3382,10 +3292,12 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_1_boats']
     # config_list = ['arbitrary_3_field_3']
     # config_list = ['arbitrary_3_field_1_siren_with_time']
+    config_list = ['arbitrary_3_field_3_siren_with_time']
     # # config_list = ['Coulomb_3_noise_0_2']
     # config_list = ['Coulomb_3_noise_0_3']
     # config_list = ['Coulomb_3_noise_0_4']
     # config_list = ['Coulomb_3_noise_0_5']
+    # config_list = ['boids_16_dropout_10']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -3395,8 +3307,8 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
-        data_train(config, device)
+        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
+        data_train(config, config_file, device)
         # data_test(config, visualize=True, style='color frame', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 21, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
 
