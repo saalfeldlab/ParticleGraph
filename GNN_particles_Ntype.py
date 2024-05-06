@@ -924,202 +924,110 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
                 if 'color' in style:
 
-                    if model_config.particle_model_name == 'PDE_O':
-                        fig = plt.figure(figsize=(12, 12))
-                        plt.scatter(H1[:, 0].detach().cpu().numpy(), H1[:, 1].detach().cpu().numpy(), s=100,
-                                    c=np.sin(to_numpy(H1[:, 2])), vmin=-1, vmax=1, cmap='viridis')
-                        plt.xlim([0, 1])
-                        plt.ylim([0, 1])
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Lut_Fig_{run}_{it}.jpg",
-                                    dpi=170.7)
-                        plt.close()
-
-                        fig = plt.figure(figsize=(12, 12))
-                        # plt.scatter(H1[:, 0].detach().cpu().numpy(), H1[:, 1].detach().cpu().numpy(), s=5, c='b')
-                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=10, c='lawngreen',
-                                    alpha=0.75)
-                        plt.xlim([0, 1])
-                        plt.ylim([0, 1])
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Rot_{run}_Fig{it}.jpg",
-                                    dpi=170.7)
-                        plt.close()
-
-                    elif model_config.signal_model_name == 'PDE_N':
-
-                        matplotlib.rcParams['savefig.pad_inches'] = 0
-                        fig = plt.figure(figsize=(12, 12))
-                        ax = plt.axes([0, 0, 1, 1], frameon=False)
-                        pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
-                        vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-                        nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False, alpha=0.025)
-                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=100, c=to_numpy(H1[:, 0]), cmap='viridis')
-                        ax.get_xaxis().set_visible(False)
-                        ax.get_yaxis().set_visible(False)
-                        plt.xlim([-1.5, 1.5])
-                        plt.ylim([-1.5, 1.5])
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
-                        plt.close()
-
-                    elif model_config.mesh_model_name == 'Chemotaxism_Mesh':
-
-                        # dx_ = to_numpy(grad[1][y_,x_])/100
-                        # dy_ = to_numpy(grad[0][y_,x_])/100
-                        # H1_IM = torch.reshape(H1_mesh[:, 0], (300, 300))
-                        # plt.imshow(to_numpy(grad[1]+grad[0]), cmap='viridis')
-                        # for i in range(1700):
-                        #     plt.arrow(x=x_[i],y=y_[i],dx=dx_[i],dy=dy_[i], head_width=2, length_includes_head=True, color='w')
-
-                        fig = plt.figure(figsize=(12, 12))
-                        H1_IM = torch.reshape(H1_mesh[:, 0], (300, 300))
-                        plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=5000, cmap='viridis')
-                        for n in range(n_particle_types):
-                            plt.scatter(x[index_particles[n], 1].detach().cpu().numpy() * 300,
-                                        x[index_particles[n], 2].detach().cpu().numpy() * 300, s=1, color='w')
-                        plt.xlim([0, 300])
-                        plt.ylim([0, 300])
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/All__{run}_{it}.jpg", dpi=170.7)
-                        plt.close()
-
-                        # fig = plt.figure(figsize=(12,12))
-                        # H1_IM = torch.reshape(distance, (300, 300))
-                        # plt.imshow(H1_IM.detach().cpu().numpy()*30, vmin=0, vmax=500)
-                        # for n in range(n_particle_types):
-                        #     plt.scatter(x[index_particles[n], 1].detach().cpu().numpy() * 300,
-                        #                 x[index_particles[n], 2].detach().cpu().numpy() * 300, s=1, color='w')
-                        # plt.xlim([0, 300])
-                        # plt.ylim([0, 300])
-                        # plt.xticks([])
-                        # plt.yticks([])
-                        # plt.tight_layout()
-                        # plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Boids_{it}.jpg", dpi=170.7)
-                        # plt.close()
-
-                    elif (model_config.particle_model_name == 'PDE_A') & (dimension == 3):
-
-                        fig = plt.figure(figsize=(12, 12))
-                        ax = fig.add_subplot(111, projection='3d')
-                        for n in range(n_particle_types):
-                            ax.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 3]), s=50, color=cmap.color(n))
-                        ax.set_xlim([0, 1])
-                        ax.set_ylim([0, 1])
-                        ax.set_zlim([0, 1])
-                        pl.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
-                        plt.close()
-
+                    # matplotlib.use("Qt5Agg")
+                    matplotlib.rcParams['savefig.pad_inches'] = 0
+                    fig = plt.figure(figsize=(12, 12))
+                    ax = fig.add_subplot(1, 1, 1)
+                    # ax.xaxis.get_major_formatter()._usetex = False
+                    # ax.yaxis.get_major_formatter()._usetex = False
+                    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+                    ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                    # if (has_mesh | (simulation_config.boundary == 'periodic')):
+                    #     ax = plt.axes([0, 0, 1, 1], frameon=False)
+                    # else:
+                    #     ax = plt.axes([-2, -2, 2, 2], frameon=False)
+                    # ax.get_xaxis().set_visible(False)
+                    # ax.get_yaxis().set_visible(False)
+                    # plt.autoscale(tight=True)
+                    if has_mesh:
+                        pts = x_mesh[:, 1:3].detach().cpu().numpy()
+                        tri = Delaunay(pts)
+                        colors = torch.sum(x_mesh[tri.simplices, 6], dim=1) / 3.0
+                        match model_config.mesh_model_name:
+                            case 'DiffMesh':
+                                plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                              facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1000)
+                            case 'WaveMesh':
+                                plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                              facecolors=colors.detach().cpu().numpy(), vmin=-1000, vmax=1000)
+                            case 'RD_Gray_Scott_Mesh':
+                                fig = plt.figure(figsize=(12, 6))
+                                ax = fig.add_subplot(1, 2, 1)
+                                colors = torch.sum(x[tri.simplices, 6], dim=1) / 3.0
+                                plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                              facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
+                                plt.xticks([])
+                                plt.yticks([])
+                                plt.axis('off')
+                                ax = fig.add_subplot(1, 2, 2)
+                                colors = torch.sum(x[tri.simplices, 7], dim=1) / 3.0
+                                plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
+                                              facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
+                                plt.xticks([])
+                                plt.yticks([])
+                                plt.axis('off')
+                            case 'RD_RPS_Mesh':
+                                fig = plt.figure(figsize=(12, 12))
+                                H1_IM = torch.reshape(H1, (100, 100, 3))
+                                plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=1)
+                                plt.xticks([])
+                                plt.yticks([])
+                                plt.axis('off')
                     else:
-                        # matplotlib.use("Qt5Agg")
-                        matplotlib.rcParams['savefig.pad_inches'] = 0
-                        fig = plt.figure(figsize=(12, 12))
-                        ax = fig.add_subplot(1, 1, 1)
-                        # ax.xaxis.get_major_formatter()._usetex = False
-                        # ax.yaxis.get_major_formatter()._usetex = False
-                        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-                        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-                        ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                        # if (has_mesh | (simulation_config.boundary == 'periodic')):
-                        #     ax = plt.axes([0, 0, 1, 1], frameon=False)
-                        # else:
-                        #     ax = plt.axes([-2, -2, 2, 2], frameon=False)
-                        # ax.get_xaxis().set_visible(False)
-                        # ax.get_yaxis().set_visible(False)
-                        # plt.autoscale(tight=True)
-                        if has_mesh:
-                            pts = x_mesh[:, 1:3].detach().cpu().numpy()
-                            tri = Delaunay(pts)
-                            colors = torch.sum(x_mesh[tri.simplices, 6], dim=1) / 3.0
-                            match model_config.mesh_model_name:
-                                case 'DiffMesh':
-                                    plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                                  facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1000)
-                                case 'WaveMesh':
-                                    plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                                  facecolors=colors.detach().cpu().numpy(), vmin=-1000, vmax=1000)
-                                case 'RD_Gray_Scott_Mesh':
-                                    fig = plt.figure(figsize=(12, 6))
-                                    ax = fig.add_subplot(1, 2, 1)
-                                    colors = torch.sum(x[tri.simplices, 6], dim=1) / 3.0
-                                    plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                                  facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
-                                    plt.xticks([])
-                                    plt.yticks([])
-                                    plt.axis('off')
-                                    ax = fig.add_subplot(1, 2, 2)
-                                    colors = torch.sum(x[tri.simplices, 7], dim=1) / 3.0
-                                    plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                                  facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
-                                    plt.xticks([])
-                                    plt.yticks([])
-                                    plt.axis('off')
-                                case 'RD_RPS_Mesh':
-                                    fig = plt.figure(figsize=(12, 12))
-                                    H1_IM = torch.reshape(H1, (100, 100, 3))
-                                    plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=1)
-                                    plt.xticks([])
-                                    plt.yticks([])
-                                    plt.axis('off')
-                        else:
-                            s_p = 100
-                            if simulation_config.has_cell_division:
-                                s_p = 25
-                            if False:  # config.simulation.non_discrete_level>0:
-                                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=s_p, color='k')
-                            else:
-                                for n in range(n_particle_types):
-                                    plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                                                s=s_p, color=cmap.color(n))
-                            if training_config.particle_dropout > 0:
-                                plt.scatter(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
-                                            x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), s=25, color='k',
-                                            alpha=0.75)
-                                plt.plot(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
-                                         x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), '+', color='w')
-                        plt.xlim([0,1])
-                        plt.ylim([0,1])
-                        # plt.xlim([-2,2])
-                        # plt.ylim([-2,2])
-                        if 'frame' in style:
-                            plt.rcParams['text.usetex'] = True
-                            rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-                            plt.xlabel(r'$x$', fontsize=64)
-                            plt.ylabel(r'$y$', fontsize=64)
-                            plt.xticks(fontsize=32.0)
-                            plt.yticks(fontsize=32.0)
-                        else:
-                            plt.xticks([])
-                            plt.yticks([])
-                        plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
-                        plt.close()
-
-                        if False:  # not(has_mesh):
-                            fig = plt.figure(figsize=(12, 12))
+                        s_p = 100
+                        if simulation_config.has_cell_division:
                             s_p = 25
-                            if simulation_config.has_cell_division:
-                                s_p = 10
+                        if False:  # config.simulation.non_discrete_level>0:
+                            plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=s_p, color='k')
+                        else:
                             for n in range(n_particle_types):
-                                plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                            x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color='k')
-                            if (simulation_config.boundary == 'periodic'):
-                                plt.xlim([0, 1])
-                                plt.ylim([0, 1])
-                            else:
-                                plt.xlim([-4, 4])
-                                plt.ylim([-4, 4])
-                            plt.xticks([])
-                            plt.yticks([])
-                            plt.tight_layout()
-                            plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_bw_{it}.jpg", dpi=170.7)
-                            plt.close()
+                                plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                                            s=s_p, color=cmap.color(n))
+                        if training_config.particle_dropout > 0:
+                            plt.scatter(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
+                                        x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), s=25, color='k',
+                                        alpha=0.75)
+                            plt.plot(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
+                                     x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), '+', color='w')
+                    plt.xlim([0,1])
+                    plt.ylim([0,1])
+                    # plt.xlim([-2,2])
+                    # plt.ylim([-2,2])
+                    if 'frame' in style:
+                        plt.rcParams['text.usetex'] = True
+                        rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+                        plt.xlabel(r'$x$', fontsize=64)
+                        plt.ylabel(r'$y$', fontsize=64)
+                        plt.xticks(fontsize=32.0)
+                        plt.yticks(fontsize=32.0)
+                    else:
+                        plt.xticks([])
+                        plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
+                    plt.close()
+
+                    if False:  # not(has_mesh):
+                        fig = plt.figure(figsize=(12, 12))
+                        s_p = 25
+                        if simulation_config.has_cell_division:
+                            s_p = 10
+                        for n in range(n_particle_types):
+                            plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
+                                        x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color='k')
+                        if (simulation_config.boundary == 'periodic'):
+                            plt.xlim([0, 1])
+                            plt.ylim([0, 1])
+                        else:
+                            plt.xlim([-4, 4])
+                            plt.ylim([-4, 4])
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_bw_{it}.jpg", dpi=170.7)
+                        plt.close()
 
         if bSave:
             torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
@@ -1627,7 +1535,6 @@ def data_train_particles(config, config_file, device):
         plt.close()
 
 
-
 def data_train_particle_field(config, config_file, device):
     print('')
 
@@ -1781,7 +1688,7 @@ def data_train_particle_field(config, config_file, device):
 
     if has_siren:
 
-        image_width = n_nodes_per_axis = int(np.sqrt(n_nodes))
+        image_width = int(np.sqrt(n_nodes))
         if has_siren_time:
             model_f = Siren_Network(image_width=image_width, in_features=3, out_features=1, hidden_features=128,
                                         hidden_layers=5, outermost_linear=True, device=device, first_omega_0=80,
@@ -1816,8 +1723,6 @@ def data_train_particle_field(config, config_file, device):
 
     list_loss = []
     time.sleep(1)
-
-    torch.autograd.set_detect_anomaly(True)
 
     for epoch in range(n_epochs + 1):
 
@@ -1958,15 +1863,6 @@ def data_train_particle_field(config, config_file, device):
             else:
                 loss = (pred_p_p + pred_f_p - y_batch).norm(2) # + model.field.norm(2)
 
-            visualize_embedding = True
-
-            if visualize_embedding & (((epoch < 3 ) & (N < 10000) & (N % 100 == 0)) | (N==0)):
-                print(N)
-                plot_training_particle_field(config=config, has_siren=has_siren, dataset_name=dataset_name, model_name=model_config.particle_model_name, log_dir=log_dir,
-                              epoch=epoch, N=N, x=x, x_mesh=x_mesh, model_field=model.field, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
-                              index_particles=index_particles, n_particles=n_particles,
-                              n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
-
             loss.backward()
             optimizer.step()
             if has_siren:
@@ -1975,6 +1871,22 @@ def data_train_particle_field(config, config_file, device):
                 optimizer_ghost_particles.step()
 
             total_loss += loss.item()
+
+            visualize_embedding = True
+            if visualize_embedding & (((epoch < 3 ) & (N < 10000) & (N % 100 == 0)) | (N==0)):
+                plot_training_particle_field(config=config, has_siren=has_siren, has_siren_time=has_siren_time, model_f=model_f, dataset_name=dataset_name, n_frames=n_frames, model_name=model_config.particle_model_name, log_dir=log_dir,
+                              epoch=epoch, N=N, x=x, x_mesh=x_mesh, model_field=model.field, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
+                              index_particles=index_particles, n_particles=n_particles,
+                              n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
+                torch.save({'model_state_dict': model.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict()},
+                           os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs_{epoch}_{N}.pt'))
+                if (has_siren):
+                    torch.save({'model_state_dict': model_f.state_dict(),
+                                'optimizer_state_dict': optimizer_f.state_dict()},
+                               os.path.join(log_dir, 'models', f'best_model_f_with_{NGraphs - 1}_graphs_{epoch}_{N}.pt'))
+
+
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
@@ -2097,6 +2009,10 @@ def data_train_particle_field(config, config_file, device):
             plt.xticks(fontsize=10.0)
             plt.yticks(fontsize=10.0)
 
+            if (epoch==1) & (has_siren_time):
+                logger.info(f'lower learning rate of field')
+                optimizer_f = torch.optim.Adam(lr=1e-5, params=model_f.parameters())
+
             if (replace_with_cluster) & (
                     (epoch == 1 * n_epochs // 4) | (epoch == 2 * n_epochs // 4) | (epoch == 3 * n_epochs // 4)):
                 match train_config.sparsity:
@@ -2169,9 +2085,6 @@ def data_train_particle_field(config, config_file, device):
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
         plt.close()
-
-
-
 
 
 def data_train_mesh(config, config_file, device):
@@ -3282,7 +3195,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_16','arbitrary_16_noise_1E-1','arbitrary_16_noise_0_2', 'arbitrary_16_noise_0_3', 'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5']
     # config_list = ['arbitrary_3', 'arbitrary_3_dropout_10_no_ghost', 'arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30', 'arbitrary_3_dropout_40']
     # config_list = ['gravity_16', 'gravity_16_noise_1E-1', 'gravity_16_noise_0_2', 'gravity_16_noise_0_3', 'gravity_16_noise_0_4', 'gravity_16_noise_0_5']
-    config_list = ['arbitrary_3_dropout_10_no_ghost']
+    # config_list = ['arbitrary_3_dropout_10_no_ghost']
     # config_list = ['arbitrary_3_dropout_10']
     # config_list = ['arbitrary_3_dropout_20']
     # config_list = ['arbitrary_3_dropout_30']
@@ -3292,7 +3205,8 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_1_boats']
     # config_list = ['arbitrary_3_field_3']
     # config_list = ['arbitrary_3_field_1_siren_with_time']
-    config_list = ['arbitrary_3_field_3_siren_with_time']
+    # config_list = ['arbitrary_3_field_3_siren_with_time']
+    config_list = ['arbitrary_3_field_2_boats_siren_with_time']
     # # config_list = ['Coulomb_3_noise_0_2']
     # config_list = ['Coulomb_3_noise_0_3']
     # config_list = ['Coulomb_3_noise_0_4']
@@ -3307,7 +3221,7 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 21)
         data_train(config, config_file, device)
         # data_test(config, visualize=True, style='color frame', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 21, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
