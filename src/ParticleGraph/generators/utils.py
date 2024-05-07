@@ -197,7 +197,7 @@ def initialize_random_values(n, device):
 
 def init_particles(config, device, cycle_length=None):
     simulation_config = config.simulation
-    n_particles = simulation_config.n_particles
+    n_particles = simulation_config.n_particles * 4
     n_particle_types = simulation_config.n_particle_types
     dimension = simulation_config.dimension
 
@@ -226,7 +226,7 @@ def init_particles(config, device, cycle_length=None):
     particle_id = torch.arange(n_particles, device=device)
     particle_id = particle_id[:, None]
 
-    scenario = ''
+    scenario = 'uniform'
 
     match scenario:
         case 'pattern':
@@ -235,7 +235,7 @@ def init_particles(config, device, cycle_length=None):
             type = torch.tensor(type, device=device)
             type = type[:, None]
         case 'uniform':
-            type = torch.ones(n_particles, device=device)*7
+            type = torch.ones(n_particles, device=device) * 10
             type =  type[:, None]
         case 'stripes':
             l = n_particles//n_particle_types

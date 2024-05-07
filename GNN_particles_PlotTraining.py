@@ -1460,12 +1460,17 @@ def data_plot_training_particle_field(config, config_file, mode, cc, device):
                 target = np.flipud(target)
 
                 os.makedirs(f"./{log_dir}/tmp_training/rotation", exist_ok=True)
+                os.makedirs(f"./{log_dir}/tmp_training/rotation/generated1", exist_ok=True)
+                os.makedirs(f"./{log_dir}/tmp_training/rotation/generated2", exist_ok=True)
+                os.makedirs(f"./{log_dir}/tmp_training/rotation/target", exist_ok=True)
+                os.makedirs(f"./{log_dir}/tmp_training/rotation/field", exist_ok=True)
+
 
                 match model_config.field_type:
                     case 'siren':
                         angle_list = [0]
                     case 'siren_with_time':
-                        angle_list = np.linspace(0, 360, 5)
+                        angle_list = trange(0, 360, 5)
                 print('Output per angle ...')
                 for angle in angle_list:
 
@@ -1486,7 +1491,7 @@ def data_plot_training_particle_field(config, config_file, mode, cc, device):
                     plt.xlim([0, 1])
                     plt.ylim([0, 1])
                     plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_training/rotation/generated_1_{angle}.tif", dpi=300)
+                    plt.savefig(f"./{log_dir}/tmp_training/rotation/generated1/generated_1_{epoch}_{angle}.tif", dpi=150)
                     plt.close()
 
                     fig = plt.figure(figsize=(12, 12))
@@ -1505,10 +1510,9 @@ def data_plot_training_particle_field(config, config_file, mode, cc, device):
                     plt.xlim([0, 1])
                     plt.ylim([0, 1])
                     plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_training/rotation/generated_2_{angle}.tif", dpi=300)
+                    plt.savefig(f"./{log_dir}/tmp_training/rotation/generated2/generated_2_{epoch}_{angle}.tif", dpi=150)
                     plt.close()
-                    values = ndimage.rotate(target, -angle, reshape=False, cval=np.mean(values) * 1.1)
-
+                    values = ndimage.rotate(target, -angle, reshape=False, cval=np.mean(target) * 1.1)
                     fig_ = plt.figure(figsize=(12, 12))
                     axf = fig_.add_subplot(1, 1, 1)
                     axf.xaxis.set_major_locator(plt.MaxNLocator(3))
@@ -1521,7 +1525,7 @@ def data_plot_training_particle_field(config, config_file, mode, cc, device):
                     plt.xticks(fontsize=32.0)
                     plt.yticks(fontsize=32.0)
                     plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_training/rotation/target_field_{angle}.tif", dpi=300)
+                    plt.savefig(f"./{log_dir}/tmp_training/rotation/target/target_field_{epoch}_{angle}.tif", dpi=150)
                     plt.close()
 
                     match model_config.field_type:
@@ -1545,7 +1549,7 @@ def data_plot_training_particle_field(config, config_file, mode, cc, device):
                     plt.xticks(fontsize=32.0)
                     plt.yticks(fontsize=32.0)
                     plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_training/rotation/reconstructed_field_{angle}.tif", dpi=300)
+                    plt.savefig(f"./{log_dir}/tmp_training/rotation/field/reconstructed_field_{epoch}_{angle}.tif", dpi=150)
                     plt.close()
 
             case 'tensor':
@@ -1634,7 +1638,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3', 'arbitrary_3_dropout_10_no_ghost', 'arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30','arbitrary_3_dropout_40']
     # config_list = ['arbitrary_16_noise_0_4','arbitrary_16_noise_0_5']# ['arbitrary_16','arbitrary_16_noise_1E-1','arbitrary_16_noise_0_2','arbitrary_16_noise_0_3']
     # config_list = ['arbitrary_3_dropout_10_no_ghost','arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30','arbitrary_3_dropout_40']
-    # config_list = ['arbitrary_3_field_4_siren_with_time'] ,['arbitrary_3_field_1_triangles'] # ['arbitrary_3_field_1','arbitrary_3_field_3','arbitrary_3_field_1_boats']
+    # config_list = ['arbitrary_3_field_4_siren_with_time']    #,['arbitrary_3_field_1_triangles'] # ['arbitrary_3_field_1','arbitrary_3_field_3','arbitrary_3_field_1_boats']
     config_list = ['arbitrary_3_field_2_boats_siren_with_time']
 
 

@@ -1133,7 +1133,7 @@ def data_train_particles(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_20.pt"
+    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_20.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
 
@@ -1149,7 +1149,7 @@ def data_train_particles(config, config_file, device):
         logger.info(f"Total Trainable Divsion Params: {n_total_params_division}")
         logger.info(f'Learning rates: 1E-3')
 
-    net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
+    net = f"./log/try_{config_file}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     print(f'network: {net}')
     print(f'initial batch_size: {batch_size}')
     print('')
@@ -1645,7 +1645,7 @@ def data_train_particle_field(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_0.pt"
+    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
 
@@ -1661,7 +1661,7 @@ def data_train_particle_field(config, config_file, device):
         logger.info(f"Total Trainable Divsion Params: {n_total_params_division}")
         logger.info(f'Learning rates: 1E-3')
 
-    net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
+    net = f"./log/try_{config_file}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     print(f'network: {net}')
     print(f'initial batch_size: {batch_size}')
     print('')
@@ -2162,7 +2162,7 @@ def data_train_mesh(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_7.pt"
+    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_7.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
 
@@ -2173,7 +2173,7 @@ def data_train_mesh(config, config_file, device):
     logger.info(f'Learning rates: {lr}, {lr_embedding}')
     model.train()
 
-    net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
+    net = f"./log/try_{config_file}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     print(f'network: {net}')
     print(f'initial batch_size: {batch_size}')
     print('')
@@ -2536,7 +2536,7 @@ def data_train_signal(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_4.pt"
+    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_4.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
 
@@ -2547,7 +2547,7 @@ def data_train_signal(config, config_file, device):
     logger.info(f'Learning rates: {lr}, {lr_embedding}')
     model.train()
 
-    net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
+    net = f"./log/try_{config_file}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     print(f'network: {net}')
     print(f'initial batch_size: {batch_size}')
     print('')
@@ -2684,7 +2684,7 @@ def data_train_signal(config, config_file, device):
         plt.close()
 
 
-def data_test(config, visualize=False, style='color', verbose=True, best_model=20, step=5, ratio=1, run=1, test_simulation=False, sample_embedding = False, device=[]):
+def data_test(config=None, config_file=None, visualize=False, style='color', verbose=True, best_model=20, step=5, ratio=1, run=1, test_simulation=False, sample_embedding = False, device=[]):
     print('')
 
     dataset_name = config.dataset
@@ -2707,7 +2707,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
     print(f'Test data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
+    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
     files = glob.glob(f"./{log_dir}/tmp_recons/*")
     for f in files:
@@ -2715,9 +2715,9 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
     graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     NGraphs = int(len(graph_files))
     if best_model == -1:
-        net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs.pt"
+        net = f"./log/try_{config_file}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     else:
-        net = f"./log/try_{dataset_name}/models/best_model_with_{NGraphs - 1}_graphs_{best_model}.pt"
+        net = f"./log/try_{config_file}/models/best_model_with_{NGraphs - 1}_graphs_{best_model}.pt"
     print('Graph files N: ', NGraphs - 1)
     print(f'network: {net}')
 
@@ -2746,7 +2746,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
             mesh_model = None
         if has_division:
             model_division = Division_Predictor(config, device)
-            net = f"./log/try_{dataset_name}/models/best_model_division_with_{NGraphs - 1}_graphs_20.pt"
+            net = f"./log/try_{config_file}/models/best_model_division_with_{NGraphs - 1}_graphs_20.pt"
             state_dict = torch.load(net, map_location=device)
             model_division.load_state_dict(state_dict['model_state_dict'])
             model_division.eval()
@@ -2796,8 +2796,8 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
     y_list = []
     x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device))
     y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device))
-    ynorm = torch.load(f'./log/try_{dataset_name}/ynorm.pt', map_location=device).to(device)
-    vnorm = torch.load(f'./log/try_{dataset_name}/vnorm.pt', map_location=device).to(device)
+    ynorm = torch.load(f'./log/try_{config_file}/ynorm.pt', map_location=device).to(device)
+    vnorm = torch.load(f'./log/try_{config_file}/vnorm.pt', map_location=device).to(device)
     x = x_list[0][0].clone().detach()
     n_sub_population = n_particles // n_particle_types
     first_embedding = model.a[1].data.clone().detach()
@@ -2835,7 +2835,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
 
     if has_ghost:
         model_ghost = Ghost_Particles(config, n_particles, vnorm, device)
-        net = f"./log/try_{dataset_name}/models/best_ghost_particles_with_{NGraphs - 1}_graphs_20.pt"
+        net = f"./log/try_{config_file}/models/best_ghost_particles_with_{NGraphs - 1}_graphs_20.pt"
         state_dict = torch.load(net, map_location=device)
         model_ghost.load_state_dict(state_dict['model_state_dict'])
         model_ghost.eval()
@@ -2851,7 +2851,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
         A1 = A1 * cycle_length_distrib
         A1 = A1[:, None]
     if has_mesh:
-        hnorm = torch.load(f'./log/try_{dataset_name}/hnorm.pt', map_location=device).to(device)
+        hnorm = torch.load(f'./log/try_{config_file}/hnorm.pt', map_location=device).to(device)
 
         mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_0.pt', map_location=device)
         mask_mesh = mesh_data['mask']
@@ -3028,7 +3028,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
             plt.ylim([0, 1])
 
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_recons/Fig_{dataset_name}_{it}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{it}.tif", dpi=170.7)
             plt.close()
 
             if has_ghost:
@@ -3058,7 +3058,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_recons/Ghost1_{dataset_name}_{it}.tif", dpi=170.7)
+                plt.savefig(f"./{log_dir}/tmp_recons/Ghost1_{config_file}_{it}.tif", dpi=170.7)
                 plt.close()
                 fig = plt.figure(figsize=(12, 12))
                 ax = fig.add_subplot(1, 1, 1)
@@ -3081,7 +3081,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
                 plt.xticks(fontsize=32.0)
                 plt.yticks(fontsize=32.0)
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_recons/Ghost2_{dataset_name}_{it}.tif", dpi=170.7)
+                plt.savefig(f"./{log_dir}/tmp_recons/Ghost2_{config_file}_{it}.tif", dpi=170.7)
                 plt.close()
                 fig = plt.figure(figsize=(12, 12))
                 ax = fig.add_subplot(1, 1, 1)
@@ -3104,7 +3104,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
                 plt.xticks(fontsize=32.0)
                 plt.yticks(fontsize=32.0)
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_recons/Ghost3_{dataset_name}_{it}.tif", dpi=170.7)
+                plt.savefig(f"./{log_dir}/tmp_recons/Ghost3_{config_file}_{it}.tif", dpi=170.7)
                 plt.close()
 
     print(f'RMSE = {np.round(np.mean(rmserr_list), 4)} +/- {np.round(np.std(rmserr_list), 4)}')
@@ -3157,7 +3157,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
         plt.ylabel(r'$y$', fontsize=64)
         # plt.text(0,0.9,f'RMS error: {np.round(np.mean(rmserr_list) * 100, 2)} +/- {np.round(np.std(rmserr_list) * 100, 2)} %')
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/rmserr_{dataset_name}_{it+2}.tif", dpi=170.7)
+        plt.savefig(f"./{log_dir}/rmserr_{config_file}_{it+2}.tif", dpi=170.7)
 
     if True:
 
@@ -3186,7 +3186,7 @@ def data_test(config, visualize=False, style='color', verbose=True, best_model=2
         plt.xlim([0, 20])
         plt.ylim([-1000, 5000])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/loss_{dataset_name}_{it+2}.tif", dpi=170.7)
+        plt.savefig(f"./{log_dir}/loss_{config_file}_{it+2}.tif", dpi=170.7)
 
 
 if __name__ == '__main__':
@@ -3206,12 +3206,16 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_3']
     # config_list = ['arbitrary_3_field_1_siren_with_time']
     # config_list = ['arbitrary_3_field_3_siren_with_time']
-    config_list = ['arbitrary_3_field_2_boats_siren_with_time']
+    # config_list = ['arbitrary_3_field_2_boats_siren_with_time']
     # # config_list = ['Coulomb_3_noise_0_2']
     # config_list = ['Coulomb_3_noise_0_3']
     # config_list = ['Coulomb_3_noise_0_4']
     # config_list = ['Coulomb_3_noise_0_5']
     # config_list = ['boids_16_dropout_10']
+    # config_list = ['arbitrary_3_field_1_no_model']
+    config_list = ['arbitrary_3_field_3_no_model']
+    # config_list = ['arbitrary_3_field_1_with_time_no_model']
+    # config_list = ['boids_16_256']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -3221,9 +3225,9 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 21)
+        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
         data_train(config, config_file, device)
-        # data_test(config, visualize=True, style='color frame', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 21, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
+        # data_test(config=config, config_file=config_file, visualize=True, style='color', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, sample_embedding=True, device=device)    # config.simulation.n_frames // 7
 
 
 
