@@ -1296,7 +1296,7 @@ def data_plot_training_particle_field(config, config_file, mode, cc, device):
         model_f.eval()
 
 
-    epoch_list = [1]
+    epoch_list = [10]
     for epoch in epoch_list:
         print(f'epoch: {epoch}')
 
@@ -1448,7 +1448,7 @@ def data_plot_training_particle_field(config, config_file, mode, cc, device):
 
         match config.graph_model.field_type:
 
-            case 'siren_with_time':
+            case 'siren_with_time' | 'siren':
 
                 x_mesh = x_mesh_list[0][0].clone().detach()
                 node_value_map = simulation_config.node_value_map
@@ -1461,7 +1461,13 @@ def data_plot_training_particle_field(config, config_file, mode, cc, device):
 
                 os.makedirs(f"./{log_dir}/tmp_training/rotation", exist_ok=True)
 
-                for angle in trange(0, 360, 5):
+                match model_config.field_type:
+                    case 'siren':
+                        angle_list = [0]
+                    case 'siren_with_time':
+                        angle_list = np.linspace(0, 360, 5)
+                print('Output per angle ...')
+                for angle in angle_list:
 
                     x=x_list[0][angle].clone().detach()
                     fig = plt.figure(figsize=(12, 12))
@@ -1501,8 +1507,7 @@ def data_plot_training_particle_field(config, config_file, mode, cc, device):
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/tmp_training/rotation/generated_2_{angle}.tif", dpi=300)
                     plt.close()
-
-                    values = ndimage.rotate(target, -angle, reshape=False)
+                    values = ndimage.rotate(target, -angle, reshape=False, cval=np.mean(values) * 1.1)
 
                     fig_ = plt.figure(figsize=(12, 12))
                     axf = fig_.add_subplot(1, 1, 1)
@@ -1629,8 +1634,8 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3', 'arbitrary_3_dropout_10_no_ghost', 'arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30','arbitrary_3_dropout_40']
     # config_list = ['arbitrary_16_noise_0_4','arbitrary_16_noise_0_5']# ['arbitrary_16','arbitrary_16_noise_1E-1','arbitrary_16_noise_0_2','arbitrary_16_noise_0_3']
     # config_list = ['arbitrary_3_dropout_10_no_ghost','arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30','arbitrary_3_dropout_40']
-    config_list = ['arbitrary_3_field_4_siren_with_time'] # ,['arbitrary_3_field_1_triangles'] # ['arbitrary_3_field_1','arbitrary_3_field_3','arbitrary_3_field_1_boats']
-
+    # config_list = ['arbitrary_3_field_4_siren_with_time'] ,['arbitrary_3_field_1_triangles'] # ['arbitrary_3_field_1','arbitrary_3_field_3','arbitrary_3_field_1_boats']
+    config_list = ['arbitrary_3_field_2_boats_siren_with_time']
 
 
     for config_file in config_list:
@@ -1644,7 +1649,9 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_plot_training_particle_field(config, config_file, mode='figures', cc = 'viridis', device=device)
+        data_plot_training_particle_field(config, config_file, mode='figures', cc = 'grey', device=device)
+
+
 
 
 

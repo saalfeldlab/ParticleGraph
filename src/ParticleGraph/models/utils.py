@@ -25,7 +25,7 @@ def get_embedding(model_a=None, dataset_number = 0):
 
     return embedding
 
-def plot_training_particle_field(config, has_siren, dataset_name, model_name, log_dir, epoch, N, x, x_mesh, model_field, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
+def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dataset_name, n_frames, model_name, log_dir, epoch, N, x, x_mesh, model_field, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -90,23 +90,48 @@ def plot_training_particle_field(config, has_siren, dataset_name, model_name, lo
                      color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
     plt.ylim([-0.04, 0.03])
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/embedding/function/{model_name}_{dataset_name}_function_{epoch}_{N}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/tmp_training/embedding/function/{model_name}_{dataset_name}_function_{epoch}_{N}.tif", dpi=170.7)
     plt.close()
 
     fig = plt.figure(figsize=(12, 12))
     if has_siren:
-        im = to_numpy(x_mesh[:,6:7])
+        if has_siren_time:
+            angle_list = [45, 135, 225, 315]
+        else:
+            angle_list = [0]
+
+        for angle in angle_list:
+
+            if has_siren_time:
+                with torch.no_grad():
+                    tmp = model_f(time=angle / n_frames) ** 2
+            else:
+                with torch.no_grad():
+                    tmp = model_f() ** 2
+
+            tmp = torch.reshape(tmp, (n_nodes_per_axis, n_nodes_per_axis))
+            tmp = to_numpy(torch.sqrt(tmp))
+            tmp = np.flipud(tmp)
+            fig_ = plt.figure(figsize=(12, 12))
+            axf = fig_.add_subplot(1, 1, 1)
+            plt.imshow(tmp, cmap='grey', vmin=0, vmax=2)
+            plt.xticks([])
+            plt.yticks([])
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/tmp_training/embedding/field/{model_name}_{epoch}_{N}_{angle}.tif", dpi=170.7)
+            plt.close()
+
     else:
         im = to_numpy(model_field[dataset_num])
-    im = np.reshape(im, (n_nodes_per_axis, n_nodes_per_axis))
-    plt.imshow(im)
-    plt.gca().invert_yaxis()
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/embedding/field/{model_name}_{dataset_name}_field_{epoch}_{N}.tif", dpi=300)
-    plt.close()
+        im = np.reshape(im, (n_nodes_per_axis, n_nodes_per_axis))
+        plt.imshow(im)
+        plt.gca().invert_yaxis()
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/embedding/field/{model_name}_{dataset_name}_field_{epoch}_{N}.tif", dpi=300)
+        plt.close()
 
-    im = np.flipud(im)
-    io.imsave(f"./{log_dir}/tmp_training/embedding/field_pic_{dataset_name}_{epoch}_{N}.tif", im)
+    # im = np.flipud(im)
+    # io.imsave(f"./{log_dir}/tmp_training/embedding/field_pic_{dataset_name}_{epoch}_{N}.tif", im)
 
 def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 

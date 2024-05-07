@@ -1299,6 +1299,8 @@ def data_train_particles(config, config_file, device):
                               epoch=epoch, N=N, x=x, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
                               index_particles=index_particles, n_particles=n_particles,
                               n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
+                torch.save({'model_state_dict': model.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs_{epoch}_{N}.pt'))
 
             loss.backward()
             optimizer.step()
@@ -1885,8 +1887,6 @@ def data_train_particle_field(config, config_file, device):
                     torch.save({'model_state_dict': model_f.state_dict(),
                                 'optimizer_state_dict': optimizer_f.state_dict()},
                                os.path.join(log_dir, 'models', f'best_model_f_with_{NGraphs - 1}_graphs_{epoch}_{N}.pt'))
-
-
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))

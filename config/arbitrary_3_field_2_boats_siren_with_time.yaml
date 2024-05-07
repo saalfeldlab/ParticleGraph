@@ -1,5 +1,5 @@
 description: 'attraction-repulsion with 3 types particles'
-dataset: 'arbitrary_3_field_1_boats'
+dataset: 'arbitrary_3_field_2_boats_siren_with_time'
 
 simulation:
   params: [[1.6233, 1.0413, 1.6012, 1.5615], [1.7667, 1.8308, 1.0855, 1.9055], [1.7226, 1.7850, 1.0584, 1.8579]]
@@ -8,9 +8,9 @@ simulation:
   n_particles: 4800
   n_particle_types: 3
   n_interactions: 3
-  n_frames: 1000
+  n_frames: 360
   sigma: 0.005
-  delta_t: 0.025
+  delta_t: 0.1
   dpos_init: 0
   boundary: 'periodic'
   n_nodes: 10000
@@ -34,6 +34,7 @@ graph_model:
   aggr_type: 'mean'
   embedding_dim: 2
   update_type: 'none'
+  field_type: 'siren_with_time'
 
 plotting:
   colormap: 'tab10'

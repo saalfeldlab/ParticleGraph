@@ -1390,6 +1390,7 @@ def data_plot_gravity():
     plt.ylabel(r'Exponent fit ', fontsize=12)
     plt.text(0.5, -0.5, f"Exponent: {np.round(np.mean(-popt_list[:, 1]), 3)}+/-{np.round(np.std(popt_list[:, 1]), 3)}",
              fontsize=10)
+    print(f"Exponent: {np.round(np.mean(-popt_list[:, 1]), 3)}+/-{np.round(np.std(popt_list[:, 1]), 3)}")
 
     fig_ = plt.figure(figsize=(12, 12))
     ax = fig_.add_subplot(1, 1, 1)
@@ -4453,11 +4454,11 @@ if __name__ == '__main__':
     # config_list = ['gravity_16','gravity_16_noise_1E-5','gravity_16_noise_1E-4','gravity_16_noise_1E-3','gravity_16_noise_1E-2','gravity_16_noise_1E-1']
     # config_list = ['gravity_16_dropout_10_no_ghost', 'gravity_16_dropout_10', 'gravity_16_dropout_20', 'gravity_16_dropout_30', 'gravity_16_dropout_40', 'gravity_16_dropout_50']
     # config_list = ['gravity_16_dropout_20'] # ['gravity_16_dropout_10_no_ghost','gravity_16_dropout_10','gravity_16_dropout_20','gravity_16_dropout_30']
-    config_list = ['arbitrary_16']
-    # config_list = ['gravity_16'] #, 'gravity_16_noise_1E-1', 'gravity_16_noise_0_2', 'gravity_16_noise_0_3', 'gravity_16_noise_0_4', 'gravity_16_noise_0_5']
+    config_list = ['gravity_16_noise_0_2']
+    # config_list = ['gravity_16_noise_1E-1', 'gravity_16_noise_0_3', 'gravity_16_noise_0_5']
 
 
     for config_name in config_list:
 
-        data_plot_attraction_repulsion()
+        data_plot_gravity()
 

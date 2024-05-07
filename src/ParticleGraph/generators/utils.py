@@ -247,6 +247,8 @@ def init_particles(config, device, cycle_length=None):
 
     return pos, dpos, type, features, cycle_duration, particle_id, cycle_length, cycle_length_distrib
 
+
+
 def rotate_init_mesh(angle, config, device):
     simulation_config = config.simulation
     n_nodes = simulation_config.n_nodes
@@ -265,13 +267,12 @@ def rotate_init_mesh(angle, config, device):
     i0 = imread(f'graphs_data/{node_value_map}')
     values = i0[(to_numpy(pos_mesh[:, 0]) * 255).astype(int), (to_numpy(pos_mesh[:, 1]) * 255).astype(int)]
     values = np.reshape(values, (n_nodes_per_axis, n_nodes_per_axis))
-    values = ndimage.rotate(values, angle, reshape=False)
+    values = ndimage.rotate(values, angle, reshape=False, cval=np.mean(values)*1.1)
     values = np.reshape(values, (n_nodes_per_axis*n_nodes_per_axis))
     features_mesh = torch.zeros((n_nodes, 2), device=device)
     features_mesh[:, 0] = torch.tensor(values / 255 * 5000, device=device)
 
     return features_mesh
-
 
 
 
