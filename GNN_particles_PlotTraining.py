@@ -23,7 +23,7 @@ from ParticleGraph.fitting_models import linear_model
 # matplotlib.use("Qt5Agg")
 # os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
-def data_plot_training(config, mode, device):
+def data_plot_training(config, config_file, mode, device):
     print('')
 
     plt.rcParams['text.usetex'] = True
@@ -63,7 +63,7 @@ def data_plot_training(config, mode, device):
     batch_size = get_batch_size(0)
 
     l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
+    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
 
     graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
@@ -148,10 +148,10 @@ def data_plot_training(config, mode, device):
     # plt.rcParams["font.sans-serif"] = ["Helvetica Neue", "HelveticaNeue", "Helvetica-Neue", "Helvetica", "Arial",
     #                                    "Liberation"]
 
-    epoch_list = [20]
+    epoch_list = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
     for epoch in epoch_list:
 
-        net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_{epoch}.pt"
+        net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
         print(f'network: {net}')
         state_dict = torch.load(net,map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
@@ -209,7 +209,7 @@ def data_plot_training(config, mode, device):
         plt.xlim([0,2])
         plt.ylim([0,2])
         plt.tight_layout()
-        # plt.savefig(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.tif",dpi=170.7)
+        # plt.savefig(f"./{log_dir}/tmp_training/embedding_{config_file}_{epoch}.tif",dpi=170.7)
         plt.close()
 
         fig = plt.figure(figsize=(12, 12))
@@ -239,7 +239,7 @@ def data_plot_training(config, mode, device):
         plt.xlim([0, max_radius])
         plt.ylim([-0.04, 0.03])
         plt.tight_layout()
-        # plt.savefig(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.tif",dpi=170.7)
+        # plt.savefig(f"./{log_dir}/tmp_training/func_{config_file}_{epoch}.tif",dpi=170.7)
         plt.close()
 
         match train_config.cluster_method:
@@ -281,7 +281,7 @@ def data_plot_training(config, mode, device):
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/UMAP_{dataset_name}_{epoch}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/tmp_training/UMAP_{config_file}_{epoch}.tif", dpi=300)
         plt.close()
 
         fig = plt.figure(figsize=(12, 12))
@@ -347,10 +347,10 @@ def data_plot_training(config, mode, device):
         plt.yticks(fontsize=32.0)
         plt.tight_layout()
         # csv_ = np.array(csv_)
-        plt.savefig(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.tif", dpi=300)
-        # np.save(f"./{log_dir}/tmp_training/embedding_{dataset_name}.npy", csv_)
+        plt.savefig(f"./{log_dir}/tmp_training/embedding_{config_file}_{epoch}.tif", dpi=300)
+        # np.save(f"./{log_dir}/tmp_training/embedding_{config_file}.npy", csv_)
         # csv_= np.reshape(csv_,(csv_.shape[0]*csv_.shape[1],2))
-        # np.savetxt(f"./{log_dir}/tmp_training/embedding_{dataset_name}.txt", csv_)
+        # np.savetxt(f"./{log_dir}/tmp_training/embedding_{config_file}.txt", csv_)
         plt.close()
 
         p = config.simulation.params
@@ -407,12 +407,12 @@ def data_plot_training(config, mode, device):
         plt.ylim([-0.1, 0.1])
         # plt.ylim([-0.03, 0.03])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/func_all_{dataset_name}_{epoch}.tif",dpi=170.7)
+        plt.savefig(f"./{log_dir}/tmp_training/func_all_{config_file}_{epoch}.tif",dpi=170.7)
         rmserr_list = torch.stack(rmserr_list)
         rmserr_list = to_numpy(rmserr_list)
         print(f'all function RMS error: {np.round(np.mean(rmserr_list), 7)}+/-{np.round(np.std(rmserr_list), 7)}')
-        np.save(f"./{log_dir}/tmp_training/func_all_{dataset_name}_{epoch}.npy", csv_)
-        np.savetxt(f"./{log_dir}/tmp_training/func_all_{dataset_name}_{epoch}.txt", csv_)
+        np.save(f"./{log_dir}/tmp_training/func_all_{config_file}_{epoch}.npy", csv_)
+        np.savetxt(f"./{log_dir}/tmp_training/func_all_{config_file}_{epoch}.txt", csv_)
         plt.close()
 
         fig = plt.figure(figsize=(12, 12))
@@ -464,7 +464,7 @@ def data_plot_training(config, mode, device):
         # plt.ylim([-0.03, 0.03])
         plt.tight_layout()
 
-        torch.save(plots,f"./{log_dir}/tmp_training/plots_{dataset_name}_{epoch}.pt")
+        torch.save(plots,f"./{log_dir}/tmp_training/plots_{config_file}_{epoch}.pt")
 
         # plt.ylim([-0.04, 0.03])
 
@@ -494,10 +494,10 @@ def data_plot_training(config, mode, device):
         plt.xlabel(r'$d_{ij}$', fontsize=64)
         plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/true_func_{dataset_name}.tif",dpi=170.7)
+        plt.savefig(f"./{log_dir}/tmp_training/true_func_{config_file}.tif",dpi=170.7)
         plt.close()
-        np.save(f"./{log_dir}/tmp_training/true_func_{dataset_name}_{epoch}.npy", csv_)
-        np.savetxt(f"./{log_dir}/tmp_training/true_func_{dataset_name}_{epoch}.txt", csv_)
+        np.save(f"./{log_dir}/tmp_training/true_func_{config_file}_{epoch}.npy", csv_)
+        np.savetxt(f"./{log_dir}/tmp_training/true_func_{config_file}_{epoch}.txt", csv_)
 
         rr = torch.tensor(np.linspace(-1.5 * max_radius, 1.5 * max_radius, 2000)).to(device)
         fig = plt.figure(figsize=(12, 12))
@@ -526,10 +526,10 @@ def data_plot_training(config, mode, device):
         plt.xlabel(r'$d_{ij}$', fontsize=64)
         plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
         plt.tight_layout()
-        torch.save(plots, f"./{log_dir}/tmp_training/plots_true_{dataset_name}_{epoch}.pt")
+        torch.save(plots, f"./{log_dir}/tmp_training/plots_true_{config_file}_{epoch}.pt")
         plt.close()
 
-def data_plot_training_asym(config, mode, device):
+def data_plot_training_asym(config, config_file, mode, device):
     print('')
 
     # plt.rcParams['text.usetex'] = True
@@ -569,7 +569,7 @@ def data_plot_training_asym(config, mode, device):
     batch_size = get_batch_size(0)
 
     l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
+    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
 
     graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
@@ -658,7 +658,7 @@ def data_plot_training_asym(config, mode, device):
     epoch_list = [20]
     for epoch in epoch_list:
 
-        net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_{epoch}.pt"
+        net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
         print(f'network: {net}')
         state_dict = torch.load(net,map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
@@ -711,7 +711,7 @@ def data_plot_training_asym(config, mode, device):
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
         plt.tight_layout()
-        # plt.savefig(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.tif",dpi=170.7)
+        # plt.savefig(f"./{log_dir}/tmp_training/embedding_{config_file}_{epoch}.tif",dpi=170.7)
         plt.close()
 
         fig = plt.figure(figsize=(12, 12))
@@ -738,7 +738,7 @@ def data_plot_training_asym(config, mode, device):
         plt.xlim([0, max_radius])
         plt.ylim([-0.04, 0.03])
         plt.tight_layout()
-        # plt.savefig(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.tif",dpi=170.7)
+        # plt.savefig(f"./{log_dir}/tmp_training/func_{config_file}_{epoch}.tif",dpi=170.7)
         plt.close()
 
 
@@ -822,8 +822,8 @@ def data_plot_training_asym(config, mode, device):
         ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
         embedding = get_embedding(model_a_first, 1)
         csv_ = embedding
-        np.save(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.npy", csv_)
-        np.savetxt(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.txt", csv_)
+        np.save(f"./{log_dir}/tmp_training/embedding_{config_file}_{epoch}.npy", csv_)
+        np.savetxt(f"./{log_dir}/tmp_training/embedding_{config_file}_{epoch}.txt", csv_)
         if n_particle_types > 1000:
             plt.scatter(embedding[:, 0], embedding[:, 1], c=to_numpy(x[:, 5]) / n_particles, s=10,
                         cmap=cc)
@@ -836,7 +836,7 @@ def data_plot_training_asym(config, mode, device):
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.tif", dpi=170.7)
+        plt.savefig(f"./{log_dir}/tmp_training/embedding_{config_file}_{epoch}.tif", dpi=170.7)
         plt.close()
 
         fig = plt.figure(figsize=(12, 12))
@@ -874,9 +874,9 @@ def data_plot_training_asym(config, mode, device):
         plt.ylim([-0.03, 0.03])
         plt.xlim([0, max_radius])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.tif", dpi=170.7)
-        np.save(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.npy", csv_)
-        np.savetxt(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.txt", csv_)
+        plt.savefig(f"./{log_dir}/tmp_training/func_{config_file}_{epoch}.tif", dpi=170.7)
+        np.save(f"./{log_dir}/tmp_training/func_{config_file}_{epoch}.npy", csv_)
+        np.savetxt(f"./{log_dir}/tmp_training/func_{config_file}_{epoch}.txt", csv_)
         plt.close()
 
         p = config.simulation.params
@@ -907,9 +907,9 @@ def data_plot_training_asym(config, mode, device):
         plt.ylim([-0.03, 0.03])
         plt.xlim([0, max_radius])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/true_func_{dataset_name}.tif", dpi=170.7)
-        np.save(f"./{log_dir}/tmp_training/true_func_{dataset_name}_{epoch}.npy", csv_)
-        np.savetxt(f"./{log_dir}/tmp_training/true_func_{dataset_name}_{epoch}.txt", csv_)
+        plt.savefig(f"./{log_dir}/tmp_training/true_func_{config_file}.tif", dpi=170.7)
+        np.save(f"./{log_dir}/tmp_training/true_func_{config_file}_{epoch}.npy", csv_)
+        np.savetxt(f"./{log_dir}/tmp_training/true_func_{config_file}_{epoch}.txt", csv_)
         plt.close()
 
         func_list = torch.stack(func_list) * ynorm
@@ -919,7 +919,7 @@ def data_plot_training_asym(config, mode, device):
         rmserr_list = to_numpy(rmserr_list)
         print(f'all function RMS error: {np.round(np.mean(rmserr_list), 7)}+/-{np.round(np.std(rmserr_list), 7)}')
 
-def data_plot_training_continuous(config, mode, device):
+def data_plot_training_continuous(config, config_file, mode, device):
     print('')
 
     # plt.rcParams['text.usetex'] = True
@@ -959,7 +959,7 @@ def data_plot_training_continuous(config, mode, device):
     batch_size = get_batch_size(0)
 
     l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
+    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
 
     graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
@@ -1047,7 +1047,7 @@ def data_plot_training_continuous(config, mode, device):
     epoch_list = [20]
     for epoch in epoch_list:
 
-        net = f"./log/try_{dataset_name}/models/best_model_with_1_graphs_{epoch}.pt"
+        net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
         print(f'network: {net}')
         state_dict = torch.load(net,map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
@@ -1080,9 +1080,9 @@ def data_plot_training_continuous(config, mode, device):
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.tif",dpi=170.7)
-        np.save(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.npy", csv_)
-        np.savetxt(f"./{log_dir}/tmp_training/embedding_{dataset_name}_{epoch}.txt", csv_)
+        plt.savefig(f"./{log_dir}/tmp_training/embedding_{config_file}_{epoch}.tif",dpi=170.7)
+        np.save(f"./{log_dir}/tmp_training/embedding_{config_file}_{epoch}.npy", csv_)
+        np.savetxt(f"./{log_dir}/tmp_training/embedding_{config_file}_{epoch}.txt", csv_)
         plt.close()
 
 
@@ -1117,9 +1117,9 @@ def data_plot_training_continuous(config, mode, device):
         plt.ylim([-0.04, 0.03])
         # plt.ylim([-0.1, 0.06])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.tif",dpi=170.7)
-        np.save(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.npy", csv_)
-        np.savetxt(f"./{log_dir}/tmp_training/func_{dataset_name}_{epoch}.txt", csv_)
+        plt.savefig(f"./{log_dir}/tmp_training/func_{config_file}_{epoch}.tif",dpi=170.7)
+        np.save(f"./{log_dir}/tmp_training/func_{config_file}_{epoch}.npy", csv_)
+        np.savetxt(f"./{log_dir}/tmp_training/func_{config_file}_{epoch}.txt", csv_)
         plt.close()
 
         fig = plt.figure(figsize=(12, 12))
@@ -1148,9 +1148,9 @@ def data_plot_training_continuous(config, mode, device):
         plt.ylim([-0.04, 0.03])
         # plt.ylim([-0.1, 0.06])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/true_func_{dataset_name}.tif",dpi=170.7)
-        np.save(f"./{log_dir}/tmp_training/true_func_{dataset_name}_{epoch}.npy", csv_)
-        np.savetxt(f"./{log_dir}/tmp_training/true_func_{dataset_name}_{epoch}.txt", csv_)
+        plt.savefig(f"./{log_dir}/tmp_training/true_func_{config_file}.tif",dpi=170.7)
+        np.save(f"./{log_dir}/tmp_training/true_func_{config_file}_{epoch}.npy", csv_)
+        np.savetxt(f"./{log_dir}/tmp_training/true_func_{config_file}_{epoch}.txt", csv_)
         plt.close()
 
         func_list = torch.stack(func_list) * ynorm
@@ -1404,7 +1404,7 @@ def data_plot_training_particle_field(config, config_file, mode, cc, device):
         if len(p) > 1:
             p = torch.tensor(p, device=device)
         else:
-            p = torch.load(f'graphs_data/graphs_{config_file}/model_p.pt',map_location=device)
+            p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt',map_location=device)
         model_a_first = model.a.clone().detach()
 
         fig = plt.figure(figsize=(12, 12))
@@ -1640,6 +1640,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_dropout_10_no_ghost','arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30','arbitrary_3_dropout_40']
     # config_list = ['arbitrary_3_field_4_siren_with_time']    #,['arbitrary_3_field_1_triangles'] # ['arbitrary_3_field_1','arbitrary_3_field_3','arbitrary_3_field_1_boats']
     config_list = ['arbitrary_3_field_2_boats_siren_with_time']
+    config_list = ['boids_16_256']
 
 
     for config_file in config_list:
@@ -1653,7 +1654,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_plot_training_particle_field(config, config_file, mode='figures', cc = 'grey', device=device)
+        data_plot_training(config, config_file, mode='figures', cc = 'grey', device=device)
 
 
 
