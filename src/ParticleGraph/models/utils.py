@@ -15,8 +15,8 @@ from ParticleGraph.models import Interaction_Particles, Interaction_Particle_Fie
     Mesh_RPS
 from ParticleGraph.utils import choose_boundary_values
 from ParticleGraph.utils import to_numpy
-
-
+from matplotlib import rc
+import matplotlib as mpl
 
 def get_embedding(model_a=None, dataset_number = 0):
     embedding = []
@@ -30,6 +30,8 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dat
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
+
+    max_radius = simulation_config.max_radius
 
     n_nodes = simulation_config.n_nodes
     n_nodes_per_axis = int(np.sqrt(n_nodes))
@@ -78,8 +80,13 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dat
     rr = torch.tensor(np.linspace(0, simulation_config.max_radius, 200)).to(device)
     for n in range(n_particles):
         embedding_ = model.a[dataset_num, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
-        in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                 rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
+        match model_config.particle_model_name:
+            case 'PDE_ParticleField_A':
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None], rr[:, None] / max_radius, embedding_), dim=1)
+            case 'PDE_ParticleField_B':
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                         torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                         0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
         with torch.no_grad():
             func = model.lin_edge(in_features.float())
         func = func[:, 0]
@@ -141,68 +148,12 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
 
     matplotlib.rcParams['savefig.pad_inches'] = 0
 
-    if model_config.particle_model_name == 'PDE_ParticleField_B':
-
-        fig = plt.figure(figsize=(12, 12))
-        ax=fig.add_subplot(2, 2, 1)
-        embedding = get_embedding(model.a, dataset_num)
-        embedding = embedding[n_nodes:, :]
-        for n in range(n_particle_types):
-                plt.scatter(embedding[index_particles[n], 0],
-                            embedding[index_particles[n], 1], color=cmap.color(n), s=1)
-        ax=fig.add_subplot(2, 2, 2)
-        embedding = get_embedding(model.a, dataset_num)
-        embedding = embedding[:n_nodes, :]
-        for n in range(n_node_types):
-                plt.scatter(embedding[index_nodes[n], 0],
-                            embedding[index_nodes[n], 1], color=cmap.color(n), s=10)
-
-        ax = fig.add_subplot(2, 2, 4)
-        uu = torch.tensor(np.linspace(-150, 150, 100)).to(device)
-        popt_list = []
-        for n in range(n_nodes):
-            embedding_ = model.a[dataset_num, n, :] * torch.ones((100, 2), device=device)
-            in_features = torch.cat((uu[:, None], embedding_), dim=1)
-            h = model.lin_phi1(in_features.float())
-            h = h[:, 0]
-            if n % 24 == 0:
-                plt.scatter(to_numpy(uu), to_numpy(h), s=1, c='k')
-            popt, pcov = curve_fit(linear_model, to_numpy(uu.squeeze()), to_numpy(h.squeeze()))
-            popt_list.append(popt)
-        t = np.array(popt_list)
-        t = t[:, 0]
-        ax = fig.add_subplot(2, 2, 3)
-        t = np.reshape(t, (100, 100))
-        plt.imshow(t/np.mean(t), cmap='viridis')
-        plt.xticks([])
-        plt.yticks([])
-        # uu = torch.tensor(np.linspace(0, 7500, 200)).to(device)
-        # popt_list = []
-        # for n in range(n_nodes):
-        #     embedding_ = model.a[dataset_num, n, :] * torch.ones((200, 2), device=device)
-        #     in_features = torch.cat((uu[:, None], embedding_), dim=1)
-        #     h = model.lin_phi2(in_features.float())
-        #     h = h[:, 0]
-        #     popt, pcov = curve_fit(linear_model, to_numpy(uu.squeeze()), to_numpy(h.squeeze()))
-        #     popt_list.append(popt)
-        # t = np.array(popt_list)
-        # t = t[:, 0]
-        # ax = fig.add_subplot(2, 2, 4)
-        # t = np.reshape(t, (100, 100))
-        # plt.imshow(t/np.mean(t), cmap='viridis')
-        # plt.xticks([])
-        # plt.yticks([])
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/embedding/{model_name}_{dataset_name}_embedding_{epoch}_{N}.tif", dpi=170.7)
-        plt.close()
-
-
-    elif not('Mesh' in model_name):
+    if not('Mesh' in model_name):
 
         fig = plt.figure(figsize=(12, 12))
         if axis:
-            # plt.rcParams['text.usetex'] = True
-            # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+            plt.rcParams['text.usetex'] = True
+            rc('font', **{'family': 'serif', 'serif': ['Palatino']})
             ax = fig.add_subplot(1,1,1)
             # ax.xaxis.get_major_formatter()._usetex = False
             # ax.yaxis.get_major_formatter()._usetex = False
@@ -210,8 +161,8 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
             ax.yaxis.set_major_locator(plt.MaxNLocator(3))
             ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
             ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-            # plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-            # plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
+            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
             plt.xticks(fontsize=32.0)
             plt.yticks(fontsize=32.0)
         else:
@@ -245,7 +196,6 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
                     print('Error in vispy')
 
             else:
-                ax = fig.add_subplot(1, 1, 1)
                 for n in range(n_particle_types):
                     plt.scatter(embedding[index_particles[n], 0],
                                 embedding[index_particles[n], 1], color=cmap.color(n), s=200)
@@ -332,6 +282,9 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
         case 'PDE_B':
             max_radius = 0.04
             fig = plt.figure(figsize=(12, 12))
+            plt.rcParams['text.usetex'] = True
+            rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+            ax = fig.add_subplot(1,1,1)
             rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
             func_list = []
             for n in range(n_particles):
@@ -345,9 +298,20 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
                 func_list.append(func)
                 if n % 5 == 0:
                     plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
-                             color=cmap.color(int(n // (n_particles / n_particle_types))), linewidth=2)
+                             color=cmap.color(int(n // (n_particles / n_particle_types))), linewidth=4)
             plt.ylim([-1E-4, 1E-4])
-            plt.axis('off')
+            plt.xlabel(r'$x_j-x_i$', fontsize=64)
+            plt.ylabel(r'$f_{ij}$', fontsize=64)
+            # ax.xaxis.get_major_formatter()._usetex = False
+            # ax.yaxis.get_major_formatter()._usetex = False
+            ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+            ax.yaxis.set_major_locator(plt.MaxNLocator(5))
+            ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+            # ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+            fmt = lambda x, pos: '{:.1f}e-5'.format((x) * 1e5, pos)
+            ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+            plt.xticks(fontsize=32.0)
+            plt.yticks(fontsize=32.0)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/tmp_training/embedding/function/{model_name}_{dataset_name}_function_{epoch}_{N}.tif",dpi=170.7)
             plt.close()
@@ -514,7 +478,7 @@ def choose_training_model(model_config, device):
     model_name = model_config.graph_model.particle_model_name
     match model_name:
 
-        case 'PDE_ParticleField_A':
+        case 'PDE_ParticleField_A' | 'PDE_ParticleField_B':
             model = Interaction_Particle_Field(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos,
                                           dimension=dimension)
             model.edges = []

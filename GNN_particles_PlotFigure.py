@@ -2055,7 +2055,7 @@ def data_plot_boids(config_file):
         csv_ = embedding
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0],
-                        embedding[index_particles[n], 1], color=cmap.color(n), s=10)
+                        embedding[index_particles[n], 1], color=cmap.color(n), s=100)
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
         plt.xticks(fontsize=32.0)
@@ -2078,7 +2078,7 @@ def data_plot_boids(config_file):
                                                             ynorm=ynorm,
                                                             types=to_numpy(x[:, 5]),
                                                             cmap=cmap, device=device)
-
+        train_config.cluster_method = 'distance_embedding'
         match train_config.cluster_method:
             case 'kmeans':
                 labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans')
@@ -2186,8 +2186,9 @@ def data_plot_boids(config_file):
         plt.xlabel(r'$x_j-x_i$', fontsize=64)
         plt.ylabel( r'$f_{ij,x}$',fontsize=64)
         plt.savefig(f"./{log_dir}/tmp_training/func_all_{config_file}_{epoch}.tif", dpi=300)
-        np.save(f"./{log_dir}/tmp_training/embedding_{config_file}_{epoch}.npy", csv_)
-        np.savetxt(f"./{log_dir}/tmp_training/embedding_{config_file}_{epoch}.txt", csv_)
+        np.save(f"./{log_dir}/tmp_training/func_all_{config_file}_{epoch}.npy", csv_)
+        np.savetxt(f"./{log_dir}/tmp_training/func_all_{config_file}_{epoch}.txt", csv_)
+        plt.close()
 
 
         fig_ = plt.figure(figsize=(12, 12))
@@ -2351,7 +2352,7 @@ def data_plot_boids(config_file):
         ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
         r_squared = 1 - (ss_res / ss_tot)
         plt.text(5e-8, 4E-7, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
-        print(f'separfation R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}  outliers: {np.sum(relative_error>threshold)} ')
+        print(f'separation R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}  outliers: {np.sum(relative_error>threshold)} ')
 
         time.sleep(1)
         plt.tight_layout()
