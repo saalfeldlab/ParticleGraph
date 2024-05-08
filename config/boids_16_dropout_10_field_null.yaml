@@ -9,9 +9,9 @@ simulation:
   n_particle_types: 16
   n_interactions: 16
   has_cell_division: False
-  n_frames: 800
+  n_frames: 8000
   sigma: 0.005
-  delta_t: 5
+  delta_t: 0.5
   dpos_init: 5.0E-4
   boundary: 'periodic'
   start_frame: 0
@@ -31,7 +31,7 @@ graph_model:
   prediction: '2nd_derivative'
   input_size: 9
   output_size: 2
-  hidden_dim: 128
+  hidden_dim: 256
   n_mp_layers: 5
   aggr_type: 'mean'
   embedding_dim: 2

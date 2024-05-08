@@ -125,6 +125,11 @@ def tv2D(params):
     return tvloss / (nb_voxel)
 
 
+def get_r2_numpy_corrcoef(x, y):
+    return np.corrcoef(x, y)[0, 1]**2
+
+
+
 class CustomColorMap:
     def __init__(self, config):
         self.cmap_name = config.plotting.colormap

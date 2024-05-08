@@ -610,6 +610,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
     n_nodes = simulation_config.n_nodes
+    n_nodes_per_axis = int(np.sqrt(n_nodes))
     delta_t = simulation_config.delta_t
     has_signal = (config.graph_model.signal_model_name != '')
     has_adjacency_matrix = (simulation_config.connectivity_file != '')
@@ -700,8 +701,14 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
             if model_config.field_type == 'siren_with_time':
-                H1_mesh = rotate_init_mesh(it, config, device=device)
-                im = torch.reshape(H1_mesh[:, 0:1], (100, 100))
+
+                if 'video' in simulation_config.node_value_map:
+                    im = imread(f"graphs_data/{simulation_config.node_value_map}")
+                    im = np.reshape(im[it], (n_nodes_per_axis * n_nodes_per_axis))
+                    H1_mesh[:, 0:1] = torch.tensor(im[:,None], dtype=torch.float32, device=device)
+                else:
+                    H1_mesh = rotate_init_mesh(it, config, device=device)
+                    im = torch.reshape(H1_mesh[:, 0:1], (100, 100))
                 # io.imsave(f"graphs_data/graphs_{dataset_name}/generated_data/rotated_image_{it}.tif", to_numpy(im))
 
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
@@ -3164,8 +3171,9 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_3_no_model']
     # config_list = ['arbitrary_3_field_1_with_time_no_model']
     # config_list = ['boids_16_256']
-    config_list = ['boids_16_dropout_10_field_null']
+    # config_list = ['boids_16_dropout_10_field_null']
     # config_list = ['boids_64_256_1_epoch']
+    config_list = ['arbitrary_3_field_video_siren_with_time']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -3175,7 +3183,7 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
         data_train(config, config_file, device)
         # data_test(config=config, config_file=config_file, visualize=True, style='color', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, sample_embedding=True, device=device)    # config.simulation.n_frames // 7
 

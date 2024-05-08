@@ -147,7 +147,7 @@ def data_plot_training(config, config_file, mode, device):
     # plt.rcParams["font.sans-serif"] = ["Helvetica Neue", "HelveticaNeue", "Helvetica-Neue", "Helvetica", "Arial",
     #                                    "Liberation"]
 
-    epoch_list = [20] #[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
+    epoch_list = [20] #[5,10,15,20]
     for epoch in epoch_list:
 
         net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
@@ -269,7 +269,7 @@ def data_plot_training(config, config_file, mode, device):
             pos = np.array(pos)
             if pos.size > 0:
                 print(f'cluster {n}  {len(pos)}')
-                plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=100,alpha=0.1)
+                plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=200,alpha=0.1)
         label_list = []
         for n in range(n_particle_types):
             tmp = labels[index_particles[n]]
@@ -322,13 +322,7 @@ def data_plot_training(config, config_file, mode, device):
         with torch.no_grad():
             model.a[1] = model_a_.clone().detach()
 
-
-
         # matplotlib.use("Qt5Agg")
-
-
-
-
 
         fig_ = plt.figure(figsize=(12, 12))
         axf = fig_.add_subplot(1, 1, 1)
@@ -1640,6 +1634,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_4_siren_with_time']    #,['arbitrary_3_field_1_triangles'] # ['arbitrary_3_field_1','arbitrary_3_field_3','arbitrary_3_field_1_boats']
     # config_list = ['arbitrary_3_field_2_boats_siren_with_time']
     config_list = ['boids_64_256']
+    config_list = ['gravity_16_noise_E-1']
 
 
     for config_file in config_list:
