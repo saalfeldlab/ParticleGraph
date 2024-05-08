@@ -133,7 +133,6 @@ def data_plot_training(config, config_file, mode, device):
 
     time.sleep(0.5)
 
-
     # matplotlib.use("Qt5Agg")
     # plt.rcParams['text.usetex'] = True
     # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
@@ -148,7 +147,7 @@ def data_plot_training(config, config_file, mode, device):
     # plt.rcParams["font.sans-serif"] = ["Helvetica Neue", "HelveticaNeue", "Helvetica-Neue", "Helvetica", "Arial",
     #                                    "Liberation"]
 
-    epoch_list = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
+    epoch_list = [20] #[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20]
     for epoch in epoch_list:
 
         net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
@@ -1639,8 +1638,8 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_16_noise_0_4','arbitrary_16_noise_0_5']# ['arbitrary_16','arbitrary_16_noise_1E-1','arbitrary_16_noise_0_2','arbitrary_16_noise_0_3']
     # config_list = ['arbitrary_3_dropout_10_no_ghost','arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30','arbitrary_3_dropout_40']
     # config_list = ['arbitrary_3_field_4_siren_with_time']    #,['arbitrary_3_field_1_triangles'] # ['arbitrary_3_field_1','arbitrary_3_field_3','arbitrary_3_field_1_boats']
-    config_list = ['arbitrary_3_field_2_boats_siren_with_time']
-    config_list = ['boids_16_256']
+    # config_list = ['arbitrary_3_field_2_boats_siren_with_time']
+    config_list = ['boids_64_256']
 
 
     for config_file in config_list:
@@ -1654,7 +1653,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_plot_training(config, config_file, mode='figures', cc = 'grey', device=device)
+        data_plot_training(config, config_file, mode='figures', device=device)
 
 
 

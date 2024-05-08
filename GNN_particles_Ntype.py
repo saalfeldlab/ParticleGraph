@@ -39,7 +39,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
     has_particle_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
 
     if has_particle_field:
-        data_generate_particle_field(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5,
+        data_generate_particle_field(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=False, step=step,
                                      alpha=0.2, ratio=1,
                                      scenario='none', device=None, bSave=True)
     else:
@@ -297,6 +297,10 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
                 # plt.style.use('dark_background')
                 # matplotlib.use("Qt5Agg")
 
+                if 'frame' in style:
+                    plt.rcParams['text.usetex'] = True
+                    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+
                 if 'graph' in style:
 
                     fig = plt.figure(figsize=(12, 12))
@@ -353,7 +357,7 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
                     matplotlib.rcParams['savefig.pad_inches'] = 0
                     fig = plt.figure(figsize=(12, 12))
                     ax = fig.add_subplot(1, 1, 1)
-                    s_p = 50
+                    s_p = 200
                     if simulation_config.has_cell_division:
                         s_p = 25
                     if False:  # config.simulation.non_discrete_level>0:
@@ -370,8 +374,14 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
                                  x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), '+', color='w')
                     plt.xlim([0, 1])
                     plt.ylim([0, 1])
-                    plt.xticks([])
-                    plt.yticks([])
+                    if 'frame' in style:
+                        plt.xlabel(r'$x$', fontsize=64)
+                        plt.ylabel(r'$y$', fontsize=64)
+                        plt.xticks(fontsize=32.0)
+                        plt.yticks(fontsize=32.0)
+                    else:
+                        plt.xticks([])
+                        plt.yticks([])
                     plt.tight_layout()
                     plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
                     plt.close()
@@ -452,9 +462,6 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
                     else:
                         # matplotlib.use("Qt5Agg")
 
-                        # plt.rcParams['text.usetex'] = True
-                        # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-
                         matplotlib.rcParams['savefig.pad_inches'] = 0
                         fig = plt.figure(figsize=(12, 12))
                         ax = fig.add_subplot(1, 1, 1)
@@ -506,7 +513,7 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
                                     plt.yticks([])
                                     plt.axis('off')
                         else:
-                            s_p = 100
+                            s_p = 200
                             if simulation_config.has_cell_division:
                                 s_p = 25
                             if False:  # config.simulation.non_discrete_level>0:
@@ -526,6 +533,8 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
                         # plt.xlim([-2,2])
                         # plt.ylim([-2,2])
                         if 'frame' in style:
+                            plt.rcParams['text.usetex'] = True
+                            rc('font', **{'family': 'serif', 'serif': ['Palatino']})
                             plt.xlabel(r'$x$', fontsize=64)
                             plt.ylabel(r'$y$', fontsize=64)
                             plt.xticks(fontsize=32.0)
@@ -693,57 +702,17 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             if model_config.field_type == 'siren_with_time':
                 H1_mesh = rotate_init_mesh(it, config, device=device)
                 im = torch.reshape(H1_mesh[:, 0:1], (100, 100))
-                io.imsave(f"graphs_data/graphs_{dataset_name}/generated_data/rotated_image_{it}.tif", to_numpy(im))
-
-            # calculate cell division
-            if (it >= 0) & has_cell_division & (n_particles < 20000):
-                pos = torch.argwhere(A1.squeeze() > cycle_length_distrib)
-                y_division = (A1.squeeze() > cycle_length_distrib).clone().detach() * 1.0
-                # cell division
-                if len(pos) > 1:
-                    n_add_nodes = len(pos)
-                    pos = to_numpy(pos[:, 0].squeeze()).astype(int)
-
-                    y_division = torch.concatenate((y_division, torch.zeros((n_add_nodes), device=device)), 0)
-
-                    n_particles = n_particles + n_add_nodes
-                    N1 = torch.arange(n_particles, device=device)
-                    N1 = N1[:, None]
-                    separation = 1E-3 * torch.randn((n_add_nodes, 2), device=device)
-                    X1 = torch.cat((X1, X1[pos, :] + separation), dim=0)
-                    X1[pos, :] = X1[pos, :] - separation
-                    phi = torch.randn(n_add_nodes, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
-                    cos_phi = torch.cos(phi)
-                    sin_phi = torch.sin(phi)
-                    new_x = cos_phi * V1[pos, 0] + sin_phi * V1[pos, 1]
-                    new_y = -sin_phi * V1[pos, 0] + cos_phi * V1[pos, 1]
-                    V1[pos, 0] = new_x
-                    V1[pos, 1] = new_y
-                    V1 = torch.cat((V1, -V1[pos, :]), dim=0)
-                    T1 = torch.cat((T1, T1[pos, :]), dim=0)
-                    H1 = torch.cat((H1, H1[pos, :]), dim=0)
-                    A1[pos, :] = 0
-                    A1 = torch.cat((A1, A1[pos, :]), dim=0)
-                    nd = torch.ones(len(pos), device=device) + 0.05 * torch.randn(len(pos), device=device)
-                    cycle_length_distrib = torch.cat(
-                        (cycle_length_distrib, cycle_length[to_numpy(T1[pos, 0])].squeeze() * nd), dim=0)
-                    y_timer = A1.squeeze().clone().detach()
-
-                    index_particles = []
-                    for n in range(n_particles):
-                        pos = torch.argwhere(T1 == n)
-                        pos = to_numpy(pos[:, 0].squeeze()).astype(int)
-                        index_particles.append(pos)
+                # io.imsave(f"graphs_data/graphs_{dataset_name}/generated_data/rotated_image_{it}.tif", to_numpy(im))
 
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                                    H1.clone().detach(), A1.clone().detach()), 1)
+
             x_mesh = torch.concatenate(
                 (N1_mesh.clone().detach(), X1_mesh.clone().detach(), V1_mesh.clone().detach(),
                  T1_mesh.clone().detach(), H1_mesh.clone().detach(), A1_mesh.clone().detach()), 1)
             x_particle_field = torch.concatenate((x_mesh, x), dim=0)
 
             # compute connectivity rules
-
             dataset_mesh = data.Data(x=x_mesh, edge_index=mesh_data['edge_index'],
                                      edge_attr=mesh_data['edge_weight'], device=device)
 
@@ -772,63 +741,42 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
             # append list
             if (it >= 0) & bSave:
+                if has_particle_dropout:
 
-                if has_cell_division:
-                    x_list.append(x.clone().detach())
-                    y_ = torch.concatenate((y, y_timer[:, None], y_division[:, None]), 1)
-                    y_list.append(y_.clone().detach())
+                    x_ = x[inv_particle_dropout_mask].clone().detach()
+                    x_[:, 0] = torch.arange(len(x_), device=device)
+                    x_removed_list.append(x[inv_particle_dropout_mask].clone().detach())
+                    x_ = x[particle_dropout_mask].clone().detach()
+                    x_[:, 0] = torch.arange(len(x_), device=device)
+                    x_list.append(x_)
+                    y_list.append(y[particle_dropout_mask].clone().detach())
+
+                    distance = torch.sum(bc_dpos(x_[:, None, 1:dimension + 1] - x_[None, :, 1:dimension + 1]) ** 2, dim=2)
+                    adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                    edge_index = adj_t.nonzero().t().contiguous()
+                    edge_p_p_list.append(edge_index)
+
+                    x_particle_field = torch.concatenate((x_mesh, x_), dim=0)
+
+                    distance = torch.sum(bc_dpos(
+                        x_particle_field[:, None, 1:dimension + 1] - x_particle_field[None, :, 1:dimension + 1]) ** 2, dim=2)
+                    adj_t = ((distance < (max_radius / 2) ** 2) & (distance > min_radius ** 2)).float() * 1
+                    edge_index = adj_t.nonzero().t().contiguous()
+                    pos = torch.argwhere((edge_index[1, :] >= n_nodes) & (edge_index[0, :] < n_nodes))
+                    pos = to_numpy(pos[:, 0])
+                    edge_index = edge_index[:, pos]
+                    edge_f_p_list.append(edge_index)
+
                 else:
-                    if has_particle_dropout:
-
-                        x_ = x[inv_particle_dropout_mask].clone().detach()
-                        x_[:, 0] = torch.arange(len(x_), device=device)
-                        x_removed_list.append(x[inv_particle_dropout_mask].clone().detach())
-                        x_ = x[particle_dropout_mask].clone().detach()
-                        x_[:, 0] = torch.arange(len(x_), device=device)
-                        x_list.append(x_)
-                        y_list.append(y[particle_dropout_mask].clone().detach())
-
-                        distance = torch.sum(bc_dpos(x_[:, None, 1:dimension + 1] - x_[None, :, 1:dimension + 1]) ** 2, dim=2)
-                        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                        edge_index = adj_t.nonzero().t().contiguous()
-                        edge_p_p_list.append(edge_index)
-
-                        x_particle_field = torch.concatenate((x_mesh, x_), dim=0)
-
-                        distance = torch.sum(bc_dpos(
-                            x_particle_field[:, None, 1:dimension + 1] - x_particle_field[None, :, 1:dimension + 1]) ** 2, dim=2)
-                        adj_t = ((distance < (max_radius / 2) ** 2) & (distance > min_radius ** 2)).float() * 1
-                        edge_index = adj_t.nonzero().t().contiguous()
-                        pos = torch.argwhere((edge_index[1, :] >= n_nodes) & (edge_index[0, :] < n_nodes))
-                        pos = to_numpy(pos[:, 0])
-                        edge_index = edge_index[:, pos]
-                        edge_f_p_list.append(edge_index)
-
-                    else:
-                        x_list.append(x.clone().detach())
-                        y_list.append(y.clone().detach())
+                    x_list.append(x.clone().detach())
+                    y_list.append(y.clone().detach())
 
             # Particle update
-            if model_config.particle_model_name == 'PDE_O':
-                H1[:, 2] = H1[:, 2] + y.squeeze() * delta_t
-                X1[:, 0] = H1[:, 0] + (3 / 8) * mesh_data['size'] * torch.cos(H1[:, 2])
-                X1[:, 1] = H1[:, 1] + (3 / 8) * mesh_data['size'] * torch.sin(H1[:, 2])
-                X1 = bc_pos(X1)
-            if has_signal:
-                H1[:, 1] = y.squeeze()
-                H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
+            if model_config.prediction == '2nd_derivative':
+                V1 += y * delta_t
             else:
-                if model_config.prediction == '2nd_derivative':
-                    V1 += y * delta_t
-                else:
-                    V1 = y
-                X1 = bc_pos(X1 + V1 * delta_t)
-                if config.graph_model.mesh_model_name == 'Chemotaxism_Mesh':
-                    grad = grads2D(torch.reshape(H1_mesh[:, 0], (300, 300)))
-                    x_ = np.clip(to_numpy(X1[:, 0]) * 300, 0, 299)
-                    y_ = np.clip(to_numpy(X1[:, 1]) * 300, 0, 299)
-                    X1[:, 0] += torch.clamp(grad[1][y_, x_] / 5E4, min=-0.5, max=0.5)
-                    X1[:, 1] += torch.clamp(grad[0][y_, x_] / 5E4, min=-0.5, max=0.5)
+                V1 = y
+            X1 = bc_pos(X1 + V1 * delta_t)
 
             A1 = A1 + delta_t
 
@@ -2684,7 +2632,7 @@ def data_train_signal(config, config_file, device):
         plt.close()
 
 
-def data_test(config=None, config_file=None, visualize=False, style='color', verbose=True, best_model=20, step=5, ratio=1, run=1, test_simulation=False, sample_embedding = False, device=[]):
+def data_test(config=None, config_file=None, visualize=False, style='color frame', verbose=True, best_model=20, step=5, ratio=1, run=1, test_simulation=False, sample_embedding = False, device=[]):
     print('')
 
     dataset_name = config.dataset
@@ -2832,7 +2780,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color', ver
             for n in range(model.a.shape[0]):
                 model.a[n] = model_a_
 
-
     if has_ghost:
         model_ghost = Ghost_Particles(config, n_particles, vnorm, device)
         net = f"./log/try_{config_file}/models/best_ghost_particles_with_{NGraphs - 1}_graphs_20.pt"
@@ -2953,13 +2900,16 @@ def data_test(config=None, config_file=None, visualize=False, style='color', ver
 
         if (it % step == 0) & (it >= 0) & visualize:
 
+            print(f'RMSE = {np.round(rmserr.item(), 4)}')
+
             # plt.style.use('dark_background')
 
             # matplotlib.use("Qt5Agg")
-            plt.rcParams['text.usetex'] = True
-            rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-
             matplotlib.rcParams['savefig.pad_inches'] = 0
+
+            if 'frame' in style:
+                plt.rcParams['text.usetex'] = True
+                rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
             fig = plt.figure(figsize=(12, 12))
             ax = fig.add_subplot(1, 1, 1)
@@ -3026,7 +2976,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color', ver
                 plt.yticks([])
             plt.xlim([0, 1])
             plt.ylim([0, 1])
-
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{it}.tif", dpi=170.7)
             plt.close()
@@ -3120,7 +3069,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color', ver
         index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
         index_particles.append(index.squeeze())
 
-
     # fig = plt.figure(figsize=(12, 12))
     # ax = fig.add_subplot(1, 1, 1)
     # x0_next = x_list[0][it + 1].clone().detach()
@@ -3159,7 +3107,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color', ver
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/rmserr_{config_file}_{it+2}.tif", dpi=170.7)
 
-    if True:
+    if False:
 
 
         loss_ctrl = torch.load ('./log/try_arbitrary_3/loss.pt')
@@ -3216,6 +3164,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_3_no_model']
     # config_list = ['arbitrary_3_field_1_with_time_no_model']
     config_list = ['boids_16_256']
+    # config_list = ['boids_16_dropout_10_field_null']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -3225,9 +3174,9 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color frame', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
         # data_train(config, config_file, device)
-        data_test(config=config, config_file=config_file, visualize=True, style='color', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, sample_embedding=True, device=device)    # config.simulation.n_frames // 7
+        data_test(config=config, config_file=config_file, visualize=True, style='color frame', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, sample_embedding=True, device=device)    # config.simulation.n_frames // 7
 
 
 
