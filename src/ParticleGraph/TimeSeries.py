@@ -1,6 +1,6 @@
 import os
 from collections.abc import Sequence
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Self
 
 import torch
 from torch_geometric.data import Data
@@ -22,9 +22,15 @@ class TimeSeries(Sequence):
     def __len__(self) -> int:
         return len(self.time)
 
-    def __getitem__(self, idx: int) -> Data:
-        data = self._data[idx]
-        return data
+    def __getitem__(self, idx: int | slice) -> Data | Self:
+        if isinstance(idx, slice):
+            # torch does not support slicing of tensors with negative step size, so make indices explicit
+            torch_idx = torch.arange(*idx.indices(len(self)))
+            return TimeSeries(self.time[torch_idx], self._data[idx], self.fields)
+        elif isinstance(idx, int):
+            return self._data[idx]
+        else:
+            raise TypeError("Index must be an integer or a slice.")
 
     @staticmethod
     def load(path: str) -> 'TimeSeries':
@@ -66,7 +72,6 @@ class TimeSeries(Sequence):
     ) -> List[torch.Tensor] | Tuple[List[torch.Tensor], List[torch.Tensor]]:
         """
         Compute the backward difference quotient of a field in a time series.
-        :param time_series: The time series over which to compute the difference quotient.
         :param field_name: The field for which to compute the difference quotient.
         :param id_name: If given, this field is used to match data points between time steps. Ids are assumed to be unique.
         :return: A list of tensors containing the difference quotient at each time step. Where the difference quotient could

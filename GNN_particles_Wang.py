@@ -41,6 +41,11 @@ if __name__ == '__main__':
     # get velocity for all time steps
     velocity = torch.vstack([frame.velocity for frame in time_series])
 
+    # a TimeSeries object can be sliced like a list
+    every_second_frame = time_series[::2]
+    first_ten_frames = time_series[:10]
+    last_ten_frames_reversed = time_series[-1:-11:-1]
+
 
     #
     # config_list = ['arbitrary_3_dropout_10_GD']
