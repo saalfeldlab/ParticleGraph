@@ -397,6 +397,7 @@ def init_mesh(config, model_mesh, device):
     #     type_mesh = -1.0 + type_mesh * -1.0
 
     a_mesh = torch.zeros_like(type_mesh)
+    type_mesh = type_mesh.to(dtype=torch.float32)
 
 
     return pos_mesh, dpos_mesh, type_mesh, features_mesh, a_mesh, node_id_mesh, mesh_data
