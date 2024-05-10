@@ -63,6 +63,8 @@ class Mesh_Laplacian(pyg.nn.MessagePassing):
         particle_id = to_numpy(x[:, 0])
         embedding = self.a[self.data_id, particle_id, :]
 
+        print(laplacian.dtype, embedding.dtype, u.dtype)
+
         pred = self.lin_phi(torch.cat((laplacian, embedding), dim=-1))
 
         # pos = to_numpy(data.x)

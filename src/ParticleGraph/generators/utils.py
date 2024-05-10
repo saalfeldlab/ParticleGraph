@@ -368,7 +368,7 @@ def init_mesh(config, model_mesh, device):
 
     pos_3d = torch.cat((x_mesh[:, 1:3], torch.ones((x_mesh.shape[0], 1), device=device)), dim=1)
     edge_index_mesh, edge_weight_mesh = get_mesh_laplacian(pos=pos_3d, face=face, normalization="None")
-
+    edge_weight_mesh = edge_weight_mesh.to(dtype=torch.float32)
     mesh_data = {'mesh_pos': pos_3d, 'face': face, 'edge_index': edge_index_mesh, 'edge_weight': edge_weight_mesh,
                  'mask': mask_mesh, 'size': mesh_size}
 

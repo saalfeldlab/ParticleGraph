@@ -130,16 +130,16 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
         # initialize particle and graph states
         X1, V1, T1, H1, A1, N1, cycle_length, cycle_length_distrib = init_particles(config, device=device,
                                                                                     cycle_length=cycle_length)
-
-        # create differnet initial conditions
-        # X1[:, 0] = X1[:, 0] / n_particle_types - torch.ones_like(X1[:,0])*0.5
-        # for n in range(n_particle_types):
-        #     X1[index_particles[n], 0] = X1[index_particles[n], 0] + n / n_particle_types
-
         if has_mesh:
             X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, model_mesh=mesh_model, device=device)
             torch.save(mesh_data, f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt')
             mask_mesh = mesh_data['mask'].squeeze()
+            if 'pics' in simulation_config.node_type_map:
+                i0 = imread(f'graphs_data/{simulation_config.node_type_map}')
+                values = i0[(to_numpy(X1_mesh[:, 0]) * 255).astype(int), (to_numpy(X1_mesh[:, 1]) * 255).astype(int)] / 255
+                values = np.reshape(values,len(X1_mesh))
+                mesh_model.coeff = torch.tensor(values, device=device, dtype=torch.float32)[:, None]
+
         if only_mesh | (model_config.particle_model_name == 'PDE_O'):
             X1 = X1_mesh.clone().detach()
             H1 = H1_mesh.clone().detach()
@@ -3205,7 +3205,8 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_video_4_siren_with_time']
     # config_list = ['arbitrary_3']
     # config_list = ['wave_logo']
-    config_list = ['arbitrary_3_field_video_bison_siren_with_time']
+    # config_list = ['arbitrary_3_field_video_bison_siren_with_time']
+    config_list = ['wave_boat']
 
 
     for config_file in config_list:
@@ -3216,8 +3217,8 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 30)
-        data_train(config, config_file, device)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 30)
+        # data_train(config, config_file, device)
         # data_test(config=config, config_file=config_file, visualize=True, style='color frame', verbose=False, best_model=10, run=0, step=config.simulation.n_frames // 7, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
 
