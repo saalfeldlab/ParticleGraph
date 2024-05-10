@@ -460,7 +460,7 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
                         plt.close()
 
                     else:
-                        # matplotlib.use("Qt5Agg")
+                        matplotlib.use("Qt5Agg")
 
                         matplotlib.rcParams['savefig.pad_inches'] = 0
                         fig = plt.figure(figsize=(12, 12))
@@ -2638,7 +2638,7 @@ def data_train_signal(config, config_file, device):
         plt.close()
 
 
-def data_test(config=None, config_file=None, visualize=False, style='color frame', verbose=True, best_model=20, step=5, ratio=1, run=1, test_simulation=False, sample_embedding = False, device=[]):
+def data_test(config=None, config_file=None, visualize=False, style='color frame', verbose=True, best_model=20, step=15, ratio=1, run=1, test_simulation=False, sample_embedding = False, device=[]):
     print('')
 
     dataset_name = config.dataset
@@ -2746,13 +2746,28 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         for n in range(n_particle_types):
             index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
-    x_list = []
-    y_list = []
-    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device))
-    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device))
-    ynorm = torch.load(f'./log/try_{config_file}/ynorm.pt', map_location=device).to(device)
-    vnorm = torch.load(f'./log/try_{config_file}/vnorm.pt', map_location=device).to(device)
-    x = x_list[0][0].clone().detach()
+    if only_mesh:
+        vnorm = torch.tensor(1.0, device=device)
+        ynorm = torch.tensor(1.0, device=device)
+        hnorm = torch.load(f'./log/try_{config_file}/hnorm.pt', map_location=device).to(device)
+        x_mesh_list = []
+        y_mesh_list = []
+        time.sleep(0.5)
+        for run in trange(NGraphs):
+            x_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
+            x_mesh_list.append(x_mesh)
+            h = torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
+            y_mesh_list.append(h)
+        h = y_mesh_list[0][0].clone().detach()
+    else:
+        x_list = []
+        y_list = []
+        x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device))
+        y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device))
+        ynorm = torch.load(f'./log/try_{config_file}/ynorm.pt', map_location=device).to(device)
+        vnorm = torch.load(f'./log/try_{config_file}/vnorm.pt', map_location=device).to(device)
+
+
     n_sub_population = n_particles // n_particle_types
     first_embedding = model.a[1].data.clone().detach()
     first_index_particles = []
@@ -2815,7 +2830,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         x_ = xy[:, 0]
         y_ = xy[:, 1]
         mask = to_numpy(mask_mesh)
-
         mask_mesh = (x_ > np.min(x_) + 0.02) & (x_ < np.max(x_) - 0.02) & (y_ > np.min(y_) + 0.02) & (
                     y_ < np.max(y_) - 0.02)
         mask_mesh = torch.tensor(mask_mesh, dtype=torch.bool, device=device)
@@ -3190,6 +3204,7 @@ if __name__ == '__main__':
     config_list = ['boids_16_256_20_epoch']
     # config_list = ['arbitrary_3_field_video_4_siren_with_time']
     # config_list = ['arbitrary_3']
+    config_list = ['wave_logo']
 
 
     for config_file in config_list:
@@ -3200,9 +3215,9 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color frame', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 5)
+        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color frame', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 15)
         # data_train(config, config_file, device)
-        data_test(config=config, config_file=config_file, visualize=True, style='color frame', verbose=False, best_model=10, run=0, step=config.simulation.n_frames // 5, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
+        data_test(config=config, config_file=config_file, visualize=True, style='color frame', verbose=False, best_model=10, run=0, step=config.simulation.n_frames // 7, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
 
 

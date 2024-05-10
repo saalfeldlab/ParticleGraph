@@ -157,35 +157,6 @@ def data_plot_training(config, config_file, mode, device):
         model.load_state_dict(state_dict['model_state_dict'])
         model.eval()
 
-        # n_particle_types = 3
-        # index_particles = []
-        # for n in range(n_particle_types):
-        #     index_particles.append(
-        #         np.arange((n_particles // n_particle_types) * n, (n_particles // n_particle_types) * (n + 1)))
-        # type = torch.zeros(int(n_particles / n_particle_types), device=device)
-        # for n in range(1, n_particle_types):
-        #     type = torch.cat((type, n * torch.ones(int(n_particles / n_particle_types), device=device)), 0)
-        # x[:,5]=type
-
-        # n_particles = int(n_particles * (1-train_config.dropout))
-        # types = to_numpy(x[:, 5])
-        # fig = plt.figure(figsize=(12, 12))
-        # ax = fig.add_subplot(1,1,1)
-        # ax.xaxis.get_major_formatter()._usetex = False
-        # ax.yaxis.get_major_formatter()._usetex = False
-        # embedding = get_embedding(model.a, 1, index_particles, n_particles, n_particle_types)
-        # for n in range(n_particle_types):
-        #     pos = np.argwhere(types == n)
-        #     plt.scatter(embedding[pos, 0],
-        #                 embedding[pos, 1], color=cmap.color(n), s=50)
-        # plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-        # plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
-        # plt.xticks(fontsize=32.0)
-        # plt.yticks(fontsize=32.0)
-        # plt.xlim([0,2])
-        # plt.ylim([0, 2])
-        # plt.tight_layout()
-
         matplotlib.use("Qt5Agg")
         plt.rcParams['text.usetex'] = True
         rc('font', **{'family': 'serif', 'serif': ['Palatino']})
