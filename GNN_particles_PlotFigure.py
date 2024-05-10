@@ -400,6 +400,7 @@ class Mesh_RPS_learn(torch.nn.Module):
         increment = torch.cat((du[:, None], dv[:, None], dw[:, None]), dim=1)
 
         return increment.squeeze()
+    
 
 def plot_embedding(index, model_a, dataset_number, index_particles, n_particles, n_particle_types, epoch, it, fig, ax, cmap, device):
 

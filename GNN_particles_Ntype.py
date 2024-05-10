@@ -3082,6 +3082,21 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     # plt.scatter(x0_next[:, 1].detach().cpu().numpy(), x0_next[:, 2].detach().cpu().numpy(), s=50)
 
     if True:
+        rmserr_list = np.array(rmserr_list)
+        fig = plt.figure(figsize=(12, 12))
+        ax = fig.add_subplot(1, 1, 1)
+        x_ = np.arange(len(rmserr_list))
+        y_ = rmserr_list
+        plt.scatter(x_,y_,c='k')
+        plt.xticks(fontsize=32)
+        plt.yticks(fontsize=32)
+        plt.xlabel(r'$Epochs$', fontsize=64)
+        plt.ylabel(r'$RMSE$', fontsize=64)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/rmserr_{config_file}_plot.tif", dpi=170.7)
+
+    if True:
+
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(1, 1, 1)
         x0_next = x_list[0][it + 1].clone().detach()
@@ -3113,8 +3128,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/rmserr_{config_file}_{it+2}.tif", dpi=170.7)
 
-    if True:
-
+    if False:
 
         loss_ctrl = torch.load ('./log/try_arbitrary_3/loss.pt')
         loss_no_ghost = torch.load('./log/try_arbitrary_3_dropout_10_no_ghost/loss.pt')
@@ -3173,9 +3187,10 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_1_with_time_no_model']
     # config_list = ['boids_16_256']
     # config_list = ['boids_16_dropout_10_field_null']
-    # config_list = ['boids_64_256_20_epoch']
-    config_list = ['arbitrary_3_field_video_4_siren_with_time']
+    config_list = ['boids_16_256_20_epoch']
+    # config_list = ['arbitrary_3_field_video_4_siren_with_time']
     # config_list = ['arbitrary_3']
+
 
     for config_file in config_list:
         # Load parameters from config file
@@ -3185,9 +3200,9 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
-        data_train(config, config_file, device)
-        # data_test(config=config, config_file=config_file, visualize=True, style='color frame', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color frame', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 5)
+        # data_train(config, config_file, device)
+        data_test(config=config, config_file=config_file, visualize=True, style='color frame', verbose=False, best_model=10, run=0, step=config.simulation.n_frames // 5, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
 
 
