@@ -2896,7 +2896,7 @@ def data_plot_wave(config_file):
 
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
 
     epoch=20
     embedding = get_embedding(mesh_model.a, 1)
@@ -3066,7 +3066,164 @@ def data_plot_wave(config_file):
     plt.close()
 
 
-def data_plot_RD():
+def data_plot_RD(config_file):
+
+    # Load parameters from config file
+    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+    dataset_name = config.dataset
+
+    simulation_config = config.simulation
+    train_config = config.training
+    model_config = config.graph_model
+
+    max_radius = config.simulation.max_radius
+    min_radius = config.simulation.min_radius
+    n_nodes = simulation_config.n_nodes
+    n_nodes_per_axis = int(np.sqrt(n_nodes))
+    n_node_types = simulation_config.n_node_types
+    n_frames = config.simulation.n_frames
+    n_runs = config.training.n_runs
+    node_value_map = simulation_config.node_value_map
+    aggr_type = config.graph_model.aggr_type
+    delta_t = config.simulation.delta_t
+    cmap = CustomColorMap(config=config)
+    node_type_map = simulation_config.node_type_map
+
+    l_dir = os.path.join('.', 'log')
+    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
+    print('log_dir: {}'.format(log_dir))
+
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
+    NGraphs = len(graph_files)
+    print('Graph files N: ', NGraphs - 1)
+    time.sleep(0.5)
+
+    net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_20.pt"
+    mesh_model, bc_pos, bc_dpos = choose_training_model(config, device)
+    state_dict = torch.load(net, map_location=device)
+    mesh_model.load_state_dict(state_dict['model_state_dict'])
+    mesh_model.eval()
+
+    vnorm = torch.tensor(1.0, device=device)
+    ynorm = torch.tensor(1.0, device=device)
+    hnorm = torch.load(f'./log/try_{config_file}/hnorm.pt', map_location=device).to(device)
+
+    x_mesh_list = []
+    y_mesh_list = []
+    time.sleep(0.5)
+    for run in trange(NGraphs):
+        x_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
+        x_mesh_list.append(x_mesh)
+        h = torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
+        y_mesh_list.append(h)
+    h = y_mesh_list[0][0].clone().detach()
+
+    print(f'hnorm: {to_numpy(hnorm)}')
+    time.sleep(0.5)
+    mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_1.pt', map_location=device)
+    mask_mesh = mesh_data['mask']
+    edge_index_mesh = mesh_data['edge_index']
+    edge_weight_mesh = mesh_data['edge_weight']
+
+    x_mesh = x_mesh_list[0][n_frames - 1].clone().detach()
+    type_list = x_mesh[:, 5:6].clone().detach()
+    n_nodes = x_mesh.shape[0]
+    print(f'N nodes: {n_nodes}')
+
+    index_nodes = []
+    x_mesh = x_mesh_list[1][0].clone().detach()
+    for n in range(n_node_types):
+        index = np.argwhere(x_mesh[:, 5].detach().cpu().numpy() == n)
+        index_nodes.append(index.squeeze())
+
+    plt.rcParams['text.usetex'] = True
+    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+    # matplotlib.use("Qt5Agg")
+
+    epoch=20
+    embedding = get_embedding(mesh_model.a, 1)
+
+    fig_ = plt.figure(figsize=(12, 12))
+    axf = fig_.add_subplot(1, 1, 1)
+    axf.xaxis.set_major_locator(plt.MaxNLocator(3))
+    axf.yaxis.set_major_locator(plt.MaxNLocator(3))
+    axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    for n in range(n_node_types):
+        plt.scatter(embedding[index_nodes[n], 0], embedding[index_nodes[n], 1], color=cmap.color(n), s=400,
+                    alpha=0.1)
+    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
+    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+    plt.xticks(fontsize=32.0)
+    plt.yticks(fontsize=32.0)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/embedding_{config_file}_{epoch}.tif", dpi=300)
+    plt.close()
+
+    c = initialize_random_values(n_node_types, device)
+    for n in range(n_node_types):
+        c[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
+    c = to_numpy(c)
+    i0 = imread(f'graphs_data/{node_type_map}')
+    values = i0[(to_numpy(x_mesh[:, 1]) * 255).astype(int), (to_numpy(x_mesh[:, 2]) * 255).astype(int)]
+    features_mesh = values
+    coeff = c[features_mesh]
+    coeff = np.reshape(coeff, (n_nodes_per_axis, n_nodes_per_axis)) * 1
+    vm = np.max(coeff)
+    fig_ = plt.figure(figsize=(12, 12))
+    axf = fig_.add_subplot(1, 1, 1)
+    axf.xaxis.set_major_locator(plt.MaxNLocator(3))
+    axf.yaxis.set_major_locator(plt.MaxNLocator(3))
+    axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    plt.imshow(coeff, cmap='viridis', vmin=0, vmax = vm)
+    plt.xlabel(r'$x$', fontsize=64)
+    plt.ylabel(r'$y$', fontsize=64)
+    plt.xticks(fontsize=32.0)
+    plt.yticks(fontsize=32.0)
+    cbar = plt.colorbar(shrink=0.5)
+    cbar.ax.tick_params(labelsize=32)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/true_RD_coeff_{config_file}_{epoch}.tif", dpi=300)
+
+
+    rr = torch.tensor(np.linspace(-150, 150, 200)).to(device)
+    popt_list = []
+    func_list = []
+    for n in range(n_nodes):
+        embedding_ = mesh_model.a[1, n, :] * torch.ones((200, 2), device=device)
+        in_features = torch.cat((rr[:, None], embedding_), dim=1)
+        h = mesh_model.lin_phi(in_features.float())
+        h = h[:, 0]
+        popt, pcov = curve_fit(linear_model, to_numpy(rr.squeeze()), to_numpy(h.squeeze()))
+        popt_list.append(popt)
+        func_list.append(h)
+    func_list = torch.stack(func_list)
+    popt_list = np.array(popt_list)
+
+    t = np.array(popt_list) * to_numpy(hnorm)
+    t = t[:, 0]
+    t = np.reshape(t, (n_nodes_per_axis, n_nodes_per_axis))
+
+    fig_ = plt.figure(figsize=(12, 12))
+    axf = fig_.add_subplot(1, 1, 1)
+    axf.xaxis.set_major_locator(plt.MaxNLocator(3))
+    axf.yaxis.set_major_locator(plt.MaxNLocator(3))
+    axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    plt.imshow(t, cmap='viridis', vmin=0, vmax = vm)
+    plt.xlabel(r'$x$', fontsize=64)
+    plt.ylabel(r'$y$', fontsize=64)
+    plt.xticks(fontsize=32.0)
+    plt.yticks(fontsize=32.0)
+    cbar = plt.colorbar(shrink=0.5)
+    cbar.ax.tick_params(labelsize=32)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/RD_coeff_{config_file}_{epoch}.tif", dpi=300)
+
+
+
+def data_plot_RD_old():
 
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
@@ -4218,7 +4375,8 @@ if __name__ == '__main__':
     # config_list = ['gravity_16_noise_0_5'] #'gravity_16_noise_0_4']# , 'gravity_16_noise_0_3', 'gravity_16_noise_0_5']
     # config_list = ['boids_64_256'] #['boids_32_256','boids_64_256'] # 'boids_16_256_1_epoch', 'boids_32_256_1_epoch', 'boids_64_256_1_epoch'] #,
     # config_list = ['boids_16_noise_0_3','boids_16_noise_0_4'] # ['boids_16_noise_1E-1'] #,'boids_16_noise_0_2','boids_16_noise_0_3','boids_16_noise_0_4','boids_16_noise_0_5']
-    config_list = ['wave_logo']
+    # config_list = ['wave_logo','wave_slit','wave_triangles']
+    config_list = ['RD_RPS_1']
 
 
     # config_list = ['Coulomb_3_noise_0_2','Coulomb_3_noise_0_3','Coulomb_3_noise_0_4']
@@ -4229,5 +4387,5 @@ if __name__ == '__main__':
 
         # data_plot_boids(config_file)
         # data_plot_gravity(config_file)
-        data_plot_wave(config_file)
+        data_plot_RD(config_file)
 
