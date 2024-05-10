@@ -703,7 +703,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             if model_config.field_type == 'siren_with_time':
 
                 if 'video' in simulation_config.node_value_map:
-                    im = imread(f"graphs_data/{simulation_config.node_value_map}")
+                    im = imread(f"graphs_data/{simulation_config.node_value_map}") / 255 * 5000
                     im = np.reshape(im[it], (n_nodes_per_axis * n_nodes_per_axis))
                     H1_mesh[:, 0:1] = torch.tensor(im[:,None], dtype=torch.float32, device=device)
                 else:
@@ -1656,7 +1656,7 @@ def data_train_particle_field(config, config_file, device):
                                         hidden_omega_0=80.)
         model_f.to(device=device)
         model_f.train()
-        optimizer_f = torch.optim.Adam(lr=1e-4, params=model_f.parameters())
+        optimizer_f = torch.optim.Adam(lr=1e-5, params=model_f.parameters())
 
     if has_ghost:
 
@@ -1696,7 +1696,6 @@ def data_train_particle_field(config, config_file, device):
                 f_p_mask = np.concatenate((f_p_mask, np.ones((n_particles, 1))), axis=0)
         f_p_mask = np.argwhere(f_p_mask == 1)
         f_p_mask = f_p_mask[:, 0]
-
 
         logger.info(f'batch_size: {batch_size}')
         if (epoch == 1) & (has_ghost):
@@ -1830,7 +1829,7 @@ def data_train_particle_field(config, config_file, device):
             total_loss += loss.item()
 
             visualize_embedding = True
-            if visualize_embedding & (((epoch < 3 ) & (N < 10000) & (N % 100 == 0)) | (N==0)):
+            if visualize_embedding & (((epoch < 3 ) & (N % 500 == 0)) | (N==0)):
                 plot_training_particle_field(config=config, has_siren=has_siren, has_siren_time=has_siren_time, model_f=model_f, dataset_name=dataset_name, n_frames=n_frames, model_name=model_config.particle_model_name, log_dir=log_dir,
                               epoch=epoch, N=N, x=x, x_mesh=x_mesh, model_field=model.field, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
                               index_particles=index_particles, n_particles=n_particles,
@@ -1885,7 +1884,7 @@ def data_train_particle_field(config, config_file, device):
         plt.xlabel('Embedding 0', fontsize=12)
         plt.ylabel('Embedding 1', fontsize=12)
 
-        if (simulation_config.n_interactions < 100) & (simulation_config.has_cell_division == False):
+        if False :
             ax = fig.add_subplot(1, 6, 3)
             rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
             if dimension == 2:
@@ -3114,7 +3113,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/rmserr_{config_file}_{it+2}.tif", dpi=170.7)
 
-    if False:
+    if True:
 
 
         loss_ctrl = torch.load ('./log/try_arbitrary_3/loss.pt')
@@ -3124,6 +3123,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         loss_with_ghost30 = torch.load('./log/try_arbitrary_3_dropout_30/loss.pt')
         loss_with_ghost40 = torch.load('./log/try_arbitrary_3_dropout_40/loss.pt')
 
+        plt.rcParams['text.usetex'] = True
+        rc('font', **{'family': 'serif', 'serif': ['Palatino']})
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(1, 1, 1)
         ax.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
@@ -3172,8 +3173,9 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_1_with_time_no_model']
     # config_list = ['boids_16_256']
     # config_list = ['boids_16_dropout_10_field_null']
-    # config_list = ['boids_64_256_1_epoch']
-    config_list = ['arbitrary_3_field_video_siren_with_time']
+    # config_list = ['boids_64_256_20_epoch']
+    config_list = ['arbitrary_3_field_video_4_siren_with_time']
+    # config_list = ['arbitrary_3']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -3185,7 +3187,7 @@ if __name__ == '__main__':
 
         data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
         data_train(config, config_file, device)
-        # data_test(config=config, config_file=config_file, visualize=True, style='color', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, sample_embedding=True, device=device)    # config.simulation.n_frames // 7
+        # data_test(config=config, config_file=config_file, visualize=True, style='color frame', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
 
 

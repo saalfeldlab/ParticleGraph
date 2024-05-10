@@ -1,5 +1,6 @@
 import time
 
+import numpy as np
 from matplotlib.ticker import FormatStrFormatter
 # import networkx as nx
 from sklearn import metrics
@@ -1302,7 +1303,6 @@ def data_plot_training_particle_field(config, config_file, mode, cc, device):
             state_dict = torch.load(net, map_location=device)
             model_f.load_state_dict(state_dict['model_state_dict'])
 
-
         embedding = get_embedding(model.a, 1)
 
         fig_ = plt.figure(figsize=(12, 12))
@@ -1463,8 +1463,12 @@ def data_plot_training_particle_field(config, config_file, mode, cc, device):
                     case 'siren':
                         angle_list = [0]
                     case 'siren_with_time':
-                        angle_list = trange(0, 360, 5)
+                        angle_list = trange(0, n_frames, 5)
                 print('Output per angle ...')
+
+                RMSE_list = []
+                PSNR_list = []
+                SSIM_list = []
                 for angle in angle_list:
 
                     x=x_list[0][angle].clone().detach()
@@ -1505,14 +1509,14 @@ def data_plot_training_particle_field(config, config_file, mode, cc, device):
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/tmp_training/rotation/generated2/generated_2_{epoch}_{angle}.tif", dpi=150)
                     plt.close()
-                    values = ndimage.rotate(target, -angle, reshape=False, cval=np.mean(target) * 1.1)
+                    y = ndimage.rotate(target, -angle, reshape=False, cval=np.mean(target) * 1.1)
                     fig_ = plt.figure(figsize=(12, 12))
                     axf = fig_.add_subplot(1, 1, 1)
                     axf.xaxis.set_major_locator(plt.MaxNLocator(3))
                     axf.yaxis.set_major_locator(plt.MaxNLocator(3))
                     axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                     axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                    plt.imshow(values, cmap=cc, vmin=0, vmax=vm)
+                    plt.imshow(y, cmap=cc, vmin=0, vmax=vm)
                     plt.xlabel(r'$x$', fontsize=64)
                     plt.ylabel(r'$y$', fontsize=64)
                     plt.xticks(fontsize=32.0)
@@ -1523,12 +1527,12 @@ def data_plot_training_particle_field(config, config_file, mode, cc, device):
 
                     match model_config.field_type:
                         case 'siren':
-                            tmp = model_f() ** 2
+                            pred = model_f() ** 2
                         case 'siren_with_time':
-                            tmp = model_f(time=angle / n_frames) ** 2
-                    tmp = torch.reshape(tmp,(n_nodes_per_axis,n_nodes_per_axis))
-                    tmp = to_numpy(torch.sqrt(tmp))
-                    tmp = np.flipud(tmp)
+                            pred = model_f(time=angle / n_frames) ** 2
+                    pred = torch.reshape(pred,(n_nodes_per_axis,n_nodes_per_axis))
+                    pred = to_numpy(torch.sqrt(pred))
+                    pred = np.flipud(pred)
 
                     fig_ = plt.figure(figsize=(12, 12))
                     axf = fig_.add_subplot(1, 1, 1)
@@ -1536,7 +1540,7 @@ def data_plot_training_particle_field(config, config_file, mode, cc, device):
                     axf.yaxis.set_major_locator(plt.MaxNLocator(3))
                     axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                     axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                    plt.imshow(tmp, cmap=cc, vmin=0, vmax=vm)
+                    plt.imshow(pred, cmap=cc, vmin=0, vmax=vm)
                     plt.xlabel(r'$x$', fontsize=64)
                     plt.ylabel(r'$y$', fontsize=64)
                     plt.xticks(fontsize=32.0)
@@ -1544,6 +1548,49 @@ def data_plot_training_particle_field(config, config_file, mode, cc, device):
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/tmp_training/rotation/field/reconstructed_field_{epoch}_{angle}.tif", dpi=150)
                     plt.close()
+
+                    RMSE= np.sqrt(np.mean((y - pred) ** 2))
+                    RMSE_list = np.concatenate((RMSE_list, [RMSE]))
+                    PSNR = calculate_psnr(y, pred, max_value=np.max(y))
+                    PSNR_list = np.concatenate((PSNR_list, [PSNR]))
+                    SSIM = calculate_ssim(y, pred)
+                    SSIM_list = np.concatenate((SSIM_list, [SSIM]))
+
+                fig_ = plt.figure(figsize=(12, 12))
+                axf = fig_.add_subplot(1, 1, 1)
+                plt.scatter(np.linspace(0, n_frames, n_frames//5),SSIM_list, color='k', linewidth=4)
+                plt.xlabel(r'$Frame$', fontsize=64)
+                plt.ylabel(r'$SSIM$', fontsize=64)
+                plt.xticks(fontsize=32.0)
+                plt.yticks(fontsize=32.0)
+                plt.ylim([0,1])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_training/rotation/ssim_{epoch}.tif", dpi=150)
+                plt.close()
+
+                fig_ = plt.figure(figsize=(12, 12))
+                axf = fig_.add_subplot(1, 1, 1)
+                plt.scatter(np.linspace(0, n_frames, n_frames//5),RMSE_list, color='k', linewidth=4)
+                plt.xlabel(r'$Frame$', fontsize=64)
+                plt.ylabel(r'RMSE', fontsize=64)
+                plt.xticks(fontsize=32.0)
+                plt.yticks(fontsize=32.0)
+                plt.ylim([0,1])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_training/rotation/rmse_{epoch}.tif", dpi=150)
+                plt.close()
+
+                fig_ = plt.figure(figsize=(12, 12))
+                axf = fig_.add_subplot(1, 1, 1)
+                plt.scatter(np.linspace(0, n_frames, n_frames//5),PSNR_list, color='k', linewidth=4)
+                plt.xlabel(r'$Frame$', fontsize=64)
+                plt.ylabel(r'PSNR', fontsize=64)
+                plt.xticks(fontsize=32.0)
+                plt.yticks(fontsize=32.0)
+                plt.ylim([0,50])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_training/rotation/psnr_{epoch}.tif", dpi=150)
+                plt.close()
 
             case 'tensor':
 
@@ -1631,10 +1678,12 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3', 'arbitrary_3_dropout_10_no_ghost', 'arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30','arbitrary_3_dropout_40']
     # config_list = ['arbitrary_16_noise_0_4','arbitrary_16_noise_0_5']# ['arbitrary_16','arbitrary_16_noise_1E-1','arbitrary_16_noise_0_2','arbitrary_16_noise_0_3']
     # config_list = ['arbitrary_3_dropout_10_no_ghost','arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30','arbitrary_3_dropout_40']
-    # config_list = ['arbitrary_3_field_4_siren_with_time']    #,['arbitrary_3_field_1_triangles'] # ['arbitrary_3_field_1','arbitrary_3_field_3','arbitrary_3_field_1_boats']
+    # config_list = ['arbitrary_3_field_1_triangles'] # ['arbitrary_3_field_1','arbitrary_3_field_3','arbitrary_3_field_1_boats']
+    config_list = ['arbitrary_3_field_4_siren_with_time']
     # config_list = ['arbitrary_3_field_2_boats_siren_with_time']
-    config_list = ['boids_64_256']
-    config_list = ['gravity_16_noise_E-1']
+
+    # config_list = ['boids_64_256']
+    # config_list = ['gravity_16_noise_1E-1']
 
 
     for config_file in config_list:
@@ -1648,7 +1697,7 @@ if __name__ == '__main__':
 
         cmap = CustomColorMap(config=config)  # create colormap for given model_config
 
-        data_plot_training(config, config_file, mode='figures', device=device)
+        data_plot_training_particle_field(config, config_file, mode='figures', cc='grey', device=device)
 
 
 

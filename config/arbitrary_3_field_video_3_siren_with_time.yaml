@@ -1,5 +1,5 @@
 description: 'attraction-repulsion with 3 types particles'
-dataset: 'arbitrary_3_field_video_siren_with_time'
+dataset: 'arbitrary_3_field_video_3_siren_with_time'
 
 simulation:
   params: [[1.6233, 1.0413, 1.6012, 1.5615], [1.7667, 1.8308, 1.0855, 1.9055], [1.7226, 1.7850, 1.0584, 1.8579]]
@@ -8,9 +8,9 @@ simulation:
   n_particles: 4800
   n_particle_types: 3
   n_interactions: 3
-  n_frames: 360
+  n_frames: 1400
   sigma: 0.005
-  delta_t: 0.1
+  delta_t: 0.025
   dpos_init: 0
   boundary: 'periodic'
   n_nodes: 10000
@@ -18,7 +18,7 @@ simulation:
   diffusion_coefficients: [[0]]
   pos_rate: [[0]]
   neg_rate: [[0]]
-  node_value_map: 'video_1.tif'
+  node_value_map: 'video_3.tif'
   node_type_map: 'pattern_Null.tif'
   node_diffusion_map: 'pattern_Null.tif'
   node_proliferation_map: 'pattern_Null.tif'
@@ -41,7 +41,7 @@ plotting:
   arrow_length: 2
 
 training:
-  n_epochs: 10
+  n_epochs: 2
   batch_size: 8
   small_init_batch_size: False
   n_runs: 2

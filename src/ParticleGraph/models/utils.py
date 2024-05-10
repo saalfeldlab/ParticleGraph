@@ -152,8 +152,8 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
 
         fig = plt.figure(figsize=(12, 12))
         if axis:
-            plt.rcParams['text.usetex'] = True
-            rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+            # plt.rcParams['text.usetex'] = True
+            # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
             ax = fig.add_subplot(1,1,1)
             # ax.xaxis.get_major_formatter()._usetex = False
             # ax.yaxis.get_major_formatter()._usetex = False
@@ -161,8 +161,8 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
             ax.yaxis.set_major_locator(plt.MaxNLocator(3))
             ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
             ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+            # plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
+            # plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
             plt.xticks(fontsize=32.0)
             plt.yticks(fontsize=32.0)
         else:
@@ -282,8 +282,8 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
         case 'PDE_B':
             max_radius = 0.04
             fig = plt.figure(figsize=(12, 12))
-            plt.rcParams['text.usetex'] = True
-            rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+            # plt.rcParams['text.usetex'] = True
+            # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
             ax = fig.add_subplot(1,1,1)
             rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
             func_list = []
@@ -300,14 +300,11 @@ def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index
                     plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
                              color=cmap.color(int(n // (n_particles / n_particle_types))), linewidth=4)
             plt.ylim([-1E-4, 1E-4])
-            plt.xlabel(r'$x_j-x_i$', fontsize=64)
-            plt.ylabel(r'$f_{ij}$', fontsize=64)
-            # ax.xaxis.get_major_formatter()._usetex = False
-            # ax.yaxis.get_major_formatter()._usetex = False
+            # plt.xlabel(r'$x_j-x_i$', fontsize=64)
+            # plt.ylabel(r'$f_{ij}$', fontsize=64)
             ax.xaxis.set_major_locator(plt.MaxNLocator(3))
             ax.yaxis.set_major_locator(plt.MaxNLocator(5))
             ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-            # ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
             fmt = lambda x, pos: '{:.1f}e-5'.format((x) * 1e5, pos)
             ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
             plt.xticks(fontsize=32.0)
