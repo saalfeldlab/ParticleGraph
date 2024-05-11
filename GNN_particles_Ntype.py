@@ -2657,11 +2657,16 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
+    n_nodes = simulation_config.n_nodes
+    n_node_types = simulation_config.n_node_types
+    node_type_map = simulation_config.node_type_map
     n_frames = simulation_config.n_frames
     delta_t = simulation_config.delta_t
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     dimension = simulation_config.dimension
-    has_particle_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
+    has_siren = 'siren' in model_config.field_type
+    has_siren_time = 'siren_with_time' in model_config.field_type
+    has_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
 
     print(f'Test data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
@@ -2703,6 +2708,30 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             model.load_state_dict(state_dict['model_state_dict'])
             model.eval()
             mesh_model = None
+
+        if has_siren:
+
+            model_f_p = model
+            model_f_f = choose_mesh_model(config, device=device)
+
+            image_width = int(np.sqrt(n_nodes))
+            if has_siren_time:
+                model_f = Siren_Network(image_width=image_width, in_features=3, out_features=1, hidden_features=128,
+                                        hidden_layers=5, outermost_linear=True, device=device, first_omega_0=80,
+                                        hidden_omega_0=80.)
+            else:
+                model_f = Siren_Network(image_width=image_width, in_features=2, out_features=1, hidden_features=64,
+                                        hidden_layers=3, outermost_linear=True, device=device, first_omega_0=80,
+                                        hidden_omega_0=80.)
+
+            net = f'./log/try_{config_file}/models/best_model_f_with_1_graphs_{best_model}.pt'
+            state_dict = torch.load(net, map_location=device)
+            model_f.load_state_dict(state_dict['model_state_dict'])
+
+            model_f.to(device=device)
+            model_f.eval()
+
+
         if has_division:
             model_division = Division_Predictor(config, device)
             net = f"./log/try_{config_file}/models/best_model_division_with_{NGraphs - 1}_graphs_20.pt"
@@ -2764,6 +2793,17 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             h = torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
             y_mesh_list.append(h)
         h = y_mesh_list[0][0].clone().detach()
+    elif has_field:
+        x_list = []
+        y_list = []
+        x_mesh_list = []
+        x_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
+        x_mesh_list.append(x_mesh)
+        hnorm = torch.load(f'./log/try_{config_file}/hnorm.pt', map_location=device).to(device)
+        x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device))
+        y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device))
+        ynorm = torch.load(f'./log/try_{config_file}/ynorm.pt', map_location=device).to(device)
+        vnorm = torch.load(f'./log/try_{config_file}/vnorm.pt', map_location=device).to(device)
     else:
         x_list = []
         y_list = []
@@ -2773,13 +2813,19 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         vnorm = torch.load(f'./log/try_{config_file}/vnorm.pt', map_location=device).to(device)
 
 
+
     n_sub_population = n_particles // n_particle_types
     first_embedding = model.a[1].data.clone().detach()
     first_index_particles = []
     for n in range(n_particle_types):
         index = np.arange(n_particles * n // n_particle_types, n_particles * (n + 1) // n_particle_types)
         first_index_particles.append(index)
-    n_particles = x_list[0][0].shape[0]
+
+    x = x_list[0][0].clone().detach()
+    n_particles = x.shape[0]
+    if has_field:
+        x_mesh = x_mesh_list[0][0].clone().detach()
+
     config.simulation.n_particles = n_particles
     print(f'N particles: {n_particles}')
     index_particles = []
@@ -2877,6 +2923,44 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             with torch.no_grad():
                 pred = mesh_model(dataset_mesh, data_id=0)
                 x[mask_mesh.squeeze(), 6:9] += pred[mask_mesh.squeeze()] * hnorm * delta_t
+        elif has_field:
+
+            match model_config.field_type:
+                case 'tensor':
+                    x_mesh[:, 6:7] = model.field[run]
+                case 'siren':
+                    x_mesh[:, 6:7] = model_f() ** 2
+                case 'siren_with_time':
+                    x_mesh[:, 6:7] = model_f(time=it / n_frames) ** 2
+            x_particle_field = torch.concatenate((x_mesh, x), dim=0)
+
+            distance = torch.sum(bc_dpos(x[:, None, 1:dimension+1] - x[None, :, 1:dimension+1]) ** 2, dim=2)
+            adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+            edge_index = adj_t.nonzero().t().contiguous()
+            dataset_p_p = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=[])
+
+            distance = torch.sum(bc_dpos(x_particle_field[:, None, 1:dimension+1] - x_particle_field[None, :, 1:dimension+1]) ** 2, dim=2)
+            adj_t = ((distance < (max_radius/2) ** 2) & (distance > min_radius ** 2)).float() * 1
+            edge_index = adj_t.nonzero().t().contiguous()
+            pos = torch.argwhere((edge_index[1,:]>=n_nodes) & (edge_index[0,:]<n_nodes))
+            pos = to_numpy(pos[:,0])
+            edge_index = edge_index[:,pos]
+            dataset_f_p = data.Data(x=x_particle_field, pos=x_particle_field[:, 1:3], edge_index=edge_index, field=x_particle_field[:,6:7])
+
+            with torch.no_grad():
+                y0 = model(dataset_p_p,data_id=1, training=False, vnorm=vnorm, phi=torch.zeros(1, device=device),has_field=False)
+                y1 = model_f_p(dataset_f_p,data_id=1, training=False, vnorm=vnorm,phi=torch.zeros(1, device=device),has_field=True)[n_nodes:]
+                y = y0 + y1
+
+            if model_config.prediction == '2nd_derivative':
+                y = y * ynorm * delta_t
+                x[:, 3:5] = x[:, 3:5] + y  # speed update
+            else:
+                y = y * vnorm
+                x[:, 3:5] = y
+
+            x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t)
+
         else:
 
             x_ = x
@@ -2988,9 +3072,14 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 s_p = 200
                 if simulation_config.has_cell_division:
                     s_p = 25
+
                 for n in range(n_particle_types):
-                    plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
+                    if has_field:
+                        plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
+                                    1-x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
+                    else:
+                        plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
+                                    x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
             if 'frame' in style:
                 plt.xlabel(r'$x$', fontsize=64)
                 plt.ylabel(r'$y$', fontsize=64)
@@ -3225,7 +3314,7 @@ if __name__ == '__main__':
 
         # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 30)
         # data_train(config, config_file, device)
-        data_test(config=config, config_file=config_file, visualize=True, style='color frame', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 16, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
+        data_test(config=config, config_file=config_file, visualize=True, style='color frame', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 32, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
 
 

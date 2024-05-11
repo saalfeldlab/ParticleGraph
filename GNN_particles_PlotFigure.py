@@ -4505,6 +4505,7 @@ def data_plot_attraction_repulsion_continuous_short(config, config_file, mode, d
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     matplotlib.rcParams['savefig.pad_inches'] = 0
+
     # style = {
     #     "pgf.rcfonts": False,
     #     "pgf.texsystem": "pdflatex",
@@ -4925,6 +4926,8 @@ def data_plot_particle_field(config_file, mode, cc, device):
 
             case 'siren_with_time' | 'siren':
 
+                s_p = 200
+
                 if has_video:
 
                     x_mesh = x_mesh_list[0][0].clone().detach()
@@ -4953,7 +4956,6 @@ def data_plot_particle_field(config_file, mode, cc, device):
                         plt.ylabel(r'$y$', fontsize=64)
                         plt.xticks(fontsize=32.0)
                         plt.yticks(fontsize=32.0)
-                        s_p = 50
                         for n in range(n_particle_types):
                             plt.scatter(to_numpy(x[index_particles[n], 1]), 1-to_numpy(x[index_particles[n], 2]), s=s_p,
                                         color='k')
@@ -4974,7 +4976,6 @@ def data_plot_particle_field(config_file, mode, cc, device):
                         plt.ylabel(r'$y$', fontsize=64)
                         plt.xticks(fontsize=32.0)
                         plt.yticks(fontsize=32.0)
-                        s_p = 50
                         for n in range(n_particle_types):
                             plt.scatter(to_numpy(x[index_particles[n], 1]), 1-to_numpy(x[index_particles[n], 2]), s=s_p)
                         plt.xlim([0, 1])
@@ -5073,7 +5074,6 @@ def data_plot_particle_field(config_file, mode, cc, device):
                         plt.ylabel(r'$y$', fontsize=64)
                         plt.xticks(fontsize=32.0)
                         plt.yticks(fontsize=32.0)
-                        s_p = 50
                         for n in range(n_particle_types):
                             plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]), s=s_p, color='k')
                         plt.xlim([0, 1])
@@ -5092,7 +5092,6 @@ def data_plot_particle_field(config_file, mode, cc, device):
                         plt.ylabel(r'$y$', fontsize=64)
                         plt.xticks(fontsize=32.0)
                         plt.yticks(fontsize=32.0)
-                        s_p = 50
                         for n in range(n_particle_types):
                             plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]), s=s_p)
                         plt.xlim([0, 1])
@@ -6050,11 +6049,6 @@ def data_plot_RD_old():
     plt.savefig('Fig7.jpg', dpi=300)
 
     plt.close()
-
-
-
-
-
 
 
 if __name__ == '__main__':
