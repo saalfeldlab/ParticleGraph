@@ -708,7 +708,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     H1_mesh[:, 0:1] = torch.tensor(im[:,None], dtype=torch.float32, device=device)
                 else:
                     H1_mesh = rotate_init_mesh(it, config, device=device)
-                    im = torch.reshape(H1_mesh[:, 0:1], (100, 100))
+                    im = torch.reshape(H1_mesh[:, 0:1], (n_nodes_per_axis, n_nodes_per_axis))
                 # io.imsave(f"graphs_data/graphs_{dataset_name}/generated_data/rotated_image_{it}.tif", to_numpy(im))
 
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
@@ -2200,7 +2200,10 @@ def data_train_mesh(config, config_file, device):
             total_loss += loss.item()
 
             visualize_embedding = True
-            if visualize_embedding & (((epoch == 0) & (N < 50000) & (N % 200 == 0)) | (N==0)):
+            if visualize_embedding & (((epoch == 0) & (N < 10000) & (N % 200 == 0)) | (N==0)):
+                torch.save({'model_state_dict': model.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict()},
+                           os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs_{epoch}_{N}.pt'))
 
                 plot_training(config=config, dataset_name=dataset_name, model_name='WaveMesh',
                               log_dir=log_dir,
