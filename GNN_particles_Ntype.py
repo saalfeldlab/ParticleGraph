@@ -2661,6 +2661,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     delta_t = simulation_config.delta_t
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     dimension = simulation_config.dimension
+    has_particle_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
 
     print(f'Test data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
@@ -2778,7 +2779,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     for n in range(n_particle_types):
         index = np.arange(n_particles * n // n_particle_types, n_particles * (n + 1) // n_particle_types)
         first_index_particles.append(index)
-    n_particles = x.shape[0]
+    n_particles = x_list[0][0].shape[0]
     config.simulation.n_particles = n_particles
     print(f'N particles: {n_particles}')
     index_particles = []
@@ -3205,13 +3206,14 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_1_with_time_no_model']
     # config_list = ['boids_16_256']
     # config_list = ['boids_16_dropout_10_field_null']
-    # config_list = ['boids_16_256_20_epoch']
+    # config_list = ['boids_16_256_steady']
     # config_list = ['arbitrary_3_field_video_4_siren_with_time']
     # config_list = ['arbitrary_3']
     # config_list = ['wave_logo']
-    # config_list = ['arbitrary_3_field_video_bison_siren_with_time']
-    config_list = ['wave_boat']
-
+    config_list = ['arbitrary_3_field_video_bison_siren_with_time']
+    # config_list = ['wave_boat']
+    # config_list = ['arbitrary_3_field_video_random_siren_with_time']
+    # config_list = ['arbitrary_3_field_video_honey_siren_with_time']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -3222,8 +3224,8 @@ if __name__ == '__main__':
         print(f'device {device}')
 
         # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 30)
-        data_train(config, config_file, device)
-        # data_test(config=config, config_file=config_file, visualize=True, style='color frame', verbose=False, best_model=10, run=0, step=config.simulation.n_frames // 7, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
+        # data_train(config, config_file, device)
+        data_test(config=config, config_file=config_file, visualize=True, style='color frame', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 16, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
 
 
