@@ -3,6 +3,7 @@ from shutil import copyfile
 
 import networkx as nx
 import scipy.io
+import torch
 # import networkx as nx
 import torch.nn as nn
 import torch_geometric.data as data
@@ -2116,9 +2117,9 @@ def data_train_mesh(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_7.pt"
-    # state_dict = torch.load(net,map_location=device)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    net = f"./log/try_{config_file}/models/best_model_with_1_graphs_17.pt"
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -2793,6 +2794,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             h = torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
             y_mesh_list.append(h)
         h = y_mesh_list[0][0].clone().detach()
+        x_list = x_mesh_list
+        y_list = y_mesh_list
+        x = x_list[0][0].clone().detach()
     elif has_field:
         x_list = []
         y_list = []
@@ -2804,6 +2808,15 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device))
         ynorm = torch.load(f'./log/try_{config_file}/ynorm.pt', map_location=device).to(device)
         vnorm = torch.load(f'./log/try_{config_file}/vnorm.pt', map_location=device).to(device)
+        x = x_list[0][0].clone().detach()
+        n_particles = x.shape[0]
+        config.simulation.n_particles = n_particles
+        print(f'N particles: {n_particles}')
+        index_particles = []
+        for n in range(n_particle_types):
+            index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
+            index_particles.append(index.squeeze())
+        x_mesh = x_mesh_list[0][0].clone().detach()
     else:
         x_list = []
         y_list = []
@@ -2811,8 +2824,14 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device))
         ynorm = torch.load(f'./log/try_{config_file}/ynorm.pt', map_location=device).to(device)
         vnorm = torch.load(f'./log/try_{config_file}/vnorm.pt', map_location=device).to(device)
-
-
+        x = x_list[0][0].clone().detach()
+        n_particles = x.shape[0]
+        config.simulation.n_particles = n_particles
+        print(f'N particles: {n_particles}')
+        index_particles = []
+        for n in range(n_particle_types):
+            index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
+            index_particles.append(index.squeeze())
 
     n_sub_population = n_particles // n_particle_types
     first_embedding = model.a[1].data.clone().detach()
@@ -2820,18 +2839,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     for n in range(n_particle_types):
         index = np.arange(n_particles * n // n_particle_types, n_particles * (n + 1) // n_particle_types)
         first_index_particles.append(index)
-
-    x = x_list[0][0].clone().detach()
-    n_particles = x.shape[0]
-    if has_field:
-        x_mesh = x_mesh_list[0][0].clone().detach()
-
-    config.simulation.n_particles = n_particles
-    print(f'N particles: {n_particles}')
-    index_particles = []
-    for n in range(n_particle_types):
-        index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
-        index_particles.append(index.squeeze())
 
     if sample_embedding:
 
@@ -2851,7 +2858,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         with torch.no_grad():
             for n in range(model.a.shape[0]):
                 model.a[n] = model_a_
-
     if has_ghost:
         model_ghost = Ghost_Particles(config, n_particles, vnorm, device)
         net = f"./log/try_{config_file}/models/best_ghost_particles_with_{NGraphs - 1}_graphs_20.pt"
@@ -2899,7 +2905,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
         x0 = x_list[0][it].clone().detach()
         y0 = y_list[0][it].clone().detach()
-
         if model_config.signal_model_name == 'PDE_N':
             rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 6:7] - x0[:, 6:7]) ** 2, axis=1)))
         else:
@@ -2919,6 +2924,23 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 pred = mesh_model(dataset_mesh, data_id=0)
             x[mask_mesh.squeeze(), 7:8] += pred[mask_mesh.squeeze()] * hnorm * delta_t
             x[mask_mesh.squeeze(), 6:7] += x[mask_mesh.squeeze(), 7:8] * delta_t
+
+            if False:
+                matplotlib.use("Qt5Agg")
+                fig=plt.figure(figsize=(8,8))
+                t = to_numpy(pred) * to_numpy(hnorm)
+                t = np.reshape(t, (100, 100))
+                plt.imshow(t)
+                plt.colorbar()
+                fig = plt.figure(figsize=(8, 8))
+                t_ = to_numpy(y0)
+                t_ = np.reshape(t_, (100, 100))
+                plt.imshow(t_)
+                plt.colorbar()
+                fig = plt.figure(figsize=(8, 8))
+                plt.scatter(t_,t)
+
+
         elif model_config.mesh_model_name == 'RD_RPS_Mesh':
             with torch.no_grad():
                 pred = mesh_model(dataset_mesh, data_id=0)
@@ -3009,7 +3031,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
         if (it % step == 0) & (it >= 0) & visualize:
 
-            print(f'RMSE = {np.round(rmserr.item(), 4)}')
+            # print(f'RMSE = {np.round(rmserr.item(), 4)}')
 
             # plt.style.use('dark_background')
 
@@ -3035,7 +3057,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                                   facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1000)
                 if model_config.mesh_model_name == 'WaveMesh':
                     plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                  facecolors=colors.detach().cpu().numpy(), vmin=-1000, vmax=1000)
+                                  facecolors=colors.detach().cpu().numpy())
                 if model_config.mesh_model_name == 'RD_Gray_Scott_Mesh':
                     fig = plt.figure(figsize=(12, 6))
                     ax = fig.add_subplot(1, 2, 1)
@@ -3208,6 +3230,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(1, 1, 1)
         x0_next = x_list[0][it + 1].clone().detach()
+        if has_field:
+            x0_next[:,2] = torch.ones_like(x0_next[:,2]) - x0_next[:,2]
+            x[:, 2] = torch.ones_like(x[:,2]) - x[:, 2]
+
         temp1 = torch.cat((x, x0_next), 0)
         temp2 = torch.tensor(np.arange(n_particles), device=device)
         temp3 = torch.tensor(np.arange(n_particles) + n_particles, device=device)
@@ -3219,11 +3245,11 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         pos = dict(enumerate(np.array((temp1[:, 1:3]).detach().cpu()), 0))
         dataset = data.Data(x=temp1[:, 1:3], edge_index=torch.squeeze(temp4[:, p]))
         vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-        nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,ax=ax,edge_color='r', width=4)
+        nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,ax=ax,edge_color='r', width=8)
         ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True)
         for n in range(n_particle_types):
             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                        x[index_particles[n], 2].detach().cpu().numpy(), s=50, color=cmap.color(n))
+                        x[index_particles[n], 2].detach().cpu().numpy(), s=100, color=cmap.color(n))
         plt.xlim([0, 1])
         plt.ylim([0, 1])
         # plt.xlim([-2, 2])
@@ -3235,6 +3261,23 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         # plt.text(0,0.9,f'RMS error: {np.round(np.mean(rmserr_list) * 100, 2)} +/- {np.round(np.std(rmserr_list) * 100, 2)} %')
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/rmserr_{config_file}_{it+2}.tif", dpi=170.7)
+
+        fig = plt.figure(figsize=(12, 12))
+        ax = fig.add_subplot(1, 1, 1)
+        ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True)
+        for n in range(n_particle_types):
+            plt.scatter(x0_next[index_particles[n], 1].detach().cpu().numpy(),
+                        x0_next[index_particles[n], 2].detach().cpu().numpy(), s=100, color=cmap.color(n))
+        plt.xlim([0, 1])
+        plt.ylim([0, 1])
+        # plt.xlim([-2, 2])
+        # plt.ylim([-2, 2])
+        plt.xticks(fontsize=32)
+        plt.yticks(fontsize=32)
+        plt.xlabel(r'$x$', fontsize=64)
+        plt.ylabel(r'$y$', fontsize=64)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/GT_{config_file}_{it+2}.tif", dpi=170.7)
 
     if False:
 
@@ -3299,10 +3342,12 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_video_4_siren_with_time']
     # config_list = ['arbitrary_3']
     # config_list = ['wave_logo']
-    config_list = ['arbitrary_3_field_video_bison_siren_with_time']
-    # config_list = ['wave_boat']
+    # config_list = ['arbitrary_3_field_4_siren_with_time']
+    config_list = ['wave_logo']
     # config_list = ['arbitrary_3_field_video_random_siren_with_time']
     # config_list = ['arbitrary_3_field_video_honey_siren_with_time']
+    # config_list = ['arbitrary_3_field_video_bison_siren_with_time']
+    # config_list = ['arbitrary_3_field_2_boats_siren_with_time']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -3313,8 +3358,8 @@ if __name__ == '__main__':
         print(f'device {device}')
 
         # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 30)
-        # data_train(config, config_file, device)
-        data_test(config=config, config_file=config_file, visualize=True, style='color frame', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 32, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
+        data_train(config, config_file, device)
+        # data_test(config=config, config_file=config_file, visualize=True, style='color frame', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 50, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
 
 
