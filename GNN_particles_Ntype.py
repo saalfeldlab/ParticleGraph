@@ -543,8 +543,9 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
                         else:
                             plt.xticks([])
                             plt.yticks([])
-                        plt.xlim([0, 1])
-                        plt.ylim([0, 1])
+                        if not (model_config.mesh_model_name == 'RD_RPS_Mesh'):
+                            plt.xlim([0, 1])
+                            plt.ylim([0, 1])
                         plt.tight_layout()
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
                         plt.close()
@@ -2117,9 +2118,9 @@ def data_train_mesh(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    net = f"./log/try_{config_file}/models/best_model_with_1_graphs_17.pt"
-    state_dict = torch.load(net,map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
+    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_17.pt"
+    # state_dict = torch.load(net,map_location=device)
+    # model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -2942,7 +2943,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.scatter(t_,t)
         elif model_config.mesh_model_name == 'RD_RPS_Mesh':
             with torch.no_grad():
-                pred = mesh_model(dataset_mesh, data_id=0)
+                pred = mesh_model(dataset_mesh, data_id=1)
                 x[mask_mesh.squeeze(), 6:9] += pred[mask_mesh.squeeze()] * hnorm * delta_t
         elif has_field:
 
@@ -2981,7 +2982,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 x[:, 3:5] = y
 
             x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t)
-
         else:
 
             x_ = x
@@ -3109,8 +3109,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             else:
                 plt.xticks([])
                 plt.yticks([])
-            plt.xlim([0, 1])
-            plt.ylim([0, 1])
+            if not(model_config.mesh_model_name == 'RD_RPS_Mesh'):
+                plt.xlim([0, 1])
+                plt.ylim([0, 1])
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{it}.tif", dpi=170.7)
             plt.close()
@@ -3342,7 +3343,9 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3']
     # config_list = ['wave_logo']
     # config_list = ['arbitrary_3_field_4_siren_with_time']
-    config_list = ['wave_slit','wave_logo','wave_boat']
+    config_list = ['wave_slit_1_epoch']
+    config_list = ['RD_RPS_1']
+
     # config_list = ['arbitrary_3_field_video_random_siren_with_time']
     # config_list = ['arbitrary_3_field_video_honey_siren_with_time']
     # config_list = ['arbitrary_3_field_video_bison_siren_with_time']
@@ -3356,7 +3359,7 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 30)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 30)
         # data_train(config, config_file, device)
         data_test(config=config, config_file=config_file, visualize=True, style='color frame', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 30, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
