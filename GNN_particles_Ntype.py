@@ -2796,7 +2796,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         h = y_mesh_list[0][0].clone().detach()
         x_list = x_mesh_list
         y_list = y_mesh_list
-        x = x_list[0][0].clone().detach()
+        x = x_list[run][0].clone().detach()
     elif has_field:
         x_list = []
         y_list = []
@@ -2878,7 +2878,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     if has_mesh:
         hnorm = torch.load(f'./log/try_{config_file}/hnorm.pt', map_location=device).to(device)
 
-        mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_0.pt', map_location=device)
+        mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt', map_location=device)
         mask_mesh = mesh_data['mask']
         edge_index_mesh = mesh_data['edge_index']
         edge_weight_mesh = mesh_data['edge_weight']
@@ -2921,26 +2921,25 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             x[:, 6:7] += pred * hnorm * delta_t
         elif model_config.mesh_model_name == 'WaveMesh':
             with torch.no_grad():
-                pred = mesh_model(dataset_mesh, data_id=0)
+                pred = mesh_model(dataset_mesh, data_id=1)
             x[mask_mesh.squeeze(), 7:8] += pred[mask_mesh.squeeze()] * hnorm * delta_t
             x[mask_mesh.squeeze(), 6:7] += x[mask_mesh.squeeze(), 7:8] * delta_t
 
             if False:
+                y_batch = y0/hnorm
                 matplotlib.use("Qt5Agg")
                 fig=plt.figure(figsize=(8,8))
-                t = to_numpy(pred) * to_numpy(hnorm)
+                t = to_numpy(pred)
                 t = np.reshape(t, (100, 100))
                 plt.imshow(t)
                 plt.colorbar()
                 fig = plt.figure(figsize=(8, 8))
-                t_ = to_numpy(y0)
+                t_ = to_numpy(y_batch)
                 t_ = np.reshape(t_, (100, 100))
                 plt.imshow(t_)
                 plt.colorbar()
                 fig = plt.figure(figsize=(8, 8))
                 plt.scatter(t_,t)
-
-
         elif model_config.mesh_model_name == 'RD_RPS_Mesh':
             with torch.no_grad():
                 pred = mesh_model(dataset_mesh, data_id=0)
@@ -3057,7 +3056,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                                   facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1000)
                 if model_config.mesh_model_name == 'WaveMesh':
                     plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                  facecolors=colors.detach().cpu().numpy())
+                                  facecolors=colors.detach().cpu().numpy(), vmin=-1000, vmax=1000)
                 if model_config.mesh_model_name == 'RD_Gray_Scott_Mesh':
                     fig = plt.figure(figsize=(12, 6))
                     ax = fig.add_subplot(1, 2, 1)
@@ -3343,7 +3342,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3']
     # config_list = ['wave_logo']
     # config_list = ['arbitrary_3_field_4_siren_with_time']
-    config_list = ['wave_logo']
+    config_list = ['wave_slit','wave_logo','wave_boat']
     # config_list = ['arbitrary_3_field_video_random_siren_with_time']
     # config_list = ['arbitrary_3_field_video_honey_siren_with_time']
     # config_list = ['arbitrary_3_field_video_bison_siren_with_time']
@@ -3358,8 +3357,8 @@ if __name__ == '__main__':
         print(f'device {device}')
 
         # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 30)
-        data_train(config, config_file, device)
-        # data_test(config=config, config_file=config_file, visualize=True, style='color frame', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 50, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
+        # data_train(config, config_file, device)
+        data_test(config=config, config_file=config_file, visualize=True, style='color frame', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 30, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
 
 
