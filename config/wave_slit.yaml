@@ -15,7 +15,7 @@ simulation:
   delta_t: 0.125
   dpos_init: 0
   boundary: 'periodic'
-  node_value_map: 'pattern_10.tif'
+  node_value_map: 'pattern_30.tif'
   node_type_map: 'pattern_19.tif'
   beta: 1.E-2
   start_frame: 0
@@ -34,7 +34,7 @@ graph_model:
   update_type: 'none'
 
 plotting:
-  colormap: 'tab10'
+  colormap: 'viridis'
   arrow_length: 10
 
 training:

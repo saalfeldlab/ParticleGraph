@@ -3360,7 +3360,7 @@ def data_plot_wave(config_file, cc='viridis'):
 
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-    # matplotlib.use("Qt5Agg")
+    matplotlib.use("Qt5Agg")
 
     if has_pic:
         i0 = imread(f'graphs_data/{simulation_config.node_type_map}')
@@ -3377,6 +3377,7 @@ def data_plot_wave(config_file, cc='viridis'):
         features_mesh = values
         coeff = c[features_mesh]
         coeff = np.reshape(coeff, (n_nodes_per_axis, n_nodes_per_axis)) * simulation_config.beta
+        coeff = np.flipud(coeff)
     vm = np.max(coeff)
     fig_ = plt.figure(figsize=(12, 12))
     axf = fig_.add_subplot(1, 1, 1)
@@ -3394,7 +3395,7 @@ def data_plot_wave(config_file, cc='viridis'):
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/true_wave_coeff_{config_file}.tif", dpi=300)
 
-    net_list=['0_200', '0_800', '0_1000','0_2000', '5', '20']
+    net_list=['20', '0_1000','0_2000','0_5000', '1', '5']
 
     for net_ in net_list:
 
@@ -3413,12 +3414,16 @@ def data_plot_wave(config_file, cc='viridis'):
         axf.yaxis.set_major_locator(plt.MaxNLocator(3))
         axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
         axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+
         if has_pic:
             plt.scatter(embedding[:, 0], embedding[:, 1],
                         color=cmap.color(np.arange(n_node_types) % 256), s=400, alpha=0.1)
         else:
             for n in range(n_node_types):
-                plt.scatter(embedding[index_nodes[n], 0], embedding[index_nodes[n], 1], color=cmap.color(n), s=400, alpha=0.1)
+                c_ = np.round(n / (n_node_types - 1)*256).astype(int)
+                print(c_)
+                # plt.scatter(embedding[index_nodes[n], 0], embedding[index_nodes[n], 1], color=cmap.color(n), s=400, alpha=0.1)
+                plt.scatter(embedding[index_nodes[n], 0], embedding[index_nodes[n], 1], c=cmap.color(c_), s=400, alpha=0.1)
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
         plt.xticks(fontsize=32.0)
@@ -3452,7 +3457,7 @@ def data_plot_wave(config_file, cc='viridis'):
         axf.yaxis.set_major_locator(plt.MaxNLocator(3))
         axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
         axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        plt.imshow(t, cmap=cc)
+        plt.imshow(t, cmap=cc,vmin=00, vmax=vm)
         plt.xlabel(r'$x$', fontsize=64)
         plt.ylabel(r'$y$', fontsize=64)
         plt.xticks(fontsize=32.0)
@@ -3493,18 +3498,21 @@ def data_plot_wave(config_file, cc='viridis'):
 
         print(f'Accuracy: {Accuracy}  n_clusters: {n_clusters}')
 
+        convert_color = [0,2,3,4,1]
         fig_ = plt.figure(figsize=(12, 12))
         for n in range(n_nodes):
             embedding_ = mesh_model.a[1, n, :] * torch.ones((200, 2), device=device)
             in_features = torch.cat((rr[:, None], embedding_), dim=1)
             h = mesh_model.lin_phi(in_features.float())
             h = h[:, 0]
-            if (n % 24):
+            if (n % 4):
                 if has_pic:
                     plt.plot(to_numpy(rr), to_numpy(h) * to_numpy(hnorm), linewidth=4,
                              color=cmap.color(n % 256), alpha=0.05)
                 else:
-                    plt.plot(to_numpy(rr), to_numpy(h) * to_numpy(hnorm), linewidth=4, color=cmap.color(new_labels[n]%256), alpha=0.05)
+                    # plt.plot(to_numpy(rr), to_numpy(h) * to_numpy(hnorm), linewidth=4, color=cmap.color(new_labels[n]%256), alpha=0.05)
+                    c_ = np.round(convert_color[int(to_numpy(type_list[n]))]*256/(n_node_types-1))
+                    plt.plot(to_numpy(rr), to_numpy(h) * to_numpy(hnorm), linewidth=4, color=cmap.color(c_.astype(int)), alpha=0.01)
         plt.xlabel(r'$\Delta u_{i}$', fontsize=64)
         plt.ylabel(r'$\Phi (\ensuremath{\mathbf{a}}_i, \Delta u_i)$', fontsize=64)
         plt.xticks(fontsize=32.0)
@@ -6097,7 +6105,7 @@ if __name__ == '__main__':
 
     # config_list = ['arbitrary_3_field_1_no_model']
     # config_list = ['arbitrary_3_field_4_siren_with_time']
-    config_list = ['wave_slit']
+    config_list = ['wave_boat']
     # config_list = ['boids_16_256_20_epoch']
 
     # config_list = ['Coulomb_3_noise_0_2','Coulomb_3_noise_0_3','Coulomb_3_noise_0_4']
@@ -6114,5 +6122,5 @@ if __name__ == '__main__':
         # data_plot_gravity(config_file)
         # data_plot_RD(config_file)
         # data_plot_particle_field(config_file, mode='figures', cc='grey', device=device)
-        data_plot_wave(config_file,cc='viridis')
+        data_plot_wave(config_file,cc='grey')
 

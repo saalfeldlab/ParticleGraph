@@ -34,7 +34,7 @@ graph_model:
   update_type: 'none'
 
 plotting:
-  colormap: 'jet'
+  colormap: 'grey'
   arrow_length: 10
 
 training:

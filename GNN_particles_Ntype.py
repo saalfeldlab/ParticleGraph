@@ -2902,7 +2902,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
     rmserr_list= []
     time.sleep(1)
-    for it in trange(n_frames - 1):
+    for it in trange(n_frames+1):
 
         x0 = x_list[0][it].clone().detach()
         y0 = y_list[0][it].clone().detach()
@@ -3106,6 +3106,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.ylabel(r'$y$', fontsize=64)
                 plt.xticks(fontsize=32.0)
                 plt.yticks(fontsize=32.0)
+                # cbar = plt.colorbar(shrink=0.5)
+                # cbar.ax.tick_params(labelsize=32)
             else:
                 plt.xticks([])
                 plt.yticks([])
@@ -3229,7 +3231,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(1, 1, 1)
-        x0_next = x_list[0][it + 1].clone().detach()
+        x0_next = x_list[0][it].clone().detach()
         if has_field:
             x0_next[:,2] = torch.ones_like(x0_next[:,2]) - x0_next[:,2]
             x[:, 2] = torch.ones_like(x[:,2]) - x[:, 2]
@@ -3345,7 +3347,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_4_siren_with_time']
     # config_list = ['wave_slit_1_epoch']
     # config_list = ['wave_boat_noise_0_2']
-    config_list = ['wave_slit']
+    config_list = ['wave_boat_noise_0_2','wave_boat_noise_0_4']
 
     # config_list = ['arbitrary_3_field_video_random_siren_with_time']
     # config_list = ['arbitrary_3_field_video_honey_siren_with_time']
@@ -3360,9 +3362,9 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color frame', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 5)
+        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color frame', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 5)
         # data_train(config, config_file, device)
-        data_test(config=config, config_file=config_file, visualize=True, style='color frame', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 5, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
+        data_test(config=config, config_file=config_file, visualize=True, style='color frame', verbose=False, best_model=10, run=0, step=config.simulation.n_frames // 5, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
 
 
