@@ -34,7 +34,7 @@ class PDE_Laplacian(pyg.nn.MessagePassing):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
 
         if self.coeff == []:
-            particle_type = to_numpy(x[:, 6])
+            particle_type = to_numpy(x[:, 5])
             c = self.c[particle_type]
             c = c[:, None]
         else:

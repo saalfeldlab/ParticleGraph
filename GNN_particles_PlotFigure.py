@@ -2556,7 +2556,7 @@ def data_plot_boids(config_file):
 
     n_particles = int(n_particles * (1 - train_config.particle_dropout))
 
-    epoch_list = [5,10,15,20]
+    epoch_list = [20]
 
     for epoch in epoch_list:
 
@@ -2797,118 +2797,121 @@ def data_plot_boids(config_file):
         cohesion_fit = np.zeros(n_particle_types)
         alignment_fit = np.zeros(n_particle_types)
         separation_fit = np.zeros(n_particle_types)
-
-        for n in range(n_particle_types):
-            pos = np.argwhere(type == n)
-            pos = pos[:, 0].astype(int)
-            xdiff = to_numpy(diffx[pos, :])
-            vdiff = to_numpy(diffv[pos, :])
-            rdiff = to_numpy(r[pos])
-            x_data = np.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
-            y_data = to_numpy(torch.norm(lin_edge_out[pos, :], dim=1))
-            lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox')
-            cohesion_fit[n] = lin_fit[0]
-            alignment_fit[n] = lin_fit[1]
-            separation_fit[n] = lin_fit[2]
-        p00 = [np.mean(cohesion_fit), np.mean(alignment_fit), np.mean(separation_fit)]
-        for n in range(n_particle_types):
-            pos = np.argwhere(type == n)
-            pos = pos[:, 0].astype(int)
-            xdiff = to_numpy(diffx[pos, :])
-            vdiff = to_numpy(diffv[pos, :])
-            rdiff = to_numpy(r[pos])
-            x_data = np.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
-            y_data = to_numpy(torch.norm(lin_edge_out[pos, :], dim=1))
-            lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox', p0=p00)
-            cohesion_fit[n] = lin_fit[0]
-            alignment_fit[n] = lin_fit[1]
-            separation_fit[n] = lin_fit[2]
-
-        index_classified = np.unique(new_labels)
-
-        ax = fig.add_subplot(3, 3, 7)
-        plt.text(-0.25, 1.1, f'g)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
-        x_data = np.abs(to_numpy(p[:, 0]) * 0.5E-5)
-        y_data = np.abs(cohesion_fit)
-        x_data = x_data[index_classified]
-        y_data = y_data[index_classified]
+        #
+        # for n in range(n_particle_types):
+        #     pos = np.argwhere(new_labels == n)
+        #     pos = pos[:, 0].astype(int)
+        #     xdiff = to_numpy(diffx[pos, :])
+        #     vdiff = to_numpy(diffv[pos, :])
+        #     rdiff = to_numpy(r[pos])
+        #     x_data = np.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
+        #     y_data = to_numpy(torch.norm(lin_edge_out[pos, :], dim=1))
+        #     lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox')
+        #     cohesion_fit[n] = lin_fit[0]
+        #     alignment_fit[n] = lin_fit[1]
+        #     separation_fit[n] = lin_fit[2]
+        # p00 = [np.mean(cohesion_fit), np.mean(alignment_fit), np.mean(separation_fit)]
+        # for n in range(n_particle_types):
+        #     pos = np.argwhere(new_labels == n)
+        #     pos = pos[:, 0].astype(int)
+        #     xdiff = to_numpy(diffx[pos, :])
+        #     vdiff = to_numpy(diffv[pos, :])
+        #     rdiff = to_numpy(r[pos])
+        #     x_data = np.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
+        #     y_data = to_numpy(torch.norm(lin_edge_out[pos, :], dim=1))
+        #     lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox', p0=p00)
+        #     cohesion_fit[n] = lin_fit[0]
+        #     alignment_fit[n] = lin_fit[1]
+        #     separation_fit[n] = lin_fit[2]
+        #
+        # index_classified = np.unique(new_labels)
+        #
+        # ax = fig.add_subplot(3, 3, 7)
+        # plt.text(-0.25, 1.1, f'g)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
+        # x_data = np.abs(to_numpy(p[:, 0]) * 0.5E-5)
+        # y_data = np.abs(cohesion_fit)
+        # x_data = x_data[index_classified]
+        # y_data = y_data[index_classified]
+        #
+        # threshold = 0.1
+        #
+        # relative_error = np.abs(y_data-x_data)/x_data
+        #
+        # pos = np.argwhere(relative_error<threshold)
+        # pos_outliers = np.argwhere(relative_error>threshold)
+        # x_data_ = x_data[pos[:,0]]
+        # y_data_ = y_data[pos[:,0]]
+        # lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
+        # plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
+        # for id, n in enumerate(index_classified):
+        #     plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=20)
+        # plt.xlabel(r'True cohesion coeff. ', fontsize=12)
+        # plt.ylabel(r'Predicted cohesion coeff. ', fontsize=12)
+        # residuals = y_data_ - linear_model(x_data_, *lin_fit)
+        # ss_res = np.sum(residuals ** 2)
+        # ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
+        # r_squared = 1 - (ss_res / ss_tot)
+        # plt.text(4E-5, 4.5E-4, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
+        # plt.text(4E-5, 4.1E-4, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
+        # print(f'cohesion Slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error>threshold)} ')
+        #
+        # ax = fig.add_subplot(3, 3, 8)
+        # plt.text(-0.25, 1.1, f'h)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
+        # x_data = np.abs(to_numpy(p[:, 1]) * 5E-4)
+        # y_data = alignment_fit
+        # x_data = x_data[index_classified]
+        # y_data = y_data[index_classified]
+        # relative_error = np.abs(y_data-x_data)/x_data
+        # pos = np.argwhere(relative_error<threshold)
+        # pos_outliers = np.argwhere(relative_error>threshold)
+        # x_data_ = x_data[pos[:,0]]
+        # y_data_ = y_data[pos[:,0]]
+        # lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
+        # plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
+        # for id, n in enumerate(index_classified):
+        #     plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=20)
+        # plt.xlabel(r'True alignment coeff. ', fontsize=12)
+        # plt.ylabel(r'Predicted alignment coeff. ', fontsize=12)
+        # plt.text(5e-3, 0.046, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
+        # residuals = y_data_ - linear_model(x_data_, *lin_fit)
+        # ss_res = np.sum(residuals ** 2)
+        # ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
+        # r_squared = 1 - (ss_res / ss_tot)
+        # plt.text(5e-3, 0.042, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
+        # print(f'alignment Slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}   outliers: {np.sum(relative_error>threshold)} ')
+        #
+        # ax = fig.add_subplot(3, 3, 9)
+        # plt.text(-0.25, 1.1, f'i)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
+        # x_data = np.abs(to_numpy(p[:, 2]) * 1E-8)
+        # y_data = separation_fit
+        # x_data = x_data[index_classified]
+        # y_data = y_data[index_classified]
+        # relative_error = np.abs(y_data-x_data)/x_data
+        # pos = np.argwhere(relative_error<threshold)
+        # pos_outliers = np.argwhere(relative_error>threshold)
+        # x_data_ = x_data[pos[:,0]]
+        # y_data_ = y_data[pos[:,0]]
+        # lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
+        # plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
+        # for id, n in enumerate(index_classified):
+        #     plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=20)
+        # plt.xlabel(r'True separation coeff. ', fontsize=12)
+        # plt.ylabel(r'Predicted separation coeff. ', fontsize=12)
+        # plt.text(5e-8, 4.4E-7, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
+        # residuals = y_data_ - linear_model(x_data_, *lin_fit)
+        # ss_res = np.sum(residuals ** 2)
+        # ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
+        # r_squared = 1 - (ss_res / ss_tot)
+        # plt.text(5e-8, 4E-7, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
+        # print(f'separation Slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}   outliers: {np.sum(relative_error>threshold)} ')
+        #
+        # time.sleep(1)
+        # plt.tight_layout()
+        # plt.savefig(f"./{log_dir}/Fig5.jpg", dpi=300)
+        # plt.close()
 
         threshold = 0.1
-
-        relative_error = np.abs(y_data-x_data)/x_data
-
-        pos = np.argwhere(relative_error<threshold)
-        pos_outliers = np.argwhere(relative_error>threshold)
-        x_data_ = x_data[pos[:,0]]
-        y_data_ = y_data[pos[:,0]]
-        lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
-        plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
-        for id, n in enumerate(index_classified):
-            plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=20)
-        plt.xlabel(r'True cohesion coeff. ', fontsize=12)
-        plt.ylabel(r'Predicted cohesion coeff. ', fontsize=12)
-        residuals = y_data_ - linear_model(x_data_, *lin_fit)
-        ss_res = np.sum(residuals ** 2)
-        ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
-        r_squared = 1 - (ss_res / ss_tot)
-        plt.text(4E-5, 4.5E-4, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
-        plt.text(4E-5, 4.1E-4, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
-        print(f'cohesion Slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error>threshold)} ')
-
-        ax = fig.add_subplot(3, 3, 8)
-        plt.text(-0.25, 1.1, f'h)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
-        x_data = np.abs(to_numpy(p[:, 1]) * 5E-4)
-        y_data = alignment_fit
-        x_data = x_data[index_classified]
-        y_data = y_data[index_classified]
-        relative_error = np.abs(y_data-x_data)/x_data
-        pos = np.argwhere(relative_error<threshold)
-        pos_outliers = np.argwhere(relative_error>threshold)
-        x_data_ = x_data[pos[:,0]]
-        y_data_ = y_data[pos[:,0]]
-        lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
-        plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
-        for id, n in enumerate(index_classified):
-            plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=20)
-        plt.xlabel(r'True alignment coeff. ', fontsize=12)
-        plt.ylabel(r'Predicted alignment coeff. ', fontsize=12)
-        plt.text(5e-3, 0.046, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
-        residuals = y_data_ - linear_model(x_data_, *lin_fit)
-        ss_res = np.sum(residuals ** 2)
-        ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
-        r_squared = 1 - (ss_res / ss_tot)
-        plt.text(5e-3, 0.042, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
-        print(f'alignment Slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}   outliers: {np.sum(relative_error>threshold)} ')
-
-        ax = fig.add_subplot(3, 3, 9)
-        plt.text(-0.25, 1.1, f'i)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
-        x_data = np.abs(to_numpy(p[:, 2]) * 1E-8)
-        y_data = separation_fit
-        x_data = x_data[index_classified]
-        y_data = y_data[index_classified]
-        relative_error = np.abs(y_data-x_data)/x_data
-        pos = np.argwhere(relative_error<threshold)
-        pos_outliers = np.argwhere(relative_error>threshold)
-        x_data_ = x_data[pos[:,0]]
-        y_data_ = y_data[pos[:,0]]
-        lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
-        plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
-        for id, n in enumerate(index_classified):
-            plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=20)
-        plt.xlabel(r'True separation coeff. ', fontsize=12)
-        plt.ylabel(r'Predicted separation coeff. ', fontsize=12)
-        plt.text(5e-8, 4.4E-7, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
-        residuals = y_data_ - linear_model(x_data_, *lin_fit)
-        ss_res = np.sum(residuals ** 2)
-        ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
-        r_squared = 1 - (ss_res / ss_tot)
-        plt.text(5e-8, 4E-7, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
-        print(f'separation Slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}   outliers: {np.sum(relative_error>threshold)} ')
-
-        time.sleep(1)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/Fig5.jpg", dpi=300)
-        plt.close()
+        index_classified = np.unique(new_labels)
 
         fig_ = plt.figure(figsize=(12, 12))
         ax = fig_.add_subplot(1, 1, 1)
@@ -6094,7 +6097,7 @@ if __name__ == '__main__':
 
     # config_list = ['arbitrary_3_field_1_no_model']
     # config_list = ['arbitrary_3_field_4_siren_with_time']
-    # config_list = ['boids_16_256_steady']
+    config_list = ['wave_slit']
     # config_list = ['boids_16_256_20_epoch']
 
     # config_list = ['Coulomb_3_noise_0_2','Coulomb_3_noise_0_3','Coulomb_3_noise_0_4']
@@ -6102,7 +6105,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_video_random_siren_with_time']
     # config_list = ['arbitrary_3_field_2_boats_siren_with_time','arbitrary_3_field_4_siren_with_time']
     # config_list = ['arbitrary_3_field_video_bison_siren_with_time']
-    config_list = ['wave_boat']
+    # config_list = ['wave_boat']
 
 
     for config_file in config_list:
@@ -6111,5 +6114,5 @@ if __name__ == '__main__':
         # data_plot_gravity(config_file)
         # data_plot_RD(config_file)
         # data_plot_particle_field(config_file, mode='figures', cc='grey', device=device)
-        data_plot_wave(config_file,cc='grey')
+        data_plot_wave(config_file,cc='viridis')
 

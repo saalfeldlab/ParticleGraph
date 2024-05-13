@@ -3343,8 +3343,9 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3']
     # config_list = ['wave_logo']
     # config_list = ['arbitrary_3_field_4_siren_with_time']
-    config_list = ['wave_slit_1_epoch']
-    config_list = ['RD_RPS_1']
+    # config_list = ['wave_slit_1_epoch']
+    # config_list = ['wave_boat_noise_0_2']
+    config_list = ['wave_slit']
 
     # config_list = ['arbitrary_3_field_video_random_siren_with_time']
     # config_list = ['arbitrary_3_field_video_honey_siren_with_time']
@@ -3359,9 +3360,9 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 30)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color frame', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 5)
         # data_train(config, config_file, device)
-        data_test(config=config, config_file=config_file, visualize=True, style='color frame', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 30, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
+        data_test(config=config, config_file=config_file, visualize=True, style='color frame', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 5, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
 
 
