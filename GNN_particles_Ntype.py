@@ -375,6 +375,8 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
                                  x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), '+', color='w')
                     plt.xlim([0, 1])
                     plt.ylim([0, 1])
+                    # plt.xlim([-2, 2])
+                    # plt.ylim([-2, 2])
                     if 'frame' in style:
                         plt.xlabel(r'$x$', fontsize=64)
                         plt.ylabel(r'$y$', fontsize=64)
@@ -534,8 +536,6 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
                         # plt.xlim([-2,2])
                         # plt.ylim([-2,2])
                         if 'frame' in style:
-                            plt.rcParams['text.usetex'] = True
-                            rc('font', **{'family': 'serif', 'serif': ['Palatino']})
                             plt.xlabel(r'$x$', fontsize=64)
                             plt.ylabel(r'$y$', fontsize=64)
                             plt.xticks(fontsize=32.0)
@@ -546,6 +546,8 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
                         if not (model_config.mesh_model_name == 'RD_RPS_Mesh'):
                             plt.xlim([0, 1])
                             plt.ylim([0, 1])
+                        # plt.xlim([-2, 2])
+                        # plt.ylim([-2, 2])
                         plt.tight_layout()
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
                         plt.close()
@@ -800,6 +802,10 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 # plt.style.use('dark_background')
                 # matplotlib.use("Qt5Agg")
 
+                if 'frame' in style:
+                    plt.rcParams['text.usetex'] = True
+                    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+
                 if 'graph' in style:
 
                     fig = plt.figure(figsize=(10, 10))
@@ -937,7 +943,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                         if simulation_config.has_cell_division:
                             s_p = 25
                         if False:  # config.simulation.non_discrete_level>0:
-                            plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=s_p, color='k')
+                            plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=s_p, color='k')
                         else:
                             for n in range(n_particle_types):
                                 plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
@@ -953,8 +959,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     # plt.xlim([-2,2])
                     # plt.ylim([-2,2])
                     if 'frame' in style:
-                        plt.rcParams['text.usetex'] = True
-                        rc('font', **{'family': 'serif', 'serif': ['Palatino']})
                         plt.xlabel(r'$x$', fontsize=64)
                         plt.ylabel(r'$y$', fontsize=64)
                         plt.xticks(fontsize=32.0)
@@ -2925,7 +2929,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 pred = mesh_model(dataset_mesh, data_id=1)
             x[mask_mesh.squeeze(), 7:8] += pred[mask_mesh.squeeze()] * hnorm * delta_t
             x[mask_mesh.squeeze(), 6:7] += x[mask_mesh.squeeze(), 7:8] * delta_t
-
             if False:
                 y_batch = y0/hnorm
                 matplotlib.use("Qt5Agg")
@@ -3093,7 +3096,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 s_p = 200
                 if simulation_config.has_cell_division:
                     s_p = 25
-
                 for n in range(n_particle_types):
                     if has_field:
                         plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
@@ -3114,6 +3116,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             if not(model_config.mesh_model_name == 'RD_RPS_Mesh'):
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
+            # plt.xlim([-2, 2])
+            # plt.ylim([-2, 2])
+
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{it}.tif", dpi=170.7)
             plt.close()
@@ -3347,7 +3352,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_4_siren_with_time']
     # config_list = ['wave_slit_1_epoch']
     # config_list = ['wave_boat_noise_0_2']
-    config_list = ['wave_boat_noise_0_2','wave_boat_noise_0_4']
+    config_list = ['arbitrary_3_field_1','arbitrary_3_field_3','arbitrary_3_field_1_boats','arbitrary_3_field_1_triangles']
 
     # config_list = ['arbitrary_3_field_video_random_siren_with_time']
     # config_list = ['arbitrary_3_field_video_honey_siren_with_time']
@@ -3357,14 +3362,15 @@ if __name__ == '__main__':
     for config_file in config_list:
         # Load parameters from config file
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+        config.training.n_runs = 1
         # print(config.pretty())
 
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color frame', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 5)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color frame', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 5)
         # data_train(config, config_file, device)
-        data_test(config=config, config_file=config_file, visualize=True, style='color frame', verbose=False, best_model=10, run=0, step=config.simulation.n_frames // 5, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
+        # data_test(config=config, config_file=config_file, visualize=True, style='color frame', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 5, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
 
 

@@ -582,7 +582,7 @@ def data_plot_attraction_repulsion(config_file):
 
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
 
     fig = plt.figure(figsize=(12.5, 9.6))
     plt.ion()
@@ -855,7 +855,7 @@ def data_plot_attraction_repulsion_asym(config_file):
     model.load_state_dict(state_dict['model_state_dict'])
     model.eval()
 
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     matplotlib.rcParams['savefig.pad_inches'] = 0
@@ -1115,7 +1115,7 @@ def data_plot_gravity(config_file):
 
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
 
     fig = plt.figure(figsize=(10.5, 9.6))
     plt.ion()
@@ -1532,7 +1532,7 @@ def data_plot_gravity_continuous(config_file):
 
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
 
     fig = plt.figure(figsize=(10.5, 9.6))
     plt.ion()
@@ -1834,7 +1834,7 @@ def data_plot_gravity_solar_system(config_file):
 
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
 
     fig = plt.figure(figsize=(10.5, 9.6))
     plt.ion()
@@ -2077,7 +2077,7 @@ def data_plot_Coulomb(config_file):
 
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
 
     fig = plt.figure(figsize=(10.5, 9.6))
     plt.ion()
@@ -2556,21 +2556,23 @@ def data_plot_boids(config_file):
 
     n_particles = int(n_particles * (1 - train_config.particle_dropout))
 
-    epoch_list = [20]
+    net_list=['0_0','0_2000','0_5000', '0_9800', '5', '20']
 
-    for epoch in epoch_list:
+    for net_ in net_list:
+
+        print (f'Plot net_{net_} ...')
 
         model, bc_pos, bc_dpos = choose_training_model(config, device)
         model = Interaction_Particles_extract(config, device, aggr_type=config.graph_model.aggr_type, bc_dpos=bc_dpos)
 
-        net = f"./log/try_{config_file}/models/best_model_with_{nrun - 1}_graphs_{epoch}.pt"
+        net = f"./log/try_{config_file}/models/best_model_with_{nrun - 1}_graphs_{net_}.pt"
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
         model.eval()
 
         plt.rcParams['text.usetex'] = True
         rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-        matplotlib.use("Qt5Agg")
+        # matplotlib.use("Qt5Agg")
 
         fig = plt.figure(figsize=(10.5, 9.6))
         plt.ion()
@@ -2596,9 +2598,9 @@ def data_plot_boids(config_file):
         plt.tight_layout()
         csv_ = np.array(csv_)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/embedding_{config_file}_{epoch}.tif", dpi=300)
-        np.save(f"./{log_dir}/tmp_training/embedding_{config_file}_{epoch}.npy", csv_)
-        np.savetxt(f"./{log_dir}/tmp_training/embedding_{config_file}_{epoch}.txt", csv_)
+        plt.savefig(f"./{log_dir}/tmp_training/embedding_{config_file}_{net_}.tif", dpi=300)
+        np.save(f"./{log_dir}/tmp_training/embedding_{config_file}_{net_}.npy", csv_)
+        np.savetxt(f"./{log_dir}/tmp_training/embedding_{config_file}_{net_}.txt", csv_)
         plt.close()
 
         ax = fig.add_subplot(3, 3, 2)
@@ -2690,9 +2692,9 @@ def data_plot_boids(config_file):
         plt.xlabel(r'$x_j-x_i$', fontsize=64)
         plt.ylabel( r'$f_{ij,x}$',fontsize=64)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/func_all_{config_file}_{epoch}.tif", dpi=300)
-        np.save(f"./{log_dir}/tmp_training/func_all_{config_file}_{epoch}.npy", csv_)
-        np.savetxt(f"./{log_dir}/tmp_training/func_all_{config_file}_{epoch}.txt", csv_)
+        plt.savefig(f"./{log_dir}/tmp_training/func_all_{config_file}_{net_}.tif", dpi=300)
+        np.save(f"./{log_dir}/tmp_training/func_all_{config_file}_{net_}.npy", csv_)
+        np.savetxt(f"./{log_dir}/tmp_training/func_all_{config_file}_{net_}.txt", csv_)
         plt.close()
 
         fig_ = plt.figure(figsize=(12, 12))
@@ -2710,7 +2712,7 @@ def data_plot_boids(config_file):
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/true_func_{config_file}_{epoch}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/tmp_training/true_func_{config_file}_{net_}.tif", dpi=300)
         plt.close()
 
         fig = plt.figure(figsize=(12, 12))
@@ -2747,7 +2749,7 @@ def data_plot_boids(config_file):
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/func_dij_{config_file}_{epoch}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/tmp_training/func_dij_{config_file}_{net_}.tif", dpi=300)
         plt.close()
 
         fig = plt.figure(figsize=(12, 12))
@@ -2766,7 +2768,7 @@ def data_plot_boids(config_file):
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/true_func_dij_{config_file}_{epoch}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/tmp_training/true_func_dij_{config_file}_{net_}.tif", dpi=300)
 
         func_list = func_list * ynorm
         func_list_ = torch.clamp(func_list, min=torch.tensor(-1.0E-4,device=device), max=torch.tensor(1.0E-4,device=device))
@@ -2776,237 +2778,220 @@ def data_plot_boids(config_file):
         rmserr_list = to_numpy(rmserr_list)
         print(f'all function RMS error : {np.round(np.mean(rmserr_list), 8)}+/-{np.round(np.std(rmserr_list), 8)}')
 
-        xs = torch.linspace(0, 1, 400)
-        ys = torch.linspace(-1, 1, 400)
-        xv, yv = torch.meshgrid([xs, ys], indexing="ij")
-        xy = torch.stack((yv.flatten(), xv.flatten())).t()
+        bFit = False
+        if bFit:
+            cohesion_fit = np.zeros(n_particle_types)
+            alignment_fit = np.zeros(n_particle_types)
+            separation_fit = np.zeros(n_particle_types)
+            for n in range(n_particle_types):
+                pos = np.argwhere(new_labels == n)
+                pos = pos[:, 0].astype(int)
+                xdiff = to_numpy(diffx[pos, :])
+                vdiff = to_numpy(diffv[pos, :])
+                rdiff = to_numpy(r[pos])
+                x_data = np.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
+                y_data = to_numpy(torch.norm(lin_edge_out[pos, :], dim=1))
+                lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox')
+                cohesion_fit[n] = lin_fit[0]
+                alignment_fit[n] = lin_fit[1]
+                separation_fit[n] = lin_fit[2]
+            p00 = [np.mean(cohesion_fit), np.mean(alignment_fit), np.mean(separation_fit)]
+            for n in range(n_particle_types):
+                pos = np.argwhere(new_labels == n)
+                pos = pos[:, 0].astype(int)
+                xdiff = to_numpy(diffx[pos, :])
+                vdiff = to_numpy(diffv[pos, :])
+                rdiff = to_numpy(r[pos])
+                x_data = np.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
+                y_data = to_numpy(torch.norm(lin_edge_out[pos, :], dim=1))
+                lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox', p0=p00)
+                cohesion_fit[n] = lin_fit[0]
+                alignment_fit[n] = lin_fit[1]
+                separation_fit[n] = lin_fit[2]
 
-        # find last image file in logdir
-        ax = fig.add_subplot(3, 3, 6)
-        files = glob.glob(os.path.join(log_dir, 'tmp_recons/Fig*.tif'))
-        files.sort(key=os.path.getmtime)
-        if len(files) > 0:
-            last_file = files[-1]
-            image = imageio.imread(last_file)
-            plt.text(-0.25, 1.1, f'f)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-            plt.title(r'Rollout inference (frame 8000)', fontsize=12)
-            plt.imshow(image)
-            plt.xticks([])
-            plt.yticks([])
+            index_classified = np.unique(new_labels)
 
-        cohesion_fit = np.zeros(n_particle_types)
-        alignment_fit = np.zeros(n_particle_types)
-        separation_fit = np.zeros(n_particle_types)
-        #
-        # for n in range(n_particle_types):
-        #     pos = np.argwhere(new_labels == n)
-        #     pos = pos[:, 0].astype(int)
-        #     xdiff = to_numpy(diffx[pos, :])
-        #     vdiff = to_numpy(diffv[pos, :])
-        #     rdiff = to_numpy(r[pos])
-        #     x_data = np.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
-        #     y_data = to_numpy(torch.norm(lin_edge_out[pos, :], dim=1))
-        #     lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox')
-        #     cohesion_fit[n] = lin_fit[0]
-        #     alignment_fit[n] = lin_fit[1]
-        #     separation_fit[n] = lin_fit[2]
-        # p00 = [np.mean(cohesion_fit), np.mean(alignment_fit), np.mean(separation_fit)]
-        # for n in range(n_particle_types):
-        #     pos = np.argwhere(new_labels == n)
-        #     pos = pos[:, 0].astype(int)
-        #     xdiff = to_numpy(diffx[pos, :])
-        #     vdiff = to_numpy(diffv[pos, :])
-        #     rdiff = to_numpy(r[pos])
-        #     x_data = np.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
-        #     y_data = to_numpy(torch.norm(lin_edge_out[pos, :], dim=1))
-        #     lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox', p0=p00)
-        #     cohesion_fit[n] = lin_fit[0]
-        #     alignment_fit[n] = lin_fit[1]
-        #     separation_fit[n] = lin_fit[2]
-        #
-        # index_classified = np.unique(new_labels)
-        #
-        # ax = fig.add_subplot(3, 3, 7)
-        # plt.text(-0.25, 1.1, f'g)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
-        # x_data = np.abs(to_numpy(p[:, 0]) * 0.5E-5)
-        # y_data = np.abs(cohesion_fit)
-        # x_data = x_data[index_classified]
-        # y_data = y_data[index_classified]
-        #
-        # threshold = 0.1
-        #
-        # relative_error = np.abs(y_data-x_data)/x_data
-        #
-        # pos = np.argwhere(relative_error<threshold)
-        # pos_outliers = np.argwhere(relative_error>threshold)
-        # x_data_ = x_data[pos[:,0]]
-        # y_data_ = y_data[pos[:,0]]
-        # lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
-        # plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
-        # for id, n in enumerate(index_classified):
-        #     plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=20)
-        # plt.xlabel(r'True cohesion coeff. ', fontsize=12)
-        # plt.ylabel(r'Predicted cohesion coeff. ', fontsize=12)
-        # residuals = y_data_ - linear_model(x_data_, *lin_fit)
-        # ss_res = np.sum(residuals ** 2)
-        # ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
-        # r_squared = 1 - (ss_res / ss_tot)
-        # plt.text(4E-5, 4.5E-4, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
-        # plt.text(4E-5, 4.1E-4, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
-        # print(f'cohesion Slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error>threshold)} ')
-        #
-        # ax = fig.add_subplot(3, 3, 8)
-        # plt.text(-0.25, 1.1, f'h)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
-        # x_data = np.abs(to_numpy(p[:, 1]) * 5E-4)
-        # y_data = alignment_fit
-        # x_data = x_data[index_classified]
-        # y_data = y_data[index_classified]
-        # relative_error = np.abs(y_data-x_data)/x_data
-        # pos = np.argwhere(relative_error<threshold)
-        # pos_outliers = np.argwhere(relative_error>threshold)
-        # x_data_ = x_data[pos[:,0]]
-        # y_data_ = y_data[pos[:,0]]
-        # lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
-        # plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
-        # for id, n in enumerate(index_classified):
-        #     plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=20)
-        # plt.xlabel(r'True alignment coeff. ', fontsize=12)
-        # plt.ylabel(r'Predicted alignment coeff. ', fontsize=12)
-        # plt.text(5e-3, 0.046, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
-        # residuals = y_data_ - linear_model(x_data_, *lin_fit)
-        # ss_res = np.sum(residuals ** 2)
-        # ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
-        # r_squared = 1 - (ss_res / ss_tot)
-        # plt.text(5e-3, 0.042, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
-        # print(f'alignment Slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}   outliers: {np.sum(relative_error>threshold)} ')
-        #
-        # ax = fig.add_subplot(3, 3, 9)
-        # plt.text(-0.25, 1.1, f'i)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
-        # x_data = np.abs(to_numpy(p[:, 2]) * 1E-8)
-        # y_data = separation_fit
-        # x_data = x_data[index_classified]
-        # y_data = y_data[index_classified]
-        # relative_error = np.abs(y_data-x_data)/x_data
-        # pos = np.argwhere(relative_error<threshold)
-        # pos_outliers = np.argwhere(relative_error>threshold)
-        # x_data_ = x_data[pos[:,0]]
-        # y_data_ = y_data[pos[:,0]]
-        # lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
-        # plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
-        # for id, n in enumerate(index_classified):
-        #     plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=20)
-        # plt.xlabel(r'True separation coeff. ', fontsize=12)
-        # plt.ylabel(r'Predicted separation coeff. ', fontsize=12)
-        # plt.text(5e-8, 4.4E-7, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
-        # residuals = y_data_ - linear_model(x_data_, *lin_fit)
-        # ss_res = np.sum(residuals ** 2)
-        # ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
-        # r_squared = 1 - (ss_res / ss_tot)
-        # plt.text(5e-8, 4E-7, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
-        # print(f'separation Slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}   outliers: {np.sum(relative_error>threshold)} ')
-        #
-        # time.sleep(1)
-        # plt.tight_layout()
-        # plt.savefig(f"./{log_dir}/Fig5.jpg", dpi=300)
-        # plt.close()
+            ax = fig.add_subplot(3, 3, 7)
+            plt.text(-0.25, 1.1, f'g)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
+            x_data = np.abs(to_numpy(p[:, 0]) * 0.5E-5)
+            y_data = np.abs(cohesion_fit)
+            x_data = x_data[index_classified]
+            y_data = y_data[index_classified]
 
-        threshold = 0.1
-        index_classified = np.unique(new_labels)
+            threshold = 0.1
 
-        fig_ = plt.figure(figsize=(12, 12))
-        ax = fig_.add_subplot(1, 1, 1)
-        ax.xaxis.set_major_formatter(FormatStrFormatter('%0.0f'))
-        ax.yaxis.set_major_formatter(FormatStrFormatter('%0.0f'))
-        fmt = lambda x, pos: '{:.1f}e-4'.format((x) * 1e4, pos)
-        ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        x_data = np.abs(to_numpy(p[:, 0]) * 0.5E-5)
-        y_data = np.abs(cohesion_fit)
-        x_data = x_data[index_classified]
-        y_data = y_data[index_classified]
-        relative_error = np.abs(y_data-x_data)/x_data
-        pos = np.argwhere(relative_error<threshold)
-        pos_outliers = np.argwhere(relative_error>threshold)
-        x_data_ = x_data[pos[:,0]]
-        y_data_ = y_data[pos[:,0]]
-        lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
-        plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-        for id, n in enumerate(index_classified):
-            plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=400)
-        plt.xlabel(r'True cohesion coeff. ', fontsize=56)
-        plt.ylabel(r'Reconstructed cohesion coeff. ', fontsize=56)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
-        plt.tight_layout()
-        csv_=[]
-        csv_.append(x_data)
-        csv_.append(y_data)
-        plt.savefig(f"./{log_dir}/tmp_training/cohesion_{config_file}_{epoch}.tif", dpi=300)
-        np.save(f"./{log_dir}/tmp_training/cohesion_{config_file}_{epoch}.npy", csv_)
-        np.savetxt(f"./{log_dir}/tmp_training/cohesion_{config_file}_{epoch}.txt", csv_)
-        plt.close()
+            relative_error = np.abs(y_data-x_data)/x_data
 
-        fig_ = plt.figure(figsize=(12, 12))
-        ax = fig_.add_subplot(1, 1, 1)
-        fmt = lambda x, pos: '{:.1f}e-2'.format((x) * 1e2, pos)
-        ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        x_data = np.abs(to_numpy(p[:, 1]) * 5E-4)
-        y_data = alignment_fit
-        x_data = x_data[index_classified]
-        y_data = y_data[index_classified]
-        relative_error = np.abs(y_data-x_data)/x_data
-        pos = np.argwhere(relative_error<threshold)
-        pos_outliers = np.argwhere(relative_error>threshold)
-        x_data_ = x_data[pos[:,0]]
-        y_data_ = y_data[pos[:,0]]
-        lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
-        plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-        for id, n in enumerate(index_classified):
-            plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=400)
-        plt.xlabel(r'True alignement coeff. ', fontsize=56)
-        plt.ylabel(r'Reconstructed alignement coeff. ', fontsize=56)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
-        plt.tight_layout()
-        csv_=[]
-        csv_.append(x_data)
-        csv_.append(y_data)
-        plt.savefig(f"./{log_dir}/tmp_training/alignment_{config_file}_{epoch}.tif", dpi=300)
-        np.save(f"./{log_dir}/tmp_training/alignment_{config_file}_{epoch}.npy", csv_)
-        np.savetxt(f"./{log_dir}/tmp_training/alignement_{config_file}_{epoch}.txt", csv_)
-        plt.close()
+            pos = np.argwhere(relative_error<threshold)
+            pos_outliers = np.argwhere(relative_error>threshold)
+            x_data_ = x_data[pos[:,0]]
+            y_data_ = y_data[pos[:,0]]
+            lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
+            plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
+            for id, n in enumerate(index_classified):
+                plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=20)
+            plt.xlabel(r'True cohesion coeff. ', fontsize=12)
+            plt.ylabel(r'Predicted cohesion coeff. ', fontsize=12)
+            residuals = y_data_ - linear_model(x_data_, *lin_fit)
+            ss_res = np.sum(residuals ** 2)
+            ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
+            r_squared = 1 - (ss_res / ss_tot)
+            plt.text(4E-5, 4.5E-4, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
+            plt.text(4E-5, 4.1E-4, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
+            print(f'cohesion Slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error>threshold)} ')
 
-        fig_ = plt.figure(figsize=(12, 12))
-        ax = fig_.add_subplot(1, 1, 1)
-        fmt = lambda x, pos: '{:.1f}e-7'.format((x) * 1e7, pos)
-        ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        x_data = np.abs(to_numpy(p[:, 2]) * 1E-8)
-        y_data = separation_fit
-        x_data = x_data[index_classified]
-        y_data = y_data[index_classified]
-        relative_error = np.abs(y_data-x_data)/x_data
-        pos = np.argwhere(relative_error<threshold)
-        pos_outliers = np.argwhere(relative_error>threshold)
-        x_data_ = x_data[pos[:,0]]
-        y_data_ = y_data[pos[:,0]]
-        lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
-        plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-        for id, n in enumerate(index_classified):
-            plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=400)
-        plt.xlabel(r'True separation coeff. ', fontsize=56)
-        plt.ylabel(r'Reconstructed separation coeff. ', fontsize=56)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
-        plt.tight_layout()
-        csv_=[]
-        csv_.append(x_data)
-        csv_.append(y_data)
-        plt.savefig(f"./{log_dir}/tmp_training/separation_{config_file}_{epoch}.tif", dpi=300)
-        np.save(f"./{log_dir}/tmp_training/separation_{config_file}_{epoch}.npy", csv_)
-        np.savetxt(f"./{log_dir}/tmp_training/separation_{config_file}_{epoch}.txt", csv_)
-        plt.close()
+            ax = fig.add_subplot(3, 3, 8)
+            plt.text(-0.25, 1.1, f'h)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
+            x_data = np.abs(to_numpy(p[:, 1]) * 5E-4)
+            y_data = alignment_fit
+            x_data = x_data[index_classified]
+            y_data = y_data[index_classified]
+            relative_error = np.abs(y_data-x_data)/x_data
+            pos = np.argwhere(relative_error<threshold)
+            pos_outliers = np.argwhere(relative_error>threshold)
+            x_data_ = x_data[pos[:,0]]
+            y_data_ = y_data[pos[:,0]]
+            lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
+            plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
+            for id, n in enumerate(index_classified):
+                plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=20)
+            plt.xlabel(r'True alignment coeff. ', fontsize=12)
+            plt.ylabel(r'Predicted alignment coeff. ', fontsize=12)
+            plt.text(5e-3, 0.046, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
+            residuals = y_data_ - linear_model(x_data_, *lin_fit)
+            ss_res = np.sum(residuals ** 2)
+            ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
+            r_squared = 1 - (ss_res / ss_tot)
+            plt.text(5e-3, 0.042, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
+            print(f'alignment Slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}   outliers: {np.sum(relative_error>threshold)} ')
+
+            ax = fig.add_subplot(3, 3, 9)
+            plt.text(-0.25, 1.1, f'i)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
+            x_data = np.abs(to_numpy(p[:, 2]) * 1E-8)
+            y_data = separation_fit
+            x_data = x_data[index_classified]
+            y_data = y_data[index_classified]
+            relative_error = np.abs(y_data-x_data)/x_data
+            pos = np.argwhere(relative_error<threshold)
+            pos_outliers = np.argwhere(relative_error>threshold)
+            x_data_ = x_data[pos[:,0]]
+            y_data_ = y_data[pos[:,0]]
+            lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
+            plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
+            for id, n in enumerate(index_classified):
+                plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=20)
+            plt.xlabel(r'True separation coeff. ', fontsize=12)
+            plt.ylabel(r'Predicted separation coeff. ', fontsize=12)
+            plt.text(5e-8, 4.4E-7, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
+            residuals = y_data_ - linear_model(x_data_, *lin_fit)
+            ss_res = np.sum(residuals ** 2)
+            ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
+            r_squared = 1 - (ss_res / ss_tot)
+            plt.text(5e-8, 4E-7, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
+            print(f'separation Slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}   outliers: {np.sum(relative_error>threshold)} ')
+
+            time.sleep(1)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/Fig5.jpg", dpi=300)
+            plt.close()
+
+            threshold = 0.1
+            index_classified = np.unique(new_labels)
+
+            fig_ = plt.figure(figsize=(12, 12))
+            ax = fig_.add_subplot(1, 1, 1)
+            ax.xaxis.set_major_formatter(FormatStrFormatter('%0.0f'))
+            ax.yaxis.set_major_formatter(FormatStrFormatter('%0.0f'))
+            fmt = lambda x, pos: '{:.1f}e-4'.format((x) * 1e4, pos)
+            ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+            ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+            x_data = np.abs(to_numpy(p[:, 0]) * 0.5E-5)
+            y_data = np.abs(cohesion_fit)
+            x_data = x_data[index_classified]
+            y_data = y_data[index_classified]
+            relative_error = np.abs(y_data-x_data)/x_data
+            pos = np.argwhere(relative_error<threshold)
+            pos_outliers = np.argwhere(relative_error>threshold)
+            x_data_ = x_data[pos[:,0]]
+            y_data_ = y_data[pos[:,0]]
+            lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
+            plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+            for id, n in enumerate(index_classified):
+                plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=400)
+            plt.xlabel(r'True cohesion coeff. ', fontsize=56)
+            plt.ylabel(r'Reconstructed cohesion coeff. ', fontsize=56)
+            plt.xticks(fontsize=32.0)
+            plt.yticks(fontsize=32.0)
+            plt.tight_layout()
+            csv_=[]
+            csv_.append(x_data)
+            csv_.append(y_data)
+            plt.savefig(f"./{log_dir}/tmp_training/cohesion_{config_file}_{net_}.tif", dpi=300)
+            np.save(f"./{log_dir}/tmp_training/cohesion_{config_file}_{net_}.npy", csv_)
+            np.savetxt(f"./{log_dir}/tmp_training/cohesion_{config_file}_{net_}.txt", csv_)
+            plt.close()
+
+            fig_ = plt.figure(figsize=(12, 12))
+            ax = fig_.add_subplot(1, 1, 1)
+            fmt = lambda x, pos: '{:.1f}e-2'.format((x) * 1e2, pos)
+            ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+            ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+            x_data = np.abs(to_numpy(p[:, 1]) * 5E-4)
+            y_data = alignment_fit
+            x_data = x_data[index_classified]
+            y_data = y_data[index_classified]
+            relative_error = np.abs(y_data-x_data)/x_data
+            pos = np.argwhere(relative_error<threshold)
+            pos_outliers = np.argwhere(relative_error>threshold)
+            x_data_ = x_data[pos[:,0]]
+            y_data_ = y_data[pos[:,0]]
+            lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
+            plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+            for id, n in enumerate(index_classified):
+                plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=400)
+            plt.xlabel(r'True alignement coeff. ', fontsize=56)
+            plt.ylabel(r'Reconstructed alignement coeff. ', fontsize=56)
+            plt.xticks(fontsize=32.0)
+            plt.yticks(fontsize=32.0)
+            plt.tight_layout()
+            csv_=[]
+            csv_.append(x_data)
+            csv_.append(y_data)
+            plt.savefig(f"./{log_dir}/tmp_training/alignment_{config_file}_{net_}.tif", dpi=300)
+            np.save(f"./{log_dir}/tmp_training/alignment_{config_file}_{net_}.npy", csv_)
+            np.savetxt(f"./{log_dir}/tmp_training/alignement_{config_file}_{net_}.txt", csv_)
+            plt.close()
+
+            fig_ = plt.figure(figsize=(12, 12))
+            ax = fig_.add_subplot(1, 1, 1)
+            fmt = lambda x, pos: '{:.1f}e-7'.format((x) * 1e7, pos)
+            ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+            ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+            x_data = np.abs(to_numpy(p[:, 2]) * 1E-8)
+            y_data = separation_fit
+            x_data = x_data[index_classified]
+            y_data = y_data[index_classified]
+            relative_error = np.abs(y_data-x_data)/x_data
+            pos = np.argwhere(relative_error<threshold)
+            pos_outliers = np.argwhere(relative_error>threshold)
+            x_data_ = x_data[pos[:,0]]
+            y_data_ = y_data[pos[:,0]]
+            lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
+            plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+            for id, n in enumerate(index_classified):
+                plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=400)
+            plt.xlabel(r'True separation coeff. ', fontsize=56)
+            plt.ylabel(r'Reconstructed separation coeff. ', fontsize=56)
+            plt.xticks(fontsize=32.0)
+            plt.yticks(fontsize=32.0)
+            plt.tight_layout()
+            csv_=[]
+            csv_.append(x_data)
+            csv_.append(y_data)
+            plt.savefig(f"./{log_dir}/tmp_training/separation_{config_file}_{net_}.tif", dpi=300)
+            np.save(f"./{log_dir}/tmp_training/separation_{config_file}_{net_}.npy", csv_)
+            np.savetxt(f"./{log_dir}/tmp_training/separation_{config_file}_{net_}.txt", csv_)
+            plt.close()
 
 def data_plot_boids_dividing(config_file):
     config_name = 'boids_16_division'
@@ -3076,7 +3061,7 @@ def data_plot_boids_dividing(config_file):
 
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
 
     fig = plt.figure(figsize=(10.5, 9.6))
     plt.ion()
@@ -3360,11 +3345,12 @@ def data_plot_wave(config_file, cc='viridis'):
 
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
 
     if has_pic:
         i0 = imread(f'graphs_data/{simulation_config.node_type_map}')
         coeff = i0[(to_numpy(x_mesh[:, 1]) * 255).astype(int), (to_numpy(x_mesh[:, 2]) * 255).astype(int)] / 255
+        coeff_ = coeff
         coeff = np.reshape(coeff, (n_nodes_per_axis, n_nodes_per_axis))
         coeff = np.flipud(coeff) * simulation_config.beta
     else:
@@ -3390,12 +3376,12 @@ def data_plot_wave(config_file, cc='viridis'):
     plt.ylabel(r'$y$', fontsize=64)
     plt.xticks(fontsize=32.0)
     plt.yticks(fontsize=32.0)
-    cbar = plt.colorbar(shrink=0.5)
-    cbar.ax.tick_params(labelsize=32)
+    # cbar = plt.colorbar(shrink=0.5)
+    # cbar.ax.tick_params(labelsize=32)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/true_wave_coeff_{config_file}.tif", dpi=300)
 
-    net_list=['20', '0_1000','0_2000','0_5000', '1', '5']
+    net_list=['0_1000','0_2000','0_5000', '1', '5', '20']
 
     for net_ in net_list:
 
@@ -3414,16 +3400,13 @@ def data_plot_wave(config_file, cc='viridis'):
         axf.yaxis.set_major_locator(plt.MaxNLocator(3))
         axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
         axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-
         if has_pic:
             plt.scatter(embedding[:, 0], embedding[:, 1],
-                        color=cmap.color(np.arange(n_node_types) % 256), s=400, alpha=0.1)
+                        color=cmap.color(np.round(coeff_*256).astype(int)), s=100, alpha=1)
         else:
             for n in range(n_node_types):
-                c_ = np.round(n / (n_node_types - 1)*256).astype(int)
-                print(c_)
-                # plt.scatter(embedding[index_nodes[n], 0], embedding[index_nodes[n], 1], color=cmap.color(n), s=400, alpha=0.1)
-                plt.scatter(embedding[index_nodes[n], 0], embedding[index_nodes[n], 1], c=cmap.color(c_), s=400, alpha=0.1)
+                    c_ = np.round(n / (n_node_types - 1) * 256).astype(int)
+                    plt.scatter(embedding[index_nodes[n], 0], embedding[index_nodes[n], 1], c=cmap.color(c_), s=400, alpha=0.1)
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
         plt.xticks(fontsize=32.0)
@@ -3457,46 +3440,47 @@ def data_plot_wave(config_file, cc='viridis'):
         axf.yaxis.set_major_locator(plt.MaxNLocator(3))
         axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
         axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        plt.imshow(t, cmap=cc,vmin=00, vmax=vm)
+        plt.imshow(t, cmap=cc, vmin=0, vmax=vm)
         plt.xlabel(r'$x$', fontsize=64)
         plt.ylabel(r'$y$', fontsize=64)
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
         fmt = lambda x, pos: '{:.3%}'.format(x)
-        cbar = plt.colorbar(format=FuncFormatter(fmt),shrink=0.5)
-        cbar.ax.tick_params(labelsize=32)
+        # cbar = plt.colorbar(format=FuncFormatter(fmt),shrink=0.5)
+        # cbar.ax.tick_params(labelsize=32)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/wave_coeff_{config_file}_{net_}.tif", dpi=300)
+        plt.close()
 
+        if not(has_pic):
+            proj_interaction = popt_list
+            proj_interaction[:, 1] = proj_interaction[:, 0]
+            match train_config.cluster_method:
+                case 'kmeans_auto_plot':
+                    labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
+                case 'kmeans_auto_embedding':
+                    labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
+                    proj_interaction = embedding
+                case 'distance_plot':
+                    labels, n_clusters = embedding_cluster.get(proj_interaction, 'distance')
+                case 'distance_embedding':
+                    labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=1.5)
+                    proj_interaction = embedding
+                case 'distance_both':
+                    new_projection = np.concatenate((proj_interaction, embedding), axis=-1)
+                    labels, n_clusters = embedding_cluster.get(new_projection, 'distance')
 
-        proj_interaction = popt_list
-        proj_interaction[:, 1] = proj_interaction[:, 0]
-        match train_config.cluster_method:
-            case 'kmeans_auto_plot':
-                labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
-            case 'kmeans_auto_embedding':
-                labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
-                proj_interaction = embedding
-            case 'distance_plot':
-                labels, n_clusters = embedding_cluster.get(proj_interaction, 'distance')
-            case 'distance_embedding':
-                labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=1.5)
-                proj_interaction = embedding
-            case 'distance_both':
-                new_projection = np.concatenate((proj_interaction, embedding), axis=-1)
-                labels, n_clusters = embedding_cluster.get(new_projection, 'distance')
+            label_list = []
+            for n in range(n_node_types):
+                tmp = labels[index_nodes[n]]
+                label_list.append(np.round(np.median(tmp)))
+            label_list = np.array(label_list)
+            new_labels = labels.copy()
+            for n in range(n_node_types):
+                new_labels[labels == label_list[n]] = n
+            Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
 
-        label_list = []
-        for n in range(n_node_types):
-            tmp = labels[index_nodes[n]]
-            label_list.append(np.round(np.median(tmp)))
-        label_list = np.array(label_list)
-        new_labels = labels.copy()
-        for n in range(n_node_types):
-            new_labels[labels == label_list[n]] = n
-        Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-
-        print(f'Accuracy: {Accuracy}  n_clusters: {n_clusters}')
+            print(f'Accuracy: {Accuracy}  n_clusters: {n_clusters}')
 
         convert_color = [0,2,3,4,1]
         fig_ = plt.figure(figsize=(12, 12))
@@ -3508,7 +3492,7 @@ def data_plot_wave(config_file, cc='viridis'):
             if (n % 4):
                 if has_pic:
                     plt.plot(to_numpy(rr), to_numpy(h) * to_numpy(hnorm), linewidth=4,
-                             color=cmap.color(n % 256), alpha=0.05)
+                             color=cmap.color(np.round(coeff_[n]*256).astype(int)), alpha=0.05)
                 else:
                     # plt.plot(to_numpy(rr), to_numpy(h) * to_numpy(hnorm), linewidth=4, color=cmap.color(new_labels[n]%256), alpha=0.05)
                     c_ = np.round(convert_color[int(to_numpy(type_list[n]))]*256/(n_node_types-1))
@@ -3523,45 +3507,39 @@ def data_plot_wave(config_file, cc='viridis'):
 
         fig_ = plt.figure(figsize=(12, 12))
         axf = fig_.add_subplot(1, 1, 1)
+
+        pos=torch.argwhere(mask_mesh==1)
+        pos=to_numpy(pos[:,0]).astype(int)
+        x_data = np.reshape(coeff, (n_nodes))
+        y_data = np.reshape(t, (n_nodes))
+        x_data = x_data.squeeze()
+        y_data = y_data.squeeze()
+        x_data = x_data[pos]
+        y_data = y_data[pos]
+
         axf.xaxis.set_major_locator(plt.MaxNLocator(3))
         axf.yaxis.set_major_locator(plt.MaxNLocator(3))
         axf.xaxis.set_major_formatter(FormatStrFormatter('%.3f'))
         axf.yaxis.set_major_formatter(FormatStrFormatter('%.3f'))
-        plt.scatter(coeff, t, c='k', s=100, alpha=0.01)
+        plt.scatter(x_data, y_data, c='k', s=100, alpha=0.01)
         plt.ylabel(r'Reconstructed coefficients', fontsize=48)
         plt.xlabel(r'True coefficients', fontsize=48)
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
         plt.xlim([0, vm * 1.1])
         plt.ylim([0, vm * 1.1])
-        plt.tight_layout()
 
-        x_data = np.reshape(coeff, (n_nodes))
-        y_data = np.reshape(t, (n_nodes))
-        threshold = 0.5
-        relative_error = np.abs(y_data - x_data)/np.abs(x_data)
-        print(f'outliers: {np.sum(relative_error > threshold)} / {n_nodes}')
-        pos = np.argwhere(relative_error < threshold)
-        pos_outliers = np.argwhere(relative_error > threshold)
-
-        x_data_ = x_data[pos].squeeze()
-        y_data_ = y_data[pos].squeeze()
-        # x_data_ = x_data.squeeze()
-        # y_data_ = y_data.squeeze()
-
-        lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
-        residuals = y_data_ - linear_model(x_data_, *lin_fit)
+        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+        residuals = y_data - linear_model(x_data, *lin_fit)
         ss_res = np.sum(residuals ** 2)
         ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
         r_squared = 1 - (ss_res / ss_tot)
-
-        print(f"Slope: {np.round(lin_fit[0], 2)}   R^2$: {np.round(r_squared, 3)}")
-
         plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/scatter_{config_file}_{net_}.tif", dpi=300)
-
         plt.close()
+
+        print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   ")
 
 def data_plot_attraction_repulsion_short(config, config_file, mode, device):
     print('')
@@ -3696,7 +3674,7 @@ def data_plot_attraction_repulsion_short(config, config_file, mode, device):
         model.load_state_dict(state_dict['model_state_dict'])
         model.eval()
 
-        matplotlib.use("Qt5Agg")
+        # matplotlib.use("Qt5Agg")
         plt.rcParams['text.usetex'] = True
         rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
@@ -4145,7 +4123,7 @@ def data_plot_attraction_repulsion_asym_short(config, config_file, mode, device)
     time.sleep(0.5)
 
 
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     matplotlib.rcParams['savefig.pad_inches'] = 0
@@ -4196,7 +4174,7 @@ def data_plot_attraction_repulsion_asym_short(config, config_file, mode, device)
         # plt.ylim([0, 2])
         # plt.tight_layout()
 
-        matplotlib.use("Qt5Agg")
+        # matplotlib.use("Qt5Agg")
 
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(1,1,1)
@@ -4534,7 +4512,7 @@ def data_plot_attraction_repulsion_continuous_short(config, config_file, mode, d
     time.sleep(0.5)
 
 
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     matplotlib.rcParams['savefig.pad_inches'] = 0
@@ -6105,7 +6083,7 @@ if __name__ == '__main__':
 
     # config_list = ['arbitrary_3_field_1_no_model']
     # config_list = ['arbitrary_3_field_4_siren_with_time']
-    config_list = ['wave_boat']
+    config_list = ['boids_16_256_20_epoch','boids_32_256_20_epoch','boids_64_256_20_epoch']
     # config_list = ['boids_16_256_20_epoch']
 
     # config_list = ['Coulomb_3_noise_0_2','Coulomb_3_noise_0_3','Coulomb_3_noise_0_4']
@@ -6118,9 +6096,9 @@ if __name__ == '__main__':
 
     for config_file in config_list:
 
-        # data_plot_boids(config_file)
+        data_plot_boids(config_file)
         # data_plot_gravity(config_file)
         # data_plot_RD(config_file)
         # data_plot_particle_field(config_file, mode='figures', cc='grey', device=device)
-        data_plot_wave(config_file,cc='grey')
+        # data_plot_wave(config_file,cc='viridis')
 
