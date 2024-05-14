@@ -145,12 +145,9 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
-
-    model_name =
-
     matplotlib.rcParams['savefig.pad_inches'] = 0
 
-    if model_config.mesh_model_name == 'WaveMesh'
+    if model_config.mesh_model_name == 'WaveMesh':
         rr = torch.tensor(np.linspace(-150, 150, 200)).to(device)
         popt_list = []
         for n in range(n_nodes):
