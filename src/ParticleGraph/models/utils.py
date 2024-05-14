@@ -140,116 +140,47 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dat
     # im = np.flipud(im)
     # io.imsave(f"./{log_dir}/tmp_training/embedding/field_pic_{dataset_name}_{epoch}_{N}.tif", im)
 
-def plot_training (config, dataset_name, model_name, log_dir, epoch, N, x, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
+def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
 
+    model_name =
+
     matplotlib.rcParams['savefig.pad_inches'] = 0
 
-    if not('Mesh' in model_name):
+    if model_config.mesh_model_name == 'WaveMesh'
+        rr = torch.tensor(np.linspace(-150, 150, 200)).to(device)
+        popt_list = []
+        for n in range(n_nodes):
+            embedding_ = model.a[dataset_num, n, :] * torch.ones((200, 2), device=device)
+            in_features = torch.cat((rr[:, None], embedding_), dim=1)
+            h = model.lin_phi(in_features.float())
+            h = h[:, 0]
+            popt, pcov = curve_fit(linear_model, to_numpy(rr.squeeze()), to_numpy(h.squeeze()))
+            popt_list.append(popt)
+        t = np.array(popt_list)
+        t = t[:, 0]
+        fig = plt.figure(figsize=(8, 8))
+        embedding = get_embedding(model.a, 1)
+        plt.scatter(embedding[:, 0], embedding[:, 1], c=t[:, None], s=3, cmap='viridis')
+        plt.xticks([])
+        plt.yticks([])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/embedding/mesh_embedding_{dataset_name}_{epoch}_{N}.tif",dpi=300)
+        plt.close()
 
-        fig = plt.figure(figsize=(12, 12))
-        if axis:
-            # plt.rcParams['text.usetex'] = True
-            # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-            ax = fig.add_subplot(1,1,1)
-            # ax.xaxis.get_major_formatter()._usetex = False
-            # ax.yaxis.get_major_formatter()._usetex = False
-            ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-            ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-            ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-            ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-            # plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-            # plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
-            plt.xticks(fontsize=32.0)
-            plt.yticks(fontsize=32.0)
-        else:
-            plt.axis('off')
+        fig = plt.figure(figsize=(8, 8))
+        t = np.reshape(t, (100, 100))
+        plt.imshow(t, cmap='viridis')
+        plt.xticks([])
+        plt.yticks([])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/embedding/function/mesh_map_{dataset_name}_{epoch}_{N}.tif",
+                    dpi=300)
 
-        embedding = get_embedding(model.a, dataset_num)
-        embedding = embedding[n_nodes:,:]
-
-        if n_particle_types > 1000:
-            plt.scatter(embedding[:, 0], embedding[:, 1], c=to_numpy(x[:, 5])/n_particles, s=5, cmap='viridis')
-        else:
-
-            if  model_config.embedding_dim == 3:
-                plt.close()
-            # matplotlib.use("Qt5Agg")
-                canvas = vispy.scene.SceneCanvas(show=False,  bgcolor='w',) # show=False) keys='interactive', show=True)
-                view = canvas.central_widget.add_view()
-                # generate data
-                pos = embedding
-                for n in range(n_particle_types):
-                    scatter = visuals.Markers()
-                    c =cmap.color(n)
-                    scatter.set_data(pos[index_particles[n]], edge_width=0, face_color=c, size=10)
-                    view.add(scatter)
-                view.camera = 'turntable'  # or try 'arcball'
-                try:
-                    image = canvas.render()
-                    io.write_png( f"./{log_dir}/tmp_training/embedding/particle/{model_name}_{dataset_name}_embedding_{epoch}_{N}.tif", image)
-                    canvas.close()
-                except:
-                    print('Error in vispy')
-
-            else:
-                for n in range(n_particle_types):
-                    plt.scatter(embedding[index_particles[n], 0],
-                                embedding[index_particles[n], 1], color=cmap.color(n), s=200)
-
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/embedding/particle/{model_name}_{dataset_name}_embedding_{epoch}_{N}.tif", dpi=170.7)
-                plt.close()
-
-    match model_name:
-
-        case 'WaveMesh' | 'DiffMesh':
-            rr = torch.tensor(np.linspace(-150, 150, 200)).to(device)
-            popt_list = []
-            for n in range(n_nodes):
-                embedding_ = model.a[dataset_num, n, :] * torch.ones((200, 2), device=device)
-                in_features = torch.cat((rr[:, None], embedding_), dim=1)
-                h = model.lin_phi(in_features.float())
-                h = h[:, 0]
-                popt, pcov = curve_fit(linear_model, to_numpy(rr.squeeze()), to_numpy(h.squeeze()))
-                popt_list.append(popt)
-            t = np.array(popt_list)
-            t = t[:, 0]
-            fig = plt.figure(figsize=(8, 8))
-            embedding = get_embedding(model.a, 1)
-            plt.scatter(embedding[:, 0], embedding[:, 1], c=t[:, None], s=3, cmap='viridis')
-            plt.xticks([])
-            plt.yticks([])
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/embedding/mesh_embedding_{dataset_name}_{epoch}_{N}.tif",dpi=300)
-            plt.close()
-
-            fig = plt.figure(figsize=(8, 8))
-            t = np.reshape(t, (100, 100))
-            plt.imshow(t, cmap='viridis')
-            plt.xticks([])
-            plt.yticks([])
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/embedding/function/mesh_map_{dataset_name}_{epoch}_{N}.tif",
-                        dpi=300)
-
-            # fig = plt.figure(figsize=(8, 8))
-            # t = np.array(popt_list)
-            # t = t[:, 0]
-            # pts = x[:, 1:3].detach().cpu().numpy()
-            # tri = Delaunay(pts)
-            # colors = np.sum(t[tri.simplices], axis=1)
-            # plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(), facecolors=colors)
-            # plt.xticks([])
-            # plt.yticks([])
-            # plt.tight_layout()
-            # plt.savefig(f"./{log_dir}/tmp_training/embedding/mesh_Delaunay_{dataset_name}_{epoch}_{N}.tif",
-            #             dpi=300)
-            # plt.close()
-
+    match model_config.particle_model_name:
         case 'PDE_GS':
             fig = plt.figure(figsize=(8, 4))
             ax = fig.add_subplot(1, 2, 1)

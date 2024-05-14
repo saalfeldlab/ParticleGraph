@@ -358,7 +358,7 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
                     matplotlib.rcParams['savefig.pad_inches'] = 0
                     fig = plt.figure(figsize=(12, 12))
                     ax = fig.add_subplot(1, 1, 1)
-                    s_p = 200
+                    s_p = 100
                     if simulation_config.has_cell_division:
                         s_p = 25
                     if False:  # config.simulation.non_discrete_level>0:
@@ -516,7 +516,7 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
                                     plt.yticks([])
                                     plt.axis('off')
                         else:
-                            s_p = 200
+                            s_p = 100
                             if simulation_config.has_cell_division:
                                 s_p = 25
                             if False:  # config.simulation.non_discrete_level>0:
@@ -943,10 +943,10 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                         if simulation_config.has_cell_division:
                             s_p = 25
                         if False:  # config.simulation.non_discrete_level>0:
-                            plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=s_p, color='k')
+                            plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=s_p, color='k')
                         else:
                             for n in range(n_particle_types):
-                                plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                                plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
                                             s=s_p, color=cmap.color(n))
                         if training_config.particle_dropout > 0:
                             plt.scatter(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
@@ -2211,7 +2211,7 @@ def data_train_mesh(config, config_file, device):
                             'optimizer_state_dict': optimizer.state_dict()},
                            os.path.join(log_dir, 'models', f'best_model_with_{NGraphs - 1}_graphs_{epoch}_{N}.pt'))
 
-                plot_training(config=config, dataset_name=dataset_name, model_name='WaveMesh',
+                plot_training(config=config, dataset_name=dataset_name,
                               log_dir=log_dir,
                               epoch=epoch, N=N, x=x_mesh, model=model, n_nodes=n_nodes, n_node_types=n_node_types, index_nodes=index_nodes, dataset_num=1,
                               index_particles=[], n_particles=[],
@@ -3093,7 +3093,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 ax.get_yaxis().set_visible(False)
                 # plt.autoscale(tight=True)
             else:
-                s_p = 200
+                s_p = 100
                 if simulation_config.has_cell_division:
                     s_p = 25
                 for n in range(n_particle_types):
@@ -3352,7 +3352,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_4_siren_with_time']
     # config_list = ['wave_slit_1_epoch']
     # config_list = ['wave_boat_noise_0_2']
-    config_list = ['arbitrary_3_field_1','arbitrary_3_field_3','arbitrary_3_field_1_boats','arbitrary_3_field_1_triangles']
+    config_list = ['RD_RPS_3']
 
     # config_list = ['arbitrary_3_field_video_random_siren_with_time']
     # config_list = ['arbitrary_3_field_video_honey_siren_with_time']
@@ -3362,14 +3362,13 @@ if __name__ == '__main__':
     for config_file in config_list:
         # Load parameters from config file
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        config.training.n_runs = 1
         # print(config.pretty())
 
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color frame', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 5)
-        # data_train(config, config_file, device)
+        data_generate(config, device=device, visualize=True, run_vizualized=1, style='color frame', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 50)
+        data_train(config, config_file, device)
         # data_test(config=config, config_file=config_file, visualize=True, style='color frame', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 5, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
 
