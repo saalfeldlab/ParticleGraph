@@ -150,8 +150,6 @@ class Interaction_Particles_extract(MessagePassing):
         else:  # PDE_A
             return r * (p[0] * torch.exp(-r ** (2 * p[1]) / (2 * self.sigma ** 2)) - p[2] * torch.exp(
                 -r ** (2 * p[3]) / (2 * self.sigma ** 2)))
-
-
 class PDE_B_extract(MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -200,8 +198,6 @@ class PDE_B_extract(MessagePassing):
         cohesion = p[0] * self.a1 * r
         separation = -p[2] * self.a3 / r
         return (cohesion + separation)
-
-
 class Mesh_RPS_extract(MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -255,61 +251,6 @@ class Mesh_RPS_extract(MessagePassing):
     def psi(self, r, p):
         return p * r
 
-
-class Mesh_RPS_learn(torch.nn.Module):
-
-    def __init__(self):
-        super(Mesh_RPS_learn, self).__init__()
-
-        self.cc = nn.Parameter(torch.zeros(5, requires_grad=True))
-
-        self.A = nn.Parameter(torch.zeros((9, 1), requires_grad=True))
-        self.B = nn.Parameter(torch.zeros((9, 1), requires_grad=True))
-        self.C = nn.Parameter(torch.zeros((9, 1), requires_grad=True))
-
-    def forward(self, in_features, type, list_index):
-        u = in_features[:, 3:4]
-        v = in_features[:, 4:5]
-        w = in_features[:, 5:6]
-
-        l = list_index.shape[0]
-        type = to_numpy(type)
-
-        laplacian_u = self.cc[type, None] * in_features[:, 0:1]
-        laplacian_v = self.cc[type, None] * in_features[:, 1:2]
-        laplacian_w = self.cc[type, None] * in_features[:, 2:3]
-
-        uu = u * u
-        uv = u * v
-        uw = u * w
-        vv = v * v
-        vw = v * w
-        ww = w * w
-
-        uu = uu[list_index]
-        uv = uv[list_index]
-        uw = uw[list_index]
-        vv = vv[list_index]
-        vw = vw[list_index]
-        ww = ww[list_index]
-
-        u = u[list_index]
-        v = v[list_index]
-        w = w[list_index]
-
-        D = 0.05
-
-        du = D * laplacian_u[list_index] + self.A[0] * uu + self.A[1] * uv + self.A[2] * uw + self.A[3] * vv + self.A[
-            4] * vw + self.A[5] * ww + self.A[6] * u + self.A[7] * v + self.A[8] * w
-        dv = D * laplacian_v[list_index] + self.B[0] * uu + self.B[1] * uv + self.B[2] * uw + self.B[3] * vv + self.B[
-            4] * vw + self.B[5] * ww + self.B[6] * u + self.B[7] * v + self.B[8] * w
-        dw = D * laplacian_w[list_index] + self.C[0] * uu + self.C[1] * uv + self.C[2] * uw + self.C[3] * vv + self.C[
-            4] * vw + self.C[5] * ww + self.C[6] * u + self.C[7] * v + self.C[8] * w
-
-        increment = torch.cat((du[:, None], dv[:, None], dw[:, None]), dim=1)
-
-        return increment.squeeze()
-    
 
 def plot_embedding(index, model_a, dataset_number, index_particles, n_particles, n_particle_types, epoch, it, fig, ax, cmap, device):
 
@@ -5245,7 +5186,7 @@ def data_plot_RD(config_file, cc='viridis'):
 
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-    # matplotlib.use("Qt5Agg")
+    matplotlib.use("Qt5Agg")
 
     if has_pic:
         i0 = imread(f'graphs_data/{simulation_config.node_type_map}')
@@ -5264,13 +5205,16 @@ def data_plot_RD(config_file, cc='viridis'):
         coeff = c[features_mesh]
         coeff = np.reshape(coeff, (n_nodes_per_axis, n_nodes_per_axis)) * simulation_config.beta
         coeff = np.flipud(coeff)
+        coeff = np.fliplr(coeff)
     vm = np.max(coeff)
+    print(f'vm: {vm}')
     fig_ = plt.figure(figsize=(12, 12))
     axf = fig_.add_subplot(1, 1, 1)
     axf.xaxis.set_major_locator(plt.MaxNLocator(3))
     axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-    axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-    axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
+    axf.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+    axf.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
     plt.imshow(coeff, cmap=cc, vmin=0, vmax=vm)
     plt.xlabel(r'$x$', fontsize=64)
     plt.ylabel(r'$y$', fontsize=64)
@@ -5282,7 +5226,7 @@ def data_plot_RD(config_file, cc='viridis'):
     plt.savefig(f"./{log_dir}/tmp_training/true_coeff_{config_file}.tif", dpi=300)
     plt.close()
 
-    net_list = ['20']
+    net_list = ['20'] # , '0_1000', '0_2000', '0_5000', '1', '5', '20']
 
     for net_ in net_list:
 
@@ -5305,7 +5249,7 @@ def data_plot_RD(config_file, cc='viridis'):
         else:
             for n in range(n_node_types):
                     c_ = np.round(n / (n_node_types - 1) * 256).astype(int)
-                    plt.scatter(embedding[index_nodes[n], 0], embedding[index_nodes[n], 1], c=cmap.color(c_), s=5)
+                    plt.scatter(embedding[index_nodes[n], 0], embedding[index_nodes[n], 1], color=cmap.color(c_), s=5)
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
         plt.xticks(fontsize=32.0)
@@ -5313,6 +5257,69 @@ def data_plot_RD(config_file, cc='viridis'):
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/embedding_{config_file}_{net_}.tif", dpi=300)
         plt.close()
+
+        print('fitting diffusion coeff ...')
+
+        rr = torch.tensor(np.linspace(0, 4, 200)).to(device)
+        popt_list = []
+        func_list = []
+        convert_color = [0,2,3,1]
+        fig_ = plt.figure(figsize=(12, 12))
+        for n in trange(n_nodes):
+            embedding_ = model.a[1, n, :] * torch.ones((200, 2), device=device)
+            in_features = torch.cat((rr[:, None], rr[:, None],rr[:, None],rr[:, None]*0,rr[:, None]*0,rr[:, None]*0,embedding_), dim=1)
+            h = model.lin_phi(in_features.float())
+            h = h[:, 0]
+            popt, pcov = curve_fit(linear_model, to_numpy(rr.squeeze()), to_numpy(h.squeeze()))
+            popt_list.append(popt)
+            func_list.append(h)
+            if (n % 4):
+                if has_pic:
+                    plt.plot(to_numpy(rr), to_numpy(h) * to_numpy(hnorm), linewidth=4,
+                             color=cmap.color(np.round(coeff_[n]*256).astype(int)), alpha=0.05)
+                else:
+                    # plt.plot(to_numpy(rr), to_numpy(h) * to_numpy(hnorm), linewidth=4, color=cmap.color(new_labels[n]%256), alpha=0.05)
+                    c_ = np.round(convert_color[int(to_numpy(type_list[n]))]*256/(n_node_types-1))
+                    plt.plot(to_numpy(rr), to_numpy(h) * to_numpy(hnorm), linewidth=4, color=cmap.color(c_.astype(int)), alpha=0.01)
+        plt.xlabel(r'$\Delta u_{i}$', fontsize=64)
+        plt.ylabel(r'$\Phi (\ensuremath{\mathbf{a}}_i, \Delta u_i)$', fontsize=64)
+        plt.xticks(fontsize=32.0)
+        plt.yticks(fontsize=32.0)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/phi_{config_file}_{net_}.tif", dpi=300)
+        plt.close()
+
+        func_list = torch.stack(func_list)
+        popt_list = np.array(popt_list)
+
+        # X.requires_grad = True
+        # L = -1 / X.shape[0] * torch.sum(psi(distmat_square(X, X)), axis=(0, 1))
+        # [g] = torch.autograd.grad(L, [X])
+
+        t = np.array(popt_list) * to_numpy(hnorm) / 0.05
+        t = t[:, 0]
+        t = np.reshape(t, (n_nodes_per_axis, n_nodes_per_axis))
+        t = np.flipud(t)
+        t = np.fliplr(t)
+
+        fig_ = plt.figure(figsize=(12, 12))
+        axf = fig_.add_subplot(1, 1, 1)
+        axf.xaxis.set_major_locator(plt.MaxNLocator(3))
+        axf.yaxis.set_major_locator(plt.MaxNLocator(3))
+        axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        plt.imshow(t, cmap=cc)
+        plt.xlabel(r'$x$', fontsize=64)
+        plt.ylabel(r'$y$', fontsize=64)
+        plt.xticks(fontsize=32.0)
+        plt.yticks(fontsize=32.0)
+        fmt = lambda x, pos: '{:.3%}'.format(x)
+        # cbar = plt.colorbar(format=FuncFormatter(fmt),shrink=0.5)
+        # cbar.ax.tick_params(labelsize=32)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/diff_coeff_{config_file}_{net_}.tif", dpi=300)
+        plt.close()
+
 
         labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
         label_list = []
@@ -5340,72 +5347,103 @@ def data_plot_RD(config_file, cc='viridis'):
         with torch.no_grad():
             model.a[1] = model_a_.clone().detach()
 
-        for k in range(0,4000,500):
-            x_mesh = x_mesh_list[1][k].clone().detach()
-            dataset = data.Data(x=x_mesh, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
-            with torch.no_grad():
-                pred, laplacian_uvw, uvw, embedding, input_phi = model(dataset, data_id=1, return_all=True)
-            pred = pred * hnorm
-            y = y_mesh_list[1][k].clone().detach()
+    k=2400
 
-            # RD_RPS_model :
-            c_ = torch.ones(n_node_types, 1, device=device) + torch.rand(n_node_types, 1, device=device)
-            for n in range(n_node_types):
-                c_[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
-            c = c_[to_numpy(dataset.x[:, 5])].squeeze()
-            u = uvw[:, 0]
-            v = uvw[:, 1]
-            w = uvw[:, 2]
-            # laplacian = mesh_model.beta * c * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
-            laplacian_u = 1 * c * laplacian_uvw[:, 0]
-            laplacian_v = 1 * c * laplacian_uvw[:, 1]
-            laplacian_w = 1 * c * laplacian_uvw[:, 2]
-            D = 0.05
-            a = 0.6
-            p = u + v + w
-            du = D * laplacian_u + u * (1 - p - a * v)
-            dv = D * laplacian_v + v * (1 - p - a * w)
-            dw = D * laplacian_w + w * (1 - p - a * u)
-            increment = torch.cat((du[:, None], dv[:, None], dw[:, None]), dim=1)
-            increment = increment.squeeze()
+    x_mesh = x_mesh_list[1][k].clone().detach()
+    dataset = data.Data(x=x_mesh, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
+    with torch.no_grad():
+        pred, laplacian_uvw, uvw, embedding, input_phi = model(dataset, data_id=1, return_all=True)
+    pred = pred * hnorm
+    y = y_mesh_list[1][k].clone().detach()
+
+    # RD_RPS_model :
+    c_ = torch.ones(n_node_types, 1, device=device) + torch.rand(n_node_types, 1, device=device)
+    for n in range(n_node_types):
+        c_[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
+    c = c_[to_numpy(dataset.x[:, 5])].squeeze()
+    u = uvw[:, 0]
+    v = uvw[:, 1]
+    w = uvw[:, 2]
+    # laplacian = mesh_model.beta * c * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
+    laplacian_u = 1 * c * laplacian_uvw[:, 0]
+    laplacian_v = 1 * c * laplacian_uvw[:, 1]
+    laplacian_w = 1 * c * laplacian_uvw[:, 2]
+    D = 0.05
+    a = 0.6
+    p = u + v + w
+    du = D * laplacian_u + u * (1 - p - a * v)
+    dv = D * laplacian_v + v * (1 - p - a * w)
+    dw = D * laplacian_w + w * (1 - p - a * u)
+    increment = torch.cat((du[:, None], dv[:, None], dw[:, None]), dim=1)
+    increment = increment.squeeze()
 
 
-            lin_fit_true = np.zeros((n_node_types, 3, 10))
-            lin_fit_reconstructed = np.zeros((n_node_types, 3, 10))
-            eq_list = ['u', 'v', 'w']
-            for n in trange(n_node_types):
-                pos = np.argwhere((new_labels == n) & (to_numpy(mask_mesh.squeeze()) == 1))
-                pos = pos[:,0].astype(int)
-                # plt.scatter(to_numpy(x_mesh[pos, 1]), to_numpy(x_mesh[pos, 2]))
-                for it, eq in enumerate(eq_list):
-                    laplacian_u = to_numpy(laplacian_uvw[pos, 0])
-                    laplacian_v = to_numpy(laplacian_uvw[pos, 1])
-                    laplacian_w = to_numpy(laplacian_uvw[pos, 2])
-                    u = to_numpy(uvw[pos, 0])
-                    v = to_numpy(uvw[pos, 1])
-                    w = to_numpy(uvw[pos, 2])
-                    x_data = np.concatenate((laplacian_u[:, None], laplacian_v[:, None], laplacian_w[:, None], u[:, None], v[:, None], w[:, None]), axis=1)
-                    y_data = to_numpy(increment[pos, 0+it:1+it])
-                    fitting_model = reaction_diffusion_model(eq)
-                    p0 = np.ones((10,1))
-                    lin_fit, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data), p0=np.squeeze(p0),method='trf')
-                    # print(f'fitting true model: {eq}  {lin_fit}')
-                    lin_fit_true[n, it] = lin_fit
-                    y_data = to_numpy(pred[pos, 0 + it:1 + it])
-                    fitting_model = reaction_diffusion_model(eq)
-                    lin_fit, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data), p0=np.squeeze(p0), method='trf')
-                    # print(f'fitting reconstructed model: {eq}  {lin_fit}')
-                    lin_fit_reconstructed[n, it] = lin_fit
+    lin_fit_true = np.zeros((n_node_types, 3, 10))
+    lin_fit_reconstructed = np.zeros((n_node_types, 3, 10))
+    eq_list = ['u', 'v', 'w']
+    if has_pic:
+        n_node_types_list=[0]
+    else:
+        n_node_types_list = np.arange(n_node_types)
+    for n in n_node_types_list:
+        if has_pic:
+            pos = np.argwhere(to_numpy(mask_mesh.squeeze()) == 1)
+        else:
+            pos = np.argwhere((new_labels == n) & (to_numpy(mask_mesh.squeeze()) == 1))
+            pos = pos[:,0].astype(int)
+        # plt.scatter(to_numpy(x_mesh[pos, 1]), to_numpy(x_mesh[pos, 2]))
+        for it, eq in enumerate(eq_list):
+            laplacian_u = to_numpy(laplacian_uvw[pos, 0])
+            laplacian_v = to_numpy(laplacian_uvw[pos, 1])
+            laplacian_w = to_numpy(laplacian_uvw[pos, 2])
+            u = to_numpy(uvw[pos, 0])
+            v = to_numpy(uvw[pos, 1])
+            w = to_numpy(uvw[pos, 2])
+            x_data = np.concatenate((laplacian_u[:, None], laplacian_v[:, None], laplacian_w[:, None], u[:, None], v[:, None], w[:, None]), axis=1)
+            y_data = to_numpy(increment[pos, 0+it:1+it])
+            fitting_model = reaction_diffusion_model(eq)
+            p0 = np.ones((10,1))
+            lin_fit, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data), p0=np.squeeze(p0),method='trf')
+            # print(f'fitting true model: {eq}  {lin_fit}')
+            lin_fit_true[n, it] = lin_fit
+            y_data = to_numpy(pred[pos, 0 + it:1 + it])
+            fitting_model = reaction_diffusion_model(eq)
+            lin_fit, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data), p0=np.squeeze(p0), method='trf')
+            # print(f'fitting reconstructed model: {eq}  {lin_fit}')
+            lin_fit_reconstructed[n, it] = lin_fit
 
-            coeff_reconstructed = np.round(np.median(lin_fit_reconstructed, axis=0),2)
-            diffusion_coeff_reconstructed = np.round(np.median(lin_fit_reconstructed, axis=1),2)[:,9]
-            coeff_true = np.round(np.median(lin_fit_true, axis=0),2)
-            diffusion_coeff_true = np.round(np.median(lin_fit_true, axis=1),2)[:,9]
+    coeff_reconstructed = np.round(np.median(lin_fit_reconstructed, axis=0),2)
+    diffusion_coeff_reconstructed = np.round(np.median(lin_fit_reconstructed, axis=1),2)[:,9]
+    coeff_true = np.round(np.median(lin_fit_true, axis=0),2)
+    diffusion_coeff_true = np.round(np.median(lin_fit_true, axis=1),2)[:,9]
 
-            print (f'coeff_reconstructed: {coeff_reconstructed}')
-            print(f'{k}   diffusion_coeff_reconstructed: {diffusion_coeff_reconstructed}')
-            print(f'coeff_true: {coeff_true}')
-            print(f'{k}   diffusion_coeff_true: {diffusion_coeff_true}')
+    print(f'frame {k}')
+    print (f'coeff_reconstructed: {coeff_reconstructed}')
+    print(f'diffusion_coeff_reconstructed: {diffusion_coeff_reconstructed}')
+    print(f'coeff_true: {coeff_true}')
+    print(f'diffusion_coeff_true: {diffusion_coeff_true}')
+
+    laplacian_uvw_list=[]
+    uvw_list=[]
+    pred_list=[]
+    for k in trange(n_frames-1):
+        x_mesh = x_mesh_list[1][k].clone().detach()
+        dataset = data.Data(x=x_mesh, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
+        with torch.no_grad():
+            pred, laplacian_uvw, uvw, embedding, input_phi = model(dataset, data_id=1, return_all=True)
+        pred = pred * hnorm
+
+
+
+    t= np.zeros((n_nodes,1))
+    for n in range(n_nodes):
+        t=t
+
+
+
+
+
+
 
 
 
@@ -5431,7 +5469,7 @@ if __name__ == '__main__':
 
     # config_list = ['arbitrary_3_field_1_no_model']
     # config_list = ['arbitrary_3_field_4_siren_with_time']
-    config_list = ['RD_RPS_1']
+    config_list = ['RD_RPS_4']
     # config_list = ['boids_16_256_20_epoch']
 
     # config_list = ['Coulomb_3_noise_0_2','Coulomb_3_noise_0_3','Coulomb_3_noise_0_4']

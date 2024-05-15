@@ -17,6 +17,7 @@ from scipy.spatial import Delaunay
 from torchvision.transforms import GaussianBlur
 from matplotlib import pyplot as plt
 from matplotlib import rc
+from matplotlib.ticker import FuncFormatter
 from prettytable import PrettyTable
 
 from ParticleGraph.config import ParticleGraphConfig
@@ -44,12 +45,12 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                                      alpha=0.2, ratio=1,
                                      scenario='none', device=None, bSave=True)
     else:
-        data_generate_node_node(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
+        data_generate_particle(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
                                         alpha=0.2, ratio=1,
                                         scenario=scenario, device=device, bSave=bSave)
 
 
-def data_generate_node_node(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
+def data_generate_particle(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
     print('')
 
@@ -286,6 +287,7 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
                         with torch.no_grad():
                             pred = mesh_model(dataset_mesh)
                             H1_mesh[mesh_data['mask'].squeeze(), :] += pred[mesh_data['mask'].squeeze(), :] * delta_t
+                            H1_mesh[mask_mesh.squeeze(), 6:9] = torch.clamp(H1_mesh[mask_mesh.squeeze(), 6:9], 0, 1)
                             H1 = H1_mesh.clone().detach()
                     case 'PDE_O_Mesh':
                         pred = []
@@ -492,6 +494,9 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
                                 case 'WaveMesh':
                                     plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                                   facecolors=colors.detach().cpu().numpy(), vmin=-1000, vmax=1000)
+                                    fmt = lambda x, pos: '{:.1f}'.format((x)/100, pos)
+                                    ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                                    ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
                                 case 'RD_Gray_Scott_Mesh':
                                     fig = plt.figure(figsize=(12, 6))
                                     ax = fig.add_subplot(1, 2, 1)
@@ -509,12 +514,14 @@ def data_generate_node_node(config, visualize=True, run_vizualized=0, style='col
                                     plt.yticks([])
                                     plt.axis('off')
                                 case 'RD_RPS_Mesh':
-                                    fig = plt.figure(figsize=(12, 12))
                                     H1_IM = torch.reshape(H1, (100, 100, 3))
                                     plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=1)
-                                    plt.xticks([])
-                                    plt.yticks([])
-                                    plt.axis('off')
+                                    fmt = lambda x, pos: '{:.1f}'.format((x)/100, pos)
+                                    ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                                    ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                                    # plt.xticks([])
+                                    # plt.yticks([])
+                                    # plt.axis('off')
                         else:
                             s_p = 100
                             if simulation_config.has_cell_division:
@@ -2908,10 +2915,15 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     time.sleep(1)
     for it in trange(n_frames+1):
 
-        x0 = x_list[0][it].clone().detach()
-        y0 = y_list[0][it].clone().detach()
+        x0 = x_list[run][it].clone().detach()
+        y0 = y_list[run][it].clone().detach()
         if model_config.signal_model_name == 'PDE_N':
             rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 6:7] - x0[:, 6:7]) ** 2, axis=1)))
+        elif model_config.mesh_model_name == 'WaveMesh':
+            rmserr = torch.sqrt(
+                torch.mean(torch.sum((x[mask_mesh.squeeze(), 6:7] - x0[mask_mesh.squeeze(), 6:7]) ** 2, axis=1)))
+        elif model_config.mesh_model_name == 'RD_RPS_Mesh':
+            rmserr = torch.sqrt(torch.mean(torch.sum((x[mask_mesh.squeeze(), 6:9] - x0[mask_mesh.squeeze(), 6:9]) ** 2, axis=1)))
         else:
             rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 1:3] - x0[:, 1:3]) ** 2, axis=1)))
         rmserr_list.append(rmserr.item())
@@ -2948,6 +2960,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             with torch.no_grad():
                 pred = mesh_model(dataset_mesh, data_id=1)
                 x[mask_mesh.squeeze(), 6:9] += pred[mask_mesh.squeeze()] * hnorm * delta_t
+                x[mask_mesh.squeeze(), 6:9] = torch.clamp(x[mask_mesh.squeeze(), 6:9], 0, 1)
         elif has_field:
 
             match model_config.field_type:
@@ -3032,7 +3045,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             A1 = A1 + delta_t
 
         if (it % step == 0) & (it >= 0) & visualize:
-
             # print(f'RMSE = {np.round(rmserr.item(), 4)}')
 
             # plt.style.use('dark_background')
@@ -3060,6 +3072,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 if model_config.mesh_model_name == 'WaveMesh':
                     plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
                                   facecolors=colors.detach().cpu().numpy(), vmin=-1000, vmax=1000)
+                    fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
+                    ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                    ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
                 if model_config.mesh_model_name == 'RD_Gray_Scott_Mesh':
                     fig = plt.figure(figsize=(12, 6))
                     ax = fig.add_subplot(1, 2, 1)
@@ -3077,12 +3092,14 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.yticks([])
                     plt.axis('off')
                 if model_config.mesh_model_name == 'RD_RPS_Mesh':
-                    fig = plt.figure(figsize=(12, 12))
                     H1_IM = torch.reshape(x[:, 6:9], (100, 100, 3))
                     plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=1)
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.axis('off')
+                    fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
+                    ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                    ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                    # plt.xticks([])
+                    # plt.yticks([])
+                    # plt.axis('off')
             elif model_config.signal_model_name == 'PDE_N':
                 # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=30, c=to_numpy(x[:,6]), cmap='viridis')
                 plt.plot(to_numpy(x0[:, 6:7]), to_numpy(x[:, 6:7]), '.')
@@ -3352,7 +3369,8 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_4_siren_with_time']
     # config_list = ['wave_slit_1_epoch']
     # config_list = ['wave_boat_noise_0_2']
-    config_list = ['RD_RPS_4']
+    config_list = ['RD_RPS_5']
+    # config_list = ['RD_RPS_boat']
 
     # config_list = ['arbitrary_3_field_video_random_siren_with_time']
     # config_list = ['arbitrary_3_field_video_honey_siren_with_time']
@@ -3367,9 +3385,9 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        # data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 50)
+        # data_generate(config, device=device, visualize=True, run_vizualized=1, style='color frame', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 5)
         data_train(config, config_file, device)
-        # data_test(config=config, config_file=config_file, visualize=True, style='color frame', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 5, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
+        # data_test(config=config, config_file=config_file, visualize=True, style='color frame', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 5, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
 
 

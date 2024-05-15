@@ -1,22 +1,22 @@
 description: 'Wave propagation'
-dataset: 'wave_slit_2'
+dataset: 'wave_boat_2'
 
 simulation:
-  params: [[0.2],[1.4],[2.6],[3.8],[5.0]]
+  params: [[1.4],[2.6],[3.8],[5.0]]
   min_radius: 0
   max_radius: 0.3
-  diffusion_coefficients: [[0],[0.6],[0.8],[1],[0.4]]
+  diffusion_coefficients: [[0.2],[0.4],[0.8],[1.2]]
   n_particles: 10000
-  n_particle_types: 5
-  n_interactions: 5
+  n_particle_types: 4
+  n_interactions: 4
   n_nodes: 10000
-  n_node_types:  5
+  n_node_types:  10000
   n_frames: 8000
   delta_t: 0.125
   dpos_init: 0
   boundary: 'periodic'
   node_value_map: 'pattern_30.tif'
-  node_type_map: 'pattern_19.tif'
+  node_type_map: 'pics_boats.tif'
   beta: 1.E-2
   start_frame: 0
 
@@ -34,10 +34,11 @@ graph_model:
   update_type: 'none'
 
 plotting:
-  colormap: 'viridis'
+  colormap: 'grey'
   arrow_length: 10
 
 training:
+  noise_level: 1.0E-3
   n_epochs: 20
   batch_size: 8
   small_init_batch_size: True
