@@ -5192,14 +5192,14 @@ def data_plot_RD(config_file, cc='viridis'):
 
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-    # matplotlib.use("Qt5Agg")
+    matplotlib.use("Qt5Agg")
 
     if has_pic:
         i0 = imread(f'graphs_data/{simulation_config.node_type_map}')
-        coeff = i0[(to_numpy(x_mesh[:, 1]) * 255).astype(int), (to_numpy(x_mesh[:, 2]) * 255).astype(int)] / 255
+        coeff = i0[(to_numpy(x_mesh[:, 1]) * 255).astype(int), (to_numpy(x_mesh[:, 2]) * 255).astype(int)]
         coeff_ = coeff
         coeff = np.reshape(coeff, (n_nodes_per_axis, n_nodes_per_axis))
-        coeff = np.flipud(coeff) * simulation_config.beta * 0.05
+        coeff = np.flipud(coeff) * simulation_config.beta
     else:
         c = initialize_random_values(n_node_types, device)
         for n in range(n_node_types):
@@ -5209,7 +5209,7 @@ def data_plot_RD(config_file, cc='viridis'):
         values = i0[(to_numpy(x_mesh[:, 1]) * 255).astype(int), (to_numpy(x_mesh[:, 2]) * 255).astype(int)]
         features_mesh = values
         coeff = c[features_mesh]
-        coeff = np.reshape(coeff, (n_nodes_per_axis, n_nodes_per_axis)) * simulation_config.beta * 0.05
+        coeff = np.reshape(coeff, (n_nodes_per_axis, n_nodes_per_axis)) * simulation_config.beta
         coeff = np.flipud(coeff)
         coeff = np.fliplr(coeff)
     vm = np.max(coeff)
@@ -5232,7 +5232,7 @@ def data_plot_RD(config_file, cc='viridis'):
     plt.savefig(f"./{log_dir}/tmp_training/true_coeff_{config_file}.tif", dpi=300)
     plt.close()
 
-    net_list = ['20', '0_1000', '0_2000', '0_5000', '1', '5']
+    net_list = ['20'] #, '0_1000', '0_2000', '0_5000', '1', '5']
 
     for net_ in net_list:
 
@@ -5240,7 +5240,7 @@ def data_plot_RD(config_file, cc='viridis'):
         model, bc_pos, bc_dpos = choose_training_model(config, device)
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
-
+        print(f'net: {net}')
         embedding = get_embedding(model.a, 1)
 
         fig_ = plt.figure(figsize=(12, 12))
@@ -5255,7 +5255,7 @@ def data_plot_RD(config_file, cc='viridis'):
         else:
             for n in range(n_node_types):
                     c_ = np.round(n / (n_node_types - 1) * 256).astype(int)
-                    plt.scatter(embedding[index_nodes[n], 0], embedding[index_nodes[n], 1], color=cmap.color(c_), s=5)
+                    plt.scatter(embedding[index_nodes[n], 0], embedding[index_nodes[n], 1], s=200)  # , color=cmap.color(c_)
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
         plt.xticks(fontsize=32.0)
@@ -5265,6 +5265,8 @@ def data_plot_RD(config_file, cc='viridis'):
         plt.close()
 
         if not(has_pic):
+
+            print('domain clustering...')
             labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
             label_list = []
             for n in range(n_node_types):
@@ -5290,12 +5292,13 @@ def data_plot_RD(config_file, cc='viridis'):
             with torch.no_grad():
                 model.a[1] = model_a_.clone().detach()
 
-        print('fitting diffusion coeff ...')
+        print('fitting diffusion coeff with domain clustering...')
 
-        if net_=='20':
+        if True:
 
             k=2400
 
+            # collect data from sing
             x_mesh = x_mesh_list[1][k].clone().detach()
             dataset = data.Data(x=x_mesh, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
             with torch.no_grad():
@@ -5315,23 +5318,22 @@ def data_plot_RD(config_file, cc='viridis'):
             laplacian_u = c * laplacian_uvw[:, 0]
             laplacian_v = c * laplacian_uvw[:, 1]
             laplacian_w = c * laplacian_uvw[:, 2]
-            D = 0.05
             a = 0.6
             p = u + v + w
-            du = D * laplacian_u + u * (1 - p - a * v)
-            dv = D * laplacian_v + v * (1 - p - a * w)
-            dw = D * laplacian_w + w * (1 - p - a * u)
+            du = laplacian_u + u * (1 - p - a * v)
+            dv = laplacian_v + v * (1 - p - a * w)
+            dw = laplacian_w + w * (1 - p - a * u)
             increment = torch.cat((du[:, None], dv[:, None], dw[:, None]), dim=1)
             increment = increment.squeeze()
 
-            lin_fit_true = np.zeros((n_node_types, 3, 10))
-            lin_fit_reconstructed = np.zeros((n_node_types, 3, 10))
+            lin_fit_true = np.zeros((np.max(new_labels)+1, 3, 10))
+            lin_fit_reconstructed = np.zeros((np.max(new_labels)+1, 3, 10))
             eq_list = ['u', 'v', 'w']
             if has_pic:
                 n_node_types_list=[0]
             else:
                 n_node_types_list = np.arange(n_node_types)
-            for n in n_node_types_list:
+            for n in np.unique(new_labels):
                 if has_pic:
                     pos = np.argwhere(to_numpy(mask_mesh.squeeze()) == 1)
                 else:
@@ -5355,6 +5357,8 @@ def data_plot_RD(config_file, cc='viridis'):
                     lin_fit, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data), p0=np.squeeze(p0), method='trf')
                     lin_fit_reconstructed[n, it] = lin_fit
 
+
+
             coeff_reconstructed = np.round(np.median(lin_fit_reconstructed, axis=0),2)
             diffusion_coeff_reconstructed = np.round(np.median(lin_fit_reconstructed, axis=1),2)[:,9]
             coeff_true = np.round(np.median(lin_fit_true, axis=0),2)
@@ -5365,6 +5369,103 @@ def data_plot_RD(config_file, cc='viridis'):
             print(f'diffusion_coeff_reconstructed: {diffusion_coeff_reconstructed}')
             print(f'coeff_true: {coeff_true}')
             print(f'diffusion_coeff_true: {diffusion_coeff_true}')
+
+
+
+            cp = ['uu','uv','uw','vv','vw','ww','u','v','w']
+            results = {
+                'True': coeff_true[0,0:9],
+                'Reconstructed': coeff_reconstructed[0,0:9],
+            }
+            x = np.arange(len(cp))  # the label locations
+            width = 0.25  # the width of the bars
+            multiplier = 0
+            fig = plt.figure(figsize=(12, 12))
+            ax = fig.add_subplot(1, 1, 1)
+            for attribute, measurement in results.items():
+                offset = width * multiplier
+                rects = ax.bar(x + offset, measurement, width, label=attribute)
+                multiplier += 1
+            ax.set_ylabel('Polynomial coefficient',fontsize=48)
+            ax.set_xticks(x + width, cp,fontsize=48)
+            plt.xticks(fontsize=32.0)
+            plt.yticks(fontsize=32.0)
+            plt.title('First equation',fontsize=48)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/tmp_training/first_equation_{config_file}_{net_}.tif", dpi=300)
+            plt.close()
+            cp = ['uu','uv','uw','vv','vw','ww','u','v','w']
+            results = {
+                'True': coeff_true[1,0:9],
+                'Reconstructed': coeff_reconstructed[1,0:9],
+            }
+            x = np.arange(len(cp))  # the label locations
+            width = 0.25  # the width of the bars
+            multiplier = 0
+            fig = plt.figure(figsize=(12, 12))
+            ax = fig.add_subplot(1, 1, 1)
+            for attribute, measurement in results.items():
+                offset = width * multiplier
+                rects = ax.bar(x + offset, measurement, width, label=attribute)
+                multiplier += 1
+            ax.set_ylabel('Polynomial coefficient',fontsize=48)
+            ax.set_xticks(x + width, cp,fontsize=48)
+            plt.xticks(fontsize=32.0)
+            plt.yticks(fontsize=32.0)
+            plt.title('Second equation',fontsize=48)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/tmp_training/second_equation_{config_file}_{net_}.tif", dpi=300)
+            plt.close()
+            cp = ['uu','uv','uw','vv','vw','ww','u','v','w']
+            results = {
+                'True': coeff_true[2,0:9],
+                'Reconstructed': coeff_reconstructed[2,0:9],
+            }
+            x = np.arange(len(cp))  # the label locations
+            width = 0.25  # the width of the bars
+            multiplier = 0
+            fig = plt.figure(figsize=(12, 12))
+            ax = fig.add_subplot(1, 1, 1)
+            for attribute, measurement in results.items():
+                offset = width * multiplier
+                rects = ax.bar(x + offset, measurement, width, label=attribute)
+                multiplier += 1
+            ax.set_ylabel('Polynomial coefficient',fontsize=48)
+            ax.set_xticks(x + width, cp,fontsize=48)
+            plt.xticks(fontsize=32.0)
+            plt.yticks(fontsize=32.0)
+            plt.title('Third equation',fontsize=48)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/tmp_training/third_equation_{config_file}_{net_}.tif", dpi=300)
+            plt.close()
+
+
+
+
+            fig_ = plt.figure(figsize=(12, 12))
+            t =diffusion_coeff_reconstructed [new_labels]
+            t_ = np.reshape(t, (n_nodes_per_axis, n_nodes_per_axis))
+            t_ = np.flipud(t_)
+            t_ = np.fliplr(t_)
+            fig_ = plt.figure(figsize=(12, 12))
+            axf = fig_.add_subplot(1, 1, 1)
+            axf.xaxis.set_major_locator(plt.MaxNLocator(3))
+            axf.yaxis.set_major_locator(plt.MaxNLocator(3))
+            fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
+            axf.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+            axf.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+            plt.imshow(t_, cmap=cc, vmin=0, vmax=vm)
+            plt.xlabel(r'$x$', fontsize=64)
+            plt.ylabel(r'$y$', fontsize=64)
+            plt.xticks(fontsize=32.0)
+            plt.yticks(fontsize=32.0)
+            fmt = lambda x, pos: '{:.3%}'.format(x)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/tmp_training/diff_coeff_map_{config_file}_{net_}.tif", dpi=300)
+            plt.close()
+
+    if False:
+
 
         laplacian_uvw_list=[]
         uvw_list=[]
@@ -5381,28 +5482,47 @@ def data_plot_RD(config_file, cc='viridis'):
             uvw_list.append(uvw)
             input_phi_list.append(input_phi)
 
+        laplacian_uvw_list= torch.stack(laplacian_uvw_list)
+        uvw_list = torch.stack(uvw_list)
+        pred_list = torch.stack(pred_list)
 
-        t = np.zeros((n_nodes,3))
+        print('Fit node level ...')
+        t = np.zeros((n_nodes,1))
         for n in trange(n_nodes):
-            for it, eq in enumerate(eq_list):
-                fitting_model = reaction_diffusion_model_L(eq)
+            for it, eq in enumerate(eq_list[0]):
+                fitting_model = reaction_diffusion_model(eq)
                 laplacian_u = to_numpy(laplacian_uvw_list[:,n, 0].squeeze())
                 laplacian_v = to_numpy(laplacian_uvw_list[:,n, 1].squeeze())
                 laplacian_w = to_numpy(laplacian_uvw_list[:,n, 2].squeeze())
                 u = to_numpy(uvw_list[:,n, 0].squeeze())
                 v = to_numpy(uvw_list[:,n, 1].squeeze())
                 w = to_numpy(uvw_list[:,n,  2].squeeze())
-                p = coeff_reconstructed[it, None] * np.ones((n_frames - 1, 1))
                 x_data = np.concatenate((laplacian_u[:, None], laplacian_v[:, None], laplacian_w[:, None], u[:, None], v[:, None], w[:, None]),axis=1)
-                y_data = to_numpy(pred_list[:,n, it:it+1].squeeze())
+                y_data = to_numpy(pred_list[:,n,it:it+1].squeeze())
                 lin_fit, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), y_data,  method='trf')
-                t[n,it]=lin_fit
+                t[n]=lin_fit[-1:]
 
+                if ((n % 1000 == 0) | (n == n_nodes - 1)):
+                    t_ = np.reshape(t, (n_nodes_per_axis, n_nodes_per_axis))
+                    t_ = np.flipud(t_)
+                    t_ = np.fliplr(t_)
+                    fig_ = plt.figure(figsize=(12, 12))
+                    axf = fig_.add_subplot(1, 1, 1)
+                    axf.xaxis.set_major_locator(plt.MaxNLocator(3))
+                    axf.yaxis.set_major_locator(plt.MaxNLocator(3))
+                    fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
+                    axf.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                    axf.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                    plt.imshow(t_ * to_numpy(hnorm), cmap=cc, vmin=0, vmax=1)
+                    plt.xlabel(r'$x$', fontsize=64)
+                    plt.ylabel(r'$y$', fontsize=64)
+                    plt.xticks(fontsize=32.0)
+                    plt.yticks(fontsize=32.0)
+                    fmt = lambda x, pos: '{:.3%}'.format(x)
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/tmp_training/diff_node_coeff_{config_file}_{net_}.tif", dpi=300)
+                    plt.close()
 
-
-        laplacian_uvw_list= torch.stack(laplacian_uvw_list)
-        uvw_list = torch.stack(uvw_list)
-        pred_list = torch.stack(pred_list)
         input_phi_list = torch.stack(input_phi_list)
         t = np.zeros((n_nodes, 1))
         for node in trange(n_nodes):
@@ -5442,7 +5562,7 @@ def data_plot_RD(config_file, cc='viridis'):
         pos = torch.argwhere(mask_mesh == 1)
         pos = to_numpy(pos[:, 0]).astype(int)
         x_data = np.reshape(coeff, (n_nodes))
-        y_data = np.reshape(t_, (n_nodes))/0.05*to_numpy(hnorm)
+        y_data = np.reshape(t_, (n_nodes))
         x_data = x_data.squeeze()
         y_data = y_data.squeeze()
         x_data = x_data[pos]
@@ -5453,8 +5573,8 @@ def data_plot_RD(config_file, cc='viridis'):
         axf.xaxis.set_major_formatter(FormatStrFormatter('%.3f'))
         axf.yaxis.set_major_formatter(FormatStrFormatter('%.3f'))
         plt.scatter(x_data, y_data, c='k', s=100, alpha=0.01)
-        plt.ylabel(r'Reconstructed coefficients', fontsize=48)
-        plt.xlabel(r'True coefficients', fontsize=48)
+        plt.ylabel(r'Reconstructed diffusion coeff.', fontsize=48)
+        plt.xlabel(r'True diffusion coeff.', fontsize=48)
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
         plt.xlim([0, vm * 1.1])
@@ -5470,7 +5590,7 @@ def data_plot_RD(config_file, cc='viridis'):
         plt.savefig(f"./{log_dir}/tmp_training/scatter_{config_file}_{net_}.tif", dpi=300)
         plt.close()
 
-        print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   ")
+        print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}")
 
 
 

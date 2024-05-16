@@ -34,7 +34,7 @@ def _aux_reaction_diffusion(x, a, b, c, d, e, f, g, h, i, cc, idx):
     vw = v * w
     ww = w * w
 
-    return 0.05 * laplacian + a * uu + b * uv + c * uw + d * vv + e * vw + f * ww + g * u + h * v + i * w
+    return laplacian + a * uu + b * uv + c * uw + d * vv + e * vw + f * ww + g * u + h * v + i * w
 
 def _aux_reaction_diffusion_L(x, cc, idx):
     u = x[:, 3]
@@ -59,7 +59,7 @@ def _aux_reaction_diffusion_L(x, cc, idx):
     vw = v * w
     ww = w * w
 
-    return 0.05 * laplacian + a * uu + b * uv + c * uw + d * vv + e * vw + f * ww + g * u + h * v + i * w
+    return laplacian + a * uu + b * uv + c * uw + d * vv + e * vw + f * ww + g * u + h * v + i * w
 
 
 def reaction_diffusion_model(variable_name):

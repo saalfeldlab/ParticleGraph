@@ -26,11 +26,9 @@ class RD_RPS(pyg.nn.MessagePassing):
         super(RD_RPS, self).__init__(aggr='add')  # "mean" aggregation.
 
         self.c = c
-        self.beta = beta
         self.bc_dpos = bc_dpos
         self.coeff = []
 
-        self.D = 0.05
         self.a = 0.6
 
     def forward(self, data):
@@ -44,14 +42,14 @@ class RD_RPS(pyg.nn.MessagePassing):
             c = self.coeff
 
         uvw = data.x[:, 6:9]
-        laplace_uvw = self.beta * c * self.propagate(data.edge_index, uvw=uvw, discrete_laplacian=data.edge_attr)
+        laplace_uvw = c * self.propagate(data.edge_index, uvw=uvw, discrete_laplacian=data.edge_attr)
         p = torch.sum(uvw, axis=1)
 
         # This is equivalent to the nonlinear reaction diffusion equation:
         #   du = D * laplace_u + u * (1 - p - a * v)
         #   dv = D * laplace_v + v * (1 - p - a * w)
         #   dw = D * laplace_w + w * (1 - p - a * u)
-        d_uvw = self.D * laplace_uvw + uvw * (1 - p[:,None] - self.a * uvw[:, [1, 2, 0]])
+        d_uvw = laplace_uvw + uvw * (1 - p[:,None] - self.a * uvw[:, [1, 2, 0]])
 
         return d_uvw
 

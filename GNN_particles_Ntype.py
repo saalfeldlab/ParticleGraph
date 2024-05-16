@@ -138,7 +138,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
             mask_mesh = mesh_data['mask'].squeeze()
             if 'pics' in simulation_config.node_type_map:
                 i0 = imread(f'graphs_data/{simulation_config.node_type_map}')
-                values = i0[(to_numpy(X1_mesh[:, 0]) * 255).astype(int), (to_numpy(X1_mesh[:, 1]) * 255).astype(int)] / 255
+                values = i0[(to_numpy(X1_mesh[:, 0]) * 255).astype(int), (to_numpy(X1_mesh[:, 1]) * 255).astype(int)]
                 values = np.reshape(values,len(X1_mesh))
                 mesh_model.coeff = torch.tensor(values, device=device, dtype=torch.float32)[:, None]
 
@@ -283,7 +283,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         H1_mesh[mask_mesh, 0:1] += H1_mesh[mask_mesh, 1:2] * delta_t
                         # x_ = to_numpy(x_mesh)
                         # plt.scatter(x_[:, 1], x_[:, 2], c=to_numpy(H1_mesh[:, 0]))
-                    case 'RD_Gray_Scott_Mesh' | 'RD_FitzHugh_Nagumo_Mesh' | 'RD_RPS_Mesh':
+                    case 'RD_Gray_Scott_Mesh' | 'RD_FitzHugh_Nagumo_Mesh' | 'RD_RPS_Mesh' | 'RD_RPS_Mesh_bis':
                         with torch.no_grad():
                             pred = mesh_model(dataset_mesh)
                             H1_mesh[mesh_data['mask'].squeeze(), :] += pred[mesh_data['mask'].squeeze(), :] * delta_t
@@ -513,7 +513,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                                     plt.xticks([])
                                     plt.yticks([])
                                     plt.axis('off')
-                                case 'RD_RPS_Mesh':
+                                case 'RD_RPS_Mesh' | 'RD_RPS_Mesh_bis':
                                     H1_IM = torch.reshape(H1, (100, 100, 3))
                                     plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=1)
                                     fmt = lambda x, pos: '{:.1f}'.format((x)/100, pos)
@@ -550,7 +550,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         else:
                             plt.xticks([])
                             plt.yticks([])
-                        if not (model_config.mesh_model_name == 'RD_RPS_Mesh'):
+                        if not ('RD_RPS_Mesh' in model_config.mesh_model_name):
                             plt.xlim([0, 1])
                             plt.ylim([0, 1])
                         # plt.xlim([-2, 2])
@@ -2923,8 +2923,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     time.sleep(1)
     for it in trange(n_frames+1):
 
-        x0 = x_list[run][it].clone().detach()
-        y0 = y_list[run][it].clone().detach()
+        x0 = x_list[0][it].clone().detach()
+        y0 = y_list[0][it].clone().detach()
         if model_config.signal_model_name == 'PDE_N':
             rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 6:7] - x0[:, 6:7]) ** 2, axis=1)))
         elif model_config.mesh_model_name == 'WaveMesh':
@@ -3377,7 +3377,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_4_siren_with_time']
     # config_list = ['wave_slit_1_epoch']
     # config_list = ['wave_boat_noise_0_2']
-    config_list = ['RD_RPS_boat_2']
+    config_list = ['boids_16_256_steady']
     # config_list = ['RD_RPS_boat']
 
     # config_list = ['arbitrary_3_field_video_random_siren_with_time']
@@ -3393,9 +3393,9 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        # data_generate(config, device=device, visualize=True, run_vizualized=1, style='color frame', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 5)
-        data_train(config, config_file, device)
-        # data_test(config=config, config_file=config_file, visualize=True, style='color frame', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 5, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
+        # data_generate(config, device=device, visualize=True, run_vizualized=1, style='bw', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
+        # data_train(config, config_file, device)
+        data_test(config=config, config_file=config_file, visualize=True, style='color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 7, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
 
 

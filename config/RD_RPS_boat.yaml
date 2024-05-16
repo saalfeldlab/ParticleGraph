@@ -5,7 +5,7 @@ simulation:
   params: [[0],[0],[0],[0]]
   min_radius: 0
   max_radius: 0.3
-  diffusion_coefficients: [[0.2],[0.4],[0.6],[0.8]]
+  diffusion_coefficients:  [[0.01], [0.02], [0.03], [0.040]]
   n_particles: 10000
   n_particle_types: 4
   n_interactions: 4
@@ -15,7 +15,7 @@ simulation:
   delta_t: 0.05
   boundary: 'periodic'
   node_value_map: 'pattern_10.tif'
-  node_type_map: 'pics_boats.tif'
+  node_type_map: 'pics_boats_RD.tif'
   beta: 1
 
 graph_model:
