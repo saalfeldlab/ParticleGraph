@@ -77,6 +77,8 @@ class Signal_Propagation(pyg.nn.MessagePassing):
         A[i,j] = self.vals
         A.T[i,j] = self.vals
 
+        self.A = A
+
         weight_ij = A[to_numpy(edge_index_i),to_numpy(edge_index_j),None]
         self.weight_ij = A.clone().detach()
 

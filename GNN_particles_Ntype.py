@@ -3377,13 +3377,14 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_4_siren_with_time']
     # config_list = ['wave_slit_1_epoch']
     # config_list = ['wave_boat_noise_0_2']
-    config_list = ['boids_16_256_steady']
+    # config_list = ['boids_16_256_steady']
     # config_list = ['RD_RPS_boat']
 
     # config_list = ['arbitrary_3_field_video_random_siren_with_time']
     # config_list = ['arbitrary_3_field_video_honey_siren_with_time']
     # config_list = ['arbitrary_3_field_video_bison_siren_with_time']
     # config_list = ['arbitrary_3_field_2_boats_siren_with_time']
+    config_list = ['signal_N_100']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -3394,8 +3395,8 @@ if __name__ == '__main__':
         print(f'device {device}')
 
         # data_generate(config, device=device, visualize=True, run_vizualized=1, style='bw', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
-        # data_train(config, config_file, device)
-        data_test(config=config, config_file=config_file, visualize=True, style='color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 7, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
+        data_train(config, config_file, device)
+        # data_test(config=config, config_file=config_file, visualize=True, style='color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 7, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
 
 

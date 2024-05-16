@@ -5658,6 +5658,35 @@ def data_plot_signal(config_file, cc='viridis'):
     adjacency = torch.tensor(mat['A'], device=device)
     adj_t = adjacency > 0
     edge_index = adj_t.nonzero().t().contiguous()
+    gt_weight = to_numpy(adjacency[adj_t])
+    norm_gt_weight = max(gt_weight)
+
+    fig_ = plt.figure(figsize=(12, 12))
+    axf = fig_.add_subplot(1, 1, 1)
+    axf.xaxis.set_major_locator(plt.MaxNLocator(3))
+    axf.yaxis.set_major_locator(plt.MaxNLocator(3))
+    axf.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+    axf.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+    plt.imshow(to_numpy(adjacency) / norm_gt_weight, cmap=cc, vmin=0, vmax=0.1)
+    plt.xticks(fontsize=32.0)
+    plt.yticks(fontsize=32.0)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/True_Aij_{config_file}.tif", dpi=300)
+    plt.close()
+    fig_ = plt.figure(figsize=(12, 12))
+    axf = fig_.add_subplot(1, 1, 1)
+    axf.xaxis.set_major_locator(plt.MaxNLocator(3))
+    axf.yaxis.set_major_locator(plt.MaxNLocator(3))
+    axf.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+    axf.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+    plt.imshow(to_numpy(adjacency) / norm_gt_weight, cmap=cc, vmin=0, vmax=0.1)
+    plt.xticks(fontsize=32.0)
+    plt.yticks(fontsize=32.0)
+    cbar = plt.colorbar(shrink=0.5)
+    cbar.ax.tick_params(labelsize=32)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/True_Aij_bar_{config_file}.tif", dpi=300)
+    plt.close()
 
 
     plt.rcParams['text.usetex'] = True
@@ -5665,7 +5694,7 @@ def data_plot_signal(config_file, cc='viridis'):
     matplotlib.use("Qt5Agg")
 
 
-    net_list = ['20'] #, '0_1000', '0_2000', '0_5000', '1', '5']
+    net_list = ['20', '0', '1', '5']
 
     for net_ in net_list:
 
@@ -5735,223 +5764,73 @@ def data_plot_signal(config_file, cc='viridis'):
             with torch.no_grad():
                 model.a[1] = model_a_.clone().detach()
 
-        print('fitting diffusion coeff with domain clustering...')
+        k=2400
 
-        if True:
+        k = np.random.randint(n_frames - 1)
+        x = x_list[1][k].clone().detach()
+        dataset = data.Data(x=x[:, :], edge_index=model.edges)
+        y = y_list[1][k].clone().detach()
+        y = y
+        pred = model(dataset, data_id=1) * ynorm
 
-            k=2400
+        fig_ = plt.figure(figsize=(12, 12))
+        axf = fig_.add_subplot(1, 1, 1)
+        axf.xaxis.set_major_locator(plt.MaxNLocator(3))
+        axf.yaxis.set_major_locator(plt.MaxNLocator(3))
+        axf.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+        axf.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+        gt_weight = to_numpy(adjacency[adj_t])
+        norm_gt_weight = max(gt_weight)
+        gt_weight = gt_weight / norm_gt_weight
+        pred_weight = to_numpy(model.weight_ij[adj_t])
+        norm_pred_weight = min(pred_weight)
+        pred_weight_ = pred_weight / norm_pred_weight
+        plt.scatter(gt_weight, pred_weight_, s=200, c='k')
+        plt.ylabel(r'Reconstructed matrix $A_{ij}$ values ', fontsize=48)
+        plt.xlabel(r'True matrix $A_{ij}$ values', fontsize=48)
+        plt.xticks(fontsize=32.0)
+        plt.yticks(fontsize=32.0)
+        x_data=gt_weight
+        y_data=pred_weight_.squeeze()
+        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+        residuals = y_data - linear_model(x_data, *lin_fit)
+        ss_res = np.sum(residuals ** 2)
+        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot)
+        plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+        plt.xlim([0, 1])
+        plt.xlim([0, 1])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/scatter_{config_file}_{net_}.tif", dpi=300)
+        plt.close()
 
-            k = np.random.randint(n_frames - 1)
-            x = x_list[1][k].clone().detach()
-            dataset = data.Data(x=x[:, :], edge_index=model.edges)
-            y = y_list[1][k].clone().detach()
-            y = y
-            pred = model(dataset, data_id=1) * ynorm
+        print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   offset: {np.round(lin_fit[1], 2)}  ")
 
-            fig_ = plt.figure(figsize=(12, 12))
-            axf = fig_.add_subplot(1, 1, 1)
-            axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-            axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-            axf.xaxis.set_major_formatter(FormatStrFormatter('%.4f'))
-            axf.yaxis.set_major_formatter(FormatStrFormatter('%.4f'))
-            gt_weight = to_numpy(adjacency[adj_t])
+        fig_ = plt.figure(figsize=(12, 12))
+        axf = fig_.add_subplot(1, 1, 1)
+        axf.xaxis.set_major_locator(plt.MaxNLocator(3))
+        axf.yaxis.set_major_locator(plt.MaxNLocator(3))
+        axf.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+        axf.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+        plt.imshow(to_numpy(model.A) / norm_pred_weight, cmap=cc, vmin=0, vmax=0.1)
+        plt.xticks(fontsize=32.0)
+        plt.yticks(fontsize=32.0)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/Reconstructed_Aij_{config_file}_{net_}.tif", dpi=300)
+        plt.close()
 
-            msg = model.weight_ij[adj_t] # * model.lin_edge(torch.ones((1), device=device))
-            embedding_ = model.a[1, 0, :].clone().detach() * torch.ones((len(msg), model_config.embedding_dim), device=device)
-            u = torch.zeros((len(msg),1),device=device)
-            input_phi = torch.cat((msg[:,None], u, embedding_), dim=-1)
-            pred_weight = to_numpy(model.lin_phi(input_phi))
-            # pred_weight = model.weight_ij[adj_t] # * model.lin_edge(torch.ones((1), device=device))
-            # pred_weight = to_numpy(pred_weight)
-            plt.scatter(gt_weight, pred_weight, s=0.1, c='k')
-            plt.xlabel('gt weight', fontsize=64)
-            plt.ylabel('predicted weight', fontsize=64)
-            plt.xticks(fontsize=32.0)
-            plt.yticks(fontsize=32.0)
-            plt.tight_layout()
-
-            x_data=gt_weight
-            y_data=pred_weight.squeeze()
-            lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-            residuals = y_data - linear_model(x_data, *lin_fit)
-            ss_res = np.sum(residuals ** 2)
-            ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-            r_squared = 1 - (ss_res / ss_tot)
-            plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/scatter_{config_file}_{net_}.tif", dpi=300)
-            plt.close()
-
-            print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   offset: {np.round(lin_fit[1], 2)}  ")
-
-
-
-
-
-
-
-            # collect data from sing
-            x_mesh = x_mesh_list[1][k].clone().detach()
-            dataset = data.Data(x=x_mesh, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
-            with torch.no_grad():
-                pred, laplacian_uvw, uvw, embedding, input_phi = model(dataset, data_id=1, return_all=True)
-            pred = pred * hnorm
-            y = y_mesh_list[1][k].clone().detach()
-
-            # RD_RPS_model :
-            c_ = torch.ones(n_node_types, 1, device=device) + torch.rand(n_node_types, 1, device=device)
-            for n in range(n_node_types):
-                c_[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
-            c = c_[to_numpy(dataset.x[:, 5])].squeeze()
-            u = uvw[:, 0]
-            v = uvw[:, 1]
-            w = uvw[:, 2]
-            # laplacian = mesh_model.beta * c * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
-            laplacian_u = c * laplacian_uvw[:, 0]
-            laplacian_v = c * laplacian_uvw[:, 1]
-            laplacian_w = c * laplacian_uvw[:, 2]
-            a = 0.6
-            p = u + v + w
-            du = laplacian_u + u * (1 - p - a * v)
-            dv = laplacian_v + v * (1 - p - a * w)
-            dw = laplacian_w + w * (1 - p - a * u)
-            increment = torch.cat((du[:, None], dv[:, None], dw[:, None]), dim=1)
-            increment = increment.squeeze()
-
-            lin_fit_true = np.zeros((np.max(new_labels)+1, 3, 10))
-            lin_fit_reconstructed = np.zeros((np.max(new_labels)+1, 3, 10))
-            eq_list = ['u', 'v', 'w']
-            if has_pic:
-                n_node_types_list=[0]
-            else:
-                n_node_types_list = np.arange(n_node_types)
-            for n in np.unique(new_labels):
-                if has_pic:
-                    pos = np.argwhere(to_numpy(mask_mesh.squeeze()) == 1)
-                else:
-                    pos = np.argwhere((new_labels == n) & (to_numpy(mask_mesh.squeeze()) == 1))
-                    pos = pos[:,0].astype(int)
-
-                for it, eq in enumerate(eq_list):
-                    fitting_model = reaction_diffusion_model(eq)
-                    laplacian_u = to_numpy(laplacian_uvw[pos, 0])
-                    laplacian_v = to_numpy(laplacian_uvw[pos, 1])
-                    laplacian_w = to_numpy(laplacian_uvw[pos, 2])
-                    u = to_numpy(uvw[pos, 0])
-                    v = to_numpy(uvw[pos, 1])
-                    w = to_numpy(uvw[pos, 2])
-                    x_data = np.concatenate((laplacian_u[:, None], laplacian_v[:, None], laplacian_w[:, None], u[:, None], v[:, None], w[:, None]), axis=1)
-                    y_data = to_numpy(increment[pos, 0+it:1+it])
-                    p0 = np.ones((10,1))
-                    lin_fit, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data), p0=np.squeeze(p0),method='trf')
-                    lin_fit_true[n, it] = lin_fit
-                    y_data = to_numpy(pred[pos, it:it+1])
-                    lin_fit, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data), p0=np.squeeze(p0), method='trf')
-                    lin_fit_reconstructed[n, it] = lin_fit
+        fig_ = plt.figure(figsize=(12, 12))
+        axf = fig_.add_subplot(1, 1, 1)
+        uu = torch.tensor(np.linspace(0, 2, 1000)).to(device)
+        with torch.no_grad():
+            func = model.lin_edge(uu[:,None].float())
+        true_func = torch.tanh(uu[:,None].float())
+        plt.plot(to_numpy(uu), to_numpy(func) * to_numpy(ynorm), linewidth=8)
+        plt.plot(to_numpy(uu), to_numpy(true_func) * to_numpy(ynorm), linewidth=8)
 
 
 
-            coeff_reconstructed = np.round(np.median(lin_fit_reconstructed, axis=0),2)
-            diffusion_coeff_reconstructed = np.round(np.median(lin_fit_reconstructed, axis=1),2)[:,9]
-            coeff_true = np.round(np.median(lin_fit_true, axis=0),2)
-            diffusion_coeff_true = np.round(np.median(lin_fit_true, axis=1),2)[:,9]
 
-            print(f'frame {k}')
-            print (f'coeff_reconstructed: {coeff_reconstructed}')
-            print(f'diffusion_coeff_reconstructed: {diffusion_coeff_reconstructed}')
-            print(f'coeff_true: {coeff_true}')
-            print(f'diffusion_coeff_true: {diffusion_coeff_true}')
-
-
-
-            cp = ['uu','uv','uw','vv','vw','ww','u','v','w']
-            results = {
-                'True': coeff_true[0,0:9],
-                'Reconstructed': coeff_reconstructed[0,0:9],
-            }
-            x = np.arange(len(cp))  # the label locations
-            width = 0.25  # the width of the bars
-            multiplier = 0
-            fig = plt.figure(figsize=(12, 12))
-            ax = fig.add_subplot(1, 1, 1)
-            for attribute, measurement in results.items():
-                offset = width * multiplier
-                rects = ax.bar(x + offset, measurement, width, label=attribute)
-                multiplier += 1
-            ax.set_ylabel('Polynomial coefficient',fontsize=48)
-            ax.set_xticks(x + width, cp,fontsize=48)
-            plt.xticks(fontsize=32.0)
-            plt.yticks(fontsize=32.0)
-            plt.title('First equation',fontsize=48)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/first_equation_{config_file}_{net_}.tif", dpi=300)
-            plt.close()
-            cp = ['uu','uv','uw','vv','vw','ww','u','v','w']
-            results = {
-                'True': coeff_true[1,0:9],
-                'Reconstructed': coeff_reconstructed[1,0:9],
-            }
-            x = np.arange(len(cp))  # the label locations
-            width = 0.25  # the width of the bars
-            multiplier = 0
-            fig = plt.figure(figsize=(12, 12))
-            ax = fig.add_subplot(1, 1, 1)
-            for attribute, measurement in results.items():
-                offset = width * multiplier
-                rects = ax.bar(x + offset, measurement, width, label=attribute)
-                multiplier += 1
-            ax.set_ylabel('Polynomial coefficient',fontsize=48)
-            ax.set_xticks(x + width, cp,fontsize=48)
-            plt.xticks(fontsize=32.0)
-            plt.yticks(fontsize=32.0)
-            plt.title('Second equation',fontsize=48)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/second_equation_{config_file}_{net_}.tif", dpi=300)
-            plt.close()
-            cp = ['uu','uv','uw','vv','vw','ww','u','v','w']
-            results = {
-                'True': coeff_true[2,0:9],
-                'Reconstructed': coeff_reconstructed[2,0:9],
-            }
-            x = np.arange(len(cp))  # the label locations
-            width = 0.25  # the width of the bars
-            multiplier = 0
-            fig = plt.figure(figsize=(12, 12))
-            ax = fig.add_subplot(1, 1, 1)
-            for attribute, measurement in results.items():
-                offset = width * multiplier
-                rects = ax.bar(x + offset, measurement, width, label=attribute)
-                multiplier += 1
-            ax.set_ylabel('Polynomial coefficient',fontsize=48)
-            ax.set_xticks(x + width, cp,fontsize=48)
-            plt.xticks(fontsize=32.0)
-            plt.yticks(fontsize=32.0)
-            plt.title('Third equation',fontsize=48)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/third_equation_{config_file}_{net_}.tif", dpi=300)
-            plt.close()
-
-            fig_ = plt.figure(figsize=(12, 12))
-            t =diffusion_coeff_reconstructed [new_labels]
-            t_ = np.reshape(t, (n_nodes_per_axis, n_nodes_per_axis))
-            t_ = np.flipud(t_)
-            t_ = np.fliplr(t_)
-            fig_ = plt.figure(figsize=(12, 12))
-            axf = fig_.add_subplot(1, 1, 1)
-            axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-            axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-            fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
-            axf.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-            axf.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-            plt.imshow(t_, cmap=cc, vmin=0, vmax=vm)
-            plt.xlabel(r'$x$', fontsize=64)
-            plt.ylabel(r'$y$', fontsize=64)
-            plt.xticks(fontsize=32.0)
-            plt.yticks(fontsize=32.0)
-            fmt = lambda x, pos: '{:.3%}'.format(x)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/diff_coeff_map_{config_file}_{net_}.tif", dpi=300)
-            plt.close()
 
 
 
@@ -5986,7 +5865,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_video_bison_siren_with_time']
     # config_list = ['RD_RPS_1']
     # config_list = ['RD_RPS_boat']
-    config_list = ['signal_N_100']
+    config_list = ['signal_N_100', 'signal_N_10', 'signal_N']
 
 
     for config_file in config_list:
