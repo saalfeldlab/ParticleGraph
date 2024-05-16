@@ -12,7 +12,7 @@ from scipy.optimize import curve_fit
 from vispy.scene import visuals
 from ParticleGraph.fitting_models import linear_model
 from ParticleGraph.models import Interaction_Particles, Interaction_Particle_Field, Signal_Propagation, Mesh_Laplacian, \
-    Mesh_RPS
+    Mesh_RPS, Mesh_RPS_bis
 from ParticleGraph.utils import choose_boundary_values
 from ParticleGraph.utils import to_numpy
 from matplotlib import rc
@@ -406,7 +406,6 @@ def choose_training_model(model_config, device):
     model=[]
     model_name = model_config.graph_model.particle_model_name
     match model_name:
-
         case 'PDE_ParticleField_A' | 'PDE_ParticleField_B':
             model = Interaction_Particle_Field(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos,
                                           dimension=dimension)
@@ -431,6 +430,9 @@ def choose_training_model(model_config, device):
             model.edges = []
         case 'RD_RPS_Mesh':
             model = Mesh_RPS(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
+            model.edges = []
+        case 'RD_RPS_Mesh_bis':
+            model = Mesh_RPS_bis(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
     model_name = model_config.graph_model.signal_model_name
     match model_name:

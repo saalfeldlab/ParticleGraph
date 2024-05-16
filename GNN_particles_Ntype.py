@@ -2266,6 +2266,14 @@ def data_train_mesh(config, config_file, device):
                     in_features = torch.cat((u, u, u, u, u, u, embedding_), dim=1)
                     h = model.lin_phi(in_features.float())
                     h = h[:, 0]
+                elif model_config.mesh_model_name == 'RD_RPS_Mesh_bis':
+                    embedding_ = model.a[1, n, :] * torch.ones((100, model_config.embedding_dim), device=device)
+                    u = torch.tensor(np.linspace(0, 10, 100)).to(device)
+                    u = u[:, None]
+                    r = u
+                    in_features = torch.cat((u, u, u, embedding_), dim=1)
+                    h = model.lin_phi_L(in_features.float())
+                    h = h[:, 0]
                 else:
                     r = torch.tensor(np.linspace(-150, 150, 100)).to(device)
                     in_features = torch.cat((r[:, None], embedding_), dim=1)
@@ -2281,7 +2289,7 @@ def data_train_mesh(config, config_file, device):
             func_list = torch.stack(func_list)
             coeff_norm = to_numpy(func_list)
             popt_list = np.array(popt_list)
-            if model_config.mesh_model_name == 'RD_RPS_Mesh':
+            if 'RD_RPS_Mesh' in model_config.mesh_model_name:
                 trans = umap.UMAP(n_neighbors=500, n_components=2, transform_queue_size=0).fit(coeff_norm)
                 proj_interaction = trans.transform(coeff_norm)
             else:
@@ -3369,7 +3377,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_4_siren_with_time']
     # config_list = ['wave_slit_1_epoch']
     # config_list = ['wave_boat_noise_0_2']
-    config_list = ['RD_RPS_5']
+    config_list = ['RD_RPS_boat_2']
     # config_list = ['RD_RPS_boat']
 
     # config_list = ['arbitrary_3_field_video_random_siren_with_time']
