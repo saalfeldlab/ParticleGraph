@@ -53,7 +53,8 @@ class Signal_Propagation(pyg.nn.MessagePassing):
         self.a = nn.Parameter(torch.zeros((self.n_dataset,int(self.n_particles), self.embedding_dim), device=self.device, requires_grad=True, dtype=torch.float32))
 
         self.vals = nn.Parameter(torch.zeros((int(self.n_particles*(self.n_particles+1)/2)), device=self.device, requires_grad=True, dtype=torch.float32))
-    def forward(self, data, data_id):
+
+    def forward(self, data=[], data_id=[], return_all=False, training_mode='all'):
         self.data_id = data_id
         x, edge_index = data.x, data.edge_index
 
@@ -64,11 +65,20 @@ class Signal_Propagation(pyg.nn.MessagePassing):
         particle_id = to_numpy(x[:, 0])
         embedding = self.a[1, particle_id, :]   # common embedding for all dataset
 
-        input_phi = torch.cat((msg, u, embedding), dim=-1)
+        input_phi = torch.cat((u, embedding), dim=-1)
 
-        pred = self.lin_phi(input_phi)
+        match training_mode:
+            case 'all':
+                pred = self.lin_phi(input_phi) + msg
+            case 'update_only':
+                pred = self.lin_phi(input_phi) + 0 * msg
+            case 'msg_only':
+                pred = 0 * self.lin_phi(input_phi) + msg
 
-        return pred
+        if return_all:
+            return pred, msg, self.lin_phi(input_phi), input_phi
+        else:
+            return pred
     def message(self, edge_index_i, edge_index_j, u_j):
 
         A = torch.zeros(self.n_particles, self.n_particles, device=self.device, requires_grad=False, dtype=torch.float32)
@@ -81,6 +91,9 @@ class Signal_Propagation(pyg.nn.MessagePassing):
 
         weight_ij = A[to_numpy(edge_index_i),to_numpy(edge_index_j),None]
         self.weight_ij = A.clone().detach()
+
+        self.activation = self.lin_edge(u_j)
+        self.u_j = u_j
 
         return weight_ij * self.lin_edge(u_j)
 

@@ -428,7 +428,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         ax.yaxis.set_major_locator(plt.MaxNLocator(3))
                         ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                         ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=100, c=to_numpy(H1[:, 0]), cmap='cool')
+                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=200, c=to_numpy(H1[:, 0]), cmap='cool',vmin=0,vmax=1)
                         plt.xlim([-1.5, 1.5])
                         plt.ylim([-1.5, 1.5])
                         plt.xticks([])
@@ -470,8 +470,8 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         matplotlib.rcParams['savefig.pad_inches'] = 0
                         fig = plt.figure(figsize=(12, 12))
                         ax = fig.add_subplot(1, 1, 1)
-                        # ax.xaxis.get_major_formatter()._usetex = False
-                        # ax.yaxis.get_major_formatter()._usetex = False
+                        ax.xaxis.get_major_formatter()._usetex = False
+                        ax.yaxis.get_major_formatter()._usetex = False
                         ax.xaxis.set_major_locator(plt.MaxNLocator(3))
                         ax.yaxis.set_major_locator(plt.MaxNLocator(3))
                         ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
@@ -2521,10 +2521,27 @@ def data_train_signal(config, config_file, device):
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
-    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+
+    optimizer = torch.optim.Adam([model.a], lr=lr_embedding)
+    optimizer.add_param_group({'params': [model.vals], 'lr': lr})
+    optimizer.add_param_group({'params': model.lin_phi.parameters(), 'lr': lr/10})
+    optimizer.add_param_group({'params': model.lin_edge.parameters(), 'lr': lr})
+    # optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+
+    model.train()
+
+    table = PrettyTable(["Modules", "Parameters"])
+    n_total_params = 0
+    for name, parameter in model.named_parameters():
+        if not parameter.requires_grad:
+            continue
+        param = parameter.numel()
+        table.add_row([name, param])
+        n_total_params += param
+    print(table)
+    print(f"Total Trainable Params: {n_total_params}")
     logger.info(f"Total Trainable Params: {n_total_params}")
     logger.info(f'Learning rates: {lr}, {lr_embedding}')
-    model.train()
 
     net = f"./log/try_{config_file}/models/best_model_with_{NGraphs - 1}_graphs.pt"
     print(f'network: {net}')
@@ -2612,7 +2629,10 @@ def data_train_signal(config, config_file, device):
             optimizer.zero_grad()
 
             for batch in batch_loader:
-                pred = model(batch, data_id=run)
+                if epoch<5:
+                    pred = model(batch, data_id=run, training_mode='msg_only')
+                else:
+                    pred = model(batch, data_id=run, training_mode='all')
 
             if not (has_large_range):
                 loss = (pred - y_batch).norm(2)
@@ -2715,42 +2735,54 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         param = parameter.numel()
         table.add_row([name, param])
         total_params += param
-    if verbose:
+
+    print(table)
+    print(f"Total Trainable Params: {total_params}")
+
+    if has_mesh:
+        mesh_model, bc_pos, bc_dpos = choose_training_model(config, device)
+        state_dict = torch.load(net, map_location=device)
+        mesh_model.load_state_dict(state_dict['model_state_dict'])
+        mesh_model.eval()
+    else:
+        state_dict = torch.load(net, map_location=device)
+        model.load_state_dict(state_dict['model_state_dict'])
+        model.eval()
+        mesh_model = None
+
+    if has_siren:
+
+        model_f_p = model
+        model_f_f = choose_mesh_model(config, device=device)
+
+        image_width = int(np.sqrt(n_nodes))
+        if has_siren_time:
+            model_f = Siren_Network(image_width=image_width, in_features=3, out_features=1, hidden_features=128,
+                                    hidden_layers=5, outermost_linear=True, device=device, first_omega_0=80,
+                                    hidden_omega_0=80.)
+        else:
+            model_f = Siren_Network(image_width=image_width, in_features=2, out_features=1, hidden_features=64,
+                                    hidden_layers=3, outermost_linear=True, device=device, first_omega_0=80,
+                                    hidden_omega_0=80.)
+
+        net = f'./log/try_{config_file}/models/best_model_f_with_1_graphs_{best_model}.pt'
+        state_dict = torch.load(net, map_location=device)
+        model_f.load_state_dict(state_dict['model_state_dict'])
+
+        model_f.to(device=device)
+        model_f.eval()
+
+        table = PrettyTable(["Modules", "Parameters"])
+        total_params = 0
+        for name, parameter in model_f.named_parameters():
+            if not parameter.requires_grad:
+                continue
+            param = parameter.numel()
+            table.add_row([name, param])
+            total_params += param
+
         print(table)
         print(f"Total Trainable Params: {total_params}")
-    if test_simulation==False:
-        if has_mesh:
-            mesh_model, bc_pos, bc_dpos = choose_training_model(config, device)
-            state_dict = torch.load(net, map_location=device)
-            mesh_model.load_state_dict(state_dict['model_state_dict'])
-            mesh_model.eval()
-        else:
-            state_dict = torch.load(net, map_location=device)
-            model.load_state_dict(state_dict['model_state_dict'])
-            model.eval()
-            mesh_model = None
-
-        if has_siren:
-
-            model_f_p = model
-            model_f_f = choose_mesh_model(config, device=device)
-
-            image_width = int(np.sqrt(n_nodes))
-            if has_siren_time:
-                model_f = Siren_Network(image_width=image_width, in_features=3, out_features=1, hidden_features=128,
-                                        hidden_layers=5, outermost_linear=True, device=device, first_omega_0=80,
-                                        hidden_omega_0=80.)
-            else:
-                model_f = Siren_Network(image_width=image_width, in_features=2, out_features=1, hidden_features=64,
-                                        hidden_layers=3, outermost_linear=True, device=device, first_omega_0=80,
-                                        hidden_omega_0=80.)
-
-            net = f'./log/try_{config_file}/models/best_model_f_with_1_graphs_{best_model}.pt'
-            state_dict = torch.load(net, map_location=device)
-            model_f.load_state_dict(state_dict['model_state_dict'])
-
-            model_f.to(device=device)
-            model_f.eval()
 
 
         if has_division:
@@ -3344,7 +3376,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
 if __name__ == '__main__':
 
-    # config_list = ['arbitrary_3','arbitrary_3_3', 'arbitrary_3_continuous', 'arbitrary_16','arbitrary_32','arbitrary_64']
+    config_list = ['arbitrary_3','arbitrary_3_3', 'arbitrary_3_continuous', 'arbitrary_16','arbitrary_32','arbitrary_64']
     # config_list = ['arbitrary_16','arbitrary_16_noise_1E-1','arbitrary_16_noise_0_2', 'arbitrary_16_noise_0_3', 'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5']
     # config_list = ['arbitrary_3', 'arbitrary_3_dropout_10_no_ghost', 'arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30', 'arbitrary_3_dropout_40']
     # config_list = ['gravity_16', 'gravity_16_noise_1E-1', 'gravity_16_noise_0_2', 'gravity_16_noise_0_3', 'gravity_16_noise_0_4', 'gravity_16_noise_0_5']
@@ -3353,9 +3385,9 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_dropout_20']
     # config_list = ['arbitrary_3_dropout_30']
     # config_list = ['arbitrary_3_dropout_40']
-    # config_list = ['arbitrary_3_field_1']
+    # config_list = ['arbitrary_3_field_4_siren_with_time']
     # config_list = ['arbitrary_3_field_3']
-    # config_list = ['arbitrary_3_field_1_boats']
+    # config_list = ['arbitrary_3_field_1_traingles']
     # config_list = ['arbitrary_3_field_3']
     # config_list = ['arbitrary_3_field_1_siren_with_time']
     # config_list = ['arbitrary_3_field_3_siren_with_time']
@@ -3375,11 +3407,10 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3']
     # config_list = ['wave_logo']
     # config_list = ['arbitrary_3_field_4_siren_with_time']
-    # config_list = ['wave_slit_1_epoch']
+    # config_list = ['wave_slit']
     # config_list = ['wave_boat_noise_0_2']
     # config_list = ['boids_16_256_steady']
-    # config_list = ['RD_RPS_boat']
-
+    # config_list = ['RD_RPS_1']
     # config_list = ['arbitrary_3_field_video_random_siren_with_time']
     # config_list = ['arbitrary_3_field_video_honey_siren_with_time']
     # config_list = ['arbitrary_3_field_video_bison_siren_with_time']
@@ -3394,8 +3425,8 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        # data_generate(config, device=device, visualize=True, run_vizualized=1, style='bw', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 7)
-        data_train(config, config_file, device)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color frame', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 25)
+        # data_train(config, config_file, device)
         # data_test(config=config, config_file=config_file, visualize=True, style='color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 7, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
 

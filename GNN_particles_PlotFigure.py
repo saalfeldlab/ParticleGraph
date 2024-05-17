@@ -996,12 +996,12 @@ def data_plot_gravity(config_file):
     ax = fig.add_subplot(3, 3, 3)
 
     label_list = []
-    for n in range(n_node_types):
+    for n in range(n_particle_types):
         tmp = labels[index_particles[n]]
         label_list.append(np.round(np.median(tmp)))
     label_list = np.array(label_list)
     new_labels = labels.copy()
-    for n in range(n_node_types):
+    for n in range(n_particle_types):
         new_labels[labels == label_list[n]] = n
     Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
 
@@ -1023,8 +1023,8 @@ def data_plot_gravity(config_file):
         tmp = labels[index_particles[n]]
         label_list.append(np.round(np.median(tmp)))
     label_list = np.array(label_list)
-    plt.xlabel(r'UMAP-proj 0', fontsize=64)
-    plt.ylabel(r'UMAP-proj 1', fontsize=64)
+    plt.xlabel(r'UMAP 0', fontsize=64)
+    plt.ylabel(r'UMAP 1', fontsize=64)
     plt.xticks(fontsize=32.0)
     plt.yticks(fontsize=32.0)
     plt.tight_layout()
@@ -2043,8 +2043,8 @@ def data_plot_Coulomb(config_file):
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
     for n in range(n_particle_types):
         plt.scatter(proj_interaction[index_particles[n], 0], proj_interaction[index_particles[n], 1], color=cmap.color(n), s=400, alpha=0.1)
-    plt.xlabel(r'$\ensuremath{\mathbf{UMAP}_{0}$', fontsize=64)
-    plt.ylabel(r'$\ensuremath{\mathbf{UMAP}}_{1}$', fontsize=64)
+    plt.xlabel(r'UMAP 0', fontsize=64)
+    plt.ylabel(r'UMAP 1', fontsize=64)
     plt.xticks(fontsize=32.0)
     plt.yticks(fontsize=32.0)
     plt.tight_layout()
@@ -3397,11 +3397,14 @@ def data_plot_wave(config_file, cc='viridis'):
 
         print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   ")
 
-def data_plot_attraction_repulsion_short(config, config_file, mode, device):
+def data_plot_attraction_repulsion_short(config_file, device):
     print('')
 
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+
+    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+    dataset_name = config.dataset
 
     simulation_config = config.simulation
     train_config = config.training
@@ -3427,6 +3430,7 @@ def data_plot_attraction_repulsion_short(config, config_file, mode, device):
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
     aggr_type = config.graph_model.aggr_type
+    cmap = CustomColorMap(config=config)
 
     embedding_cluster = EmbeddingCluster(config)
 
@@ -3620,8 +3624,8 @@ def data_plot_attraction_repulsion_short(config, config_file, mode, device):
             tmp = labels[index_particles[n]]
             label_list.append(np.round(np.median(tmp)))
         label_list = np.array(label_list)
-        plt.xlabel(r'UMAP-proj 0', fontsize=64)
-        plt.ylabel(r'UMAP-proj 1', fontsize=64)
+        plt.xlabel(r'UMAP 0', fontsize=64)
+        plt.ylabel(r'UMAP 1', fontsize=64)
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
         plt.tight_layout()
@@ -4547,20 +4551,20 @@ def data_plot_particle_field(config_file, mode, cc, device):
 
     x_list = []
     y_list = []
-    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_1.pt', map_location=device))
-    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_1.pt', map_location=device))
+    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device))
+    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_0.pt', map_location=device))
     ynorm = torch.load(f'./log/try_{dataset_name}/ynorm.pt', map_location=device).to(device)
     vnorm = torch.load(f'./log/try_{dataset_name}/vnorm.pt', map_location=device).to(device)
 
     x_mesh_list = []
     y_mesh_list = []
-    x_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/x_mesh_list_1.pt', map_location=device)
+    x_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/x_mesh_list_0.pt', map_location=device)
     x_mesh_list.append(x_mesh)
-    y_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_1.pt', map_location=device)
+    y_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_0.pt', map_location=device)
     y_mesh_list.append(y_mesh)
     hnorm = torch.load(f'./log/try_{dataset_name}/hnorm.pt', map_location=device).to(device)
 
-    mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_1.pt', map_location=device)
+    mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_0.pt', map_location=device)
     mask_mesh = mesh_data['mask']
     mask_mesh = mask_mesh.repeat(batch_size, 1)
 
@@ -4640,7 +4644,7 @@ def data_plot_particle_field(config_file, mode, cc, device):
         model_f.eval()
 
 
-    epoch_list = [10]
+    epoch_list = [5]
     for epoch in epoch_list:
         print(f'epoch: {epoch}')
 
@@ -5232,7 +5236,7 @@ def data_plot_RD(config_file, cc='viridis'):
     plt.savefig(f"./{log_dir}/tmp_training/true_coeff_{config_file}.tif", dpi=300)
     plt.close()
 
-    net_list = ['20'] #, '0_1000', '0_2000', '0_5000', '1', '5']
+    net_list = ['20', '0_1000', '0_2000', '0_5000', '1', '5']
 
     for net_ in net_list:
 
@@ -5242,6 +5246,7 @@ def data_plot_RD(config_file, cc='viridis'):
         model.load_state_dict(state_dict['model_state_dict'])
         print(f'net: {net}')
         embedding = get_embedding(model.a, 1)
+        first_embedding = embedding
 
         fig_ = plt.figure(figsize=(12, 12))
         axf = fig_.add_subplot(1, 1, 1)
@@ -5462,6 +5467,24 @@ def data_plot_RD(config_file, cc='viridis'):
             fmt = lambda x, pos: '{:.3%}'.format(x)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/tmp_training/diff_coeff_map_{config_file}_{net_}.tif", dpi=300)
+            plt.close()
+
+            t_ = np.reshape(t, (n_nodes_per_axis*n_nodes_per_axis))
+            fig_ = plt.figure(figsize=(12, 12))
+            axf = fig_.add_subplot(1, 1, 1)
+            axf.xaxis.set_major_locator(plt.MaxNLocator(3))
+            axf.yaxis.set_major_locator(plt.MaxNLocator(3))
+            axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+            axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+
+            plt.scatter(first_embedding[:, 0], first_embedding[:, 1],
+                                s=200, c=t_, cmap='viridis', alpha=0.5,vmin=0,vmax=vm)
+            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
+            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+            plt.xticks(fontsize=32.0)
+            plt.yticks(fontsize=32.0)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/tmp_training/embedding_{config_file}_{net_}.tif", dpi=300)
             plt.close()
 
     bContinuous=False
@@ -5689,12 +5712,13 @@ def data_plot_signal(config_file, cc='viridis'):
     plt.close()
 
 
-    plt.rcParams['text.usetex'] = True
-    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+    # plt.rcParams['text.usetex'] = True
+    # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     matplotlib.use("Qt5Agg")
 
+    GT_model, bc_pos, bc_dpos = choose_model(config, device=device)
 
-    net_list = ['20', '0', '1', '5']
+    net_list = ['10'] # , '0', '1', '5']
 
     for net_ in net_list:
 
@@ -5715,8 +5739,8 @@ def data_plot_signal(config_file, cc='viridis'):
         for n in range(n_particle_types):
                 c_ = np.round(n / (n_particle_types - 1) * 256).astype(int)
                 plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=200)  # , color=cmap.color(c_)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+        # plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
+        # plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
         plt.tight_layout()
@@ -5764,14 +5788,21 @@ def data_plot_signal(config_file, cc='viridis'):
             with torch.no_grad():
                 model.a[1] = model_a_.clone().detach()
 
-        k=2400
-
-        k = np.random.randint(n_frames - 1)
+        k = 500
         x = x_list[1][k].clone().detach()
         dataset = data.Data(x=x[:, :], edge_index=model.edges)
         y = y_list[1][k].clone().detach()
         y = y
-        pred = model(dataset, data_id=1) * ynorm
+        pred = model(dataset, data_id=1)
+
+        adj_t = adjacency > 0
+        edge_index = adj_t.nonzero().t().contiguous()
+        edge_attr_adjacency = adjacency[adj_t]
+        dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
+        GT_pred = GT_model(dataset)
+        #
+        # fig_ = plt.figure(figsize=(12, 12))
+        # plt.scatter(to_numpy(y), to_numpy(GT_pred), s=200, c='k')
 
         fig_ = plt.figure(figsize=(12, 12))
         axf = fig_.add_subplot(1, 1, 1)
@@ -5781,13 +5812,13 @@ def data_plot_signal(config_file, cc='viridis'):
         axf.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
         gt_weight = to_numpy(adjacency[adj_t])
         norm_gt_weight = max(gt_weight)
-        gt_weight = gt_weight / norm_gt_weight
+        gt_weight = gt_weight #/ norm_gt_weight
         pred_weight = to_numpy(model.weight_ij[adj_t])
-        norm_pred_weight = min(pred_weight)
-        pred_weight_ = pred_weight / norm_pred_weight
+        norm_pred_weight = max(pred_weight)
+        pred_weight_ = pred_weight #/ norm_pred_weight
         plt.scatter(gt_weight, pred_weight_, s=200, c='k')
-        plt.ylabel(r'Reconstructed matrix $A_{ij}$ values ', fontsize=48)
-        plt.xlabel(r'True matrix $A_{ij}$ values', fontsize=48)
+        # plt.ylabel(r'Reconstructed matrix $A_{ij}$ values ', fontsize=48)
+        # plt.xlabel(r'True matrix $A_{ij}$ values', fontsize=48)
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
         x_data=gt_weight
@@ -5812,7 +5843,7 @@ def data_plot_signal(config_file, cc='viridis'):
         axf.yaxis.set_major_locator(plt.MaxNLocator(3))
         axf.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
         axf.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
-        plt.imshow(to_numpy(model.A) / norm_pred_weight, cmap=cc, vmin=0, vmax=0.1)
+        plt.imshow(to_numpy(model.A), cmap=cc, vmin=0, vmax=0.01)
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
         plt.tight_layout()
@@ -5821,12 +5852,108 @@ def data_plot_signal(config_file, cc='viridis'):
 
         fig_ = plt.figure(figsize=(12, 12))
         axf = fig_.add_subplot(1, 1, 1)
-        uu = torch.tensor(np.linspace(0, 2, 1000)).to(device)
+        uu = torch.tensor(np.linspace(0, 5, 1000)).to(device)
+        # uu = x[:,6:7].squeeze()
         with torch.no_grad():
             func = model.lin_edge(uu[:,None].float())
         true_func = torch.tanh(uu[:,None].float())
-        plt.plot(to_numpy(uu), to_numpy(func) * to_numpy(ynorm), linewidth=8)
-        plt.plot(to_numpy(uu), to_numpy(true_func) * to_numpy(ynorm), linewidth=8)
+
+        plt.scatter(to_numpy(uu), to_numpy(func), linewidth=8)
+        plt.scatter(to_numpy(uu), to_numpy(true_func), linewidth=8)
+        plt.ylabel(r'Reconstructed activation', fontsize=48)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/reconstructed_activation_{config_file}_{net_}.tif", dpi=300)
+        plt.close()
+
+        fig_ = plt.figure(figsize=(12, 12))
+        axf = fig_.add_subplot(1, 1, 1)
+        uu = torch.tensor(np.linspace(0, 5, 1000)).to(device)
+        # uu = x[:,6:7].squeeze()
+        with torch.no_grad():
+            func = model.lin_edge(uu[:,None].float())
+        true_func = torch.tanh(uu[:,None].float())
+        plt.scatter(to_numpy(uu), to_numpy(func) * to_numpy(ynorm) / norm_gt_weight*norm_pred_weight, linewidth=8)
+        plt.scatter(to_numpy(uu), to_numpy(true_func) * to_numpy(ynorm), linewidth=8)
+        plt.ylabel(r'Activation', fontsize=48)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/Activation_norm_{config_file}_{net_}.tif", dpi=300)
+        plt.close()
+
+
+        # fig_ = plt.figure(figsize=(12, 12))
+        # axf = fig_.add_subplot(1, 1, 1)
+        # for n in range(n_particles):
+        #     embedding_ = torch.tensor(embedding[n, :],device=device)
+        #     input =torch.cat((uu[:,None],torch.ones_like(uu[:,None])*embedding_),dim=1)
+        #     with torch.no_grad():
+        #         func = model.lin_phi(input.float())
+        #     plt.plot(to_numpy(uu), to_numpy(func), linewidth=4, alpha=0.1, color=cmap.color(to_numpy(type_list[n])))
+        # # plt.scatter(to_numpy(uu), to_numpy(true_func) * to_numpy(ynorm), linewidth=8)
+        # plt.ylabel(r'Update', fontsize=48)
+        # plt.tight_layout()
+        # plt.savefig(f"./{log_dir}/tmp_training/Update_{config_file}_{net_}.tif", dpi=300)
+        # plt.close()
+
+        k = 500
+        x = x_list[1][k].clone().detach()
+        dataset = data.Data(x=x[:, :], edge_index=model.edges)
+        y = y_list[1][k].clone().detach()
+        y = y
+        pred, msg, phi, input_phi = model(dataset, data_id=1, return_all=True)
+        u_j = model.u_j
+        activation = model.activation
+
+        adj_t = adjacency > 0
+        edge_index = adj_t.nonzero().t().contiguous()
+        edge_attr_adjacency = adjacency[adj_t]
+        dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
+        du_gt, msg_gt, phi_gt = GT_model(dataset, return_all=True)
+
+        u_j_gt = GT_model.u_j
+        activation_gt = GT_model.activation
+
+        uu = x[:, 6:7].squeeze()
+
+        fig_ = plt.figure(figsize=(12, 12))
+        plt.scatter(to_numpy(uu), to_numpy(msg + phi), s=100)
+        plt.scatter(to_numpy(uu), to_numpy(phi), s=20)
+        plt.scatter(to_numpy(uu), to_numpy(msg), s=20)
+        # plt.scatter(to_numpy(uu), to_numpy(msg_gt+phi_gt), s=40, c='r')
+        plt.xlim([0, 3])
+        plt.ylim([0, 1])
+
+        fig_ = plt.figure(figsize=(12, 12))
+        plt.scatter(to_numpy(uu), to_numpy(msg_gt+phi_gt), s=100)
+        plt.scatter(to_numpy(uu), to_numpy(phi_gt), s=20)
+        plt.scatter(to_numpy(uu), to_numpy(msg_gt), s=20)
+        plt.xlim([0, 3])
+        plt.ylim([0, 1])
+
+        fig_ = plt.figure(figsize=(12, 12))
+        plt.scatter(to_numpy(uu), to_numpy(msg + phi), s=100)
+        plt.scatter(to_numpy(uu), to_numpy(msg_gt+phi_gt), s=20)
+
+
+
+
+
+        fig_ = plt.figure(figsize=(12, 12))
+        plt.scatter(to_numpy(msg_gt), to_numpy(msg), s=20, c='k')
+
+        fig_ = plt.figure(figsize=(12, 12))
+        plt.scatter(to_numpy(u_j_gt), to_numpy(activation_gt), s=20)
+        plt.scatter(to_numpy(u_j), to_numpy(activation), s=20)
+        plt.scatter(to_numpy(uu), to_numpy(phi_u_gt), s=20)
+        plt.scatter(to_numpy(uu), to_numpy(phi), s=20)
+
+        fig_ = plt.figure(figsize=(12, 12))
+        plt.scatter(to_numpy(uu),to_numpy(msg_gt+phi_u_gt), s=20)
+        plt.scatter(to_numpy(uu),to_numpy(msg+phi), s=20)
+
+
+
+
+
 
 
 
@@ -5842,18 +5969,21 @@ if __name__ == '__main__':
     # epoch=20
     # config_file = 'arbitrary_32'
     # data_plot_FIG2()
+    # config_list = ['arbitrary_16']
+    # config_list = ['arbitrary_16_noise_1E-1','arbitrary_16_noise_0_2','arbitrary_16_noise_0_3','arbitrary_16_noise_0_4','arbitrary_16_noise_0_5']
+    # config_list = ['arbitrary_3_dropout_10_no_ghost', 'arbitrary_3_dropout_10', 'arbitrary_3_dropout_20', 'arbitrary_3_dropout_30', 'arbitrary_3_dropout_40', 'arbitrary_3_dropout_50']
+    # config_list = ['arbitrary_3']
 
-    # config_list = ['gravity_16','gravity_16_noise_1E-5','gravity_16_noise_1E-4','gravity_16_noise_1E-3','gravity_16_noise_1E-2','gravity_16_noise_1E-1']
     # config_list = ['gravity_16_dropout_10_no_ghost', 'gravity_16_dropout_10', 'gravity_16_dropout_20', 'gravity_16_dropout_30', 'gravity_16_dropout_40', 'gravity_16_dropout_50']
-    # config_list = ['gravity_16_dropout_20'] # ['gravity_16_dropout_10_no_ghost','gravity_16_dropout_10','gravity_16_dropout_20','gravity_16_dropout_30']
-    # config_list = ['gravity_16_noise_0_2']
-    # config_list = ['gravity_16_noise_0_5'] #'gravity_16_noise_0_4']# , 'gravity_16_noise_0_3', 'gravity_16_noise_0_5']
+    # config_list = [,'gravity_16_dropout_20'] # ['gravity_16_dropout_10_no_ghost','gravity_16_dropout_10','gravity_16_dropout_20','gravity_16_dropout_30']
+
+    # config_list = ['gravity_16_noise_1E-1', 'gravity_16_noise_0_2', 'gravity_16_noise_0_3', 'gravity_16_noise_0_4']
     # config_list = ['boids_64_256'] #['boids_32_256','boids_64_256'] # 'boids_16_256_1_epoch', 'boids_32_256_1_epoch', 'boids_64_256_1_epoch'] #,
     # config_list = ['boids_16_noise_0_3','boids_16_noise_0_4'] # ['boids_16_noise_1E-1'] #,'boids_16_noise_0_2','boids_16_noise_0_3','boids_16_noise_0_4','boids_16_noise_0_5']
     # config_list = ['wave_logo','wave_slit','wave_triangles']
     # config_list = ['RD_RPS_1']
 
-    # config_list = ['arbitrary_3_field_1_no_model']
+    # config_list = ['arbitrary_3_field_1']
     # config_list = ['arbitrary_3_field_4_siren_with_time']
 
     # config_list = ['boids_16_256_20_epoch']
@@ -5865,15 +5995,15 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_video_bison_siren_with_time']
     # config_list = ['RD_RPS_1']
     # config_list = ['RD_RPS_boat']
-    config_list = ['signal_N_100', 'signal_N_10', 'signal_N']
-
+    # config_list = ['signal_N_100'] #, 'signal_N_10', 'signal_N']
+    config_list = ['arbitrary_3_field_1_triangles']
 
     for config_file in config_list:
 
+        # data_plot_attraction_repulsion_short(config_file, device=device)
         # data_plot_boids(config_file)
         # data_plot_gravity(config_file)
         # data_plot_RD(config_file,cc='viridis')
-        # data_plot_particle_field(config_file, mode='figures', cc='grey', device=device)
+        data_plot_particle_field(config_file, mode='figures', cc='grey', device=device)
         # data_plot_wave(config_file,cc='grey')
-        data_plot_signal(config_file,cc='viridis')
-
+        # data_plot_signal(config_file,cc='viridis')
