@@ -332,7 +332,14 @@ def analyze_edge_function(rr=None, vizualize=False, config=None, model_lin_edge=
     for n in range(n_particles):
         embedding_ = model_a[dataset_number, n_nodes+n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
         max_radius = config.simulation.max_radius
-        match config.graph_model.particle_model_name:
+        if config.graph_model.particle_model_name != '':
+            config_model = config.graph_model.particle_model_name
+        elif config.graph_model.signal_model_name != '':
+            config_model = config.graph_model.signal_model_name
+        elif config.graph_model.mesh_model_name != '':
+            config_model = config.graph_model.mesh_model_name
+
+        match config_model:
             case 'PDE_A':
                 in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                          rr[:, None] / max_radius, embedding_), dim=1)
@@ -360,6 +367,8 @@ def analyze_edge_function(rr=None, vizualize=False, config=None, model_lin_edge=
             case 'PDE_E':
                 in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                          rr[:, None] / max_radius, embedding_, embedding_), dim=1)
+            case 'PDE_N':
+                in_features = torch.cat((rr[:, None], embedding_), dim=1)
         with torch.no_grad():
             func = model_lin_edge(in_features.float())
         func = func[:, 0]

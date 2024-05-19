@@ -2469,21 +2469,18 @@ def data_train_signal(config, config_file, device):
 
     dimension = simulation_config.dimension
     n_epochs = train_config.n_epochs
-    max_radius = simulation_config.max_radius
-    min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
-    has_cell_division = simulation_config.has_cell_division
-    data_augmentation = train_config.data_augmentation
     data_augmentation_loop = train_config.data_augmentation_loop
+    recursive_loop = train_config.recursive_loop
     target_batch_size = train_config.batch_size
-    has_adjacency_matrix = (simulation_config.connectivity_file != '')
     has_mesh = (config.graph_model.mesh_model_name != '')
     replace_with_cluster = 'replace' in train_config.sparsity
     has_ghost = train_config.n_ghosts > 0
     has_large_range = train_config.large_range
+    delta_t = simulation_config.delta_t
     if train_config.small_init_batch_size:
         get_batch_size = increasing_batch_size(target_batch_size)
     else:
@@ -2515,18 +2512,13 @@ def data_train_signal(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_4.pt"
-    # state_dict = torch.load(net,map_location=device)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    net = f"./log/try_{config_file}/models/best_model_with_99_graphs_20.pt"
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
-
-    optimizer = torch.optim.Adam([model.a], lr=lr_embedding)
-    optimizer.add_param_group({'params': [model.vals], 'lr': lr})
-    optimizer.add_param_group({'params': model.lin_phi.parameters(), 'lr': lr/10})
-    optimizer.add_param_group({'params': model.lin_edge.parameters(), 'lr': lr})
-    # optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
 
     model.train()
 
@@ -2582,7 +2574,7 @@ def data_train_signal(config, config_file, device):
 
     list_loss = []
     time.sleep(1)
-    for epoch in range(n_epochs + 1):
+    for epoch in range(20,40): # n_epochs + 1):
 
         old_batch_size = batch_size
         batch_size = get_batch_size(epoch)
@@ -2607,37 +2599,88 @@ def data_train_signal(config, config_file, device):
         for N in range(Niter):
 
             run = 1 + np.random.randint(NGraphs - 1)
+            k = np.random.randint(n_frames - 6)
 
-            dataset_batch = []
-            time_batch = []
-
-            for batch in range(batch_size):
-
-                k = np.random.randint(n_frames - 1)
-                x = x_list[run][k].clone().detach()
-                dataset = data.Data(x=x[:, :], edge_index=model.edges)
-                dataset_batch.append(dataset)
-                y = y_list[run][k].clone().detach()
-                y = y / ynorm
-
-                if batch == 0:
-                    y_batch = y[:, 0:2]
-                else:
-                    y_batch = torch.cat((y_batch, y[:, 0:2]), dim=0)
-
-            batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
 
-            for batch in batch_loader:
-                if epoch<5:
-                    pred = model(batch, data_id=run, training_mode='msg_only')
-                else:
-                    pred = model(batch, data_id=run, training_mode='all')
+            match recursive_loop:
 
-            if not (has_large_range):
-                loss = (pred - y_batch).norm(2)
-            else:
-                loss = ((pred - y_batch) / (y_batch)).norm(2) / 1E9
+                case 1:
+
+                    x = x_list[run][k].clone().detach()
+                    dataset = data.Data(x=x[:, :], edge_index=model.edges)
+                    pred = model(dataset, data_id=run)
+                    y = y_list[run][k].clone().detach()
+                    y = y / ynorm
+                    y = y[:, 0:2]
+                    loss = (pred - y).norm(2)
+
+                case 2:
+
+                    x = x_list[run][k].clone().detach()
+                    dataset = data.Data(x=x[:, :], edge_index=model.edges)
+                    pred1 = model(dataset, data_id=run)
+                    x[:, 6:7] += pred1 * delta_t
+                    dataset = data.Data(x=x[:, :], edge_index=model.edges)
+                    pred2 = model(dataset, data_id=run)
+
+                    y = (y_list[run][k].clone().detach() + y_list[run][k + 1].clone().detach())
+                    y = y / ynorm
+                    y = y[:, 0:2]
+
+                    loss = (pred1 + pred2 - y).norm(2) / 2
+
+                case 3:
+
+                    x = x_list[run][k].clone().detach()
+                    dataset = data.Data(x=x[:, :], edge_index=model.edges)
+                    pred1 = model(dataset, data_id=run)
+                    x[:, 6:7] += pred1 * delta_t
+                    dataset = data.Data(x=x[:, :], edge_index=model.edges)
+                    pred2 = model(dataset, data_id=run)
+                    x[:, 6:7] += pred2 * delta_t
+                    dataset = data.Data(x=x[:, :], edge_index=model.edges)
+                    pred3 = model(dataset, data_id=run)
+
+                    y1 = y_list[run][k].clone().detach()/ ynorm
+                    y2 = y_list[run][k+1].clone().detach()/ ynorm
+                    y3 = y_list[run][k+2].clone().detach()/ ynorm
+                    y1 = y1[:, 0:2]
+                    y2 = y2[:, 0:2]
+                    y3 = y3[:, 0:2]
+
+                    loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)
+
+                case 5:
+
+                    x = x_list[run][k].clone().detach()
+                    dataset = data.Data(x=x[:, :], edge_index=model.edges)
+                    pred1 = model(dataset, data_id=run)
+                    x[:, 6:7] += pred1 * delta_t
+                    dataset = data.Data(x=x[:, :], edge_index=model.edges)
+                    pred2 = model(dataset, data_id=run)
+                    x[:, 6:7] += pred2 * delta_t
+                    dataset = data.Data(x=x[:, :], edge_index=model.edges)
+                    pred3 = model(dataset, data_id=run)
+                    x[:, 6:7] += pred3 * delta_t
+                    dataset = data.Data(x=x[:, :], edge_index=model.edges)
+                    pred4 = model(dataset, data_id=run)
+                    x[:, 6:7] += pred4 * delta_t
+                    dataset = data.Data(x=x[:, :], edge_index=model.edges)
+                    pred5 = model(dataset, data_id=run)
+
+                    y1 = y_list[run][k].clone().detach()/ ynorm
+                    y2 = y_list[run][k+1].clone().detach()/ ynorm
+                    y3 = y_list[run][k+2].clone().detach()/ ynorm
+                    y4 = y_list[run][k+3].clone().detach()/ ynorm
+                    y5 = y_list[run][k+4].clone().detach()/ ynorm
+                    y1 = y1[:, 0:2]
+                    y2 = y2[:, 0:2]
+                    y3 = y3[:, 0:2]
+                    y4 = y4[:, 0:2]
+                    y5 = y5[:, 0:2]
+
+                    loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2)
 
             loss.backward()
             optimizer.step()
@@ -3376,7 +3419,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
 if __name__ == '__main__':
 
-    config_list = ['arbitrary_3','arbitrary_3_3', 'arbitrary_3_continuous', 'arbitrary_16','arbitrary_32','arbitrary_64']
+    # config_list = ['arbitrary_3','arbitrary_3_3', 'arbitrary_3_continuous', 'arbitrary_16','arbitrary_32','arbitrary_64']
     # config_list = ['arbitrary_16','arbitrary_16_noise_1E-1','arbitrary_16_noise_0_2', 'arbitrary_16_noise_0_3', 'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5']
     # config_list = ['arbitrary_3', 'arbitrary_3_dropout_10_no_ghost', 'arbitrary_3_dropout_10','arbitrary_3_dropout_20','arbitrary_3_dropout_30', 'arbitrary_3_dropout_40']
     # config_list = ['gravity_16', 'gravity_16_noise_1E-1', 'gravity_16_noise_0_2', 'gravity_16_noise_0_3', 'gravity_16_noise_0_4', 'gravity_16_noise_0_5']
@@ -3415,7 +3458,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_video_honey_siren_with_time']
     # config_list = ['arbitrary_3_field_video_bison_siren_with_time']
     # config_list = ['arbitrary_3_field_2_boats_siren_with_time']
-    config_list = ['signal_N_100']
+    config_list = ['signal_N']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -3425,9 +3468,9 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color frame', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 25)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='frame color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 6)
         # data_train(config, config_file, device)
         # data_test(config=config, config_file=config_file, visualize=True, style='color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 7, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
-
+#
 
 

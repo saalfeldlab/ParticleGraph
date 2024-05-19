@@ -1,4 +1,5 @@
 import matplotlib.cm as cmplt
+import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import FormatStrFormatter
 from torch_geometric.nn import MessagePassing
@@ -10,6 +11,8 @@ from matplotlib import rc
 import time
 from ParticleGraph.utils import *
 from ParticleGraph.fitting_models import *
+from ParticleGraph.kan import *
+from pysr import PySRRegressor
 
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
@@ -5712,13 +5715,13 @@ def data_plot_signal(config_file, cc='viridis'):
     plt.close()
 
 
-    # plt.rcParams['text.usetex'] = True
-    # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+    plt.rcParams['text.usetex'] = True
+    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     matplotlib.use("Qt5Agg")
 
     GT_model, bc_pos, bc_dpos = choose_model(config, device=device)
 
-    net_list = ['10'] # , '0', '1', '5']
+    net_list = ['20'] # [,'1','5','10'] # , '0', '1', '5']
 
     for net_ in net_list:
 
@@ -5738,55 +5741,15 @@ def data_plot_signal(config_file, cc='viridis'):
         axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
         for n in range(n_particle_types):
                 c_ = np.round(n / (n_particle_types - 1) * 256).astype(int)
-                plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=200)  # , color=cmap.color(c_)
-        # plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-        # plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+                plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=400, alpha=0.1)  # , color=cmap.color(c_)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/embedding_{config_file}_{net_}.tif", dpi=300)
         plt.close()
 
-        bClustering = False
-        if bClustering:
-            print('domain clustering...')
-            match train_config.cluster_method:
-                case 'kmeans_auto_plot':
-                    labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
-                case 'kmeans_auto_embedding':
-                    labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
-                    proj_interaction = embedding
-                case 'distance_plot':
-                    labels, n_clusters = embedding_cluster.get(proj_interaction, 'distance')
-                case 'distance_embedding':
-                    labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=0.05)
-                    proj_interaction = embedding
-                case 'distance_both':
-                    new_projection = np.concatenate((proj_interaction, embedding), axis=-1)
-                    labels, n_clusters = embedding_cluster.get(new_projection, 'distance')
-            label_list = []
-            for n in range(n_particle_types):
-                tmp = labels[index_particles[n]]
-                label_list.append(np.round(np.median(tmp)))
-            label_list = np.array(label_list)
-            new_labels = labels.copy()
-            for n in range(n_particle_types):
-                new_labels[labels == label_list[n]] = n
-            Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-            print(f'Accuracy: {Accuracy}  n_clusters: {n_clusters}')
-
-            model_a_ = model.a[1].clone().detach()
-            for n in range(n_clusters):
-                pos = np.argwhere(labels == n).squeeze().astype(int)
-                pos = np.array(pos)
-                if pos.size > 0:
-                    median_center = model_a_[pos, :]
-                    median_center = torch.median(median_center, dim=0).values
-                    # plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='r', alpha=0.25)
-                    model_a_[pos, :] = median_center
-                    # plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='k')
-            with torch.no_grad():
-                model.a[1] = model_a_.clone().detach()
 
         k = 500
         x = x_list[1][k].clone().detach()
@@ -5794,16 +5757,10 @@ def data_plot_signal(config_file, cc='viridis'):
         y = y_list[1][k].clone().detach()
         y = y
         pred = model(dataset, data_id=1)
-
         adj_t = adjacency > 0
         edge_index = adj_t.nonzero().t().contiguous()
         edge_attr_adjacency = adjacency[adj_t]
         dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
-        GT_pred = GT_model(dataset)
-        #
-        # fig_ = plt.figure(figsize=(12, 12))
-        # plt.scatter(to_numpy(y), to_numpy(GT_pred), s=200, c='k')
-
         fig_ = plt.figure(figsize=(12, 12))
         axf = fig_.add_subplot(1, 1, 1)
         axf.xaxis.set_major_locator(plt.MaxNLocator(3))
@@ -5811,74 +5768,38 @@ def data_plot_signal(config_file, cc='viridis'):
         axf.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
         axf.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
         gt_weight = to_numpy(adjacency[adj_t])
-        norm_gt_weight = max(gt_weight)
-        gt_weight = gt_weight #/ norm_gt_weight
         pred_weight = to_numpy(model.weight_ij[adj_t])
-        norm_pred_weight = max(pred_weight)
-        pred_weight_ = pred_weight #/ norm_pred_weight
-        plt.scatter(gt_weight, pred_weight_, s=200, c='k')
-        # plt.ylabel(r'Reconstructed matrix $A_{ij}$ values ', fontsize=48)
-        # plt.xlabel(r'True matrix $A_{ij}$ values', fontsize=48)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
+        plt.scatter(gt_weight, pred_weight, s=200, c='k')
         x_data=gt_weight
-        y_data=pred_weight_.squeeze()
+        y_data=pred_weight.squeeze()
         lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
         residuals = y_data - linear_model(x_data, *lin_fit)
         ss_res = np.sum(residuals ** 2)
         ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
         r_squared = 1 - (ss_res / ss_tot)
         plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-        plt.xlim([0, 1])
-        plt.xlim([0, 1])
+        plt.ylabel('Reconstructed $A_{ij}$ values', fontsize=64)
+        plt.xlabel('True network $A_{ij}$ values', fontsize=64)
+        plt.xticks(fontsize=32.0)
+        plt.yticks(fontsize=32.0)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/scatter_{config_file}_{net_}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/tmp_training/Matrix_{config_file}_{net_}.tif", dpi=300)
         plt.close()
 
         print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   offset: {np.round(lin_fit[1], 2)}  ")
 
-        fig_ = plt.figure(figsize=(12, 12))
-        axf = fig_.add_subplot(1, 1, 1)
-        axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-        axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-        axf.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
-        axf.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
-        plt.imshow(to_numpy(model.A), cmap=cc, vmin=0, vmax=0.01)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/Reconstructed_Aij_{config_file}_{net_}.tif", dpi=300)
-        plt.close()
-
-        fig_ = plt.figure(figsize=(12, 12))
-        axf = fig_.add_subplot(1, 1, 1)
-        uu = torch.tensor(np.linspace(0, 5, 1000)).to(device)
-        # uu = x[:,6:7].squeeze()
-        with torch.no_grad():
-            func = model.lin_edge(uu[:,None].float())
-        true_func = torch.tanh(uu[:,None].float())
-
-        plt.scatter(to_numpy(uu), to_numpy(func), linewidth=8)
-        plt.scatter(to_numpy(uu), to_numpy(true_func), linewidth=8)
-        plt.ylabel(r'Reconstructed activation', fontsize=48)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/reconstructed_activation_{config_file}_{net_}.tif", dpi=300)
-        plt.close()
-
-        fig_ = plt.figure(figsize=(12, 12))
-        axf = fig_.add_subplot(1, 1, 1)
-        uu = torch.tensor(np.linspace(0, 5, 1000)).to(device)
-        # uu = x[:,6:7].squeeze()
-        with torch.no_grad():
-            func = model.lin_edge(uu[:,None].float())
-        true_func = torch.tanh(uu[:,None].float())
-        plt.scatter(to_numpy(uu), to_numpy(func) * to_numpy(ynorm) / norm_gt_weight*norm_pred_weight, linewidth=8)
-        plt.scatter(to_numpy(uu), to_numpy(true_func) * to_numpy(ynorm), linewidth=8)
-        plt.ylabel(r'Activation', fontsize=48)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/Activation_norm_{config_file}_{net_}.tif", dpi=300)
-        plt.close()
-
+        # fig_ = plt.figure(figsize=(12, 12))
+        # axf = fig_.add_subplot(1, 1, 1)
+        # axf.xaxis.set_major_locator(plt.MaxNLocator(3))
+        # axf.yaxis.set_major_locator(plt.MaxNLocator(3))
+        # axf.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+        # axf.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+        # plt.imshow(to_numpy(model.A), cmap=cc)
+        # plt.xticks(fontsize=32.0)
+        # plt.yticks(fontsize=32.0)
+        # plt.tight_layout()
+        # plt.savefig(f"./{log_dir}/tmp_training/Reconstructed_Aij_{config_file}_{net_}.tif", dpi=300)
+        # plt.close()
 
         # fig_ = plt.figure(figsize=(12, 12))
         # axf = fig_.add_subplot(1, 1, 1)
@@ -5894,6 +5815,276 @@ def data_plot_signal(config_file, cc='viridis'):
         # plt.savefig(f"./{log_dir}/tmp_training/Update_{config_file}_{net_}.tif", dpi=300)
         # plt.close()
 
+
+        fig = plt.figure(figsize=(12, 12))
+        ax = fig.add_subplot(1,1,1)
+        uu = x[:, 6:7].squeeze()
+        ax.xaxis.get_major_formatter()._usetex = False
+        ax.yaxis.get_major_formatter()._usetex = False
+        uu = torch.tensor(np.linspace(0, 3, 1000)).to(device)
+        print(n_particles)
+        func_list, proj_interaction = analyze_edge_function(rr=uu, vizualize=True, config=config,
+                                                                model_lin_edge=model.lin_phi, model_a=model.a,
+                                                                dataset_number=1,
+                                                                n_particles=int(n_particles*(1-train_config.particle_dropout)), ynorm=ynorm,
+                                                                types=to_numpy(x[:, 5]),
+                                                                cmap=cmap, device=device)
+        # plt.xlabel(r'$d_{ij}$', fontsize=64)
+        # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+        # xticks with sans serif font
+        plt.xticks(fontsize=32)
+        plt.yticks(fontsize=32)
+        plt.xlabel(r'$u$', fontsize=64)
+        plt.ylabel(r'Reconstructed $\Phi(u)$', fontsize=64)
+        plt.ylim([-0.25, 0.25])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/phi_u_{config_file}_{net_}.tif",dpi=170.7)
+        plt.close()
+
+        embedding_ = model.a[1, :, :]
+        u = torch.tensor(0.5,device=device).float()
+        u = u * torch.ones((n_particles, 1),device=device)
+        in_features = torch.cat((u, embedding_), dim=1)
+        with torch.no_grad():
+            func = model.lin_phi(in_features.float())
+        func = func[:,0]
+        fig = plt.figure(figsize=(12, 12))
+        ax = fig.add_subplot(1,1,1)
+        for n in range(n_particle_types):
+            plt.scatter(0 * to_numpy(func[index_particles[n]]), to_numpy(func[index_particles[n]]), s=200, alpha=0.05)
+        proj_interaction = to_numpy(func[:,None])
+        labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
+        fig_ = plt.figure(figsize=(12, 12))
+        axf = fig_.add_subplot(1, 1, 1)
+        axf.xaxis.set_major_locator(plt.MaxNLocator(3))
+        axf.yaxis.set_major_locator(plt.MaxNLocator(3))
+        axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        for n in range(n_clusters):
+            pos = np.argwhere(labels == n)
+            pos = np.array(pos)
+            if pos.size > 0:
+                plt.scatter(np.ones_like(pos)*0.5, proj_interaction[pos, 0], color=cmap.color(n), s=400,alpha=0.1)
+        label_list = []
+        for n in range(n_particle_types):
+            tmp = labels[index_particles[n]]
+            label_list.append(np.round(np.median(tmp)))
+        label_list = np.array(label_list)
+        plt.xlabel(r'$u$', fontsize=64)
+        plt.ylabel(r'$\Phi(u)$', fontsize=64)
+        plt.xticks(fontsize=32.0)
+        plt.yticks(fontsize=32.0)
+        plt.ylim([-0.25, 0.25])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/cluster_{config_file}_{net_}.tif", dpi=300)
+        plt.close()
+
+        new_labels = labels.copy()
+        for n in range(n_particle_types):
+            new_labels[labels == label_list[n]] = n
+        type_list = x[:, 5:6].clone().detach()
+        Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
+        print(f'Accuracy: {np.round(Accuracy, 3)}   n_clusters: {n_clusters}')
+
+        model_a_ = model.a[1].clone().detach()
+        for n in range(n_clusters):
+            pos = np.argwhere(labels == n).squeeze().astype(int)
+            pos = np.array(pos)
+            if pos.size > 0:
+                median_center = model_a_[pos, :]
+                median_center = torch.median(median_center, dim=0).values
+                model_a_[pos, :] = median_center
+        with torch.no_grad():
+            model.a[1] = model_a_.clone().detach()
+
+        uu = torch.tensor(np.linspace(0, 3, 1000)).to(device)
+        p = config.simulation.params
+        if len(p) > 1:
+            p = torch.tensor(p, device=device)
+        fig_ = plt.figure(figsize=(12, 12))
+        for n in range(n_particle_types):
+            phi = -p[n,0]*uu + p[n,1]*torch.tanh(uu)
+            plt.plot(to_numpy(uu), to_numpy(phi), linewidth=8)
+        plt.xlabel(r'$u$', fontsize=64)
+        plt.ylabel(r'True $\Phi(u)$', fontsize=64)
+        plt.xticks(fontsize=32.0)
+        plt.yticks(fontsize=32.0)
+        plt.ylim([-0.25, 0.25])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/true_phi_u_{config_file}_{net_}.tif",dpi=170.7)
+        plt.close()
+
+        uu = torch.tensor(np.linspace(0, 3, 1000)).to(device)
+        with torch.no_grad():
+            func = model.lin_edge(uu[:,None].float())
+        true_func = torch.tanh(uu[:,None].float())
+
+        fig_ = plt.figure(figsize=(12, 12))
+        axf = fig_.add_subplot(1, 1, 1)
+        plt.xlabel(r'$u$', fontsize=64)
+        plt.ylabel(r'Reconstructed $f(u)$', fontsize=64)
+        plt.xticks(fontsize=32.0)
+        plt.yticks(fontsize=32.0)
+        plt.scatter(to_numpy(uu), to_numpy(func), linewidth=8, c='k', label='Reconstructed')
+        plt.ylim([-3,3])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/f_u_{config_file}_{net_}.tif", dpi=300)
+        plt.close()
+
+        fig_ = plt.figure(figsize=(12, 12))
+        axf = fig_.add_subplot(1, 1, 1)
+        plt.xlabel(r'$u$', fontsize=64)
+        plt.ylabel(r'True $f(u)$', fontsize=64)
+        plt.xticks(fontsize=32.0)
+        plt.yticks(fontsize=32.0)
+        plt.scatter(to_numpy(uu), to_numpy(true_func), linewidth=8, c='k', label='Reconstructed')
+        plt.ylim([-3,3])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/true_f_u_{config_file}_{net_}.tif", dpi=300)
+        plt.close()
+
+        uu = torch.tensor(np.linspace(0, 3, 1000)).to(device)
+        in_features = uu[:, None]
+        with torch.no_grad():
+            func = model.lin_edge(in_features.float())
+            func = func[:, 0]
+
+        uu = uu.to(dtype=torch.float32)
+        func = func.to(dtype=torch.float32)
+        dataset = {}
+        dataset['train_input'] = uu[:, None]
+        dataset['test_input'] = uu[:, None]
+        dataset['train_label'] = func[:, None]
+        dataset['test_label'] = func[:, None]
+
+        model_pysrr = PySRRegressor(
+            niterations=30,  # < Increase me for better results
+            binary_operators=["+", "*"],
+            unary_operators=[
+                "cos",
+                "exp",
+                "sin",
+                "tanh"
+            ],
+            random_state=0,
+            temp_equation_file=True
+        )
+
+        model_pysrr.fit(to_numpy(dataset["train_input"]), to_numpy(dataset["train_label"]))
+
+        print(model_pysrr)
+        print(model_pysrr.equations_)
+
+        k = 500
+        x = x_list[1][k].clone().detach()
+        dataset = data.Data(x=x[:, :], edge_index=model.edges)
+        y = y_list[1][k].clone().detach()
+        y = y
+        pred = model(dataset, data_id=1)
+        adj_t = adjacency > 0
+        edge_index = adj_t.nonzero().t().contiguous()
+        edge_attr_adjacency = adjacency[adj_t]
+        dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
+        fig_ = plt.figure(figsize=(12, 12))
+        axf = fig_.add_subplot(1, 1, 1)
+        axf.xaxis.set_major_locator(plt.MaxNLocator(3))
+        axf.yaxis.set_major_locator(plt.MaxNLocator(3))
+        axf.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+        axf.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+        gt_weight = to_numpy(adjacency[adj_t])
+        pred_weight = to_numpy(model.weight_ij[adj_t]) * -1.878
+        plt.scatter(gt_weight, pred_weight, s=200, c='k')
+        x_data=gt_weight
+        y_data=pred_weight.squeeze()
+        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+        residuals = y_data - linear_model(x_data, *lin_fit)
+        ss_res = np.sum(residuals ** 2)
+        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot)
+        plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+        plt.ylabel('Reconstructed $A_{ij}$ values', fontsize=64)
+        plt.xlabel('True network $A_{ij}$ values', fontsize=64)
+        plt.xticks(fontsize=32.0)
+        plt.yticks(fontsize=32.0)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/Matrix_bis_{config_file}_{net_}.tif", dpi=300)
+        plt.close()
+
+        print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   offset: {np.round(lin_fit[1], 2)}  ")
+
+
+        fig_ = plt.figure(figsize=(12, 12))
+        axf = fig_.add_subplot(1, 1, 1)
+        plt.xlabel(r'$u$', fontsize=64)
+        plt.ylabel(r'Reconstructed $f(u)$', fontsize=64)
+        plt.xticks(fontsize=32.0)
+        plt.yticks(fontsize=32.0)
+        plt.plot(to_numpy(uu), to_numpy(true_func), linewidth=20, c='g', label='True')
+        plt.plot(to_numpy(uu), to_numpy(func)/ -1.878, linewidth=8, c='k', label='Reconstructed')
+        plt.legend(fontsize=32.0)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/comparison_f_u_{config_file}_{net_}.tif", dpi=300)
+        plt.close()
+
+
+
+
+
+        uu = torch.tensor(np.linspace(0, 3, 1000)).to(device)
+        fig_ = plt.figure(figsize=(12, 12))
+        n = 0
+        pos = np.argwhere(labels == n).squeeze().astype(int)
+        func = torch.mean(func_list[pos,:],dim=0)
+        true_func = -to_numpy(uu) * to_numpy(p[n,0]) + to_numpy(p[n,1]) * np.tanh(to_numpy(uu))
+        plt.plot(to_numpy(uu), true_func, linewidth=20, label='True', c='orange') #xkcd:sky blue') #'orange') #
+        plt.plot(to_numpy(uu), to_numpy(func), linewidth=8, c='k', label='Reconstructed')
+        plt.xlabel(r'$u$', fontsize=64)
+        plt.ylabel(r'Reconstructed $\Phi_1(u)$', fontsize=64)
+        plt.xticks(fontsize=32.0)
+        plt.yticks(fontsize=32.0)
+        plt.legend(fontsize=32.0)
+        plt.ylim([-0.25, 0.25])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/comparison_phi_1_{config_file}_{net_}.tif", dpi=300)
+        plt.close()
+
+
+        uu = uu.to(dtype=torch.float32)
+        func = func.to(dtype=torch.float32)
+        dataset = {}
+        dataset['train_input'] = uu[:, None]
+        dataset['test_input'] = uu[:, None]
+        dataset['train_label'] = func[:, None]
+        dataset['test_label'] = func[:, None]
+
+        model_pysrr = PySRRegressor(
+            niterations=300,  # < Increase me for better results
+            binary_operators=["+", "*"],
+            unary_operators=[
+                "tanh"
+            ],
+            random_state=0,
+            temp_equation_file=True
+        )
+        model_pysrr.fit(to_numpy(dataset["train_input"]), to_numpy(dataset["train_label"]))
+
+        print(model_pysrr)
+        print(model_pysrr.equations_)
+
+        for col in model_pysrr.equations_.columns:
+            print(col)
+
+
+
+
+
+
+
+
+
+
+
+
         k = 500
         x = x_list[1][k].clone().detach()
         dataset = data.Data(x=x[:, :], edge_index=model.edges)
@@ -5902,17 +6093,15 @@ def data_plot_signal(config_file, cc='viridis'):
         pred, msg, phi, input_phi = model(dataset, data_id=1, return_all=True)
         u_j = model.u_j
         activation = model.activation
-
         adj_t = adjacency > 0
         edge_index = adj_t.nonzero().t().contiguous()
         edge_attr_adjacency = adjacency[adj_t]
         dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
         du_gt, msg_gt, phi_gt = GT_model(dataset, return_all=True)
-
         u_j_gt = GT_model.u_j
         activation_gt = GT_model.activation
-
         uu = x[:, 6:7].squeeze()
+
 
         fig_ = plt.figure(figsize=(12, 12))
         plt.scatter(to_numpy(uu), to_numpy(msg + phi), s=100)
@@ -5921,6 +6110,7 @@ def data_plot_signal(config_file, cc='viridis'):
         # plt.scatter(to_numpy(uu), to_numpy(msg_gt+phi_gt), s=40, c='r')
         plt.xlim([0, 3])
         plt.ylim([0, 1])
+        plt.savefig(f"./{log_dir}/tmp_training/model_{config_file}_{net_}.tif", dpi=300)
 
         fig_ = plt.figure(figsize=(12, 12))
         plt.scatter(to_numpy(uu), to_numpy(msg_gt+phi_gt), s=100)
@@ -5928,27 +6118,116 @@ def data_plot_signal(config_file, cc='viridis'):
         plt.scatter(to_numpy(uu), to_numpy(msg_gt), s=20)
         plt.xlim([0, 3])
         plt.ylim([0, 1])
+        plt.savefig(f"./{log_dir}/tmp_training/true_{config_file}_{net_}.tif", dpi=300)
 
         fig_ = plt.figure(figsize=(12, 12))
         plt.scatter(to_numpy(uu), to_numpy(msg + phi), s=100)
         plt.scatter(to_numpy(uu), to_numpy(msg_gt+phi_gt), s=20)
-
-
-
+        plt.savefig(f"./{log_dir}/tmp_training/comparison_all_{config_file}_{net_}.tif", dpi=300)
 
 
         fig_ = plt.figure(figsize=(12, 12))
         plt.scatter(to_numpy(msg_gt), to_numpy(msg), s=20, c='k')
+        plt.savefig(f"./{log_dir}/tmp_training/comparison_msg_{config_file}_{net_}.tif", dpi=300)
 
         fig_ = plt.figure(figsize=(12, 12))
         plt.scatter(to_numpy(u_j_gt), to_numpy(activation_gt), s=20)
         plt.scatter(to_numpy(u_j), to_numpy(activation), s=20)
-        plt.scatter(to_numpy(uu), to_numpy(phi_u_gt), s=20)
+        plt.scatter(to_numpy(uu), to_numpy(phi_gt), s=20)
         plt.scatter(to_numpy(uu), to_numpy(phi), s=20)
+        plt.savefig(f"./{log_dir}/tmp_training/funky_comparison_{config_file}_{net_}.tif", dpi=300)
 
         fig_ = plt.figure(figsize=(12, 12))
-        plt.scatter(to_numpy(uu),to_numpy(msg_gt+phi_u_gt), s=20)
-        plt.scatter(to_numpy(uu),to_numpy(msg+phi), s=20)
+        plt.scatter(to_numpy(uu), to_numpy(phi), s=400, c='g', label='True')
+        plt.scatter(to_numpy(uu), to_numpy(phi_gt), s=20, c='k', label='Reconstructed')
+        plt.xlabel(r'$u$', fontsize=64)
+        plt.ylabel(r'$f(u)$', fontsize=64)
+        plt.xticks(fontsize=32.0)
+        plt.yticks(fontsize=32.0)
+        plt.legend(fontsize=32.0)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/phi_u_{config_file}_{net_}.tif", dpi=300)
+        plt.close()
+
+
+        fig_ = plt.figure(figsize=(12, 12))
+        axf = fig_.add_subplot(1, 1, 1)
+        axf.xaxis.set_major_locator(plt.MaxNLocator(3))
+        axf.yaxis.set_major_locator(plt.MaxNLocator(3))
+        axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        for n in range(n_clusters):
+            pos = np.argwhere(labels == n)
+            pos = np.array(pos)
+            if pos.size > 0:
+                print(f'cluster {n}  {len(pos)}')
+                plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=200,alpha=0.1)
+        label_list = []
+        for n in range(n_particle_types):
+            tmp = labels[index_particles[n]]
+            label_list.append(np.round(np.median(tmp)))
+        label_list = np.array(label_list)
+        plt.xlabel(r'UMAP 0', fontsize=64)
+        plt.ylabel(r'UMAP 1', fontsize=64)
+        plt.xticks(fontsize=32.0)
+        plt.yticks(fontsize=32.0)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/UMAP_{config_file}_{net_}.tif", dpi=300)
+        plt.close()
+
+        new_labels = labels.copy()
+        for n in range(n_particle_types):
+            new_labels[labels == label_list[n]] = n
+        Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
+        print(f'Accuracy: {np.round(Accuracy, 3)}   n_clusters: {n_clusters}')
+
+        model_a_ = model.a[1].clone().detach()
+        fig_ = plt.figure(figsize=(12, 12))
+        for n in range(n_clusters):
+            pos = np.argwhere(labels == n).squeeze().astype(int)
+            pos = np.array(pos)
+            if pos.size > 0:
+                median_center = model_a_[pos, :]
+                median_center = torch.median(median_center, dim=0).values
+                plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='r', alpha=0.25)
+                model_a_[pos, :] = median_center
+                plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='k')
+        for n in np.unique(new_labels):
+            pos = np.argwhere(new_labels == n).squeeze().astype(int)
+            pos = np.array(pos)
+            if pos.size > 0:
+                plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), color='k', s=5)
+        plt.xlabel('ai0', fontsize=12)
+        plt.ylabel('ai1', fontsize=12)
+        plt.xticks(fontsize=10.0)
+        plt.yticks(fontsize=10.0)
+        plt.close()
+
+        model_a_first = model.a.clone().detach()
+
+
+
+        # model_kan = KAN(width=[1, 1], grid=5, k=3, seed=0)
+        # model_kan.train(dataset, opt="LBFGS", steps=20, lamb=0.01, lamb_entropy=10.)
+        # lib = ['x', 'x^2', 'x^3', 'x^4', 'exp', 'log', 'sqrt', 'tanh', 'sin', 'abs']
+        # model_kan.auto_symbolic(lib=lib)
+        # model_kan.train(dataset, steps=20)
+        # formula, variables = model_kan.symbolic_formula()
+        # print(formula)
+        #
+        # model_kan = KAN(width=[1, 5, 1], grid=5, k=3, seed=0)
+        # model_kan.train(dataset, opt="LBFGS", steps=50, lamb=0.01, lamb_entropy=10.)
+        # model_kan = model_kan.prune()
+        # model_kan.train(dataset, opt="LBFGS", steps=50);
+        # for k in range(10):
+        #     lib = ['x', 'x^2', 'x^3', 'x^4', 'exp', 'log', 'sqrt', 'tanh', 'sin', 'abs']
+        #     model_kan.auto_symbolic(lib=lib)
+        #     model_kan.train(dataset, steps=100)
+        #     formula, variables = model_kan.symbolic_formula()
+        #     print(formula)
+
+
+
 
 
 
@@ -5995,8 +6274,8 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_video_bison_siren_with_time']
     # config_list = ['RD_RPS_1']
     # config_list = ['RD_RPS_boat']
-    # config_list = ['signal_N_100'] #, 'signal_N_10', 'signal_N']
-    config_list = ['arbitrary_3_field_1_triangles']
+    # config_list = ['signal_N_100_2a','signal_N_100_2b','signal_N_100_2c','signal_N_100_2d','signal_N_100_2e','signal_N_100_3a','signal_N_100_3b','signal_N_100_3c'] #, 'signal_N_10', 'signal_N']
+    config_list = ['signal_N_100_2']
 
     for config_file in config_list:
 
@@ -6004,6 +6283,6 @@ if __name__ == '__main__':
         # data_plot_boids(config_file)
         # data_plot_gravity(config_file)
         # data_plot_RD(config_file,cc='viridis')
-        data_plot_particle_field(config_file, mode='figures', cc='grey', device=device)
+        # data_plot_particle_field(config_file, mode='figures', cc='grey', device=device)
         # data_plot_wave(config_file,cc='grey')
-        # data_plot_signal(config_file,cc='viridis')
+        data_plot_signal(config_file,cc='viridis')
