@@ -300,7 +300,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                 # plt.style.use('dark_background')
                 # matplotlib.use("Qt5Agg")
 
-                if 'frame' in style:
+                if 'latex' in style:
                     plt.rcParams['text.usetex'] = True
                     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
@@ -428,9 +428,12 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         ax.yaxis.set_major_locator(plt.MaxNLocator(3))
                         ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                         ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=200, c=to_numpy(H1[:, 0]), cmap='cool',vmin=0,vmax=1)
+                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=200, c=to_numpy(H1[:, 0]), cmap='cool',vmin=0,vmax=3)
                         plt.xlim([-1.5, 1.5])
                         plt.ylim([-1.5, 1.5])
+                        plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=24)
+                        # cbar = plt.colorbar(shrink=0.5)
+                        # cbar.ax.tick_params(labelsize=32)
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
@@ -449,7 +452,9 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         # plt.xticks([])
                         # plt.yticks([])
                         # plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
+                        # plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
+
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{10000+it}.tif", dpi=42.675)
                         plt.close()
 
                     elif (model_config.particle_model_name == 'PDE_A') & (dimension == 3):
@@ -542,21 +547,31 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         # plt.ylim([0,1])
                         # plt.xlim([-2,2])
                         # plt.ylim([-2,2])
-                        if 'frame' in style:
+                        if 'latex' in style:
                             plt.xlabel(r'$x$', fontsize=64)
                             plt.ylabel(r'$y$', fontsize=64)
                             plt.xticks(fontsize=32.0)
                             plt.yticks(fontsize=32.0)
+                        elif 'frame' in style:
+                            plt.xlabel('x', fontsize=32)
+                            plt.ylabel('y', fontsize=32)
+                            plt.xticks(fontsize=32.0)
+                            plt.yticks(fontsize=32.0)
+                            ax.tick_params(axis='both', which='major', pad=15)
+                            plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
                         else:
                             plt.xticks([])
                             plt.yticks([])
                         if not ('RD_RPS_Mesh' in model_config.mesh_model_name):
                             plt.xlim([0, 1])
                             plt.ylim([0, 1])
-                        # plt.xlim([-2, 2])
-                        # plt.ylim([-2, 2])
+
+                        if 'PDE_G' in model_config.particle_model_name:
+                            plt.xlim([-2, 2])
+                            plt.ylim([-2, 2])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.tif", dpi=170.7)
+                        # plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{10000+it}.tif", dpi=42.675)
                         plt.close()
 
                         if False:  # not(has_mesh):
@@ -809,7 +824,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 # plt.style.use('dark_background')
                 # matplotlib.use("Qt5Agg")
 
-                if 'frame' in style:
+                if 'latex' in style:
                     plt.rcParams['text.usetex'] = True
                     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
@@ -965,9 +980,14 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     plt.ylim([0,1])
                     # plt.xlim([-2,2])
                     # plt.ylim([-2,2])
-                    if 'frame' in style:
+                    if 'latex' in style:
                         plt.xlabel(r'$x$', fontsize=64)
                         plt.ylabel(r'$y$', fontsize=64)
+                        plt.xticks(fontsize=32.0)
+                        plt.yticks(fontsize=32.0)
+                    elif 'frame' in style:
+                        plt.xlabel('x', fontsize=64)
+                        plt.ylabel('$', fontsize=64)
                         plt.xticks(fontsize=32.0)
                         plt.yticks(fontsize=32.0)
                     else:
@@ -2512,9 +2532,9 @@ def data_train_signal(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    net = f"./log/try_{config_file}/models/best_model_with_99_graphs_20.pt"
-    state_dict = torch.load(net,map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
+    # net = f"./log/try_{config_file}/models/best_model_with_99_graphs_20.pt"
+    # state_dict = torch.load(net,map_location=device)
+    # model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -2574,7 +2594,7 @@ def data_train_signal(config, config_file, device):
 
     list_loss = []
     time.sleep(1)
-    for epoch in range(20,40): # n_epochs + 1):
+    for epoch in range(20): # n_epochs + 1):
 
         old_batch_size = batch_size
         batch_size = get_batch_size(epoch)
@@ -2792,7 +2812,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         model.load_state_dict(state_dict['model_state_dict'])
         model.eval()
         mesh_model = None
-
     if has_siren:
 
         model_f_p = model
@@ -2838,44 +2857,13 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             print('Use learned labels')
             labels = torch.load(os.path.join(log_dir, f'labels_{best_model}.pt'))
 
-    # nparticles larger than initially
-    if ratio > 1:
 
-        index_particles = []
-        prev_index_particles = index
-
-        new_nparticles = n_particles * ratio
-        prev_nparticles = n_particles
-
-        print('')
-        print(f'New_number of particles: {new_nparticles}  ratio:{ratio}')
-        print('')
-
-        embedding = model.a[1].data.clone().detach()
-        new_embedding = []
-        new_labels = []
-
-        for n in range(n_particle_types):
-            for m in range(ratio):
-                if (n == 0) & (m == 0):
-                    new_embedding = embedding[prev_index_particles[n].astype(int), :]
-                    new_labels = labels[prev_index_particles[n].astype(int)]
-                else:
-                    new_embedding = torch.cat((new_embedding, embedding[prev_index_particles[n].astype(int), :]), dim=0)
-                    new_labels = torch.cat((new_labels, labels[prev_index_particles[n].astype(int)]), dim=0)
-
-        model.a = nn.Parameter(
-            torch.tensor(np.ones((NGraphs - 1, int(prev_nparticles) * ratio, 2)), device=device, dtype=torch.float32,
-                         requires_grad=False))
-        model.a.requires_grad = False
-        model.a[1] = new_embedding
-        n_particles = new_nparticles
-
-        index_particles = []
-        np_i = int(n_particles / n_particle_types)
-        for n in range(n_particle_types):
-            index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
-
+    n_sub_population = n_particles // n_particle_types
+    first_embedding = model.a[1].data.clone().detach()
+    first_index_particles = []
+    for n in range(n_particle_types):
+        index = np.arange(n_particles * n // n_particle_types, n_particles * (n + 1) // n_particle_types)
+        first_index_particles.append(index)
     if only_mesh:
         vnorm = torch.tensor(1.0, device=device)
         ynorm = torch.tensor(1.0, device=device)
@@ -2928,13 +2916,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
             index_particles.append(index.squeeze())
 
-    n_sub_population = n_particles // n_particle_types
-    first_embedding = model.a[1].data.clone().detach()
-    first_index_particles = []
-    for n in range(n_particle_types):
-        index = np.arange(n_particles * n // n_particle_types, n_particles * (n + 1) // n_particle_types)
-        first_index_particles.append(index)
-
     if sample_embedding:
 
         model_a_ = nn.Parameter(
@@ -2946,6 +2927,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             index=first_index_particles[t][np.random.randint(n_sub_population)]
             with torch.no_grad():
                 model_a_[n] = first_embedding[index].clone().detach()
+
         model.a = nn.Parameter(
             torch.tensor(np.ones((model.n_dataset,int(n_particles), model.embedding_dim)),
                          device=device,
@@ -3039,7 +3021,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.colorbar()
                 fig = plt.figure(figsize=(8, 8))
                 plt.scatter(t_,t)
-        elif model_config.mesh_model_name == 'RD_RPS_Mesh':
+        elif (model_config.mesh_model_name == 'RD_RPS_Mesh') | (model_config.mesh_model_name=='RD_RPS_Mesh_bis'):
             with torch.no_grad():
                 pred = mesh_model(dataset_mesh, data_id=1)
                 x[mask_mesh.squeeze(), 6:9] += pred[mask_mesh.squeeze()] * hnorm * delta_t
@@ -3090,21 +3072,24 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             if has_adjacency_matrix:
                 dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
+                if test_simulation:
+                    y = y0 / ynorm
+                else:
+                    with torch.no_grad():
+                        y = model(dataset, data_id=1)
             else:
                 distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
                 adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
                 edge_index = adj_t.nonzero().t().contiguous()
                 dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
-
-            if test_simulation:
-                y = y0 / ynorm
-            else:
-                with torch.no_grad():
-                    y = model(dataset, data_id=1, training=False, vnorm=vnorm,
-                              phi=torch.zeros(1, device=device))  # acceleration estimation
-
-            if has_ghost:
-                y = y[mask_ghost]
+                if test_simulation:
+                    y = y0 / ynorm
+                else:
+                    with torch.no_grad():
+                        y = model(dataset, data_id=1, training=False, vnorm=vnorm,
+                                  phi=torch.zeros(1, device=device))  # acceleration estimation
+                if has_ghost:
+                    y = y[mask_ghost]
 
             if model_config.prediction == '2nd_derivative':
                 y = y * ynorm * delta_t
@@ -3135,7 +3120,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             # matplotlib.use("Qt5Agg")
             matplotlib.rcParams['savefig.pad_inches'] = 0
 
-            if 'frame' in style:
+            if 'latex' in style:
                 plt.rcParams['text.usetex'] = True
                 rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
@@ -3174,7 +3159,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.xticks([])
                     plt.yticks([])
                     plt.axis('off')
-                if model_config.mesh_model_name == 'RD_RPS_Mesh':
+                if (model_config.mesh_model_name == 'RD_RPS_Mesh') | (model_config.mesh_model_name=='RD_RPS_Mesh_bis'):
                     H1_IM = torch.reshape(x[:, 6:9], (100, 100, 3))
                     plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=1)
                     fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
@@ -3184,14 +3169,25 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     # plt.yticks([])
                     # plt.axis('off')
             elif model_config.signal_model_name == 'PDE_N':
-                # plt.scatter(to_numpy(x[:,1]), to_numpy(x[:,2]), s=30, c=to_numpy(x[:,6]), cmap='viridis')
-                plt.plot(to_numpy(x0[:, 6:7]), to_numpy(x[:, 6:7]), '.')
-                plt.plot(to_numpy(y0[:, 0]), to_numpy(y[:, 0]), '.')
-                plt.xlim([0,1])
-                plt.ylim([0,1])
-                ax.get_xaxis().set_visible(False)
-                ax.get_yaxis().set_visible(False)
-                # plt.autoscale(tight=True)
+
+                matplotlib.rcParams['savefig.pad_inches'] = 0
+                fig = plt.figure(figsize=(12, 12))
+                ax = fig.add_subplot(1, 1, 1)
+                ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+                ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=200, c=to_numpy(x[:, 6]), cmap='cool', vmin=0,
+                            vmax=3)
+                plt.xlim([-1.5, 1.5])
+                plt.ylim([-1.5, 1.5])
+                # plt.xlabel('x', fontsize=32)
+                # plt.ylabel('y', fontsize=32)
+                plt.xticks(fontsize=32.0)
+                plt.yticks(fontsize=32.0)
+                ax.tick_params(axis='both', which='major', pad=15)
+                plt.text(0, 1.1, f'   ', ha='left', va='top', transform=ax.transAxes, fontsize=32)
+                plt.tight_layout()
             else:
                 s_p = 100
                 if simulation_config.has_cell_division:
@@ -3203,24 +3199,33 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     else:
                         plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                                     x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
-            if 'frame' in style:
+            if 'latex' in style:
                 plt.xlabel(r'$x$', fontsize=64)
                 plt.ylabel(r'$y$', fontsize=64)
                 plt.xticks(fontsize=32.0)
                 plt.yticks(fontsize=32.0)
+            elif 'frame' in style:
+                plt.xlabel('x', fontsize=32)
+                plt.ylabel('y', fontsize=32)
+                plt.xticks(fontsize=32.0)
+                plt.yticks(fontsize=32.0)
+                plt.text(0, 1.1, f'   ', ha='left', va='top', transform=ax.transAxes, fontsize=32)
+                ax.tick_params(axis='both', which='major', pad=15)
                 # cbar = plt.colorbar(shrink=0.5)
                 # cbar.ax.tick_params(labelsize=32)
             else:
                 plt.xticks([])
                 plt.yticks([])
-            if not(model_config.mesh_model_name == 'RD_RPS_Mesh'):
+            if not(('RD_RPS_Mesh' in model_config.mesh_model_name)|(model_config.signal_model_name == 'PDE_N')):
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
-            # plt.xlim([-2, 2])
-            # plt.ylim([-2, 2])
+            if 'PDE_G' in model_config.particle_model_name:
+                plt.xlim([-2, 2])
+                plt.ylim([-2, 2])
 
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{it}.tif", dpi=170.7)
+            # plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{10000+it}.tif", dpi=42.675)
             plt.close()
 
             if has_ghost:
@@ -3299,7 +3304,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.savefig(f"./{log_dir}/tmp_recons/Ghost3_{config_file}_{it}.tif", dpi=170.7)
                 plt.close()
 
-    print(f'RMSE = {np.round(np.mean(rmserr_list), 4)} +/- {np.round(np.std(rmserr_list), 4)}')
+    print(f'RMSE = {np.round(np.mean(rmserr_list), 6)} +/- {np.round(np.std(rmserr_list), 6)}')
 
     # plt.rcParams['text.usetex'] = True
     # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
@@ -3386,35 +3391,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/GT_{config_file}_{it+2}.tif", dpi=170.7)
 
-    if False:
-
-        loss_ctrl = torch.load ('./log/try_arbitrary_3/loss.pt')
-        loss_no_ghost = torch.load('./log/try_arbitrary_3_dropout_10_no_ghost/loss.pt')
-        loss_with_ghost = torch.load('./log/try_arbitrary_3_dropout_10/loss.pt')
-        loss_with_ghost20 = torch.load('./log/try_arbitrary_3_dropout_20/loss.pt')
-        loss_with_ghost30 = torch.load('./log/try_arbitrary_3_dropout_30/loss.pt')
-        loss_with_ghost40 = torch.load('./log/try_arbitrary_3_dropout_40/loss.pt')
-
-        plt.rcParams['text.usetex'] = True
-        rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(1, 1, 1)
-        ax.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
-        plt.plot(np.array(loss_ctrl)*1E6, label='No removal', linewidth=4)
-        plt.plot(np.array(loss_no_ghost)*1E6, label=r'10$\%$ removal, no ghost', linewidth=4)
-        plt.plot(np.array(loss_with_ghost)*1E6, label=r'10$\%$ removal, with ghost', linewidth=4)
-        plt.plot(np.array(loss_with_ghost20)*1E6, label=r'20$\%$ removal, with ghost', linewidth=4)
-        plt.plot(np.array(loss_with_ghost30)*1E6, label=r'30$\%$ removal, with ghost', linewidth=4)
-        plt.plot(np.array(loss_with_ghost40)*1E6, label=r'40$\%$ removal, with ghost', linewidth=4)
-        plt.xlabel(r'$Epochs$', fontsize=64)
-        plt.ylabel(r'$Loss$', fontsize=64)
-        plt.xticks(fontsize=32)
-        plt.yticks(fontsize=32)
-        plt.legend(fontsize=24)
-        plt.xlim([0, 20])
-        plt.ylim([-1000, 5000])
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/loss_{config_file}_{it+2}.tif", dpi=170.7)
 
 
 if __name__ == '__main__':
@@ -3435,7 +3411,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_1_siren_with_time']
     # config_list = ['arbitrary_3_field_3_siren_with_time']
     # config_list = ['arbitrary_3_field_2_boats_siren_with_time']
-    # # config_list = ['Coulomb_3_noise_0_2']
+
     # config_list = ['Coulomb_3_noise_0_3']
     # config_list = ['Coulomb_3_noise_0_4']
     # config_list = ['Coulomb_3_noise_0_5']
@@ -3452,13 +3428,22 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_field_4_siren_with_time']
     # config_list = ['wave_slit']
     # config_list = ['wave_boat_noise_0_2']
-    # config_list = ['boids_16_256_steady']
+    # config_list = ['boids_16_256']
     # config_list = ['RD_RPS_1']
     # config_list = ['arbitrary_3_field_video_random_siren_with_time']
     # config_list = ['arbitrary_3_field_video_honey_siren_with_time']
     # config_list = ['arbitrary_3_field_video_bison_siren_with_time']
     # config_list = ['arbitrary_3_field_2_boats_siren_with_time']
-    config_list = ['signal_N']
+    # config_list = ['signal_N_2']
+
+    # config_list = ['arbitrary_3','arbitrary_16']
+    # config_list = ['arbitrary_32','arbitrary_64']
+    # config_list = ['gravity_16']
+    # config_list = ['gravity_100']
+    # config_list = ['Coulomb_3','boids_16_256']
+    # config_list = ['boids_32_256','boids_64_256']
+
+    config_list = ['boids_16_256_steady'] # _field_1_boats','arbitrary_3_field_1_triangles']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -3468,9 +3453,9 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='frame color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 6)
+        data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex frame color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 5)
         # data_train(config, config_file, device)
-        # data_test(config=config, config_file=config_file, visualize=True, style='color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 7, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
-#
+        data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 5, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
+
 
 

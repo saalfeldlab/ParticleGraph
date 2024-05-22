@@ -229,7 +229,7 @@ def init_particles(config, device, cycle_length=None):
             type = torch.tensor(type, device=device)
             type = type[:, None]
         case 'uniform':
-            type = torch.ones(n_particles, device=device) * 14
+            type = torch.ones(n_particles, device=device) * 1
             type =  type[:, None]
         case 'stripes':
             l = n_particles//n_particle_types
