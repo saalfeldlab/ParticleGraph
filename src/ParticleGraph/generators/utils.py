@@ -149,36 +149,38 @@ def choose_mesh_model(config, device):
     aggr_type = config.graph_model.mesh_aggr_type
     _, bc_dpos = choose_boundary_values(config.simulation.boundary)
 
-    c = initialize_random_values(n_node_types, device)
-    if not('pics' in config.simulation.node_type_map):
-        for n in range(n_node_types):
-            c[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
-
-    beta = config.simulation.beta
-
-    match mesh_model_name:
-        case 'RD_Gray_Scott_Mesh':
-            mesh_model = RD_Gray_Scott(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
-        case 'RD_FitzHugh_Nagumo_Mesh':
-            mesh_model = RD_FitzHugh_Nagumo(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
-        case 'RD_RPS_Mesh':
-            mesh_model = RD_RPS(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
-        case 'RD_RPS_Mesh_bis':
-            mesh_model = RD_RPS(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
-        case 'DiffMesh' | 'WaveMesh':
-            mesh_model = PDE_Laplacian(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
-        case 'Chemotaxism_Mesh':
-            c = initialize_random_values(n_node_types, device)
+    if mesh_model_name =='':
+        mesh_model = []
+    else:
+        c = initialize_random_values(n_node_types, device)
+        if not('pics' in config.simulation.node_type_map):
             for n in range(n_node_types):
                 c[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
-            mesh_model = PDE_Laplacian(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
-        case 'PDE_O_Mesh':
-            c = initialize_random_values(n_node_types, device)
-            for n in range(n_node_types):
-                c[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
-            mesh_model = PDE_Laplacian(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
-        case _:
-            mesh_model = PDE_Z(device=device)
+        beta = config.simulation.beta
+
+        match mesh_model_name:
+            case 'RD_Gray_Scott_Mesh':
+                mesh_model = RD_Gray_Scott(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
+            case 'RD_FitzHugh_Nagumo_Mesh':
+                mesh_model = RD_FitzHugh_Nagumo(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
+            case 'RD_RPS_Mesh':
+                mesh_model = RD_RPS(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
+            case 'RD_RPS_Mesh_bis':
+                mesh_model = RD_RPS(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
+            case 'DiffMesh' | 'WaveMesh':
+                mesh_model = PDE_Laplacian(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
+            case 'Chemotaxism_Mesh':
+                c = initialize_random_values(n_node_types, device)
+                for n in range(n_node_types):
+                    c[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
+                mesh_model = PDE_Laplacian(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
+            case 'PDE_O_Mesh':
+                c = initialize_random_values(n_node_types, device)
+                for n in range(n_node_types):
+                    c[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
+                mesh_model = PDE_Laplacian(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
+            case _:
+                mesh_model = PDE_Z(device=device)
 
     return mesh_model
 
@@ -186,7 +188,6 @@ def choose_mesh_model(config, device):
 # TODO: this seems to be used to provide default values in case no parameters are given?
 def initialize_random_values(n, device):
     return torch.ones(n, 1, device=device) + torch.rand(n, 1, device=device)
-
 
 
 def init_particles(config, device, cycle_length=None):
@@ -241,6 +242,7 @@ def init_particles(config, device, cycle_length=None):
 
     return pos, dpos, type, features, cycle_duration, particle_id, cycle_length, cycle_length_distrib
 
+
 def rotate_init_mesh(angle, config, device):
     simulation_config = config.simulation
     n_nodes = simulation_config.n_nodes
@@ -255,6 +257,7 @@ def rotate_init_mesh(angle, config, device):
     pos_mesh = torch.zeros((n_nodes, 2), device=device)
     pos_mesh[0:n_nodes, 0:1] = x_mesh[0:n_nodes]
     pos_mesh[0:n_nodes, 1:2] = y_mesh[0:n_nodes]
+
 
 def rotate_init_mesh(angle, config, device):
     simulation_config = config.simulation
@@ -281,6 +284,13 @@ def rotate_init_mesh(angle, config, device):
 
     return features_mesh
 
+
+def get_index(n_particles, n_particle_types):
+    index_particles = []
+    for n in range(n_particle_types):
+        index_particles.append(
+            np.arange((n_particles // n_particle_types) * n, (n_particles // n_particle_types) * (n + 1)))
+    return index_particles
 
 
 def init_mesh(config, model_mesh, device):

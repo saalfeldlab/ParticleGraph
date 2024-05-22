@@ -210,12 +210,14 @@ def laplace(y, x):
     grad = gradient(y, x)
     return divergence(grad, x)
 
+
 def calculate_psnr(img1, img2, max_value=255):
     """"Calculating peak signal-to-noise ratio (PSNR) between two images."""
     mse = np.mean((np.array(img1, dtype=np.float32) - np.array(img2, dtype=np.float32)) ** 2)
     if mse == 0:
         return 100
     return 20 * np.log10(max_value / (np.sqrt(mse)))
+
 
 def calculate_ssim(img1, img2):
     ssim_score = ssim(img1, img2, data_range=img2.max() - img2.min())
