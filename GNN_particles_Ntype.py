@@ -831,13 +831,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 if 'graph' in style:
 
                     fig = plt.figure(figsize=(10, 10))
-                    # distance2 = torch.sum((x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
-                    # adj_t2 = ((distance2 < max_radius ** 2) & (distance2 < 0.9 ** 2)).float() * 1
-                    # edge_index2 = adj_t2.nonzero().t().contiguous()
-                    # dataset2 = data.Data(x=x, edge_index=edge_index2)
-                    # pos = dict(enumerate(np.array(x[:, 1:3].detach().cpu()), 0))
-                    # vis = to_networkx(dataset2, remove_self_loops=True, to_undirected=True)
-                    # nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False, alpha=alpha)
 
                     if model_config.mesh_model_name == 'RD_RPS_Mesh':
                         H1_IM = torch.reshape(x_mesh[:, 6:9], (100, 100, 3))
