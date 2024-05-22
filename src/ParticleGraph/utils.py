@@ -10,7 +10,9 @@ import numpy as np
 import torch
 from torch_geometric.data import Data
 from torchvision.transforms import CenterCrop
-
+import numpy as np
+import matplotlib.pyplot as plt
+from skimage.metrics import structural_similarity as ssim
 
 def to_numpy(tensor: torch.Tensor) -> np.ndarray:
     """
@@ -125,6 +127,10 @@ def tv2D(params):
     return tvloss / (nb_voxel)
 
 
+def get_r2_numpy_corrcoef(x, y):
+    return np.corrcoef(x, y)[0, 1]**2
+
+
 class CustomColorMap:
     def __init__(self, config):
         self.cmap_name = config.plotting.colormap
@@ -204,10 +210,21 @@ def laplace(y, x):
     grad = gradient(y, x)
     return divergence(grad, x)
 
+def calculate_psnr(img1, img2, max_value=255):
+    """"Calculating peak signal-to-noise ratio (PSNR) between two images."""
+    mse = np.mean((np.array(img1, dtype=np.float32) - np.array(img2, dtype=np.float32)) ** 2)
+    if mse == 0:
+        return 100
+    return 20 * np.log10(max_value / (np.sqrt(mse)))
 
-def create_log_dir(config, dataset_name):
+def calculate_ssim(img1, img2):
+    ssim_score = ssim(img1, img2, data_range=img2.max() - img2.min())
+    return ssim_score
+
+
+def create_log_dir(config, config_file):
     l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
+    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'models'), exist_ok=True)

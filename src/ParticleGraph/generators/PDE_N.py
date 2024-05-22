@@ -26,7 +26,7 @@ class PDE_N(pyg.nn.MessagePassing):
         self.p = p
         self.bc_dpos = bc_dpos
 
-    def forward(self, data):
+    def forward(self, data=[], return_all=False):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         particle_type = to_numpy(x[:, 5])
@@ -42,11 +42,19 @@ class PDE_N(pyg.nn.MessagePassing):
 
         du = -b*u + c*torch.tanh(u) + msg
 
-        return du
+        if return_all:
+            return du, msg, -b*u + c*torch.tanh(u)
+        else:
+            return du
 
     def message(self, u_j, edge_attr):
 
+        self.activation = torch.tanh(u_j)
+        self.u_j = u_j
+
         return edge_attr[:,None] * torch.tanh(u_j)
+
+
 
 
     def psi(self, r, p):

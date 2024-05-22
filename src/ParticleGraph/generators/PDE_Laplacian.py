@@ -28,13 +28,17 @@ class PDE_Laplacian(pyg.nn.MessagePassing):
         self.c = c
         self.beta = beta
         self.bc_dpos = bc_dpos
+        self.coeff = []
 
     def forward(self, data):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
 
-        particle_type = to_numpy(x[:, 5])
-        c = self.c[particle_type]
-        c = c[:, None]
+        if self.coeff == []:
+            particle_type = to_numpy(x[:, 5])
+            c = self.c[particle_type]
+            c = c[:, None]
+        else:
+            c = self.coeff
 
         u = x[:, 6:7]
 

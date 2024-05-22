@@ -1,11 +1,11 @@
 description: 'Rock Paper Scissor model'
-dataset: 'RD_RPS_2'
+dataset: 'RD_RPS_1'
 
 simulation:
   params: [[0],[0],[0],[0]]
   min_radius: 0
   max_radius: 0.3
-  diffusion_coefficients: [[0.4],[0.8],[1],[0.6]]
+  diffusion_coefficients: [[0.02], [0.04], [0.05], [0.03]]
   n_particles: 10000
   n_particle_types: 4
   n_interactions: 4
@@ -15,14 +15,14 @@ simulation:
   delta_t: 0.05
   boundary: 'periodic'
   node_value_map: 'pattern_10.tif'
-  node_type_map: 'pattern_0.tif'
+  node_type_map: 'pattern_17.tif'
   beta: 1
 
 graph_model:
   particle_model_name: ''
-  mesh_model_name: 'RD_RPS_Mesh'
+  mesh_model_name: 'RD_RPS_Mesh_bis'
   prediction: 'first_derivative'
-  input_size: 8
+  input_size: 5
   output_size: 3
   hidden_dim: 32
   n_mp_layers: 5
@@ -32,16 +32,16 @@ graph_model:
   update_type: 'none'
 
 plotting:
-  colormap: 'tab10'
+  colormap: 'viridis'
   arrow_length: 10
 
 training:
 
-  n_epochs: 20
+  n_epochs: 40
   batch_size: 8
   small_init_batch_size: True
   n_runs: 2
-  sparsity: 'replace_embedding'
+  sparsity: 'none'
   cluster_method: 'distance_plot'
   fix_cluster_embedding: True
 

@@ -46,15 +46,6 @@ def choose_model(config, device):
     params = config.simulation.params
 
     match particle_model_name:
-        case 'PDE_ParticleField_B':
-            # particle parameters
-            p = torch.rand(n_particle_types, 4, device=device) * 100  # comprised between 10 and 50
-            if params[0] != [-1]:
-                for n in range(n_particle_types):
-                    p[n] = torch.tensor(params[n])
-            else:
-                print(p)
-            model = PDE_ParticleField_B(aggr_type=aggr_type,  pos_rate=[], neg_rate=[], coeff_diff=[], delta_t=config.simulation.delta_t,  p=torch.squeeze(p), bc_dpos=bc_dpos, n_particles=n_particles, n_nodes=n_nodes)
         case 'PDE_A' | 'PDE_ParticleField_A' :
             p = torch.ones(n_particle_types, 4, device=device) + torch.rand(n_particle_types, 4, device=device)
             if config.simulation.non_discrete_level>0:
@@ -82,7 +73,7 @@ def choose_model(config, device):
             # for n in range(n_particles):
             #     func= model.psi(rr,p[n])
             #     plt.plot(rr.detach().cpu().numpy(),func.detach().cpu().numpy(),c='k',alpha=0.01)
-        case 'PDE_B':
+        case 'PDE_B' | 'PDE_ParticleField_B':
             p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
             if params[0] != [-1]:
                 for n in range(n_particle_types):
@@ -159,8 +150,9 @@ def choose_mesh_model(config, device):
     _, bc_dpos = choose_boundary_values(config.simulation.boundary)
 
     c = initialize_random_values(n_node_types, device)
-    for n in range(n_node_types):
-        c[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
+    if not('pics' in config.simulation.node_type_map):
+        for n in range(n_node_types):
+            c[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
 
     beta = config.simulation.beta
 
@@ -170,6 +162,8 @@ def choose_mesh_model(config, device):
         case 'RD_FitzHugh_Nagumo_Mesh':
             mesh_model = RD_FitzHugh_Nagumo(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
         case 'RD_RPS_Mesh':
+            mesh_model = RD_RPS(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
+        case 'RD_RPS_Mesh_bis':
             mesh_model = RD_RPS(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
         case 'DiffMesh' | 'WaveMesh':
             mesh_model = PDE_Laplacian(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
@@ -235,7 +229,7 @@ def init_particles(config, device, cycle_length=None):
             type = torch.tensor(type, device=device)
             type = type[:, None]
         case 'uniform':
-            type = torch.ones(n_particles, device=device)*7
+            type = torch.ones(n_particles, device=device) * 1
             type =  type[:, None]
         case 'stripes':
             l = n_particles//n_particle_types
@@ -262,16 +256,30 @@ def rotate_init_mesh(angle, config, device):
     pos_mesh[0:n_nodes, 0:1] = x_mesh[0:n_nodes]
     pos_mesh[0:n_nodes, 1:2] = y_mesh[0:n_nodes]
 
+def rotate_init_mesh(angle, config, device):
+    simulation_config = config.simulation
+    n_nodes = simulation_config.n_nodes
+    node_value_map = simulation_config.node_value_map
+
+    n_nodes_per_axis = int(np.sqrt(n_nodes))
+    xs = torch.linspace(1 / (2 * n_nodes_per_axis), 1 - 1 / (2 * n_nodes_per_axis), steps=n_nodes_per_axis)
+    ys = torch.linspace(1 / (2 * n_nodes_per_axis), 1 - 1 / (2 * n_nodes_per_axis), steps=n_nodes_per_axis)
+    x_mesh, y_mesh = torch.meshgrid(xs, ys, indexing='xy')
+    x_mesh = torch.reshape(x_mesh, (n_nodes_per_axis ** 2, 1))
+    y_mesh = torch.reshape(y_mesh, (n_nodes_per_axis ** 2, 1))
+    pos_mesh = torch.zeros((n_nodes, 2), device=device)
+    pos_mesh[0:n_nodes, 0:1] = x_mesh[0:n_nodes]
+    pos_mesh[0:n_nodes, 1:2] = y_mesh[0:n_nodes]
+
     i0 = imread(f'graphs_data/{node_value_map}')
     values = i0[(to_numpy(pos_mesh[:, 0]) * 255).astype(int), (to_numpy(pos_mesh[:, 1]) * 255).astype(int)]
     values = np.reshape(values, (n_nodes_per_axis, n_nodes_per_axis))
-    values = ndimage.rotate(values, angle, reshape=False)
+    values = ndimage.rotate(values, angle, reshape=False, cval=np.mean(values)*1.1)
     values = np.reshape(values, (n_nodes_per_axis*n_nodes_per_axis))
     features_mesh = torch.zeros((n_nodes, 2), device=device)
     features_mesh[:, 0] = torch.tensor(values / 255 * 5000, device=device)
 
     return features_mesh
-
 
 
 
@@ -294,7 +302,11 @@ def init_mesh(config, model_mesh, device):
     pos_mesh[0:n_nodes, 1:2] = y_mesh[0:n_nodes]
 
     i0 = imread(f'graphs_data/{node_value_map}')
-    values = i0[(to_numpy(pos_mesh[:, 0]) * 255).astype(int), (to_numpy(pos_mesh[:, 1]) * 255).astype(int)]
+    if 'video' in simulation_config.node_value_map:
+        i0 = imread(f'graphs_data/pattern_Null.tif')
+    else:
+        i0 = imread(f'graphs_data/{node_value_map}')
+    values = i0[(to_numpy(pos_mesh[:, 1]) * 255).astype(int), (to_numpy(pos_mesh[:, 0]) * 255).astype(int)]
 
     mask_mesh = (x_mesh > torch.min(x_mesh) + 0.02) & (x_mesh < torch.max(x_mesh) - 0.02) & (y_mesh > torch.min(y_mesh) + 0.02) & (y_mesh < torch.max(y_mesh) - 0.02)
 
@@ -307,7 +319,7 @@ def init_mesh(config, model_mesh, device):
             features_mesh[:, 1] = 0.25 * torch.tensor(values / 255, device=device)
         case 'RD_FitzHugh_Nagumo_Mesh':
             features_mesh = torch.zeros((n_nodes, 2), device=device) + torch.rand((n_nodes, 2), device=device) * 0.1
-        case 'RD_RPS_Mesh':
+        case 'RD_RPS_Mesh' | 'RD_RPS_Mesh_bis':
             features_mesh = torch.rand((n_nodes, 3), device=device)
             s = torch.sum(features_mesh, dim=1)
             for k in range(3):
@@ -372,35 +384,36 @@ def init_mesh(config, model_mesh, device):
 
     pos_3d = torch.cat((x_mesh[:, 1:3], torch.ones((x_mesh.shape[0], 1), device=device)), dim=1)
     edge_index_mesh, edge_weight_mesh = get_mesh_laplacian(pos=pos_3d, face=face, normalization="None")
-
+    edge_weight_mesh = edge_weight_mesh.to(dtype=torch.float32)
     mesh_data = {'mesh_pos': pos_3d, 'face': face, 'edge_index': edge_index_mesh, 'edge_weight': edge_weight_mesh,
                  'mask': mask_mesh, 'size': mesh_size}
 
-    if config.graph_model.particle_model_name == 'PDE_ParticleField_A':
+    if (config.graph_model.particle_model_name == 'PDE_ParticleField_A')  | (config.graph_model.particle_model_name == 'PDE_ParticleField_B'):
 
         type_mesh = 0 * type_mesh
 
-    if config.graph_model.particle_model_name == 'PDE_ParticleField_B':
-
-        a1 = 1E-2  # diffusion coefficient
-        a2 = 8E-5  # positive rate coefficient
-        a3 = 6.65E-5  # negative rate coefficient
-
-        i0 = imread(f'graphs_data/{config.simulation.node_diffusion_map}')
-        index = np.round(
-            i0[(to_numpy(x_mesh[:, 0]) * 255).astype(int), (to_numpy(x_mesh[:, 1]) * 255).astype(int)]).astype(int)
-        coeff_diff = a1 * np.array(config.simulation.diffusion_coefficients)[index]
-        model.coeff_diff = torch.tensor(coeff_diff, device=device)
-        i0 = imread(f'graphs_data/{config.simulation.node_proliferation_map}')
-        index = np.round(
-            i0[(to_numpy(x_mesh[:, 0]) * 255).astype(int), (to_numpy(x_mesh[:, 1]) * 255).astype(int)]).astype(int)
-        pos_rate = a2 * np.array(config.simulation.pos_rate)[index]
-        model.pos_rate = torch.tensor(pos_rate, device=device)
-        model.neg_rate = - torch.ones_like(model.pos_rate) * a3 * torch.tensor(config.simulation.pos_rate[0], device=device)
-
-        type_mesh = -1.0 + type_mesh * -1.0
+    # if config.graph_model.particle_model_name == 'PDE_ParticleField_B':
+    #
+    #     a1 = 1E-2  # diffusion coefficient
+    #     a2 = 8E-5  # positive rate coefficient
+    #     a3 = 6.65E-5  # negative rate coefficient
+    #
+    #     i0 = imread(f'graphs_data/{config.simulation.node_diffusion_map}')
+    #     index = np.round(
+    #         i0[(to_numpy(x_mesh[:, 1]) * 255).astype(int), (to_numpy(x_mesh[:, 2]) * 255).astype(int)]).astype(int)
+    #     coeff_diff = a1 * np.array(config.simulation.diffusion_coefficients)[index]
+    #     model.coeff_diff = torch.tensor(coeff_diff, device=device)
+    #     i0 = imread(f'graphs_data/{config.simulation.node_proliferation_map}')
+    #     index = np.round(
+    #         i0[(to_numpy(x_mesh[:, 0]) * 255).astype(int), (to_numpy(x_mesh[:, 1]) * 255).astype(int)]).astype(int)
+    #     pos_rate = a2 * np.array(config.simulation.pos_rate)[index]
+    #     model.pos_rate = torch.tensor(pos_rate, device=device)
+    #     model.neg_rate = - torch.ones_like(model.pos_rate) * a3 * torch.tensor(config.simulation.pos_rate[0], device=device)
+    #
+    #     type_mesh = -1.0 + type_mesh * -1.0
 
     a_mesh = torch.zeros_like(type_mesh)
+    type_mesh = type_mesh.to(dtype=torch.float32)
 
 
     return pos_mesh, dpos_mesh, type_mesh, features_mesh, a_mesh, node_id_mesh, mesh_data

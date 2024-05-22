@@ -155,28 +155,26 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         # embedding_j = self.a[self.data_id, to_numpy(particle_id_j), :].squeeze()
 
         match self.model:
+
             case 'PDE_ParticleField_A':
                 if self.has_field:
-                    in_features = torch.cat((delta_pos, r[:, None], field_j , embedding_i), dim=-1)
+                    in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
+                    out = field_j * self.lin_edge(in_features)
                 else:
-                    in_features = torch.cat((delta_pos, r[:, None], torch.ones_like(r[:, None]), embedding_i), dim=-1)
+                    in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
+                    out = self.lin_edge(in_features)
 
-
-        out = self.lin_edge(in_features)
-
-        if self.model == 'PDE_B':
-            self.diffx = delta_pos * self.max_radius
-            self.lin_edge_out = out
-            self.particle_id = particle_id_i
-        if self.model == 'PDE_A_bis':
-            self.diffx = delta_pos * self.max_radius
-            self.lin_edge_out = out
-            self.particle_id_i = particle_id_i
-            self.particle_id_j = particle_id_j
-        if self.model == 'PDE_GS':
-            self.in_features = in_features
-            self.r = r
-            self.lin_edge_out = out
+            case 'PDE_ParticleField_B':
+                if self.has_field:
+                    in_features = torch.cat(
+                        (delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None] ,
+                         dpos_y_j[:, None], embedding_i), dim=-1)
+                    out = field_j * self.lin_edge(in_features)
+                else:
+                    in_features = torch.cat(
+                        (delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
+                         dpos_y_j[:, None], embedding_i), dim=-1)
+                    out = self.lin_edge(in_features)
 
 
         return out

@@ -48,7 +48,7 @@ class Mesh_RPS(pyg.nn.MessagePassing):
             torch.tensor(np.ones((int(self.ndataset), int(self.nparticles), self.embedding_dim)), device=self.device,
                          requires_grad=True, dtype=torch.float32))
 
-    def forward(self, data, data_id):
+    def forward(self, data=[], data_id=[], return_all=False):
         self.data_id = data_id
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
 
@@ -63,12 +63,13 @@ class Mesh_RPS(pyg.nn.MessagePassing):
 
         pred = self.lin_phi(input_phi)
 
-        return pred
+        if return_all:
+            return pred, laplacian_uvw, uvw, embedding, input_phi
+        else:
+            return pred
 
     def message(self, uvw_j, discrete_laplacian):
         return discrete_laplacian[:,None] * uvw_j
-
-        return Laplace
 
     def update(self, aggr_out):
         return aggr_out

@@ -20,6 +20,8 @@ dependencies:
   - imageio
   - astropy
   - vispy
+  - scikit-image
+  - opencv-python
   - pip:
     - geomloss
     - torch_geometric
