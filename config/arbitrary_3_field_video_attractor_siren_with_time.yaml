@@ -13,12 +13,13 @@ simulation:
   delta_t: 0.1
   dpos_init: 0
   boundary: 'periodic'
+
   n_nodes: 10000
   n_node_types: 1
   diffusion_coefficients: [[0]]
   pos_rate: [[0]]
   neg_rate: [[0]]
-  node_value_map: 'video_bisons.tif'
+  node_value_map: 'video_attractors.tif'
   node_type_map: 'pattern_Null.tif'
   node_diffusion_map: 'pattern_Null.tif'
   node_proliferation_map: 'pattern_Null.tif'

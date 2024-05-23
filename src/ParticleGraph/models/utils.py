@@ -103,7 +103,7 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dat
     fig = plt.figure(figsize=(12, 12))
     if has_siren:
         if has_siren_time:
-            angle_list = [45, 135, 225, 315]
+            angle_list = [45, 135, 175, 250]
         else:
             angle_list = [0]
 
@@ -118,7 +118,7 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dat
 
             tmp = torch.reshape(tmp, (n_nodes_per_axis, n_nodes_per_axis))
             tmp = to_numpy(torch.sqrt(tmp))
-            tmp = np.flipud(tmp)
+            # tmp = np.flipud(tmp)
             fig_ = plt.figure(figsize=(12, 12))
             axf = fig_.add_subplot(1, 1, 1)
             plt.imshow(tmp, cmap='grey', vmin=0, vmax=2)

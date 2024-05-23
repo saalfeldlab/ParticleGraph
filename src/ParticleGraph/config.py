@@ -54,18 +54,25 @@ class GraphModelConfig(BaseModel):
     aggr_type: str
     mesh_aggr_type: str = 'add'
     embedding_dim: int = 2
+
     update_type: Literal['linear', 'none'] = 'none'
     input_size_update: int = 3
     n_layers_update: int = 3
     hidden_dim_update: int = 64
     output_size_update: int = 1
 
+    input_size_nnr: int = 3
+    n_layers_nnr: int = 5
+    hidden_dim_nnr: int = 128
+    output_size_nnr: int = 1
+
+
     field_method: Literal['none', 'tensor', 'Siren_wo_time', 'Siren_with_time'] = 'tensor'
 
     division_predictor_input_size: int = 3
-    division_predictor_output_size: int = 1
     division_predictor_hidden_dim: int = 64
     division_predictor_n_layers: int = 3
+    division_predictor_output_size: int = 1
 
     field_type: str = 'tensor'
 

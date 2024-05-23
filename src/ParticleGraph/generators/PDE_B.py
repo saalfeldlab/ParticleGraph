@@ -37,22 +37,26 @@ class PDE_B(pyg.nn.MessagePassing):
     def forward(self, data):
 
         x, edge_index = data.x, data.edge_index
+
+        if field == []:
+            field = torch.ones((x.shape[0], 1), device=x.device)
+
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         particle_type = to_numpy(x[:, 5])
         parameters = self.p[particle_type, :]
         d_pos = x[:, 3:5].clone().detach()
-        dd_pos = self.propagate(edge_index, pos=x[:,1:3], parameters=parameters, d_pos=d_pos)
+        dd_pos = self.propagate(edge_index, pos=x[:,1:3], parameters=parameters, d_pos=d_pos, , field=field)
 
         return dd_pos
 
-    def message(self, pos_i, pos_j, parameters_i, d_pos_i, d_pos_j):
+    def message(self, pos_i, pos_j, parameters_i, d_pos_i, d_pos_j, field_j):
         distance_squared = torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, axis=1)  # distance squared
 
         cohesion = parameters_i[:,0,None] * self.a1 * self.bc_dpos(pos_j - pos_i)
         alignment = parameters_i[:,1,None] * self.a2 * self.bc_dpos(d_pos_j - d_pos_i)
         separation = - parameters_i[:,2,None] * self.a3 * self.bc_dpos(pos_j - pos_i) / distance_squared[:, None]
 
-        return (separation + alignment + cohesion)
+        return (separation + alignment + cohesion) * field_j
 
     def psi(self, r, p):
         cohesion = p[0] * self.a4 * r

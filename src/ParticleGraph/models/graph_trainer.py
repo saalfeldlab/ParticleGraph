@@ -1,5 +1,6 @@
 from GNN_particles_Ntype import *
 from ParticleGraph.models.utils import *
+from ParticleGraph.models.Siren_Network import *
 
 def data_train(config, config_file, device):
 
@@ -1036,13 +1037,11 @@ def data_train_particle_field(config, config_file, device):
 
         image_width = int(np.sqrt(n_nodes))
         if has_siren_time:
-            model_f = Siren_Network(image_width=image_width, in_features=3, out_features=1, hidden_features=128,
-                                        hidden_layers=5, outermost_linear=True, device=device, first_omega_0=80,
-                                        hidden_omega_0=80.)
+            model_f = Siren_Network(image_width=image_width, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
+                                        hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.)
         else:
-            model_f = Siren_Network(image_width=image_width, in_features=2, out_features=1, hidden_features=64,
-                                        hidden_layers=3, outermost_linear=True, device=device, first_omega_0=80,
-                                        hidden_omega_0=80.)
+            model_f = Siren_Network(image_width=image_width, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
+                                        hidden_layers=3, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.)
         model_f.to(device=device)
         model_f.train()
         optimizer_f = torch.optim.Adam(lr=1e-5, params=model_f.parameters())

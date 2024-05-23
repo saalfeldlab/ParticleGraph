@@ -18,7 +18,7 @@ simulation:
   diffusion_coefficients: [[0]]
   pos_rate: [[0]]
   neg_rate: [[0]]
-  node_value_map: 'video_sesame.tif'
+  node_value_map: 'video_bisons.tif'
   node_type_map: 'pattern_Null.tif'
   node_diffusion_map: 'pattern_Null.tif'
   node_proliferation_map: 'pattern_Null.tif'
@@ -29,7 +29,7 @@ graph_model:
   prediction: 'first_derivative'
   input_size: 5
   output_size: 2
-  hidden_dim: 128
+  hidden_dim: 256
   n_mp_layers: 5
   aggr_type: 'mean'
   embedding_dim: 2

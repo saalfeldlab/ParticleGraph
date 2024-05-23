@@ -1,3 +1,5 @@
+import numpy as np
+
 from GNN_particles_Ntype import *
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
@@ -578,11 +580,8 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
     n_nodes = simulation_config.n_nodes
     n_nodes_per_axis = int(np.sqrt(n_nodes))
     delta_t = simulation_config.delta_t
-    has_signal = (config.graph_model.signal_model_name != '')
     has_adjacency_matrix = (simulation_config.connectivity_file != '')
     has_mesh = (config.graph_model.mesh_model_name != '')
-    only_mesh = (config.graph_model.particle_model_name == '') & has_mesh
-    has_cell_division = simulation_config.has_cell_division
     n_frames = simulation_config.n_frames
     cycle_length = None
     has_particle_dropout = training_config.particle_dropout > 0
@@ -669,7 +668,8 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             if model_config.field_type == 'siren_with_time':
 
                 if 'video' in simulation_config.node_value_map:
-                    im = imread(f"graphs_data/{simulation_config.node_value_map}") / 255 * 5000
+                    im = imread(f"graphs_data/{simulation_config.node_value_map}") # / 255 * 5000
+                    im = np.fliplr(im)
                     im = np.reshape(im[it], (n_nodes_per_axis * n_nodes_per_axis))
                     H1_mesh[:, 0:1] = torch.tensor(im[:,None], dtype=torch.float32, device=device)
                 else:
@@ -710,7 +710,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             with torch.no_grad():
                 y0 = model_p_p(dataset_p_p)
                 y1 = model_f_p(dataset_f_p)[n_nodes:]
-                y = y0 + y1
+                y = y0 +  0 * y1
 
             # append list
             if (it >= 0) & bSave:
@@ -920,14 +920,14 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                         plt.yticks(fontsize=32.0)
                     elif 'frame' in style:
                         plt.xlabel('x', fontsize=64)
-                        plt.ylabel('$', fontsize=64)
+                        plt.ylabel('y', fontsize=64)
                         plt.xticks(fontsize=32.0)
                         plt.yticks(fontsize=32.0)
                     else:
                         plt.xticks([])
                         plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=42.675)
                     plt.close()
 
                     if False:  # not(has_mesh):
