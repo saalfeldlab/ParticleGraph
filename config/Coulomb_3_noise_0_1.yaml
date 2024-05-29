@@ -1,5 +1,5 @@
 description: 'Coulomb model with three different particle types of charges being +1, +2 and -1'
-dataset: 'Coulomb_3_noise_1E-1'
+dataset: 'Coulomb_3_noise_0_1'
 
 simulation:
   params: [[2], [1], [-1]]
