@@ -55,17 +55,17 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         return
 
     folder = f'./graphs_data/graphs_{dataset_name}/'
+    os.makedirs(folder, exist_ok=True)
+    os.makedirs(f'./graphs_data/graphs_{dataset_name}/generated_data/', exist_ok=True)
     if erase:
         files = glob.glob(f"{folder}/*")
         for f in files:
             if (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (
                     f != 'generation_code.py'):
                 os.remove(f)
-    os.makedirs(folder, exist_ok=True)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/generated_data/', exist_ok=True)
-    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/generated_data/*')
-    for f in files:
-        os.remove(f)
+        files = glob.glob(f'./graphs_data/graphs_{dataset_name}/generated_data/*')
+        for f in files:
+            os.remove(f)
 
     model, bc_pos, bc_dpos = choose_model(config, device=device)
     particle_dropout_mask = np.arange(n_particles)
@@ -144,8 +144,6 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
 
             # compute connectivity rule
             if has_adjacency_matrix:
-                adj_t = adjacency > 0
-                edge_index = adj_t.nonzero().t().contiguous()
                 dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
             else:
                 distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
@@ -158,8 +156,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                 y = model(dataset)
 
             # append list
-            if (it >= 0) & bSave:
-
+            if (it >= 0):
                 if has_cell_division:
                     x_list.append(x.clone().detach())
                     y_ = torch.concatenate((y, y_timer[:, None], y_division[:, None]), 1)
