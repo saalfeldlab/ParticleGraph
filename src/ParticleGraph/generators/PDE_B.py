@@ -22,17 +22,19 @@ class PDE_B(pyg.nn.MessagePassing):
         the acceleration of the Boids (dimension 2)
     """
 
-    def __init__(self, aggr_type=[], p=[], bc_dpos=[]):
+    def __init__(self, aggr_type=[], p=[], bc_dpos=[], dimension=[]):
         super(PDE_B, self).__init__(aggr=aggr_type)  # "mean" aggregation.
 
         self.p = p
         self.bc_dpos = bc_dpos
+        self.dimension = dimension
 
         self.a1 = 0.5E-5
         self.a2 = 5E-4
         self.a3 = 1E-8
         self.a4 = 0.5E-5
         self.a5 = 1E-8
+
 
     def forward(self, data):
 
@@ -42,10 +44,11 @@ class PDE_B(pyg.nn.MessagePassing):
             field = torch.ones((x.shape[0], 1), device=x.device)
 
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        particle_type = to_numpy(x[:, 5])
+        particle_type = to_numpy(x[:, 1 + 2*self.dimension])
         parameters = self.p[particle_type, :]
-        d_pos = x[:, 3:5].clone().detach()
-        dd_pos = self.propagate(edge_index, pos=x[:,1:3], parameters=parameters, d_pos=d_pos, field=field)
+        pos = x[:, 1:self.dimension + 1]
+        d_pos = x[:, self.dimension + 1:1 + 2 * self.dimension]
+        dd_pos = self.propagate(edge_index, pos=pos, parameters=parameters, d_pos=d_pos, field=field)
 
         return dd_pos
 

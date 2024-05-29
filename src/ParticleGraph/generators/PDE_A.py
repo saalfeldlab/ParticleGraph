@@ -41,7 +41,8 @@ class PDE_A(pyg.nn.MessagePassing):
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         particle_type = to_numpy(x[:, 1 + 2*self.dimension])
         parameters = self.p[particle_type,:]
-        d_pos = self.propagate(edge_index, pos=x[:, 1:self.dimension+1], parameters=parameters, field=field)
+        pos = x[:, 1:self.dimension + 1]
+        d_pos = self.propagate(edge_index, pos=pos, parameters=parameters, field=field)
         return d_pos
 
         import matplotlib

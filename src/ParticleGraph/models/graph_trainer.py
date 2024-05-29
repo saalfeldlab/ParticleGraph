@@ -52,6 +52,7 @@ def data_train_particles(config, config_file, device):
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     embedding_cluster = EmbeddingCluster(config)
     n_runs = train_config.n_runs
+    marker_size = config.plotting.marker_size
 
     l_dir, log_dir, logger = create_log_dir(config, config_file)
     print(f'Graph files N: {n_runs}')
@@ -99,11 +100,11 @@ def data_train_particles(config, config_file, device):
     logger.info(f"Total Trainable Params: {n_total_params}")
     logger.info(f'Learning rates: {lr}, {lr_embedding}')
     model.train()
-    if has_cell_division:
-        model_division = Division_Predictor(config, device)
-        optimizer_division, n_total_params_division = set_trainable_division_parameters(model_division, lr=1E-3)
-        logger.info(f"Total Trainable Divsion Params: {n_total_params_division}")
-        logger.info(f'Learning rates: 1E-3')
+    # if has_cell_division:
+    #     model_division = Division_Predictor(config, device)
+    #     optimizer_division, n_total_params_division = set_trainable_division_parameters(model_division, lr=1E-3)
+    #     logger.info(f"Total Trainable Divsion Params: {n_total_params_division}")
+    #     logger.info(f'Learning rates: 1E-3')
 
     net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs.pt"
     print(f'network: {net}')
@@ -228,18 +229,18 @@ def data_train_particles(config, config_file, device):
             optimizer.zero_grad()
             if has_ghost:
                 optimizer_ghost_particles.zero_grad()
-            if has_cell_division:
-                optimizer_division.zero_grad()
+            # if has_cell_division:
+            #     optimizer_division.zero_grad()
 
             for batch in batch_loader:
                 pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi)
 
-            if has_cell_division:
-                pred_division = model_division(time_batch, data_id=run)
-                loss_division = (pred_division - y_batch_division).norm(2)
-                loss_division.backward()
-                optimizer_division.step()
-                total_loss_division += loss_division.item()
+            # if has_cell_division:
+            #     pred_division = model_division(time_batch, data_id=run)
+            #     loss_division = (pred_division - y_batch_division).norm(2)
+            #     loss_division.backward()
+            #     optimizer_division.step()
+            #     total_loss_division += loss_division.item()
 
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
@@ -520,6 +521,7 @@ def data_train_mesh(config, config_file, device):
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     embedding_cluster = EmbeddingCluster(config)
     n_runs = train_config.n_runs
+    marker_size = config.plotting.marker_size
 
     l_dir, log_dir, logger = create_log_dir(config, config_file)
     logger.info(f'Graph files N: {n_runs}')
@@ -921,6 +923,7 @@ def data_train_particle_field(config, config_file, device):
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     embedding_cluster = EmbeddingCluster(config)
     n_runs = train_config.n_runs
+    marker_size = config.plotting.marker_size
 
     l_dir, log_dir, logger = create_log_dir(config, config_file)
     print(f'Graph files N: {n_runs}')
@@ -1439,19 +1442,17 @@ def data_train_signal(config, config_file, device):
 
     print(f'Training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
-    dimension = simulation_config.dimension
     n_epochs = train_config.n_epochs
     n_particle_types = simulation_config.n_particle_types
-    n_particles = simulation_config.n_particles
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
     data_augmentation_loop = train_config.data_augmentation_loop
     recursive_loop = train_config.recursive_loop
     target_batch_size = train_config.batch_size
     has_mesh = (config.graph_model.mesh_model_name != '')
-    replace_with_cluster = 'replace' in train_config.sparsity
+    marker_size = config.plotting.marker_size
+
     has_ghost = train_config.n_ghosts > 0
-    has_large_range = train_config.large_range
     delta_t = simulation_config.delta_t
     if train_config.small_init_batch_size:
         get_batch_size = increasing_batch_size(target_batch_size)
@@ -1459,8 +1460,7 @@ def data_train_signal(config, config_file, device):
         get_batch_size = constant_batch_size(target_batch_size)
     batch_size = get_batch_size(0)
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
-    embedding_cluster = EmbeddingCluster(config)
-    n_runs = training_config.n_runs
+    n_runs = train_config.n_runs
 
     l_dir, log_dir, logger = create_log_dir(config, config_file)
     print(f'Graph files N: {n_runs}')
@@ -1514,23 +1514,15 @@ def data_train_signal(config, config_file, device):
     logger.info(f'N epochs: {n_epochs}')
     logger.info(f'initial batch_size: {batch_size}')
 
-    print('Update variables ...')
-    # update variable if particle_dropout, cell_division, etc ...
+    print('Update variables ,if particle_dropout, cell_division, etc ...')
     x = x_list[1][n_frames - 1].clone().detach()
-    if dimension == 2:
-        type_list = x[:, 5:6].clone().detach()
-    else:
-        type_list = x[:, 7:8].clone().detach()
     n_particles = x.shape[0]
     print(f'N particles: {n_particles}')
     logger.info(f'N particles: {n_particles}')
     config.simulation.n_particles = n_particles
     index_particles = []
     for n in range(n_particle_types):
-        if dimension == 2:
-            index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
-        else:
-            index = np.argwhere(x[:, 7].detach().cpu().numpy() == n)
+        index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
         index_particles.append(index.squeeze())
 
     mat = scipy.io.loadmat(simulation_config.connectivity_file)
@@ -1561,7 +1553,6 @@ def data_train_signal(config, config_file, device):
                 mask_ghost = mask_ghost[:, 0].astype(int)
 
         total_loss = 0
-        total_loss_division = 0
 
         Niter = n_frames * data_augmentation_loop // batch_size
         if (has_mesh) & (batch_size == 1):
@@ -1697,7 +1688,7 @@ def data_train_signal(config, config_file, device):
         plt.close()
 
 
-def data_test(config=None, config_file=None, visualize=False, style='color frame', verbose=True, best_model=20, step=15, ratio=1, run=1, test_simulation=False, sample_embedding = False, device=[]):
+def data_test(config=None, config_file=None, visualize=False, style='color frame', marker_size=100, verbose=True, best_model=20, step=15, ratio=1, run=1, test_simulation=False, sample_embedding = False, device=[]):
     print('')
 
     dataset_name = config.dataset
@@ -2140,16 +2131,13 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.text(0, 1.1, f'   ', ha='left', va='top', transform=ax.transAxes, fontsize=32)
                 plt.tight_layout()
             else:
-                s_p = 100
-                if simulation_config.has_cell_division:
-                    s_p = 25
                 for n in range(n_particle_types):
                     if has_field:
                         plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                    1-x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
+                                    1-x[index_particles[n], 2].detach().cpu().numpy(), s=marker_size, color=cmap.color(n))
                     else:
                         plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                    x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
+                                    x[index_particles[n], 2].detach().cpu().numpy(), s=marker_size, color=cmap.color(n))
             if 'latex' in style:
                 plt.xlabel(r'$x$', fontsize=64)
                 plt.ylabel(r'$y$', fontsize=64)
@@ -2194,7 +2182,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                 for n in range(n_particle_types):
                     plt.scatter(x0[index_particles[n], 1].detach().cpu().numpy(),
-                                x0[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
+                                x0[index_particles[n], 2].detach().cpu().numpy(), s=marker_size, color=cmap.color(n))
                 if 'frame' in style:
                     plt.xlabel(r'$x$', fontsize=64)
                     plt.ylabel(r'$y$', fontsize=64)
@@ -2215,7 +2203,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                 ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                 plt.scatter(x_ghost_pos[:, 0].detach().cpu().numpy(),
-                            x_ghost_pos[:, 1].detach().cpu().numpy(), s=s_p, color='g')
+                            x_ghost_pos[:, 1].detach().cpu().numpy(), s=marker_size, color='g')
                 if 'frame' in style:
                     plt.xlabel(r'$x$', fontsize=64)
                     plt.ylabel(r'$y$', fontsize=64)
@@ -2238,7 +2226,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                 ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                 plt.scatter(x_removed[:, 1].detach().cpu().numpy(),
-                            x_removed[:, 2].detach().cpu().numpy(), s=s_p, color='r')
+                            x_removed[:, 2].detach().cpu().numpy(), s=marker_size, color='r')
                 if 'frame' in style:
                     plt.xlabel(r'$x$', fontsize=64)
                     plt.ylabel(r'$y$', fontsize=64)

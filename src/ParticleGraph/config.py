@@ -15,6 +15,9 @@ class SimulationConfig(BaseModel):
     dimension: int = 2
     connectivity_file: str = ''
     params: list[list[float]]
+    cell_cycle_length: list[float] =[-1]
+    cell_death_rate: list[float] = [-1]
+
     min_radius: Annotated[float, Field(ge=0)] = 0
     max_radius: Annotated[float, Field(gt=0)]
     diffusion_coefficients: list[list[float]] = None
@@ -76,7 +79,6 @@ class GraphModelConfig(BaseModel):
 
     field_type: str = 'tensor'
 
-
     # def get_instance(self, **kwargs):
     #     return GraphModel(**self.model_dump(), **kwargs)
 
@@ -86,6 +88,7 @@ class PlottingConfig(BaseModel):
 
     colormap: str = 'tab10'
     arrow_length: int = 10
+    marker_size: int = 100
 
 
 class TrainingConfig(BaseModel):
@@ -115,7 +118,7 @@ class TrainingConfig(BaseModel):
     noise_level: float = 0
     data_augmentation: bool = True
     data_augmentation_loop: int = 40
-    recursive_loop: int = 0
+    recursive_loop: int = 1
 
     cluster_method: Literal['kmeans', 'kmeans_auto_plot', 'kmeans_auto_embedding', 'distance_plot', 'distance_embedding', 'distance_both'] = 'distance_plot'
     

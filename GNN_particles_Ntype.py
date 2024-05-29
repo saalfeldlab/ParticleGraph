@@ -19,6 +19,8 @@ from matplotlib import pyplot as plt
 from matplotlib import rc
 from matplotlib.ticker import FuncFormatter
 from prettytable import PrettyTable
+import vispy.scene
+from vispy.scene import visuals
 
 from ParticleGraph.config import ParticleGraphConfig
 from ParticleGraph.data_loaders import *
@@ -36,10 +38,9 @@ from ParticleGraph.models.Ghost_Particles import Ghost_Particles
 from ParticleGraph.models.utils import *
 from ParticleGraph.utils import *
 
-
 if __name__ == '__main__':
 
-    config_list = ['boids_16_256_bison_siren_with_time_2_bw_steady']
+    config_list = ['boids_16_256_division_long']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -49,8 +50,8 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='frame color', alpha=1, erase=True, bSave=True, step=8) #config.simulation.n_frames // 1)
-        data_train(config, config_file, device)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='frame color', erase=True, bSave=True, step=8) #config.simulation.n_frames // 1)
+        # data_train(config, config_file, device)
         # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 25, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
 

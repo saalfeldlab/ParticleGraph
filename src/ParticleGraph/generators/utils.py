@@ -80,7 +80,7 @@ def choose_model(config, device):
                     p[n] = torch.tensor(params[n])
             else:
                 print(p)
-            model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
+            model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos, dimension=dimension)
         case 'PDE_B_bis':
             p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
             if params[0] != [-1]:
@@ -190,7 +190,7 @@ def initialize_random_values(n, device):
     return torch.ones(n, 1, device=device) + torch.rand(n, 1, device=device)
 
 
-def init_particles(config, device, cycle_length=None):
+def init_particles(config, device):
     simulation_config = config.simulation
     n_particles = simulation_config.n_particles
     n_particle_types = simulation_config.n_particle_types
@@ -198,7 +198,9 @@ def init_particles(config, device, cycle_length=None):
 
     dpos_init = simulation_config.dpos_init
 
-    if cycle_length == None:
+    if config.simulation.cell_cycle_length != [-1]:
+        cycle_length = torch.tensor(config.simulation.cell_cycle_length, device=device)
+    else:
         cycle_length = torch.clamp(torch.abs(torch.ones(n_particle_types, 1, device=device) * 400 + torch.randn(n_particle_types, 1, device=device) * 50), min=100, max=700)
 
     if (simulation_config.boundary == 'periodic'): # | (simulation_config.dimension == 3):
@@ -240,7 +242,9 @@ def init_particles(config, device, cycle_length=None):
         case _:
             pass
 
-    return pos, dpos, type, features, cycle_duration, particle_id, cycle_length, cycle_length_distrib
+    division = torch.zeros_like(cycle_duration)
+
+    return pos, dpos, type, features, cycle_duration, division, particle_id, cycle_length, cycle_length_distrib
 
 
 def rotate_init_mesh(angle, config, device):
