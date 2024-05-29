@@ -36,7 +36,7 @@ class PDE_B(pyg.nn.MessagePassing):
 
     def forward(self, data):
 
-        x, edge_index = data.x, data.edge_index
+        x, edge_index, field = data.x, data.edge_index, data.field
 
         if field == []:
             field = torch.ones((x.shape[0], 1), device=x.device)
@@ -45,7 +45,7 @@ class PDE_B(pyg.nn.MessagePassing):
         particle_type = to_numpy(x[:, 5])
         parameters = self.p[particle_type, :]
         d_pos = x[:, 3:5].clone().detach()
-        dd_pos = self.propagate(edge_index, pos=x[:,1:3], parameters=parameters, d_pos=d_pos, , field=field)
+        dd_pos = self.propagate(edge_index, pos=x[:,1:3], parameters=parameters, d_pos=d_pos, field=field)
 
         return dd_pos
 

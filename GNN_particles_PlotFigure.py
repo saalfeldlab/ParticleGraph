@@ -4591,10 +4591,10 @@ def data_plot_particle_field(config_file, mode, cc, device):
     i0 = imread(f'graphs_data/{node_value_map}')
     if has_video:
         i0 = i0[0]
-        target = i0[(to_numpy(x_mesh[:, 2]) * 100).astype(int), (to_numpy(x_mesh[:, 1]) * 100).astype(int)] * 5000 / 255
+        target = i0[(to_numpy(x_mesh[:, 2]) * 100).astype(int), (to_numpy(x_mesh[:, 1]) * 100).astype(int)]
         target = np.reshape(target, (n_nodes_per_axis, n_nodes_per_axis))
     else:
-        target = i0[(to_numpy(x_mesh[:, 1]) * 255).astype(int), (to_numpy(x_mesh[:, 2]) * 255).astype(int)] * 5000 / 255
+        target = i0[(to_numpy(x_mesh[:, 1]) * 255).astype(int), (to_numpy(x_mesh[:, 2]) * 255).astype(int)]
         target = np.reshape(target, (n_nodes_per_axis, n_nodes_per_axis))
         target = np.flipud(target)
     vm = np.max(target)
@@ -4768,43 +4768,48 @@ def data_plot_particle_field(config_file, mode, cc, device):
             p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt',map_location=device)
         model_a_first = model.a.clone().detach()
 
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(1,1,1)
-        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-        csv_ = []
-        csv_.append(to_numpy(rr))
-        rmserr_list = []
-        for n in range(int(n_particles*(1-train_config.particle_dropout))):
-            embedding_ = model_a_first[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            match config.graph_model.particle_model_name:
-                case 'PDE_A' | 'PDE_ParticleField_A':
-                    in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                         rr[:, None] / max_radius, embedding_), dim=1)
-            with torch.no_grad():
-                func = model.lin_edge(in_features.float())
-            func = func[:, 0]
-            csv_.append(to_numpy(func))
-            true_func = model.psi(rr, p[to_numpy(type_list[n]).astype(int)].squeeze(), p[to_numpy(type_list[n]).astype(int)].squeeze())
-            rmserr_list.append(torch.sqrt(torch.mean((func * ynorm - true_func) ** 2)))
-            plt.plot(to_numpy(rr),
-                     to_numpy(func) * to_numpy(ynorm),
-                     color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
-        plt.xticks(fontsize=32)
-        plt.yticks(fontsize=32)
-        # plt.xlabel(r'$d_{ij}$', fontsize=64)
-        # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
-        plt.xlim([0, max_radius])
-        # plt.ylim([-0.15, 0.15])
-        plt.ylim([-0.04, 0.03])
-        # plt.ylim([-0.1, 0.1])
-        # plt.ylim([-0.03, 0.03])
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/func_all_{config_file}_{epoch}.tif",dpi=170.7)
-        rmserr_list = torch.stack(rmserr_list)
-        rmserr_list = to_numpy(rmserr_list)
-        print(f'all function RMS error: {np.round(np.mean(rmserr_list), 7)}+/-{np.round(np.std(rmserr_list), 7)}')
-        plt.close()
+        if False:
+            fig = plt.figure(figsize=(12, 12))
+            ax = fig.add_subplot(1,1,1)
+            ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+            ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+            csv_ = []
+            csv_.append(to_numpy(rr))
+            rmserr_list = []
+            for n in range(int(n_particles*(1-train_config.particle_dropout))):
+                embedding_ = model_a_first[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                match config.graph_model.particle_model_name:
+                    case 'PDE_A' | 'PDE_ParticleField_A':
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                             rr[:, None] / max_radius, embedding_), dim=1)
+                    case 'PDE_B' | 'PDE_ParticleField_B':
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                 torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                                 0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                with torch.no_grad():
+                    func = model.lin_edge(in_features.float())
+                func = func[:, 0]
+                csv_.append(to_numpy(func))
+                true_func = model.psi(rr, p[to_numpy(type_list[n]).astype(int)].squeeze(), p[to_numpy(type_list[n]).astype(int)].squeeze())
+                rmserr_list.append(torch.sqrt(torch.mean((func * ynorm - true_func) ** 2)))
+                plt.plot(to_numpy(rr),
+                         to_numpy(func) * to_numpy(ynorm),
+                         color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
+            plt.xticks(fontsize=32)
+            plt.yticks(fontsize=32)
+            # plt.xlabel(r'$d_{ij}$', fontsize=64)
+            # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+            plt.xlim([0, max_radius])
+            # plt.ylim([-0.15, 0.15])
+            plt.ylim([-0.04, 0.03])
+            # plt.ylim([-0.1, 0.1])
+            # plt.ylim([-0.03, 0.03])
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/tmp_training/func_all_{config_file}_{epoch}.tif",dpi=170.7)
+            rmserr_list = torch.stack(rmserr_list)
+            rmserr_list = to_numpy(rmserr_list)
+            print(f'all function RMS error: {np.round(np.mean(rmserr_list), 7)}+/-{np.round(np.std(rmserr_list), 7)}')
+            plt.close()
 
 
         match config.graph_model.field_type:
@@ -4871,8 +4876,7 @@ def data_plot_particle_field(config_file, mode, cc, device):
                         plt.close()
 
                         i0_ = i0[frame]
-                        y = i0_[(to_numpy(x_mesh[:, 2]) * 100).astype(int), (to_numpy(x_mesh[:, 1]) * 100).astype(
-                            int)] * 5000 / 255
+                        y = i0_[(to_numpy(x_mesh[:, 2]) * 100).astype(int), (to_numpy(x_mesh[:, 1]) * 100).astype(int)]
                         y = np.reshape(y, (n_nodes_per_axis, n_nodes_per_axis))
                         fig_ = plt.figure(figsize=(12, 12))
                         axf = fig_.add_subplot(1, 1, 1)
@@ -4894,14 +4898,14 @@ def data_plot_particle_field(config_file, mode, cc, device):
                         pred = model_f(time=frame / n_frames) ** 2
                         pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
                         pred = to_numpy(torch.sqrt(pred))
-
+                        pred = np.flipud(pred)
                         fig_ = plt.figure(figsize=(12, 12))
                         axf = fig_.add_subplot(1, 1, 1)
                         axf.xaxis.set_major_locator(plt.MaxNLocator(3))
                         axf.yaxis.set_major_locator(plt.MaxNLocator(3))
                         axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                         axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                        plt.imshow(pred, cmap=cc, vmin=0, vmax=vm)
+                        plt.imshow(pred, cmap=cc, vmin=0, vmax=1)
                         plt.xlabel(r'$x$', fontsize=64)
                         plt.ylabel(r'$y$', fontsize=64)
                         plt.xticks(fontsize=32.0)
@@ -6328,14 +6332,6 @@ def data_video_training(config_file, device):
     # ax.tick_params(axis='both', which='major', pad=15)
 
 
-
-
-
-
-
-
-
-
 if __name__ == '__main__':
 
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
@@ -6375,16 +6371,16 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3']#,'arbitrary_16','arbitrary_32','arbitrary_64']
     # config_list=['arbitrary_3_field_video_bison_siren_with_time']
     # config_list = ['gravity_16','gravity_100'] #,'Coulomb_3','boids_16_256','boids_32_256','boids_64_256']
-    config_list=['signal_N_100_2']
+    config_list = ['boids_16_256_bison_siren_with_time_2_bw']
     for config_file in config_list:
 
         # data_plot_attraction_repulsion_short(config_file, device=device)
         # data_plot_boids(config_file)
         # data_plot_gravity(config_file)
         # data_plot_RD(config_file,cc='viridis')
-        # data_plot_particle_field(config_file, mode='figures', cc='grey', device=device)
+        data_plot_particle_field(config_file, mode='figures', cc='grey', device=device)
         # data_plot_wave(config_file,cc='viridis')
-        data_plot_signal(config_file,cc='viridis')
+        # data_plot_signal(config_file,cc='viridis')
 
         # data_video_validation(config_file,device=device)
         # data_video_training(config_file,device=device)

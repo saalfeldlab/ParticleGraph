@@ -570,7 +570,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
     training_config = config.training
     model_config = config.graph_model
 
-    print(f'Generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+    print(f'Generating data ... {config} {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     dimension = simulation_config.dimension
     max_radius = simulation_config.max_radius
@@ -665,7 +665,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         time.sleep(0.5)
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
-            if model_config.field_type == 'siren_with_time':
+            if ('siren' in model_config.field_type) & (it >= 0):
 
                 if 'video' in simulation_config.node_value_map:
                     im = imread(f"graphs_data/{simulation_config.node_value_map}") # / 255 * 5000
@@ -710,7 +710,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             with torch.no_grad():
                 y0 = model_p_p(dataset_p_p)
                 y1 = model_f_p(dataset_f_p)[n_nodes:]
-                y = y0 +  0 * y1
+                y = y0 + y1
 
             # append list
             if (it >= 0) & bSave:
