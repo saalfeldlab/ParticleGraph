@@ -5642,15 +5642,11 @@ def data_plot_signal(config_file, cc='viridis'):
     train_config = config.training
     model_config = config.graph_model
 
-    max_radius = config.simulation.max_radius
-    min_radius = config.simulation.min_radius
     n_frames = config.simulation.n_frames
     n_runs = config.training.n_runs
     n_particle_types = simulation_config.n_particle_types
-    aggr_type = config.graph_model.aggr_type
-    delta_t = config.simulation.delta_t
     cmap = CustomColorMap(config=config)
-    dimension = simulation_config.dimension
+
 
     embedding_cluster = EmbeddingCluster(config)
 
@@ -5678,21 +5674,14 @@ def data_plot_signal(config_file, cc='viridis'):
     print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
 
     print('Update variables ...')
-    # update variable if particle_dropout, cell_division, etc ...
     x = x_list[1][n_frames - 1].clone().detach()
-    if dimension == 2:
-        type_list = x[:, 5:6].clone().detach()
-    else:
-        type_list = x[:, 7:8].clone().detach()
+    type_list = x[:, 3:4].clone().detach()
     n_particles = x.shape[0]
     print(f'N particles: {n_particles}')
     config.simulation.n_particles = n_particles
     index_particles = []
     for n in range(n_particle_types):
-        if dimension == 2:
-            index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
-        else:
-            index = np.argwhere(x[:, 7].detach().cpu().numpy() == n)
+        index = np.argwhere(x[:, 3].detach().cpu().numpy() == n)
         index_particles.append(index.squeeze())
 
     mat = scipy.io.loadmat(simulation_config.connectivity_file)
@@ -5744,7 +5733,6 @@ def data_plot_signal(config_file, cc='viridis'):
         net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{net_}.pt"
         # net_ = net.split('graphs')[1]
 
-        net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{net_}.pt"
         model, bc_pos, bc_dpos = choose_training_model(config, device)
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
@@ -5780,7 +5768,6 @@ def data_plot_signal(config_file, cc='viridis'):
         edge_index = adj_t.nonzero().t().contiguous()
         edge_attr_adjacency = adjacency[adj_t]
         dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
-        fig_ = plt.figure(figsize=(12, 12))
         axf = fig_.add_subplot(1, 1, 1)
         axf.xaxis.set_major_locator(plt.MaxNLocator(3))
         axf.yaxis.set_major_locator(plt.MaxNLocator(3))
@@ -5837,7 +5824,7 @@ def data_plot_signal(config_file, cc='viridis'):
 
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(1,1,1)
-        uu = x[:, 6:7].squeeze()
+        uu = x[:, 4:5].squeeze()
         ax.xaxis.get_major_formatter()._usetex = False
         ax.yaxis.get_major_formatter()._usetex = False
         uu = torch.tensor(np.linspace(0, 3, 1000)).to(device)
@@ -5846,7 +5833,7 @@ def data_plot_signal(config_file, cc='viridis'):
                                                                 model_lin_edge=model.lin_phi, model_a=model.a,
                                                                 dataset_number=1,
                                                                 n_particles=int(n_particles*(1-train_config.particle_dropout)), ynorm=ynorm,
-                                                                types=to_numpy(x[:, 5]),
+                                                                types=to_numpy(x[:, 3]),
                                                                 cmap=cmap, device=device)
         # plt.xlabel(r'$d_{ij}$', fontsize=64)
         # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
@@ -6371,16 +6358,16 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3']#,'arbitrary_16','arbitrary_32','arbitrary_64']
     # config_list=['arbitrary_3_field_video_bison_siren_with_time']
     # config_list = ['gravity_16','gravity_100'] #,'Coulomb_3','boids_16_256','boids_32_256','boids_64_256']
-    config_list = ['boids_16_256_bison_siren_with_time_2_bw']
+    config_list = ['signal_N_100_test']
     for config_file in config_list:
 
         # data_plot_attraction_repulsion_short(config_file, device=device)
         # data_plot_boids(config_file)
         # data_plot_gravity(config_file)
         # data_plot_RD(config_file,cc='viridis')
-        data_plot_particle_field(config_file, mode='figures', cc='grey', device=device)
+        # data_plot_particle_field(config_file, mode='figures', cc='grey', device=device)
         # data_plot_wave(config_file,cc='viridis')
-        # data_plot_signal(config_file,cc='viridis')
+        data_plot_signal(config_file,cc='viridis')
 
         # data_video_validation(config_file,device=device)
         # data_video_training(config_file,device=device)

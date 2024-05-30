@@ -58,7 +58,7 @@ class Signal_Propagation(pyg.nn.MessagePassing):
         self.data_id = data_id
         x, edge_index = data.x, data.edge_index
 
-        u = data.x[:, 6:7]
+        u = data.x[:, 4:5]
 
         msg = self.propagate(edge_index, u=u)
 

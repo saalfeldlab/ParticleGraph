@@ -101,7 +101,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
             # calculate cell division
-            if (it >= 0) & has_cell_division & (n_particles < 20000):
+            if (it >= 0) & has_cell_division & (n_particles < 5000):
                 pos = torch.argwhere(A1.squeeze() > cycle_length_distrib)
                 divisions = (A1.squeeze() > cycle_length_distrib).clone().detach() * 1.0
                 # cell division
@@ -130,11 +130,11 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                 A1 = A1 + delta_t
 
             if has_signal:
-                x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach(), D1.clone().detach()), 1)
+                x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), T1.clone().detach(), H1.clone().detach()), 1)
             elif has_cell_division:
-                x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(),T1.clone().detach(), A1.clone().detach(),D1.clone().detach()), 1)
+                x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), A1.clone().detach(), D1.clone().detach()), 1)
             else:
-                x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(),T1.clone().detach()), 1)
+                x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach()), 1)
 
             # compute connectivity rule
             if has_adjacency_matrix:
@@ -331,10 +331,6 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                             plt.axis('off')
                             plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.tif", dpi=170.7)
                             plt.close()
-
-
-
-
 
 
         if bSave:
