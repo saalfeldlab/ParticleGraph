@@ -5725,7 +5725,7 @@ def data_plot_signal(config_file, cc='viridis'):
 
     GT_model, bc_pos, bc_dpos = choose_model(config, device=device)
 
-    net_list = ['4']
+    net_list = ['9']
     # net_list = glob.glob(f"./log/try_{config_file}/models/*.pt")
 
     for net_ in net_list:
@@ -6358,7 +6358,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3']#,'arbitrary_16','arbitrary_32','arbitrary_64']
     # config_list=['arbitrary_3_field_video_bison_siren_with_time']
     # config_list = ['gravity_16','gravity_100'] #,'Coulomb_3','boids_16_256','boids_32_256','boids_64_256']
-    config_list = ['signal_N_100_test_3a']
+    config_list = ['signal_N_100_test_3b']
     for config_file in config_list:
 
         # data_plot_attraction_repulsion_short(config_file, device=device)

@@ -160,9 +160,10 @@ def data_train_particles(config, config_file, device):
 
         for N in range(Niter):
 
-            phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
-            cos_phi = torch.cos(phi)
-            sin_phi = torch.sin(phi)
+            with torch.no_grad():
+                phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
+                cos_phi = torch.cos(phi)
+                sin_phi = torch.sin(phi)
 
             run = 1 + np.random.randint(n_runs-1)       # sample dataset number, first dataset is skipped
 
@@ -185,10 +186,8 @@ def data_train_particles(config, config_file, device):
                         ind_np = torch.min(distance,axis=1)[1]
                         x_ghost[:,3:5] = x[ind_np, 3:5].clone().detach()
                     x = torch.cat((x, x_ghost), 0)
-
                     with torch.no_grad():
                         model.a[run,n_particles:n_particles+n_ghosts] = model.a[run,ghosts_particles.embedding_index].clone().detach()   # sample ghost embedding
-
                     distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
                     adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
                     t = torch.Tensor([max_radius ** 2])
