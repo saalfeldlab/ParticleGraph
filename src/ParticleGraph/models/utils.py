@@ -493,9 +493,11 @@ def set_trainable_parameters(model, lr_embedding, lr):
     #     optimizer.add_param_group({'params': parameter, 'lr': lr})
 
     optimizer = torch.optim.Adam([model.a], lr=lr_embedding)
+    n_total_params = model.a.numel()
     for name, parameter in model.named_parameters():
         if (parameter.requires_grad) & (name!='a'):
             optimizer.add_param_group({'params': parameter, 'lr': lr})
+            n_total_params += parameter.numel()
 
     return optimizer, n_total_params
 

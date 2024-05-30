@@ -59,11 +59,14 @@ def data_train_particles(config, config_file, device):
     time.sleep(0.5)
     x_list = []
     y_list = []
+    edge_p_p_list = []
     for run in trange(n_runs):
         x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
         y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
+        edge_p_p = torch.load(f'graphs_data/graphs_{dataset_name}/edge_p_p_list{run}.pt', map_location=device)
         x_list.append(x)
         y_list.append(y)
+        edge_p_p_list.append(edge_p_p)
     x = x_list[0][0].clone().detach()
     y = y_list[0][0].clone().detach()
     for run in range(n_runs):
@@ -171,8 +174,8 @@ def data_train_particles(config, config_file, device):
             for batch in range(batch_size):
 
                 k = 1 + np.random.randint(n_frames - 2)
-
                 x = x_list[run][k].clone().detach()
+                edges = edge_p_p_list[run][k].clone().detach()
 
                 if has_ghost:
                     x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k, bc_pos=bc_pos)
@@ -186,10 +189,11 @@ def data_train_particles(config, config_file, device):
                     with torch.no_grad():
                         model.a[run,n_particles:n_particles+n_ghosts] = model.a[run,ghosts_particles.embedding_index].clone().detach()   # sample ghost embedding
 
-                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                t = torch.Tensor([max_radius ** 2])
-                edges = adj_t.nonzero().t().contiguous()
+                    distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                    adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                    t = torch.Tensor([max_radius ** 2])
+                    edges = adj_t.nonzero().t().contiguous()
+
                 dataset = data.Data(x=x[:, :], edge_index=edges)
                 dataset_batch.append(dataset)
 

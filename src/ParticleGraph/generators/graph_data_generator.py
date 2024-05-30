@@ -88,6 +88,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
 
         x_list = []
         y_list = []
+        edge_p_p_list = []
 
         # initialize particle and graph states
         X1, V1, T1, H1, A1, D1, N1, cycle_length, cycle_length_distrib = init_particles(config, device=device)
@@ -144,6 +145,8 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                 adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
                 edge_index = adj_t.nonzero().t().contiguous()
                 dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=[])
+                if not (has_particle_dropout):
+                    edge_p_p_list.append(edge_index)
 
             # model prediction
             with torch.no_grad():
@@ -336,6 +339,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         if bSave:
             torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
+            torch.save(edge_p_p_list, f'graphs_data/graphs_{dataset_name}/edge_p_p_list{run}.pt')
             torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
             torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
             torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
