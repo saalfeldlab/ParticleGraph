@@ -181,6 +181,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
         plt.savefig(f"./{log_dir}/tmp_training/embedding/function/mesh_map_{dataset_name}_{epoch}_{N}.tif",
                     dpi=300)
     else:
+        fig = plt.figure(figsize=(8, 8))
         embedding = get_embedding(model.a, 1)
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=20)
@@ -481,15 +482,20 @@ def increasing_batch_size(batch_size):
     return get_batch_size
 
 def set_trainable_parameters(model, lr_embedding, lr):
-    trainable_params = [param for _, param in model.named_parameters() if param.requires_grad]
-    n_total_params = sum(p.numel() for p in trainable_params) + torch.numel(model.a)
+    # trainable_params = [param for _, param in model.named_parameters() if param.requires_grad]
+    # n_total_params = sum(p.numel() for p in trainable_params) + torch.numel(model.a)
+    #
+    # embedding = model.a
+    # optimizer = torch.optim.Adam([embedding], lr=lr_embedding)
+    #
+    # _, *parameters = trainable_params
+    # for parameter in parameters:
+    #     optimizer.add_param_group({'params': parameter, 'lr': lr})
 
-    embedding = model.a
-    optimizer = torch.optim.Adam([embedding], lr=lr_embedding)
-
-    _, *parameters = trainable_params
-    for parameter in parameters:
-        optimizer.add_param_group({'params': parameter, 'lr': lr})
+    optimizer = torch.optim.Adam([model.a], lr=lr_embedding)
+    for name, parameter in model.named_parameters():
+        if (parameter.requires_grad) & (name!='a'):
+            optimizer.add_param_group({'params': parameter, 'lr': lr})
 
     return optimizer, n_total_params
 
