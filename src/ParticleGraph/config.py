@@ -22,6 +22,7 @@ class SimulationConfig(BaseModel):
     max_radius: Annotated[float, Field(gt=0)]
     diffusion_coefficients: list[list[float]] = None
     n_particles: int = 1000
+    n_particles_max: int = 1000
     n_particle_types: int = 5
     n_interactions: int = 5
     non_discrete_level: float = 0
@@ -119,6 +120,7 @@ class TrainingConfig(BaseModel):
     data_augmentation: bool = True
     data_augmentation_loop: int = 40
     recursive_loop: int = 1
+    sub_batches: int = 0
 
     cluster_method: Literal['kmeans', 'kmeans_auto_plot', 'kmeans_auto_embedding', 'distance_plot', 'distance_embedding', 'distance_both'] = 'distance_plot'
     

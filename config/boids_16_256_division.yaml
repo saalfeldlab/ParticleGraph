@@ -8,6 +8,7 @@ simulation:
   max_radius: 0.04
   n_particles: 256
   has_cell_division: True
+  n_particles_max: 9600
   n_particle_types: 16
   n_interactions: 16
   n_frames: 8000
@@ -37,7 +38,8 @@ plotting:
 training:
   n_epochs: 20
   batch_size: 1
-  small_init_batch_size: True
+  small_init_batch_size: False
+  sub_batches: 4
   n_runs: 2
   noise_level: 0
   data_augmentation: True

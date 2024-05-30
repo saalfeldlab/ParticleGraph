@@ -38,6 +38,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
     min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
+    n_particles_max = simulation_config.n_particles_max
     delta_t = simulation_config.delta_t
     has_signal = (config.graph_model.signal_model_name != '')
     has_adjacency_matrix = (simulation_config.connectivity_file != '')
@@ -102,7 +103,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
             # calculate cell division
-            if (it >= 0) & has_cell_division & (n_particles < 5000):
+            if (it >= 0) & has_cell_division & (n_particles < n_particles_max):
                 pos = torch.argwhere(A1.squeeze() > cycle_length_distrib)
                 divisions = (A1.squeeze() > cycle_length_distrib).clone().detach() * 1.0
                 # cell division

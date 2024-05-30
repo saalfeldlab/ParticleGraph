@@ -40,6 +40,7 @@ def data_train_particles(config, config_file, device):
     data_augmentation = train_config.data_augmentation
     data_augmentation_loop = train_config.data_augmentation_loop
     target_batch_size = train_config.batch_size
+    sub_batches = train_config.sub_batches
     replace_with_cluster = 'replace' in train_config.sparsity
     has_ghost = train_config.n_ghosts > 0
     n_ghosts = train_config.n_ghosts
@@ -144,6 +145,7 @@ def data_train_particles(config, config_file, device):
     list_loss = []
     time.sleep(1)
 
+
     for epoch in range(n_epochs + 1):
 
         batch_size = get_batch_size(epoch)
@@ -177,6 +179,8 @@ def data_train_particles(config, config_file, device):
                 k = 1 + np.random.randint(n_frames - 2)
                 x = x_list[run][k].clone().detach()
                 edges = edge_p_p_list[run][k].clone().detach()
+                if sub_batches>0:
+                    sub_indexes, edges = subset_edges (edges, sub_batches, N % sub_batches, n_particles)
 
                 if has_ghost:
                     x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k, bc_pos=bc_pos)
@@ -219,6 +223,8 @@ def data_train_particles(config, config_file, device):
 
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
+            elif sub_batches>0:
+                loss = ((pred[sub_indexes] - y_batch[sub_indexes])).norm(2)
             else:
                 loss = (pred - y_batch).norm(2)
 
