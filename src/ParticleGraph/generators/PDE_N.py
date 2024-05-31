@@ -55,7 +55,5 @@ class PDE_N(pyg.nn.MessagePassing):
         return edge_attr[:,None] * torch.tanh(u_j)
 
 
-
-
     def psi(self, r, p):
         return r * p

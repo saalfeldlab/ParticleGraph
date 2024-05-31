@@ -43,10 +43,12 @@ def set_device(device=None):
     return device
 
 def get_gpu_memory_map(device=None):
+    print(' ')
     t = np.round(torch.cuda.get_device_properties(device).total_memory/1E9,2)
     r = np.round(torch.cuda.memory_reserved(device)/1E9,2)
     a = np.round(torch.cuda.memory_allocated(device)/1E9,2)
-    print(f"Total GPU memory: total {t} reserved {r} allocated {a}")
+    print(f"GPU memory: total {t} reserved {r} allocated {a}")
+    print(' ')
 
     return t, r, a
 
@@ -111,6 +113,27 @@ def choose_boundary_values(bc_name):
             return identity, identity
         case 'periodic':
             return periodic, shifted_periodic
+        case _:
+            raise ValueError(f'Unknown boundary condition {bc_name}')
+
+def choose_boundary_np_values(bc_name):
+    def identity(x):
+        return x
+
+    def np_periodic(x):
+        return np.remainder(x, 1.0)  # in [0, 1)
+
+    def np_shifted_periodic(x):
+        try:
+            return np.remainder(x - 0.5, 1.0) - 0.5  # in [-0.5, 0.5)
+        except:
+            print('pb')
+
+    match bc_name:
+        case 'no':
+            return identity, identity
+        case 'periodic':
+            return np_periodic, np_shifted_periodic
         case _:
             raise ValueError(f'Unknown boundary condition {bc_name}')
 

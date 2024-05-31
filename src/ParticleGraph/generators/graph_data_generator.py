@@ -16,7 +16,6 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
         data_generate_mesh(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
                                         alpha=0.2, ratio=1,
                                         scenario=scenario, device=device, bSave=bSave)
-
     else:
         data_generate_particle(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
                                         alpha=0.2, ratio=1,
@@ -68,7 +67,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         for f in files:
             os.remove(f)
 
-    model, bc_pos, bc_dpos = choose_model(config, device=device)
+    model, bc_pos, bc_dpos, bc_pos_np, bc_dpos_np = choose_model(config, device=device)
     particle_dropout_mask = np.arange(n_particles)
     if has_particle_dropout:
         draw = np.random.permutation(np.arange(n_particles))
@@ -92,7 +91,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         edge_p_p_list = []
 
         # initialize particle and graph states
-        X1, V1, T1, H1, A1, D1, N1, cycle_length, cycle_length_distrib = init_particles(config, device=device)
+        X1, V1, T1, H1, A1, D1, N1, cycle_length, cycle_length_distrib = init_particles(config, device=device) # cell_death_rate, cell_death_rate_distrib
         index_particles = []
         for n in range(n_particle_types):
             pos = torch.argwhere(T1 == n)
@@ -104,9 +103,16 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
 
             # calculate cell division
             if (it >= 0) & has_cell_division & (n_particles < n_particles_max):
-                pos = torch.argwhere(A1.squeeze() > cycle_length_distrib)
-                divisions = (A1.squeeze() > cycle_length_distrib).clone().detach() * 1.0
+                # cell death
+                # sample = torch.rand(n_particles, device=device)
+                # pos = torch.argwhere(sample < cell_death_rate_distrib)
+                # if len(pos) > 1:
+                #     pos = to_numpy(pos[:, 0].squeeze()).astype(int)
+                #     D1[pos] = -1
                 # cell division
+                pos = torch.argwhere((A1.squeeze() > cycle_length_distrib) & (D1.squeeze() > -1))
+                divisions = (A1.squeeze() > cycle_length_distrib).clone().detach() * 1.0
+
                 if len(pos) > 1:
                     n_add_nodes = len(pos)
                     pos = to_numpy(pos[:, 0].squeeze()).astype(int)
@@ -142,12 +148,27 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
             if has_adjacency_matrix:
                 dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
             else:
-                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                edge_index = adj_t.nonzero().t().contiguous()
+
+                if n_particles > 500000:
+                    edge_index = np.sum(bc_dpos_np(to_numpy(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1])) ** 2, axis=2)
+                    edge_index = ((edge_index < max_radius ** 2) & (edge_index > min_radius ** 2)) * 1
+                    edge_index = edge_index.nonzero()
+                    if not (has_particle_dropout):
+                        edge_p_p_list.append(edge_index)
+                    edge_index = torch.tensor(edge_index, dtype=torch.int64, device=device)
+                else:
+                    edge_index = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                    edge_index = ((edge_index < max_radius ** 2) & (edge_index > min_radius ** 2)).float() * 1
+                    edge_index = edge_index.nonzero().t().contiguous()
+                    if not (has_particle_dropout):
+                        edge_p_p_list.append(to_numpy(edge_index))
+
                 dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=[])
-                if not (has_particle_dropout):
-                    edge_p_p_list.append(edge_index)
+
+
+                del edge_index
+                if it % 1000 == 0:
+                    t, r, a = get_gpu_memory_map(device)
 
             # model prediction
             with torch.no_grad():
@@ -242,7 +263,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                                     vmin=0, vmax=3)
                         plt.xlim([-1.5, 1.5])
                         plt.ylim([-1.5, 1.5])
-                        plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=24)
+                        plt.text(0, 1.1, f'frame {it}, {n_particles} particles', ha='left', va='top', transform=ax.transAxes, fontsize=24)
                         # cbar = plt.colorbar(shrink=0.5)
                         # cbar.ax.tick_params(labelsize=32)
                         plt.xticks([])
@@ -292,7 +313,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                                 plt.xticks(fontsize=32.0)
                                 plt.yticks(fontsize=32.0)
                                 ax.tick_params(axis='both', which='major', pad=15)
-                                plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes,
+                                plt.text(0, 1.1, f'frame {it}, {n_particles} particles', ha='left', va='top', transform=ax.transAxes,
                                          fontsize=32)
                             else:
                                 plt.xticks([])
@@ -340,7 +361,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         if bSave:
             torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
-            torch.save(edge_p_p_list, f'graphs_data/graphs_{dataset_name}/edge_p_p_list{run}.pt')
+            np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}',*edge_p_p_list)
             torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
             torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
             torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')

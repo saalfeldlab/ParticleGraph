@@ -79,6 +79,7 @@ class Signal_Propagation(pyg.nn.MessagePassing):
             return pred, msg, self.lin_phi(input_phi), input_phi
         else:
             return pred
+
     def message(self, edge_index_i, edge_index_j, u_j):
 
         A = torch.zeros(self.n_particles, self.n_particles, device=self.device, requires_grad=False, dtype=torch.float32)
@@ -90,8 +91,8 @@ class Signal_Propagation(pyg.nn.MessagePassing):
         self.A = A
 
         weight_ij = A[to_numpy(edge_index_i),to_numpy(edge_index_j),None]
-        self.weight_ij = A.clone().detach()
 
+        self.weight_ij = A.clone().detach()
         self.activation = self.lin_edge(u_j)
         self.u_j = u_j
 

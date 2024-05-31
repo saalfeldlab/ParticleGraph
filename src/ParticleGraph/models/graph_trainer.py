@@ -64,7 +64,7 @@ def data_train_particles(config, config_file, device):
     for run in trange(n_runs):
         x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
         y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
-        edge_p_p = torch.load(f'graphs_data/graphs_{dataset_name}/edge_p_p_list{run}.pt', map_location=device)
+        edge_p_p = np.load(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}.npz')
         x_list.append(x)
         y_list.append(y)
         edge_p_p_list.append(edge_p_p)
@@ -178,7 +178,8 @@ def data_train_particles(config, config_file, device):
 
                 k = 1 + np.random.randint(n_frames - 2)
                 x = x_list[run][k].clone().detach()
-                edges = edge_p_p_list[run][k].clone().detach()
+                edges = edge_p_p_list[run][f'arr_{k}']
+                edges = torch.tensor(edges, dtype=torch.int64, device=device)
                 if sub_batches>0:
                     sub_indexes, edges = subset_edges (edges, sub_batches, N % sub_batches, n_particles)
 

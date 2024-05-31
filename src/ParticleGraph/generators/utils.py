@@ -6,7 +6,7 @@ import matplotlib
 from tifffile import imread
 from ParticleGraph.generators import PDE_A, PDE_B, PDE_B_bis, PDE_E, PDE_G, PDE_GS, PDE_N, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, \
     PDE_Laplacian, PDE_O
-from ParticleGraph.utils import choose_boundary_values
+from ParticleGraph.utils import choose_boundary_values, choose_boundary_np_values
 from ParticleGraph.data_loaders import load_solar_system
 from time import sleep
 import numpy as np
@@ -40,8 +40,11 @@ def choose_model(config, device):
     n_node_types = config.simulation.n_node_types
     n_nodes = config.simulation.n_nodes
     n_particle_types = config.simulation.n_particle_types
-    bc_pos, bc_dpos = choose_boundary_values(config.simulation.boundary)
     dimension = config.simulation.dimension
+
+    bc_pos, bc_dpos = choose_boundary_values(config.simulation.boundary)
+    bc_pos_np, bc_dpos_np = choose_boundary_np_values(config.simulation.boundary)
+
 
     params = config.simulation.params
 
@@ -140,7 +143,7 @@ def choose_model(config, device):
 
 
 
-    return model, bc_pos, bc_dpos
+    return model, bc_pos, bc_dpos, bc_pos_np, bc_dpos_np
 
 
 def choose_mesh_model(config, device):
@@ -203,6 +206,11 @@ def init_particles(config, device):
     else:
         cycle_length = torch.clamp(torch.abs(torch.ones(n_particle_types, 1, device=device) * 400 + torch.randn(n_particle_types, 1, device=device) * 50), min=100, max=700)
 
+    if config.simulation.cell_death_rate != [-1]:
+        cell_death_rate = torch.tensor(config.simulation.cell_death_rate, device=device)
+    else:
+        cell_death_rate = torch.zeros((n_particles, 1), device=device)
+
     if (simulation_config.boundary == 'periodic'): # | (simulation_config.dimension == 3):
         pos = torch.rand(n_particles, dimension, device=device)
     else:
@@ -216,12 +224,13 @@ def init_particles(config, device):
         type = torch.tensor(np.arange(n_particles), device=device)
     features = torch.cat((torch.rand((n_particles, 1), device=device) , 0.1 * torch.randn((n_particles, 1), device=device)), 1)
     cycle_length_distrib = cycle_length[to_numpy(type)].squeeze() * (torch.ones(n_particles, device=device) + 0.05 * torch.randn(n_particles, device=device))
-    type = type[:, None]
     cycle_duration = torch.rand(n_particles, device=device)
     cycle_duration = cycle_duration * cycle_length[to_numpy(type)].squeeze()
     cycle_duration = cycle_duration[:, None]
+    cell_death_rate_distrib = (cell_death_rate[to_numpy(type)].squeeze() * (torch.ones(n_particles, device=device) + 0.05 * torch.randn(n_particles, device=device)))/100
     particle_id = torch.arange(n_particles, device=device)
     particle_id = particle_id[:, None]
+    type = type[:, None]
 
     scenario = ''
 
@@ -244,7 +253,7 @@ def init_particles(config, device):
 
     division = torch.zeros_like(cycle_duration)
 
-    return pos, dpos, type, features, cycle_duration, division, particle_id, cycle_length, cycle_length_distrib
+    return pos, dpos, type, features, cycle_duration, division, particle_id, cycle_length, cycle_length_distrib  #, cell_death_rate, cell_death_rate_distrib
 
 
 def rotate_init_mesh(angle, config, device):
