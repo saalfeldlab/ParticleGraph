@@ -48,7 +48,6 @@ def get_gpu_memory_map(device=None):
     r = np.round(torch.cuda.memory_reserved(device)/1E9,2)
     a = np.round(torch.cuda.memory_allocated(device)/1E9,2)
     print(f"GPU memory: total {t} reserved {r} allocated {a}")
-    print(' ')
 
     return t, r, a
 

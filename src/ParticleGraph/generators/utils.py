@@ -43,7 +43,7 @@ def choose_model(config, device):
     dimension = config.simulation.dimension
 
     bc_pos, bc_dpos = choose_boundary_values(config.simulation.boundary)
-    bc_pos_np, bc_dpos_np = choose_boundary_np_values(config.simulation.boundary)
+    # bc_pos_np, bc_dpos_np = choose_boundary_np_values(config.simulation.boundary)
 
 
     params = config.simulation.params
@@ -143,7 +143,7 @@ def choose_model(config, device):
 
 
 
-    return model, bc_pos, bc_dpos, bc_pos_np, bc_dpos_np
+    return model, bc_pos, bc_dpos
 
 
 def choose_mesh_model(config, device):
@@ -198,6 +198,7 @@ def init_particles(config, device):
     n_particles = simulation_config.n_particles
     n_particle_types = simulation_config.n_particle_types
     dimension = simulation_config.dimension
+    has_cell_division = simulation_config.has_cell_division
 
     dpos_init = simulation_config.dpos_init
 
@@ -252,6 +253,9 @@ def init_particles(config, device):
             pass
 
     division = torch.zeros_like(cycle_duration)
+
+    if has_cell_division:
+        print(f'cycle_length {to_numpy(cycle_length)}')
 
     return pos, dpos, type, features, cycle_duration, division, particle_id, cycle_length, cycle_length_distrib  #, cell_death_rate, cell_death_rate_distrib
 

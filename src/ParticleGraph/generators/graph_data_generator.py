@@ -67,7 +67,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         for f in files:
             os.remove(f)
 
-    model, bc_pos, bc_dpos, bc_pos_np, bc_dpos_np = choose_model(config, device=device)
+    model, bc_pos, bc_dpos = choose_model(config, device=device)
     particle_dropout_mask = np.arange(n_particles)
     if has_particle_dropout:
         draw = np.random.permutation(np.arange(n_particles))
@@ -91,7 +91,11 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         edge_p_p_list = []
 
         # initialize particle and graph states
-        X1, V1, T1, H1, A1, D1, N1, cycle_length, cycle_length_distrib = init_particles(config, device=device) # cell_death_rate, cell_death_rate_distrib
+        if run==0:
+            X1, V1, T1, H1, A1, D1, N1, cycle_length, cycle_length_distrib = init_particles(config, device=device) # cell_death_rate, cell_death_rate_distrib
+        else:
+            X1, V1, T1, H1, A1, D1, N1, _, _ = init_particles(config, device=device)  # cell_death_rate, cell_death_rate_distrib
+
         index_particles = []
         for n in range(n_particle_types):
             pos = torch.argwhere(T1 == n)
@@ -148,31 +152,22 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
             if has_adjacency_matrix:
                 dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
             else:
-
-                if n_particles > 500000:
-                    edge_index = np.sum(bc_dpos_np(to_numpy(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1])) ** 2, axis=2)
-                    edge_index = ((edge_index < max_radius ** 2) & (edge_index > min_radius ** 2)) * 1
-                    edge_index = edge_index.nonzero()
-                    if not (has_particle_dropout):
-                        edge_p_p_list.append(edge_index)
-                    edge_index = torch.tensor(edge_index, dtype=torch.int64, device=device)
-                else:
+                with torch.no_grad():
                     edge_index = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
                     edge_index = ((edge_index < max_radius ** 2) & (edge_index > min_radius ** 2)).float() * 1
                     edge_index = edge_index.nonzero().t().contiguous()
                     if not (has_particle_dropout):
                         edge_p_p_list.append(to_numpy(edge_index))
-
-                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=[])
-
-
-                del edge_index
-                if it % 1000 == 0:
-                    t, r, a = get_gpu_memory_map(device)
+                    dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=[])
 
             # model prediction
             with torch.no_grad():
                 y = model(dataset)
+            if (it) % 500 == 0:
+                t, r, a = get_gpu_memory_map(device)
+                print(x.shape)
+                print(y.shape)
+                print(edge_index.shape)
 
             # append list
             if (it >= 0):
@@ -182,11 +177,11 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                     x_list.append(x_)
                     x_ = x[inv_particle_dropout_mask].clone().detach()
                     x_[:, 0] = torch.arange(len(x_), device=device)
-                    x_removed_list.append(x[inv_particle_dropout_mask].clone().detach())
-                    y_list.append(y[particle_dropout_mask].clone().detach())
+                    x_removed_list.append(x[inv_particle_dropout_mask])
+                    y_list.append(y[particle_dropout_mask])
                 else:
-                    x_list.append(x.clone().detach())
-                    y_list.append(y.clone().detach())
+                    x_list.append(x)
+                    y_list.append(y)
 
             # Particle update
             if has_signal:
@@ -361,12 +356,16 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         if bSave:
             torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
+            # np.savez(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt',x_list)
+            # np.savez(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt',y_list)
             np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}',*edge_p_p_list)
-            torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
-            torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
-            torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
+            if has_cell_division:
+                torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
+                torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
+            torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p_{run}.pt')
+            torch.save(model, f'graphs_data/graphs_{dataset_name}/model_{run}.pt')
             if has_particle_dropout:
-                torch.save(x_removed_list, f'graphs_data/graphs_{dataset_name}/x_removed_list_{run}.pt')
+                np.save(f'graphs_data/graphs_{dataset_name}/x_removed_list_{run}.pt',x_removed_list)
                 np.save(f'graphs_data/graphs_{dataset_name}/particle_dropout_mask.npy', particle_dropout_mask)
                 np.save(f'graphs_data/graphs_{dataset_name}/inv_particle_dropout_mask.npy', inv_particle_dropout_mask)
 
