@@ -162,6 +162,8 @@ def data_train_particles(config, config_file, device):
 
         for N in range(Niter):
 
+            print(N)
+
             with torch.no_grad():
                 phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
                 cos_phi = torch.cos(phi)
@@ -181,7 +183,7 @@ def data_train_particles(config, config_file, device):
                 edges = edge_p_p_list[run][f'arr_{k}']
                 edges = torch.tensor(edges, dtype=torch.int64, device=device)
                 if sub_batches>0:
-                    sub_indexes, edges = subset_edges (edges, sub_batches, N % sub_batches, n_particles)
+                    sub_indexes, edges = subset_edges (edges, sub_batches, N % sub_batches, has_cell_division, x[:, 6:7])
 
                 if has_ghost:
                     x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k, bc_pos=bc_pos)
@@ -198,10 +200,7 @@ def data_train_particles(config, config_file, device):
                     t = torch.Tensor([max_radius ** 2])
                     edges = adj_t.nonzero().t().contiguous()
 
-                if has_cell_division:
-                    dataset = data.Data(x=x[:, :], edge_index=edges, has_field=true)
-                else:
-                    dataset = data.Data(x=x[:, :], edge_index=edges)
+                dataset = data.Data(x=x[:, :], edge_index=edges)
                 dataset_batch.append(dataset)
 
                 y = y_list[run][k].clone().detach()
@@ -223,12 +222,15 @@ def data_train_particles(config, config_file, device):
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
 
             for batch in batch_loader:
-                pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi)
+                pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=has_cell_division)
 
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
             elif sub_batches>0:
-                loss = ((pred[sub_indexes] - y_batch[sub_indexes])).norm(2)
+                try:
+                    loss = (pred[sub_indexes] - y_batch[sub_indexes]).norm(2)
+                except:
+                    print(f'Error: {sub_indexes}')
             elif has_cell_division:
                 mask_cell_alive = np.argwhere(to_numpy(x[:6,7]) == 1)
                 mask_cell_alive = mask_cell_alive[:, 0].astype(int)

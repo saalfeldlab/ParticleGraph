@@ -514,9 +514,11 @@ def set_trainable_division_parameters(model, lr):
 
     return optimizer, n_total_params
 
-def subset_edges(edges, n_subset, n, n_particles):
+def subset_edges(edges, n_subset, n, has_cell_division, alive):
 
-    subset_length = n_particles // n_subset
+
+
+    subset_length = len(alive) // n_subset
     index = n * subset_length
 
     pos = torch.argwhere((edges[1] >= index) & (edges[1] < index + subset_length))
@@ -524,6 +526,11 @@ def subset_edges(edges, n_subset, n, n_particles):
     edges = edges[:, pos]
 
     sub_indexes = np.arange(index, index + subset_length)
+
+    if has_cell_division:
+        pos = torch.argwhere(alive[sub_indexes, 0:1] == 1)
+        pos = to_numpy(pos.squeeze())
+        sub_indexes = sub_indexes[pos]
 
     return sub_indexes, edges
 

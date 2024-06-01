@@ -76,21 +76,23 @@ class Interaction_Particles(pyg.nn.MessagePassing):
             self.lin_update = MLP(input_size=self.output_size + self.embedding_dim + 2, output_size=self.output_size,
                                   nlayers=self.n_layers_update, hidden_size=self.hidden_dim_update, device=self.device)
 
-    def forward(self, data, data_id, training, vnorm, phi):
+    def forward(self, data, data_id, training, vnorm, phi, has_field):
 
         self.data_id = data_id
         self.vnorm = vnorm
         self.cos_phi = torch.cos(phi)
         self.sin_phi = torch.sin(phi)
         self.training = training
+        self.has_field = has_field
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
         pos = x[:, 1:self.dimension+1]
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
         particle_id = x[:, 0:1]
+        field = x[:, 6:7]
 
-        pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id)
+        pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id, field=field, has_field=has_field)
 
         if self.update_type == 'linear':
             embedding = self.a[self.data_id, particle_id, :]
@@ -98,7 +100,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
 
         return pred
 
-    def message(self, pos_i, pos_j, d_pos_i, d_pos_j, particle_id_i, particle_id_j):
+    def message(self, pos_i, pos_j, d_pos_i, d_pos_j, particle_id_i, particle_id_j, field_j, has_field):
         # squared distance
         r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
         delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
@@ -147,6 +149,8 @@ class Interaction_Particles(pyg.nn.MessagePassing):
                     (delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
 
         out = self.lin_edge(in_features)
+        if self.has_field:
+            out = out * field_j
 
         if self.model == 'PDE_B':
             self.diffx = delta_pos * self.max_radius
