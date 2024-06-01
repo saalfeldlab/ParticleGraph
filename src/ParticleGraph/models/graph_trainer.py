@@ -198,7 +198,10 @@ def data_train_particles(config, config_file, device):
                     t = torch.Tensor([max_radius ** 2])
                     edges = adj_t.nonzero().t().contiguous()
 
-                dataset = data.Data(x=x[:, :], edge_index=edges)
+                if has_cell_division:
+                    dataset = data.Data(x=x[:, :], edge_index=edges, has_field=true)
+                else:
+                    dataset = data.Data(x=x[:, :], edge_index=edges)
                 dataset_batch.append(dataset)
 
                 y = y_list[run][k].clone().detach()
@@ -226,6 +229,10 @@ def data_train_particles(config, config_file, device):
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
             elif sub_batches>0:
                 loss = ((pred[sub_indexes] - y_batch[sub_indexes])).norm(2)
+            elif has_cell_division:
+                mask_cell_alive = np.argwhere(to_numpy(x[:6,7]) == 1)
+                mask_cell_alive = mask_cell_alive[:, 0].astype(int)
+                loss = ((pred[mask_cell_alive] - y_batch[mask_cell_alive])).norm(2)
             else:
                 loss = (pred - y_batch).norm(2)
 

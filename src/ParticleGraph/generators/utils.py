@@ -223,7 +223,10 @@ def init_particles(config, device):
         type = torch.cat((type, n * torch.ones(int(n_particles / n_particle_types), device=device)), 0)
     if (simulation_config.params == 'continuous') | (config.simulation.non_discrete_level > 0):  # TODO: params is a list[list[float]]; this can never happen?
         type = torch.tensor(np.arange(n_particles), device=device)
-    features = torch.cat((torch.rand((n_particles, 1), device=device) , 0.1 * torch.randn((n_particles, 1), device=device)), 1)
+    if has_cell_division:
+        features = torch.ones(n_particles, 2, device=device)
+    else:
+        features = torch.cat((torch.rand((n_particles, 1), device=device), 0.1 * torch.randn((n_particles, 1), device=device)), 1)
     cycle_length_distrib = cycle_length[to_numpy(type)].squeeze() * (torch.ones(n_particles, device=device) + 0.05 * torch.randn(n_particles, device=device))
     cycle_duration = torch.rand(n_particles, device=device)
     cycle_duration = cycle_duration * cycle_length[to_numpy(type)].squeeze()
@@ -252,12 +255,10 @@ def init_particles(config, device):
         case _:
             pass
 
-    division = torch.zeros_like(cycle_duration)
-
     if has_cell_division:
         print(f'cycle_length {to_numpy(cycle_length)}')
 
-    return pos, dpos, type, features, cycle_duration, division, particle_id, cycle_length, cycle_length_distrib  #, cell_death_rate, cell_death_rate_distrib
+    return pos, dpos, type, features, cycle_duration, particle_id, cycle_length, cycle_length_distrib, cell_death_rate, cell_death_rate_distrib
 
 
 def rotate_init_mesh(angle, config, device):

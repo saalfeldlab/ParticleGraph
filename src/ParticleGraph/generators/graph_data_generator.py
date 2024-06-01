@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 from GNN_particles_Ntype import *
 
@@ -43,7 +44,6 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
     has_adjacency_matrix = (simulation_config.connectivity_file != '')
     has_cell_division = simulation_config.has_cell_division
     n_frames = simulation_config.n_frames
-    cycle_length = None
     has_particle_dropout = training_config.particle_dropout > 0
     cmap = CustomColorMap(config=config)
     dataset_name = config.dataset
@@ -67,22 +67,24 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         for f in files:
             os.remove(f)
 
-    model, bc_pos, bc_dpos = choose_model(config, device=device)
-    particle_dropout_mask = np.arange(n_particles)
-    if has_particle_dropout:
-        draw = np.random.permutation(np.arange(n_particles))
-        cut = int(n_particles * (1 - training_config.particle_dropout))
-        particle_dropout_mask = draw[0:cut]
-        inv_particle_dropout_mask = draw[cut:]
-        x_removed_list = []
-    if has_adjacency_matrix:
-        mat = scipy.io.loadmat(simulation_config.connectivity_file)
-        adjacency = torch.tensor(mat['A'], device=device)
-        adj_t = adjacency > 0
-        edge_index = adj_t.nonzero().t().contiguous()
-        edge_attr_adjacency = adjacency[adj_t]
-
     for run in range(config.training.n_runs):
+
+        torch.cuda.empty_cache()
+
+        model, bc_pos, bc_dpos = choose_model(config, device=device)
+        particle_dropout_mask = np.arange(n_particles)
+        if has_particle_dropout:
+            draw = np.random.permutation(np.arange(n_particles))
+            cut = int(n_particles * (1 - training_config.particle_dropout))
+            particle_dropout_mask = draw[0:cut]
+            inv_particle_dropout_mask = draw[cut:]
+            x_removed_list = []
+        if has_adjacency_matrix:
+            mat = scipy.io.loadmat(simulation_config.connectivity_file)
+            adjacency = torch.tensor(mat['A'], device=device)
+            adj_t = adjacency > 0
+            edge_index = adj_t.nonzero().t().contiguous()
+            edge_attr_adjacency = adjacency[adj_t]
 
         n_particles = simulation_config.n_particles
 
@@ -91,10 +93,17 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         edge_p_p_list = []
 
         # initialize particle and graph states
+        X1, V1, T1, H1, A1, N1, cycle_length, cycle_length_distrib, cell_death_rate, cell_death_rate_distrib = init_particles(config, device=device)
         if run==0:
-            X1, V1, T1, H1, A1, D1, N1, cycle_length, cycle_length_distrib = init_particles(config, device=device) # cell_death_rate, cell_death_rate_distrib
+            cycle_length_first = cycle_length.clone().detach()
+            cycle_length_distrib_first = cycle_length_distrib.clone().detach()
+            cell_death_rate_first = cell_death_rate.clone().detach()
+            cell_death_rate_distrib_first = cell_death_rate_distrib.clone().detach()
         else:
-            X1, V1, T1, H1, A1, D1, N1, _, _ = init_particles(config, device=device)  # cell_death_rate, cell_death_rate_distrib
+            cycle_length = cycle_length_first.clone().detach()
+            cycle_length_distrib = cycle_length_distrib_first.clone().detach()
+            cell_death_rate = cell_death_rate_first.clone().detach()
+            cell_death_rate_distrib = cell_death_rate_distrib_first.clone().detach()
 
         index_particles = []
         for n in range(n_particle_types):
@@ -108,19 +117,17 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
             # calculate cell division
             if (it >= 0) & has_cell_division & (n_particles < n_particles_max):
                 # cell death
-                # sample = torch.rand(n_particles, device=device)
-                # pos = torch.argwhere(sample < cell_death_rate_distrib)
-                # if len(pos) > 1:
-                #     pos = to_numpy(pos[:, 0].squeeze()).astype(int)
-                #     D1[pos] = -1
+                sample = torch.rand(n_particles, device=device)
+                H1[sample.squeeze() < cell_death_rate_distrib.squeeze()/5E3, 0] = 0
                 # cell division
-                pos = torch.argwhere((A1.squeeze() > cycle_length_distrib) & (D1.squeeze() > -1))
-                divisions = (A1.squeeze() > cycle_length_distrib).clone().detach() * 1.0
-
+                pos = torch.argwhere((A1.squeeze() > cycle_length_distrib) & (H1[:,0].squeeze() == 1))
                 if len(pos) > 1:
                     n_add_nodes = len(pos)
                     pos = to_numpy(pos[:, 0].squeeze()).astype(int)
-                    D1 = torch.concatenate((divisions[:,None], torch.zeros((n_add_nodes,1), device=device)), 0)
+                    H1[:,1] = 0
+                    H1[pos,1]= 1
+                    H1 = torch.concatenate((H1, torch.ones((n_add_nodes,2), device=device)), 0)
+                    H1[-n_add_nodes:,1] = 0
                     n_particles = n_particles + n_add_nodes
                     N1 = torch.arange(n_particles, device=device)
                     N1 = N1[:, None]
@@ -129,11 +136,11 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                     X1[pos, :] = X1[pos, :] - separation
                     V1 = torch.cat((V1, -V1[pos, :]), dim=0)
                     T1 = torch.cat((T1, T1[pos, :]), dim=0)
-                    H1 = torch.cat((H1, H1[pos, :]), dim=0)
                     A1[pos, :] = 0
                     A1 = torch.cat((A1, A1[pos, :]), dim=0)
                     nd = torch.ones(len(pos), device=device) + 0.05 * torch.randn(len(pos), device=device)
                     cycle_length_distrib = torch.cat((cycle_length_distrib, cycle_length[to_numpy(T1[pos, 0])].squeeze() * nd), dim=0)
+                    cell_death_rate_distrib = torch.cat((cell_death_rate_distrib, cell_death_rate[to_numpy(T1[pos, 0])].squeeze() * nd), dim=0)
                     index_particles = []
                     for n in range(n_particles):
                         pos = torch.argwhere(T1 == n)
@@ -141,10 +148,11 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         index_particles.append(pos)
                 A1 = A1 + delta_t
 
+
             if has_signal:
                 x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), T1.clone().detach(), H1.clone().detach()), 1)
             elif has_cell_division:
-                x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), A1.clone().detach(), D1.clone().detach()), 1)
+                x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
             else:
                 x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach()), 1)
 
@@ -158,16 +166,20 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                     edge_index = edge_index.nonzero().t().contiguous()
                     if not (has_particle_dropout):
                         edge_p_p_list.append(to_numpy(edge_index))
-                    dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=[])
+                    if has_cell_division:
+                        alive = (H1[:,0] == 1).float()*1.
+                        dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=alive[:,None])
+                    else:
+                        dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=[])
 
             # model prediction
             with torch.no_grad():
                 y = model(dataset)
+                if has_cell_division:
+                    y = y * alive[:,None].repeat(1,2)
             if (it) % 500 == 0:
                 t, r, a = get_gpu_memory_map(device)
-                print(x.shape)
-                print(y.shape)
-                print(edge_index.shape)
+                print(f'x {to_numpy(x).shape}, y {to_numpy(y).shape}, edges {to_numpy(edge_index).shape}')
 
             # append list
             if (it >= 0):
@@ -192,6 +204,8 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                     V1 += y * delta_t
                 else:
                     V1 = y
+                if has_cell_division:
+                    V1 = V1 * alive[:,None].repeat(1,2)
                 X1 = bc_pos(X1 + V1 * delta_t)
 
 
@@ -280,9 +294,22 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                         ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                         if dimension == 2:
-                            for n in range(n_particle_types):
+                            if has_cell_division:
+                                index_particles = []
+                                for n in range(n_particle_types):
+                                    pos = torch.argwhere((T1.squeeze() == n) & (H1[:,0].squeeze()==1))
+                                    pos = to_numpy(pos[:, 0].squeeze()).astype(int)
+                                    index_particles.append(pos)
                                     plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
                                                 s=marker_size, color=cmap.color(n))
+                                dead_cell = np.argwhere(to_numpy(H1[:,0]) == 0)
+                                if len(dead_cell) > 0:
+                                    plt.scatter(to_numpy(X1[dead_cell[:,0].squeeze(), 0]), to_numpy(X1[dead_cell[:,0].squeeze(), 1]), s=2, color='k', alpha=0.5)
+                            else:
+                                for n in range(n_particle_types):
+                                    plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                                                s=marker_size, color=cmap.color(n))
+
                             if training_config.particle_dropout > 0:
                                 plt.scatter(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
                                             x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), s=25, color='k',
@@ -291,9 +318,6 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                                          x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), '+', color='w')
                             plt.xlim([0, 1])
                             plt.ylim([0, 1])
-                            # if has_cell_division:
-                            #     plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]),
-                            #                 s=to_numpy(D1)*marker_size*10, alpha=0.25,c='g')
                             if 'PDE_G' in model_config.particle_model_name:
                                 plt.xlim([-2, 2])
                                 plt.ylim([-2, 2])
@@ -352,7 +376,6 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                             plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.tif", dpi=170.7)
                             plt.close()
 
-
         if bSave:
             torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
@@ -362,8 +385,9 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
             if has_cell_division:
                 torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
                 torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
+                torch.save(cell_death_rate, f'graphs_data/graphs_{dataset_name}/cell_death_rate.pt')
+                torch.save(cell_death_rate_distrib, f'graphs_data/graphs_{dataset_name}/cell_death_rate_distrib.pt')
             torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p_{run}.pt')
-            torch.save(model, f'graphs_data/graphs_{dataset_name}/model_{run}.pt')
             if has_particle_dropout:
                 np.save(f'graphs_data/graphs_{dataset_name}/x_removed_list_{run}.pt',x_removed_list)
                 np.save(f'graphs_data/graphs_{dataset_name}/particle_dropout_mask.npy', particle_dropout_mask)
