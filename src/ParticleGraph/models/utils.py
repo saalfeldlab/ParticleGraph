@@ -222,40 +222,6 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
             plt.savefig(f"./{log_dir}/tmp_training/embedding/function/func_{dataset_name}_{epoch}_{N}.tif", dpi=300)
             plt.close()
 
-        case 'PDE_B':
-            max_radius = 0.04
-            fig = plt.figure(figsize=(12, 12))
-            # plt.rcParams['text.usetex'] = True
-            # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-            ax = fig.add_subplot(1,1,1)
-            rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
-            func_list = []
-            for n in range(n_particles):
-                embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
-                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                         torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
-                                         0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-                with torch.no_grad():
-                    func = model.lin_edge(in_features.float())
-                func = func[:, 0]
-                func_list.append(func)
-                if n % 5 == 0:
-                    plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
-                             color=cmap.color(int(n // (n_particles / n_particle_types))), linewidth=4)
-            plt.ylim([-1E-4, 1E-4])
-            # plt.xlabel(r'$x_j-x_i$', fontsize=64)
-            # plt.ylabel(r'$f_{ij}$', fontsize=64)
-            ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-            ax.yaxis.set_major_locator(plt.MaxNLocator(5))
-            ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-            fmt = lambda x, pos: '{:.1f}e-5'.format((x) * 1e5, pos)
-            ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-            plt.xticks(fontsize=32.0)
-            plt.yticks(fontsize=32.0)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/embedding/function/{dataset_name}_function_{epoch}_{N}.tif",dpi=170.7)
-            plt.close()
-
         case 'PDE_G':
             fig = plt.figure(figsize=(12, 12))
             if axis:
@@ -533,6 +499,21 @@ def subset_edges(edges, n_subset, n, has_cell_division, alive):
         sub_indexes = sub_indexes[pos]
 
     return sub_indexes, edges
+
+def get_index_particles(x, n_particle_types, dimension):
+    index_particles = []
+    for n in range(n_particle_types):
+        if dimension == 2:
+            index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
+        elif dimension == 3:
+            index = np.argwhere(x[:, 7].detach().cpu().numpy() == n)
+        index_particles.append(index.squeeze())
+    return index_particles
+
+def get_type_list(x, dimension):
+
+    type_list = x[:, 1 + 2 * dimension:2 + 2 * dimension].clone().detach()
+    return type_list
 
 
 
