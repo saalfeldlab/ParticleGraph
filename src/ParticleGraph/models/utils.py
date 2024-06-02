@@ -486,9 +486,10 @@ def increasing_batch_size(batch_size):
     return get_batch_size
 
 def set_trainable_parameters(model, lr_embedding, lr):
-    # trainable_params = [param for _, param in model.named_parameters() if param.requires_grad]
-    # n_total_params = sum(p.numel() for p in trainable_params) + torch.numel(model.a)
-    #
+
+    trainable_params = [param for _, param in model.named_parameters() if param.requires_grad]
+    n_total_params = sum(p.numel() for p in trainable_params) + torch.numel(model.a)
+
     # embedding = model.a
     # optimizer = torch.optim.Adam([embedding], lr=lr_embedding)
     #
