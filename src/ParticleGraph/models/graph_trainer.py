@@ -1545,7 +1545,7 @@ def data_train_signal(config, config_file, device):
 
     list_loss = []
     time.sleep(1)
-    for epoch in range(20): # n_epochs + 1):
+    for epoch in range(n_epochs + 1):
 
         old_batch_size = batch_size
         batch_size = get_batch_size(epoch)
