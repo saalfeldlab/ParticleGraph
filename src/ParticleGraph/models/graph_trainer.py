@@ -1460,7 +1460,7 @@ def data_train_signal(config, config_file, device):
     batch_size = get_batch_size(0)
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     embedding_cluster = EmbeddingCluster(config)
-    n_runs = training_config.n_runs
+    n_runs = train_config.n_runs
 
     l_dir, log_dir, logger = create_log_dir(config, config_file)
     print(f'Graph files N: {n_runs}')

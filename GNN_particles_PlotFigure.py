@@ -4658,7 +4658,7 @@ def data_plot_particle_field(config_file, mode, cc, device):
         model_f.eval()
 
 
-    epoch_list = [0]
+    epoch_list = [1]
     for epoch in epoch_list:
         print(f'epoch: {epoch}')
 
@@ -6367,11 +6367,11 @@ if __name__ == '__main__':
     # config_list = ['RD_RPS_1']
     # config_list = ['RD_RPS_boat']
     # config_list = ['signal_N_100_2a','signal_N_100_2b','signal_N_100_2c','signal_N_100_2d','signal_N_100_2e','signal_N_100_3a','signal_N_100_3b','signal_N_100_3c'] #, 'signal_N_10', 'signal_N']
-    # config_list = ['arbitrary_3','boids_16_256']
+    config_list = ['arbitrary_3_field_video_bison_siren_with_time_test']
     # config_list = ['arbitrary_3']#,'arbitrary_16','arbitrary_32','arbitrary_64']
     # config_list=['arbitrary_3_field_video_bison_siren_with_time']
     # config_list = ['gravity_16','gravity_100'] #,'Coulomb_3','boids_16_256','boids_32_256','boids_64_256']
-    config_list = ['boids_16_256_bison_siren_with_time_2_bw_2']
+    # config_list = ['boids_16_256_bison_siren_with_time_2_bw_2']
     for config_file in config_list:
 
         # data_plot_attraction_repulsion_short(config_file, device=device)
