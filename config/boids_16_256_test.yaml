@@ -33,7 +33,7 @@ plotting:
   arrow_length: 5
 
 training:
-  n_epochs: 20
+  n_epochs: 1
   batch_size: 8
   small_init_batch_size: True
   n_runs: 2
