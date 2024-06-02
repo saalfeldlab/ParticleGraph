@@ -41,7 +41,7 @@ if __name__ == '__main__':
 
     # config_list = ['boids_16_256_division_death_2']
     # config_list = ['arbitrary_3_test_N']
-    config_list = ['boids_16_256_bison_siren_with_time_2_3']
+    config_list = ['boids_16_256_bison_siren_with_time_2_4']
 
     for config_file in config_list:
         # Load parameters from config file
