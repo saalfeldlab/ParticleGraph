@@ -40,9 +40,9 @@ def plot_training_signal(config, dataset, model, adjacency, log_dir, epoch, N, i
     ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
 
-    vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-    pos = to_numpy(dataset.x[:, 1:3])
-    nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False, alpha=0.3)
+    vis = nx.to_networkx_graph(dataset)
+    pos = to_numpy(dataset.x[:, 1:3].squeeze())
+    nx.draw_networkx(vis,pos=pos)
 
 
     plt.tight_layout()
