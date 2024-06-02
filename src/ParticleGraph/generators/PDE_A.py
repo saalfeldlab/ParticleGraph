@@ -35,7 +35,7 @@ class PDE_A(pyg.nn.MessagePassing):
     def forward(self, data=[], has_field=False):
         x, edge_index, field = data.x, data.edge_index
 
-        if has_field
+        if has_field:
             field = x[:6:7]
         else:
             field = torch.ones(x.shape[0], 1)

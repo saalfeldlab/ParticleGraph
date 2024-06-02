@@ -112,7 +112,7 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
 
         pos = x[:, 1:self.dimension+1]
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
-        if has_field
+        if has_field:
             field = x[:6:7]
         else:
             field = torch.ones(x.shape[0], 1)
