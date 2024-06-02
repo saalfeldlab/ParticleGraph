@@ -1,5 +1,5 @@
 description: 'Gravity model with 16 different particle types'
-dataset: 'gravity_16_dropout_10_GD'
+dataset: 'gravity_16_noise_0_1'
 
 simulation:
     params: [[-1]]
@@ -35,12 +35,10 @@ training:
     batch_size: 8
     small_init_batch_size: False
     n_runs: 2
-    particle_dropout: 0.1
-    ghost_method: 'tensor'
-    n_ghosts: 96
-    sparsity: 'none'
+    sparsity: 'replace_embedding_function'
     data_augmentation: True
     data_augmentation_loop: 100
     cluster_method: 'distance_plot'
-    fix_cluster_embedding: False
+    fix_cluster_embedding: True
+    noise_level: 1.0E-1
     device: 'auto'

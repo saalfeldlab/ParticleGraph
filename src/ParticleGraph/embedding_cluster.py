@@ -12,8 +12,7 @@ class EmbeddingCluster:
     def get(self, data, method, thresh=2.5):
         match method:
             case 'kmeans':
-                kmeans = KMeans(init="random", n_clusters=self.n_interactions, n_init=1000, max_iter=10000,
-                                random_state=10)
+                kmeans = KMeans(init="random", n_clusters=self.n_interactions, n_init=1000, max_iter=10000, random_state=10)
                 k = kmeans.fit(data)
                 clusters = k.labels_
                 n_clusters = self.n_interactions
