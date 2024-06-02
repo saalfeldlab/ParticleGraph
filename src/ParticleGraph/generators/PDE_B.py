@@ -35,12 +35,12 @@ class PDE_B(pyg.nn.MessagePassing):
         self.a5 = 1E-8
 
     def forward(self, data=[], has_field=False):
-        x, edge_index, field = data.x, data.edge_index
+        x, edge_index = data.x, data.edge_index
 
         if has_field:
             field = x[:6:7]
         else:
-            field = torch.ones(x.shape[0], 1)
+            field = torch.ones_like(x[:,6:7])
 
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         particle_type = to_numpy(x[:, 5])

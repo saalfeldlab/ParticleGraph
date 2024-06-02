@@ -115,7 +115,7 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         if has_field:
             field = x[:6:7]
         else:
-            field = torch.ones(x.shape[0], 1)
+            field = torch.ones_like(x[:,6:7])
 
         particle_id = x[:, 0:1]
 
