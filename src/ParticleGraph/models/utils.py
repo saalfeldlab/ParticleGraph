@@ -247,8 +247,9 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 func_list.append(func)
                 if n % 5 == 0:
                     plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
-                             color=cmap.color(int(n // (n_particles / n_particle_types))), linewidth=4)
+                             color=cmap.color(int(n // (n_particles / n_particle_types))), linewidth=2)
             plt.ylim([-1E-4, 1E-4])
+            plt.xlim([-max_radius, max_radius])
             # plt.xlabel(r'$x_j-x_i$', fontsize=64)
             # plt.ylabel(r'$f_{ij}$', fontsize=64)
             ax.xaxis.set_major_locator(plt.MaxNLocator(3))
@@ -341,7 +342,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 if n % 5 == 0:
                     plt.plot(to_numpy(rr),
                              to_numpy(func*ynorm),
-                             linewidth=8,
+                             linewidth=2,
                              color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
                 plt.ylim([-0.04, 0.03])
             plt.tight_layout()
