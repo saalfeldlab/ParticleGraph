@@ -39,7 +39,7 @@ from ParticleGraph.utils import *
 
 if __name__ == '__main__':
 
-    config_list = ['arbitrary_3_field_video_attractor_siren_with_time']
+    config_list = ['signal_N_100_2_test']
 
 
     for config_file in config_list:
