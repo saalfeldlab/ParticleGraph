@@ -692,7 +692,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             distance = torch.sum(bc_dpos(x[:, None, 1:dimension+1] - x[None, :, 1:dimension+1]) ** 2, dim=2)
             adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
             edge_index = adj_t.nonzero().t().contiguous()
-            dataset_p_p = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=[])
+            dataset_p_p = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
             if not(has_particle_dropout):
                 edge_p_p_list.append(edge_index)
 
@@ -702,14 +702,14 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             pos = torch.argwhere((edge_index[1,:]>=n_nodes) & (edge_index[0,:]<n_nodes))
             pos = to_numpy(pos[:,0])
             edge_index = edge_index[:,pos]
-            dataset_f_p = data.Data(x=x_particle_field, pos=x_particle_field[:, 1:3], edge_index=edge_index, field=x_particle_field[:,6:7])
+            dataset_f_p = data.Data(x=x_particle_field, pos=x_particle_field[:, 1:3], edge_index=edge_index)
             if not (has_particle_dropout):
                 edge_f_p_list.append(edge_index)
 
             # model prediction
             with torch.no_grad():
-                y0 = model_p_p(dataset_p_p)
-                y1 = model_f_p(dataset_f_p)[n_nodes:]
+                y0 = model_p_p(dataset_p_p,has_field=False)
+                y1 = model_f_p(dataset_f_p,has_field=True)[n_nodes:]
                 y = y0 + y1
 
             # append list

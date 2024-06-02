@@ -97,7 +97,7 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
             self.lin_update = MLP(input_size=self.output_size + self.embedding_dim + 2, output_size=self.output_size,
                                   nlayers=self.n_layers_update, hidden_size=self.hidden_dim_update, device=self.device)
 
-    def forward(self, data, data_id, training, vnorm, phi, has_field):
+    def forward(self, data=[], data_id=[], training=[], vnorm=[], phi=[], has_field=False):
 
 
         self.data_id = data_id
@@ -112,7 +112,10 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
 
         pos = x[:, 1:self.dimension+1]
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
-        field = x[:,6:7]
+        if has_field
+            field = x[:6:7]
+        else:
+            field = torch.ones(x.shape[0], 1)
 
         particle_id = x[:, 0:1]
 
@@ -157,24 +160,13 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         match self.model:
 
             case 'PDE_ParticleField_A':
-                if self.has_field:
                     in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
-                    out = field_j * self.lin_edge(in_features)
-                else:
-                    in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
-                    out = self.lin_edge(in_features)
-
             case 'PDE_ParticleField_B':
-                if self.has_field:
-                    in_features = torch.cat(
-                        (delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None] ,
-                         dpos_y_j[:, None], embedding_i), dim=-1)
-                    out = field_j * self.lin_edge(in_features)
-                else:
                     in_features = torch.cat(
                         (delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
                          dpos_y_j[:, None], embedding_i), dim=-1)
-                    out = self.lin_edge(in_features)
+
+        out = self.lin_edge(in_features) * field_j
 
 
         return out

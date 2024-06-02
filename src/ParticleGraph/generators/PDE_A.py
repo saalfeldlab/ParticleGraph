@@ -32,11 +32,13 @@ class PDE_A(pyg.nn.MessagePassing):
         self.bc_dpos = bc_dpos
         self.dimension = dimension
 
-    def forward(self, data):
-        x, edge_index, field = data.x, data.edge_index, data.field
+    def forward(self, data=[], has_field=False):
+        x, edge_index, field = data.x, data.edge_index
 
-        if field == []:
-            field = torch.ones((x.shape[0], 1), device=x.device)
+        if has_field
+            field = x[:6:7]
+        else:
+            field = torch.ones(x.shape[0], 1)
 
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         particle_type = to_numpy(x[:, 1 + 2*self.dimension])
