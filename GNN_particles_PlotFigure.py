@@ -4658,7 +4658,7 @@ def data_plot_particle_field(config_file, mode, cc, device):
         model_f.eval()
 
 
-    epoch_list = [20]
+    epoch_list = [0]
     for epoch in epoch_list:
         print(f'epoch: {epoch}')
 
@@ -6371,7 +6371,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3']#,'arbitrary_16','arbitrary_32','arbitrary_64']
     # config_list=['arbitrary_3_field_video_bison_siren_with_time']
     # config_list = ['gravity_16','gravity_100'] #,'Coulomb_3','boids_16_256','boids_32_256','boids_64_256']
-    config_list = ['boids_16_256_bison_siren_with_time_2_bw']
+    config_list = ['boids_16_256_bison_siren_with_time_2_bw_2']
     for config_file in config_list:
 
         # data_plot_attraction_repulsion_short(config_file, device=device)

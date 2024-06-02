@@ -95,7 +95,12 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dat
                      to_numpy(func * ynorm),
                      linewidth=8,
                      color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
-    plt.ylim([-0.04, 0.03])
+    match model_config.particle_model_name:
+        case 'PDE_ParticleField_A':
+            plt.ylim([-0.04, 0.03])
+        case 'PDE_ParticleField_B':
+            plt.ylim([-1E-4, 1E-4])
+
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/embedding/function/{model_name}_{dataset_name}_function_{epoch}_{N}.tif", dpi=170.7)
     plt.close()
@@ -115,10 +120,10 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dat
             else:
                 with torch.no_grad():
                     tmp = model_f() ** 2
-
             tmp = torch.reshape(tmp, (n_nodes_per_axis, n_nodes_per_axis))
             tmp = to_numpy(torch.sqrt(tmp))
-            # tmp = np.flipud(tmp)
+            if has_siren_time:
+                tmp = np.flipud(tmp)
             fig_ = plt.figure(figsize=(12, 12))
             axf = fig_.add_subplot(1, 1, 1)
             plt.imshow(tmp, cmap='grey', vmin=0, vmax=2)
@@ -221,7 +226,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
             plt.savefig(f"./{log_dir}/tmp_training/embedding/function/func_{dataset_name}_{epoch}_{N}.tif", dpi=300)
             plt.close()
 
-        case 'PDE_B':
+        case 'PDE_B' | 'PDE_ParticleField_B':
             max_radius = 0.04
             fig = plt.figure(figsize=(12, 12))
             # plt.rcParams['text.usetex'] = True
@@ -289,7 +294,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
             plt.savefig(f"./{log_dir}/tmp_training/embedding/function/{dataset_name}_function_{epoch}_{N}.tif", dpi=300)
             plt.close()
 
-        case 'PDE_A'| 'PDE_A_bis' | 'PDE_ParticleField_A' | 'PDE_E' | 'PDE_B':
+        case 'PDE_A'| 'PDE_A_bis' | 'PDE_ParticleField_A' | 'PDE_E':
             fig = plt.figure(figsize=(12, 12))
             if axis:
                 ax = fig.add_subplot(1, 1, 1)
