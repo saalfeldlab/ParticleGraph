@@ -153,6 +153,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
     matplotlib.rcParams['savefig.pad_inches'] = 0
 
     if model_config.mesh_model_name == 'WaveMesh':
+        fig = plt.figure(figsize=(8, 8))
         rr = torch.tensor(np.linspace(-150, 150, 200)).to(device)
         popt_list = []
         for n in range(n_nodes):
@@ -186,6 +187,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
         plt.savefig(f"./{log_dir}/tmp_training/embedding/function/mesh_map_{dataset_name}_{epoch}_{N}.tif",
                     dpi=300)
     else:
+        fig = plt.figure(figsize=(8, 8))
         embedding = get_embedding(model.a, 1)
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=20)

@@ -39,7 +39,7 @@ from ParticleGraph.utils import *
 
 if __name__ == '__main__':
 
-    config_list = ['boids_16_256_bison_siren_with_time_2_bw']
+    config_list = ['boids_16_256_test']
 
     for config_file in config_list:
         # Load parameters from config file
