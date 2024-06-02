@@ -1,4 +1,6 @@
 import numpy as np
+import networkx as nx
+from torch_geometric.utils.convert import to_networkx
 
 from GNN_particles_Ntype import *
 
@@ -96,6 +98,16 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
             pos = torch.argwhere(T1 == n)
             pos = to_numpy(pos[:, 0].squeeze()).astype(int)
             index_particles.append(pos)
+        if has_adjacency_matrix:
+            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
+                 H1.clone().detach(), A1.clone().detach()), 1)
+            adj_t = adjacency > 0
+            edge_index = adj_t.nonzero().t().contiguous()
+            dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
+            vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
+            pos = nx.spring_layout(vis, weight='weight', seed=42, k=1)
+            for k,v in pos.items():
+                X1[k,:] = torch.tensor([v[0],v[1]], device=device)
 
         time.sleep(0.5)
         for it in trange(simulation_config.start_frame, n_frames + 1):

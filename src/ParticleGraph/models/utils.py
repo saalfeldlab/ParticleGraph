@@ -18,6 +18,7 @@ from ParticleGraph.utils import to_numpy
 from matplotlib import rc
 import matplotlib as mpl
 import networkx as nx
+from torch_geometric.utils.convert import to_networkx
 
 def get_embedding(model_a=None, dataset_number = 0):
     embedding = []
@@ -28,26 +29,21 @@ def get_embedding(model_a=None, dataset_number = 0):
 
 def plot_training_signal(config, dataset, model, adjacency, log_dir, epoch, N, index_particles, n_particles, n_particle_types, device):
 
-    simulation_config = config.simulation
-    train_config = config.training
-    model_config = config.graph_model
-
-    matplotlib.rcParams['savefig.pad_inches'] = 0
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(1, 1, 1)
     ax.xaxis.set_major_locator(plt.MaxNLocator(3))
     ax.yaxis.set_major_locator(plt.MaxNLocator(3))
     ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-
-    vis = nx.to_networkx_graph(dataset)
-    pos = to_numpy(dataset.x[:, 1:3].squeeze())
-    nx.draw_networkx(vis,pos=pos)
-
-
+    x = dataset.x
+    plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=200, c=to_numpy(x[:, 6]), cmap='cool', vmin=0,
+                vmax=3)
+    plt.xlim([-1.5, 1.5])
+    plt.ylim([-1.5, 1.5])
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/embedding/particle/{dataset_name}_network_{epoch}_{N}.tif", dpi=170.7)
     plt.close()
+
 
 def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dataset_name, n_frames, model_name, log_dir, epoch, N, x, x_mesh, model_field, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 
