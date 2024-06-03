@@ -1,24 +1,9 @@
-import matplotlib
-import matplotlib.pyplot as plt
-# matplotlib.use("Qt5Agg")
-import numpy as np
-import torch
-import umap
-import vispy.scene
-import vispy.plot as vp
-import vispy.io as io
-from matplotlib.ticker import FormatStrFormatter
-from scipy.optimize import curve_fit
-from vispy.scene import visuals
-from ParticleGraph.fitting_models import linear_model
-from ParticleGraph.models import Interaction_Particles, Interaction_Particle_Field, Signal_Propagation, Mesh_Laplacian, \
-    Mesh_RPS, Mesh_RPS_bis
-from ParticleGraph.utils import choose_boundary_values
-from ParticleGraph.utils import to_numpy
-from matplotlib import rc
+from GNN_particles_Ntype import *
+from ParticleGraph.models.utils import *
 import matplotlib as mpl
 import networkx as nx
 from torch_geometric.utils.convert import to_networkx
+# matplotlib.use("Qt5Agg")
 
 def get_embedding(model_a=None, dataset_number = 0):
     embedding = []
@@ -35,14 +20,18 @@ def plot_training_signal(config, dataset, model, adjacency, log_dir, epoch, N, i
     ax.yaxis.set_major_locator(plt.MaxNLocator(3))
     ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-    edges = to_numpy(dataset.edge_index)
-    weights = to_numpy(model.weight_ij_.squeeze())
-    # plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=200, c=to_numpy(x[:, 6]), cmap='cool', vmin=0,
-    #             vmax=3)
+
+    x = dataset.x
+    adj_t = adjacency > 0
+    edge_index = adj_t.nonzero().t().contiguous()
+    edge_attr_adjacency = model.A[adj_t]
+    dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
     vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-    pos = to_numpy(dataset.x[:, 1:3])
-    nx.draw(vis, pos, node_color='k', edgelist=edges, edge_color='k', width=weights*100, edge_cmap=plt.cm.cool,
-            node_size=10, alpha=0.5)
+    pos = nx.spring_layout(vis, weight='weight', seed=42, k=1)
+    nx.draw(vis, pos,  node_size=10, alpha=0.025, cmap='viridis')
+    for k, v in pos.items():
+        x[k, 1:3] = torch.tensor([v[0], v[1]], device=device)
+    plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), c=np.arange(len(x)), s=100, cmap='viridis')
     plt.xlim([-1.25, 1.25])
     plt.ylim([-1.25, 1.25])
     plt.tight_layout()
