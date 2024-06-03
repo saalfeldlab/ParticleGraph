@@ -322,7 +322,7 @@ def data_train_particles(config, config_file, device):
                                                                 types=to_numpy(x[:, 1+2*dimension]),
                                                                 cmap=cmap, dimension=dimension, device=device)
 
-            labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding, cluster_distance_threshold, index_particles, n_particle_types, embedding_cluster)
+            labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding, train_config.cluster_distance_threshold, index_particles, n_particle_types, embedding_cluster)
 
             Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
 

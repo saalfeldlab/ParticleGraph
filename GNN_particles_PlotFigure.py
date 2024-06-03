@@ -3496,7 +3496,7 @@ def data_plot_attraction_repulsion_short(config_file, device):
     # plt.rcParams["font.sans-serif"] = ["Helvetica Neue", "HelveticaNeue", "Helvetica-Neue", "Helvetica", "Arial",
     #                                    "Liberation"]
 
-    epoch_list = [20] #[5,10,15,20]
+    epoch_list = [0] #[5,10,15,20]
     for epoch in epoch_list:
 
         net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
@@ -3535,23 +3535,14 @@ def data_plot_attraction_repulsion_short(config_file, device):
         ax = fig.add_subplot(1,1,1)
         ax.xaxis.get_major_formatter()._usetex = False
         ax.yaxis.get_major_formatter()._usetex = False
-        if model_config.particle_model_name == 'PDE_G':
-            rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-        elif model_config.particle_model_name == 'PDE_GS':
-            rr = torch.tensor(np.logspace(7, 9, 1000)).to(device)
-        else:
-            rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
-
-        print(n_particles)
-
-        func_list, proj_interaction = analyze_edge_function(rr=rr, vizualize=True, config=config,
+        func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
                                                                 model_lin_edge=model.lin_edge, model_a=model.a,
                                                                 dataset_number=1,
-                                                                n_particles=int(n_particles*(1-train_config.particle_dropout)), ynorm=ynorm,
+                                                                n_particles=n_particles, ynorm=ynorm,
                                                                 types=to_numpy(x[:, 5]),
                                                                 cmap=cmap, device=device)
-        # plt.xlabel(r'$d_{ij}$', fontsize=64)
-        # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+        plt.xlabel(r'$d_{ij}$', fontsize=64)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=64)
         # xticks with sans serif font
         plt.xticks(fontsize=32)
         plt.yticks(fontsize=32)
@@ -3561,61 +3552,9 @@ def data_plot_attraction_repulsion_short(config_file, device):
         # plt.savefig(f"./{log_dir}/tmp_training/func_{config_file}_{epoch}.tif",dpi=170.7)
         plt.close()
 
-        match train_config.cluster_method:
-            case 'kmeans':
-                labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans')
-            case 'kmeans_auto_plot':
-                labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
-            case 'kmeans_auto_embedding':
-                labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
-                proj_interaction = embedding
-            case 'distance_plot':
-                labels, n_clusters = embedding_cluster.get(proj_interaction, 'distance')
-            case 'distance_embedding':
-                labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=0.05)
-                proj_interaction = embedding
-            case 'distance_both':
-                new_projection = np.concatenate((proj_interaction, embedding), axis=-1)
-                labels, n_clusters = embedding_cluster.get(new_projection, 'distance')
+        labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding,
+                                                          train_config.cluster_distance_threshold, index_particles, n_particle_types, embedding_cluster)
 
-        fig_ = plt.figure(figsize=(12, 12))
-        axf = fig_.add_subplot(1, 1, 1)
-        axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-        axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-        axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        for n in range(n_clusters):
-            pos = np.argwhere(labels == n)
-            pos = np.array(pos)
-            if pos.size > 0:
-                print(f'cluster {n}  {len(pos)}')
-                plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=200,alpha=0.1)
-        label_list = []
-        for n in range(n_particle_types):
-            tmp = labels[index_particles[n]]
-            label_list.append(np.round(np.median(tmp)))
-        label_list = np.array(label_list)
-        plt.xlabel(r'UMAP 0', fontsize=64)
-        plt.ylabel(r'UMAP 1', fontsize=64)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/UMAP_{config_file}_{epoch}.tif", dpi=300)
-        plt.close()
-
-        fig = plt.figure(figsize=(12, 12))
-        new_labels = labels.copy()
-        for n in range(n_particle_types):
-            new_labels[labels == label_list[n]] = n
-            pos = np.argwhere(labels == label_list[n])
-            pos = np.array(pos)
-            if pos.size > 0:
-                plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1],
-                            color=cmap.color(n), s=0.1)
-        Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-        print(f'Accuracy: {np.round(Accuracy, 3)}   n_clusters: {n_clusters}')
-
-        fig = plt.figure(figsize=(12, 12))
         model_a_ = model.a[1].clone().detach()
         for n in range(n_clusters):
             pos = np.argwhere(labels == n).squeeze().astype(int)
@@ -3623,19 +3562,6 @@ def data_plot_attraction_repulsion_short(config_file, device):
             if pos.size > 0:
                 median_center = model_a_[pos, :]
                 median_center = torch.median(median_center, dim=0).values
-                plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='r', alpha=0.25)
-                model_a_[pos, :] = median_center
-                plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='k')
-        for n in np.unique(new_labels):
-            pos = np.argwhere(new_labels == n).squeeze().astype(int)
-            pos = np.array(pos)
-            if pos.size > 0:
-                plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), color='k', s=5)
-        plt.xlabel('ai0', fontsize=12)
-        plt.ylabel('ai1', fontsize=12)
-        plt.xticks(fontsize=10.0)
-        plt.yticks(fontsize=10.0)
-        plt.close()
 
         model_a_first = model.a.clone().detach()
 
@@ -3969,7 +3895,6 @@ def data_plot_attraction_repulsion_asym_short(config_file, device):
         labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding,
                                                           train_config.cluster_distance_threshold, index_particles, n_particle_types, embedding_cluster)
 
-        fig = plt.figure(figsize=(12, 12))
         model_a_ = model.a[1].clone().detach()
         for n in range(n_clusters):
             pos = np.argwhere(labels == n).squeeze().astype(int)
@@ -3977,19 +3902,6 @@ def data_plot_attraction_repulsion_asym_short(config_file, device):
             if pos.size > 0:
                 median_center = model_a_[pos, :]
                 median_center = torch.median(median_center, dim=0).values
-                plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='r', alpha=0.25)
-                model_a_[pos, :] = median_center
-                plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='k')
-        for n in np.unique(new_labels):
-            pos = np.argwhere(new_labels == n).squeeze().astype(int)
-            pos = np.array(pos)
-            if pos.size > 0:
-                plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), color='k', s=5)
-        plt.xlabel('ai0', fontsize=12)
-        plt.ylabel('ai1', fontsize=12)
-        plt.xticks(fontsize=10.0)
-        plt.yticks(fontsize=10.0)
-        plt.close()
 
         model_a_first = model.a.clone().detach()
 
@@ -6189,6 +6101,7 @@ if __name__ == '__main__':
 
     config_list = ['arbitrary_3_3']
     config_list = ['wave_slit_test']
+    config_list = ['arbitrary_64_256_0_5']
     # config_list = ['arbitrary_3']#,'arbitrary_16','arbitrary_32','arbitrary_64']
     # config_list=['arbitrary_3_field_video_bison_siren_with_time']
     # config_list = ['gravity_16','gravity_100'] #,'Coulomb_3','boids_16_256','boids_32_256','boids_64_256']

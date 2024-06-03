@@ -899,27 +899,26 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
                     matplotlib.rcParams['savefig.pad_inches'] = 0
 
-
-
+                    if model_config.prediction == '2nd_derivative':
+                        V0 = y0  * delta_t
+                        V1 = y1  * delta_t
+                    else:
+                        V0 = y0
+                        V1 = y1
                     fig = plt.figure(figsize=(12, 12))
                     ax = fig.add_subplot(1, 1, 1)
-                    # ax.xaxis.get_major_formatter()._usetex = False
-                    # ax.yaxis.get_major_formatter()._usetex = False
+                    type_list = to_numpy(get_type_list(x, dimension))
                     ax.xaxis.set_major_locator(plt.MaxNLocator(3))
                     ax.yaxis.set_major_locator(plt.MaxNLocator(3))
                     ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                     ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                    # if (has_mesh | (simulation_config.boundary == 'periodic')):
-                    #     ax = plt.axes([0, 0, 1, 1], frameon=False)
-                    # else:
-                    #     ax = plt.axes([-2, -2, 2, 2], frameon=False)
-                    # ax.get_xaxis().set_visible(False)
-                    # ax.get_yaxis().set_visible(False)
-                    # plt.autoscale(tight=True)
-                    s_p = 100
-                    plt.scatter(to_numpy(x_mesh[0:n_nodes, 2]), to_numpy(x_mesh[0:n_nodes, 1]), c=to_numpy(x_mesh[0:n_nodes, 6]))
+                    plt.scatter(to_numpy(x_mesh[0:n_nodes, 2]), to_numpy(x_mesh[0:n_nodes, 1]), c=to_numpy(x_mesh[0:n_nodes, 6]),cmap='grey',s=5)
                     plt.xlim([0,1])
                     plt.ylim([0,1])
+                    for n in range(n_particles):
+                        plt.arrow(x=to_numpy(x[n, 2]), y=to_numpy(x[n, 1]), dx=to_numpy(V1[n,1])*2.5, dy=to_numpy(V1[n,0])*2.5, color=cmap.color(type_list[n].astype(int)), head_width=0.004, length_includes_head=True)
+
+
                     # plt.xlim([-2,2])
                     # plt.ylim([-2,2])
                     if 'latex' in style:
@@ -936,28 +935,8 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                         plt.xticks([])
                         plt.yticks([])
                     plt.tight_layout()
-
-
-
-                    if False:  # not(has_mesh):
-                        fig = plt.figure(figsize=(12, 12))
-                        s_p = 25
-                        if simulation_config.has_cell_division:
-                            s_p = 10
-                        for n in range(n_particle_types):
-                            plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                        x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color='k')
-                        if (simulation_config.boundary == 'periodic'):
-                            plt.xlim([0, 1])
-                            plt.ylim([0, 1])
-                        else:
-                            plt.xlim([-4, 4])
-                            plt.ylim([-4, 4])
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_bw_{it}.jpg", dpi=170.7)
-                        plt.close()
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Arrow_{run}_{it}.jpg", dpi=42.675)
+                    plt.close()
 
         if bSave:
             torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')

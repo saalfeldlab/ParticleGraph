@@ -207,6 +207,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/embedding/function/mesh_map_{dataset_name}_{epoch}_{N}.tif",
                     dpi=300)
+        plt.close()
     elif model_config.mesh_model_name == 'RD_RPD_Mesh':
         fig = plt.figure(figsize=(8, 8))
         plt.savefig(f"./{log_dir}/tmp_training/embedding/function/mesh_map_{dataset_name}_{epoch}_{N}.tif",
