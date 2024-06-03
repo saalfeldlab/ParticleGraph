@@ -626,16 +626,14 @@ def data_train_mesh(config, config_file, device):
 
         # matplotlib.use("Qt5Agg")
         fig = plt.figure(figsize=(22, 4))
-        # white background
-        # plt.style.use('classic')
 
-        ax = fig.add_subplot(1, 6, 1)
+        ax = fig.add_subplot(1, 5, 1)
         plt.plot(list_loss, color='k')
         plt.xlim([0, n_epochs])
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
 
-        ax = fig.add_subplot(1, 6, 2)
+        ax = fig.add_subplot(1, 5, 2)
         embedding = get_embedding(model.a, 1)
         for n in range(n_node_types):
             plt.scatter(embedding[index_nodes[n], 0],
@@ -645,7 +643,7 @@ def data_train_mesh(config, config_file, device):
 
         if (simulation_config.n_interactions < 100):
 
-            ax = fig.add_subplot(1, 6, 3)
+            ax = fig.add_subplot(1, 5, 3)
             func_list = []
             popt_list = []
             for n in range(n_nodes):
@@ -681,6 +679,7 @@ def data_train_mesh(config, config_file, device):
             func_list = torch.stack(func_list)
             coeff_norm = to_numpy(func_list)
             popt_list = np.array(popt_list)
+
             if 'RD_RPS_Mesh' in model_config.mesh_model_name:
                 trans = umap.UMAP(n_neighbors=500, n_components=2, transform_queue_size=0).fit(coeff_norm)
                 proj_interaction = trans.transform(coeff_norm)
@@ -688,52 +687,22 @@ def data_train_mesh(config, config_file, device):
                 proj_interaction = popt_list
                 proj_interaction[:, 1] = proj_interaction[:, 0]
 
-            ax = fig.add_subplot(1, 6, 4)
-            match train_config.cluster_method:
-                case 'kmeans_auto_plot':
-                    labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
-                case 'kmeans_auto_embedding':
-                    labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
-                    proj_interaction = embedding
-                case 'distance_plot':
-                    labels, n_clusters = embedding_cluster.get(proj_interaction, 'distance')
-                case 'distance_embedding':
-                    labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=1.5)
-                    proj_interaction = embedding
-                case 'distance_both':
-                    new_projection = np.concatenate((proj_interaction, embedding), axis=-1)
-                    labels, n_clusters = embedding_cluster.get(new_projection, 'distance')
-            for n in range(n_clusters):
-                pos = np.argwhere(labels == n)
-                pos = np.array(pos)
-                if pos.size > 0:
-                    plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=5)
-            label_list = []
-            for n in range(n_node_types):
-                tmp = labels[index_nodes[n]]
-                label_list.append(np.round(np.median(tmp)))
-            label_list = np.array(label_list)
+            labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding, cluster_distance_threshold, index_particles, n_particle_types, embedding_cluster)
 
-            plt.xlabel('proj 0', fontsize=12)
-            plt.ylabel('proj 1', fontsize=12)
-            plt.text(0., 1.1, f'Nclusters: {n_clusters}', ha='left', va='top', transform=ax.transAxes)
-
-            ax = fig.add_subplot(1, 6, 5)
-            new_labels = labels.copy()
-            for n in range(n_node_types):
-                new_labels[labels == label_list[n]] = n
-                pos = np.argwhere(labels == label_list[n])
-                pos = np.array(pos)
-                if pos.size > 0:
-                    plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1],
-                                color=cmap.color(n), s=0.1)
             Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-            plt.text(0, 1.1, f'Accuracy: {np.round(Accuracy, 3)}', ha='left', va='top', transform=ax.transAxes,
-                     fontsize=10)
             print(f'Accuracy: {np.round(Accuracy, 3)}   n_clusters: {n_clusters}')
             logger.info(f'Accuracy: {np.round(Accuracy, 3)}    n_clusters: {n_clusters}')
 
-            ax = fig.add_subplot(1, 6, 6)
+            ax = fig.add_subplot(1, 5, 4)
+            for n in np.unique(new_labels):
+                pos = np.array(np.argwhere(new_labels == n).squeeze().astype(int))
+                if pos.size > 0:
+                    plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], s=5)
+            plt.xlabel('proj 0', fontsize=12)
+            plt.ylabel('proj 1', fontsize=12)
+            plt.text(0, 1.1, f'Accuracy: {np.round(Accuracy, 3)},  {n_clusters} clusters', ha='left', va='top', transform=ax.transAxes,fontsize=10)
+
+            ax = fig.add_subplot(1, 5, 5)
             model_a_ = model.a[1].clone().detach()
             for n in range(n_clusters):
                 pos = np.argwhere(labels == n).squeeze().astype(int)
@@ -743,12 +712,8 @@ def data_train_mesh(config, config_file, device):
                     median_center = torch.median(median_center, dim=0).values
                     plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='r', alpha=0.25)
                     model_a_[pos, :] = median_center
-                    plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='k')
-            for n in np.unique(new_labels):
-                pos = np.argwhere(new_labels == n).squeeze().astype(int)
-                pos = np.array(pos)
-                if pos.size > 0:
-                    plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), color='k', s=5)
+                    plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=10, c='k')
+
             plt.xlabel('ai0', fontsize=12)
             plt.ylabel('ai1', fontsize=12)
             plt.xticks(fontsize=10.0)

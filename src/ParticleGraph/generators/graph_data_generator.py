@@ -681,8 +681,9 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
                 if 'video' in simulation_config.node_value_map:
                     im = imread(f"graphs_data/{simulation_config.node_value_map}") # / 255 * 5000
-                    im = np.fliplr(im)
-                    im = np.reshape(im[it], (n_nodes_per_axis * n_nodes_per_axis))
+                    im = im[it].squeeze()
+                    im = np.rot90(im,3)
+                    im = np.reshape(im, (n_nodes_per_axis * n_nodes_per_axis))
                     H1_mesh[:, 0:1] = torch.tensor(im[:,None], dtype=torch.float32, device=device)
                 else:
                     H1_mesh = rotate_init_mesh(it, config, device=device)
@@ -854,7 +855,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
                 if 'color' in style:
 
-                    # matplotlib.use("Qt5Agg")
+                    matplotlib.use("Qt5Agg")
                     matplotlib.rcParams['savefig.pad_inches'] = 0
                     fig = plt.figure(figsize=(12, 12))
                     ax = fig.add_subplot(1, 1, 1)
@@ -871,56 +872,10 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     # ax.get_xaxis().set_visible(False)
                     # ax.get_yaxis().set_visible(False)
                     # plt.autoscale(tight=True)
-                    if has_mesh:
-                        pts = x_mesh[:, 1:3].detach().cpu().numpy()
-                        tri = Delaunay(pts)
-                        colors = torch.sum(x_mesh[tri.simplices, 6], dim=1) / 3.0
-                        match model_config.mesh_model_name:
-                            case 'DiffMesh':
-                                plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                              facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1000)
-                            case 'WaveMesh':
-                                plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                              facecolors=colors.detach().cpu().numpy(), vmin=-1000, vmax=1000)
-                            case 'RD_Gray_Scott_Mesh':
-                                fig = plt.figure(figsize=(12, 6))
-                                ax = fig.add_subplot(1, 2, 1)
-                                colors = torch.sum(x[tri.simplices, 6], dim=1) / 3.0
-                                plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                              facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
-                                plt.xticks([])
-                                plt.yticks([])
-                                plt.axis('off')
-                                ax = fig.add_subplot(1, 2, 2)
-                                colors = torch.sum(x[tri.simplices, 7], dim=1) / 3.0
-                                plt.tripcolor(pts[:, 0], pts[:, 1], tri.simplices.copy(),
-                                              facecolors=colors.detach().cpu().numpy(), vmin=0, vmax=1)
-                                plt.xticks([])
-                                plt.yticks([])
-                                plt.axis('off')
-                            case 'RD_RPS_Mesh':
-                                fig = plt.figure(figsize=(12, 12))
-                                H1_IM = torch.reshape(H1, (100, 100, 3))
-                                plt.imshow(H1_IM.detach().cpu().numpy(), vmin=0, vmax=1)
-                                plt.xticks([])
-                                plt.yticks([])
-                                plt.axis('off')
-                    else:
-                        s_p = 100
-                        if simulation_config.has_cell_division:
-                            s_p = 25
-                        if False:  # config.simulation.non_discrete_level>0:
-                            plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=s_p, color='k')
-                        else:
-                            for n in range(n_particle_types):
-                                plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
-                                            s=s_p, color=cmap.color(n))
-                        if training_config.particle_dropout > 0:
-                            plt.scatter(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
-                                        x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), s=25, color='k',
-                                        alpha=0.75)
-                            plt.plot(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
-                                     x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), '+', color='w')
+                    s_p = 100
+                    for n in range(n_particle_types):
+                            plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
+                                        s=s_p, color=cmap.color(n))
                     plt.xlim([0,1])
                     plt.ylim([0,1])
                     # plt.xlim([-2,2])
@@ -941,6 +896,48 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     plt.tight_layout()
                     plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=42.675)
                     plt.close()
+
+                    matplotlib.rcParams['savefig.pad_inches'] = 0
+
+
+
+                    fig = plt.figure(figsize=(12, 12))
+                    ax = fig.add_subplot(1, 1, 1)
+                    # ax.xaxis.get_major_formatter()._usetex = False
+                    # ax.yaxis.get_major_formatter()._usetex = False
+                    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+                    ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                    # if (has_mesh | (simulation_config.boundary == 'periodic')):
+                    #     ax = plt.axes([0, 0, 1, 1], frameon=False)
+                    # else:
+                    #     ax = plt.axes([-2, -2, 2, 2], frameon=False)
+                    # ax.get_xaxis().set_visible(False)
+                    # ax.get_yaxis().set_visible(False)
+                    # plt.autoscale(tight=True)
+                    s_p = 100
+                    plt.scatter(to_numpy(x_mesh[0:n_nodes, 2]), to_numpy(x_mesh[0:n_nodes, 1]), c=to_numpy(x_mesh[0:n_nodes, 6]))
+                    plt.xlim([0,1])
+                    plt.ylim([0,1])
+                    # plt.xlim([-2,2])
+                    # plt.ylim([-2,2])
+                    if 'latex' in style:
+                        plt.xlabel(r'$x$', fontsize=64)
+                        plt.ylabel(r'$y$', fontsize=64)
+                        plt.xticks(fontsize=32.0)
+                        plt.yticks(fontsize=32.0)
+                    elif 'frame' in style:
+                        plt.xlabel('x', fontsize=64)
+                        plt.ylabel('y', fontsize=64)
+                        plt.xticks(fontsize=32.0)
+                        plt.yticks(fontsize=32.0)
+                    else:
+                        plt.xticks([])
+                        plt.yticks([])
+                    plt.tight_layout()
+
+
 
                     if False:  # not(has_mesh):
                         fig = plt.figure(figsize=(12, 12))
