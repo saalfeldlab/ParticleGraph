@@ -48,6 +48,7 @@ def sparsify_cluster(cluster_method, proj_interaction, embedding, cluster_distan
 
     # normalization of projection because UMAP output is not normalized
     proj_interaction = (proj_interaction - np.min(proj_interaction)) / (np.max(proj_interaction) - np.min(proj_interaction)+1e-10)
+    embedding = (embedding - np.min(embedding)) / (np.max(embedding) - np.min(embedding)+1e-10)
 
     match cluster_method:
         case 'kmeans_auto_plot':

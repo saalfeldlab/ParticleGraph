@@ -3134,7 +3134,7 @@ def data_plot_wave(config_file, cc='viridis'):
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
 
-    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
+    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_mesh_list*")
     NGraphs = len(graph_files)
     print('Graph files N: ', NGraphs - 1)
     time.sleep(0.5)
@@ -6168,21 +6168,16 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_16_noise_1E-1','arbitrary_16_noise_0_2','arbitrary_16_noise_0_3','arbitrary_16_noise_0_4','arbitrary_16_noise_0_5']
     # config_list = ['arbitrary_3_dropout_10_no_ghost', 'arbitrary_3_dropout_10', 'arbitrary_3_dropout_20', 'arbitrary_3_dropout_30', 'arbitrary_3_dropout_40', 'arbitrary_3_dropout_50']
     # config_list = ['arbitrary_3']
-
     # config_list = ['gravity_16_dropout_10_no_ghost', 'gravity_16_dropout_10', 'gravity_16_dropout_20', 'gravity_16_dropout_30', 'gravity_16_dropout_40', 'gravity_16_dropout_50']
     # config_list = [,'gravity_16_dropout_20'] # ['gravity_16_dropout_10_no_ghost','gravity_16_dropout_10','gravity_16_dropout_20','gravity_16_dropout_30']
-
     # config_list = ['gravity_16_noise_1E-1', 'gravity_16_noise_0_2', 'gravity_16_noise_0_3', 'gravity_16_noise_0_4']
     # config_list = ['boids_64_256'] #['boids_32_256','boids_64_256'] # 'boids_16_256_1_epoch', 'boids_32_256_1_epoch', 'boids_64_256_1_epoch'] #,
     # config_list = ['boids_16_noise_0_3','boids_16_noise_0_4'] # ['boids_16_noise_1E-1'] #,'boids_16_noise_0_2','boids_16_noise_0_3','boids_16_noise_0_4','boids_16_noise_0_5']
     # config_list = ['wave_logo','wave_slit','wave_triangles']
     # config_list = ['RD_RPS_1']
-
     # config_list = ['arbitrary_3_field_1']
     # config_list = ['arbitrary_3_field_4_siren_with_time']
-
     # config_list = ['boids_16_256_20_epoch']
-
     # config_list = ['Coulomb_3_noise_0_2','Coulomb_3_noise_0_3','Coulomb_3_noise_0_4']
     # config_list = ['Coulomb_3_dropout_10'] #,'Coulomb_3_dropout_10', 'Coulomb_3_dropout_10_no_ghost'] # ,'Coulomb_3_dropout_20', 'Coulomb_3_dropout_30', 'Coulomb_3_dropout_40'
     # config_list = ['arbitrary_3_field_video_random_siren_with_time']
@@ -6191,7 +6186,9 @@ if __name__ == '__main__':
     # config_list = ['RD_RPS_1']
     # config_list = ['RD_RPS_boat']
     # config_list = ['signal_N_100_2a','signal_N_100_2b','signal_N_100_2c','signal_N_100_2d','signal_N_100_2e','signal_N_100_3a','signal_N_100_3b','signal_N_100_3c'] #, 'signal_N_10', 'signal_N']
+
     config_list = ['arbitrary_3_3']
+    config_list = ['wave_slit_test']
     # config_list = ['arbitrary_3']#,'arbitrary_16','arbitrary_32','arbitrary_64']
     # config_list=['arbitrary_3_field_video_bison_siren_with_time']
     # config_list = ['gravity_16','gravity_100'] #,'Coulomb_3','boids_16_256','boids_32_256','boids_64_256']
@@ -6205,8 +6202,13 @@ if __name__ == '__main__':
                 data_plot_attraction_repulsion_short(config_file, device=device)
             case 'PDE_A_bis':
                 data_plot_attraction_repulsion_asym_short(config_file, device=device)
-            case _:
-                print('no plot function for this model')
+
+        match config.graph_model.mesh_model_name:
+            case 'WaveMesh':
+                data_plot_wave(config_file,cc='viridis')
+
+
+
 
         # data_plot_attraction_repulsion_short(config_file, device=device)
         # data_plot_boids(config_file)
