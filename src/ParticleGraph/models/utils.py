@@ -558,6 +558,20 @@ def set_trainable_division_parameters(model, lr):
 
     return optimizer, n_total_params
 
+def get_index_particles(x, n_particle_types, dimension):
+    index_particles = []
+    for n in range(n_particle_types):
+        if dimension == 2:
+            index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
+        elif dimension == 3:
+            index = np.argwhere(x[:, 7].detach().cpu().numpy() == n)
+        index_particles.append(index.squeeze())
+    return index_particles
+
+def get_type_list(x, dimension):
+    type_list = x[:, 1 + 2 * dimension:2 + 2 * dimension].clone().detach()
+    return type_list
+
 
 
 

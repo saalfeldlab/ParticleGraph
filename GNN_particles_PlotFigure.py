@@ -3448,12 +3448,6 @@ def data_plot_attraction_repulsion_short(config_file, device):
 
     embedding_cluster = EmbeddingCluster(config)
 
-    if train_config.small_init_batch_size:
-        get_batch_size = increasing_batch_size(target_batch_size)
-    else:
-        get_batch_size = constant_batch_size(target_batch_size)
-    batch_size = get_batch_size(0)
-
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
@@ -3508,13 +3502,6 @@ def data_plot_attraction_repulsion_short(config_file, device):
     print('done ...')
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-
-
-    if  has_cell_division:
-        model_division = Division_Predictor(config, device)
-        optimizer_division, n_total_params_division = set_trainable_division_parameters(model_division, lr=1E-3)
-        logger.info(f"Total Trainable Divsion Params: {n_total_params_division}")
-        logger.info(f'Learning rates: 1E-3')
 
     x = x_list[1][0].clone().detach()
     type_list = x[:, 5:6].clone().detach()
@@ -3885,8 +3872,11 @@ def data_plot_attraction_repulsion_short(config_file, device):
         torch.save(plots, f"./{log_dir}/tmp_training/plots_true_{config_file}_{epoch}.pt")
         plt.close()
 
-def data_plot_attraction_repulsion_asym_short(config, config_file, mode, device):
+def data_plot_attraction_repulsion_asym_short(config_file, device):
     print('')
+
+    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+    dataset_name = config.dataset
 
     # plt.rcParams['text.usetex'] = True
     # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
@@ -3918,12 +3908,6 @@ def data_plot_attraction_repulsion_asym_short(config, config_file, mode, device)
 
     embedding_cluster = EmbeddingCluster(config)
 
-    if train_config.small_init_batch_size:
-        get_batch_size = increasing_batch_size(target_batch_size)
-    else:
-        get_batch_size = constant_batch_size(target_batch_size)
-    batch_size = get_batch_size(0)
-
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
@@ -3945,34 +3929,7 @@ def data_plot_attraction_repulsion_asym_short(config, config_file, mode, device)
 
     time.sleep(0.5)
     print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
-    if has_mesh:
-        x_mesh_list = []
-        y_mesh_list = []
-        for run in trange(NGraphs):
-            x_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
-            x_mesh_list.append(x_mesh)
-            h = torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
-            y_mesh_list.append(h)
-        h = y_mesh_list[0][0].clone().detach()
-        for run in range(NGraphs):
-            for k in range(n_frames):
-                h = torch.cat((h, y_mesh_list[run][k].clone().detach()), 0)
-        hnorm = torch.std(h)
-        torch.save(hnorm, os.path.join(log_dir, 'hnorm.pt'))
-        print(f'hnorm: {to_numpy(hnorm)}')
-        time.sleep(0.5)
 
-        mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_1.pt', map_location=device)
-
-        mask_mesh = mesh_data['mask']
-        # mesh_pos = mesh_data['mesh_pos']
-        edge_index_mesh = mesh_data['edge_index']
-        edge_weight_mesh = mesh_data['edge_weight']
-        # face = mesh_data['face']
-
-        mask_mesh = mask_mesh.repeat(batch_size, 1)
-
-    h=[]
     x=[]
     y=[]
 
@@ -3980,14 +3937,10 @@ def data_plot_attraction_repulsion_asym_short(config, config_file, mode, device)
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
-
-    if  has_cell_division:
-        model_division = Division_Predictor(config, device)
-        optimizer_division, n_total_params_division = set_trainable_division_parameters(model_division, lr=1E-3)
-        logger.info(f"Total Trainable Divsion Params: {n_total_params_division}")
-        logger.info(f'Learning rates: 1E-3')
-
     x = x_list[1][0].clone().detach()
+
+
+
     type_list = x[:, 5:6].clone().detach()
     index_particles = []
     for n in range(n_particle_types):
@@ -3995,7 +3948,6 @@ def data_plot_attraction_repulsion_asym_short(config, config_file, mode, device)
         index_particles.append(index.squeeze())
 
     time.sleep(0.5)
-
 
     # matplotlib.use("Qt5Agg")
     plt.rcParams['text.usetex'] = True
@@ -4275,8 +4227,11 @@ def data_plot_attraction_repulsion_asym_short(config, config_file, mode, device)
         rmserr_list = to_numpy(rmserr_list)
         print(f'all function RMS error: {np.round(np.mean(rmserr_list), 7)}+/-{np.round(np.std(rmserr_list), 7)}')
 
-def data_plot_attraction_repulsion_continuous_short(config, config_file, mode, device):
+def data_plot_attraction_repulsion_continuous_short(config_file, device):
     print('')
+
+    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+    dataset_name = config.dataset
 
     # plt.rcParams['text.usetex'] = True
     # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
@@ -6367,18 +6322,28 @@ if __name__ == '__main__':
     # config_list = ['RD_RPS_1']
     # config_list = ['RD_RPS_boat']
     # config_list = ['signal_N_100_2a','signal_N_100_2b','signal_N_100_2c','signal_N_100_2d','signal_N_100_2e','signal_N_100_3a','signal_N_100_3b','signal_N_100_3c'] #, 'signal_N_10', 'signal_N']
-    config_list = ['arbitrary_3_field_video_bison_siren_with_time_test']
+    config_list = ['arbitrary_3_3']
     # config_list = ['arbitrary_3']#,'arbitrary_16','arbitrary_32','arbitrary_64']
     # config_list=['arbitrary_3_field_video_bison_siren_with_time']
     # config_list = ['gravity_16','gravity_100'] #,'Coulomb_3','boids_16_256','boids_32_256','boids_64_256']
     # config_list = ['boids_16_256_bison_siren_with_time_2_bw_2']
     for config_file in config_list:
 
+        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+
+        match config.graph_model.particle_model_name:
+            case 'PDE_A':
+                data_plot_attraction_repulsion_short(config_file, device=device)
+            case 'PDE_A_bis':
+                data_plot_attraction_repulsion_asym_short(config_file, device=device)
+            case _:
+                print('no plot function for this model')
+
         # data_plot_attraction_repulsion_short(config_file, device=device)
         # data_plot_boids(config_file)
         # data_plot_gravity(config_file)
         # data_plot_RD(config_file,cc='viridis')
-        data_plot_particle_field(config_file, mode='figures', cc='grey', device=device)
+        # data_plot_particle_field(config_file, mode='figures', cc='grey', device=device)
         # data_plot_wave(config_file,cc='viridis')
         # data_plot_signal(config_file,cc='viridis')
 
