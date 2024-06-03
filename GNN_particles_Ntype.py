@@ -39,7 +39,7 @@ from ParticleGraph.utils import *
 
 if __name__ == '__main__':
 
-    config_list = ['arbitrary_3_test']
+    config_list = ['arbitrary_64_256_0_25']
 
 
     for config_file in config_list:

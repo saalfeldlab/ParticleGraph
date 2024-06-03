@@ -45,6 +45,10 @@ class EmbeddingCluster:
 
 
 def sparsify_cluster(cluster_method, proj_interaction, embedding, cluster_distance_threshold, index_particles, n_particle_types):
+
+    # normalization of projection because UMAP output is not normalized
+    proj_interaction = (proj_interaction - np.min(proj_interaction)) / (np.max(proj_interaction) - np.min(proj_interaction)+1e-10)
+
     match cluster_method:
         case 'kmeans_auto_plot':
             labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
@@ -67,7 +71,6 @@ def sparsify_cluster(cluster_method, proj_interaction, embedding, cluster_distan
     new_labels = labels.copy()
     for n in range(n_particle_types):
         new_labels[labels == label_list[n]] = n
-
     return labels, n_clusters, new_labels
 
 

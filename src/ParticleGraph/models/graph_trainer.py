@@ -307,8 +307,8 @@ def data_train_particles(config, config_file, device):
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0],
                         embedding[index_particles[n], 1], color=cmap.color(n), s=0.1)
-        plt.xlabel('Embedding 0', fontsize=12)
-        plt.ylabel('Embedding 1', fontsize=12)
+        plt.xlabel('ai0', fontsize=12)
+        plt.ylabel('ai1', fontsize=12)
 
         if (simulation_config.n_interactions < 100) & (simulation_config.has_cell_division == False):
 
@@ -340,10 +340,6 @@ def data_train_particles(config, config_file, device):
 
             ax = fig.add_subplot(1, 5, 5)
             model_a_ = model.a[1].clone().detach()
-            for n in np.unique(new_labels):
-                pos = np.array(np.argwhere(new_labels == n).squeeze().astype(int))
-                if pos.size > 0:
-                    plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=5)
             for n in range(n_clusters):
                 pos = np.argwhere(labels == n).squeeze().astype(int)
                 pos = np.array(pos)
@@ -352,7 +348,7 @@ def data_train_particles(config, config_file, device):
                     median_center = torch.median(median_center, dim=0).values
                     plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='r', alpha=0.25)
                     model_a_[pos, :] = median_center
-                    plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='k')
+                    plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=10, c='k')
 
             plt.xlabel('ai0', fontsize=12)
             plt.ylabel('ai1', fontsize=12)
