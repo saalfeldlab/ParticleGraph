@@ -41,6 +41,7 @@ def data_train_particles(config, config_file, device):
     data_augmentation_loop = train_config.data_augmentation_loop
     target_batch_size = train_config.batch_size
     replace_with_cluster = 'replace' in train_config.sparsity
+    cluster_distance_threshold = train_config.cluster_distance_threshold
     has_ghost = train_config.n_ghosts > 0
     n_ghosts = train_config.n_ghosts
     has_large_range = train_config.large_range
@@ -295,13 +296,13 @@ def data_train_particles(config, config_file, device):
         # white background
         # plt.style.use('classic')
 
-        ax = fig.add_subplot(1, 6, 1)
+        ax = fig.add_subplot(1, 5, 1)
         plt.plot(list_loss, color='k')
         plt.xlim([0, n_epochs])
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
 
-        ax = fig.add_subplot(1, 6, 2)
+        ax = fig.add_subplot(1, 5, 2)
         embedding = get_embedding(model.a, 1)
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0],
@@ -310,61 +311,39 @@ def data_train_particles(config, config_file, device):
         plt.ylabel('Embedding 1', fontsize=12)
 
         if (simulation_config.n_interactions < 100) & (simulation_config.has_cell_division == False):
-            ax = fig.add_subplot(1, 6, 3)
+
+
+            ax = fig.add_subplot(1, 5, 3)
             func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
                                                                 model_lin_edge=model.lin_edge, model_a=model.a,
                                                                 n_nodes = 0,
                                                                 dataset_number=1,
                                                                 n_particles=n_particles, ynorm=ynorm,
-                                                                types=to_numpy(x[:, 1+2*column_dimension]),
+                                                                types=to_numpy(x[:, 1+2*dimension]),
                                                                 cmap=cmap, dimension=dimension, device=device)
 
-            ax = fig.add_subplot(1, 6, 4)
-            match train_config.cluster_method:
-                case 'kmeans_auto_plot':
-                    labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
-                case 'kmeans_auto_embedding':
-                    labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
-                    proj_interaction = embedding
-                case 'distance_plot':
-                    labels, n_clusters = embedding_cluster.get(proj_interaction, 'distance')
-                case 'distance_embedding':
-                    labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=0.05)
-                    proj_interaction = embedding
-                case 'distance_both':
-                    new_projection = np.concatenate((proj_interaction, embedding), axis=-1)
-                    labels, n_clusters = embedding_cluster.get(new_projection, 'distance')
-            for n in range(n_clusters):
-                pos = np.argwhere(labels == n)
-                pos = np.array(pos)
-                if pos.size > 0:
-                    plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=5)
-            label_list = []
-            for n in range(n_particle_types):
-                tmp = labels[index_particles[n]]
-                label_list.append(np.round(np.median(tmp)))
-            label_list = np.array(label_list)
-            plt.xlabel('proj 0', fontsize=12)
-            plt.ylabel('proj 1', fontsize=12)
-            plt.text(0., 1.1, f'Nclusters: {n_clusters}', ha='left', va='top', transform=ax.transAxes)
+            labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding, cluster_distance_threshold, index_particles, n_particle_types)
 
-            ax = fig.add_subplot(1, 6, 5)
-            new_labels = labels.copy()
-            for n in range(n_particle_types):
-                new_labels[labels == label_list[n]] = n
-                pos = np.argwhere(labels == label_list[n])
-                pos = np.array(pos)
-                if pos.size > 0:
-                    plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1],
-                                color=cmap.color(n), s=0.1)
             Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-            plt.text(0, 1.1, f'Accuracy: {np.round(Accuracy, 3)}', ha='left', va='top', transform=ax.transAxes,
-                     fontsize=10)
+
             print(f'Accuracy: {np.round(Accuracy, 3)}   n_clusters: {n_clusters}')
             logger.info(f'Accuracy: {np.round(Accuracy, 3)}    n_clusters: {n_clusters}')
 
-            ax = fig.add_subplot(1, 6, 6)
+            ax = fig.add_subplot(1, 5, 4)
+            for n in np.unique(new_labels):
+                pos = np.array(np.argwhere(new_labels == n).squeeze().astype(int))
+                if pos.size > 0:
+                    plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], s=5)
+            plt.xlabel('proj 0', fontsize=12)
+            plt.ylabel('proj 1', fontsize=12)
+            plt.text(0, 1.1, f'Accuracy: {np.round(Accuracy, 3)},  {n_clusters} clusters', ha='left', va='top', transform=ax.transAxes,fontsize=10)
+
+            ax = fig.add_subplot(1, 5, 5)
             model_a_ = model.a[1].clone().detach()
+            for n in np.unique(new_labels):
+                pos = np.array(np.argwhere(new_labels == n).squeeze().astype(int))
+                if pos.size > 0:
+                    plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=5)
             for n in range(n_clusters):
                 pos = np.argwhere(labels == n).squeeze().astype(int)
                 pos = np.array(pos)
@@ -374,11 +353,7 @@ def data_train_particles(config, config_file, device):
                     plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='r', alpha=0.25)
                     model_a_[pos, :] = median_center
                     plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='k')
-            for n in np.unique(new_labels):
-                pos = np.argwhere(new_labels == n).squeeze().astype(int)
-                pos = np.array(pos)
-                if pos.size > 0:
-                    plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), color='k', s=5)
+
             plt.xlabel('ai0', fontsize=12)
             plt.ylabel('ai1', fontsize=12)
             plt.xticks(fontsize=10.0)

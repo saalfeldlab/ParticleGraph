@@ -380,7 +380,7 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_lin_edge=[]
     model_config = config.graph_model
     max_radius = config.simulation.max_radius
 
-    if rr=[]:
+    if rr==[]:
         if model_config.particle_model_name == 'PDE_G':
             rr = torch.tensor(np.linspace(0, max_radius * 1.3, 1000)).to(device)
         elif model_config.particle_model_name == 'PDE_GS':

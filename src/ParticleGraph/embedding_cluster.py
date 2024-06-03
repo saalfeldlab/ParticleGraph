@@ -44,6 +44,33 @@ class EmbeddingCluster:
         return clusters, n_clusters
 
 
+def sparsify_cluster(cluster_method, proj_interaction, embedding, cluster_distance_threshold, index_particles, n_particle_types):
+    match cluster_method:
+        case 'kmeans_auto_plot':
+            labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
+        case 'kmeans_auto_embedding':
+            labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
+            proj_interaction = embedding
+        case 'distance_plot':
+            labels, n_clusters = embedding_cluster.get(proj_interaction, 'distance', thresh=cluster_distance_threshold)
+        case 'distance_embedding':
+            labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=cluster_distance_threshold)
+            proj_interaction = embedding
+        case 'distance_both':
+            new_projection = np.concatenate((proj_interaction, embedding), axis=-1)
+            labels, n_clusters = embedding_cluster.get(new_projection, 'distance', thresh=cluster_distance_threshold)
+    label_list = []
+    for n in range(n_particle_types):
+        tmp = labels[index_particles[n]]
+        label_list.append(np.round(np.median(tmp)))
+    label_list = np.array(label_list)
+    new_labels = labels.copy()
+    for n in range(n_particle_types):
+        new_labels[labels == label_list[n]] = n
+
+    return labels, n_clusters, new_labels
+
+
 if __name__ == '__main__':
     # generate 3 clusters of each around 100 points and one orphan point
     n_interactions = 3
