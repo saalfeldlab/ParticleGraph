@@ -3858,11 +3858,11 @@ def data_plot_attraction_repulsion_asym_short(config_file, device):
     print(f'Plot training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     dimension = simulation_config.dimension
-    radius = simulation_config.max_radius
+    max_radius = simulation_config.max_radius
+    min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
     dataset_name = config.dataset
-    has_mesh = (config.graph_model.mesh_model_name != '')
     max_radius = config.simulation.max_radius
     cmap = CustomColorMap(config=config)
     embedding_cluster = EmbeddingCluster(config)
@@ -3898,7 +3898,6 @@ def data_plot_attraction_repulsion_asym_short(config_file, device):
 
     x = x_list[1][0].clone().detach()
     index_particles = get_index_particles(x, n_particle_types, dimension)
-    type_list = get_type_list(x, dimension)
 
     time.sleep(0.5)
 
@@ -3970,55 +3969,6 @@ def data_plot_attraction_repulsion_asym_short(config_file, device):
         labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding,
                                                           train_config.cluster_distance_threshold, index_particles, n_particle_types, embedding_cluster)
 
-        Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-
-        print(f'Accuracy: {np.round(Accuracy, 3)}   n_clusters: {n_clusters}')
-        logger.info(f'Accuracy: {np.round(Accuracy, 3)}    n_clusters: {n_clusters}')
-
-
-        match train_config.cluster_method:
-            case 'kmeans_auto_plot':
-                labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
-            case 'kmeans_auto_embedding':
-                labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
-                proj_interaction = embedding
-            case 'distance_plot':
-                labels, n_clusters = embedding_cluster.get(proj_interaction, 'distance')
-            case 'distance_embedding':
-                labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=1.5)
-                proj_interaction = embedding
-            case 'distance_both':
-                new_projection = np.concatenate((proj_interaction, embedding), axis=-1)
-                labels, n_clusters = embedding_cluster.get(new_projection, 'distance')
-
-        fig = plt.figure(figsize=(12, 12))
-        for n in range(n_clusters):
-            pos = np.argwhere(labels == n)
-            pos = np.array(pos)
-            if pos.size > 0:
-                plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=5)
-        label_list = []
-        for n in range(n_particle_types):
-            tmp = labels[index_particles[n]]
-            label_list.append(np.round(np.median(tmp)))
-        label_list = np.array(label_list)
-
-        plt.xlabel('proj 0', fontsize=12)
-        plt.ylabel('proj 1', fontsize=12)
-        plt.close()
-
-        fig = plt.figure(figsize=(12, 12))
-        new_labels = labels.copy()
-        for n in range(n_particle_types):
-            new_labels[labels == label_list[n]] = n
-            pos = np.argwhere(labels == label_list[n])
-            pos = np.array(pos)
-            if pos.size > 0:
-                plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1],
-                            color=cmap.color(n), s=0.1)
-        Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-        print(f'Accuracy: {np.round(Accuracy, 3)}   n_clusters: {n_clusters}')
-
         fig = plt.figure(figsize=(12, 12))
         model_a_ = model.a[1].clone().detach()
         for n in range(n_clusters):
@@ -4073,33 +4023,39 @@ def data_plot_attraction_repulsion_asym_short(config_file, device):
         plt.savefig(f"./{log_dir}/tmp_training/embedding_{config_file}_{epoch}.tif", dpi=170.7)
         plt.close()
 
+        x = x_list[1][100].clone().detach()
+        index_particles = get_index_particles(x, n_particle_types, dimension)
+        type_list = to_numpy(get_type_list(x, dimension))
+        distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+        t = torch.Tensor([max_radius ** 2])
+        edges = adj_t.nonzero().t().contiguous()
+        indexes = np.random.randint(0, edges.shape[1], 5000)
+        edges = edges[:, indexes]
+
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(1,1,1)
-        # ax.xaxis.get_major_formatter()._usetex = False
-        # ax.yaxis.get_major_formatter()._usetex = False
         ax.xaxis.set_major_locator(plt.MaxNLocator(3))
         ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-        func_list = []
-        csv_ = []
-        csv_.append(to_numpy(rr))
-        for n in range(n_particle_types):
-            pos = np.argwhere(new_labels == n).squeeze().astype(int)
-            embedding_1 = model.a[1, pos[0], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            for m in range(n_particle_types):
-                pos = np.argwhere(new_labels == m).squeeze().astype(int)
-                embedding_2 = model.a[1, pos[0], :] * torch.ones((1000, config.graph_model.embedding_dim),
-                                                                 device=device)
 
-                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                         rr[:, None] / max_radius, embedding_1, embedding_2), dim=1)
-                with torch.no_grad():
-                    func = model.lin_edge(in_features.float())
-                func = func[:, 0]
-                func_list.append(func)
-                csv_.append(to_numpy(func))
-                plt.plot(to_numpy(rr),
-                         to_numpy(func) * to_numpy(ynorm),
-                         color=cmap.color(n), linewidth=8)
+
+        rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+        func_list = []
+
+        for n in trange(edges.shape[1]):
+            embedding_1 = model.a[1, edges[0,n], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+            embedding_2 = model.a[1, edges[1,n], :] * torch.ones((1000, config.graph_model.embedding_dim),
+                                                                 device=device)
+            type = type_list[to_numpy(edges[0,n])].astype(int)
+            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                     rr[:, None] / max_radius, embedding_1, embedding_2), dim=1)
+            with torch.no_grad():
+                func = model.lin_edge(in_features.float())
+            func = func[:, 0]
+            func_list.append(func)
+            plt.plot(to_numpy(rr),
+                     to_numpy(func) * to_numpy(ynorm),
+                     color=cmap.color(type), linewidth=8)
         plt.xlabel(r'$d_{ij}$', fontsize=64)
         plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=64)
         # xticks with sans serif font
@@ -4109,11 +4065,8 @@ def data_plot_attraction_repulsion_asym_short(config_file, device):
         plt.xlim([0, max_radius])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/func_{config_file}_{epoch}.tif", dpi=170.7)
-        np.save(f"./{log_dir}/tmp_training/func_{config_file}_{epoch}.npy", csv_)
-        np.savetxt(f"./{log_dir}/tmp_training/func_{config_file}_{epoch}.txt", csv_)
         plt.close()
 
-        p = config.simulation.params
         p = config.simulation.params
         if len(p) > 0:
             p = torch.tensor(p, device=device)
@@ -4125,14 +4078,12 @@ def data_plot_attraction_repulsion_asym_short(config_file, device):
         # ax.yaxis.get_major_formatter()._usetex = False
         ax.xaxis.set_major_locator(plt.MaxNLocator(3))
         ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-        true_func_list=[]
-        csv_ = []
-        csv_.append(to_numpy(rr))
+
+        true_func=[]
         for n in range(n_particle_types):
             for m in range(n_particle_types):
-                plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[3*n + m], p[n*3 +m])), color=cmap.color(n), linewidth=8)
-                true_func_list.append(model.psi(rr, p[3*n + m], p[n*3 +m]))
-                csv_.append(to_numpy(model.psi(rr, p[3*n + m], p[n*3 +m]).squeeze()))
+                plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[3 * n + m], p[3 * n + m]).squeeze()), color=cmap.color(n), linewidth=8)
+                true_func.append(model.psi(rr, p[3 * n + m].squeeze(), p[n * 3 + m].squeeze()))
         plt.xlabel(r'$d_{ij}$', fontsize=64)
         plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=64)
         # xticks with sans serif font
@@ -4145,6 +4096,12 @@ def data_plot_attraction_repulsion_asym_short(config_file, device):
         np.save(f"./{log_dir}/tmp_training/true_func_{config_file}_{epoch}.npy", csv_)
         np.savetxt(f"./{log_dir}/tmp_training/true_func_{config_file}_{epoch}.txt", csv_)
         plt.close()
+
+        true_func_list=[]
+        for k in trange(edges.shape[1]):
+                n = type_list[to_numpy(edges[0,k])].astype(int)
+                m = type_list[to_numpy(edges[1,k])].astype(int)
+                true_func_list.append(true_func[3 * n.squeeze() + m.squeeze()])
 
         func_list = torch.stack(func_list) * ynorm
         true_func_list = torch.stack(true_func_list)
