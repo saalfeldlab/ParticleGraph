@@ -31,13 +31,13 @@ class EmbeddingCluster:
                 kmeans = KMeans(n_clusters=n_clusters, random_state=10, n_init='auto')
                 k = kmeans.fit(data)
                 clusters = k.labels_
+            case 'distance':
+                clusters = hcluster.fclusterdata(data, thresh, criterion="distance", method='average') - 1
+                n_clusters = len(np.unique(clusters))
+            case 'inconsistent':
+                clusters = hcluster.fclusterdata(data, thresh, criterion="inconsistent", method='average') - 1
+                n_clusters = len(np.unique(clusters))
 
-            case 'distance':
-                clusters = hcluster.fclusterdata(data, thresh, criterion="distance") - 1
-                n_clusters = len(np.unique(clusters))
-            case 'distance':
-                clusters = hcluster.fclusterdata(data, thresh, criterion="distance") - 1
-                n_clusters = len(np.unique(clusters))
             case _:
                 raise ValueError(f'Unknown method {method}')
 

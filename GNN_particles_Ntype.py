@@ -39,8 +39,8 @@ from ParticleGraph.utils import *
 
 if __name__ == '__main__':
 
-    # config_list = ['arbitrary_64_256_0_0025']
-    config_list = ['wave_slit']
+    config_list = ['arbitrary_64_256_0_0025']
+    # config_list = ['wave_slit']
     # config_list = ['signal_N_100_2_test']
 
 
