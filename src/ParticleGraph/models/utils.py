@@ -374,8 +374,21 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
             plt.savefig(f"./{log_dir}/tmp_training/embedding/function/{dataset_name}_function_{epoch}_{N}.tif", dpi=300)
             plt.close()
 
-def analyze_edge_function(rr=None, vizualize=False, config=None, model_lin_edge=[], model_a=None, n_nodes=0, dataset_number = 0, n_particles=None, ynorm=None, types=None, cmap=None, dimension=2, device=None):
+def analyze_edge_function(rr=[], vizualize=False, config=None, model_lin_edge=[], model_a=None, n_nodes=0, dataset_number = 0, n_particles=None, ynorm=None, types=None, cmap=None, dimension=2, device=None):
     func_list = []
+
+    model_config = config.graph_model
+    max_radius = config.simulation.max_radius
+
+    if rr=[]:
+        if model_config.particle_model_name == 'PDE_G':
+            rr = torch.tensor(np.linspace(0, max_radius * 1.3, 1000)).to(device)
+        elif model_config.particle_model_name == 'PDE_GS':
+            rr = torch.tensor(np.logspace(7, 9, 1000)).to(device)
+        else:
+            rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+
+
     for n in range(n_particles):
         embedding_ = model_a[dataset_number, n_nodes+n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
         max_radius = config.simulation.max_radius
