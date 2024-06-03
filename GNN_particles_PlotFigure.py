@@ -562,7 +562,6 @@ def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoc
 
     return Accuracy
 
-
 def data_plot_attraction_repulsion(config_file, epoch_list, device):
     print('')
 

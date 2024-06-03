@@ -117,7 +117,7 @@ class TrainingConfig(BaseModel):
     data_augmentation_loop: int = 40
     recursive_loop: int = 0
 
-    cluster_method: Literal['kmeans', 'kmeans_auto_plot', 'kmeans_auto_embedding', 'distance_plot', 'distance_embedding', 'distance_both'] = 'distance_plot'
+    cluster_method: Literal['kmeans', 'kmeans_auto_plot', 'kmeans_auto_embedding', 'distance_plot', 'distance_embedding', 'distance_both', 'inconsistent_plot', 'inconsistent_embedding'] = 'distance_plot'
     cluster_distance_threshold: float = 0.1
     device: Annotated[str, Field(pattern=r'^(auto|cpu|cuda:\d+)$')] = 'auto'
 

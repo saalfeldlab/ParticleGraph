@@ -61,6 +61,11 @@ def sparsify_cluster(cluster_method, proj_interaction, embedding, cluster_distan
         case 'distance_embedding':
             labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=cluster_distance_threshold)
             proj_interaction = embedding
+        case 'inconsistent_plot':
+            labels, n_clusters = embedding_cluster.get(proj_interaction, 'inconsistent', thresh=cluster_distance_threshold)
+        case 'inconsistent_embedding':
+            labels, n_clusters = embedding_cluster.get(embedding, 'inconsistent', thresh=cluster_distance_threshold)
+            proj_interaction = embedding
         case 'distance_both':
             new_projection = np.concatenate((proj_interaction, embedding), axis=-1)
             labels, n_clusters = embedding_cluster.get(new_projection, 'distance', thresh=cluster_distance_threshold)

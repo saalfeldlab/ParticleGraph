@@ -383,7 +383,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                              to_numpy(func*ynorm),
                              linewidth=2,
                              color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
-                plt.ylim([-0.04, 0.03])
+            plt.ylim([-0.1, 0.1])
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/tmp_training/embedding/function/{dataset_name}_function_{epoch}_{N}.tif", dpi=300)
             plt.close()
@@ -457,7 +457,7 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_lin_edge=[]
         if ((n % 5 == 0) | (config.graph_model.particle_model_name=='PDE_GS')) & vizualize:
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
-                     color=cmap.color(types[n].astype(int)), linewidth=8, alpha=0.25)
+                     color=cmap.color(types[n].astype(int)), linewidth=2, alpha=0.25)
     func_list = torch.stack(func_list)
     coeff_norm = to_numpy(func_list)
     if coeff_norm.shape[0] > 1000:

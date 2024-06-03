@@ -90,7 +90,7 @@ def data_train_particles(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_20.pt"
+    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
 
@@ -322,7 +322,25 @@ def data_train_particles(config, config_file, device):
                                                                 types=to_numpy(x[:, 1+2*dimension]),
                                                                 cmap=cmap, dimension=dimension, device=device)
 
+
+            ax = fig.add_subplot(1, 5, 4)
+            plt.scatter(proj_interaction[:, 0], proj_interaction[:, 1], s=1)
+
+            train_config.cluster_method = 'distance_plot'
+            train_config.cluster_distance_threshold = 0.005
             labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding, train_config.cluster_distance_threshold, index_particles, n_particle_types, embedding_cluster)
+            n_clusters
+
+            fig = plt.figure(figsize=(12, 12))
+            for n in range(n_clusters):
+                pos = np.argwhere(labels == n).squeeze().astype(int)
+                pos = np.array(pos)
+                if pos.size > 1:
+                    median_center = proj_interaction[pos, :]
+                    median_center = np.median(median_center, axis=0)
+                    plt.scatter((proj_interaction[pos, 0]), (proj_interaction[pos, 1]), s=1, c='r', alpha=0.25)
+                    plt.scatter((median_center[0]), (median_center[1]), s=10, c='k')
+
 
             Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
 
@@ -687,7 +705,7 @@ def data_train_mesh(config, config_file, device):
                 proj_interaction = popt_list
                 proj_interaction[:, 1] = proj_interaction[:, 0]
 
-            labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding, cluster_distance_threshold, index_particles, n_particle_types, embedding_cluster)
+            labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding, train_config.cluster_distance_threshold, index_nodes, n_node_types, embedding_cluster)
 
             Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
             print(f'Accuracy: {np.round(Accuracy, 3)}   n_clusters: {n_clusters}')
