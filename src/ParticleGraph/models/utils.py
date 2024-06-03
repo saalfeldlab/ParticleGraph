@@ -1,3 +1,25 @@
+import matplotlib
+import matplotlib.pyplot as plt
+# matplotlib.use("Qt5Agg")
+import numpy as np
+import torch
+import umap
+import vispy.scene
+import vispy.plot as vp
+import vispy.io as io
+from matplotlib.ticker import FormatStrFormatter
+from scipy.optimize import curve_fit
+from vispy.scene import visuals
+from ParticleGraph.fitting_models import linear_model
+from ParticleGraph.models import Interaction_Particles, Interaction_Particle_Field, Signal_Propagation, Mesh_Laplacian, \
+    Mesh_RPS, Mesh_RPS_bis
+from ParticleGraph.utils import choose_boundary_values
+from ParticleGraph.utils import to_numpy
+from matplotlib import rc
+import matplotlib as mpl
+import networkx as nx
+from torch_geometric.utils.convert import to_networkx
+
 from GNN_particles_Ntype import *
 from ParticleGraph.models.utils import *
 import matplotlib as mpl
@@ -179,6 +201,8 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
             popt_list.append(popt)
         t = np.array(popt_list)
         t = t[:, 0]
+        plt.close()
+
         fig = plt.figure(figsize=(8, 8))
         embedding = get_embedding(model.a, 1)
         plt.scatter(embedding[:, 0], embedding[:, 1], c=t[:, None], s=20, cmap='viridis')
