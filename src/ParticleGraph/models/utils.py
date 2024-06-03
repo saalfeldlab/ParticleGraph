@@ -35,13 +35,18 @@ def plot_training_signal(config, dataset, model, adjacency, log_dir, epoch, N, i
     ax.yaxis.set_major_locator(plt.MaxNLocator(3))
     ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-    x = dataset.x
-    plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=200, c=to_numpy(x[:, 6]), cmap='cool', vmin=0,
-                vmax=3)
-    plt.xlim([-1.5, 1.5])
-    plt.ylim([-1.5, 1.5])
+    edges = to_numpy(dataset.edge_index)
+    weights = to_numpy(model.weight_ij_.squeeze())
+    # plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=200, c=to_numpy(x[:, 6]), cmap='cool', vmin=0,
+    #             vmax=3)
+    vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
+    pos = to_numpy(dataset.x[:, 1:3])
+    nx.draw(vis, pos, node_color='k', edgelist=edges, edge_color='k', width=weights*100, edge_cmap=plt.cm.cool,
+            node_size=10, alpha=0.5)
+    plt.xlim([-1.25, 1.25])
+    plt.ylim([-1.25, 1.25])
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/embedding/particle/{dataset_name}_network_{epoch}_{N}.tif", dpi=170.7)
+    plt.savefig(f"./{log_dir}/tmp_training/embedding/particle/network_{epoch}_{N}.tif", dpi=170.7)
     plt.close()
 
 

@@ -38,7 +38,7 @@ class PDE_B(pyg.nn.MessagePassing):
         x, edge_index = data.x, data.edge_index
 
         if has_field:
-            field = x[:6:7]
+            field = x[:,6:7]
         else:
             field = torch.ones_like(x[:,6:7])
 
