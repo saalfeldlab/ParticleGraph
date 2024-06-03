@@ -402,10 +402,6 @@ def data_plot_attraction_repulsion(config_file):
     n_particles = config.simulation.n_particles
     nrun = config.training.n_runs
 
-    index_particles = []
-    np_i = int(n_particles / n_particle_types)
-    for n in range(n_particle_types):
-        index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
@@ -425,6 +421,9 @@ def data_plot_attraction_repulsion(config_file):
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     x = x_list[0][0].clone().detach()
+
+    index_particles = get_index_particles(x, n_particle_types, dimension)
+    type_list = get_type_list(x, dimension)
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
@@ -679,10 +678,6 @@ def data_plot_attraction_repulsion_asym(config_file):
     n_particles = config.simulation.n_particles
     nrun = config.training.n_runs
 
-    index_particles = []
-    np_i = int(n_particles / n_particle_types)
-    for n in range(n_particle_types):
-        index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
@@ -702,6 +697,9 @@ def data_plot_attraction_repulsion_asym(config_file):
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     x = x_list[0][0].clone().detach()
+
+    index_particles = get_index_particles(x, n_particle_types, dimension)
+    type_list = get_type_list(x, dimension)
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
@@ -955,11 +953,8 @@ def data_plot_gravity(config_file):
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     x = x_list[0][0].clone().detach()
 
-    type_list = x[:, 5:6].clone().detach()
-    index_particles = []
-    for n in range(n_particle_types):
-        index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
-        index_particles.append(index.squeeze())
+    index_particles = get_index_particles(x, n_particle_types, dimension)
+    type_list = get_type_list(x, dimension)
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
@@ -1354,11 +1349,6 @@ def data_plot_gravity_continuous(config_file):
     n_particles = config.simulation.n_particles
     nrun = config.training.n_runs
 
-    index_particles = []
-    np_i = int(n_particles / n_particle_types)
-    for n in range(n_particle_types):
-        index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
-
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
@@ -1377,6 +1367,8 @@ def data_plot_gravity_continuous(config_file):
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     x = x_list[0][0].clone().detach()
+    index_particles = get_index_particles(x, n_particle_types, dimension)
+    type_list = get_type_list(x, dimension)
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
@@ -1656,11 +1648,6 @@ def data_plot_gravity_solar_system(config_file):
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
 
-    index_particles = []
-    np_i = int(n_particles / n_particle_types)
-    for n in range(n_particle_types):
-        index_particles.append(np.arange(np_i * n, np_i * (n + 1)))
-
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
@@ -1679,6 +1666,8 @@ def data_plot_gravity_solar_system(config_file):
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     x = x_list[0][0].clone().detach()
+    index_particles = get_index_particles(x, n_particle_types, dimension)
+    type_list = get_type_list(x, dimension)
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
@@ -1910,17 +1899,8 @@ def data_plot_Coulomb(config_file):
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     x = x_list[0][0].clone().detach()
-    if dimension == 2:
-        type_list = x[:, 5:6].clone().detach()
-    elif dimension == 3:
-        type_list = x[:, 7:8].clone().detach()
-    index_particles = []
-    for n in range(n_particle_types):
-        if dimension == 2:
-            index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
-        elif dimension == 3:
-            index = np.argwhere(x[:, 7].detach().cpu().numpy() == n)
-        index_particles.append(index.squeeze())
+    index_particles = get_index_particles(x, n_particle_types, dimension)
+    type_list = get_type_list(x, dimension)
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
@@ -2401,13 +2381,8 @@ def data_plot_boids(config_file):
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     x = x_list[0][0].clone().detach()
 
-    index_particles = []
-    for n in range(n_particle_types):
-        if dimension == 2:
-            index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
-        elif dimension == 3:
-            index = np.argwhere(x[:, 7].detach().cpu().numpy() == n)
-        index_particles.append(index.squeeze())
+    index_particles = get_index_particles(x, n_particle_types, dimension)
+    type_list = get_type_list(x, dimension)
 
     n_particles = int(n_particles * (1 - train_config.particle_dropout))
 
@@ -2896,10 +2871,8 @@ def data_plot_boids_dividing(config_file):
     T1 = x[:, 5:6].clone().detach()
     n_particles = x.shape[0]
     config.simulation.n_particles = n_particles
-    index_particles = []
-    for n in range(n_particle_types):
-        index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
-        index_particles.append(index.squeeze())
+    index_particles = get_index_particles(x, n_particle_types, dimension)
+    type_list = get_type_list(x, dimension)
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
     model = Interaction_Particles_extract(config, device, aggr_type=config.graph_model.aggr_type, bc_dpos=bc_dpos)
@@ -3504,11 +3477,8 @@ def data_plot_attraction_repulsion_short(config_file, device):
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
     x = x_list[1][0].clone().detach()
-    type_list = x[:, 5:6].clone().detach()
-    index_particles = []
-    for n in range(n_particle_types):
-        index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
-        index_particles.append(index.squeeze())
+    index_particles = get_index_particles(x, n_particle_types, dimension)
+    type_list = get_type_list(x, dimension)
 
     time.sleep(0.5)
 
@@ -3938,14 +3908,8 @@ def data_plot_attraction_repulsion_asym_short(config_file, device):
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
     x = x_list[1][0].clone().detach()
-
-
-
-    type_list = x[:, 5:6].clone().detach()
-    index_particles = []
-    for n in range(n_particle_types):
-        index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
-        index_particles.append(index.squeeze())
+    index_particles = get_index_particles(x, n_particle_types, dimension)
+    type_list = get_type_list(x, dimension)
 
     time.sleep(0.5)
 
@@ -4332,11 +4296,8 @@ def data_plot_attraction_repulsion_continuous_short(config_file, device):
         logger.info(f'Learning rates: 1E-3')
 
     x = x_list[1][0].clone().detach()
-    type_list = x[:, 5:6].clone().detach()
-    index_particles = []
-    for n in range(n_particle_types):
-        index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
-        index_particles.append(index.squeeze())
+    index_particles = get_index_particles(x, n_particle_types, dimension)
+    type_list = get_type_list(x, dimension)
 
     time.sleep(0.5)
 
@@ -4577,11 +4538,9 @@ def data_plot_particle_field(config_file, mode, cc, device):
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
-    index_particles = []
     x = x_list[0][0].clone().detach()
-    for n in range(n_particle_types):
-        index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
-        index_particles.append(index.squeeze())
+    index_particles = get_index_particles(x, n_particle_types, dimension)
+    type_list = get_type_list(x, dimension)
     if has_ghost:
         ghosts_particles = Ghost_Particles(config, n_particles, device)
         if train_config.ghost_method == 'MLP':
@@ -5635,20 +5594,11 @@ def data_plot_signal(config_file, cc='viridis'):
     print('Update variables ...')
     # update variable if particle_dropout, cell_division, etc ...
     x = x_list[1][n_frames - 1].clone().detach()
-    if dimension == 2:
-        type_list = x[:, 5:6].clone().detach()
-    else:
-        type_list = x[:, 7:8].clone().detach()
+    index_particles = get_index_particles(x, n_particle_types, dimension)
+    type_list = get_type_list(x, dimension)
     n_particles = x.shape[0]
     print(f'N particles: {n_particles}')
     config.simulation.n_particles = n_particles
-    index_particles = []
-    for n in range(n_particle_types):
-        if dimension == 2:
-            index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
-        else:
-            index = np.argwhere(x[:, 7].detach().cpu().numpy() == n)
-        index_particles.append(index.squeeze())
 
     mat = scipy.io.loadmat(simulation_config.connectivity_file)
     adjacency = torch.tensor(mat['A'], device=device)
