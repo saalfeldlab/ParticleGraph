@@ -855,7 +855,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
                 if 'color' in style:
 
-                    matplotlib.use("Qt5Agg")
+                    # matplotlib.use("Qt5Agg")
                     matplotlib.rcParams['savefig.pad_inches'] = 0
                     fig = plt.figure(figsize=(12, 12))
                     ax = fig.add_subplot(1, 1, 1)

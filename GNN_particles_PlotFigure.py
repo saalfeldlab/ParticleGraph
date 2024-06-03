@@ -326,7 +326,7 @@ def plot_function(bVisu, index, model_name, model_MLP, model_a, dataset_number, 
 
     return func_list
 
-def plot_umap(index, func_list, log_dir, n_neighbors, index_particles, n_particles, n_particle_types, embedding_cluster, epoch, it, fig, ax, cmap,device):
+def plot_umap(index, func_list, log_dir, n_neighbors, index_particles, n_particles, n_particle_types, embedding_cluster, epoch, it, fig, ax, cmap, device):
 
     # print(f'plot umap epoch:{epoch} it: {it}')
     plt.text(-0.25, 1.1, f'{index}', ha='left', va='top', transform=ax.transAxes, fontsize=12)
@@ -383,7 +383,7 @@ def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoc
 
     return Accuracy
 
-def data_plot_attraction_repulsion(config_file):
+def data_plot_attraction_repulsion(config_file, device):
 
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
@@ -658,10 +658,8 @@ def data_plot_attraction_repulsion(config_file):
     rmserr = rmserr / ( torch.max(true_func_list) - torch.min(true_func_list))
     print(f'RMS error / (max-min): {np.round(rmserr.item(), 7)}')
 
-def data_plot_attraction_repulsion_asym(config_file):
+def data_plot_attraction_repulsion_asym(config_file, device):
 
-    config_file = 'arbitrary_3_3'
-    # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
 
     dataset_name = config.dataset
@@ -911,7 +909,7 @@ def data_plot_attraction_repulsion_asym(config_file):
     plt.savefig(f"./{log_dir}/tmp_training/true_func_{config_file}.tif", dpi=170.7)
     plt.close()
 
-def data_plot_gravity(config_file):
+def data_plot_gravity(config_file, device):
 
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
 
@@ -1325,7 +1323,7 @@ def data_plot_gravity(config_file):
     plt.savefig(f'./log/try_{config_file}/Fig_3.jpg', dpi=300)
     plt.close()
 
-def data_plot_gravity_continuous(config_file):
+def data_plot_gravity_continuous(config_file, device):
 
     # config_file = 'gravity_16'
     # Load parameters from config file
@@ -1626,7 +1624,7 @@ def data_plot_gravity_continuous(config_file):
     plt.savefig(f'Fig3_{config_file}.jpg', dpi=300)
     plt.close()
 
-def data_plot_gravity_solar_system(config_file):
+def data_plot_gravity_solar_system(config_file, device):
 
     config_file = 'gravity_solar_system'
     # Load parameters from config file
@@ -1856,7 +1854,7 @@ def data_plot_gravity_solar_system(config_file):
     plt.savefig('Fig3.jpg', dpi=300)
     plt.close()
 
-def data_plot_Coulomb(config_file):
+def data_plot_Coulomb(config_file, device):
 
     # config_file = 'Coulomb_3'
     # Load parameters from config file
@@ -2339,7 +2337,7 @@ def data_plot_Coulomb(config_file):
     plt.close()
     print(' ')
 
-def data_plot_boids(config_file):
+def data_plot_boids(config_file, device):
     # config_file = 'boids_16'
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
@@ -2823,10 +2821,10 @@ def data_plot_boids(config_file):
             np.savetxt(f"./{log_dir}/tmp_training/separation_{config_file}_{net_}.txt", csv_)
             plt.close()
 
-def data_plot_boids_dividing(config_file):
-    config_name = 'boids_16_division'
-    # Load parameters from config file
-    config = ParticleGraphConfig.from_yaml(f'./config/{config_name}.yaml')
+def data_plot_boids_dividing(config_file, device):
+
+    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+    dataset_name = config.dataset
 
     dataset_name = config.dataset
     embedding_cluster = EmbeddingCluster(config)
@@ -4890,7 +4888,7 @@ def data_plot_particle_field(config_file, mode, cc, device):
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_training/field_scatter_{config_file}_{epoch}.tif", dpi=300)
 
-def data_plot_RD(config_file, cc='viridis'):
+def data_plot_RD(config_file, cc='viridis', device):
 
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
@@ -5377,7 +5375,7 @@ def data_plot_RD(config_file, cc='viridis'):
 
         print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}")
 
-def data_plot_signal(config_file, cc='viridis'):
+def data_plot_signal(config_file, cc='viridis', device):
 
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
@@ -6072,40 +6070,11 @@ if __name__ == '__main__':
 
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
-    #
-    # epoch=20
-    # config_file = 'arbitrary_32'
-    # data_plot_FIG2()
-    # config_list = ['arbitrary_16']
-    # config_list = ['arbitrary_16_noise_1E-1','arbitrary_16_noise_0_2','arbitrary_16_noise_0_3','arbitrary_16_noise_0_4','arbitrary_16_noise_0_5']
-    # config_list = ['arbitrary_3_dropout_10_no_ghost', 'arbitrary_3_dropout_10', 'arbitrary_3_dropout_20', 'arbitrary_3_dropout_30', 'arbitrary_3_dropout_40', 'arbitrary_3_dropout_50']
-    # config_list = ['arbitrary_3']
-    # config_list = ['gravity_16_dropout_10_no_ghost', 'gravity_16_dropout_10', 'gravity_16_dropout_20', 'gravity_16_dropout_30', 'gravity_16_dropout_40', 'gravity_16_dropout_50']
-    # config_list = [,'gravity_16_dropout_20'] # ['gravity_16_dropout_10_no_ghost','gravity_16_dropout_10','gravity_16_dropout_20','gravity_16_dropout_30']
-    # config_list = ['gravity_16_noise_1E-1', 'gravity_16_noise_0_2', 'gravity_16_noise_0_3', 'gravity_16_noise_0_4']
-    # config_list = ['boids_64_256'] #['boids_32_256','boids_64_256'] # 'boids_16_256_1_epoch', 'boids_32_256_1_epoch', 'boids_64_256_1_epoch'] #,
-    # config_list = ['boids_16_noise_0_3','boids_16_noise_0_4'] # ['boids_16_noise_1E-1'] #,'boids_16_noise_0_2','boids_16_noise_0_3','boids_16_noise_0_4','boids_16_noise_0_5']
-    # config_list = ['wave_logo','wave_slit','wave_triangles']
-    # config_list = ['RD_RPS_1']
-    # config_list = ['arbitrary_3_field_1']
-    # config_list = ['arbitrary_3_field_4_siren_with_time']
-    # config_list = ['boids_16_256_20_epoch']
-    # config_list = ['Coulomb_3_noise_0_2','Coulomb_3_noise_0_3','Coulomb_3_noise_0_4']
-    # config_list = ['Coulomb_3_dropout_10'] #,'Coulomb_3_dropout_10', 'Coulomb_3_dropout_10_no_ghost'] # ,'Coulomb_3_dropout_20', 'Coulomb_3_dropout_30', 'Coulomb_3_dropout_40'
-    # config_list = ['arbitrary_3_field_video_random_siren_with_time']
-    # config_list = ['arbitrary_3_field_2_boats_siren_with_time','arbitrary_3_field_4_siren_with_time']
-    # config_list = ['arbitrary_3_field_video_bison_siren_with_time']
-    # config_list = ['RD_RPS_1']
-    # config_list = ['RD_RPS_boat']
-    # config_list = ['signal_N_100_2a','signal_N_100_2b','signal_N_100_2c','signal_N_100_2d','signal_N_100_2e','signal_N_100_3a','signal_N_100_3b','signal_N_100_3c'] #, 'signal_N_10', 'signal_N']
 
     config_list = ['arbitrary_3_3']
     config_list = ['wave_slit_test']
-    config_list = ['arbitrary_64_256_0_5']
-    # config_list = ['arbitrary_3']#,'arbitrary_16','arbitrary_32','arbitrary_64']
-    # config_list=['arbitrary_3_field_video_bison_siren_with_time']
-    # config_list = ['gravity_16','gravity_100'] #,'Coulomb_3','boids_16_256','boids_32_256','boids_64_256']
-    # config_list = ['boids_16_256_bison_siren_with_time_2_bw_2']
+    config_list = ['Coulomb_3_256']
+
     for config_file in config_list:
 
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
@@ -6115,6 +6084,8 @@ if __name__ == '__main__':
                 data_plot_attraction_repulsion_short(config_file, device=device)
             case 'PDE_A_bis':
                 data_plot_attraction_repulsion_asym_short(config_file, device=device)
+            case 'PDE_E':
+                data_plot_Coulomb(config_file, device=device)
 
         match config.graph_model.mesh_model_name:
             case 'WaveMesh':
