@@ -251,7 +251,7 @@ def data_train_particles(config, config_file, device):
                     loss = ((pred - y_batch) / (y_batch)).norm(2) / 1E9
 
             visualize_embedding = True
-            if visualize_embedding & (((epoch == 0) & (N < 10000) & (N % 200 == 0)) | (N==0)):
+            if visualize_embedding & (((epoch < 3 ) & (N % 500 == 0)) | (N==0)):
                 plot_training(config=config, dataset_name=dataset_name, log_dir=log_dir,
                               epoch=epoch, N=N, x=x, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
                               index_particles=index_particles, n_particles=n_particles,
@@ -322,7 +322,7 @@ def data_train_particles(config, config_file, device):
                                                                 types=to_numpy(x[:, 1+2*dimension]),
                                                                 cmap=cmap, dimension=dimension, device=device)
 
-            labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding, cluster_distance_threshold, index_particles, n_particle_types)
+            labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding, cluster_distance_threshold, index_particles, n_particle_types, embedding_cluster)
 
             Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
 

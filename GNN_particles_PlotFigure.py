@@ -3858,24 +3858,13 @@ def data_plot_attraction_repulsion_asym_short(config_file, device):
     print(f'Plot training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     dimension = simulation_config.dimension
-    n_epochs = train_config.n_epochs
     radius = simulation_config.max_radius
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
     dataset_name = config.dataset
-    n_frames = simulation_config.n_frames
-    has_cell_division = simulation_config.has_cell_division
-    data_augmentation = train_config.data_augmentation
-    data_augmentation_loop = train_config.data_augmentation_loop
-    target_batch_size = train_config.batch_size
     has_mesh = (config.graph_model.mesh_model_name != '')
-    only_mesh = (config.graph_model.particle_model_name == '') & has_mesh
-    replace_with_cluster = 'replace' in train_config.sparsity
-    visualize_embedding = False
     max_radius = config.simulation.max_radius
-    min_radius = config.simulation.min_radius
-    aggr_type = config.graph_model.aggr_type
-
+    cmap = CustomColorMap(config=config)
     embedding_cluster = EmbeddingCluster(config)
 
     l_dir = os.path.join('.', 'log')
@@ -3913,7 +3902,7 @@ def data_plot_attraction_repulsion_asym_short(config_file, device):
 
     time.sleep(0.5)
 
-    # matplotlib.use("Qt5Agg")
+    matplotlib.use("Qt5Agg")
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     matplotlib.rcParams['savefig.pad_inches'] = 0
@@ -3935,36 +3924,7 @@ def data_plot_attraction_repulsion_asym_short(config_file, device):
         state_dict = torch.load(net,map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
 
-        n_particle_types = 3
-        index_particles = []
-        for n in range(n_particle_types):
-            index_particles.append(
-                np.arange((n_particles // n_particle_types) * n, (n_particles // n_particle_types) * (n + 1)))
-        type = torch.zeros(int(n_particles / n_particle_types), device=device)
-        for n in range(1, n_particle_types):
-            type = torch.cat((type, n * torch.ones(int(n_particles / n_particle_types), device=device)), 0)
-        x[:,5]=type
-
-        # n_particles = int(n_particles * (1-train_config.dropout))
-        # types = to_numpy(x[:, 5])
-        # fig = plt.figure(figsize=(12, 12))
-        # ax = fig.add_subplot(1,1,1)
-        # ax.xaxis.get_major_formatter()._usetex = False
-        # ax.yaxis.get_major_formatter()._usetex = False
-        # embedding = get_embedding(model.a, 1)
-        # for n in range(n_particle_types):
-        #     pos = np.argwhere(types == n)
-        #     plt.scatter(embedding[pos, 0],
-        #                 embedding[pos, 1], color=cmap.color(n), s=50)
-        # plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-        # plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
-        # plt.xticks(fontsize=32.0)
-        # plt.yticks(fontsize=32.0)
-        # plt.xlim([0,2])
-        # plt.ylim([0, 2])
-        # plt.tight_layout()
-
-        # matplotlib.use("Qt5Agg")
+        # matplotlib.use("Qt5Agg"
 
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(1,1,1)
@@ -3990,13 +3950,7 @@ def data_plot_attraction_repulsion_asym_short(config_file, device):
         ax = fig.add_subplot(1,1,1)
         ax.xaxis.get_major_formatter()._usetex = False
         ax.yaxis.get_major_formatter()._usetex = False
-        if model_config.particle_model_name == 'PDE_G':
-            rr = torch.tensor(np.linspace(0, max_radius * 1.3, 1000)).to(device)
-        elif model_config.particle_model_name == 'PDE_GS':
-            rr = torch.tensor(np.logspace(7, 9, 1000)).to(device)
-        else:
-            rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
-        func_list, proj_interaction = analyze_edge_function(rr=rr, vizualize=True, config=config,
+        func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
                                                                 model_lin_edge=model.lin_edge, model_a=model.a,
                                                                 dataset_number=1,
                                                                 n_particles=n_particles, ynorm=ynorm,
@@ -4012,6 +3966,14 @@ def data_plot_attraction_repulsion_asym_short(config_file, device):
         plt.tight_layout()
         # plt.savefig(f"./{log_dir}/tmp_training/func_{config_file}_{epoch}.tif",dpi=170.7)
         plt.close()
+
+        labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding,
+                                                          train_config.cluster_distance_threshold, index_particles, n_particle_types, embedding_cluster)
+
+        Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
+
+        print(f'Accuracy: {np.round(Accuracy, 3)}   n_clusters: {n_clusters}')
+        logger.info(f'Accuracy: {np.round(Accuracy, 3)}    n_clusters: {n_clusters}')
 
 
         match train_config.cluster_method:

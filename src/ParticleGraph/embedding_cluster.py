@@ -44,7 +44,7 @@ class EmbeddingCluster:
         return clusters, n_clusters
 
 
-def sparsify_cluster(cluster_method, proj_interaction, embedding, cluster_distance_threshold, index_particles, n_particle_types):
+def sparsify_cluster(cluster_method, proj_interaction, embedding, cluster_distance_threshold, index_particles, n_particle_types, embedding_cluster):
 
     # normalization of projection because UMAP output is not normalized
     proj_interaction = (proj_interaction - np.min(proj_interaction)) / (np.max(proj_interaction) - np.min(proj_interaction)+1e-10)
