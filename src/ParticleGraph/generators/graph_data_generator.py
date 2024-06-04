@@ -154,11 +154,6 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                 (N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                  H1.clone().detach(), A1.clone().detach()), 1)
 
-            if it == 0:
-                x = torch.load('x.pt')
-                V1 = x[:,3:5]
-                X1 = x[:, 1:3]
-
             # compute connectivity rule
             if has_adjacency_matrix:
                 adj_t = adjacency > 0
@@ -703,11 +698,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             x_mesh = torch.concatenate(
                 (N1_mesh.clone().detach(), X1_mesh.clone().detach(), V1_mesh.clone().detach(),
                  T1_mesh.clone().detach(), H1_mesh.clone().detach(), A1_mesh.clone().detach()), 1)
-
-            if it == 0:
-                x = torch.load('x.pt')
-                X1 = x[:, 1:3]
-                V1 = x[:,3:5]
 
             x_particle_field = torch.concatenate((x_mesh, x), dim=0)
 
