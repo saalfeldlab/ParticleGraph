@@ -117,21 +117,12 @@ def data_train_particles(config, config_file, device):
     print('Update variables ...')
     # update variable if particle_dropout, cell_division, etc ...
     x = x_list[1][n_frames - 1].clone().detach()
-    if dimension == 2:
-        type_list = x[:, 5:6].clone().detach()
-    elif dimension == 3:
-        type_list = x[:, 7:8].clone().detach()
     n_particles = x.shape[0]
-    print(f'N particles: {n_particles}')
-    logger.info(f'N particles: {n_particles}')
     config.simulation.n_particles = n_particles
-    index_particles = []
-    for n in range(n_particle_types):
-        if dimension == 2:
-            index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
-        elif dimension == 3:
-            index = np.argwhere(x[:, 7].detach().cpu().numpy() == n)
-        index_particles.append(index.squeeze())
+    index_particles = get_index_particles(x, n_particle_types, dimension)
+    type_list = get_type_list(x, dimension)
+    print(f'N particles: {n_particles} {len(torch.unique(type_list))} types')
+    logger.info(f'N particles:  {n_particles} {len(torch.unique(type_list))} types')
 
     if has_ghost:
 
@@ -913,9 +904,9 @@ def data_train_particle_field(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    net = f"./log/try_{config_file}/models/best_model_with_1_graphs_20.pt"
-    state_dict = torch.load(net,map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
+    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_20.pt"
+    # state_dict = torch.load(net,map_location=device)
+    # model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -959,9 +950,9 @@ def data_train_particle_field(config, config_file, device):
         model_f.to(device=device)
         model_f.train()
         optimizer_f = torch.optim.Adam(lr=1e-5, params=model_f.parameters())
-        net = f"./log/try_{config_file}/models/best_model_f_with_1_graphs_20.pt"
-        state_dict = torch.load(net, map_location=device)
-        model_f.load_state_dict(state_dict['model_state_dict'])
+        # net = f"./log/try_{config_file}/models/best_model_f_with_1_graphs_20.pt"
+        # state_dict = torch.load(net, map_location=device)
+        # model_f.load_state_dict(state_dict['model_state_dict'])
 
 
     if has_ghost:

@@ -9,6 +9,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
 
     has_particle_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
     has_mesh = (config.graph_model.mesh_model_name != '')
+    has_signal = (config.graph_model.signal_model_name != '')
 
     if has_particle_field:
         data_generate_particle_field(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=False, step=step,
@@ -18,7 +19,6 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
         data_generate_mesh(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
                                         alpha=0.2, ratio=1,
                                         scenario=scenario, device=device, bSave=bSave)
-
     else:
         data_generate_particle(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
                                         alpha=0.2, ratio=1,
@@ -622,9 +622,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
     for f in files:
         os.remove(f)
     copyfile(os.path.realpath(__file__), os.path.join(folder, 'generation_code.py'))
-
-    config.graph_model.particle_model_name = 'PDE_B'
-    model_pp, bc_pos, bc_dpos  = choose_model(config, device=device)
 
     config.graph_model.particle_model_name = 'PDE_ParticleField_B'
     model_p_p, bc_pos, bc_dpos = choose_model(config, device=device)

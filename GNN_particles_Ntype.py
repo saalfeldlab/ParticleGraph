@@ -40,8 +40,9 @@ from ParticleGraph.utils import *
 if __name__ == '__main__':
 
     # config_list = ['arbitrary_64_256_0_005']
-    config_list = ['boids_16_256_ABCD']
+    # config_list = ['boids_16_256']
     # config_list = ['signal_N_100_2_test']
+    config_list = ['arbitrary_3_test']
 
 
 
