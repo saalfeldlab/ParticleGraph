@@ -29,6 +29,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                                         alpha=0.2, ratio=1,
                                         scenario=scenario, device=device, bSave=bSave)
 
+
 def data_generate_particle(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,
                            ratio=1, scenario='none', device=None, bSave=True):
     print('')
@@ -338,6 +339,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
             #     plt.xticks([])
             #     plt.yticks([])
 
+
 def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,
                            ratio=1, scenario='none', device=None, bSave=True):
     print('')
@@ -352,13 +354,15 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
     max_radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
-    n_particles = simulation_config.n_particles
+    n_particles_max = simulation_config.n_particles_max
     delta_t = simulation_config.delta_t
+    has_adjacency_matrix = (simulation_config.connectivity_file != '')
+    has_cell_division = simulation_config.has_cell_division
     n_frames = simulation_config.n_frames
-    cycle_length = None
     has_particle_dropout = training_config.particle_dropout > 0
     cmap = CustomColorMap(config=config)
     dataset_name = config.dataset
+    marker_size = config.plotting.marker_size
 
     if config.data_folder_name != 'none':
         print(f'Generating from data ...')
@@ -366,30 +370,43 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         return
 
     folder = f'./graphs_data/graphs_{dataset_name}/'
+    os.makedirs(folder, exist_ok=True)
+    os.makedirs(f'./graphs_data/graphs_{dataset_name}/generated_data/', exist_ok=True)
     if erase:
         files = glob.glob(f"{folder}/*")
         for f in files:
             if (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (
                     f != 'generation_code.py'):
                 os.remove(f)
-    os.makedirs(folder, exist_ok=True)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/generated_data/', exist_ok=True)
-    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/generated_data/*')
-    for f in files:
-        os.remove(f)
-
-    model, bc_pos, bc_dpos = choose_model(config, device=device)
-    particle_dropout_mask = np.arange(n_particles)
+        files = glob.glob(f'./graphs_data/graphs_{dataset_name}/generated_data/*')
+        for f in files:
+            os.remove(f)
 
     for run in range(config.training.n_runs):
+
+        torch.cuda.empty_cache()
+
+        model, bc_pos, bc_dpos = choose_model(config, device=device)
 
         n_particles = simulation_config.n_particles
 
         x_list = []
         y_list = []
+        edge_p_p_list = []
 
         # initialize particle and graph states
-        X1, V1, T1, H1, A1, N1, cycle_length, cycle_length_distrib = init_cells(config, device=device)
+        X1, V1, T1, H1, A1, N1, cycle_length, cycle_length_distrib, cell_death_rate, cell_death_rate_distrib = init_particles(config, device=device)
+        if run==0:
+            cycle_length_first = cycle_length.clone().detach()
+            cycle_length_distrib_first = cycle_length_distrib.clone().detach()
+            cell_death_rate_first = cell_death_rate.clone().detach()
+            cell_death_rate_distrib_first = cell_death_rate_distrib.clone().detach()
+        else:
+            cycle_length = cycle_length_first.clone().detach()
+            cycle_length_distrib = cycle_length_distrib_first.clone().detach()
+            cell_death_rate = cell_death_rate_first.clone().detach()
+            cell_death_rate_distrib = cell_death_rate_distrib_first.clone().detach()
+
         index_particles = []
         for n in range(n_particle_types):
             pos = torch.argwhere(T1 == n)
@@ -400,70 +417,82 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
             # calculate cell division
-            if (it >= 0) & has_cell_division & (n_particles < 20000):
-                pos = torch.argwhere(A1.squeeze() > cycle_length_distrib)
-                y_division = (A1.squeeze() > cycle_length_distrib).clone().detach() * 1.0
+            if (it >= 0) & (n_particles < n_particles_max):
+                # cell death
+                sample = torch.rand(n_particles, device=device)
+                H1[sample.squeeze() < cell_death_rate_distrib.squeeze()/5E3, 0] = 0
                 # cell division
+                pos = torch.argwhere((A1.squeeze() > cycle_length_distrib) & (H1[:,0].squeeze() == 1))
                 if len(pos) > 1:
                     n_add_nodes = len(pos)
                     pos = to_numpy(pos[:, 0].squeeze()).astype(int)
-                    y_division = torch.concatenate((y_division, torch.zeros((n_add_nodes), device=device)), 0)
+                    H1[:,1] = 0
+                    H1[pos,1]= 1
+                    H1 = torch.concatenate((H1, torch.ones((n_add_nodes,2), device=device)), 0)
+                    H1[-n_add_nodes:,1] = 0
                     n_particles = n_particles + n_add_nodes
                     N1 = torch.arange(n_particles, device=device)
                     N1 = N1[:, None]
-                    separation = 1E-3 * torch.randn((n_add_nodes, 2), device=device)
+                    separation = 1E-3 * torch.randn((n_add_nodes, dimension), device=device)
                     X1 = torch.cat((X1, X1[pos, :] + separation), dim=0)
                     X1[pos, :] = X1[pos, :] - separation
-                    phi = torch.randn(n_add_nodes, dtype=torch.float32, requires_grad=False,
-                                      device=device) * np.pi * 2
-                    cos_phi = torch.cos(phi)
-                    sin_phi = torch.sin(phi)
-                    new_x = cos_phi * V1[pos, 0] + sin_phi * V1[pos, 1]
-                    new_y = -sin_phi * V1[pos, 0] + cos_phi * V1[pos, 1]
-                    V1[pos, 0] = new_x
-                    V1[pos, 1] = new_y
                     V1 = torch.cat((V1, -V1[pos, :]), dim=0)
                     T1 = torch.cat((T1, T1[pos, :]), dim=0)
-                    H1 = torch.cat((H1, H1[pos, :]), dim=0)
                     A1[pos, :] = 0
                     A1 = torch.cat((A1, A1[pos, :]), dim=0)
                     nd = torch.ones(len(pos), device=device) + 0.05 * torch.randn(len(pos), device=device)
-                    cycle_length_distrib = torch.cat(
-                        (cycle_length_distrib, cycle_length[to_numpy(T1[pos, 0])].squeeze() * nd), dim=0)
-                    y_timer = A1.squeeze().clone().detach()
+                    cycle_length_distrib = torch.cat((cycle_length_distrib, cycle_length[to_numpy(T1[pos, 0])].squeeze() * nd), dim=0)
+                    cell_death_rate_distrib = torch.cat((cell_death_rate_distrib, cell_death_rate[to_numpy(T1[pos, 0])].squeeze() * nd), dim=0)
                     index_particles = []
                     for n in range(n_particles):
                         pos = torch.argwhere(T1 == n)
                         pos = to_numpy(pos[:, 0].squeeze()).astype(int)
                         index_particles.append(pos)
+                A1 = A1 + delta_t
 
-            x = torch.concatenate(
-                (N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
-                 H1.clone().detach(), A1.clone().detach()), 1)
+            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
 
-            # compute connectivity rule
-            distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-            adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-            edge_index = adj_t.nonzero().t().contiguous()
-            dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=[])
+            with torch.no_grad():
+                edge_index = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                edge_index = ((edge_index < max_radius ** 2) & (edge_index > min_radius ** 2)).float() * 1
+                edge_index = edge_index.nonzero().t().contiguous()
+                if not (has_particle_dropout):
+                    edge_p_p_list.append(to_numpy(edge_index))
+                alive = (H1[:,0] == 1).float()*1.
+                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
 
             # model prediction
             with torch.no_grad():
-                y = model(dataset)
+                y = model(dataset, has_field=True)
+                y = y * alive[:,None].repeat(1,2)
+
+            if (it) % 500 == 0:
+                t, r, a = get_gpu_memory_map(device)
+                print(f'x {to_numpy(x).shape}, y {to_numpy(y).shape}, edges {to_numpy(edge_index).shape}')
 
             # append list
-            if (it >= 0) & bSave:
-                    x_list.append(x.clone().detach())
-                    y_list.append(y.clone().detach())
+            if (it >= 0):
+                if has_particle_dropout:
+                    x_ = x[particle_dropout_mask].clone().detach()
+                    x_[:, 0] = torch.arange(len(x_), device=device)
+                    x_list.append(x_)
+                    x_ = x[inv_particle_dropout_mask].clone().detach()
+                    x_[:, 0] = torch.arange(len(x_), device=device)
+                    x_removed_list.append(x[inv_particle_dropout_mask])
+                    y_list.append(y[particle_dropout_mask])
+                else:
+                    x_list.append(x)
+                    y_list.append(y)
 
-            # Particle update
+            # cell update
             if model_config.prediction == '2nd_derivative':
                 V1 += y * delta_t
             else:
                 V1 = y
+            if has_cell_division:
+                V1 = V1 * alive[:,None].repeat(1,2)
             X1 = bc_pos(X1 + V1 * delta_t)
 
-            A1 = A1 + delta_t
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
@@ -480,15 +509,9 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     matplotlib.rcParams['savefig.pad_inches'] = 0
                     fig = plt.figure(figsize=(12, 12))
                     ax = fig.add_subplot(1, 1, 1)
-                    s_p = 100
-                    if simulation_config.has_cell_division:
-                        s_p = 25
-                    if False:  # config.simulation.non_discrete_level>0:
-                        plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=s_p, color='k')
-                    else:
-                        for n in range(n_particle_types):
-                            plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                                        s=s_p, color='k')
+                    for n in range(n_particle_types):
+                        plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                                    s=marker_size, color='k')
                     if training_config.particle_dropout > 0:
                         plt.scatter(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
                                     x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), s=25, color='k',
@@ -515,37 +538,33 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
                 if 'color' in style:
 
-                    if (model_config.particle_model_name == 'PDE_A') & (dimension == 3):
-
-                        fig = plt.figure(figsize=(12, 12))
-                        ax = fig.add_subplot(111, projection='3d')
-                        for n in range(n_particle_types):
-                            ax.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                                       to_numpy(x[index_particles[n], 3]), s=50, color=cmap.color(n))
-                        ax.set_xlim([0, 1])
-                        ax.set_ylim([0, 1])
-                        ax.set_zlim([0, 1])
-                        pl.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
-                        plt.close()
-
-                    else:
-                        # matplotlib.use("Qt5Agg")
-
-                        matplotlib.rcParams['savefig.pad_inches'] = 0
-                        fig = plt.figure(figsize=(12, 12))
-                        ax = fig.add_subplot(1, 1, 1)
-                        ax.xaxis.get_major_formatter()._usetex = False
-                        ax.yaxis.get_major_formatter()._usetex = False
-                        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-                        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-                        ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                        s_p = 100
-                        if simulation_config.has_cell_division:
-                            s_p = 25
-                        for n in range(n_particle_types):
+                    # matplotlib.use("Qt5Agg")
+                    matplotlib.rcParams['savefig.pad_inches'] = 0
+                    fig = plt.figure(figsize=(12, 12))
+                    ax = fig.add_subplot(1, 1, 1)
+                    ax.xaxis.get_major_formatter()._usetex = False
+                    ax.yaxis.get_major_formatter()._usetex = False
+                    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+                    ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                    if dimension == 2:
+                        if has_cell_division:
+                            index_particles = []
+                            for n in range(n_particle_types):
+                                pos = torch.argwhere((T1.squeeze() == n) & (H1[:,0].squeeze()==1))
+                                pos = to_numpy(pos[:, 0].squeeze()).astype(int)
+                                index_particles.append(pos)
                                 plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                                            s=s_p, color=cmap.color(n))
+                                            s=marker_size, color=cmap.color(n))
+                            dead_cell = np.argwhere(to_numpy(H1[:,0]) == 0)
+                            if len(dead_cell) > 0:
+                                plt.scatter(to_numpy(X1[dead_cell[:,0].squeeze(), 0]), to_numpy(X1[dead_cell[:,0].squeeze(), 1]), s=2, color='k', alpha=0.5)
+                        else:
+                            for n in range(n_particle_types):
+                                plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                                            s=marker_size, color=cmap.color(n))
+
                         if training_config.particle_dropout > 0:
                             plt.scatter(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
                                         x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), s=25, color='k',
@@ -565,37 +584,44 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                             plt.xticks(fontsize=32.0)
                             plt.yticks(fontsize=32.0)
                             ax.tick_params(axis='both', which='major', pad=15)
-                            plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
+                            plt.text(0, 1.1, f'frame {it}, {n_particles} particles', ha='left', va='top', transform=ax.transAxes,
+                                     fontsize=32)
                         else:
                             plt.xticks([])
                             plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.tif", dpi=170.7)
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.tif",
+                                    dpi=170.7)
                         # plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{10000+it}.tif", dpi=42.675)
+                        plt.close()
+                    else:
+                        # matplotlib.use("Qt5Agg")
+                        fig = plt.figure(figsize=(12, 12))
+                        ax = fig.add_subplot(projection='3d')
+                        for n in range(n_particle_types):
+                            cc = list(cmap.color(n))
+                            cc[3]=0.5
+                            cc=tuple(cc)
+                            ax.scatter(to_numpy(X1[index_particles[n],0]),to_numpy(X1[index_particles[n],1]),to_numpy(X1[index_particles[n],2]),s=marker_size, c=cc)
+                        ax.text(0, 0, 1.5, f'frame {it}', size=20, zorder=1, color='k')
+                        plt.tight_layout()
+                        ax.set_xlim(0, 1)
+                        ax.set_ylim(0, 1)
+                        ax.set_zlim(0, 1)
+                        plt.axis('off')
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.tif", dpi=170.7)
                         plt.close()
 
         if bSave:
             torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
-            if has_particle_dropout:
-                torch.save(x_removed_list, f'graphs_data/graphs_{dataset_name}/x_removed_list_{run}.pt')
-                np.save(f'graphs_data/graphs_{dataset_name}/particle_dropout_mask.npy', particle_dropout_mask)
-                np.save(f'graphs_data/graphs_{dataset_name}/inv_particle_dropout_mask.npy', inv_particle_dropout_mask)
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
+            np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}',edge_p_p_list)
             torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
             torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
-            torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
+            torch.save(cell_death_rate, f'graphs_data/graphs_{dataset_name}/cell_death_rate.pt')
+            torch.save(cell_death_rate_distrib, f'graphs_data/graphs_{dataset_name}/cell_death_rate_distrib.pt')
+            torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p_{run}.pt')
 
-            # if model_config.signal_model_name == 'PDE_N' & (run == run_vizualized):
-            #     matplotlib.rcParams['savefig.pad_inches'] = 0
-            #     fig = plt.figure(figsize=(12, 12))
-            #     signal=[]
-            #     for k in range(len(x_list)):
-            #         signal.append(x_list[k][:,6:7])
-            #     signal = torch.stack(signal)
-            #     signal = to_numpy(signal.squeeze())
-            #     plt.imshow(signal, aspect='auto', cmap='viridis')
-            #     plt.xticks([])
-            #     plt.yticks([])
 
 
 def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
