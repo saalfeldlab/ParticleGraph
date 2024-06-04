@@ -144,29 +144,29 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dat
     fig = plt.figure(figsize=(12, 12))
     if has_siren:
         if has_siren_time:
-            angle_list = [45, 135, 175, 250]
+            frame_list = [n_frames//4, 2*n_frames//4, 2*n_frames//4, n_frames-1]
         else:
-            angle_list = [0]
+            frame_list = [0]
 
-        for angle in angle_list:
+        for frame in frame_list:
 
             if has_siren_time:
                 with torch.no_grad():
-                    tmp = model_f(time=angle / n_frames) ** 2
+                    tmp = model_f(time=frame / n_frames) ** 2
             else:
                 with torch.no_grad():
                     tmp = model_f() ** 2
             tmp = torch.reshape(tmp, (n_nodes_per_axis, n_nodes_per_axis))
             tmp = to_numpy(torch.sqrt(tmp))
             if has_siren_time:
-                tmp = np.flipud(tmp)
+                tmp= np.rot90(tmp,k=1)
             fig_ = plt.figure(figsize=(12, 12))
             axf = fig_.add_subplot(1, 1, 1)
             plt.imshow(tmp, cmap='grey', vmin=0, vmax=2)
             plt.xticks([])
             plt.yticks([])
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/embedding/field/{model_name}_{epoch}_{N}_{angle}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/tmp_training/embedding/field/{model_name}_{epoch}_{N}_{frame}.tif", dpi=170.7)
             plt.close()
 
     else:
@@ -387,10 +387,6 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/tmp_training/embedding/function/{dataset_name}_function_{epoch}_{N}.tif", dpi=300)
             plt.close()
-
-
-
-
 
 def analyze_edge_function(rr=[], vizualize=False, config=None, model_lin_edge=[], model_a=None, n_nodes=0, dataset_number = 0, n_particles=None, ynorm=None, types=None, cmap=None, dimension=2, device=None):
     func_list = []

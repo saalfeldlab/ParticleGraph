@@ -90,7 +90,7 @@ def data_train_particles(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0.pt"
+    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_5.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
 
@@ -321,28 +321,6 @@ def data_train_particles(config, config_file, device):
                                                                 n_particles=n_particles, ynorm=ynorm,
                                                                 types=to_numpy(x[:, 1+2*dimension]),
                                                                 cmap=cmap, dimension=dimension, device=device)
-
-
-            ax = fig.add_subplot(1, 5, 4)
-            plt.scatter(proj_interaction[:, 0], proj_interaction[:, 1], s=1)
-
-            train_config.cluster_method = 'distance_plot'
-            train_config.cluster_distance_threshold = 0.005
-            labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding, train_config.cluster_distance_threshold, index_particles, n_particle_types, embedding_cluster)
-            n_clusters
-
-            fig = plt.figure(figsize=(12, 12))
-            for n in range(n_clusters):
-                pos = np.argwhere(labels == n).squeeze().astype(int)
-                pos = np.array(pos)
-                if pos.size > 1:
-                    median_center = proj_interaction[pos, :]
-                    median_center = np.median(median_center, axis=0)
-                    plt.scatter((proj_interaction[pos, 0]), (proj_interaction[pos, 1]), s=1, c='r', alpha=0.25)
-                    plt.scatter((median_center[0]), (median_center[1]), s=10, c='k')
-
-
-            Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
 
             print(f'Accuracy: {np.round(Accuracy, 3)}   n_clusters: {n_clusters}')
             logger.info(f'Accuracy: {np.round(Accuracy, 3)}    n_clusters: {n_clusters}')
@@ -935,9 +913,9 @@ def data_train_particle_field(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0.pt"
-    # state_dict = torch.load(net,map_location=device)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    net = f"./log/try_{config_file}/models/best_model_with_1_graphs_20.pt"
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -962,21 +940,12 @@ def data_train_particle_field(config, config_file, device):
     print('Update variables ...')
     # update variable if particle_dropout, cell_division, etc ...
     x = x_list[1][n_frames - 1].clone().detach()
-    if dimension == 2:
-        type_list = x[:, 5:6].clone().detach()
-    elif dimension == 3:
-        type_list = x[:, 7:8].clone().detach()
     n_particles = x.shape[0]
-    print(f'N particles: {n_particles}')
-    logger.info(f'N particles: {n_particles}')
+    index_particles = get_index_particles(x, n_particle_types, dimension)
+    type_list = get_type_list(x, dimension)
+    print(f'N particles: {n_particles} {len(torch.unique(type_list))} types')
+    logger.info(f'N particles:  {n_particles} {len(torch.unique(type_list))} types')
     config.simulation.n_particles = n_particles
-    index_particles = []
-    for n in range(n_particle_types):
-        if dimension == 2:
-            index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
-        elif dimension == 3:
-            index = np.argwhere(x[:, 7].detach().cpu().numpy() == n)
-        index_particles.append(index.squeeze())
 
     if has_siren:
 
@@ -990,6 +959,10 @@ def data_train_particle_field(config, config_file, device):
         model_f.to(device=device)
         model_f.train()
         optimizer_f = torch.optim.Adam(lr=1e-5, params=model_f.parameters())
+        net = f"./log/try_{config_file}/models/best_model_f_with_1_graphs_20.pt"
+        state_dict = torch.load(net, map_location=device)
+        model_f.load_state_dict(state_dict['model_state_dict'])
+
 
     if has_ghost:
 
