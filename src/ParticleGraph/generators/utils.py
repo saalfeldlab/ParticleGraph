@@ -246,11 +246,13 @@ def init_cells(config, device):
 
     dpos_init = simulation_config.dpos_init
 
+
+
     if config.simulation.cell_cycle_length != [-1]:
         cycle_length = torch.tensor(config.simulation.cell_cycle_length, device=device)
     else:
-        cycle_length = torch.clamp(torch.abs(torch.ones(n_particle_types, 1, device=device) * 400 + torch.randn(n_particle_types, 1, device=device) * 50), min=100, max=700)
-
+        cycle_length = torch.clamp(torch.abs(torch.ones(n_particle_types, 1, device=device) * 250 + torch.randn(n_particle_types, 1, device=device) * 50), min=100, max=700)
+    # 400
     if config.simulation.cell_death_rate != [-1]:
         cell_death_rate = torch.tensor(config.simulation.cell_death_rate, device=device)
     else:

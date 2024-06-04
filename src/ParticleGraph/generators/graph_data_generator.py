@@ -458,23 +458,14 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 y = model(dataset, has_field=True)
                 y = y * alive[:,None].repeat(1,2)
 
-            if (it) % 500 == 0:
+            if (it) % 250 == 0:
                 t, r, a = get_gpu_memory_map(device)
                 print(f'x {to_numpy(x).shape}, y {to_numpy(y).shape}, edges {to_numpy(edge_index).shape}')
 
             # append list
             if (it >= 0):
-                if has_particle_dropout:
-                    x_ = x[particle_dropout_mask].clone().detach()
-                    x_[:, 0] = torch.arange(len(x_), device=device)
-                    x_list.append(x_)
-                    x_ = x[inv_particle_dropout_mask].clone().detach()
-                    x_[:, 0] = torch.arange(len(x_), device=device)
-                    x_removed_list.append(x[inv_particle_dropout_mask])
-                    y_list.append(y[particle_dropout_mask])
-                else:
-                    x_list.append(x)
-                    y_list.append(y)
+                x_list.append(x)
+                y_list.append(y)
 
             # cell update
             if model_config.prediction == '2nd_derivative':
