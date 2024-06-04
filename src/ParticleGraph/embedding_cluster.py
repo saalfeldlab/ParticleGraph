@@ -8,8 +8,10 @@ from sklearn.metrics import silhouette_score
 class EmbeddingCluster:
     def __init__(self, config):
         self.n_interactions = config.simulation.n_interactions
+        self.cluster_connectivity = config.training.cluster_connectivity
 
     def get(self, data, method, thresh=2.5):
+
         match method:
             case 'kmeans':
                 kmeans = KMeans(init="random", n_clusters=self.n_interactions, n_init=1000, max_iter=10000, random_state=10)
@@ -32,10 +34,10 @@ class EmbeddingCluster:
                 k = kmeans.fit(data)
                 clusters = k.labels_
             case 'distance':
-                clusters = hcluster.fclusterdata(data, thresh, criterion="distance", method='average') - 1
+                clusters = hcluster.fclusterdata(data, thresh, criterion="distance", method=self.cluster_connectivity) - 1
                 n_clusters = len(np.unique(clusters))
             case 'inconsistent':
-                clusters = hcluster.fclusterdata(data, thresh, criterion="inconsistent", method='average') - 1
+                clusters = hcluster.fclusterdata(data, thresh, criterion="inconsistent", method=self.cluster_connectivity) - 1
                 n_clusters = len(np.unique(clusters))
 
             case _:

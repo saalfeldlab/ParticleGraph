@@ -459,7 +459,7 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_lin_edge=[]
     if coeff_norm.shape[0] > 1000:
         new_index = np.random.permutation(coeff_norm.shape[0])
         new_index = new_index[0:min(1000, coeff_norm.shape[0])]
-        trans = umap.UMAP(n_neighbors=500, n_components=2, transform_queue_size=0).fit(coeff_norm[new_index])
+        trans = umap.UMAP(n_neighbors=500, n_components=2, transform_queue_size=0, random_state=config.training.seed).fit(coeff_norm[new_index])
         proj_interaction = trans.transform(coeff_norm)
     else:
         trans = umap.UMAP(n_neighbors=100, n_components=2, transform_queue_size=0).fit(coeff_norm)

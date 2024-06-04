@@ -1,8 +1,15 @@
 from GNN_particles_Ntype import *
 from ParticleGraph.models.utils import *
 from ParticleGraph.models.Siren_Network import *
+import random
 
 def data_train(config, config_file, device):
+
+    seed = config.training.seed
+
+    torch.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
 
     has_mesh = (config.graph_model.mesh_model_name != '')
     has_signal = (config.graph_model.signal_model_name != '')
@@ -90,7 +97,7 @@ def data_train_particles(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    net = f"./log/try_{config_file}/models/best_model_with_1_graphs_5.pt"
+    net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0.pt"
     state_dict = torch.load(net,map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
 
@@ -312,6 +319,10 @@ def data_train_particles(config, config_file, device):
                                                                 n_particles=n_particles, ynorm=ynorm,
                                                                 types=to_numpy(x[:, 1+2*dimension]),
                                                                 cmap=cmap, dimension=dimension, device=device)
+
+            labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding, train_config.cluster_distance_threshold, index_particles, n_particle_types, embedding_cluster)
+
+            Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
 
             print(f'Accuracy: {np.round(Accuracy, 3)}   n_clusters: {n_clusters}')
             logger.info(f'Accuracy: {np.round(Accuracy, 3)}    n_clusters: {n_clusters}')

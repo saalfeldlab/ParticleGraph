@@ -97,7 +97,7 @@ class TrainingConfig(BaseModel):
     large_range: bool = False
 
     n_runs: int = 2
-    seed : int = 42
+    seed : int = 40
     clamp: float = 0
     pred_limit: float = 1.E+10
     sparsity: Literal['none', 'replace_embedding', 'replace_embedding_function'] = 'none'
@@ -121,6 +121,7 @@ class TrainingConfig(BaseModel):
 
     cluster_method: Literal['kmeans', 'kmeans_auto_plot', 'kmeans_auto_embedding', 'distance_plot', 'distance_embedding', 'distance_both', 'inconsistent_plot', 'inconsistent_embedding'] = 'distance_plot'
     cluster_distance_threshold: float = 0.1
+    cluster_connectivity:  Literal['single','average'] = 'single'
     device: Annotated[str, Field(pattern=r'^(auto|cpu|cuda:\d+)$')] = 'auto'
 
 

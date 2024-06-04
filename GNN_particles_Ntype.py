@@ -39,12 +39,11 @@ from ParticleGraph.utils import *
 
 if __name__ == '__main__':
 
-    config_list = ['arbitrary_64_256_0_1']
-    # config_list = ['boids_16_256']
-    # config_list = ['signal_N_100_2_test']
-    # config_list = ['wave_slit_test']
+    config_list = ['arbitrary_64_256_0_1','arbitrary_64_256_0_01','arbitrary_64_256_0_005','arbitrary_64_256_0_0025']
+    config_list = ['arbitrary_64_256_0_005_freq_2','arbitrary_64_256_0_005_replace_function','arbitrary_64_256_0_005']
+    config_list = ['arbitrary_64_256_0_005_seed_42', 'arbitrary_64_256_0_005_seed_43','arbitrary_64_256_0_005_seed_44', 'arbitrary_64_256_0_005_seed_45']
 
-
+    config_list = ['arbitrary_3_test']
 
     for config_file in config_list:
         # Load parameters from config file

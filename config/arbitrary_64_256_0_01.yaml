@@ -35,7 +35,7 @@ training:
   batch_size: 1
   small_init_batch_size: False
   n_runs: 2
-  sparsity: 'none'
+  sparsity: 'replace_embedding'
   cluster_method: 'distance_plot'
   cluster_distance_threshold: 0.01
   data_augmentation: True
