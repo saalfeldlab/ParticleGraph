@@ -39,6 +39,7 @@ training:
   sparsity_freq: 2
   cluster_method: 'distance_plot'
   cluster_distance_threshold: 0.005
+  cluster_connectivity:  'average'
   data_augmentation: True
   data_augmentation_loop: 20
   fix_cluster_embedding: True

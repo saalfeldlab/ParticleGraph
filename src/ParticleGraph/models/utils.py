@@ -60,7 +60,6 @@ def plot_training_signal(config, dataset, model, adjacency, log_dir, epoch, N, i
     plt.savefig(f"./{log_dir}/tmp_training/embedding/particle/network_{epoch}_{N}.tif", dpi=170.7)
     plt.close()
 
-
 def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dataset_name, n_frames, model_name, log_dir, epoch, N, x, x_mesh, model_field, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 
     simulation_config = config.simulation

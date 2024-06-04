@@ -1,7 +1,7 @@
 from GNN_particles_Ntype import *
 
 if __name__ == '__main__':
-    im = imread(f"graphs_data/ABCD.tif")
+    im = imread(f"../../../graphs_data/ABCD.tif")
     # im = np.rot90(im, k=3, axes=(1, 2))
     im = im / 255*0.5
     video = np.zeros((101, 100,100))
