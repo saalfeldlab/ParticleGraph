@@ -41,7 +41,7 @@ def data_train_particles(config, config_file, device):
     data_augmentation_loop = train_config.data_augmentation_loop
     target_batch_size = train_config.batch_size
     replace_with_cluster = 'replace' in train_config.sparsity
-    cluster_distance_threshold = train_config.cluster_distance_threshold
+    sparsity_freq = train_config.sparsity_freq
     has_ghost = train_config.n_ghosts > 0
     n_ghosts = train_config.n_ghosts
     has_large_range = train_config.large_range
@@ -90,9 +90,9 @@ def data_train_particles(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_5.pt"
-    # state_dict = torch.load(net,map_location=device)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    net = f"./log/try_{config_file}/models/best_model_with_1_graphs_5.pt"
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -342,8 +342,7 @@ def data_train_particles(config, config_file, device):
             plt.xticks(fontsize=10.0)
             plt.yticks(fontsize=10.0)
 
-            if (replace_with_cluster) & (
-                    (epoch == 1 * n_epochs // 4) | (epoch == 2 * n_epochs // 4) | (epoch == 3 * n_epochs // 4)):
+            if (replace_with_cluster) & ((epoch+1) % sparsity_freq == 0):
                 match train_config.sparsity:
                     case 'replace_embedding':
                         # Constrain embedding domain
@@ -421,12 +420,7 @@ def data_train_particles(config, config_file, device):
                         logger.info(f'regul_embedding: replaced')
                         plt.text(0, 1.1, f'Replaced', ha='left', va='top', transform=ax.transAxes, fontsize=10)
             else:
-                # if (epoch > n_epochs - 3) & (replace_with_cluster):
-                #     lr_embedding = 1E-5
-                #     lr = train_config.learning_rate_end
-                #     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-                #     logger.info(f'Learning rates: {lr}, {lr_embedding}')
-                if epoch > 3 * n_epochs // 4 + 1:
+                if epoch > n_epochs - sparsity_freq:
                     lr_embedding = train_config.learning_rate_embedding_end
                     lr = train_config.learning_rate_end
                     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
@@ -469,6 +463,7 @@ def data_train_mesh(config, config_file, device):
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     embedding_cluster = EmbeddingCluster(config)
     n_runs = train_config.n_runs
+    sparsity_freq = train_config.sparsity_freq
 
     l_dir, log_dir, logger = create_log_dir(config, config_file)
     logger.info(f'Graph files N: {n_runs}')
@@ -706,7 +701,7 @@ def data_train_mesh(config, config_file, device):
             plt.xticks(fontsize=10.0)
             plt.yticks(fontsize=10.0)
 
-            if (replace_with_cluster) & ((epoch == 1 * n_epochs // 4) | (epoch == 2 * n_epochs // 4) | (epoch == 3 * n_epochs // 4)):
+            if (replace_with_cluster) & ((epoch+1) % sparsity_freq == 0):
                 match train_config.sparsity:
                     case 'replace_embedding':
                         # Constrain embedding domain
@@ -781,7 +776,7 @@ def data_train_mesh(config, config_file, device):
                         logger.info(f'regul_embedding: replaced')
                         plt.text(0, 1.1, f'Replaced', ha='left', va='top', transform=ax.transAxes, fontsize=10)
             else:
-                if epoch > 3 * n_epochs // 4 + 1:
+                if epoch > n_epochs - sparsity_freq:
                     lr_embedding = train_config.learning_rate_embedding_end
                     lr = train_config.learning_rate_end
                     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
