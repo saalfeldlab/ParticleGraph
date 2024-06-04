@@ -154,6 +154,11 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                 (N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                  H1.clone().detach(), A1.clone().detach()), 1)
 
+            if it == 0:
+                x = torch.load('x.pt')
+                V1 = x[:,3:5]
+                X1 = x[:, 1:3]
+
             # compute connectivity rule
             if has_adjacency_matrix:
                 adj_t = adjacency > 0
@@ -618,6 +623,10 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         os.remove(f)
     copyfile(os.path.realpath(__file__), os.path.join(folder, 'generation_code.py'))
 
+    config.graph_model.particle_model_name = 'PDE_B'
+    model_pp, bc_pos, bc_dpos  = choose_model(config, device=device)
+
+    config.graph_model.particle_model_name = 'PDE_ParticleField_B'
     model_p_p, bc_pos, bc_dpos = choose_model(config, device=device)
     model_f_p = model_p_p
 
@@ -677,6 +686,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         time.sleep(0.5)
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
+
             if ('siren' in model_config.field_type) & (it >= 0):
 
                 if 'video' in simulation_config.node_value_map:
@@ -696,6 +706,12 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             x_mesh = torch.concatenate(
                 (N1_mesh.clone().detach(), X1_mesh.clone().detach(), V1_mesh.clone().detach(),
                  T1_mesh.clone().detach(), H1_mesh.clone().detach(), A1_mesh.clone().detach()), 1)
+
+            if it == 0:
+                x = torch.load('x.pt')
+                X1 = x[:, 1:3]
+                V1 = x[:,3:5]
+
             x_particle_field = torch.concatenate((x_mesh, x), dim=0)
 
             # compute connectivity rules
@@ -718,6 +734,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             dataset_f_p = data.Data(x=x_particle_field, pos=x_particle_field[:, 1:3], edge_index=edge_index)
             if not (has_particle_dropout):
                 edge_f_p_list.append(edge_index)
+
 
             # model prediction
             with torch.no_grad():
@@ -900,11 +917,11 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     matplotlib.rcParams['savefig.pad_inches'] = 0
 
                     if model_config.prediction == '2nd_derivative':
-                        V0 = y0  * delta_t
-                        V1 = y1  * delta_t
+                        V0_ = y0  * delta_t
+                        V1_ = y1  * delta_t
                     else:
-                        V0 = y0
-                        V1 = y1
+                        V0_ = y0
+                        V1_ = y1
                     fig = plt.figure(figsize=(12, 12))
                     ax = fig.add_subplot(1, 1, 1)
                     type_list = to_numpy(get_type_list(x, dimension))
@@ -916,7 +933,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     plt.xlim([0,1])
                     plt.ylim([0,1])
                     for n in range(n_particles):
-                        plt.arrow(x=to_numpy(x[n, 2]), y=to_numpy(x[n, 1]), dx=to_numpy(V1[n,1])*2.5, dy=to_numpy(V1[n,0])*2.5, color=cmap.color(type_list[n].astype(int)), head_width=0.004, length_includes_head=True)
+                        plt.arrow(x=to_numpy(x[n, 2]), y=to_numpy(x[n, 1]), dx=to_numpy(V1_[n,1])*2.5, dy=to_numpy(V1_[n,0])*2.5, color=cmap.color(type_list[n].astype(int)), head_width=0.004, length_includes_head=True)
 
 
                     # plt.xlim([-2,2])
