@@ -399,7 +399,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         # cell_death_rate : cell death rate associated with a cell type   dim=cell_types
         # cell_death_rate : cell death rate for each cell, = cell death rate (1+ N(0,0.05)),   dim=number of cell
 
-        X1, V1, T1, H1, A1, N1, cycle_length, cycle_length_distrib, cell_death_rate, cell_death_rate = init_cells(config, device=device)
+        X1, V1, T1, H1, A1, N1, cycle_length, cycle_length_distrib, cell_death_rate, cell_death_rate_distrib = init_cells(config, device=device)
         if run==0:
             cycle_length_first = cycle_length.clone().detach()
             cycle_length_distrib_first = cycle_length_distrib.clone().detach()
@@ -410,6 +410,13 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             cycle_length_distrib = cycle_length_distrib_first.clone().detach()
             cell_death_rate = cell_death_rate_first.clone().detach()
             cell_death_rate_distrib = cell_death_rate_distrib_first.clone().detach()
+
+        logger.info('cell cycle length')
+        logger.info(to_numpy(cycle_length))
+        logger.info('cell death rate')
+        logger.info(to_numpy(cell_death_rate))
+        logger.info('interaction parameters')
+        logger.info(to_numpy(model.p))
 
         index_particles = []
         for n in range(n_particle_types):
@@ -426,8 +433,10 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 sample = torch.rand(n_particles, device=device)
                 H1[sample.squeeze() < cell_death_rate_distrib.squeeze()/5E3, 0] = 0     # H1[:,0] = cell alive flag, alive : 0 , death : 0
                 # cell division
+                n_particles_alive = torch.sum(H1[:,0])
+                n_particles_dead = n_particles - n_particles_alive
                 pos = torch.argwhere((A1.squeeze() > cycle_length_distrib) & (H1[:,0].squeeze() == 1))
-                if (len(pos) > 1) & (n_particles < n_particles_max):
+                if (len(pos) > 1) & (n_particles_alive < n_particles_max):
                     n_add_nodes = len(pos)
                     pos = to_numpy(pos[:, 0].squeeze()).astype(int)
                     H1[:,1] = 0
@@ -552,57 +561,38 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     ax.yaxis.set_major_locator(plt.MaxNLocator(3))
                     ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                     ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                    if dimension == 2:
-                        index_particles = []
-                        for n in range(n_particle_types):
-                            pos = torch.argwhere((T1.squeeze() == n) & (H1[:,0].squeeze()==1))
-                            pos = to_numpy(pos[:, 0].squeeze()).astype(int)
-                            index_particles.append(pos)
-                            plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                                        s=marker_size, color=cmap.color(n))
-                        dead_cell = np.argwhere(to_numpy(H1[:,0]) == 0)
-                        if len(dead_cell) > 0:
-                            plt.scatter(to_numpy(X1[dead_cell[:,0].squeeze(), 0]), to_numpy(X1[dead_cell[:,0].squeeze(), 1]), s=2, color='k', alpha=0.5)
-                        plt.xlim([0, 1])
-                        plt.ylim([0, 1])
-                        if 'latex' in style:
-                            plt.xlabel(r'$x$', fontsize=64)
-                            plt.ylabel(r'$y$', fontsize=64)
-                            plt.xticks(fontsize=32.0)
-                            plt.yticks(fontsize=32.0)
-                        elif 'frame' in style:
-                            plt.xlabel('x', fontsize=32)
-                            plt.ylabel('y', fontsize=32)
-                            plt.xticks(fontsize=32.0)
-                            plt.yticks(fontsize=32.0)
-                            ax.tick_params(axis='both', which='major', pad=15)
-                            plt.text(0, 1.1, f'frame {it}, {n_particles} particles', ha='left', va='top', transform=ax.transAxes,
-                                     fontsize=32)
-                        else:
-                            plt.xticks([])
-                            plt.yticks([])
-                        plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.tif",
-                                    dpi=85.35)
-                        # plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{10000+it}.tif", dpi=42.675)
-                        plt.close()
+                    index_particles = []
+                    for n in range(n_particle_types):
+                        pos = torch.argwhere((T1.squeeze() == n) & (H1[:,0].squeeze()==1))
+                        pos = to_numpy(pos[:, 0].squeeze()).astype(int)
+                        index_particles.append(pos)
+                        plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                                    s=marker_size, color=cmap.color(n))
+                    dead_cell = np.argwhere(to_numpy(H1[:,0]) == 0)
+                    if len(dead_cell) > 0:
+                        plt.scatter(to_numpy(X1[dead_cell[:,0].squeeze(), 0]), to_numpy(X1[dead_cell[:,0].squeeze(), 1]), s=2, color='k', alpha=0.5)
+                    plt.xlim([0, 1])
+                    plt.ylim([0, 1])
+                    if 'latex' in style:
+                        plt.xlabel(r'$x$', fontsize=64)
+                        plt.ylabel(r'$y$', fontsize=64)
+                        plt.xticks(fontsize=32.0)
+                        plt.yticks(fontsize=32.0)
+                    elif 'frame' in style:
+                        plt.xlabel('x', fontsize=32)
+                        plt.ylabel('y', fontsize=32)
+                        plt.xticks(fontsize=32.0)
+                        plt.yticks(fontsize=32.0)
+                        ax.tick_params(axis='both', which='major', pad=15)
+                        plt.text(0, 1.1, f'frame {it}, {int(n_particles_alive)} alive particles ({int(n_particles_dead)} dead)  ', ha='left', va='top', transform=ax.transAxes, fontsize=24)
                     else:
-                        # matplotlib.use("Qt5Agg")
-                        fig = plt.figure(figsize=(12, 12))
-                        ax = fig.add_subplot(projection='3d')
-                        for n in range(n_particle_types):
-                            cc = list(cmap.color(n))
-                            cc[3]=0.5
-                            cc=tuple(cc)
-                            ax.scatter(to_numpy(X1[index_particles[n],0]),to_numpy(X1[index_particles[n],1]),to_numpy(X1[index_particles[n],2]),s=marker_size, c=cc)
-                        ax.text(0, 0, 1.5, f'frame {it}', size=20, zorder=1, color='k')
-                        plt.tight_layout()
-                        ax.set_xlim(0, 1)
-                        ax.set_ylim(0, 1)
-                        ax.set_zlim(0, 1)
-                        plt.axis('off')
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.tif", dpi=85.35)
-                        plt.close()
+                        plt.xticks([])
+                        plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.tif",
+                                dpi=85.35)
+                    # plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{10000+it}.tif", dpi=42.675)
+                    plt.close()
 
                 if radius_pid:
                     fig = plt.figure(figsize=(12, 6))

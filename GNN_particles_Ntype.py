@@ -46,7 +46,7 @@ if __name__ == '__main__':
 
     config_list = ['boids_16_256_division_death_rnd']
 
-    seed_list = [10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+    seed_list = np.arange(10,20)
 
     for config_file in config_list:
         for seed in seed_list:
