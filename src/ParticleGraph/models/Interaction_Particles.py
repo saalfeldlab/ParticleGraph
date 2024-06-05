@@ -46,6 +46,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         self.embedding_dim = model_config.embedding_dim
         self.n_dataset = train_config.n_runs
         self.prediction = model_config.prediction
+        self.n_particles_max = simulation_config.n_particles_max
         self.update_type = model_config.update_type
         self.n_layers_update = model_config.n_layers_update
         self.hidden_dim_update = model_config.hidden_dim_update
@@ -64,7 +65,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
 
         if simulation_config.has_cell_division :
             self.a = nn.Parameter(
-                torch.tensor(np.ones((self.n_dataset, 20500, 2)), device=self.device,
+                torch.tensor(np.ones((self.n_dataset, self.n_particles_max, 2)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
         else:
             self.a = nn.Parameter(

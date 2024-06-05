@@ -11,7 +11,7 @@ simulation:
   max_edges: 500000
   n_particles: 512
   has_cell_division: True
-  n_particles_max: 8000
+  n_particles_max: 20000
   n_particle_types: 16
   n_interactions: 16
   n_frames: 8000

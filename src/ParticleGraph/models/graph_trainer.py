@@ -475,6 +475,7 @@ def data_train_cell(config, config_file, device):
         edge_p_p_list.append(edge_p_p)
     x = x_list[0][0].clone().detach()
     y = y_list[0][0].clone().detach()
+    config.simulation.n_particles_max = n_particles_max
     for run in range(n_runs):
         for k in trange(n_frames):
             if (k % 10 == 0) | (n_frames < 1000):
@@ -625,10 +626,10 @@ def data_train_cell(config, config_file, device):
 
             visualize_embedding = True
             if visualize_embedding & (((epoch < 3 ) & (N % 500 == 0)) | (N==0)):
-                plot_training(config=config, dataset_name=dataset_name, log_dir=log_dir,
-                              epoch=epoch, N=N, x=x, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
-                              index_particles=index_particles, n_particles=n_particles,
-                              n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
+                x_ = x_list[1][n_frames - 1].clone().detach()
+                index_particles = get_index_particles(x_, n_particle_types, dimension)
+                plot_training_cell(config=config, dataset_name=dataset_name, log_dir=log_dir,
+                              epoch=epoch, N=N, model=model, index_particles=index_particles, n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, device=device)
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
