@@ -22,7 +22,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                                         alpha=0.2, ratio=1,
                                         scenario=scenario, device=device, bSave=bSave)
     elif has_cell_divsion:
-        data_generate_cell(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
+         data_generate_cell(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
                                         alpha=0.2, ratio=1,
                                         scenario=scenario, device=device, bSave=bSave)
     else:
@@ -351,7 +351,10 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
     marker_size = config.plotting.marker_size
     radius_pid = simulation_config.radius_pid
     if radius_pid:
-        pid = PID(Kp=0.2, Ki=0, Kd=0.001, setpoint=simulation_config.max_edges, output_limits=(simulation_config.min_radius, simulation_config.max_radius) )
+        max_radius_list = []
+        edges_len_list = []
+        x_len_list = []
+        # pid = PID(Kp=1E-5, Ki=1E-5, Kd=0, setpoint=simulation_config.max_edges, output_limits=(simulation_config.min_radius, simulation_config.max_radius), starting_output = simulation_config.max_radius)
 
     folder = f'./graphs_data/graphs_{dataset_name}/'
     os.makedirs(folder, exist_ok=True)
@@ -448,19 +451,25 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 edge_p_p_list.append(to_numpy(edge_index))
                 alive = (H1[:,0] == 1).float()*1.
                 dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
-
                 if radius_pid:
-                    max_radius = pid(edge_index.shape[1])
-
+                    if edge_index.shape[1] > simulation_config.max_edges:
+                        max_radius = max_radius / 1.025
+                    else:
+                        max_radius = max_radius * 1.0025
+                    max_radius =np.clip(max_radius, simulation_config.min_radius, simulation_config.max_radius)
+                    max_radius_list.append(max_radius)
+                    edges_len_list.append(edge_index.shape[1])
+                    x_len_list.append(x.shape[0])
             # model prediction
             with torch.no_grad():
                 y = model(dataset, has_field=True)
                 y = y * alive[:,None].repeat(1,2)
 
-            if (it) % 100 == 0:
+            if (it) % 25 == 0:
                 t, r, a = get_gpu_memory_map(device)
                 logger.info(f"GPU memory: total {t} reserved {r} allocated {a}")
                 logger.info(f'{x.shape[0]} particles,  {edge_index.shape[1]} edges, max_radius: {np.round(max_radius,3)},')
+                logger.info(f'max_radius {max_radius} {edge_index.shape[1]}')
 
             # append list
             if (it >= 0):
@@ -582,6 +591,19 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         plt.axis('off')
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.tif", dpi=85.35)
                         plt.close()
+
+                if radius_pid:
+                    fig = plt.figure(figsize=(12, 6))
+                    ax = fig.add_subplot(1, 2, 1)
+                    plt.plot(max_radius_list)
+                    plt.xlabel('Frame')
+                    plt.ylabel('Max radius')
+                    ax = fig.add_subplot(1, 2, 2)
+                    plt.plot(x_len_list, edges_len_list)
+                    plt.xlabel('Number of particles')
+                    plt.ylabel('Number of edges')
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/max_radius_{run}.jpg", dpi=170.7)
+                    plt.close()
 
         if bSave:
             torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')

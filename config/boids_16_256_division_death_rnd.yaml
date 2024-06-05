@@ -8,8 +8,8 @@ simulation:
   min_radius: 0.001
   max_radius: 0.04
   radius_pid: true
-  max_edges: 1.0E6
-  n_particles: 512
+  max_edges: 500000
+  n_particles: 2048
   has_cell_division: True
   n_particles_max: 20000
   n_particle_types: 16
