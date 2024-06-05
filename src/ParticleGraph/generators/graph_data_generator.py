@@ -351,11 +351,11 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
     dataset_name = config.dataset
     marker_size = config.plotting.marker_size
     radius_pid = simulation_config.radius_pid
-    if radius_pid:
-        max_radius_list = []
-        edges_len_list = []
-        x_len_list = []
-        # pid = PID(Kp=1E-5, Ki=1E-5, Kd=0, setpoint=simulation_config.max_edges, output_limits=(simulation_config.min_radius, simulation_config.max_radius), starting_output = simulation_config.max_radius)
+
+    max_radius_list = []
+    edges_len_list = []
+    x_len_list = []
+    # pid = PID(Kp=1E-5, Ki=1E-5, Kd=0, setpoint=simulation_config.max_edges, output_limits=(simulation_config.min_radius, simulation_config.max_radius), starting_output = simulation_config.max_radius)
 
     folder = f'./graphs_data/graphs_{dataset_name}/'
     os.makedirs(folder, exist_ok=True)
@@ -437,7 +437,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 n_particles_alive = torch.sum(H1[:,0])
                 n_particles_dead = n_particles - n_particles_alive
                 pos = torch.argwhere((A1.squeeze() > cycle_length_distrib) & (H1[:,0].squeeze() == 1))
-                if (len(pos) > 1):
+                if False: # (len(pos) > 1):
                     n_add_nodes = len(pos)
                     pos = to_numpy(pos[:, 0].squeeze()).astype(int)
                     H1[:,1] = 0
@@ -475,15 +475,14 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 edge_p_p_list.append(to_numpy(edge_index))
                 alive = (H1[:,0] == 1).float()*1.
                 dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
-                if radius_pid:
-                    if edge_index.shape[1] > simulation_config.max_edges:
-                        max_radius = max_radius / 1.025
-                    else:
-                        max_radius = max_radius * 1.0025
-                    max_radius =np.clip(max_radius, simulation_config.min_radius, simulation_config.max_radius)
-                    max_radius_list.append(max_radius)
-                    edges_len_list.append(edge_index.shape[1])
-                    x_len_list.append(x.shape[0])
+                if edge_index.shape[1] > simulation_config.max_edges:
+                    max_radius = max_radius / 1.025
+                else:
+                    max_radius = max_radius * 1.0025
+                max_radius =np.clip(max_radius, simulation_config.min_radius, simulation_config.max_radius)
+                max_radius_list.append(max_radius)
+                edges_len_list.append(edge_index.shape[1])
+                x_len_list.append(x.shape[0])
             # model prediction
             with torch.no_grad():
                 y = model(dataset, has_field=True)
@@ -597,20 +596,19 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     # plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{10000+it}.tif", dpi=42.675)
                     plt.close()
 
-                if radius_pid:
-                    fig = plt.figure(figsize=(12, 6))
-                    ax = fig.add_subplot(1, 2, 1)
-                    plt.plot(max_radius_list)
-                    plt.xlabel('Frame')
-                    plt.ylabel('Max radius')
-                    plt.ylim([0, simulation_config.max_radius*1.1])
-                    ax = fig.add_subplot(1, 2, 2)
-                    plt.plot(x_len_list, edges_len_list)
-                    plt.xlabel('Number of particles')
-                    plt.ylabel('Number of edges')
-                    plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/max_radius_{run}.jpg", dpi=170.7)
-                    plt.close()
+                fig = plt.figure(figsize=(12, 6))
+                ax = fig.add_subplot(1, 2, 1)
+                plt.plot(max_radius_list)
+                plt.xlabel('Frame')
+                plt.ylabel('Max radius')
+                plt.ylim([0, simulation_config.max_radius*1.1])
+                ax = fig.add_subplot(1, 2, 2)
+                plt.plot(x_len_list, edges_len_list)
+                plt.xlabel('Number of particles')
+                plt.ylabel('Number of edges')
+                plt.tight_layout()
+                plt.savefig(f"graphs_data/graphs_{dataset_name}/max_radius_{run}.jpg", dpi=170.7)
+                plt.close()
 
         if bSave:
             torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')

@@ -45,6 +45,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_64_256']
 
     config_list = ['boids_16_256_division_death']
+    # config_list = ['arbitrary_3_division_death']
 
     seed_list = np.arange(10)
 

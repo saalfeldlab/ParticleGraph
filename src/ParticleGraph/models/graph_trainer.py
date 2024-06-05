@@ -582,14 +582,11 @@ def data_train_cell(config, config_file, device):
                         ind_np = torch.min(distance,axis=1)[1]
                         x_ghost[:,3:5] = x[ind_np, 3:5].clone().detach()
                     x = torch.cat((x, x_ghost), 0)
-
                     with torch.no_grad():
                         model.a[run,n_particles:n_particles+n_ghosts] = model.a[run,ghosts_particles.embedding_index].clone().detach()   # sample ghost embedding
 
-                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                t = torch.Tensor([max_radius ** 2])
-                edges = adj_t.nonzero().t().contiguous()
+                edges = edge_p_p_list[run][f'arr_{k}']
+                edges = torch.tensor(edges, dtype=torch.int64, device=device)
                 dataset = data.Data(x=x[:, :], edge_index=edges)
                 dataset_batch.append(dataset)
 
@@ -620,7 +617,7 @@ def data_train_cell(config, config_file, device):
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
             else:
-                mask_cell_alive = np.argwhere(to_numpy(x[:6,7]) == 1)
+                mask_cell_alive = np.argwhere(to_numpy(x[:,6:7]) == 1)
                 mask_cell_alive = mask_cell_alive[:, 0].astype(int)
                 loss = ((pred[mask_cell_alive] - y_batch[mask_cell_alive])).norm(2)
 
@@ -629,9 +626,11 @@ def data_train_cell(config, config_file, device):
                 x_ = x_list[1][n_frames - 1].clone().detach()
                 index_particles = get_index_particles(x_, n_particle_types, dimension)
                 plot_training_cell(config=config, dataset_name=dataset_name, log_dir=log_dir,
-                              epoch=epoch, N=N, model=model, index_particles=index_particles, n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, device=device)
+                              epoch=epoch, N=N, model=model, index_particles=index_particles, n_particle_types=n_particle_types, type_list=type_list, ynorm=ynorm, cmap=cmap, device=device)
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+                t, r, a = get_gpu_memory_map(device)
+                logger.info(f"GPU memory: total {t} reserved {r} allocated {a}")
 
             loss.backward()
             optimizer.step()
