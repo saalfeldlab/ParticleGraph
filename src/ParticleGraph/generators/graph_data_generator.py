@@ -423,20 +423,21 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             pos = torch.argwhere(T1 == n)
             pos = to_numpy(pos[:, 0].squeeze()).astype(int)
             index_particles.append(pos)
+        n_particles_alive = len(X1)
 
         time.sleep(0.5)
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
             # calculate cell death and cell division
-            if (it >= 0) :
+            if (it >= 0) & (n_particles_alive < simulation_config.n_particles_max):
                 # cell death
                 sample = torch.rand(n_particles, device=device)
-                H1[sample.squeeze() < cell_death_rate_distrib.squeeze()/5E3, 0] = 0     # H1[:,0] = cell alive flag, alive : 0 , death : 0
+                H1[sample.squeeze() < cell_death_rate_distrib.squeeze()/5E4, 0] = 0     # H1[:,0] = cell alive flag, alive : 0 , death : 0
                 # cell division
                 n_particles_alive = torch.sum(H1[:,0])
                 n_particles_dead = n_particles - n_particles_alive
                 pos = torch.argwhere((A1.squeeze() > cycle_length_distrib) & (H1[:,0].squeeze() == 1))
-                if (len(pos) > 1) & (n_particles_alive < n_particles_max):
+                if (len(pos) > 1):
                     n_add_nodes = len(pos)
                     pos = to_numpy(pos[:, 0].squeeze()).astype(int)
                     H1[:,1] = 0
@@ -461,10 +462,12 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         pos = torch.argwhere(T1 == n)
                         pos = to_numpy(pos[:, 0].squeeze()).astype(int)
                         index_particles.append(pos)
-                A1 = A1 + delta_t   # update age
+
+            A1 = A1 + delta_t   # update age
 
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
 
+            # calculate connectivity
             with torch.no_grad():
                 edge_index = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
                 edge_index = ((edge_index < max_radius ** 2) & (edge_index > min_radius ** 2)).float() * 1
@@ -584,7 +587,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         plt.xticks(fontsize=32.0)
                         plt.yticks(fontsize=32.0)
                         ax.tick_params(axis='both', which='major', pad=15)
-                        plt.text(0, 1.1, f'frame {it}, {int(n_particles_alive)} alive particles ({int(n_particles_dead)} dead)  ', ha='left', va='top', transform=ax.transAxes, fontsize=24)
+                        plt.text(0, 1.1, f'frame {it}, {int(n_particles_alive)} alive particles ({int(n_particles_dead)} dead), {edge_index.shape[1]} edges  ', ha='left', va='top', transform=ax.transAxes, fontsize=12)
                     else:
                         plt.xticks([])
                         plt.yticks([])
