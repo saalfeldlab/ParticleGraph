@@ -46,18 +46,17 @@ if __name__ == '__main__':
 
     config_list = ['boids_16_256_division_death_rnd']
 
+    seed_list = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+
     for config_file in config_list:
+        for seed in seed_list:
+            config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+            config.dataset = f'{config.dataset}_{seed}'
 
-        # Load parameters from config file
-        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        # print(config.pretty())
+            device = set_device(config.training.device)
+            print(f'device {device}')
 
-        device = set_device(config.training.device)
-        print(f'device {device}')
-
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='frame color', alpha=1, erase=True, bSave=True, step=8) #config.simulation.n_frames // 1)
-        # data_train(config, config_file, device)
-        # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 25, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
-
-
+            data_generate(config, device=device, visualize=True, run_vizualized=0, style='frame color', alpha=1, erase=True, bSave=True, step=25)  # config.simulation.n_frames // 1)
+            # data_train(config, config_file, device)
+            # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 25, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 

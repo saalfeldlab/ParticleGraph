@@ -366,6 +366,11 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         for f in files:
             os.remove(f)
 
+    logging.basicConfig(filename=f'./graphs_data/graphs_{dataset_name}/generator.log', format='%(asctime)s %(message)s', filemode='w')
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    logger.info(config)
+
     for run in range(config.training.n_runs):
 
         torch.cuda.empty_cache()
@@ -398,7 +403,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             index_particles.append(pos)
 
         time.sleep(0.5)
-        for it in range(simulation_config.start_frame, n_frames + 1):
+        for it in trange(simulation_config.start_frame, n_frames + 1):
 
             # calculate cell death and cell division
             if (it >= 0) & (n_particles < n_particles_max):
@@ -454,7 +459,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
             if (it) % 100 == 0:
                 t, r, a = get_gpu_memory_map(device)
-                print(f'x {to_numpy(x).shape}, max_radius {max_radius}, edges {to_numpy(edge_index).shape}')
+                logger.info(f"GPU memory: total {t} reserved {r} allocated {a}")
+                logger.info(f'{x.shape[0]} particles,  {edge_index.shape[1]} edges, max_radius: {np.round(max_radius,3)},')
 
             # append list
             if (it >= 0):
@@ -556,7 +562,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                             plt.yticks([])
                         plt.tight_layout()
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.tif",
-                                    dpi=170.7)
+                                    dpi=85.35)
                         # plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{10000+it}.tif", dpi=42.675)
                         plt.close()
                     else:
