@@ -39,27 +39,24 @@ from ParticleGraph.utils import *
 
 if __name__ == '__main__':
 
-    config_list = ['arbitrary_64_0','arbitrary_64_0_1','arbitrary_64_0_01','arbitrary_64_0_005','arbitrary_64_0_0025']
+    # config_list = ['arbitrary_64_0','arbitrary_64_0_1','arbitrary_64_0_01','arbitrary_64_0_005','arbitrary_64_0_0025']
     # config_list = ['arbitrary_64_256_0_005_replace_function','arbitrary_64_256_0_005'] # 'arbitrary_64_256_0_005_freq_2',
     # config_list = ['arbitrary_64_256_0_005_seed_43','arbitrary_64_256_0_005_seed_44', 'arbitrary_64_256_0_005_seed_45']
     # config_list = ['arbitrary_64_256']
 
-    # config_list = ['boids_16_256_bison_siren_with_time_2']
+    config_list = ['boids_16_256_division_death_rnd']
 
     for config_file in config_list:
-
-
 
         # Load parameters from config file
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         # print(config.pretty())
 
-
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='frame color', alpha=1, erase=True, bSave=True, step=8) #config.simulation.n_frames // 1)
-        data_train(config, config_file, device)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='frame color', alpha=1, erase=True, bSave=True, step=8) #config.simulation.n_frames // 1)
+        # data_train(config, config_file, device)
         # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 25, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
 

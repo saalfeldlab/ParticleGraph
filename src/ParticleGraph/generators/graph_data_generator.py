@@ -3,6 +3,7 @@ import networkx as nx
 from torch_geometric.utils.convert import to_networkx
 
 from GNN_particles_Ntype import *
+from simple_pid import PID
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
@@ -348,6 +349,9 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
     cmap = CustomColorMap(config=config)
     dataset_name = config.dataset
     marker_size = config.plotting.marker_size
+    radius_pid = simulation_config.radius_pid
+    if radius_pid:
+        pid = PID(Kp=0.2, Ki=0, Kd=0.001, setpoint=simulation_config.max_edges, output_limits=(simulation_config.min_radius, simulation_config.max_radius) )
 
     folder = f'./graphs_data/graphs_{dataset_name}/'
     os.makedirs(folder, exist_ok=True)
@@ -394,7 +398,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             index_particles.append(pos)
 
         time.sleep(0.5)
-        for it in trange(simulation_config.start_frame, n_frames + 1):
+        for it in range(simulation_config.start_frame, n_frames + 1):
 
             # calculate cell death and cell division
             if (it >= 0) & (n_particles < n_particles_max):
@@ -440,14 +444,17 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 alive = (H1[:,0] == 1).float()*1.
                 dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
 
+                if radius_pid:
+                    max_radius = pid(edge_index.shape[1])
+
             # model prediction
             with torch.no_grad():
                 y = model(dataset, has_field=True)
                 y = y * alive[:,None].repeat(1,2)
 
-            if (it) % 250 == 0:
+            if (it) % 100 == 0:
                 t, r, a = get_gpu_memory_map(device)
-                print(f'x {to_numpy(x).shape}, y {to_numpy(y).shape}, edges {to_numpy(edge_index).shape}')
+                print(f'x {to_numpy(x).shape}, max_radius {max_radius}, edges {to_numpy(edge_index).shape}')
 
             # append list
             if (it >= 0):

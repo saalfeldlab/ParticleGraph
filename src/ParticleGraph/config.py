@@ -19,6 +19,8 @@ class SimulationConfig(BaseModel):
     cell_death_rate: list[float] = [-1]
     min_radius: Annotated[float, Field(ge=0)] = 0
     max_radius: Annotated[float, Field(gt=0)]
+    radius_pid: bool = False
+    max_edges: float = 1.0E6
     diffusion_coefficients: list[list[float]] = None
     n_particles: int = 1000
     n_particles_max: int = 20000
