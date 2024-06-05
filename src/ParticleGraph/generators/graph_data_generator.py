@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import networkx as nx
 from torch_geometric.utils.convert import to_networkx
@@ -598,10 +599,12 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     plt.plot(max_radius_list)
                     plt.xlabel('Frame')
                     plt.ylabel('Max radius')
+                    plt.ylim([0, simulation_config.max_radius*1.1])
                     ax = fig.add_subplot(1, 2, 2)
                     plt.plot(x_len_list, edges_len_list)
                     plt.xlabel('Number of particles')
                     plt.ylabel('Number of edges')
+                    plt.tight_layout()
                     plt.savefig(f"graphs_data/graphs_{dataset_name}/max_radius_{run}.jpg", dpi=170.7)
                     plt.close()
 

@@ -9,12 +9,12 @@ simulation:
   max_radius: 0.04
   radius_pid: true
   max_edges: 500000
-  n_particles: 2048
+  n_particles: 1024
   has_cell_division: True
   n_particles_max: 20000
   n_particle_types: 16
   n_interactions: 16
-  n_frames: 12000
+  n_frames: 8000
   sigma: 0.005
   delta_t: 0.5
   dpos_init: 5.0E-4
