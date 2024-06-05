@@ -126,7 +126,7 @@ class TrainingConfig(BaseModel):
 
     cluster_method: Literal['kmeans', 'kmeans_auto_plot', 'kmeans_auto_embedding', 'distance_plot', 'distance_embedding', 'distance_both', 'inconsistent_plot', 'inconsistent_embedding'] = 'distance_plot'
     cluster_distance_threshold: float = 0.1
-    cluster_connectivity:  Literal['single','average'] = 'single'
+    cluster_connectivity: Literal['single','average'] = 'single'
     device: Annotated[str, Field(pattern=r'^(auto|cpu|cuda:\d+)$')] = 'auto'
 
 

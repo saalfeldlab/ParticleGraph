@@ -327,18 +327,6 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
             torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
             torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
 
-            # if model_config.signal_model_name == 'PDE_N' & (run == run_vizualized):
-            #     matplotlib.rcParams['savefig.pad_inches'] = 0
-            #     fig = plt.figure(figsize=(12, 12))
-            #     signal=[]
-            #     for k in range(len(x_list)):
-            #         signal.append(x_list[k][:,6:7])
-            #     signal = torch.stack(signal)
-            #     signal = to_numpy(signal.squeeze())
-            #     plt.imshow(signal, aspect='auto', cmap='viridis')
-            #     plt.xticks([])
-            #     plt.yticks([])
-
 
 def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,
                            ratio=1, scenario='none', device=None, bSave=True):
@@ -357,7 +345,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
     n_particles_max = simulation_config.n_particles_max
     delta_t = simulation_config.delta_t
     n_frames = simulation_config.n_frames
-    has_particle_dropout = training_config.particle_dropout > 0
     cmap = CustomColorMap(config=config)
     dataset_name = config.dataset
     marker_size = config.plotting.marker_size
@@ -387,7 +374,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         y_list = []
         edge_p_p_list = []
 
-        # initialize particle and graph states
+        # initialize cell and graph states
         X1, V1, T1, H1, A1, N1, cycle_length, cycle_length_distrib, cell_death_rate, cell_death_rate_distrib = init_cells(config, device=device)
         if run==0:
             cycle_length_first = cycle_length.clone().detach()
@@ -409,18 +396,18 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         time.sleep(0.5)
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
-            # calculate cell division
+            # calculate cell death and cell division
             if (it >= 0) & (n_particles < n_particles_max):
                 # cell death
                 sample = torch.rand(n_particles, device=device)
-                H1[sample.squeeze() < cell_death_rate_distrib.squeeze()/5E3, 0] = 0
+                H1[sample.squeeze() < cell_death_rate_distrib.squeeze()/5E3, 0] = 0     # cell death flag
                 # cell division
                 pos = torch.argwhere((A1.squeeze() > cycle_length_distrib) & (H1[:,0].squeeze() == 1))
                 if len(pos) > 1:
                     n_add_nodes = len(pos)
                     pos = to_numpy(pos[:, 0].squeeze()).astype(int)
                     H1[:,1] = 0
-                    H1[pos,1]= 1
+                    H1[pos,1]= 1    # cell division flag
                     H1 = torch.concatenate((H1, torch.ones((n_add_nodes,2), device=device)), 0)
                     H1[-n_add_nodes:,1] = 0
                     n_particles = n_particles + n_add_nodes
@@ -429,9 +416,9 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     separation = 1E-3 * torch.randn((n_add_nodes, dimension), device=device)
                     X1 = torch.cat((X1, X1[pos, :] + separation), dim=0)
                     X1[pos, :] = X1[pos, :] - separation
-                    V1 = torch.cat((V1, -V1[pos, :]), dim=0)
-                    T1 = torch.cat((T1, T1[pos, :]), dim=0)
-                    A1[pos, :] = 0
+                    V1 = torch.cat((V1, -V1[pos, :]), dim=0)    # the new cell is moving away from it's mother
+                    T1 = torch.cat((T1, T1[pos, :]), dim=0)     # the new cell inherits it's mother's type
+                    A1[pos, :] = 0  # age set to zero
                     A1 = torch.cat((A1, A1[pos, :]), dim=0)
                     nd = torch.ones(len(pos), device=device) + 0.05 * torch.randn(len(pos), device=device)
                     cycle_length_distrib = torch.cat((cycle_length_distrib, cycle_length[to_numpy(T1[pos, 0])].squeeze() * nd), dim=0)
@@ -441,7 +428,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         pos = torch.argwhere(T1 == n)
                         pos = to_numpy(pos[:, 0].squeeze()).astype(int)
                         index_particles.append(pos)
-                A1 = A1 + delta_t
+                A1 = A1 + delta_t   # update age
 
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
 
@@ -592,7 +579,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             torch.save(cell_death_rate, f'graphs_data/graphs_{dataset_name}/cell_death_rate.pt')
             torch.save(cell_death_rate_distrib, f'graphs_data/graphs_{dataset_name}/cell_death_rate_distrib.pt')
             torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p_{run}.pt')
-
 
 
 def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,

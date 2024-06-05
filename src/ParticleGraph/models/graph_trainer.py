@@ -308,7 +308,7 @@ def data_train_particles(config, config_file, device):
         plt.xlabel('ai0', fontsize=12)
         plt.ylabel('ai1', fontsize=12)
 
-        if (simulation_config.n_interactions < 100) & (simulation_config.has_cell_division == False):
+        if (simulation_config.n_interactions < 100):
 
 
             ax = fig.add_subplot(1, 5, 3)
@@ -353,7 +353,7 @@ def data_train_particles(config, config_file, device):
             plt.xticks(fontsize=10.0)
             plt.yticks(fontsize=10.0)
 
-            if (replace_with_cluster) & ((epoch+1) % sparsity_freq == 0):
+            if (replace_with_cluster) & (epoch % sparsity_freq == sparsity_freq-1):
                 match train_config.sparsity:
                     case 'replace_embedding':
                         # Constrain embedding domain

@@ -31,15 +31,11 @@ plotting:
   arrow_length: 2
 
 training:
-  seed: 43
   n_epochs: 20
   batch_size: 1
   small_init_batch_size: False
   n_runs: 2
-  sparsity: 'replace_embedding'
-  cluster_method: 'distance_plot'
-  cluster_distance_threshold: 0.005
-  cluster_connectivity: 'average'
+  sparsity: 'none'
   data_augmentation: True
   data_augmentation_loop: 20
   fix_cluster_embedding: True

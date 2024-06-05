@@ -112,7 +112,12 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dat
         # plt.ylim([-0.04, 0.03])
         # plt.ylim([-0.1, 0.1])
         plt.tight_layout()
-    rr = torch.tensor(np.linspace(0, simulation_config.max_radius, 200)).to(device)
+
+    match model_config.particle_model_name:
+        case 'PDE_ParticleField_A':
+            rr = torch.tensor(np.linspace(0, simulation_config.max_radius, 200)).to(device)
+        case 'PDE_ParticleField_B':
+            rr = torch.tensor(np.linspace(-max_radius, max_radius, 200)).to(device)
     for n in range(n_particles):
         embedding_ = model.a[dataset_num, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
         match model_config.particle_model_name:
