@@ -3578,7 +3578,7 @@ def data_plot_wave(config_file, cc='viridis'):
 
             print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   ")
 
-def data_plot_particle_field(config_file, mode, cc, device):
+def data_plot_particle_field(config_file, cc, device):
     print('')
 
     # plt.rcParams['text.usetex'] = True
@@ -3717,7 +3717,7 @@ def data_plot_particle_field(config_file, mode, cc, device):
         model_f.eval()
 
 
-    epoch_list = [1]
+    epoch_list = [20]
     for epoch in epoch_list:
         print(f'epoch: {epoch}')
 
@@ -3964,6 +3964,8 @@ def data_plot_particle_field(config_file, mode, cc, device):
                         axf.yaxis.set_major_locator(plt.MaxNLocator(3))
                         axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                         axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                        pred=np.rot90(pred)
+                        pred =np.fliplr(pred)
                         plt.imshow(pred, cmap=cc, vmin=0, vmax=1)
                         plt.xlabel(r'$x$', fontsize=64)
                         plt.ylabel(r'$y$', fontsize=64)
@@ -5387,7 +5389,7 @@ if __name__ == '__main__':
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
-    config_list = ['arbitrary_3','arbitrary_3_3']
+    config_list = ['boids_16_256_bison_siren_with_time_2']
 
     # config_list = ['wave_slit_test']
     # config_list = ['Coulomb_3_256']
@@ -5405,6 +5407,8 @@ if __name__ == '__main__':
                 data_plot_attraction_repulsion_asym(config_file, epoch_list, device)
             case 'PDE_E':
                 data_plot_Coulomb(config_file, device)
+            case 'PDE_ParticleField_B' | 'PDE_ParticleField_A':
+                data_plot_particle_field(config_file, 'grey', device)
 
         match config.graph_model.mesh_model_name:
             case 'WaveMesh':
