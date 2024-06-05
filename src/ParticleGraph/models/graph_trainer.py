@@ -43,7 +43,6 @@ def data_train_particles(config, config_file, device):
     noise_level = train_config.noise_level
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
-    has_cell_division = simulation_config.has_cell_division
     data_augmentation = train_config.data_augmentation
     data_augmentation_loop = train_config.data_augmentation_loop
     target_batch_size = train_config.batch_size
@@ -107,11 +106,6 @@ def data_train_particles(config, config_file, device):
     logger.info(f"Total Trainable Params: {n_total_params}")
     logger.info(f'Learning rates: {lr}, {lr_embedding}')
     model.train()
-    if has_cell_division:
-        model_division = Division_Predictor(config, device)
-        optimizer_division, n_total_params_division = set_trainable_division_parameters(model_division, lr=1E-3)
-        logger.info(f"Total Trainable Divsion Params: {n_total_params_division}")
-        logger.info(f'Learning rates: 1E-3')
 
     net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs.pt"
     print(f'network: {net}')
@@ -213,32 +207,13 @@ def data_train_particles(config, config_file, device):
                 else:
                     y_batch = torch.cat((y_batch, y[:, 0:2]), dim=0)
 
-                if has_cell_division:
-                    if batch == 0:
-                        time_batch = torch.concatenate((x[:, 0:1], torch.ones_like(y[:, 3:4], device=device) * k),
-                                                       dim=1)
-                        y_batch_division = y[:, 2:3]
-                    else:
-                        time_batch = torch.concatenate((time_batch, torch.concatenate(
-                            (x[:, 0:1], torch.ones_like(y[:, 2:3], device=device) * k), dim=1)), dim=0)
-                        y_batch_division = torch.concatenate((y_batch_division, y[:, 3:4]), dim=0)
-
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
             if has_ghost:
                 optimizer_ghost_particles.zero_grad()
-            if has_cell_division:
-                optimizer_division.zero_grad()
 
             for batch in batch_loader:
                 pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi)
-
-            if has_cell_division:
-                pred_division = model_division(time_batch, data_id=run)
-                loss_division = (pred_division - y_batch_division).norm(2)
-                loss_division.backward()
-                optimizer_division.step()
-                total_loss_division += loss_division.item()
 
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
@@ -278,13 +253,6 @@ def data_train_particles(config, config_file, device):
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
-        if has_cell_division:
-            print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss_division / (N + 1) / n_particles / batch_size))
-            logger.info("Epoch {}. Division Loss: {:.6f}".format(epoch, total_loss_division / (
-                    N + 1) / n_particles / batch_size))
-            torch.save({'model_state_dict': model_division.state_dict(),
-                        'optimizer_state_dict': optimizer_division.state_dict()},
-                       os.path.join(log_dir, 'models', f'best_model_division_with_{n_runs - 1}_graphs_{epoch}.pt'))
         if has_ghost:
             torch.save({'model_state_dict': ghosts_particles.state_dict(),
                         'optimizer_state_dict': optimizer_ghost_particles.state_dict()}, os.path.join(log_dir, 'models', f'best_ghost_particles_with_{n_runs - 1}_graphs_{epoch}.pt'))
@@ -920,11 +888,6 @@ def data_train_particle_field(config, config_file, device):
     logger.info(f"Total Trainable Params: {n_total_params}")
     logger.info(f'Learning rates: {lr}, {lr_embedding}')
     model.train()
-    if has_cell_division:
-        model_division = Division_Predictor(config, device)
-        optimizer_division, n_total_params_division = set_trainable_division_parameters(model_division, lr=1E-3)
-        logger.info(f"Total Trainable Divsion Params: {n_total_params_division}")
-        logger.info(f'Learning rates: 1E-3')
 
     net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs.pt"
     print(f'network: {net}')
@@ -1074,16 +1037,6 @@ def data_train_particle_field(config, config_file, device):
                 else:
                     y_batch = torch.cat((y_batch, y[:, 0:2]), dim=0)
 
-                if has_cell_division:
-                    if batch == 0:
-                        time_batch = torch.concatenate((x[:, 0:1], torch.ones_like(y[:, 3:4], device=device) * k),
-                                                       dim=1)
-                        y_batch_division = y[:, 2:3]
-                    else:
-                        time_batch = torch.concatenate((time_batch, torch.concatenate(
-                            (x[:, 0:1], torch.ones_like(y[:, 2:3], device=device) * k), dim=1)), dim=0)
-                        y_batch_division = torch.concatenate((y_batch_division, y[:, 3:4]), dim=0)
-
                 if has_ghost:
                     if batch == 0:
                         var_batch = torch.mean(ghosts_particles.var[run,k],dim=0)
@@ -1101,8 +1054,6 @@ def data_train_particle_field(config, config_file, device):
                 optimizer_f.zero_grad()
             if has_ghost:
                 optimizer_ghost_particles.zero_grad()
-            if has_cell_division:
-                optimizer_division.zero_grad()
 
             for batch in batch_loader_f_p:
                 pred_f_p = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=True)
@@ -1111,12 +1062,6 @@ def data_train_particle_field(config, config_file, device):
 
             pred_f_p = pred_f_p[f_p_mask]
 
-            if has_cell_division:
-                pred_division = model_division(time_batch, data_id=run)
-                loss_division = (pred_division - y_batch_division).norm(2)
-                loss_division.backward()
-                optimizer_division.step()
-                total_loss_division += loss_division.item()
             if has_ghost:
                 loss = ((pred_p_p[mask_ghost] + 0 * pred_f_p - y_batch)).norm(2) + var_batch.mean() + model.field.norm(2)
             else:
@@ -1157,13 +1102,6 @@ def data_train_particle_field(config, config_file, device):
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
-        if has_cell_division:
-            print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss_division / (N + 1) / n_particles / batch_size))
-            logger.info("Epoch {}. Division Loss: {:.6f}".format(epoch, total_loss_division / (
-                    N + 1) / n_particles / batch_size))
-            torch.save({'model_state_dict': model_division.state_dict(),
-                        'optimizer_state_dict': optimizer_division.state_dict()},
-                       os.path.join(log_dir, 'models', f'best_model_division_with_{n_runs - 1}_graphs_{epoch}.pt'))
         if has_ghost:
             torch.save({'model_state_dict': ghosts_particles.state_dict(),
                         'optimizer_state_dict': optimizer_ghost_particles.state_dict()}, os.path.join(log_dir, 'models', f'best_ghost_particles_with_{n_runs - 1}_graphs_{epoch}.pt'))
@@ -1475,7 +1413,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     has_adjacency_matrix = (simulation_config.connectivity_file != '')
     has_mesh = (config.graph_model.mesh_model_name != '')
     only_mesh = (config.graph_model.particle_model_name == '') & has_mesh
-    has_division = simulation_config.has_cell_division
     has_ghost = config.training.n_ghosts > 0
     max_radius = simulation_config.max_radius
     min_radius = simulation_config.min_radius
@@ -1663,13 +1600,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
         mask_ghost = np.argwhere(mask_ghost == 1)
         mask_ghost = mask_ghost[:, 0].astype(int)
-    if simulation_config.has_cell_division:
-        cycle_length = torch.load(f'./graphs_data/graphs_{dataset_name}/cycle_length.pt', map_location=device).to(
-            device)
-        cycle_length_distrib = cycle_length[to_numpy(x[:, 5]).astype(int)].squeeze()
-        A1 = torch.rand(cycle_length_distrib.shape[0], device=device)
-        A1 = A1 * cycle_length_distrib
-        A1 = A1[:, None]
     if has_mesh:
         hnorm = torch.load(f'./log/try_{config_file}/hnorm.pt', map_location=device).to(device)
 
@@ -1827,8 +1757,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t)  # position update
 
-        if simulation_config.has_cell_division:
-            A1 = A1 + delta_t
+
+        A1 = A1 + delta_t
 
         if (it % step == 0) & (it >= 0) & visualize:
             # print(f'RMSE = {np.round(rmserr.item(), 4)}')
