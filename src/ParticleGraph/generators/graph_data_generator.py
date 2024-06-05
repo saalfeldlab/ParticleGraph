@@ -582,12 +582,12 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         plt.xticks(fontsize=32.0)
                         plt.yticks(fontsize=32.0)
                     elif 'frame' in style:
-                        plt.xlabel('x', fontsize=32)
-                        plt.ylabel('y', fontsize=32)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
+                        plt.xlabel('x', fontsize=13)
+                        plt.ylabel('y', fontsize=16)
+                        plt.xticks(fontsize=16.0)
+                        plt.yticks(fontsize=16.0)
                         ax.tick_params(axis='both', which='major', pad=15)
-                        plt.text(0, 1.1, f'frame {it}, {int(n_particles_alive)} alive particles ({int(n_particles_dead)} dead), {edge_index.shape[1]} edges  ', ha='left', va='top', transform=ax.transAxes, fontsize=12)
+                        plt.text(0, 1.05, f'frame {it}, {int(n_particles_alive)} alive particles ({int(n_particles_dead)} dead), {edge_index.shape[1]} edges  ', ha='left', va='top', transform=ax.transAxes, fontsize=16)
                     else:
                         plt.xticks([])
                         plt.yticks([])
