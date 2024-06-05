@@ -387,8 +387,19 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         y_list = []
         edge_p_p_list = []
 
-        # initialize cell and graph states
-        X1, V1, T1, H1, A1, N1, cycle_length, cycle_length_distrib, cell_death_rate, cell_death_rate_distrib = init_cells(config, device=device)
+        # initialize cell states
+        # X1 positions dim=2
+        # V1 velocities dim=2
+        # T1 cell type dim=1
+        # H1 cell status dim=2  H1[:,0] = cell alive flag, alive : 0 , death : 0 , H1[:,1] = cell division flag, dividing : 1
+        # A1 cell age dim=1
+        # N1 cell index dim=1
+        # cycle_length : cell cycle length (duration) associated with a cell type   dim=cell_types
+        # cycle_length_distrib : cell cycle length for each cell, = cycle_length (1+ N(0,0.05)),   dim=number of cell
+        # cell_death_rate : cell death rate associated with a cell type   dim=cell_types
+        # cell_death_rate : cell death rate for each cell, = cell death rate (1+ N(0,0.05)),   dim=number of cell
+
+        X1, V1, T1, H1, A1, N1, cycle_length, cycle_length_distrib, cell_death_rate, cell_death_rate = init_cells(config, device=device)
         if run==0:
             cycle_length_first = cycle_length.clone().detach()
             cycle_length_distrib_first = cycle_length_distrib.clone().detach()
@@ -410,17 +421,17 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
             # calculate cell death and cell division
-            if (it >= 0) & (n_particles < n_particles_max):
+            if (it >= 0) :
                 # cell death
                 sample = torch.rand(n_particles, device=device)
-                H1[sample.squeeze() < cell_death_rate_distrib.squeeze()/5E3, 0] = 0     # cell death flag
+                H1[sample.squeeze() < cell_death_rate_distrib.squeeze()/5E3, 0] = 0     # H1[:,0] = cell alive flag, alive : 0 , death : 0
                 # cell division
                 pos = torch.argwhere((A1.squeeze() > cycle_length_distrib) & (H1[:,0].squeeze() == 1))
-                if len(pos) > 1:
+                if (len(pos) > 1) & (n_particles < n_particles_max):
                     n_add_nodes = len(pos)
                     pos = to_numpy(pos[:, 0].squeeze()).astype(int)
                     H1[:,1] = 0
-                    H1[pos,1]= 1    # cell division flag
+                    H1[pos,1]= 1    # cell division, dividing : 1
                     H1 = torch.concatenate((H1, torch.ones((n_add_nodes,2), device=device)), 0)
                     H1[-n_add_nodes:,1] = 0
                     n_particles = n_particles + n_add_nodes

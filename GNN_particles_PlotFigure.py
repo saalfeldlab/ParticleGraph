@@ -3906,7 +3906,7 @@ def data_plot_particle_field(config_file, cc, device):
                         plt.xticks(fontsize=32.0)
                         plt.yticks(fontsize=32.0)
                         for n in range(n_particle_types):
-                            plt.scatter(to_numpy(x[index_particles[n], 1]), 1-to_numpy(x[index_particles[n], 2]), s=s_p,
+                            plt.scatter(to_numpy(x[index_particles[n], 2]), 1-to_numpy(x[index_particles[n], 1]), s=s_p,
                                         color='k')
                         plt.xlim([0, 1])
                         plt.ylim([0, 1])
@@ -3926,7 +3926,7 @@ def data_plot_particle_field(config_file, cc, device):
                         plt.xticks(fontsize=32.0)
                         plt.yticks(fontsize=32.0)
                         for n in range(n_particle_types):
-                            plt.scatter(to_numpy(x[index_particles[n], 1]), 1-to_numpy(x[index_particles[n], 2]), s=s_p)
+                            plt.scatter(to_numpy(x[index_particles[n], 2]), 1-to_numpy(x[index_particles[n], 1]), s=s_p)
                         plt.xlim([0, 1])
                         plt.ylim([0, 1])
                         plt.tight_layout()
