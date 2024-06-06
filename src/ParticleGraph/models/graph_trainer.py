@@ -612,7 +612,7 @@ def data_train_cell(config, config_file, device):
                 optimizer_ghost_particles.zero_grad()
 
             for batch in batch_loader:
-                pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi)
+                pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=True)
 
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
