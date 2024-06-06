@@ -393,8 +393,8 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
                                                       train_config.cluster_distance_threshold, index_particles,
                                                       n_particle_types, embedding_cluster)
 
-    Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-    print(f'Accuracy: {np.round(Accuracy, 3)}   n_clusters: {n_clusters}')
+    accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
+    print(f'accuracy: {np.round(accuracy, 3)}   n_clusters: {n_clusters}')
 
     model_a_ = model.a[1].clone().detach()
     for n in range(n_clusters):
@@ -434,6 +434,8 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/embedding_{config_file}_{epoch}.tif", dpi=170.7)
     plt.close()
+
+    return  accuracy, n_clusters, new_labels
 
 
 def plot_embedding(index, model_a, dataset_number, index_particles, n_particles, n_particle_types, epoch, it, fig, ax, cmap, device):
@@ -676,7 +678,7 @@ def data_plot_attraction_repulsion(config_file, epoch_list, device):
         rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
         model_a_first = model.a.clone().detach()
-        plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list,
+        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list,
                                     n_particle_types, n_particles, ynorm, epoch, log_dir, device)
 
         # matplotlib.use("Qt5Agg")
@@ -897,7 +899,7 @@ def data_plot_attraction_repulsion_asym(config_file, epoch_list, device):
         # matplotlib.use("Qt5Agg"
 
         model_a_first = model.a.clone().detach()
-        plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list,
+        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list,
                                     n_particle_types, n_particles, ynorm, epoch, log_dir, device)
 
         x = x_list[0][100].clone().detach()
@@ -2228,7 +2230,7 @@ def data_plot_Coulomb(config_file, device):
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     # matplotlib.use("Qt5Agg")
 
-    plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list,
+    accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list,
                                 n_particle_types, n_particles, ynorm, epoch, log_dir, device)
 
 
@@ -2600,25 +2602,25 @@ def data_plot_boids(config_file, device):
         # matplotlib.use("Qt5Agg")
 
         model_a_first = model.a.clone().detach()
-        plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list,
+        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list,
                                     n_particle_types, n_particles, ynorm, epoch, log_dir, device)
 
         it = 7000
-
+        # compute model output for frame 7000
         x = x_list[0][it].clone().detach()
-
         distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)  # threshold
         adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
         edge_index = adj_t.nonzero().t().contiguous()
         dataset = data.Data(x=x, edge_index=edge_index)
-
         with torch.no_grad():
-            y, in_features, lin_edge_out = model(dataset, data_id=1, training=False, vnorm=vnorm,
-                                                 phi=torch.zeros(1, device=device))  # acceleration estimation
+            y, in_features, lin_edge_out = model(dataset, data_id=1, training=False, vnorm=vnorm, phi=torch.zeros(1, device=device))  # acceleration estimation
         y = y * ynorm
         lin_edge_out = lin_edge_out * ynorm
+
+        # compute ground truth output
         p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
         model_B = PDE_B_extract(aggr_type=config.graph_model.aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
+        rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
         psi_output = []
         for n in range(n_particle_types):
             psi_output.append(model.psi(rr, torch.squeeze(p[n])))
@@ -2634,13 +2636,11 @@ def data_plot_boids(config_file, device):
             pos = np.argwhere(type == n)
             pos = pos[:, 0].astype(int)
             plt.scatter(to_numpy(diffx[pos, 0]), to_numpy(lin_edge_out[pos, 0]), color=cmap.color(n), s=50, alpha=0.5)
-        plt.ylim([-5E-5, 5E-5])
+        # plt.ylim([-5E-5, 5E-5])
         plt.xlabel(r'$x_j-x_i$', fontsize=64)
         plt.ylabel( r'$f_{ij,x}$',fontsize=64)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/func_all_{config_file}_{net_}.tif", dpi=300)
-        np.save(f"./{log_dir}/tmp_training/func_all_{config_file}_{net_}.npy", csv_)
-        np.savetxt(f"./{log_dir}/tmp_training/func_all_{config_file}_{net_}.txt", csv_)
         plt.close()
 
         fig_ = plt.figure(figsize=(12, 12))
@@ -2652,7 +2652,7 @@ def data_plot_boids(config_file, device):
             pos = pos[:, 0].astype(int)
             plt.scatter(to_numpy(diffx[pos, 0]), to_numpy(sum[pos, 0]), color=cmap.color(n), s=50, alpha=0.5)
         # plt.ylim([-0.08, 0.08])
-        plt.ylim([-5E-5, 5E-5])
+        # plt.ylim([-5E-5, 5E-5])
         plt.xlabel(r'$x_j-x_i$', fontsize=64)
         plt.ylabel( r'$f_{ij,x}$',fontsize=64)
         plt.xticks(fontsize=32.0)
@@ -2757,14 +2757,9 @@ def data_plot_boids(config_file, device):
 
             index_classified = np.unique(new_labels)
 
-            ax = fig.add_subplot(3, 3, 7)
-            plt.text(-0.25, 1.1, f'g)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
-            x_data = np.abs(to_numpy(p[:, 0]) * 0.5E-5)
-            y_data = np.abs(cohesion_fit)
-            x_data = x_data[index_classified]
-            y_data = y_data[index_classified]
+            x_data
 
-            threshold = 0.1
+            threshold = 2
 
             relative_error = np.abs(y_data-x_data)/x_data
 
