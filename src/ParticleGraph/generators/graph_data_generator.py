@@ -325,8 +325,6 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                 np.save(f'graphs_data/graphs_{dataset_name}/particle_dropout_mask.npy', particle_dropout_mask)
                 np.save(f'graphs_data/graphs_{dataset_name}/inv_particle_dropout_mask.npy', inv_particle_dropout_mask)
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
-            torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
-            torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
             torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
 
 
@@ -424,6 +422,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             pos = to_numpy(pos[:, 0].squeeze()).astype(int)
             index_particles.append(pos)
         n_particles_alive = len(X1)
+        n_particles_dead = 0
 
         time.sleep(0.5)
         for it in trange(simulation_config.start_frame, n_frames + 1):

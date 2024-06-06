@@ -45,7 +45,11 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_64_256']
 
     # config_list = ['boids_16_256_division_death_0_125']
-    config_list = ['arbitrary_3_division_death']
+    # config_list = ['arbitrary_3_division_death']
+    # config_list = ['boids_16_256_test']
+    # config_list = ['boids_16_256_test_cell_division_a']
+    # config_list = ['boids_16_256_test_cell_division_b']
+    config_list = ['boids_16_256_division_death_model_2']
 
     seed_list = np.arange(10)
 
@@ -55,9 +59,10 @@ if __name__ == '__main__':
         # config.dataset = f'{config.dataset}_{seed}'
 
         device = set_device(config.training.device)
+        device = 'cuda:1'
         print(f'device {device}')
 
         data_generate(config, device=device, visualize=True, run_vizualized=0, style='frame color', alpha=1, erase=True, bSave=True, step=25)  # config.simulation.n_frames // 1)
-        data_train(config, config_file, device)
+        # data_train(config, config_file, device)
         # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 25, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
