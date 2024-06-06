@@ -2,7 +2,6 @@ import torch
 import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
 from ParticleGraph.utils import to_numpy
-import matplotlib.pyplot as plt
 
 
 class PDE_G(pyg.nn.MessagePassing):
@@ -34,10 +33,8 @@ class PDE_G(pyg.nn.MessagePassing):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         particle_type = to_numpy(x[:, 5])
-        try:
-            mass = self.p[particle_type]
-        except:
-            mass=1
+
+        mass = self.p[particle_type]
         dd_pos = self.propagate(edge_index, pos=x[:,1:3], mass=mass[:,None])
         return dd_pos
 

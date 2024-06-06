@@ -437,7 +437,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 n_particles_alive = torch.sum(H1[:,0])
                 n_particles_dead = n_particles - n_particles_alive
                 pos = torch.argwhere((A1.squeeze() > cycle_length_distrib) & (H1[:,0].squeeze() == 1))
-                if False: # (len(pos) > 1):
+                if (len(pos) > 1):
                     n_add_nodes = len(pos)
                     pos = to_numpy(pos[:, 0].squeeze()).astype(int)
                     H1[:,1] = 0
