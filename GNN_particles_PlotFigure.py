@@ -2580,7 +2580,7 @@ def data_plot_boids(config_file, device):
 
     n_particles = int(n_particles * (1 - train_config.particle_dropout))
 
-    net_list=['0_0','0_2000','0_5000', '0_9800', '5', '20']
+    net_list=['20']
 
     for net_ in net_list:
 
@@ -2802,7 +2802,7 @@ def data_plot_boids(config_file, device):
         rmserr_list = to_numpy(rmserr_list)
         print(f'all function RMS error : {np.round(np.mean(rmserr_list), 8)}+/-{np.round(np.std(rmserr_list), 8)}')
 
-        bFit = False
+        bFit = True
         if bFit:
             cohesion_fit = np.zeros(n_particle_types)
             alignment_fit = np.zeros(n_particle_types)
@@ -2933,12 +2933,12 @@ def data_plot_boids(config_file, device):
             y_data = np.abs(cohesion_fit)
             x_data = x_data[index_classified]
             y_data = y_data[index_classified]
-            relative_error = np.abs(y_data-x_data)/x_data
-            pos = np.argwhere(relative_error<threshold)
-            pos_outliers = np.argwhere(relative_error>threshold)
-            x_data_ = x_data[pos[:,0]]
-            y_data_ = y_data[pos[:,0]]
-            lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
+            # relative_error = np.abs(y_data-x_data)/x_data
+            # pos = np.argwhere(relative_error<threshold)
+            # pos_outliers = np.argwhere(relative_error>threshold)
+            # x_data_ = x_data[pos[:,0]]
+            # y_data_ = y_data[pos[:,0]]
+            lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
             plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
             for id, n in enumerate(index_classified):
                 plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=400)
@@ -5389,7 +5389,7 @@ if __name__ == '__main__':
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
-    config_list = ['boids_16_256_bison_siren_with_time_2']
+    config_list = ['boids_16_256']
 
     # config_list = ['wave_slit_test']
     # config_list = ['Coulomb_3_256']
@@ -5405,6 +5405,8 @@ if __name__ == '__main__':
                 data_plot_attraction_repulsion(config_file, epoch_list, device)
             case 'PDE_A_bis':
                 data_plot_attraction_repulsion_asym(config_file, epoch_list, device)
+            case 'PDE_B':
+                data_plot_boids(config_file, device)
             case 'PDE_E':
                 data_plot_Coulomb(config_file, device)
             case 'PDE_ParticleField_B' | 'PDE_ParticleField_A':
