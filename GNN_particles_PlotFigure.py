@@ -1260,7 +1260,7 @@ def data_plot_gravity(config_file, device):
 
     x_list = []
     y_list = []
-    print('Load normalizations ...')
+    print('Load data ...')
     time.sleep(1)
     x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_1.pt', map_location=device))
     y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_1.pt', map_location=device))
@@ -1675,7 +1675,7 @@ def data_plot_gravity_continuous(config_file, device):
 
     x_list = []
     y_list = []
-    print('Load normalizations ...')
+    print('Load data ...')
     time.sleep(1)
     x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device))
     y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_0.pt', map_location=device))
@@ -1974,7 +1974,7 @@ def data_plot_gravity_solar_system(config_file, device):
 
     x_list = []
     y_list = []
-    print('Load normalizations ...')
+    print('Load data ...')
     time.sleep(1)
     x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device))
     y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_0.pt', map_location=device))
@@ -2207,7 +2207,7 @@ def data_plot_Coulomb(config_file, device):
 
     x_list = []
     y_list = []
-    print('Load normalizations ...')
+    print('Load data ...')
     time.sleep(1)
     x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device))
     y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_0.pt', map_location=device))
@@ -2567,7 +2567,7 @@ def data_plot_boids(config_file, device):
 
     x_list = []
     y_list = []
-    print('Load normalizations ...')
+    print('Load data ...')
     time.sleep(1)
     x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device))
     y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_0.pt', map_location=device))
@@ -2580,7 +2580,8 @@ def data_plot_boids(config_file, device):
 
     n_particles = int(n_particles * (1 - train_config.particle_dropout))
 
-    net_list=['0_0','0_2000','0_5000', '0_9800', '5', '20']
+    net_list=['20'] #'0_0','0_2000','0_5000', '0_9800', '5', '20']
+    epoch = 20
 
     for net_ in net_list:
 
@@ -2598,94 +2599,15 @@ def data_plot_boids(config_file, device):
         rc('font', **{'family': 'serif', 'serif': ['Palatino']})
         # matplotlib.use("Qt5Agg")
 
-        fig = plt.figure(figsize=(10.5, 9.6))
-        plt.ion()
-        ax = fig.add_subplot(3, 3, 1)
-        embedding = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap, device)
-
-        fig_ = plt.figure(figsize=(12, 12))
-        ax = fig_.add_subplot(1, 1, 1)
-        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-        ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        embedding = get_embedding(model.a, 1)
-        embedding = embedding[0:n_particles]
-        csv_ = embedding
-        for n in range(n_particle_types):
-            plt.scatter(embedding[index_particles[n], 0],
-                        embedding[index_particles[n], 1], color=cmap.color(n), s=200)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
-        plt.tight_layout()
-        csv_ = np.array(csv_)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/embedding_{config_file}_{net_}.tif", dpi=300)
-        np.save(f"./{log_dir}/tmp_training/embedding_{config_file}_{net_}.npy", csv_)
-        np.savetxt(f"./{log_dir}/tmp_training/embedding_{config_file}_{net_}.txt", csv_)
-        plt.close()
-
-        ax = fig.add_subplot(3, 3, 2)
-
-        rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
-        func_list, proj_interaction = analyze_edge_function(rr=rr, vizualize=False, config=config,
-                                                            model_lin_edge=model.lin_edge, model_a=model.a,
-                                                            dataset_number=1,
-                                                            n_particles=n_particles,
-                                                            ynorm=ynorm,
-                                                            types=to_numpy(x[:, 5]),
-                                                            cmap=cmap, device=device)
-        # train_config.cluster_method = 'distance_embedding'
-        match train_config.cluster_method:
-            case 'kmeans':
-                labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans')
-            case 'kmeans_auto_plot':
-                labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
-            case 'kmeans_auto_embedding':
-                labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
-                proj_interaction = embedding
-            case 'distance_plot':
-                labels, n_clusters = embedding_cluster.get(proj_interaction, 'distance')
-            case 'distance_embedding':
-                labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=0.025)
-                proj_interaction = embedding
-            case 'distance_both':
-                new_projection = np.concatenate((proj_interaction, embedding), axis=-1)
-                labels, n_clusters = embedding_cluster.get(new_projection, 'distance')
-
-        for n in range(n_clusters):
-            pos = np.argwhere(labels == n)
-            pos = np.array(pos)
-            if pos.size > 0:
-                plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=5)
-        label_list = []
-        for n in range(n_particle_types):
-            tmp = labels[index_particles[n]]
-            label_list.append(np.round(np.median(tmp)))
-        label_list = np.array(label_list)
-        plt.xlabel('proj 0', fontsize=12)
-        plt.ylabel('proj 1', fontsize=12)
-
-        new_labels = labels.copy()
-        for n in range(n_particle_types):
-            new_labels[labels == label_list[n]] = n
-
-        if dimension == 2:
-            type_list = x[:, 5:6].clone().detach()
-        elif dimension == 3:
-            type_list = x[:, 7:8].clone().detach()
-
-        Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-        print(f'Accuracy: {np.round(Accuracy, 3)}   n_clusters: {n_clusters}')
+        model_a_first = model.a.clone().detach()
+        plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list,
+                                    n_particle_types, n_particles, ynorm, epoch, log_dir, device)
 
         it = 7000
 
         x = x_list[0][it].clone().detach()
 
-        distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
-        t = torch.Tensor([max_radius ** 2])  # threshold
+        distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)  # threshold
         adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
         edge_index = adj_t.nonzero().t().contiguous()
         dataset = data.Data(x=x, edge_index=edge_index)
@@ -2802,7 +2724,7 @@ def data_plot_boids(config_file, device):
         rmserr_list = to_numpy(rmserr_list)
         print(f'all function RMS error : {np.round(np.mean(rmserr_list), 8)}+/-{np.round(np.std(rmserr_list), 8)}')
 
-        bFit = False
+        bFit = True
         if bFit:
             cohesion_fit = np.zeros(n_particle_types)
             alignment_fit = np.zeros(n_particle_types)
@@ -3052,7 +2974,7 @@ def data_plot_boids_dividing(config_file, device):
 
     x_list = []
     y_list = []
-    print('Load normalizations ...')
+    print('Load data ...')
     time.sleep(1)
     x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_1.pt', map_location=device))
     y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_1.pt', map_location=device))
@@ -5390,7 +5312,7 @@ if __name__ == '__main__':
     print(f'device {device}')
 
     config_list = ['boids_16_256_bison_siren_with_time_2']
-
+    config_list = ['boids_16_256']
     # config_list = ['wave_slit_test']
     # config_list = ['Coulomb_3_256']
 
@@ -5405,6 +5327,8 @@ if __name__ == '__main__':
                 data_plot_attraction_repulsion(config_file, epoch_list, device)
             case 'PDE_A_bis':
                 data_plot_attraction_repulsion_asym(config_file, epoch_list, device)
+            case 'PDE_B':
+                data_plot_boids(config_file, device)
             case 'PDE_E':
                 data_plot_Coulomb(config_file, device)
             case 'PDE_ParticleField_B' | 'PDE_ParticleField_A':
