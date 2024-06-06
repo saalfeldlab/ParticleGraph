@@ -2629,6 +2629,46 @@ def data_plot_boids(config_file, device):
         type = to_numpy(type)
 
         fig_ = plt.figure(figsize=(12, 12))
+        plt.scatter(to_numpy(y_B), to_numpy(y), color='k', s=50, alpha=0.5)
+        fig_ = plt.figure(figsize=(12, 12))
+        plt.scatter(to_numpy(sum), to_numpy(lin_edge_out), color='k', s=50, alpha=0.5)
+
+        cohesion_fit = np.zeros(n_particle_types)
+        alignment_fit = np.zeros(n_particle_types)
+        separation_fit = np.zeros(n_particle_types)
+        for n in range(n_particle_types):
+            pos = np.argwhere(new_labels == n)
+            pos = pos[:, 0].astype(int)
+            xdiff = to_numpy(diffx[pos, :])
+            vdiff = to_numpy(diffv[pos, :])
+            rdiff = to_numpy(r[pos])
+            x_data = np.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
+            y_data = to_numpy(torch.norm(sum[pos, :], dim=1))
+            lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox')
+            cohesion_fit[n] = lin_fit[0]
+            alignment_fit[n] = lin_fit[1]
+            separation_fit[n] = lin_fit[2]
+        p00 = [np.mean(cohesion_fit), np.mean(alignment_fit), np.mean(separation_fit)]
+        for n in range(n_particle_types):
+            pos = np.argwhere(new_labels == n)
+            pos = pos[:, 0].astype(int)
+            xdiff = to_numpy(diffx[pos, :])
+            vdiff = to_numpy(diffv[pos, :])
+            rdiff = to_numpy(r[pos])
+            x_data = np.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
+            y_data = to_numpy(torch.norm(sum[pos, :], dim=1))
+            lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox', p0=p00)
+            cohesion_fit[n] = lin_fit[0]
+            alignment_fit[n] = lin_fit[1]
+            separation_fit[n] = lin_fit[2]
+
+        fig_ = plt.figure(figsize=(12, 12))
+        plt.scatter(to_numpy(p[:,0]*0.5E-5), cohesion_fit, color='k', s=50, alpha=0.5)
+
+
+
+
+        fig_ = plt.figure(figsize=(12, 12))
         ax = fig_.add_subplot(1, 1, 1)
         ax.xaxis.set_major_locator(plt.MaxNLocator(3))
         ax.yaxis.set_major_locator(plt.MaxNLocator(3))
