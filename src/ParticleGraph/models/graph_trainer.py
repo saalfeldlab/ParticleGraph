@@ -468,15 +468,22 @@ def data_train_cell(config, config_file, device):
         if x[len(x)-1].shape[0] > n_particles_max:
             n_particles_max = x[len(x)-1].shape[0]
         n_particles_max_list.append(x[len(x)-1].shape[0])
-        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
-        edge_p_p = np.load(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}.npz')
-        x_list.append(x)
-        y_list.append(y)
-        edge_p_p_list.append(edge_p_p)
-    x = x_list[0][0].clone().detach()
-    y = y_list[0][0].clone().detach()
+        if run>0:
+            y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
+            edge_p_p = np.load(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}.npz')
+            x_list.append(x)
+            y_list.append(y)
+            edge_p_p_list.append(edge_p_p)
+        else:
+            # first dataset is not used for training but for validation
+            small_tensor = torch.zeros((1, 1), dtype=torch.float32, device=device)
+            x_list.append(small_tensor)
+            y_list.append(small_tensor)
+            edge_p_p_list.append(to_numpy(small_tensor))
+    x = x_list[1][0].clone().detach()
+    y = y_list[1][0].clone().detach()
     config.simulation.n_particles_max = n_particles_max
-    for run in range(n_runs):
+    for run in range(1,n_runs):
         for k in trange(n_frames):
             if (k % 10 == 0) | (n_frames < 1000):
                 x = torch.cat((x, x_list[run][k].clone().detach()), 0)

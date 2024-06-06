@@ -34,6 +34,7 @@ graph_model:
 plotting:
   colormap: 'tab20'
   arrow_length: 5
+  marker_size: 20
 
 training:
   n_epochs: 0
