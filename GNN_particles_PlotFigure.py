@@ -62,9 +62,11 @@ class Interaction_Particles_extract(MessagePassing):
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                             hidden_size=self.hidden_dim, device=self.device)
 
+
+
         if simulation_config.has_cell_division :
             self.a = nn.Parameter(
-                torch.tensor(np.ones((self.n_dataset, 20500, 2)), device=self.device,
+                torch.tensor(np.ones((self.n_dataset, self.n_particles_max, 2)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
         else:
             self.a = nn.Parameter(
@@ -75,25 +77,31 @@ class Interaction_Particles_extract(MessagePassing):
             self.lin_update = MLP(input_size=self.output_size + self.embedding_dim + 2, output_size=self.output_size,
                                   nlayers=self.n_layers_update, hidden_size=self.hidden_dim_update, device=self.device)
 
-    def forward(self, data, data_id, training, vnorm, phi):
+    def forward(self, data=[], data_id=[], training=[], vnorm=[], phi=[], has_field=False):
 
         self.data_id = data_id
         self.vnorm = vnorm
         self.cos_phi = torch.cos(phi)
         self.sin_phi = torch.sin(phi)
         self.training = training
+        self.has_field = has_field
+
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
         pos = x[:, 1:3]
         d_pos = x[:, 3:5]
         particle_id = x[:, 0:1]
+        if has_field:
+            field = x[:,6:7]
+        else:
+            field = torch.ones_like(x[:,6:7])
 
-        pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id)
+        pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id, field=field)
 
         return pred, self.in_features, self.lin_edge_out
 
-    def message(self, pos_i, pos_j, d_pos_i, d_pos_j, particle_id_i, particle_id_j):
+    def message(self, pos_i, pos_j, d_pos_i, d_pos_j, particle_id_i, particle_id_j, field_j):
         # squared distance
         r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
         delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
@@ -134,7 +142,7 @@ class Interaction_Particles_extract(MessagePassing):
                 in_features = torch.cat(
                     (delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
 
-        out = self.lin_edge(in_features)
+        out = self.lin_edge(in_features) * field_j
 
         self.in_features = in_features
         self.lin_edge_out = out
@@ -4893,8 +4901,8 @@ if __name__ == '__main__':
     print(f'device {device}')
 
     # config_list = ['boids_16_256_bison_siren_with_time_2']
-    # config_list = ['boids_16_256']
-    config_list = ['boids_16_256_division_death_model_2']
+    config_list = ['boids_16_256']
+    # config_list = ['boids_16_256_division_death_model_2']
     # config_list = ['wave_slit_test']
     # config_list = ['Coulomb_3_256']
 
