@@ -180,7 +180,7 @@ class PDE_B_extract(MessagePassing):
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
-        acc = self.propagate(edge_index, x=(x, x))
+        acc = self.propagate(edge_index, x=x)
 
         sum = self.cohesion + self.alignment + self.separation
 
@@ -2620,6 +2620,7 @@ def data_plot_boids(config_file, device):
         it = 2000
         # compute model output for frame 7000
         x = x_list[0][it].clone().detach()
+        x[:,5:6] = torch.tensor(new_labels[:,None], device=device)
         distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)  # threshold
         adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
         edge_index = adj_t.nonzero().t().contiguous()
@@ -2652,8 +2653,10 @@ def data_plot_boids(config_file, device):
         cohesion_fit = np.zeros(n_particle_types)
         alignment_fit = np.zeros(n_particle_types)
         separation_fit = np.zeros(n_particle_types)
+        indexes = np.unique(type)
+        indexes = indexes.astype(int)
         for loop in range (2):
-            for n in range(n_particle_types):
+            for n in indexes:
                 pos = np.argwhere(type == n)
                 pos = pos[:, 0].astype(int)
                 xdiff = to_numpy(diffx[pos, :])
@@ -2665,14 +2668,12 @@ def data_plot_boids(config_file, device):
                     lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox')
                 else:
                     lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox', p0=p00)
-                cohesion_fit[n] = lin_fit[0]
-                alignment_fit[n] = lin_fit[1]
-                separation_fit[n] = lin_fit[2]
-            p00 = [np.mean(cohesion_fit), np.mean(alignment_fit), np.mean(separation_fit)]
+                cohesion_fit[int(n)] = lin_fit[0]
+                alignment_fit[int(n)] = lin_fit[1]
+                separation_fit[int(n)] = lin_fit[2]
+            p00 = [np.mean(cohesion_fit[indexes]), np.mean(alignment_fit[indexes]), np.mean(separation_fit[indexes])]
 
         threshold = 0.25
-        index_classified = np.unique(new_labels)
-        index_classified = index_classified[0:n_particle_types]
 
         fig_ = plt.figure(figsize=(12, 12))
         ax = fig_.add_subplot(1, 1, 1)
@@ -2683,15 +2684,15 @@ def data_plot_boids(config_file, device):
         ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
         x_data = np.abs(to_numpy(p[:, 0]) * 0.5E-5)
         y_data = np.abs(cohesion_fit)
-        x_data = x_data[index_classified]
-        y_data = y_data[index_classified]
+        x_data = x_data[indexes]
+        y_data = y_data[indexes]
         relative_error = np.abs(y_data - x_data) / x_data
         pos = np.argwhere(relative_error < threshold)
         x_data_ = x_data[pos[:, 0]]
         y_data_ = y_data[pos[:, 0]]
         lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
         plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-        for id, n in enumerate(index_classified):
+        for id, n in enumerate(indexes):
             plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=400)
         plt.xlabel(r'True cohesion coeff. ', fontsize=56)
         plt.ylabel(r'Reconstructed cohesion coeff. ', fontsize=56)
@@ -2713,15 +2714,15 @@ def data_plot_boids(config_file, device):
         ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
         x_data = np.abs(to_numpy(p[:, 1]) * 5E-4)
         y_data = alignment_fit
-        x_data = x_data[index_classified]
-        y_data = y_data[index_classified]
+        x_data = x_data[indexes]
+        y_data = y_data[indexes]
         relative_error = np.abs(y_data - x_data) / x_data
         pos = np.argwhere(relative_error < threshold)
         x_data_ = x_data[pos[:, 0]]
         y_data_ = y_data[pos[:, 0]]
         lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
         plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-        for id, n in enumerate(index_classified):
+        for id, n in enumerate(indexes):
             plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=400)
         plt.xlabel(r'True alignement coeff. ', fontsize=56)
         plt.ylabel(r'Reconstructed alignement coeff. ', fontsize=56)
@@ -2743,15 +2744,15 @@ def data_plot_boids(config_file, device):
         ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
         x_data = np.abs(to_numpy(p[:, 2]) * 1E-8)
         y_data = separation_fit
-        x_data = x_data[index_classified]
-        y_data = y_data[index_classified]
+        x_data = x_data[indexes]
+        y_data = y_data[indexes]
         relative_error = np.abs(y_data - x_data) / x_data
         pos = np.argwhere(relative_error < threshold)
         x_data_ = x_data[pos[:, 0]]
         y_data_ = y_data[pos[:, 0]]
         lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
         plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-        for id, n in enumerate(index_classified):
+        for id, n in enumerate(indexes):
             plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=400)
         plt.xlabel(r'True separation coeff. ', fontsize=56)
         plt.ylabel(r'Reconstructed separation coeff. ', fontsize=56)
@@ -4918,8 +4919,8 @@ if __name__ == '__main__':
     print(f'device {device}')
 
     # config_list = ['boids_16_256_bison_siren_with_time_2']
-    # config_list = ['boids_16_256']
-    config_list = ['boids_16_256_division_death_model_2']
+    config_list = ['boids_16_256']
+    # config_list = ['boids_16_256_division_death_model_2']
     # config_list = ['wave_slit_test']
     # config_list = ['Coulomb_3_256']
 
