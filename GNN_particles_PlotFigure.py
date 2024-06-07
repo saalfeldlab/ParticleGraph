@@ -2574,10 +2574,17 @@ def data_plot_boids(config_file, device):
     has_cell_division = config.simulation.has_cell_division
     n_frames = config.simulation.n_frames
 
+
+
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
     print(f'Graph files N: {n_runs}')
+
+    logging.basicConfig(filename=f'{log_dir}/results.log', format='%(asctime)s %(message)s', filemode='w')
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    logger.info(config)
 
     print('Load data ...')
     x_list = []
@@ -2616,11 +2623,18 @@ def data_plot_boids(config_file, device):
 
         accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list,
                                     n_particle_types, n_particles, ynorm, epoch, log_dir, device)
+        logger.info(' ')
+        logger.info(f'accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}')
 
         it = 2000
-        # compute model output for frame 7000
+        # compute model output for a given frame
         x = x_list[0][it].clone().detach()
-        x[:,5:6] = torch.tensor(new_labels[:,None], device=device)
+        particle_index = to_numpy(x[:,0:1]).astype(int)
+        x[:,5:6] = torch.tensor(new_labels[particle_index], device=device)  # set label found by clustering and mapperd to ground truth
+        pos = torch.argwhere(x[:,5:6] < n_particle_types).squeeze()
+        pos = to_numpy(pos[:,0]).astype(int)
+        # filter out cluster not associated with ground truth
+        x = x[pos,:]
         distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)  # threshold
         adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
         edge_index = adj_t.nonzero().t().contiguous()
@@ -2706,6 +2720,8 @@ def data_plot_boids(config_file, device):
         np.save(f"./{log_dir}/tmp_training/cohesion_{config_file}_{net_}.npy", csv_)
         np.savetxt(f"./{log_dir}/tmp_training/cohesion_{config_file}_{net_}.txt", csv_)
         plt.close()
+        logger.info(' ')
+        logger.info('cohesion results')
 
         fig_ = plt.figure(figsize=(12, 12))
         ax = fig_.add_subplot(1, 1, 1)
@@ -4919,8 +4935,8 @@ if __name__ == '__main__':
     print(f'device {device}')
 
     # config_list = ['boids_16_256_bison_siren_with_time_2']
-    config_list = ['boids_16_256']
-    # config_list = ['boids_16_256_division_death_model_2']
+    # config_list = ['boids_16_256']
+    config_list = ['boids_16_256_division_death_model_2']
     # config_list = ['wave_slit_test']
     # config_list = ['Coulomb_3_256']
 
