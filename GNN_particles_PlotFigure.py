@@ -2638,6 +2638,36 @@ def data_plot_boids(config_file, device):
                 separation_fit[n] = lin_fit[2]
             p00 = [np.mean(cohesion_fit), np.mean(alignment_fit), np.mean(separation_fit)]
 
+
+###########3
+
+        # compute ground truth output
+        p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
+        model_B = PDE_B_extract(aggr_type=config.graph_model.aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
+        rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+        psi_output = []
+        for n in range(n_particle_types):
+            psi_output.append(model.psi(rr, torch.squeeze(p[n])))
+        with torch.no_grad():
+            y_B, sum, cohesion, alignment, separation, diffx, diffv, r, type = model_B(dataset)  # acceleration estimation
+        type = to_numpy(type)
+
+        n=0
+        pos = np.argwhere(type == n)
+        pos = pos[:, 0].astype(int)
+
+        cohesion_ = p[type, 0:1].repeat(1, 2) * model_B.a1 * diffx
+        alignment_ = p[type, 1:2].repeat(1, 2) * model_B.a2 * diffv
+        separation_ = p[type, 2:3].repeat(1, 2) * model_B.a3 * diffx / (r[:, None].repeat(1, 2))
+        sum_ = cohesion_ + alignment_ + separation_
+
+        fig_ = plt.figure(figsize=(12, 12))
+        plt.scatter(to_numpy(y_B), to_numpy(y), color='k', s=50, alpha=0.5)
+        fig_ = plt.figure(figsize=(12, 12))
+        plt.scatter(to_numpy(sum), to_numpy(lin_edge_out), color='k', s=50, alpha=0.5)
+
+
+
         fig_ = plt.figure(figsize=(12, 12))
         plt.scatter(to_numpy(p[:,0]*model_B.a1), cohesion_fit, color='k', s=50, alpha=0.5)
 
