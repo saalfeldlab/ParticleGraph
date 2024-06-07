@@ -592,9 +592,11 @@ def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoc
 
 def plot_cell_rates(config, device, log_dir, n_frames, n_particles_max, n_particle_types, x_list, new_labels, cmap):
 
+
+    print('plot cell rates ...')
     N_cells_alive = np.zeros((n_frames, n_particle_types))
     N_cells_dead = np.zeros((n_frames, n_particle_types))
-
+    division_list = []
     for it in trange(n_frames):
         x = x_list[0][it].clone().detach()
         particle_index = to_numpy(x[:,0:1]).astype(int)
@@ -605,13 +607,22 @@ def plot_cell_rates(config, device, log_dir, n_frames, n_particles_max, n_partic
             N_cells_alive[it, k] = pos.shape[0]
             pos =torch.argwhere((x[:,5:6] == k) & (x[:,6:7] == 0))
             N_cells_dead[it, k] = pos.shape[0]
+            pos = torch.argwhere((x[:, 5:6] == k) & (x[:, 7:8] == 1))
+            if len(pos)>0:
+                tmp = torch.cat((x[pos, 5:6],x[pos, 8:9]),0)
+                division_list.append(tmp)
+
+    last_frame_growth = np.argwhere(np.diff(N_cells_alive[:,0], axis=0))
+    last_frame_growth = last_frame_growth[-1]-1
+    N_cells_alive = N_cells_alive[0:int(last_frame_growth),:]
+    N_cells_dead = N_cells_dead[0:int(last_frame_growth),:]
 
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(1, 1, 1)
     for k in range(n_particle_types):
-        plt.plot(np.arange(n_frames), N_cells_alive[:, k], color=cmap.color(k), linewidth=4, label=f'Cell type {k} alive')
-    plt.xticks(fontsize=10.0)
-    plt.yticks(fontsize=10.0)
+        plt.plot(np.arange(last_frame_growth), N_cells_alive[:, k], color=cmap.color(k), linewidth=4, label=f'Cell type {k} alive')
+    plt.xticks(fontsize=32.0)
+    plt.yticks(fontsize=32.0)
     plt.xlabel(r'Frame', fontsize=64)
     plt.ylabel(r'Number of alive cells', fontsize=64)
     plt.tight_layout()
@@ -619,13 +630,16 @@ def plot_cell_rates(config, device, log_dir, n_frames, n_particles_max, n_partic
 
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(1, 1, 1)
-    plt.plot(np.arange(n_frames), N_cells_dead[:, k], color=cmap.color(k), linewidth=4, linestyle='dashed',
-             label=f'Cell type {k} dead')
-    plt.xticks(fontsize=10.0)
-    plt.yticks(fontsize=10.0)
+    for k in range(n_particle_types):
+        plt.plot(np.arange(last_frame_growth), N_cells_dead[:, k], color=cmap.color(k), linewidth=4, label=f'Cell type {k} dead')
+    plt.xticks(fontsize=32.0)
+    plt.yticks(fontsize=32.0)
     plt.xlabel(r'Frame', fontsize=64)
     plt.ylabel(r'Number of dead cells', fontsize=64)
+    plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/cell_dead_{config_file}.tif", dpi=300)
+    plt.close()
+
 
 def data_plot_attraction_repulsion(config_file, epoch_list, device):
     print('')
@@ -2704,7 +2718,7 @@ def data_plot_boids(config_file, device):
 
 
 
-        print('Fitting with known function ...')
+        print('fitting with known function ...')
         cohesion_fit = np.zeros(n_particle_types)
         alignment_fit = np.zeros(n_particle_types)
         separation_fit = np.zeros(n_particle_types)
