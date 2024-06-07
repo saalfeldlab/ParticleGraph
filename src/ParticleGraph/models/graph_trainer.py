@@ -506,9 +506,9 @@ def data_train_cell(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0.pt"
-    # state_dict = torch.load(net,map_location=device)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    net = f"./log/try_{config_file}/models/best_model_with_1_graphs_20.pt"
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -683,10 +683,6 @@ def data_train_cell(config, config_file, device):
             pos=pos[:,0]
             plt.scatter(embedding[pos, 0],
                         embedding[pos, 1], color=cmap.color(n), s=0.1)
-
-
-            plt.scatter(embedding[index_particles[n], 0],
-                        embedding[index_particles[n], 1], color=cmap.color(n), s=0.1)
         plt.xlabel('ai0', fontsize=12)
         plt.ylabel('ai1', fontsize=12)
 

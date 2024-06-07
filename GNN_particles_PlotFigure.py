@@ -392,8 +392,27 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
     plt.xticks(fontsize=32)
     plt.yticks(fontsize=32)
     plt.xlim([0, max_radius])
+    plt.ylim([-1E-4,1e-4])
     plt.ylim([-0.5E6, 0.5E6])
     plt.tight_layout()
+    plt.close()
+
+    fig = plt.figure(figsize=(12, 12))
+    ax = fig.add_subplot(1, 1, 1)
+    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+    ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    embedding = get_embedding(model.a, 1)
+    for n in range(n_particle_types):
+        plt.scatter(proj_interaction[index_particles[n], 0],
+                    proj_interaction[index_particles[n], 1], color=cmap.color(n), s=1)
+    plt.xlabel(r'UMAP 0', fontsize=64)
+    plt.ylabel(r'UMAP 1', fontsize=64)
+    plt.xticks(fontsize=32.0)
+    plt.yticks(fontsize=32.0)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/UMAP_{config_file}_{epoch}.tif",dpi=170.7)
     plt.close()
 
     labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding,
@@ -411,7 +430,6 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
             median_center = model_a_[pos, :]
             median_center = torch.median(median_center, dim=0).values
             model_a_[pos, :] = median_center
-
     model_a_first = model.a.clone().detach()
 
     with torch.no_grad():
@@ -2564,8 +2582,8 @@ def data_plot_boids(config_file, device):
     print('Load data ...')
     x_list = []
     y_list = []
-    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device))
-    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_0.pt', map_location=device))
+    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_1.pt', map_location=device))
+    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_1.pt', map_location=device))
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     x = x_list[0][n_frames].clone().detach()
@@ -2599,7 +2617,7 @@ def data_plot_boids(config_file, device):
         accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list,
                                     n_particle_types, n_particles, ynorm, epoch, log_dir, device)
 
-        it = 7000
+        it = 2000
         # compute model output for frame 7000
         x = x_list[0][it].clone().detach()
         distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)  # threshold
@@ -2810,9 +2828,6 @@ def data_plot_boids(config_file, device):
         rmserr_list = torch.sqrt(torch.mean((func_list_ - true_func_list_) ** 2,1))
         rmserr_list = to_numpy(rmserr_list)
         print(f'all function RMS error : {np.round(np.mean(rmserr_list), 8)}+/-{np.round(np.std(rmserr_list), 8)}')
-
-
-
 
 def data_plot_wave(config_file, cc='viridis'):
 
