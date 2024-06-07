@@ -55,6 +55,7 @@ class Interaction_Particles_No_Tracking(pyg.nn.MessagePassing):
         self.bc_dpos = bc_dpos
         self.n_ghosts = int(train_config.n_ghosts)
         self.dimension = dimension
+        self.n_frames = simulation_config.n_frames
 
         if train_config.large_range:
             self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,

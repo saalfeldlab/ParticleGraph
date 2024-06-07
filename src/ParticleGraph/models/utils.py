@@ -12,7 +12,7 @@ from scipy.optimize import curve_fit
 from vispy.scene import visuals
 from ParticleGraph.fitting_models import linear_model
 from ParticleGraph.models import Interaction_Particles, Interaction_Particle_Field, Signal_Propagation, Mesh_Laplacian, \
-    Mesh_RPS, Mesh_RPS_bis, Interaction_Particles_No_tracking
+    Mesh_RPS, Mesh_RPS_bis, Interaction_Particles_No_Tracking
 from ParticleGraph.utils import choose_boundary_values
 from ParticleGraph.utils import to_numpy
 from matplotlib import rc
@@ -612,7 +612,7 @@ def choose_training_model(model_config, device):
             model.edges = []
         case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G':
             if has_no_tracking:
-                model=Interaction_Particles_No_tracking(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
+                model=Interaction_Particles_No_Tracking(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             else:
                 model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []

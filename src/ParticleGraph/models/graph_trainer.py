@@ -446,9 +446,6 @@ def data_train_no_tracking(config, config_file, device):
     target_batch_size = train_config.batch_size
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
-    has_ghost = train_config.n_ghosts > 0
-    n_ghosts = train_config.n_ghosts
-    has_large_range = train_config.large_range
     if train_config.small_init_batch_size:
         get_batch_size = increasing_batch_size(target_batch_size)
     else:
@@ -563,31 +560,31 @@ def data_train_no_tracking(config, config_file, device):
                 dataset = data.Data(x=x[:, :], edge_index=edges)
                 dataset_batch.append(dataset)
 
-                y = y_list[run][k].clone().detach()
+                y = x_list[run][k+1].clone().detach()
+                y = y[:, 1:3]
                 if noise_level > 0:
                     y = y * (1 + torch.randn_like(y) * noise_level)
 
-                y = y / ynorm
-
-                if data_augmentation:
-                    new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
-                    new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
-                    y[:, 0] = new_x
-                    y[:, 1] = new_y
+                # if data_augmentation:
+                #     new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
+                #     new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
+                #     y[:, 0] = new_x
+                #     y[:, 1] = new_y
                 if batch == 0:
-                    y_batch = y[:, 0:2]
+                    y_batch = y
                 else:
-                    y_batch = torch.cat((y_batch, y[:, 0:2]), dim=0)
+                    y_batch = torch.cat((y_batch, y), dim=0)
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
 
             for batch in batch_loader:
-                pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi)
+                pred, logvar = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, frame=k)
+
 
             loss = ((pred - y_batch) / (y_batch)).norm(2) / 1E9
 
-            visualize_embedding = True
+            visualize_embedding = False
             if visualize_embedding & (((epoch < 3 ) & (N % 500 == 0)) | (N==0)):
                 plot_training(config=config, dataset_name=dataset_name, log_dir=log_dir,
                               epoch=epoch, N=N, x=x, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
