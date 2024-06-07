@@ -27,7 +27,6 @@ from matplotlib.ticker import FuncFormatter
 
 # matplotlib.use("Qt5Agg")
 
-
 class Interaction_Particles_extract(MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -342,8 +341,7 @@ class Mesh_RPS_extract(MessagePassing):
         plt.savefig(f"./{log_dir}/tmp_training/embedding_{config_file}_{epoch}.tif", dpi=170.7)
         plt.close()
 
-def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list,
-                                n_particle_types, n_particles, ynorm, epoch, log_dir, device):
+def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list, n_particle_types, n_particles, ynorm, epoch, log_dir, device):
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
@@ -436,7 +434,6 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
     plt.close()
 
     return  accuracy, n_clusters, new_labels
-
 
 def plot_embedding(index, model_a, dataset_number, index_particles, n_particles, n_particle_types, epoch, it, fig, ax, cmap, device):
 
@@ -2599,7 +2596,7 @@ def data_plot_boids(config_file, device):
 
         plt.rcParams['text.usetex'] = True
         rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-        # matplotlib.use("Qt5Agg")
+        matplotlib.use("Qt5Agg")
 
         model_a_first = model.a.clone().detach()
         accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list,
@@ -2628,6 +2625,15 @@ def data_plot_boids(config_file, device):
             y_B, sum, cohesion, alignment, separation, diffx, diffv, r, type = model_B(dataset)  # acceleration estimation
         type = to_numpy(type)
 
+        n=0
+        pos = np.argwhere(type == n)
+        pos = pos[:, 0].astype(int)
+
+        cohesion_ = p[type, 0:1].repeat(1, 2) * model_B.a1 * diffx
+        alignment_ = p[type, 1:2].repeat(1, 2) * model_B.a2 * diffv
+        separation_ = p[type, 2:3].repeat(1, 2) * model_B.a3 * diffx / (r[:, None].repeat(1, 2))
+        sum_ = cohesion_ + alignment_ + separation_
+
         fig_ = plt.figure(figsize=(12, 12))
         plt.scatter(to_numpy(y_B), to_numpy(y), color='k', s=50, alpha=0.5)
         fig_ = plt.figure(figsize=(12, 12))
@@ -2637,20 +2643,20 @@ def data_plot_boids(config_file, device):
         alignment_fit = np.zeros(n_particle_types)
         separation_fit = np.zeros(n_particle_types)
         for n in range(n_particle_types):
-            pos = np.argwhere(new_labels == n)
+            pos = np.argwhere(type == n)
             pos = pos[:, 0].astype(int)
             xdiff = to_numpy(diffx[pos, :])
             vdiff = to_numpy(diffv[pos, :])
             rdiff = to_numpy(r[pos])
             x_data = np.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
-            y_data = to_numpy(torch.norm(sum[pos, :], dim=1))
+            y_data = to_numpy(torch.norm(lin_edge_out[pos, :], dim=1))
             lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox')
             cohesion_fit[n] = lin_fit[0]
             alignment_fit[n] = lin_fit[1]
             separation_fit[n] = lin_fit[2]
         p00 = [np.mean(cohesion_fit), np.mean(alignment_fit), np.mean(separation_fit)]
         for n in range(n_particle_types):
-            pos = np.argwhere(new_labels == n)
+            pos = np.argwhere(type == n)
             pos = pos[:, 0].astype(int)
             xdiff = to_numpy(diffx[pos, :])
             vdiff = to_numpy(diffv[pos, :])
@@ -5346,7 +5352,7 @@ if __name__ == '__main__':
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
     print(f'device {device}')
 
-    config_list = ['boids_16_256_bison_siren_with_time_2']
+    # config_list = ['boids_16_256_bison_siren_with_time_2']
     config_list = ['boids_16_256']
     # config_list = ['wave_slit_test']
     # config_list = ['Coulomb_3_256']
