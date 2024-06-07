@@ -2629,70 +2629,6 @@ def data_plot_boids(config_file, device):
         # fig_ = plt.figure(figsize=(12, 12))
         # plt.scatter(to_numpy(sum), to_numpy(lin_edge_out), color='k', s=50, alpha=0.5)
 
-        print('Compare reconstructed interaction with ground truth...')
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(1, 1, 1)
-        func_list = []
-        true_func_list = []
-        for n in range(n_particles):
-            embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
-            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                     torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
-                                     0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-            with torch.no_grad():
-                func = model.lin_edge(in_features.float())
-            func = func[:, 0]
-            func_list.append(func)
-            type = to_numpy(x[n,5]).astype(int)
-            true_func = model_B.psi(rr, p[type])
-            true_func_list.append(true_func)
-            if (n % 10 == 0) :
-                plt.plot(to_numpy(rr),
-                         to_numpy(func) * to_numpy(ynorm),
-                         color=cmap.color(type), linewidth=4, alpha=0.25)
-        func_list = torch.stack(func_list)
-        true_func_list = torch.stack(true_func_list)
-        plt.ylim([-1E-4, 1E-4])
-        plt.xlabel(r'$x_j-x_i$', fontsize=64)
-        plt.ylabel(r'$f_{ij}$', fontsize=64)
-        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-        ax.yaxis.set_major_locator(plt.MaxNLocator(5))
-        ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-        fmt = lambda x, pos: '{:.1f}e-5'.format((x) * 1e5, pos)
-        ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/func_dij_{config_file}_{net_}.tif", dpi=300)
-        plt.close()
-
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(1, 1, 1)
-        for n in range(n_particle_types):
-            true_func  = model_B.psi(rr, p[n])
-            plt.plot(to_numpy(rr), to_numpy(true_func), color=cmap.color(n), linewidth=4)
-        plt.ylim([-1E-4, 1E-4])
-        plt.xlabel(r'$x_j-x_i$', fontsize=64)
-        plt.ylabel(r'$f_{ij}$', fontsize=64)
-        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-        ax.yaxis.set_major_locator(plt.MaxNLocator(5))
-        ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-        fmt = lambda x, pos: '{:.1f}e-5'.format((x) * 1e5, pos)
-        ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/true_func_dij_{config_file}_{net_}.tif", dpi=300)
-
-        func_list = func_list * ynorm
-        func_list_ = torch.clamp(func_list, min=torch.tensor(-1.0E-4,device=device), max=torch.tensor(1.0E-4,device=device))
-        true_func_list_ = torch.clamp(true_func_list, min=torch.tensor(-1.0E-4, device=device),
-                                 max=torch.tensor(1.0E-4, device=device))
-        rmserr_list = torch.sqrt(torch.mean((func_list_ - true_func_list_) ** 2,1))
-        rmserr_list = to_numpy(rmserr_list)
-        print(f'all function RMS error : {np.round(np.mean(rmserr_list), 8)}+/-{np.round(np.std(rmserr_list), 8)}')
-
-
         print('Fitting with known function ...')
         cohesion_fit = np.zeros(n_particle_types)
         alignment_fit = np.zeros(n_particle_types)
@@ -2809,6 +2745,70 @@ def data_plot_boids(config_file, device):
         np.save(f"./{log_dir}/tmp_training/separation_{config_file}_{net_}.npy", csv_)
         np.savetxt(f"./{log_dir}/tmp_training/separation_{config_file}_{net_}.txt", csv_)
         plt.close()
+
+        print('Compare reconstructed interaction with ground truth...')
+        rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
+        fig = plt.figure(figsize=(12, 12))
+        ax = fig.add_subplot(1, 1, 1)
+        func_list = []
+        true_func_list = []
+        for n in range(n_particles):
+            embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
+            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                     torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                     0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+            with torch.no_grad():
+                func = model.lin_edge(in_features.float())
+            func = func[:, 0]
+            func_list.append(func)
+            type = to_numpy(x[n,5]).astype(int)
+            true_func = model_B.psi(rr, p[type])
+            true_func_list.append(true_func)
+            if (n % 10 == 0) :
+                plt.plot(to_numpy(rr),
+                         to_numpy(func) * to_numpy(ynorm),
+                         color=cmap.color(type), linewidth=4, alpha=0.25)
+        func_list = torch.stack(func_list)
+        true_func_list = torch.stack(true_func_list)
+        plt.ylim([-1E-4, 1E-4])
+        plt.xlabel(r'$x_j-x_i$', fontsize=64)
+        plt.ylabel(r'$f_{ij}$', fontsize=64)
+        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+        ax.yaxis.set_major_locator(plt.MaxNLocator(5))
+        ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+        fmt = lambda x, pos: '{:.1f}e-5'.format((x) * 1e5, pos)
+        ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+        plt.xticks(fontsize=32.0)
+        plt.yticks(fontsize=32.0)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/func_dij_{config_file}_{net_}.tif", dpi=300)
+        plt.close()
+
+        fig = plt.figure(figsize=(12, 12))
+        ax = fig.add_subplot(1, 1, 1)
+        for n in range(n_particle_types):
+            true_func  = model_B.psi(rr, p[n])
+            plt.plot(to_numpy(rr), to_numpy(true_func), color=cmap.color(n), linewidth=4)
+        plt.ylim([-1E-4, 1E-4])
+        plt.xlabel(r'$x_j-x_i$', fontsize=64)
+        plt.ylabel(r'$f_{ij}$', fontsize=64)
+        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+        ax.yaxis.set_major_locator(plt.MaxNLocator(5))
+        ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+        fmt = lambda x, pos: '{:.1f}e-5'.format((x) * 1e5, pos)
+        ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+        plt.xticks(fontsize=32.0)
+        plt.yticks(fontsize=32.0)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/true_func_dij_{config_file}_{net_}.tif", dpi=300)
+
+        func_list = func_list * ynorm
+        func_list_ = torch.clamp(func_list, min=torch.tensor(-1.0E-4,device=device), max=torch.tensor(1.0E-4,device=device))
+        true_func_list_ = torch.clamp(true_func_list, min=torch.tensor(-1.0E-4, device=device),
+                                 max=torch.tensor(1.0E-4, device=device))
+        rmserr_list = torch.sqrt(torch.mean((func_list_ - true_func_list_) ** 2,1))
+        rmserr_list = to_numpy(rmserr_list)
+        print(f'all function RMS error : {np.round(np.mean(rmserr_list), 8)}+/-{np.round(np.std(rmserr_list), 8)}')
 
 
 
