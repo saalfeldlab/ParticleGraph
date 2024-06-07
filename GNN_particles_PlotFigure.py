@@ -2721,7 +2721,11 @@ def data_plot_boids(config_file, device):
         np.savetxt(f"./{log_dir}/tmp_training/cohesion_{config_file}_{net_}.txt", csv_)
         plt.close()
         logger.info(' ')
-        logger.info('cohesion results')
+        residuals = y_data_ - linear_model(x_data_, *lin_fit)
+        ss_res = np.sum(residuals ** 2)
+        ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot)
+        logger.info(f'cohesion slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
 
         fig_ = plt.figure(figsize=(12, 12))
         ax = fig_.add_subplot(1, 1, 1)
@@ -2752,6 +2756,12 @@ def data_plot_boids(config_file, device):
         np.save(f"./{log_dir}/tmp_training/alignment_{config_file}_{net_}.npy", csv_)
         np.savetxt(f"./{log_dir}/tmp_training/alignement_{config_file}_{net_}.txt", csv_)
         plt.close()
+        logger.info(' ')
+        residuals = y_data_ - linear_model(x_data_, *lin_fit)
+        ss_res = np.sum(residuals ** 2)
+        ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot)
+        logger.info(f'alignment   slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
 
         fig_ = plt.figure(figsize=(12, 12))
         ax = fig_.add_subplot(1, 1, 1)
@@ -2782,6 +2792,14 @@ def data_plot_boids(config_file, device):
         np.save(f"./{log_dir}/tmp_training/separation_{config_file}_{net_}.npy", csv_)
         np.savetxt(f"./{log_dir}/tmp_training/separation_{config_file}_{net_}.txt", csv_)
         plt.close()
+        logger.info(' ')
+        residuals = y_data_ - linear_model(x_data_, *lin_fit)
+        ss_res = np.sum(residuals ** 2)
+        ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot)
+        logger.info(f'separation   slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
+
+
 
         print('Compare reconstructed interaction with ground truth...')
         rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
@@ -2789,7 +2807,8 @@ def data_plot_boids(config_file, device):
         ax = fig.add_subplot(1, 1, 1)
         func_list = []
         true_func_list = []
-        for n in range(n_particles):
+        x = x_list[0][n_frames].clone().detach()
+        for n in np.arange(len(x)):
             embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                      torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
@@ -2797,14 +2816,15 @@ def data_plot_boids(config_file, device):
             with torch.no_grad():
                 func = model.lin_edge(in_features.float())
             func = func[:, 0]
-            func_list.append(func)
             type = to_numpy(x[n,5]).astype(int)
-            true_func = model_B.psi(rr, p[type])
-            true_func_list.append(true_func)
-            if (n % 10 == 0) :
-                plt.plot(to_numpy(rr),
-                         to_numpy(func) * to_numpy(ynorm),
-                         color=cmap.color(type), linewidth=4, alpha=0.25)
+            if type<n_particle_types:
+                func_list.append(func)
+                true_func = model_B.psi(rr, p[type])
+                true_func_list.append(true_func)
+                if (n % 10 == 0) :
+                    plt.plot(to_numpy(rr),
+                             to_numpy(func) * to_numpy(ynorm),
+                             color=cmap.color(type), linewidth=4, alpha=0.25)
         func_list = torch.stack(func_list)
         true_func_list = torch.stack(true_func_list)
         plt.ylim([-1E-4, 1E-4])
@@ -2846,6 +2866,10 @@ def data_plot_boids(config_file, device):
         rmserr_list = torch.sqrt(torch.mean((func_list_ - true_func_list_) ** 2,1))
         rmserr_list = to_numpy(rmserr_list)
         print(f'all function RMS error : {np.round(np.mean(rmserr_list), 8)}+/-{np.round(np.std(rmserr_list), 8)}')
+        logger.info(' ')
+        logger.info(f'all function RMS error : {np.round(np.mean(rmserr_list), 8)}+/-{np.round(np.std(rmserr_list), 8)}')
+
+    logging.shutdown()
 
 def data_plot_wave(config_file, cc='viridis'):
 
@@ -4935,8 +4959,8 @@ if __name__ == '__main__':
     print(f'device {device}')
 
     # config_list = ['boids_16_256_bison_siren_with_time_2']
-    # config_list = ['boids_16_256']
-    config_list = ['boids_16_256_division_death_model_2']
+    config_list = ['boids_16_256']
+    # config_list = ['boids_16_256_division_death_model_2']
     # config_list = ['wave_slit_test']
     # config_list = ['Coulomb_3_256']
 
