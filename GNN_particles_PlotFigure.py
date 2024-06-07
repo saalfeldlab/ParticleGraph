@@ -596,7 +596,7 @@ def plot_cell_rates(config, device, log_dir, n_frames, n_particles_max, n_partic
     print('plot cell rates ...')
     N_cells_alive = np.zeros((n_frames, n_particle_types))
     N_cells_dead = np.zeros((n_frames, n_particle_types))
-    division_list = []
+
     for it in trange(n_frames):
         x = x_list[0][it].clone().detach()
         particle_index = to_numpy(x[:,0:1]).astype(int)
@@ -607,10 +607,6 @@ def plot_cell_rates(config, device, log_dir, n_frames, n_particles_max, n_partic
             N_cells_alive[it, k] = pos.shape[0]
             pos =torch.argwhere((x[:,5:6] == k) & (x[:,6:7] == 0))
             N_cells_dead[it, k] = pos.shape[0]
-            pos = torch.argwhere((x[:, 5:6] == k) & (x[:, 7:8] == 1))
-            if len(pos)>0:
-                tmp = torch.cat((x[pos, 5:6],x[pos, 8:9]),0)
-                division_list.append(tmp)
 
     last_frame_growth = np.argwhere(np.diff(N_cells_alive[:,0], axis=0))
     last_frame_growth = last_frame_growth[-1]-1
