@@ -1246,15 +1246,13 @@ def data_plot_gravity(config_file, device):
     min_radius = config.simulation.min_radius
     n_particle_types = config.simulation.n_particle_types
     n_particles = config.simulation.n_particles
-    nrun = config.training.n_runs
+    n_runs = config.training.n_runs
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
-
-    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
-    n_graphs = len(graph_files)
-    print('Graph files N: ', n_graphs - 1)
+    print(f'Graph files N: {n_runs}')
+    logger.info(f'Graph files N: {n_runs}')
     time.sleep(0.5)
 
     x_list = []
@@ -1272,7 +1270,7 @@ def data_plot_gravity(config_file, device):
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
-    net = f"./log/try_{config_file}/models/best_model_with_{nrun - 1}_graphs_20.pt"
+    net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_20.pt"
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
     model.eval()
@@ -1661,15 +1659,13 @@ def data_plot_gravity_continuous(config_file, device):
     min_radius = config.simulation.min_radius
     n_particle_types = config.simulation.n_particle_types
     n_particles = config.simulation.n_particles
-    nrun = config.training.n_runs
+    n_runs = config.training.n_runs
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
-
-    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
-    n_graphs = len(graph_files)
-    print('Graph files N: ', n_graphs - 1)
+    print(f'Graph files N: {n_runs}')
+    logger.info(f'Graph files N: {n_runs}')
     time.sleep(0.5)
 
     x_list = []
@@ -1686,7 +1682,7 @@ def data_plot_gravity_continuous(config_file, device):
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
-    net = f"./log/try_{config_file}/models/best_model_with_{nrun - 1}_graphs_20.pt"
+    net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_20.pt"
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
     model.eval()
@@ -1958,17 +1954,15 @@ def data_plot_gravity_solar_system(config_file, device):
     min_radius = config.simulation.min_radius
     n_particle_types = config.simulation.n_particle_types
     n_particles = config.simulation.n_particles
-    nrun = config.training.n_runs
+    n_runs = config.training.n_runs
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
-
-    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
-    n_graphs = len(graph_files)
-    print('Graph files N: ', n_graphs - 1)
+    print(f'Graph files N: {n_runs}')
+    logger.info(f'Graph files N: {n_runs}')
     time.sleep(0.5)
 
     x_list = []
@@ -1985,7 +1979,7 @@ def data_plot_gravity_solar_system(config_file, device):
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
-    net = f"./log/try_{config_file}/models/best_model_with_{nrun - 1}_graphs_2.pt"
+    net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_2.pt"
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
     model.eval()
@@ -2193,15 +2187,13 @@ def data_plot_Coulomb(config_file, device):
     min_radius = config.simulation.min_radius
     n_particle_types = config.simulation.n_particle_types
     n_particles = config.simulation.n_particles
-    nrun = config.training.n_runs
+    n_runs = config.training.n_runs
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
-
-    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
-    n_graphs = len(graph_files)
-    print('Graph files N: ', n_graphs - 1)
+    print(f'Graph files N: {n_runs}')
+    logger.info(f'Graph files N: {n_runs}')
     time.sleep(0.5)
 
     x_list = []
@@ -2218,7 +2210,7 @@ def data_plot_Coulomb(config_file, device):
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
     epoch=20
-    net = f"./log/try_{config_file}/models/best_model_with_{nrun - 1}_graphs_{epoch}.pt"
+    net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt"
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
     model.eval()
@@ -2553,15 +2545,13 @@ def data_plot_boids(config_file, device):
     min_radius = config.simulation.min_radius
     n_particle_types = config.simulation.n_particle_types
     n_particles = config.simulation.n_particles
-    nrun = config.training.n_runs
+    n_runs = config.training.n_runs
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
-
-    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
-    n_graphs = len(graph_files)
-    print('Graph files N: ', n_graphs - 1)
+    print(f'Graph files N: {n_runs}')
+    logger.info(f'Graph files N: {n_runs}')
     time.sleep(0.5)
 
     x_list = []
@@ -2589,7 +2579,7 @@ def data_plot_boids(config_file, device):
         model, bc_pos, bc_dpos = choose_training_model(config, device)
         model = Interaction_Particles_extract(config, device, aggr_type=config.graph_model.aggr_type, bc_dpos=bc_dpos)
 
-        net = f"./log/try_{config_file}/models/best_model_with_{nrun - 1}_graphs_{net_}.pt"
+        net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{net_}.pt"
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
         model.eval()
@@ -2620,56 +2610,50 @@ def data_plot_boids(config_file, device):
         rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
         psi_output = []
         for n in range(n_particle_types):
-            psi_output.append(model.psi(rr, torch.squeeze(p[n])))
-        with torch.no_grad():
-            y_B, sum, cohesion, alignment, separation, diffx, diffv, r, type = model_B(dataset)  # acceleration estimation
+            with torch.no_grad():
+                psi_output.append(model.psi(rr, torch.squeeze(p[n])))
+                y_B, sum, cohesion, alignment, separation, diffx, diffv, rr, type = model_B(dataset)  # acceleration estimation
         type = to_numpy(type)
-
-        n=0
-        pos = np.argwhere(type == n)
-        pos = pos[:, 0].astype(int)
-
-        cohesion_ = p[type, 0:1].repeat(1, 2) * model_B.a1 * diffx
-        alignment_ = p[type, 1:2].repeat(1, 2) * model_B.a2 * diffv
-        separation_ = p[type, 2:3].repeat(1, 2) * model_B.a3 * diffx / (r[:, None].repeat(1, 2))
-        sum_ = cohesion_ + alignment_ + separation_
-
-        fig_ = plt.figure(figsize=(12, 12))
-        plt.scatter(to_numpy(y_B), to_numpy(y), color='k', s=50, alpha=0.5)
-        fig_ = plt.figure(figsize=(12, 12))
-        plt.scatter(to_numpy(sum), to_numpy(lin_edge_out), color='k', s=50, alpha=0.5)
+        # cohesion_ = p[type, 0:1].repeat(1, 2) * model_B.a1 * diffx
+        # alignment_ = p[type, 1:2].repeat(1, 2) * model_B.a2 * diffv
+        # separation_ = p[type, 2:3].repeat(1, 2) * model_B.a3 * diffx / (rr[:, None].repeat(1, 2))
+        # sum_ = cohesion_ + alignment_ + separation_
+        # fig_ = plt.figure(figsize=(12, 12))
+        # plt.scatter(to_numpy(y_B), to_numpy(y), color='k', s=50, alpha=0.5)
+        # fig_ = plt.figure(figsize=(12, 12))
+        # plt.scatter(to_numpy(sum), to_numpy(lin_edge_out), color='k', s=50, alpha=0.5)
 
         cohesion_fit = np.zeros(n_particle_types)
         alignment_fit = np.zeros(n_particle_types)
         separation_fit = np.zeros(n_particle_types)
-        for n in range(n_particle_types):
-            pos = np.argwhere(type == n)
-            pos = pos[:, 0].astype(int)
-            xdiff = to_numpy(diffx[pos, :])
-            vdiff = to_numpy(diffv[pos, :])
-            rdiff = to_numpy(r[pos])
-            x_data = np.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
-            y_data = to_numpy(torch.norm(lin_edge_out[pos, :], dim=1))
-            lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox')
-            cohesion_fit[n] = lin_fit[0]
-            alignment_fit[n] = lin_fit[1]
-            separation_fit[n] = lin_fit[2]
-        p00 = [np.mean(cohesion_fit), np.mean(alignment_fit), np.mean(separation_fit)]
-        for n in range(n_particle_types):
-            pos = np.argwhere(type == n)
-            pos = pos[:, 0].astype(int)
-            xdiff = to_numpy(diffx[pos, :])
-            vdiff = to_numpy(diffv[pos, :])
-            rdiff = to_numpy(r[pos])
-            x_data = np.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
-            y_data = to_numpy(torch.norm(sum[pos, :], dim=1))
-            lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox', p0=p00)
-            cohesion_fit[n] = lin_fit[0]
-            alignment_fit[n] = lin_fit[1]
-            separation_fit[n] = lin_fit[2]
+        for loop in range (2):
+            for n in range(n_particle_types):
+                pos = np.argwhere(type == n)
+                pos = pos[:, 0].astype(int)
+                xdiff = to_numpy(diffx[pos, :])
+                vdiff = to_numpy(diffv[pos, :])
+                rdiff = to_numpy(rr[pos])
+                x_data = np.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
+                y_data = to_numpy(torch.norm(lin_edge_out[pos, :], dim=1))
+                if loop==0:
+                    lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox')
+                else:
+                    lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox', p0=p00)
+                cohesion_fit[n] = lin_fit[0]
+                alignment_fit[n] = lin_fit[1]
+                separation_fit[n] = lin_fit[2]
+            p00 = [np.mean(cohesion_fit), np.mean(alignment_fit), np.mean(separation_fit)]
 
         fig_ = plt.figure(figsize=(12, 12))
-        plt.scatter(to_numpy(p[:,0]*0.5E-5), cohesion_fit, color='k', s=50, alpha=0.5)
+        plt.scatter(to_numpy(p[:,0]*model_B.a1), cohesion_fit, color='k', s=50, alpha=0.5)
+
+        fig_ = plt.figure(figsize=(12, 12))
+        plt.scatter(to_numpy(p[:,1]*model_B.a2), alignment_fit, color='k', s=50, alpha=0.5)
+
+        fig_ = plt.figure(figsize=(12, 12))
+        plt.scatter(to_numpy(p[:,2]*model_B.a3), separation_fit, color='k', s=50, alpha=0.5)
+
+
 
 
 
@@ -2802,11 +2786,7 @@ def data_plot_boids(config_file, device):
                 separation_fit[n] = lin_fit[2]
 
             index_classified = np.unique(new_labels)
-
-            x_data
-
-            threshold = 2
-
+            threshold = 0.25
             relative_error = np.abs(y_data-x_data)/x_data
 
             pos = np.argwhere(relative_error<threshold)
@@ -2877,10 +2857,6 @@ def data_plot_boids(config_file, device):
             plt.text(5e-8, 4E-7, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
             print(f'separation Slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}   outliers: {np.sum(relative_error>threshold)} ')
 
-            time.sleep(1)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/Fig5.jpg", dpi=300)
-            plt.close()
 
             threshold = 0.1
             index_classified = np.unique(new_labels)

@@ -61,6 +61,6 @@ if __name__ == '__main__':
         print(f'device {device}')
 
         data_generate(config, device=device, visualize=True, run_vizualized=0, style='frame color', alpha=1, erase=True, bSave=True, step=25)  # config.simulation.n_frames // 1)
-        data_train(config, config_file, device)
+        # data_train(config, config_file, device)
         # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 25, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
