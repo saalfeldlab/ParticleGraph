@@ -679,6 +679,12 @@ def data_train_cell(config, config_file, device):
         ax = fig.add_subplot(1, 5, 2)
         embedding = get_embedding(model.a, 1)
         for n in range(n_particle_types):
+            pos = np.argwhere(to_numpy(x[:,5:6]) == n).squeeze().astype(int)
+            pos=pos[:,0]
+            plt.scatter(embedding[pos, 0],
+                        embedding[pos, 1], color=cmap.color(n), s=0.1)
+
+
             plt.scatter(embedding[index_particles[n], 0],
                         embedding[index_particles[n], 1], color=cmap.color(n), s=0.1)
         plt.xlabel('ai0', fontsize=12)

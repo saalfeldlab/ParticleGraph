@@ -58,6 +58,7 @@ class Interaction_Particles_extract(MessagePassing):
         self.model = model_config.particle_model_name
         self.bc_dpos = bc_dpos
         self.n_ghosts = int(train_config.n_ghosts)
+        self.n_particles_max = simulation_config.n_particles_max
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                             hidden_size=self.hidden_dim, device=self.device)
@@ -4901,8 +4902,8 @@ if __name__ == '__main__':
     print(f'device {device}')
 
     # config_list = ['boids_16_256_bison_siren_with_time_2']
-    config_list = ['boids_16_256']
-    # config_list = ['boids_16_256_division_death_model_2']
+    # config_list = ['boids_16_256']
+    config_list = ['boids_16_256_division_death_model_2']
     # config_list = ['wave_slit_test']
     # config_list = ['Coulomb_3_256']
 

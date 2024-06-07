@@ -617,7 +617,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
             torch.save(cell_death_rate, f'graphs_data/graphs_{dataset_name}/cell_death_rate.pt')
             torch.save(cell_death_rate_distrib, f'graphs_data/graphs_{dataset_name}/cell_death_rate_distrib.pt')
-            torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p_{run}.pt')
+            torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
 
 
 def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
