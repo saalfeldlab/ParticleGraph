@@ -582,10 +582,11 @@ def data_train_no_tracking(config, config_file, device):
                 pred, logvar = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, frame=k)
 
 
-            loss = ((pred - y_batch) / (y_batch)).norm(2) / 1E9
+            loss = ((pred - y_batch) / (logvar+1E-10)).norm(2) + (logvar).norm(2)
 
-            visualize_embedding = False
+            visualize_embedding = True
             if visualize_embedding & (((epoch < 3 ) & (N % 500 == 0)) | (N==0)):
+                model.a_current = model.a[1,k].clone().detach()
                 plot_training(config=config, dataset_name=dataset_name, log_dir=log_dir,
                               epoch=epoch, N=N, x=x, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
                               index_particles=index_particles, n_particles=n_particles,
