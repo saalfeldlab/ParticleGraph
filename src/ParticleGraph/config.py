@@ -101,6 +101,7 @@ class TrainingConfig(BaseModel):
     batch_size: int = 1
     small_init_batch_size: bool = True
     large_range: bool = False
+    has_no_tracking: bool = False
 
     n_runs: int = 2
     seed : int = 40
