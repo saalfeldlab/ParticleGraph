@@ -1252,7 +1252,7 @@ def data_plot_gravity(config_file, device):
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
     print(f'Graph files N: {n_runs}')
-    logger.info(f'Graph files N: {n_runs}')
+
     time.sleep(0.5)
 
     x_list = []
@@ -1665,7 +1665,7 @@ def data_plot_gravity_continuous(config_file, device):
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
     print(f'Graph files N: {n_runs}')
-    logger.info(f'Graph files N: {n_runs}')
+
     time.sleep(0.5)
 
     x_list = []
@@ -1962,7 +1962,7 @@ def data_plot_gravity_solar_system(config_file, device):
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
     print(f'Graph files N: {n_runs}')
-    logger.info(f'Graph files N: {n_runs}')
+
     time.sleep(0.5)
 
     x_list = []
@@ -2176,7 +2176,6 @@ def data_plot_Coulomb(config_file, device):
     # print(config.pretty())
 
     cmap = CustomColorMap(config=config)
-    aggr_type = config.graph_model.aggr_type
 
     simulation_config = config.simulation
     train_config = config.training
@@ -2193,7 +2192,6 @@ def data_plot_Coulomb(config_file, device):
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
     print(f'Graph files N: {n_runs}')
-    logger.info(f'Graph files N: {n_runs}')
     time.sleep(0.5)
 
     x_list = []
@@ -2551,13 +2549,10 @@ def data_plot_boids(config_file, device):
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
     print(f'Graph files N: {n_runs}')
-    logger.info(f'Graph files N: {n_runs}')
-    time.sleep(0.5)
 
+    print('Load data ...')
     x_list = []
     y_list = []
-    print('Load data ...')
-    time.sleep(1)
     x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device))
     y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_0.pt', map_location=device))
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
@@ -2566,7 +2561,6 @@ def data_plot_boids(config_file, device):
 
     index_particles = get_index_particles(x, n_particle_types, dimension)
     type_list = get_type_list(x, dimension)
-
     n_particles = int(n_particles * (1 - train_config.particle_dropout))
 
     net_list=['20'] #'0_0','0_2000','0_5000', '0_9800', '5', '20']
