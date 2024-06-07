@@ -2672,6 +2672,7 @@ def data_plot_boids(config_file, device):
 
         threshold = 0.25
         index_classified = np.unique(new_labels)
+        index_classified = index_classified[0:n_particle_types]
 
         fig_ = plt.figure(figsize=(12, 12))
         ax = fig_.add_subplot(1, 1, 1)

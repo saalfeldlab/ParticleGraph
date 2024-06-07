@@ -47,8 +47,8 @@ if __name__ == '__main__':
     # config_list = ['boids_16_256_division_death_0_125']
     # config_list = ['arbitrary_3_division_death']
     # config_list = ['boids_16_256']
-    # config_list = ['boids_16_256_test_cell_division_a']
-    config_list = ['boids_16_256_division_death_model_2']
+    config_list = ['boids_16_256_test_cell_division_c']
+    # config_list = ['boids_16_256_division_death_model_2']
 
     seed_list = np.arange(10)
 

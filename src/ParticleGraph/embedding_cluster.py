@@ -76,7 +76,7 @@ def sparsify_cluster(cluster_method, proj_interaction, embedding, cluster_distan
         tmp = labels[index_particles[n]]
         label_list.append(np.round(np.median(tmp)))
     label_list = np.array(label_list)
-    new_labels = labels.copy()
+    new_labels = np.ones_like(labels) * n_particle_types
     for n in range(n_particle_types):
         new_labels[labels == label_list[n]] = n
     return labels, n_clusters, new_labels
