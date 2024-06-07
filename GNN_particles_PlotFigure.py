@@ -1,6 +1,7 @@
 import matplotlib.cm as cmplt
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
 from matplotlib.ticker import FormatStrFormatter
 from torch_geometric.nn import MessagePassing
 import torch_geometric.utils as pyg_utils
@@ -587,6 +588,44 @@ def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoc
     plt.ylabel(r'True label', fontsize=12)
 
     return Accuracy
+
+
+def plot_cell_rates(config, device, log_dir, n_frames, n_particles_max, n_particle_types, x_list, new_labels, cmap):
+
+    N_cells_alive = np.zeros((n_frames, n_particle_types))
+    N_cells_dead = np.zeros((n_frames, n_particle_types))
+
+    for it in trange(n_frames):
+        x = x_list[0][it].clone().detach()
+        particle_index = to_numpy(x[:,0:1]).astype(int)
+        x[:,5:6] = torch.tensor(new_labels[particle_index], device=device)
+
+        for k in range(n_particle_types):
+            pos =torch.argwhere((x[:,5:6] == k) & (x[:,6:7] == 1))
+            N_cells_alive[it, k] = pos.shape[0]
+            pos =torch.argwhere((x[:,5:6] == k) & (x[:,6:7] == 0))
+            N_cells_dead[it, k] = pos.shape[0]
+
+    fig = plt.figure(figsize=(12, 12))
+    ax = fig.add_subplot(1, 1, 1)
+    for k in range(n_particle_types):
+        plt.plot(np.arange(n_frames), N_cells_alive[:, k], color=cmap.color(k), linewidth=4, label=f'Cell type {k} alive')
+    plt.xticks(fontsize=10.0)
+    plt.yticks(fontsize=10.0)
+    plt.xlabel(r'Frame', fontsize=64)
+    plt.ylabel(r'Number of alive cells', fontsize=64)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/cell_alive_{config_file}.tif", dpi=300)
+
+    fig = plt.figure(figsize=(12, 12))
+    ax = fig.add_subplot(1, 1, 1)
+    plt.plot(np.arange(n_frames), N_cells_dead[:, k], color=cmap.color(k), linewidth=4, linestyle='dashed',
+             label=f'Cell type {k} dead')
+    plt.xticks(fontsize=10.0)
+    plt.yticks(fontsize=10.0)
+    plt.xlabel(r'Frame', fontsize=64)
+    plt.ylabel(r'Number of dead cells', fontsize=64)
+    plt.savefig(f"./{log_dir}/tmp_training/cell_dead_{config_file}.tif", dpi=300)
 
 def data_plot_attraction_repulsion(config_file, epoch_list, device):
     print('')
@@ -2663,6 +2702,8 @@ def data_plot_boids(config_file, device):
         # fig_ = plt.figure(figsize=(12, 12))
         # plt.scatter(to_numpy(sum), to_numpy(lin_edge_out), color='k', s=50, alpha=0.5)
 
+
+
         print('Fitting with known function ...')
         cohesion_fit = np.zeros(n_particle_types)
         alignment_fit = np.zeros(n_particle_types)
@@ -2801,7 +2842,7 @@ def data_plot_boids(config_file, device):
 
 
 
-        print('Compare reconstructed interaction with ground truth...')
+        print('compare reconstructed interaction with ground truth...')
         rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(1, 1, 1)
@@ -2869,7 +2910,12 @@ def data_plot_boids(config_file, device):
         logger.info(' ')
         logger.info(f'all function RMS error : {np.round(np.mean(rmserr_list), 8)}+/-{np.round(np.std(rmserr_list), 8)}')
 
+        if has_cell_division:
+
+            plot_cell_rates(config, device, log_dir, n_frames, n_particles_max, n_particle_types, x_list, new_labels, cmap)
+
     logging.shutdown()
+
 
 def data_plot_wave(config_file, cc='viridis'):
 
@@ -4959,8 +5005,8 @@ if __name__ == '__main__':
     print(f'device {device}')
 
     # config_list = ['boids_16_256_bison_siren_with_time_2']
-    config_list = ['boids_16_256']
-    # config_list = ['boids_16_256_division_death_model_2']
+    # config_list = ['boids_16_256']
+    config_list = ['boids_16_256_division_death_model_2']
     # config_list = ['wave_slit_test']
     # config_list = ['Coulomb_3_256']
 
