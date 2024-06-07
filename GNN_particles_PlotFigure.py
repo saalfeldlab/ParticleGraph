@@ -2544,6 +2544,8 @@ def data_plot_boids(config_file, device):
     n_particle_types = config.simulation.n_particle_types
     n_particles = config.simulation.n_particles
     n_runs = config.training.n_runs
+    has_cell_division = config.simulation.has_cell_division
+    n_frames = config.simulation.n_frames
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
@@ -2557,11 +2559,14 @@ def data_plot_boids(config_file, device):
     y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_0.pt', map_location=device))
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
-    x = x_list[0][0].clone().detach()
+    x = x_list[0][n_frames].clone().detach()
 
     index_particles = get_index_particles(x, n_particle_types, dimension)
     type_list = get_type_list(x, dimension)
-    n_particles = int(n_particles * (1 - train_config.particle_dropout))
+    n_particles = x.shape[0]
+    if has_cell_division:
+        n_particles_max = np.load(os.path.join(log_dir, 'n_particles_max.npy'))
+        config.simulation.n_particles_max = n_particles_max
 
     net_list=['20'] #'0_0','0_2000','0_5000', '0_9800', '5', '20']
     epoch = 20
@@ -4888,7 +4893,8 @@ if __name__ == '__main__':
     print(f'device {device}')
 
     # config_list = ['boids_16_256_bison_siren_with_time_2']
-    config_list = ['boids_16_256']
+    # config_list = ['boids_16_256']
+    config_list = ['boids_16_256_division_death_model_2']
     # config_list = ['wave_slit_test']
     # config_list = ['Coulomb_3_256']
 

@@ -496,6 +496,7 @@ def data_train_cell(config, config_file, device):
     ynorm = ynorm[4]
     torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
     torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
+    np.save(os.path.join(log_dir, 'n_particles_max.npy'), n_particles_max)
     time.sleep(0.5)
     print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
     logger.info(f'vnorm ynorm: {to_numpy(vnorm)} {to_numpy(ynorm)}')
