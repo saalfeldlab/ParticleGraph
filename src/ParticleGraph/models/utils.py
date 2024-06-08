@@ -244,7 +244,6 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
         plt.savefig(f"./{log_dir}/tmp_training/embedding/particle/embedding_{dataset_name}_{epoch}_{N}.tif",dpi=300)
         plt.close()
 
-    if has_no_tracking == False
         match model_config.particle_model_name:
             case 'PDE_GS':
                 fig = plt.figure(figsize=(8, 4))
@@ -284,7 +283,10 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
                 func_list = []
                 for n in range(n_particles):
-                    embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
+                    if has_no_tracking:
+                        embedding_ = model.a_current[n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
+                    else:
+                        embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
                     in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                              torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
                                              0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
@@ -363,7 +365,10 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                     plt.tight_layout()
                 rr = torch.tensor(np.linspace(0, simulation_config.max_radius, 200)).to(device)
                 for n in range(n_particles):
-                    embedding_ = model.a[dataset_num, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
+                    if has_no_tracking:
+                        embedding_ = model.a_current[n, :] * torch.ones((200, model_config.embedding_dim), device=device)
+                    else:
+                        embedding_ = model.a[1, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
                     if (model_config.particle_model_name == 'PDE_A'):
                         in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                                  rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
