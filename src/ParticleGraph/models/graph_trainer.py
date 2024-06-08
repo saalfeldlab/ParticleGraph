@@ -102,6 +102,7 @@ def data_train_particles(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
+    # print('Loading existing model ...')
     # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
@@ -167,8 +168,6 @@ def data_train_particles(config, config_file, device):
             run = 1 + np.random.randint(n_runs - 1)
 
             dataset_batch = []
-            time_batch = []
-
             for batch in range(batch_size):
 
                 k = 1 + np.random.randint(n_frames - 2)
@@ -484,6 +483,7 @@ def data_train_no_tracking(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
+    # print('Loading existing model ...')
     # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
@@ -535,8 +535,6 @@ def data_train_no_tracking(config, config_file, device):
             run = 1 + np.random.randint(n_runs - 1)
 
             dataset_batch = []
-            time_batch = []
-
             for batch in range(batch_size):
 
                 k = 1 + np.random.randint(n_frames - 2)
@@ -566,7 +564,7 @@ def data_train_no_tracking(config, config_file, device):
             optimizer.zero_grad()
 
             for batch in batch_loader:
-                pred, logvar = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, frame=k)
+                pred, logvar, sigma = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, frame=k)
 
             if data_augmentation:
                 new_x = cos_phi * pred[:, 0] - sin_phi * pred[:, 1]
@@ -574,14 +572,28 @@ def data_train_no_tracking(config, config_file, device):
                 pred[:, 0] = new_x
                 pred[:, 1] = new_y
 
-            x_pred = x_batch + pred * delta_t
+            x_pred = bc_pos(x_batch + pred * delta_t)
 
-            loss1 = ((x_pred - y_batch) / (logvar+1E-10)).norm(2)
-            loss2 = (logvar).norm(2)
+            loss1 = ((x_pred - y_batch)/sigma).norm(2)
+            loss2 = torch.sum(logvar)
             loss = loss1 + loss2
 
             visualize_embedding = True
+
+            if (epoch==0) & (k==100):
+                # matplotlib.use("Qt5Agg")
+                fig = plt.figure(figsize=(8, 8))
+                plt.scatter(to_numpy(x_batch[:, 0]), to_numpy(x_batch[:, 1]), s=10, c='k', alpha=0.1)
+                plt.scatter(to_numpy(y_batch[:, 0]), to_numpy(y_batch[:, 1]), s=10, c='r', alpha=0.1)
+                plt.scatter(to_numpy(x_pred[:, 0]), to_numpy(x_pred[:, 1]), s=10, c='b', alpha=0.1)
+                plt.xlim([0.2, 0.8])
+                plt.ylim([0.2, 0.8])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_training/embedding/Fig_{dataset_name}_{epoch}_{N}.tif")
+                plt.close()
+
             if visualize_embedding & (((epoch < 3 ) & (N % 500 == 0)) | (N==0)):
+
                 logger.info(f'{loss1.item()} {loss2.item()}')
                 model.a_current = model.a[1,k].clone().detach()
                 plot_training(config=config, dataset_name=dataset_name, log_dir=log_dir,
