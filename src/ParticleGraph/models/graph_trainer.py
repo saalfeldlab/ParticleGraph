@@ -122,7 +122,6 @@ def data_train_particles(config, config_file, device):
     logger.info(f'initial batch_size: {batch_size}')
 
     print('Update variables ...')
-    # update variable if particle_dropout, cell_division, etc ...
     x = x_list[1][n_frames - 1].clone().detach()
     n_particles = x.shape[0]
     config.simulation.n_particles = n_particles
@@ -148,7 +147,6 @@ def data_train_particles(config, config_file, device):
     time.sleep(1)
     for epoch in range(n_epochs + 1):
 
-        old_batch_size = batch_size
         batch_size = get_batch_size(epoch)
         logger.info(f'batch_size: {batch_size}')
         if (epoch == 1) & (has_ghost):
@@ -158,7 +156,6 @@ def data_train_particles(config, config_file, device):
             mask_ghost = mask_ghost[:, 0].astype(int)
 
         total_loss = 0
-        total_loss_division = 0
         Niter = n_frames * data_augmentation_loop // batch_size
 
         for N in range(Niter):
@@ -420,8 +417,6 @@ def data_train_particles(config, config_file, device):
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
         plt.close()
 
-        logging.shutdown()
-
 
 def data_train_no_tracking(config, config_file, device):
     print('')
@@ -444,8 +439,6 @@ def data_train_no_tracking(config, config_file, device):
     data_augmentation = train_config.data_augmentation
     data_augmentation_loop = train_config.data_augmentation_loop
     target_batch_size = train_config.batch_size
-    replace_with_cluster = 'replace' in train_config.sparsity
-    sparsity_freq = train_config.sparsity_freq
     if train_config.small_init_batch_size:
         get_batch_size = increasing_batch_size(target_batch_size)
     else:
@@ -511,7 +504,6 @@ def data_train_no_tracking(config, config_file, device):
     logger.info(f'initial batch_size: {batch_size}')
 
     print('Update variables ...')
-    # update variable if particle_dropout, cell_division, etc ...
     x = x_list[1][n_frames - 1].clone().detach()
     n_particles = x.shape[0]
     config.simulation.n_particles = n_particles
@@ -528,12 +520,10 @@ def data_train_no_tracking(config, config_file, device):
     time.sleep(1)
     for epoch in range(n_epochs + 1):
 
-        old_batch_size = batch_size
         batch_size = get_batch_size(epoch)
         logger.info(f'batch_size: {batch_size}')
 
         total_loss = 0
-        total_loss_division = 0
         Niter = n_frames * data_augmentation_loop // batch_size
 
         for N in range(Niter):
