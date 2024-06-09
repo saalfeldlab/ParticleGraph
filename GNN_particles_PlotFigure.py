@@ -589,7 +589,6 @@ def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoc
 
     return Accuracy
 
-
 def plot_cell_rates(config, device, log_dir, n_frames, n_particles_max, n_particle_types, x_list, new_labels, cmap):
 
 
@@ -635,7 +634,6 @@ def plot_cell_rates(config, device, log_dir, n_frames, n_particles_max, n_partic
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/cell_dead_{config_file}.tif", dpi=300)
     plt.close()
-
 
 def data_plot_attraction_repulsion(config_file, epoch_list, device):
     print('')

@@ -187,9 +187,6 @@ def data_train_particles(config, config_file, device):
                 x = x_list[run][k].clone().detach()
                 edges = edge_p_p_list[run][f'arr_{k}']
                 edges = torch.tensor(edges, dtype=torch.int64, device=device)
-                if sub_batches>0:
-                    sub_indexes, edges = subset_edges (edges, sub_batches, N % sub_batches, False, x[:, 6:7])
-
                 if has_ghost:
                     x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k, bc_pos=bc_pos)
                     if ghosts_particles.boids:
@@ -234,8 +231,6 @@ def data_train_particles(config, config_file, device):
 
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
-            elif sub_batches>0:
-                loss = (pred[sub_indexes] - y_batch[sub_indexes]).norm(2)
             else:
                 loss = (pred - y_batch).norm(2)
 
@@ -253,7 +248,6 @@ def data_train_particles(config, config_file, device):
                               n_particle_types=n_particle_types, type_list = type_list, ynorm=ynorm, cmap=cmap, axis=True, device=device)
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
-
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
@@ -288,66 +282,30 @@ def data_train_particles(config, config_file, device):
 
         if (simulation_config.n_interactions < 100):
             ax = fig.add_subplot(1, 6, 3)
-            if model_config.particle_model_name == 'PDE_G':
-                rr = torch.tensor(np.linspace(0, max_radius * 1.3, 1000)).to(device)
-            elif model_config.particle_model_name == 'PDE_GS':
-                rr = torch.tensor(np.logspace(7, 9, 1000)).to(device)
-            else:
-                rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
-            if dimension == 2:
-                column_dimension = 5
-            if dimension == 3:
-                column_dimension = 7
-            func_list, proj_interaction = analyze_edge_function(rr=rr, vizualize=True, config=config,
+            func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
                                                                 model_lin_edge=model.lin_edge, model_a=model.a,
                                                                 n_nodes = 0,
                                                                 dataset_number=1,
                                                                 n_particles=n_particles, ynorm=ynorm,
-                                                                types=to_numpy(x[:, column_dimension]),
-                                                                cmap=cmap, dimension=dimension, device=device)
-            ax = fig.add_subplot(1, 6, 4)
-            match train_config.cluster_method:
-                case 'kmeans_auto_plot':
-                    labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
-                case 'kmeans_auto_embedding':
-                    labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
-                    proj_interaction = embedding
-                case 'distance_plot':
-                    labels, n_clusters = embedding_cluster.get(proj_interaction, 'distance')
-                case 'distance_embedding':
-                    labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=0.05)
-                    proj_interaction = embedding
-                case 'distance_both':
-                    new_projection = np.concatenate((proj_interaction, embedding), axis=-1)
-                    labels, n_clusters = embedding_cluster.get(new_projection, 'distance')
-            for n in range(n_clusters):
-                pos = np.argwhere(labels == n)
-                pos = np.array(pos)
-                if pos.size > 0:
-                    plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=5)
-            label_list = []
-            for n in range(n_particle_types):
-                tmp = labels[index_particles[n]]
-                label_list.append(np.round(np.median(tmp)))
-            label_list = np.array(label_list)
-            plt.xlabel('proj 0', fontsize=12)
-            plt.ylabel('proj 1', fontsize=12)
-            plt.text(0., 1.1, f'Nclusters: {n_clusters}', ha='left', va='top', transform=ax.transAxes)
+                                                                types=to_numpy(type_list),
+                                                                cmap=cmap, device=device)
+
+            labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding,
+                                                              train_config.cluster_distance_threshold, index_particles,
+                                                              n_particle_types, embedding_cluster)
+
 
             ax = fig.add_subplot(1, 6, 5)
             new_labels = labels.copy()
             for n in range(n_particle_types):
-                new_labels[labels == label_list[n]] = n
-                pos = np.argwhere(labels == label_list[n])
+                new_labels == n
                 pos = np.array(pos)
                 if pos.size > 0:
                     plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1],
                                 color=cmap.color(n), s=0.1)
-            Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-            plt.text(0, 1.1, f'Accuracy: {np.round(Accuracy, 3)}', ha='left', va='top', transform=ax.transAxes,
-                     fontsize=10)
-            print(f'Accuracy: {np.round(Accuracy, 3)}   n_clusters: {n_clusters}')
-            logger.info(f'Accuracy: {np.round(Accuracy, 3)}    n_clusters: {n_clusters}')
+            accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
+            print(f'accuracy: {np.round(accuracy, 3)}   n_clusters: {n_clusters}')
+            logger.info(f'accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}')
 
             ax = fig.add_subplot(1, 6, 6)
             model_a_ = model.a[1].clone().detach()
