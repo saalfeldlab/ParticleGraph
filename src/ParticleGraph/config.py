@@ -17,12 +17,13 @@ class SimulationConfig(BaseModel):
     params: list[list[float]]
     cell_cycle_length: list[float] =[-1]
     cell_death_rate: list[float] = [-1]
-
     min_radius: Annotated[float, Field(ge=0)] = 0
     max_radius: Annotated[float, Field(gt=0)]
+    radius_pid: bool = False
+    max_edges: float = 1.0E6
     diffusion_coefficients: list[list[float]] = None
     n_particles: int = 1000
-    n_particles_max: int = 1000
+    n_particles_max: int = 20000
     n_particle_types: int = 5
     n_interactions: int = 5
     non_discrete_level: float = 0
@@ -99,11 +100,14 @@ class TrainingConfig(BaseModel):
     batch_size: int = 1
     small_init_batch_size: bool = True
     large_range: bool = False
+    has_no_tracking: bool = False
 
     n_runs: int = 2
+    seed : int = 40
     clamp: float = 0
     pred_limit: float = 1.E+10
     sparsity: Literal['none', 'replace_embedding', 'replace_embedding_function'] = 'none'
+    sparsity_freq : int = 5
     particle_dropout: float = 0
     n_ghosts: int = 0
     ghost_method: Literal['none', 'tensor', 'MLP'] = 'none'
@@ -116,14 +120,19 @@ class TrainingConfig(BaseModel):
     learning_rate_embedding_start: float = 0.001
     learning_rate_embedding_end: float = 0.001
 
+    coeff_loss1: float = 1
+    coeff_loss2: float = 1
+    coeff_loss3: float = 1
+
     noise_level: float = 0
     data_augmentation: bool = True
     data_augmentation_loop: int = 40
-    recursive_loop: int = 1
-    sub_batches: int = 0
+    recursive_loop: int = 0
+    sub_batches: int = 1
 
-    cluster_method: Literal['kmeans', 'kmeans_auto_plot', 'kmeans_auto_embedding', 'distance_plot', 'distance_embedding', 'distance_both'] = 'distance_plot'
-    
+    cluster_method: Literal['kmeans', 'kmeans_auto_plot', 'kmeans_auto_embedding', 'distance_plot', 'distance_embedding', 'distance_both', 'inconsistent_plot', 'inconsistent_embedding'] = 'distance_plot'
+    cluster_distance_threshold: float = 0.01
+    cluster_connectivity: Literal['single','average'] = 'single'
     device: Annotated[str, Field(pattern=r'^(auto|cpu|cuda:\d+)$')] = 'auto'
 
 

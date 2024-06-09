@@ -1,4 +1,3 @@
-========
 description: 'attraction-repulsion with 3 types particles'
 dataset: 'arbitrary_3'
 
@@ -20,7 +19,7 @@ graph_model:
   mesh_model_name: ''
   prediction: 'first_derivative'
   input_size: 5
-  output_size: 2
+  output_size: 3
   hidden_dim: 128
   n_mp_layers: 5
   aggr_type: 'mean'
@@ -32,16 +31,23 @@ plotting:
   arrow_length: 2
 
 training:
-  n_epochs: 0
-  batch_size: 8
-  small_init_batch_size: False
+  n_epochs: 10
+  has_no_tracking: True
+  batch_size: 1
+  small_init_batch_size: True
   n_runs: 2
   sparsity: 'replace_embedding_function'
   cluster_method: 'distance_plot'
   data_augmentation: True
-  data_augmentation_loop: 100
+  data_augmentation_loop: 200
   fix_cluster_embedding: True
+  learning_rate_start: 1.0E-4
+  learning_rate_end: 5.0E-5
+  learning_rate_embedding_start: 1.0E-4
+  learning_rate_embedding_end: 1.0E-4
   device: 'auto'
+  coeff_loss1: 1
+  coeff_loss2: 1.0E+2
 
 
 

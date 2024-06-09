@@ -32,11 +32,13 @@ class PDE_A(pyg.nn.MessagePassing):
         self.bc_dpos = bc_dpos
         self.dimension = dimension
 
-    def forward(self, data):
-        x, edge_index, field = data.x, data.edge_index, data.field
+    def forward(self, data=[], has_field=False):
+        x, edge_index = data.x, data.edge_index
 
-        if field == []:
-            field = torch.ones((x.shape[0], 1), device=x.device)
+        if has_field:
+            field = x[:,6:7]
+        else:
+            field = torch.ones_like(x[:,6:7])
 
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         particle_type = to_numpy(x[:, 1 + 2*self.dimension])
@@ -45,12 +47,6 @@ class PDE_A(pyg.nn.MessagePassing):
         d_pos = self.propagate(edge_index, pos=pos, parameters=parameters, field=field)
         return d_pos
 
-        import matplotlib
-        from matplotlib import pyplot as plt
-        matplotlib.use("Qt5Agg")
-        fig = plt.figure(figsize=(12, 12))
-        im = torch.reshape(field[0:10000, 0:1], (100, 100))
-        plt.imshow(to_numpy(im))
 
     def message(self, pos_i, pos_j, parameters_i, field_j):
 

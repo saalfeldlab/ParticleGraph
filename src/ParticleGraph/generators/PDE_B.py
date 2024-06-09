@@ -35,13 +35,13 @@ class PDE_B(pyg.nn.MessagePassing):
         self.a4 = 0.5E-5
         self.a5 = 1E-8
 
+    def forward(self, data=[], has_field=False):
+        x, edge_index = data.x, data.edge_index
 
-    def forward(self, data):
-
-        x, edge_index, field = data.x, data.edge_index, data.field
-
-        if field == []:
-            field = torch.ones((x.shape[0], 1), device=x.device)
+        if has_field:
+            field = x[:,6:7]
+        else:
+            field = torch.ones_like(x[:,6:7])
 
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         particle_type = to_numpy(x[:, 1 + 2*self.dimension])
@@ -59,7 +59,9 @@ class PDE_B(pyg.nn.MessagePassing):
         alignment = parameters_i[:,1,None] * self.a2 * self.bc_dpos(d_pos_j - d_pos_i)
         separation = - parameters_i[:,2,None] * self.a3 * self.bc_dpos(pos_j - pos_i) / distance_squared[:, None]
 
+
         return (separation + alignment + cohesion) * field_j
+
 
     def psi(self, r, p):
         cohesion = p[0] * self.a4 * r

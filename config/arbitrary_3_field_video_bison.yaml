@@ -1,16 +1,16 @@
-description: 'attraction-repulsion with 16 types particles'
-dataset: 'arbitrary_64'
+description: 'attraction-repulsion with 3 types particles'
+dataset: 'arbitrary_3_test_N'
 
 simulation:
-  params: [[-1]]
+  params: [[1.6233, 1.0413, 1.6012, 1.5615], [1.7667, 1.8308, 1.0855, 1.9055], [1.7226, 1.7850, 1.0584, 1.8579]]
   min_radius: 0
   max_radius: 0.075
-  n_particles: 4800
-  n_particle_types: 64
-  n_interactions: 64
-  n_frames: 1000
+  n_particles: 9600
+  n_particle_types: 3
+  n_interactions: 3
+  n_frames: 250
   sigma: 0.005
-  delta_t: 0.025
+  delta_t: 0.1
   dpos_init: 0
   boundary: 'periodic'
 
@@ -27,17 +27,17 @@ graph_model:
   update_type: 'none'
 
 plotting:
-  colormap: 'tab20'
+  colormap: 'tab10'
   arrow_length: 2
 
 training:
   n_epochs: 20
   batch_size: 1
+  sub_batches: 4
   small_init_batch_size: False
   n_runs: 2
-  sparsity: 'none'
+  sparsity: 'replace_embedding_function'
   cluster_method: 'distance_plot'
-  cluster_distance_threshold: 0.1
   data_augmentation: True
   data_augmentation_loop: 100
   fix_cluster_embedding: True

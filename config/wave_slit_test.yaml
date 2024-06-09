@@ -1,5 +1,5 @@
 description: 'Wave propagation'
-dataset: 'wave_slit_2'
+dataset: 'wave_slit'
 
 simulation:
   params: [[0.2],[1.4],[2.6],[3.8],[5.0]]
@@ -38,14 +38,13 @@ plotting:
   arrow_length: 10
 
 training:
-  n_epochs: 20
+  n_epochs: 0
   batch_size: 8
   small_init_batch_size: True
   n_runs: 2
   sparsity: 'replace_embedding'
   data_augmentation: True
-  data_augmentation_loop: 200
-  cluster_method: 'kmeans_auto_plot'
+  cluster_method: 'distance_plot'
   fix_cluster_embedding: True
 
   device: 'auto'

@@ -1,5 +1,5 @@
 description: 'attraction-repulsion with 16 types particles'
-dataset: 'arbitrary_64'
+dataset: 'arbitrary_64_256'
 
 simulation:
   params: [[-1]]
@@ -20,7 +20,7 @@ graph_model:
   prediction: 'first_derivative'
   input_size: 5
   output_size: 2
-  hidden_dim: 128
+  hidden_dim: 256
   n_mp_layers: 5
   aggr_type: 'mean'
   embedding_dim: 2
@@ -35,11 +35,12 @@ training:
   batch_size: 1
   small_init_batch_size: False
   n_runs: 2
-  sparsity: 'none'
+  sparsity: 'replace_embedding'
   cluster_method: 'distance_plot'
-  cluster_distance_threshold: 0.1
+  cluster_distance_threshold: 0.0025
+  cluster_connectivity:  'average'
   data_augmentation: True
-  data_augmentation_loop: 100
+  data_augmentation_loop: 20
   fix_cluster_embedding: True
   device: 'auto'
 

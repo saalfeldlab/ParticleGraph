@@ -1,30 +1,25 @@
-description: 'attraction-repulsion with 3 types particles + field with strong coupling'
-dataset: 'arbitrary_3_field_video_attractor_siren_with_time'
+description: 'attraction-repulsion with 3 types particles'
+dataset: 'arbitrary_3_division_death'
 
 simulation:
   params: [[1.6233, 1.0413, 1.6012, 1.5615], [1.7667, 1.8308, 1.0855, 1.9055], [1.7226, 1.7850, 1.0584, 1.8579]]
+  cell_cycle_length: [-1]
+  cell_death_rate: [1,2,3]
   min_radius: 0
   max_radius: 0.075
-  n_particles: 4800
+  n_particles: 2400
   n_particle_types: 3
   n_interactions: 3
-  n_frames: 256
+  has_cell_division: True
+  n_particles_max: 20000
+  n_frames: 2000
   sigma: 0.005
-  delta_t: 0.1
+  delta_t: 0.025
   dpos_init: 0
   boundary: 'periodic'
-  n_nodes: 10000
-  n_node_types: 1
-  diffusion_coefficients: [[0]]
-  pos_rate: [[0]]
-  neg_rate: [[0]]
-  node_value_map: 'video_bisons.tif'
-  node_type_map: 'pattern_Null.tif'
-  node_diffusion_map: 'pattern_Null.tif'
-  node_proliferation_map: 'pattern_Null.tif'
 
 graph_model:
-  particle_model_name: 'PDE_ParticleField_A'
+  particle_model_name: 'PDE_A'
   mesh_model_name: ''
   prediction: 'first_derivative'
   input_size: 5
@@ -34,7 +29,6 @@ graph_model:
   aggr_type: 'mean'
   embedding_dim: 2
   update_type: 'none'
-  field_type: 'siren_with_time'
 
 plotting:
   colormap: 'tab10'
@@ -45,18 +39,12 @@ training:
   batch_size: 8
   small_init_batch_size: False
   n_runs: 2
-  sparsity: 'none'
+  sparsity: 'replace_embedding_function'
   cluster_method: 'distance_plot'
   data_augmentation: True
-  data_augmentation_loop: 200
+  data_augmentation_loop: 100
   fix_cluster_embedding: True
   device: 'auto'
-
-
-
-
-
-
 
 
 

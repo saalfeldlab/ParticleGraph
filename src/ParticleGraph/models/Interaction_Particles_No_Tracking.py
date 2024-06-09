@@ -5,10 +5,9 @@ import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
 from ParticleGraph.MLP import MLP
 from ParticleGraph.utils import to_numpy
-from ParticleGraph.models import Siren_Network
 
 
-class Interaction_Particle_Field(pyg.nn.MessagePassing):
+class Interaction_Particles_No_Tracking(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
@@ -29,7 +28,7 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
 
     def __init__(self, config, device, aggr_type=None, bc_dpos=None, dimension=2):
 
-        super(Interaction_Particle_Field, self).__init__(aggr=aggr_type)  # "Add" aggregation.
+        super(Interaction_Particles_No_Tracking, self).__init__(aggr=aggr_type)  # "Add" aggregation.
 
         simulation_config = config.simulation
         model_config = config.graph_model
@@ -41,14 +40,13 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         self.hidden_dim = model_config.hidden_dim
         self.n_layers = model_config.n_mp_layers
         self.n_particles = simulation_config.n_particles
-        self.n_nodes = simulation_config.n_nodes
-        self.n_nodes_per_axis = int(np.sqrt(self.n_nodes))
         self.max_radius = simulation_config.max_radius
         self.data_augmentation = train_config.data_augmentation
         self.noise_level = train_config.noise_level
         self.embedding_dim = model_config.embedding_dim
         self.n_dataset = train_config.n_runs
         self.prediction = model_config.prediction
+        self.n_particles_max = simulation_config.n_particles_max
         self.update_type = model_config.update_type
         self.n_layers_update = model_config.n_layers_update
         self.hidden_dim_update = model_config.hidden_dim_update
@@ -57,9 +55,7 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         self.bc_dpos = bc_dpos
         self.n_ghosts = int(train_config.n_ghosts)
         self.dimension = dimension
-
-        print('Model:', self.n_particles, self.n_ghosts)
-
+        self.n_frames = simulation_config.n_frames
 
         if train_config.large_range:
             self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
@@ -68,62 +64,45 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
             self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device)
 
-        if simulation_config.has_cell_division :
-            self.a = nn.Parameter(
-                torch.tensor(np.ones((self.n_dataset, 20500, 2)), device=self.device,
-                             requires_grad=True, dtype=torch.float32))
-        else:
-            self.a = nn.Parameter(
-                torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
-                             requires_grad=True, dtype=torch.float32))
-
-        if (model_config.field_method == 'tensor'):
-            self.field = nn.Parameter(
-                    torch.tensor(np.zeros((self.n_dataset, int(self.n_nodes), 1)), device=self.device, requires_grad=True, dtype=torch.float32))
-        elif (model_config.field_method == 'Siren_wo_time'):
-            self.field=[]
-            for n in range(self.n_dataset):
-                image_width = self.n_nodes_per_axis
-                self.field.append(Siren_Network(image_width=image_width, in_features=2, out_features=1, hidden_features=256, hidden_layers=8, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.))
-        elif (model_config.field_method == 'Siren_with_time'):
-            self.field = []
-            for n in range(self.n_dataset):
-                image_width = self.n_nodes_per_axis
-                self.field.append(Siren_Network(image_width=image_width, in_features=2, out_features=1, hidden_features=256, hidden_layers=8, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.))
-
+        self.a = nn.Parameter(
+            torch.tensor(np.ones((self.n_dataset, int(self.n_frames), int(self.n_particles), self.embedding_dim)), device=self.device,
+                         requires_grad=True, dtype=torch.float32))
 
 
         if self.update_type != 'none':
             self.lin_update = MLP(input_size=self.output_size + self.embedding_dim + 2, output_size=self.output_size,
                                   nlayers=self.n_layers_update, hidden_size=self.hidden_dim_update, device=self.device)
 
-    def forward(self, data=[], data_id=[], training=[], vnorm=[], phi=[], has_field=False):
-
+    def forward(self, data=[], data_id=[], training=[], vnorm=[], phi=[], frame=[], has_field=False):
 
         self.data_id = data_id
+        self.frame = frame
         self.vnorm = vnorm
         self.cos_phi = torch.cos(phi)
         self.sin_phi = torch.sin(phi)
-        self.has_field = has_field
         self.training = training
+        self.has_field = has_field
 
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
-        pos = x[:, 1:self.dimension+1]
-        d_pos = x[:, self.dimension+1:1+2*self.dimension]
         if has_field:
             field = x[:,6:7]
         else:
             field = torch.ones_like(x[:,6:7])
 
+        pos = x[:, 1:self.dimension+1]
+        d_pos = x[:, self.dimension+1:1+2*self.dimension]
         particle_id = x[:, 0:1]
 
         pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id, field=field)
 
-        if self.update_type == 'linear':
-            embedding = self.a[self.data_id, particle_id, :]
-            pred = self.lin_update(torch.cat((pred, x[:, 3:5], embedding), dim=-1))
+        mu = pred[:, 0:2]
+        log_var = pred[:, 2:3]
+        log_var = log_var.repeat(1,2)
+        sigma = torch.exp(0.5 * log_var) + 1e-10
+        eps = torch.randn_like(sigma)
+        return mu + sigma * eps, log_var, sigma
 
         return pred
 
@@ -153,19 +132,29 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
             dpos_x_j = new_dpos_x_j
             dpos_y_j = new_dpos_y_j
 
-        embedding_i = self.a[self.data_id, to_numpy(particle_id_i), :].squeeze()
-        # embedding_j = self.a[self.data_id, to_numpy(particle_id_j), :].squeeze()
+        embedding_i = self.a[self.data_id, self.frame, to_numpy(particle_id_i), :].squeeze()
+        embedding_j = self.a[self.data_id, self.frame, to_numpy(particle_id_j), :].squeeze()
 
         match self.model:
-            case 'PDE_ParticleField_A':
-                    in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
-            case 'PDE_ParticleField_B':
-                    in_features = torch.cat(
-                        (delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
-                         dpos_y_j[:, None], embedding_i), dim=-1)
+            case 'PDE_A'|'PDE_ParticleField_A':
+                in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
+            case 'PDE_A_bis':
+                in_features = torch.cat((delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
+            case 'PDE_B' | 'PDE_B_bis':
+                in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
+                                         dpos_y_j[:, None], embedding_i), dim=-1)
+            case 'PDE_G':
+                in_features = torch.cat(
+                    (delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None], dpos_y_j[:, None],
+                     embedding_j),
+                    dim=-1)
+            case 'PDE_GS':
+                in_features = torch.cat((delta_pos, r[:, None], 10**embedding_j),dim=-1)
+            case 'PDE_E':
+                in_features = torch.cat(
+                    (delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
 
         out = self.lin_edge(in_features) * field_j
-
 
         return out
 
@@ -175,8 +164,8 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
 
     def psi(self, r, p1, p2):
 
-        if (self.model == 'PDE_A') | (self.model =='PDE_A_bis')  | (self.model=='PDE_ParticleField_A'):
-            return r * (p1[0] * torch.exp(-r ** (2 * p1[1]) / (2 * self.sigma ** 2)) - p1[2] * torch.exp(-r ** (2 * p1[3]) / (2 * self.sigma ** 2)))
+        if (self.model == 'PDE_A') | (self.model =='PDE_A_bis') | (self.model=='PDE_ParticleField_A'):
+            return r * (p1[0] * torch.exp(-torch.abs(r) ** (2 * p1[1]) / (2 * self.sigma ** 2)) - p1[2] * torch.exp(-torch.abs(r) ** (2 * p1[3]) / (2 * self.sigma ** 2)))
         if self.model == 'PDE_B':
             cohesion = p1[0] * 0.5E-5 * r
             separation = -p1[2] * 1E-8 / r

@@ -47,6 +47,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         self.embedding_dim = model_config.embedding_dim
         self.n_dataset = train_config.n_runs
         self.prediction = model_config.prediction
+        self.n_particles_max = simulation_config.n_particles_max
         self.update_type = model_config.update_type
         self.n_layers_update = model_config.n_layers_update
         self.hidden_dim_update = model_config.hidden_dim_update
@@ -65,7 +66,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
 
         if simulation_config.has_cell_division :
             self.a = nn.Parameter(
-                torch.tensor(np.ones((self.n_dataset, 20500, 2)), device=self.device,
+                torch.tensor(np.ones((self.n_dataset, self.n_particles_max, 2)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
         else:
             self.a = nn.Parameter(
@@ -77,7 +78,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
             self.lin_update = MLP(input_size=self.output_size + self.embedding_dim + 2, output_size=self.output_size,
                                   nlayers=self.n_layers_update, hidden_size=self.hidden_dim_update, device=self.device)
 
-    def forward(self, data, data_id, training, vnorm, phi, has_field):
+    def forward(self, data=[], data_id=[], training=[], vnorm=[], phi=[], has_field=False):
 
         self.data_id = data_id
         self.vnorm = vnorm
@@ -85,15 +86,21 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         self.sin_phi = torch.sin(phi)
         self.training = training
         self.has_field = has_field
+
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+
+        if has_field:
+            field = x[:,6:7]
+        else:
+            field = torch.ones_like(x[:,6:7])
 
         pos = x[:, 1:self.dimension+1]
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
         particle_id = x[:, 0:1]
         field = x[:, 6:7]
 
-        pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id, field=field, has_field=has_field)
+        pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id, field=field)
 
         if self.update_type == 'linear':
             embedding = self.a[self.data_id, particle_id, :]
@@ -101,7 +108,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
 
         return pred
 
-    def message(self, pos_i, pos_j, d_pos_i, d_pos_j, particle_id_i, particle_id_j, field_j, has_field):
+    def message(self, pos_i, pos_j, d_pos_i, d_pos_j, particle_id_i, particle_id_j, field_j):
         # squared distance
         r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
         delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
@@ -149,9 +156,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
                 in_features = torch.cat(
                     (delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
 
-        out = self.lin_edge(in_features)
-        if self.has_field:
-            out = out * field_j
+        out = self.lin_edge(in_features) * field_j
 
         if self.model == 'PDE_B':
             self.diffx = delta_pos * self.max_radius

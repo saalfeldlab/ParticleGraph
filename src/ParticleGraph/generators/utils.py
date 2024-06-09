@@ -202,11 +202,61 @@ def init_particles(config, device):
 
     dpos_init = simulation_config.dpos_init
 
+    if (simulation_config.boundary == 'periodic'): # | (simulation_config.dimension == 3):
+        pos = torch.rand(n_particles, dimension, device=device)
+    else:
+        pos = torch.randn(n_particles, dimension, device=device) * 0.5
+    dpos = dpos_init * torch.randn((n_particles, dimension), device=device)
+    dpos = torch.clamp(dpos, min=-torch.std(dpos), max=+torch.std(dpos))
+    type = torch.zeros(int(n_particles / n_particle_types), device=device)
+    for n in range(1, n_particle_types):
+        type = torch.cat((type, n * torch.ones(int(n_particles / n_particle_types), device=device)), 0)
+    if (simulation_config.params == 'continuous') | (config.simulation.non_discrete_level > 0):  # TODO: params is a list[list[float]]; this can never happen?
+        type = torch.tensor(np.arange(n_particles), device=device)
+    features = torch.cat((torch.rand((n_particles, 1), device=device) , 0.1 * torch.randn((n_particles, 1), device=device)), 1)
+    type = type[:, None]
+    particle_id = torch.arange(n_particles, device=device)
+    particle_id = particle_id[:, None]
+    age = torch.zeros((n_particles,1), device=device)
+
+    scenario = ''
+
+    match scenario:
+        case 'pattern':
+            i0 = imread(f'graphs_data/pattern_0.tif')
+            type = np.round(i0[(to_numpy(pos[:, 0]) * 255).astype(int), (to_numpy(pos[:, 1]) * 255).astype(int)] / 255 * n_particle_types-1).astype(int)
+            type = torch.tensor(type, device=device)
+            type = type[:, None]
+        case 'uniform':
+            type = torch.ones(n_particles, device=device) * 1
+            type =  type[:, None]
+        case 'stripes':
+            l = n_particles//n_particle_types
+            for n in range(n_particle_types):
+                index = np.arange(n*l, (n+1)*l)
+                pos[index, 0:1] = torch.rand(l, 1, device=device) * (1/n_particle_types) + n/n_particle_types
+        case _:
+            pass
+
+    return pos, dpos, type, features, age, particle_id
+
+
+def init_cells(config, device):
+    simulation_config = config.simulation
+    n_particles = simulation_config.n_particles
+    n_particle_types = simulation_config.n_particle_types
+    dimension = simulation_config.dimension
+    has_cell_division = simulation_config.has_cell_division
+
+    dpos_init = simulation_config.dpos_init
+
+
+
     if config.simulation.cell_cycle_length != [-1]:
         cycle_length = torch.tensor(config.simulation.cell_cycle_length, device=device)
     else:
-        cycle_length = torch.clamp(torch.abs(torch.ones(n_particle_types, 1, device=device) * 400 + torch.randn(n_particle_types, 1, device=device) * 50), min=100, max=700)
-
+        cycle_length = torch.clamp(torch.abs(torch.ones(n_particle_types, 1, device=device) * 250 + torch.randn(n_particle_types, 1, device=device) * 50), min=100, max=700)
+    # 400
     if config.simulation.cell_death_rate != [-1]:
         cell_death_rate = torch.tensor(config.simulation.cell_death_rate, device=device)
     else:
@@ -223,10 +273,8 @@ def init_particles(config, device):
         type = torch.cat((type, n * torch.ones(int(n_particles / n_particle_types), device=device)), 0)
     if (simulation_config.params == 'continuous') | (config.simulation.non_discrete_level > 0):  # TODO: params is a list[list[float]]; this can never happen?
         type = torch.tensor(np.arange(n_particles), device=device)
-    if has_cell_division:
-        features = torch.ones(n_particles, 2, device=device)
-    else:
-        features = torch.cat((torch.rand((n_particles, 1), device=device), 0.1 * torch.randn((n_particles, 1), device=device)), 1)
+    features = torch.ones(n_particles, 2, device=device)
+    features [:,1] = 0
     cycle_length_distrib = cycle_length[to_numpy(type)].squeeze() * (torch.ones(n_particles, device=device) + 0.05 * torch.randn(n_particles, device=device))
     cycle_duration = torch.rand(n_particles, device=device)
     cycle_duration = cycle_duration * cycle_length[to_numpy(type)].squeeze()
@@ -255,8 +303,7 @@ def init_particles(config, device):
         case _:
             pass
 
-    if has_cell_division:
-        print(f'cycle_length {to_numpy(cycle_length)}')
+    return pos, dpos, type, features, cycle_duration, particle_id, cycle_length, cycle_length_distrib, cell_death_rate, cell_death_rate_distrib
 
     return pos, dpos, type, features, cycle_duration, particle_id, cycle_length, cycle_length_distrib, cell_death_rate, cell_death_rate_distrib
 

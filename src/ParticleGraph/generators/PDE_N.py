@@ -36,9 +36,9 @@ class PDE_N(pyg.nn.MessagePassing):
 
         u = x[:, 4:5]
 
-        indices = torch.arange(0, x.size(0),device=x.device)
+        # indices = torch.arange(0, x.size(0),device=x.device)
 
-        msg = self.propagate(edge_index, u=u, edge_attr=edge_attr, indices=indices[:,None])
+        msg = self.propagate(edge_index, u=u, edge_attr=edge_attr)
 
         du = -b*u + c*torch.tanh(u) + msg
 
