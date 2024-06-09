@@ -46,6 +46,8 @@ training:
   learning_rate_embedding_start: 1.0E-4
   learning_rate_embedding_end: 1.0E-4
   device: 'auto'
+  coeff_loss1: 1
+  coeff_loss2: 1.0E+4
 
 
 

@@ -575,12 +575,13 @@ def data_train_no_tracking(config, config_file, device):
             x_pred = bc_pos(x_batch + pred * delta_t)
 
             loss1 = ((x_pred - y_batch)/sigma).norm(2)
-            loss2 = torch.sum(logvar)
-            loss = loss1 + loss2
+            loss2 = torch.sum(sigma)
+            loss3 = pred.norm(2)
+            loss = loss1 + 1E3*loss2
 
             visualize_embedding = True
 
-            if (epoch==0) & (k==100):
+            if (k==100):
                 # matplotlib.use("Qt5Agg")
                 fig = plt.figure(figsize=(8, 8))
                 plt.scatter(to_numpy(x_batch[:, 0]), to_numpy(x_batch[:, 1]), s=10, c='k', alpha=0.1)
@@ -592,9 +593,9 @@ def data_train_no_tracking(config, config_file, device):
                 plt.savefig(f"./{log_dir}/tmp_training/embedding/Fig_{dataset_name}_{epoch}_{N}.tif")
                 plt.close()
 
-            if visualize_embedding & (((epoch < 3 ) & (N % 500 == 0)) | (N==0)):
+            if visualize_embedding & (((epoch < 3 ) & (N % 1000 == 0)) | (N==0)):
 
-                logger.info(f'{loss1.item()} {loss2.item()}')
+                logger.info(f'{loss1.item()} {loss2.item()} {loss3.item()}')
                 model.a_current = model.a[1,k].clone().detach()
                 plot_training(config=config, dataset_name=dataset_name, log_dir=log_dir,
                               epoch=epoch, N=N, x=x, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
