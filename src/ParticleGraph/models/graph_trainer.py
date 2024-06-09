@@ -577,7 +577,7 @@ def data_train_no_tracking(config, config_file, device):
             loss1 = ((x_pred - y_batch)/sigma).norm(2)
             loss2 = torch.sum(sigma)
             loss3 = pred.norm(2)
-            loss = loss1 + 1E3*loss2
+            loss = config.training.coeff_loss1 * loss1 + config.training.coeff_loss1 * loss2
 
             visualize_embedding = True
 

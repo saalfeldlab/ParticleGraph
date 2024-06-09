@@ -43,13 +43,12 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_64_256_0_005_replace_function','arbitrary_64_256_0_005'] # 'arbitrary_64_256_0_005_freq_2',
     # config_list = ['arbitrary_64_256_0_005_seed_43','arbitrary_64_256_0_005_seed_44', 'arbitrary_64_256_0_005_seed_45']
     # config_list = ['arbitrary_64_256']
-
     # config_list = ['boids_16_256_division_death_0_125']
     # config_list = ['arbitrary_3_division_death']
     # config_list = ['boids_16_256']
     # config_list = ['boids_16_256_test_cell_division_c']
     # config_list = ['boids_16_256_division_death_model_2']
-    config_list = ['arbitrary_3_no_tracking_c']
+    config_list = ['arbitrary_3_no_tracking']
 
     seed_list = np.arange(10)
 

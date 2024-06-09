@@ -100,7 +100,7 @@ class Interaction_Particles_No_Tracking(pyg.nn.MessagePassing):
         mu = pred[:, 0:2]
         log_var = pred[:, 2:3]
         log_var = log_var.repeat(1,2)
-        sigma = torch.exp(0.5 * log_var) + 1e-5
+        sigma = torch.exp(0.5 * log_var) + 1e-10
         eps = torch.randn_like(sigma)
         return mu + sigma * eps, log_var, sigma
 
