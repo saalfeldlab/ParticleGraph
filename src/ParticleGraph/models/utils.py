@@ -57,7 +57,7 @@ def plot_training_signal(config, dataset, model, adjacency, log_dir, epoch, N, i
     plt.xlim([-1.25, 1.25])
     plt.ylim([-1.25, 1.25])
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/embedding/particle/network_{epoch}_{N}.tif", dpi=170.7)
+    plt.savefig(f"./{log_dir}/tmp_training/particle/network_{epoch}_{N}.tif", dpi=170.7)
     plt.close()
 
 def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dataset_name, n_frames, model_name, log_dir, epoch, N, x, x_mesh, model_field, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
@@ -93,7 +93,7 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dat
                         embedding[index_particles[n], 1], color=cmap.color(n), s=200)  #
 
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/embedding/particle/{model_name}_{dataset_name}_embedding_{epoch}_{N}.tif", dpi=170.7)
+    plt.savefig(f"./{log_dir}/tmp_training/particle/{model_name}_{dataset_name}_embedding_{epoch}_{N}.tif", dpi=170.7)
     plt.close()
 
     fig = plt.figure(figsize=(12, 12))
@@ -142,7 +142,7 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dat
             plt.ylim([-1E-4, 1E-4])
 
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/embedding/function/{model_name}_{dataset_name}_function_{epoch}_{N}.tif", dpi=170.7)
+    plt.savefig(f"./{log_dir}/tmp_training/function/{model_name}_{dataset_name}_function_{epoch}_{N}.tif", dpi=170.7)
     plt.close()
 
     fig = plt.figure(figsize=(12, 12))
@@ -170,7 +170,7 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dat
             plt.xticks([])
             plt.yticks([])
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/embedding/field/{model_name}_{epoch}_{N}_{frame}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/tmp_training/field/{model_name}_{epoch}_{N}_{frame}.tif", dpi=170.7)
             plt.close()
 
     else:
@@ -179,11 +179,11 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dat
         plt.imshow(im)
         plt.gca().invert_yaxis()
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/embedding/field/{model_name}_{dataset_name}_field_{epoch}_{N}.tif", dpi=87)
+        plt.savefig(f"./{log_dir}/tmp_training/field/{model_name}_{dataset_name}_field_{epoch}_{N}.tif", dpi=87)
         plt.close()
 
     # im = np.flipud(im)
-    # io.imsave(f"./{log_dir}/tmp_training/embedding/field_pic_{dataset_name}_{epoch}_{N}.tif", im)
+    # io.imsave(f"./{log_dir}/tmp_training/field_pic_{dataset_name}_{epoch}_{N}.tif", im)
 
 def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 
@@ -214,7 +214,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
         plt.xticks([])
         plt.yticks([])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/embedding/particle/{dataset_name}_{epoch}_{N}.tif",dpi=87)
+        plt.savefig(f"./{log_dir}/tmp_training/particle/{dataset_name}_{epoch}_{N}.tif",dpi=87)
         plt.close()
 
         fig = plt.figure(figsize=(8, 8))
@@ -223,12 +223,12 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
         plt.xticks([])
         plt.yticks([])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/embedding/function/mesh_map_{dataset_name}_{epoch}_{N}.tif",
+        plt.savefig(f"./{log_dir}/tmp_training/function/mesh_map_{dataset_name}_{epoch}_{N}.tif",
                     dpi=87)
         plt.close()
     elif model_config.mesh_model_name == 'RD_RPD_Mesh':
         fig = plt.figure(figsize=(8, 8))
-        plt.savefig(f"./{log_dir}/tmp_training/embedding/function/mesh_map_{dataset_name}_{epoch}_{N}.tif",
+        plt.savefig(f"./{log_dir}/tmp_training/function/mesh_map_{dataset_name}_{epoch}_{N}.tif",
                     dpi=87)
     else:
         fig = plt.figure(figsize=(8, 8))
@@ -241,7 +241,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
         plt.xticks([])
         plt.yticks([])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/embedding/particle/embedding_{dataset_name}_{epoch}_{N}.tif",dpi=87)
+        plt.savefig(f"./{log_dir}/tmp_training/particle_{dataset_name}_{epoch}_{N}.tif",dpi=87)
         plt.close()
 
         match model_config.particle_model_name:
@@ -271,7 +271,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 plt.xlim([-10, 4])
                 plt.ylim([-10, 4])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/embedding/function/func_{dataset_name}_{epoch}_{N}.tif", dpi=87)
+                plt.savefig(f"./{log_dir}/tmp_training/function/func_{dataset_name}_{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
             case 'PDE_B' | 'PDE_ParticleField_B':
@@ -309,7 +309,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 plt.xticks(fontsize=32.0)
                 plt.yticks(fontsize=32.0)
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/embedding/function/{dataset_name}_function_{epoch}_{N}.tif",dpi=170.7)
+                plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_function_{epoch}_{N}.tif",dpi=170.7)
                 plt.close()
 
             case 'PDE_G':
@@ -343,7 +343,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 plt.xlim([0, 0.02])
                 plt.ylim([0, 0.5E6])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/embedding/function/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
+                plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
             case 'PDE_A'| 'PDE_A_bis' | 'PDE_ParticleField_A' | 'PDE_E':
@@ -398,7 +398,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                                  color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
                 plt.ylim([-0.1, 0.1])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/embedding/function/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
+                plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
 def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, index_particles, n_particle_types, type_list, ynorm, cmap, device):
@@ -417,7 +417,7 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, index_par
     plt.xticks([])
     plt.yticks([])
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/embedding/particle/embedding_{dataset_name}_{epoch}_{N}.tif", dpi=87)
+    plt.savefig(f"./{log_dir}/tmp_training/particle_{dataset_name}_{epoch}_{N}.tif", dpi=87)
     plt.close()
 
     match model_config.particle_model_name:
@@ -454,7 +454,7 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, index_par
             plt.xticks(fontsize=32.0)
             plt.yticks(fontsize=32.0)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/embedding/function/{dataset_name}_function_{epoch}_{N}.tif",dpi=170.7)
+            plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_function_{epoch}_{N}.tif",dpi=170.7)
             plt.close()
 
         case 'PDE_A'| 'PDE_A_bis' | 'PDE_ParticleField_A' | 'PDE_E':
@@ -505,7 +505,7 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, index_par
                              color=cmap.color( int(to_numpy(type_list[n])) ), alpha=0.25)
             plt.ylim([-0.1, 0.1])
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/embedding/function/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
+            plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
             plt.close()
 
 def analyze_edge_function(rr=[], vizualize=False, config=None, model_lin_edge=[], model_a=None, n_nodes=0, dataset_number = 0, n_particles=None, ynorm=None, types=None, cmap=None, dimension=2, device=None):
