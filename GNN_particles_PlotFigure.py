@@ -788,9 +788,8 @@ def data_plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger
         true_func = []
         for n in range(n_particle_types):
             for m in range(n_particle_types):
-                plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[3 * n + m], p[3 * n + m]).squeeze()),
-                         color=cmap.color(n), linewidth=8)
-                true_func.append(model.psi(rr, p[3 * n + m].squeeze(), p[n * 3 + m].squeeze()))
+                true_func.append(model.psi(rr, p[n, m].squeeze(), p[n, m].squeeze()))
+                plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n,m], p[n,m]).squeeze()), color=cmap.color(n), linewidth=8)
         plt.xlabel(r'$d_{ij}$', fontsize=64)
         plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=64)
         plt.ylim(config.plotting.ylim)
