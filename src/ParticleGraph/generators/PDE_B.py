@@ -41,7 +41,7 @@ class PDE_B(pyg.nn.MessagePassing):
         if has_field:
             field = x[:,6:7]
         else:
-            field = torch.ones_like(x[:,6:7])
+            field = torch.ones_like(x[:,0:1])
 
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         particle_type = to_numpy(x[:, 1 + 2*self.dimension])
@@ -60,7 +60,7 @@ class PDE_B(pyg.nn.MessagePassing):
         separation = - parameters_i[:,2,None] * self.a3 * self.bc_dpos(pos_j - pos_i) / distance_squared[:, None]
 
 
-        return (separation + alignment + cohesion) * field_j
+        return (separation + alignment + cohesion) * field_j.repeat(1,2)
 
 
     def psi(self, r, p):

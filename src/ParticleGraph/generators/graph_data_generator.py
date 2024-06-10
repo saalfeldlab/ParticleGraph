@@ -47,7 +47,6 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
     min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
-    n_particles_max = simulation_config.n_particles_max
     delta_t = simulation_config.delta_t
     has_signal = (config.graph_model.signal_model_name != '')
     has_adjacency_matrix = (simulation_config.connectivity_file != '')
@@ -74,6 +73,11 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         files = glob.glob(f'./graphs_data/graphs_{dataset_name}/generated_data/*')
         for f in files:
             os.remove(f)
+
+    logging.basicConfig(filename=f'./graphs_data/graphs_{dataset_name}/generator.log', format='%(asctime)s %(message)s', filemode='w')
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    logger.info(config)
 
     for run in range(config.training.n_runs):
 
@@ -127,8 +131,6 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
 
             if has_signal:
                 x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), T1.clone().detach(), H1.clone().detach()), 1)
-            elif has_cell_division:
-                x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
             else:
                 x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach()), 1)
 
@@ -140,22 +142,17 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                     edge_index = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
                     edge_index = ((edge_index < max_radius ** 2) & (edge_index > min_radius ** 2)).float() * 1
                     edge_index = edge_index.nonzero().t().contiguous()
-                    if not (has_particle_dropout):
-                        edge_p_p_list.append(to_numpy(edge_index))
-                    if has_cell_division:
-                        alive = (H1[:,0] == 1).float()*1.
-                        dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=alive[:,None])
-                    else:
-                        dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=[])
+                    edge_p_p_list.append(to_numpy(edge_index))
+                    dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=[])
 
             # model prediction
             with torch.no_grad():
                 y = model(dataset)
-                if has_cell_division:
-                    y = y * alive[:,None].repeat(1,2)
-            if (it) % 500 == 0:
+            if it % 100  == 0:
                 t, r, a = get_gpu_memory_map(device)
-                print(f'x {to_numpy(x).shape}, y {to_numpy(y).shape}, edges {to_numpy(edge_index).shape}')
+                logger.info(f"GPU memory: total {t} reserved {r} allocated {a}")
+                logger.info(f'{x.shape[0]} particles,  {edge_index.shape[1]} edges, max_radius: {np.round(max_radius,3)},')
+                logger.info(f'max_radius {max_radius} {edge_index.shape[1]}')
 
             # append list
             if (it >= 0) & bSave:
@@ -180,10 +177,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                     V1 += y * delta_t
                 else:
                     V1 = y
-                if has_cell_division:
-                    V1 = V1 * alive[:,None].repeat(1,2)
                 X1 = bc_pos(X1 + V1 * delta_t)
-
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
@@ -507,7 +501,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 y = model(dataset, has_field=True)
                 y = y * alive[:,None].repeat(1,2)
 
-            if (it) % 25 == 0:
+            if it % 100  == 0:
                 t, r, a = get_gpu_memory_map(device)
                 logger.info(f"GPU memory: total {t} reserved {r} allocated {a}")
                 logger.info(f'{x.shape[0]} particles,  {edge_index.shape[1]} edges, max_radius: {np.round(max_radius,3)},')

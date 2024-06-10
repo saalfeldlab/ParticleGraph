@@ -38,7 +38,7 @@ class PDE_A(pyg.nn.MessagePassing):
         if has_field:
             field = x[:,6:7]
         else:
-            field = torch.ones_like(x[:,6:7])
+            field = torch.ones_like(x[:,0:1])
 
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         particle_type = to_numpy(x[:, 1 + 2*self.dimension])
@@ -53,7 +53,7 @@ class PDE_A(pyg.nn.MessagePassing):
         distance_squared = torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, axis=1)  # squared distance
         psi = (parameters_i[:, 0] * torch.exp(-distance_squared ** parameters_i[:, 1] / (2 * self.sigma ** 2))
                - parameters_i[:, 2] * torch.exp(-distance_squared ** parameters_i[:, 3] / (2 * self.sigma ** 2)))
-        d_pos = psi[:, None] * self.bc_dpos(pos_j - pos_i) * field_j
+        d_pos = psi[:, None] * self.bc_dpos(pos_j - pos_i) * field_j.repeat(1,2)
 
         return d_pos
 
