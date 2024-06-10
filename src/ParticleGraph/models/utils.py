@@ -614,8 +614,7 @@ def choose_training_model(model_config, device):
     model_name = model_config.graph_model.particle_model_name
     match model_name:
         case 'PDE_ParticleField_A' | 'PDE_ParticleField_B':
-            model = Interaction_Particle_Field(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos,
-                                          dimension=dimension)
+            model = Interaction_Particle_Field(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
         case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G':
             if has_no_tracking:

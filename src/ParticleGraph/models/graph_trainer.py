@@ -2375,17 +2375,12 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         print(table)
         print(f"Total Trainable Params: {total_params}")
 
-
         if has_division:
             model_division = Division_Predictor(config, device)
             net = f"./log/try_{config_file}/models/best_model_division_with_{n_runs - 1}_graphs_20.pt"
             state_dict = torch.load(net, map_location=device)
             model_division.load_state_dict(state_dict['model_state_dict'])
             model_division.eval()
-        if os.path.isfile(os.path.join(log_dir, f'labels_{best_model}.pt')):
-            print('Use learned labels')
-            labels = torch.load(os.path.join(log_dir, f'labels_{best_model}.pt'))
-
 
     n_sub_population = n_particles // n_particle_types
     first_embedding = model.a[1].data.clone().detach()

@@ -37,14 +37,10 @@ def choose_model(config, device):
     model_signal_name = config.graph_model.signal_model_name
     aggr_type = config.graph_model.aggr_type
     n_particles = config.simulation.n_particles
-    n_node_types = config.simulation.n_node_types
-    n_nodes = config.simulation.n_nodes
     n_particle_types = config.simulation.n_particle_types
     dimension = config.simulation.dimension
 
     bc_pos, bc_dpos = choose_boundary_values(config.simulation.boundary)
-    # bc_pos_np, bc_dpos_np = choose_boundary_np_values(config.simulation.boundary)
-
 
     params = config.simulation.params
 
@@ -71,11 +67,6 @@ def choose_model(config, device):
             sigma = config.simulation.sigma
             p = p if n_particle_types == 1 else torch.squeeze(p)
             model = PDE_A(aggr_type=aggr_type, p=torch.squeeze(p), sigma=sigma, bc_dpos=bc_dpos, dimension=dimension)
-            # matplotlib.use("Qt5Agg")
-            # rr = torch.tensor(np.linspace(0, 0.075, 1000)).to(device)
-            # for n in range(n_particles):
-            #     func= model.psi(rr,p[n])
-            #     plt.plot(rr.detach().cpu().numpy(),func.detach().cpu().numpy(),c='k',alpha=0.01)
         case 'PDE_B' | 'PDE_ParticleField_B':
             p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
             if params[0] != [-1]:
@@ -246,17 +237,15 @@ def init_cells(config, device):
     n_particles = simulation_config.n_particles
     n_particle_types = simulation_config.n_particle_types
     dimension = simulation_config.dimension
-    has_cell_division = simulation_config.has_cell_division
 
     dpos_init = simulation_config.dpos_init
-
 
 
     if config.simulation.cell_cycle_length != [-1]:
         cycle_length = torch.tensor(config.simulation.cell_cycle_length, device=device)
     else:
         cycle_length = torch.clamp(torch.abs(torch.ones(n_particle_types, 1, device=device) * 250 + torch.randn(n_particle_types, 1, device=device) * 50), min=100, max=700)
-    # 400
+
     if config.simulation.cell_death_rate != [-1]:
         cell_death_rate = torch.tensor(config.simulation.cell_death_rate, device=device)
     else:
@@ -302,8 +291,6 @@ def init_cells(config, device):
                 pos[index, 0:1] = torch.rand(l, 1, device=device) * (1/n_particle_types) + n/n_particle_types
         case _:
             pass
-
-    return pos, dpos, type, features, cycle_duration, particle_id, cycle_length, cycle_length_distrib, cell_death_rate, cell_death_rate_distrib
 
     return pos, dpos, type, features, cycle_duration, particle_id, cycle_length, cycle_length_distrib, cell_death_rate, cell_death_rate_distrib
 

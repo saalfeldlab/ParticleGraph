@@ -84,6 +84,8 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         torch.cuda.empty_cache()
 
         model, bc_pos, bc_dpos = choose_model(config, device=device)
+        config.simulation.params = model.p
+
         particle_dropout_mask = np.arange(n_particles)
         if has_particle_dropout:
             draw = np.random.permutation(np.arange(n_particles))
@@ -289,50 +291,15 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                             ax.tick_params(axis='both', which='major', pad=15)
                             plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
                         else:
-
-                            matplotlib.use("Qt5Agg")
-                            # canvas = vispy.scene.SceneCanvas(keys='interactive', show=True)
-                            # view = canvas.central_widget.add_view()
-                            # for n in range(n_particle_types):
-                            #     pos = to_numpy(X1[index_particles[n]])
-                            #     scatter = visuals.Markers()
-                            #     cc = list(cmap.color(n))
-                            #     cc[3]=0.5
-                            #     cc=tuple(cc)
-                            #     scatter.set_data(pos * 1, edge_width=0, face_color=cc, size=10, symbol='o')
-                            #     view.add(scatter)
-                            # view.camera = vispy.scene.cameras.TurntableCamera(fov=90, azimuth=0, elevation=0, distance=1.5)
-                            # img = canvas.render()
-                            # io.write_png(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.png", img)
-                            # canvas.close()
-
-                            fig = plt.figure(figsize=(12, 12))
-                            ax = fig.add_subplot(projection='3d')
-                            for n in range(n_particle_types):
-                                cc = list(cmap.color(n))
-                                cc[3]=0.5
-                                cc=tuple(cc)
-                                ax.scatter(to_numpy(X1[index_particles[n],0]),to_numpy(X1[index_particles[n],1]),to_numpy(X1[index_particles[n],2]),s=marker_size, c=cc)
-                            ax.text(0, 0, 1.5, f'frame {it}', size=20, zorder=1, color='k')
-                            plt.tight_layout()
-                            ax.set_xlim(0, 1)
-                            ax.set_ylim(0, 1)
-                            ax.set_zlim(0, 1)
                             plt.axis('off')
-                            plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.tif", dpi=170.7)
-                            plt.close()
+                        plt.tight_layout()
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.tif", dpi=80)
+                        plt.close()
 
         if bSave:
             torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
-            # np.savez(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt',x_list)
-            # np.savez(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt',y_list)
             np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}',*edge_p_p_list)
-            if has_cell_division:
-                torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
-                torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
-                torch.save(cell_death_rate, f'graphs_data/graphs_{dataset_name}/cell_death_rate.pt')
-                torch.save(cell_death_rate_distrib, f'graphs_data/graphs_{dataset_name}/cell_death_rate_distrib.pt')
             torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p_{run}.pt')
             if has_particle_dropout:
                 np.save(f'graphs_data/graphs_{dataset_name}/x_removed_list_{run}.pt',x_removed_list)
