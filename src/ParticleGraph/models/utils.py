@@ -242,7 +242,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
         plt.xticks([])
         plt.yticks([])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/particle_{dataset_name}_{epoch}_{N}.tif",dpi=87)
+        plt.savefig(f"./{log_dir}/tmp_training/particle/particle_{dataset_name}_{epoch}_{N}.tif",dpi=87)
         plt.close()
 
         match model_config.particle_model_name:
@@ -397,7 +397,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                                  to_numpy(func*ynorm),
                                  linewidth=2,
                                  color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
-                plt.ylim([-0.1, 0.1])
+                plt.ylim(config.plotting.ylim)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
                 plt.close()

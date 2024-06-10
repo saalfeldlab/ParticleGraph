@@ -294,8 +294,8 @@ def data_train_particles(config, config_file, device):
 
             accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
 
-            print(f'accuracy: {np.round(Accuracy, 3)}   n_clusters: {n_clusters}')
-            logger.info(f'accuracy: {np.round(Accuracy, 3)}    n_clusters: {n_clusters}')
+            print(f'accuracy: {np.round(accuracy, 3)}   n_clusters: {n_clusters}')
+            logger.info(f'accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}')
 
             ax = fig.add_subplot(1, 5, 4)
             for n in np.unique(new_labels):
@@ -304,7 +304,7 @@ def data_train_particles(config, config_file, device):
                     plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], s=5)
             plt.xlabel('proj 0', fontsize=12)
             plt.ylabel('proj 1', fontsize=12)
-            plt.text(0, 1.1, f'accuracy: {np.round(Accuracy, 3)},  {n_clusters} clusters', ha='left', va='top', transform=ax.transAxes,fontsize=10)
+            plt.text(0, 1.1, f'accuracy: {np.round(accuracy, 3)},  {n_clusters} clusters', ha='left', va='top', transform=ax.transAxes,fontsize=10)
 
             ax = fig.add_subplot(1, 5, 5)
             model_a_ = model.a[1].clone().detach()
@@ -1127,9 +1127,9 @@ def data_train_mesh(config, config_file, device):
 
             labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding, train_config.cluster_distance_threshold, index_nodes, n_node_types, embedding_cluster)
 
-            Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-            print(f'Accuracy: {np.round(Accuracy, 3)}   n_clusters: {n_clusters}')
-            logger.info(f'Accuracy: {np.round(Accuracy, 3)}    n_clusters: {n_clusters}')
+            accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
+            print(f'accuracy: {np.round(accuracy, 3)}   n_clusters: {n_clusters}')
+            logger.info(f'accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}')
 
             ax = fig.add_subplot(1, 5, 4)
             for n in np.unique(new_labels):
@@ -1138,7 +1138,7 @@ def data_train_mesh(config, config_file, device):
                     plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], s=5)
             plt.xlabel('proj 0', fontsize=12)
             plt.ylabel('proj 1', fontsize=12)
-            plt.text(0, 1.1, f'Accuracy: {np.round(Accuracy, 3)},  {n_clusters} clusters', ha='left', va='top', transform=ax.transAxes,fontsize=10)
+            plt.text(0, 1.1, f'accuracy: {np.round(accuracy, 3)},  {n_clusters} clusters', ha='left', va='top', transform=ax.transAxes,fontsize=10)
 
             ax = fig.add_subplot(1, 5, 5)
             model_a_ = model.a[1].clone().detach()

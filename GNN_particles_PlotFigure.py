@@ -283,7 +283,7 @@ class Mesh_RPS_extract(MessagePassing):
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
         plt.tight_layout()
-        # plt.savefig(f"./{log_dir}/tmp_training/results/embedding_{config_file}_{epoch}.tif",dpi=170.7)
+        # plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{epoch}.tif",dpi=170.7)
         plt.close()
 
         fig = plt.figure(figsize=(12, 12))
@@ -310,8 +310,8 @@ class Mesh_RPS_extract(MessagePassing):
                                                           train_config.cluster_distance_threshold, index_particles,
                                                           n_particle_types, embedding_cluster)
 
-        Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-        print(f'Accuracy: {np.round(Accuracy, 3)}   n_clusters: {n_clusters}')
+        accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
+        print(f'accuracy: {np.round(accuracy, 3)}   n_clusters: {n_clusters}')
 
         model_a_ = model.a[1].clone().detach()
         for n in range(n_clusters):
@@ -334,8 +334,8 @@ class Mesh_RPS_extract(MessagePassing):
         ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
         embedding = get_embedding(model_a_first, 1)
         csv_ = embedding
-        np.save(f"./{log_dir}/tmp_training/results/embedding_{config_file}_{epoch}.npy", csv_)
-        np.savetxt(f"./{log_dir}/tmp_training/results/embedding_{config_file}_{epoch}.txt", csv_)
+        np.save(f"./{log_dir}/results/embedding_{config_file}_{epoch}.npy", csv_)
+        np.savetxt(f"./{log_dir}/results/embedding_{config_file}_{epoch}.txt", csv_)
         if n_particle_types > 1000:
             plt.scatter(embedding[:, 0], embedding[:, 1], c=to_numpy(x[:, 5]) / n_particles, s=10,
                         cmap=cc)
@@ -348,7 +348,7 @@ class Mesh_RPS_extract(MessagePassing):
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/results/embedding_{config_file}_{epoch}.tif", dpi=170.7)
+        plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{epoch}.tif", dpi=170.7)
         plt.close()
 
 def load_training_data(dataset_name, n_runs, log_dir, device):
@@ -365,40 +365,21 @@ def load_training_data(dataset_name, n_runs, log_dir, device):
     print("vnorm:{:.2e},  ynorm:{:.2e}".format(to_numpy(vnorm),to_numpy(ynorm)))
     x = []
     y = []
-    print('done ...')
 
     return x_list, y_list, vnorm, ynorm
 
 def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list, n_particle_types, n_particles, ynorm, epoch, log_dir, device):
-    simulation_config = config.simulation
+
     train_config = config.training
-    model_config = config.graph_model
 
     max_radius = config.simulation.max_radius
-    min_radius = config.simulation.min_radius
+
+    print('analyze GNN ...')
+
 
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(1, 1, 1)
-    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-    ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-    embedding = get_embedding(model.a, 1)
-    for n in range(n_particle_types):
-        plt.scatter(embedding[index_particles[n], 0],
-                    embedding[index_particles[n], 1], color=cmap.color(n), s=400)
-    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
-    plt.xticks(fontsize=32.0)
-    plt.yticks(fontsize=32.0)
-    plt.tight_layout()
-    # plt.savefig(f"./{log_dir}/tmp_training/results/embedding_{config_file}_{epoch}.tif",dpi=170.7)
-    plt.close()
-
-    fig = plt.figure(figsize=(12, 12))
-    ax = fig.add_subplot(1, 1, 1)
-    ax.xaxis.get_major_formatter()._usetex = False
-    ax.yaxis.get_major_formatter()._usetex = False
+    ax.tick_params(axis='both', which='major', pad=15)
     func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
                                                         model_lin_edge=model.lin_edge, model_a=model.a,
                                                         dataset_number=1,
@@ -418,20 +399,24 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
 
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(1, 1, 1)
+    ax.tick_params(axis='both', which='major', pad=15)
     ax.xaxis.set_major_locator(plt.MaxNLocator(3))
     ax.yaxis.set_major_locator(plt.MaxNLocator(3))
     ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
     embedding = get_embedding(model.a, 1)
+    proj_interaction = (proj_interaction - np.min(proj_interaction)) / (np.max(proj_interaction) - np.min(proj_interaction)+1e-10)
     for n in range(n_particle_types):
         plt.scatter(proj_interaction[index_particles[n], 0],
-                    proj_interaction[index_particles[n], 1], color=cmap.color(n), s=1)
+                    proj_interaction[index_particles[n], 1], color=cmap.color(n), s=200, alpha=0.1)
     plt.xlabel(r'UMAP 0', fontsize=64)
     plt.ylabel(r'UMAP 1', fontsize=64)
     plt.xticks(fontsize=32.0)
     plt.yticks(fontsize=32.0)
+    plt.xlim([0,1])
+    plt.ylim([0,1])
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/results/UMAP_{config_file}_{epoch}.tif",dpi=170.7)
+    plt.savefig(f"./{log_dir}/results/UMAP_{config_file}_{epoch}.tif",dpi=170.7)
     plt.close()
 
     labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding,
@@ -455,14 +440,15 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
 
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(1, 1, 1)
+    ax.tick_params(axis='both', which='major', pad=15)
     ax.xaxis.set_major_locator(plt.MaxNLocator(3))
     ax.yaxis.set_major_locator(plt.MaxNLocator(3))
     ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
     embedding = get_embedding(model_a_first, 1)
     csv_ = embedding
-    np.save(f"./{log_dir}/tmp_training/results/embedding_{config_file}_{epoch}.npy", csv_)
-    np.savetxt(f"./{log_dir}/tmp_training/results/embedding_{config_file}_{epoch}.txt", csv_)
+    np.save(f"./{log_dir}/results/embedding_{config_file}_{epoch}.npy", csv_)
+    np.savetxt(f"./{log_dir}/results/embedding_{config_file}_{epoch}.txt", csv_)
     if n_particle_types > 1000:
         plt.scatter(embedding[:, 0], embedding[:, 1], c=to_numpy(x[:, 5]) / n_particles, s=10,
                     cmap=cc)
@@ -475,7 +461,7 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
     plt.xticks(fontsize=32.0)
     plt.yticks(fontsize=32.0)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/results/embedding_{config_file}_{epoch}.tif", dpi=170.7)
+    plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{epoch}.tif", dpi=170.7)
     plt.close()
 
     return  accuracy, n_clusters, new_labels
@@ -596,15 +582,15 @@ def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoc
         cm_display.plot(ax=fig.gca(), cmap='Blues', include_values=False, colorbar=False)
     else:
         cm_display.plot(ax=fig.gca(), cmap='Blues', include_values=True, values_format='d', colorbar=False)
-    Accuracy = metrics.accuracy_score(true_labels, new_labels)
-    plt.title(f'Accuracy: {np.round(Accuracy,3)}', fontsize=12)
-    # print(f'Accuracy: {np.round(Accuracy,3)}')
+    accuracy = metrics.accuracy_score(true_labels, new_labels)
+    plt.title(f'accuracy: {np.round(accuracy,3)}', fontsize=12)
+    # print(f'accuracy: {np.round(accuracy,3)}')
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
     plt.xlabel(r'Predicted label', fontsize=12)
     plt.ylabel(r'True label', fontsize=12)
 
-    return Accuracy
+    return accuracy
 
 def plot_cell_rates(config, device, log_dir, n_frames, n_particles_max, n_particle_types, x_list, new_labels, cmap):
 
@@ -638,7 +624,7 @@ def plot_cell_rates(config, device, log_dir, n_frames, n_particles_max, n_partic
     plt.xlabel(r'Frame', fontsize=64)
     plt.ylabel(r'Number of alive cells', fontsize=64)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/results/cell_alive_{config_file}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/results/cell_alive_{config_file}.tif", dpi=300)
 
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(1, 1, 1)
@@ -649,7 +635,7 @@ def plot_cell_rates(config, device, log_dir, n_frames, n_particles_max, n_partic
     plt.xlabel(r'Frame', fontsize=64)
     plt.ylabel(r'Number of dead cells', fontsize=64)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/results/cell_dead_{config_file}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/results/cell_dead_{config_file}.tif", dpi=300)
     plt.close()
 
 def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
@@ -667,7 +653,8 @@ def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, dev
     train_config = config.training
     model_config = config.graph_model
 
-    print(f'Plot training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+    print(f'GNN trained with simulation {model_config.particle_model_name}, with cluster method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+    logger.info(f'GNN trained with simulation {model_config.particle_model_name}, with cluster method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
     dimension = simulation_config.dimension
     n_particle_types = simulation_config.n_particle_types
@@ -698,8 +685,8 @@ def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, dev
         config.training.cluster_distance_threshold = 0.01
         accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list,
                                     n_particle_types, n_particles, ynorm, epoch, log_dir, device)
-        print(f'accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}    epoch: {epoch}   method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
-        logger.info(f'accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}    epoch: {epoch}   method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+        print(f'final ressult     accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+        logger.info(f'final ressult     accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(1,1,1)
@@ -727,7 +714,7 @@ def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, dev
         plt.xlim([0, max_radius])
         plt.ylim(config.plotting.ylim)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/results/func_all_{config_file}_{epoch}.tif",dpi=170.7)
+        plt.savefig(f"./{log_dir}/results/func_all_{config_file}_{epoch}.tif",dpi=170.7)
         rmserr_list = torch.stack(rmserr_list)
         rmserr_list = to_numpy(rmserr_list)
         print("all function RMS error: {:.2e}+/-{:.2e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
@@ -750,7 +737,7 @@ def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, dev
         plt.xlabel(r'$d_{ij}$', fontsize=64)
         plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/results/true_func_{config_file}.tif",dpi=170.7)
+        plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif",dpi=170.7)
         plt.close()
 
         rr = torch.tensor(np.linspace(-1.5 * max_radius, 1.5 * max_radius, 2000)).to(device)
@@ -779,7 +766,7 @@ def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, dev
         plt.xlabel(r'$d_{ij}$', fontsize=64)
         plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
         plt.tight_layout()
-        torch.save(plots, f"./{log_dir}/tmp_training/results/plots_true_{config_file}_{epoch}.pt")
+        torch.save(plots, f"./{log_dir}/results/plots_true_{config_file}_{epoch}.pt")
         plt.close()
 
 def data_plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger, device):
@@ -821,15 +808,6 @@ def data_plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     matplotlib.rcParams['savefig.pad_inches'] = 0
-    # style = {
-    #     "pgf.rcfonts": False,
-    #     "pgf.texsystem": "pdflatex",
-    #     "text.usetex": True,
-    #     "font.family": "sans-serif"
-    # }
-    # matplotlib.rcParams.update(style)
-    # plt.rcParams["font.sans-serif"] = ["Helvetica Neue", "HelveticaNeue", "Helvetica-Neue", "Helvetica", "Arial",
-    #                                    "Liberation"]
 
     for epoch in epoch_list:
 
@@ -838,7 +816,6 @@ def data_plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger
         state_dict = torch.load(net,map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
 
-        # matplotlib.use("Qt5Agg"
 
         model_a_first = model.a.clone().detach()
         accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list,
@@ -884,7 +861,7 @@ def data_plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger
         plt.ylim([-0.03, 0.03])
         plt.xlim([0, max_radius])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/results/func_{config_file}_{epoch}.tif", dpi=170.7)
+        plt.savefig(f"./{log_dir}/results/func_{config_file}_{epoch}.tif", dpi=170.7)
         plt.close()
 
         p = config.simulation.params
@@ -912,7 +889,7 @@ def data_plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger
         plt.ylim([-0.03, 0.03])
         plt.xlim([0, max_radius])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/results/true_func_{config_file}.tif", dpi=170.7)
+        plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=170.7)
         plt.close()
 
         true_func_list=[]
@@ -973,17 +950,6 @@ def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, 
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     matplotlib.rcParams['savefig.pad_inches'] = 0
 
-    # style = {
-    #     "pgf.rcfonts": False,
-    #     "pgf.texsystem": "pdflatex",
-    #     "text.usetex": True,
-    #     "font.family": "sans-serif"
-    # }
-    # matplotlib.rcParams.update(style)
-    # plt.rcParams["font.sans-serif"] = ["Helvetica Neue", "HelveticaNeue", "Helvetica-Neue", "Helvetica", "Arial",
-    #                                    "Liberation"]
-
-    epoch_list = [20]
     for epoch in epoch_list:
 
         net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
@@ -1019,9 +985,9 @@ def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, 
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/results/embedding_{config_file}_{epoch}.tif",dpi=170.7)
-        np.save(f"./{log_dir}/tmp_training/results/embedding_{config_file}_{epoch}.npy", csv_)
-        np.savetxt(f"./{log_dir}/tmp_training/results/embedding_{config_file}_{epoch}.txt", csv_)
+        plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{epoch}.tif",dpi=170.7)
+        np.save(f"./{log_dir}/results/embedding_{config_file}_{epoch}.npy", csv_)
+        np.savetxt(f"./{log_dir}/results/embedding_{config_file}_{epoch}.txt", csv_)
         plt.close()
 
 
@@ -1056,9 +1022,9 @@ def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, 
         plt.ylim([-0.04, 0.03])
         # plt.ylim([-0.1, 0.06])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/results/func_{config_file}_{epoch}.tif",dpi=170.7)
-        np.save(f"./{log_dir}/tmp_training/results/func_{config_file}_{epoch}.npy", csv_)
-        np.savetxt(f"./{log_dir}/tmp_training/results/func_{config_file}_{epoch}.txt", csv_)
+        plt.savefig(f"./{log_dir}/results/func_{config_file}_{epoch}.tif",dpi=170.7)
+        np.save(f"./{log_dir}/results/func_{config_file}_{epoch}.npy", csv_)
+        np.savetxt(f"./{log_dir}/results/func_{config_file}_{epoch}.txt", csv_)
         plt.close()
 
         fig = plt.figure(figsize=(12, 12))
@@ -1087,9 +1053,9 @@ def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, 
         plt.ylim([-0.04, 0.03])
         # plt.ylim([-0.1, 0.06])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/results/true_func_{config_file}.tif",dpi=170.7)
-        np.save(f"./{log_dir}/tmp_training/results/true_func_{config_file}_{epoch}.npy", csv_)
-        np.savetxt(f"./{log_dir}/tmp_training/results/true_func_{config_file}_{epoch}.txt", csv_)
+        plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif",dpi=170.7)
+        np.save(f"./{log_dir}/results/true_func_{config_file}_{epoch}.npy", csv_)
+        np.savetxt(f"./{log_dir}/results/true_func_{config_file}_{epoch}.txt", csv_)
         plt.close()
 
         func_list = torch.stack(func_list) * ynorm
@@ -1183,9 +1149,9 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
     new_labels = labels.copy()
     for n in range(n_particle_types):
         new_labels[labels == label_list[n]] = n
-    Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
+    accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
 
-    print(f'Accuracy: {Accuracy}  n_clusters: {n_clusters}')
+    print(f'accuracy: {accuracy}  n_clusters: {n_clusters}')
 
     fig_ = plt.figure(figsize=(12, 12))
     axf = fig_.add_subplot(1, 1, 1)
@@ -1208,7 +1174,7 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
     plt.xticks(fontsize=32.0)
     plt.yticks(fontsize=32.0)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/results/UMAP_{config_file}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/results/UMAP_{config_file}.tif", dpi=300)
     plt.close()
 
     model_a_first = model.a.clone().detach()
@@ -1241,10 +1207,10 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
     plt.xticks(fontsize=32.0)
     plt.yticks(fontsize=32.0)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/results/embedding_{config_file}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/results/embedding_{config_file}.tif", dpi=300)
     # csv_ = np.reshape(csv_, (csv_.shape[0]*csv_.shape[1], 2))
-    # np.save(f"./{log_dir}/tmp_training/results/embedding_{config_file}.npy", csv_)
-    # np.savetxt(f"./{log_dir}/tmp_training/results/embedding_{config_file}.txt", csv_)
+    # np.save(f"./{log_dir}/results/embedding_{config_file}.npy", csv_)
+    # np.savetxt(f"./{log_dir}/results/embedding_{config_file}.txt", csv_)
     plt.close()
 
     ax = fig.add_subplot(3, 3, 4)
@@ -1323,10 +1289,10 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
     plt.xlim([0, 0.02])
     plt.ylim([0, 0.5E6])
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/results/func_all{config_file}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/results/func_all{config_file}.tif", dpi=300)
     csv_ = np.array(csv_)
-    np.save(f"./{log_dir}/tmp_training/results/func_all{config_file}.npy", csv_)
-    np.savetxt(f"./{log_dir}/tmp_training/results/func_all{config_file}.txt", csv_)
+    np.save(f"./{log_dir}/results/func_all{config_file}.npy", csv_)
+    np.savetxt(f"./{log_dir}/results/func_all{config_file}.txt", csv_)
     plt.close()
 
     rmserr_list = torch.stack(rmserr_list)
@@ -1366,10 +1332,10 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
     plt.xlabel(r'$d_{ij}$', fontsize=64)
     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/results/true_func{config_file}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/results/true_func{config_file}.tif", dpi=300)
     csv_ = np.array(csv_)
-    np.save(f"./{log_dir}/tmp_training/results/true_func{config_file}.npy", csv_)
-    np.savetxt(f"./{log_dir}/tmp_training/results/true_func{config_file}.txt", csv_)
+    np.save(f"./{log_dir}/results/true_func{config_file}.npy", csv_)
+    np.savetxt(f"./{log_dir}/results/true_func{config_file}.txt", csv_)
     plt.close()
 
     plot_list = []
@@ -1437,10 +1403,10 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
     plt.xlim([0, 5.5])
     plt.ylim([0, 5.5])
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/results/mass{config_file}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/results/mass{config_file}.tif", dpi=300)
     # csv_ = np.array(csv_)
-    # np.save(f"./{log_dir}/tmp_training/results/mass{config_file}.npy", csv_)
-    # np.savetxt(f"./{log_dir}/tmp_training/results/mass{config_file}.txt", csv_)
+    # np.save(f"./{log_dir}/results/mass{config_file}.npy", csv_)
+    # np.savetxt(f"./{log_dir}/results/mass{config_file}.txt", csv_)
     plt.close()
 
     relative_error = np.abs(popt_list[:, 0] - p_list.squeeze()) / p_list.squeeze() * 100
@@ -1477,9 +1443,9 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
     plt.xlabel(r'True mass', fontsize=64)
     plt.ylabel(r'Reconstructed exponent', fontsize=64)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/results/exponent_{config_file}.tif", dpi=300)
-    np.save(f"./{log_dir}/tmp_training/results/exponent_{config_file}.npy", csv_)
-    np.savetxt(f"./{log_dir}/tmp_training/results/exponent_{config_file}.txt", csv_)
+    plt.savefig(f"./{log_dir}/results/exponent_{config_file}.tif", dpi=300)
+    np.save(f"./{log_dir}/results/exponent_{config_file}.npy", csv_)
+    np.savetxt(f"./{log_dir}/results/exponent_{config_file}.txt", csv_)
     plt.close()
 
 
@@ -1584,11 +1550,11 @@ def data_plot_gravity_continuous(config_file, epoch_list, log_dir, logger, devic
     plt.yticks(fontsize=32.0)
     csv_ = np.array(csv_)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/results/embedding_{config_file}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/results/embedding_{config_file}.tif", dpi=300)
     csv_ = np.array(csv_)
     csv_ = np.reshape(csv_, (csv_.shape[0]*csv_.shape[1], 2))
-    np.save(f"./{log_dir}/tmp_training/results/embedding_{config_file}.npy", csv_)
-    np.savetxt(f"./{log_dir}/tmp_training/results/embedding_{config_file}.txt", csv_)
+    np.save(f"./{log_dir}/results/embedding_{config_file}.npy", csv_)
+    np.savetxt(f"./{log_dir}/results/embedding_{config_file}.txt", csv_)
     plt.close()
 
     p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
@@ -1624,10 +1590,10 @@ def data_plot_gravity_continuous(config_file, epoch_list, log_dir, logger, devic
     plt.xlim([0, 0.02])
     plt.ylim([0, 0.5E6])
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/results/func_{config_file}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/results/func_{config_file}.tif", dpi=300)
     csv_ = np.array(csv_)
-    np.save(f"./{log_dir}/tmp_training/results/func_{config_file}.npy", csv_)
-    np.savetxt(f"./{log_dir}/tmp_training/results/func_{config_file}.txt", csv_)
+    np.save(f"./{log_dir}/results/func_{config_file}.npy", csv_)
+    np.savetxt(f"./{log_dir}/results/func_{config_file}.txt", csv_)
     plt.close()
 
     rmserr_list = torch.stack(rmserr_list)
@@ -1667,10 +1633,10 @@ def data_plot_gravity_continuous(config_file, epoch_list, log_dir, logger, devic
     plt.xlabel(r'$d_{ij}$', fontsize=64)
     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/results/true_func_{config_file}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=300)
     csv_ = np.array(csv_)
-    np.save(f"./{log_dir}/tmp_training/results/true_func_{config_file}.npy", csv_)
-    np.savetxt(f"./{log_dir}/tmp_training/results/true_func_{config_file}.txt", csv_)
+    np.save(f"./{log_dir}/results/true_func_{config_file}.npy", csv_)
+    np.savetxt(f"./{log_dir}/results/true_func_{config_file}.txt", csv_)
     plt.close()
 
     plot_list = []
@@ -1732,10 +1698,10 @@ def data_plot_gravity_continuous(config_file, epoch_list, log_dir, logger, devic
     plt.xlabel(r'True mass ', fontsize=64)
     plt.ylabel(r'Reconstructed mass ', fontsize=64)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/results/mass_{config_file}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/results/mass_{config_file}.tif", dpi=300)
     csv_ = np.array(csv_)
-    np.save(f"./{log_dir}/tmp_training/results/mass_{config_file}.npy", csv_)
-    np.savetxt(f"./{log_dir}/tmp_training/results/mass_{config_file}.txt", csv_)
+    np.save(f"./{log_dir}/results/mass_{config_file}.npy", csv_)
+    np.savetxt(f"./{log_dir}/results/mass_{config_file}.txt", csv_)
     plt.close()
 
     relative_error = np.abs(x_data - y_data) / x_data * 100
@@ -1772,9 +1738,9 @@ def data_plot_gravity_continuous(config_file, epoch_list, log_dir, logger, devic
     plt.xlabel(r'True mass', fontsize=64)
     plt.ylabel(r'Reconstructed exponent', fontsize=64)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/results/exponent_{config_file}.tif", dpi=300)
-    np.save(f"./{log_dir}/tmp_training/results/exponent_{config_file}.npy", csv_)
-    np.savetxt(f"./{log_dir}/tmp_training/results/exponent_{config_file}.txt", csv_)
+    plt.savefig(f"./{log_dir}/results/exponent_{config_file}.tif", dpi=300)
+    np.save(f"./{log_dir}/results/exponent_{config_file}.npy", csv_)
+    np.savetxt(f"./{log_dir}/results/exponent_{config_file}.txt", csv_)
     plt.close()
 
     # find last image file in logdir
@@ -1879,7 +1845,7 @@ def data_plot_gravity_solar_system(config_file, epoch_list, log_dir, logger, dev
                                                          n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap,device)
 
     ax = fig.add_subplot(3, 3, 3)
-    Accuracy = plot_confusion_matrix('c)', to_numpy(x[:,5:6]), new_labels, n_particle_types, 20, '$10^6$', fig, ax)
+    accuracy = plot_confusion_matrix('c)', to_numpy(x[:,5:6]), new_labels, n_particle_types, 20, '$10^6$', fig, ax)
     plt.tight_layout()
 
     model_a_ = model.a.clone().detach()
@@ -2126,7 +2092,7 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
     plt.xlim([0, 0.02])
     plt.ylim([-0.5E6, 0.5E6])
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/results/func_{config_file}_{epoch}.tif", dpi=170.7)
+    plt.savefig(f"./{log_dir}/results/func_{config_file}_{epoch}.tif", dpi=170.7)
     plt.close()
 
     fig_ = plt.figure(figsize=(12,12))
@@ -2163,11 +2129,11 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
     plt.xticks(fontsize=32)
     plt.yticks(fontsize=32)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/results/func_{config_file}_{epoch}.tif", dpi=170.7)
+    plt.savefig(f"./{log_dir}/results/func_{config_file}_{epoch}.tif", dpi=170.7)
     csv_ = to_numpy(torch.stack(func_list))
     csv_ = np.concatenate((csv_,to_numpy(rr[None,:])))
-    np.save(f"./{log_dir}/tmp_training/results/func_{config_file}_{epoch}.npy", csv_)
-    np.savetxt(f"./{log_dir}/tmp_training/results/func_{config_file}_{epoch}.txt", csv_)
+    np.save(f"./{log_dir}/results/func_{config_file}_{epoch}.npy", csv_)
+    np.savetxt(f"./{log_dir}/results/func_{config_file}_{epoch}.txt", csv_)
     plt.close()
 
     ax = fig.add_subplot(3, 3, 6)
@@ -2213,9 +2179,9 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
     plt.xticks(fontsize=32)
     plt.yticks(fontsize=32)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/results/true_func_{config_file}_{epoch}.tif", dpi=170.7)
-    np.save(f"./{log_dir}/tmp_training/results/true_func_{config_file}_{epoch}.npy", csv_)
-    np.savetxt(f"./{log_dir}/tmp_training/results/true_func_{config_file}_{epoch}.txt", csv_)
+    plt.savefig(f"./{log_dir}/results/true_func_{config_file}_{epoch}.tif", dpi=170.7)
+    np.save(f"./{log_dir}/results/true_func_{config_file}_{epoch}.npy", csv_)
+    np.savetxt(f"./{log_dir}/results/true_func_{config_file}_{epoch}.txt", csv_)
     plt.close()
 
     func_list = torch.stack(func_list)
@@ -2323,10 +2289,10 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
     plt.xlim([-3, 5])
     plt.ylim([-3, 5])
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/results/qiqj_{config_file}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/results/qiqj_{config_file}.tif", dpi=300)
     csv_ = np.array(csv_)
-    np.save(f"./{log_dir}/tmp_training/results/qiqj_{config_file}.npy", csv_)
-    np.savetxt(f"./{log_dir}/tmp_training/results/qiqj_{config_file}.txt", csv_)
+    np.save(f"./{log_dir}/results/qiqj_{config_file}.npy", csv_)
+    np.savetxt(f"./{log_dir}/results/qiqj_{config_file}.txt", csv_)
     plt.close
 
     print(f"Exponent: {np.round(np.mean(-popt_list[:, 1]), 5)}+/-{np.round(np.std(popt_list[:, 1]), 5)}")
@@ -2349,9 +2315,9 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
     plt.xlabel(r'True $q_i q_j$', fontsize=64)
     plt.ylabel(r'Reconstructed exponent', fontsize=64)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/results/exponent_{config_file}.tif", dpi=300)
-    np.save(f"./{log_dir}/tmp_training/results/exponent_{config_file}.npy", csv_)
-    np.savetxt(f"./{log_dir}/tmp_training/results/exponent_{config_file}.txt", csv_)
+    plt.savefig(f"./{log_dir}/results/exponent_{config_file}.tif", dpi=300)
+    np.save(f"./{log_dir}/results/exponent_{config_file}.npy", csv_)
+    np.savetxt(f"./{log_dir}/results/exponent_{config_file}.txt", csv_)
     plt.close()
 
     # find last image file in logdir
@@ -2530,9 +2496,9 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         csv_ = []
         csv_.append(x_data)
         csv_.append(y_data)
-        plt.savefig(f"./{log_dir}/tmp_training/results/cohesion_{config_file}_{net_}.tif", dpi=300)
-        np.save(f"./{log_dir}/tmp_training/results/cohesion_{config_file}_{net_}.npy", csv_)
-        np.savetxt(f"./{log_dir}/tmp_training/results/cohesion_{config_file}_{net_}.txt", csv_)
+        plt.savefig(f"./{log_dir}/results/cohesion_{config_file}_{net_}.tif", dpi=300)
+        np.save(f"./{log_dir}/results/cohesion_{config_file}_{net_}.npy", csv_)
+        np.savetxt(f"./{log_dir}/results/cohesion_{config_file}_{net_}.txt", csv_)
         plt.close()
         logger.info(' ')
         residuals = y_data_ - linear_model(x_data_, *lin_fit)
@@ -2566,9 +2532,9 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         csv_ = []
         csv_.append(x_data)
         csv_.append(y_data)
-        plt.savefig(f"./{log_dir}/tmp_training/results/alignment_{config_file}_{net_}.tif", dpi=300)
-        np.save(f"./{log_dir}/tmp_training/results/alignment_{config_file}_{net_}.npy", csv_)
-        np.savetxt(f"./{log_dir}/tmp_training/results/alignement_{config_file}_{net_}.txt", csv_)
+        plt.savefig(f"./{log_dir}/results/alignment_{config_file}_{net_}.tif", dpi=300)
+        np.save(f"./{log_dir}/results/alignment_{config_file}_{net_}.npy", csv_)
+        np.savetxt(f"./{log_dir}/results/alignement_{config_file}_{net_}.txt", csv_)
         plt.close()
         logger.info(' ')
         residuals = y_data_ - linear_model(x_data_, *lin_fit)
@@ -2602,9 +2568,9 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         csv_ = []
         csv_.append(x_data)
         csv_.append(y_data)
-        plt.savefig(f"./{log_dir}/tmp_training/results/separation_{config_file}_{net_}.tif", dpi=300)
-        np.save(f"./{log_dir}/tmp_training/results/separation_{config_file}_{net_}.npy", csv_)
-        np.savetxt(f"./{log_dir}/tmp_training/results/separation_{config_file}_{net_}.txt", csv_)
+        plt.savefig(f"./{log_dir}/results/separation_{config_file}_{net_}.tif", dpi=300)
+        np.save(f"./{log_dir}/results/separation_{config_file}_{net_}.npy", csv_)
+        np.savetxt(f"./{log_dir}/results/separation_{config_file}_{net_}.txt", csv_)
         plt.close()
         logger.info(' ')
         residuals = y_data_ - linear_model(x_data_, *lin_fit)
@@ -2652,7 +2618,7 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/results/func_dij_{config_file}_{net_}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/func_dij_{config_file}_{net_}.tif", dpi=300)
         plt.close()
 
         fig = plt.figure(figsize=(12, 12))
@@ -2671,7 +2637,7 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/results/true_func_dij_{config_file}_{net_}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/true_func_dij_{config_file}_{net_}.tif", dpi=300)
 
         func_list = func_list * ynorm
         func_list_ = torch.clamp(func_list, min=torch.tensor(-1.0E-4,device=device), max=torch.tensor(1.0E-4,device=device))
@@ -2783,7 +2749,7 @@ def data_plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
     # cbar = plt.colorbar(shrink=0.5)
     # cbar.ax.tick_params(labelsize=32)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/results/true_wave_coeff_{config_file}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/results/true_wave_coeff_{config_file}.tif", dpi=300)
 
     net_list=['0_1000','0_2000','0_5000', '1', '5', '20']
 
@@ -2821,7 +2787,7 @@ def data_plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/results/embedding_{config_file}_{net_}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{net_}.tif", dpi=300)
         plt.close()
 
         rr = torch.tensor(np.linspace(-150, 150, 200)).to(device)
@@ -2863,7 +2829,7 @@ def data_plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
         # cbar = plt.colorbar(format=FuncFormatter(fmt),shrink=0.5)
         # cbar.ax.tick_params(labelsize=32)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/results/wave_coeff_{config_file}_{net_}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/wave_coeff_{config_file}_{net_}.tif", dpi=300)
         plt.close()
 
         if not(has_pic):
@@ -2892,9 +2858,9 @@ def data_plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
             new_labels = labels.copy()
             for n in range(n_node_types):
                 new_labels[labels == label_list[n]] = n
-            Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
+            accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
 
-            print(f'Accuracy: {Accuracy}  n_clusters: {n_clusters}')
+            print(f'accuracy: {accuracy}  n_clusters: {n_clusters}')
 
         if False:
 
@@ -2918,7 +2884,7 @@ def data_plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
             plt.xticks(fontsize=32.0)
             plt.yticks(fontsize=32.0)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/results/phi_{config_file}_{net_}.tif", dpi=300)
+            plt.savefig(f"./{log_dir}/results/phi_{config_file}_{net_}.tif", dpi=300)
             plt.close()
 
             fig_ = plt.figure(figsize=(12, 12))
@@ -2952,7 +2918,7 @@ def data_plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
             r_squared = 1 - (ss_res / ss_tot)
             plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/results/scatter_{config_file}_{net_}.tif", dpi=300)
+            plt.savefig(f"./{log_dir}/results/scatter_{config_file}_{net_}.tif", dpi=300)
             plt.close()
 
             print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   ")
@@ -3047,7 +3013,7 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
     cbar.ax.tick_params(labelsize=32)
     # cbar.set_label(r'$Coupling$',fontsize=64)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/results/target_field.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/results/target_field.tif", dpi=300)
     plt.close()
 
     print('Create models ...')
@@ -3118,10 +3084,10 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
         plt.yticks(fontsize=32.0)
         plt.tight_layout()
         # csv_ = np.array(csv_)
-        plt.savefig(f"./{log_dir}/tmp_training/results/embedding_{config_file}_{epoch}.tif", dpi=300)
-        # np.save(f"./{log_dir}/tmp_training/results/embedding_{config_file}.npy", csv_)
+        plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{epoch}.tif", dpi=300)
+        # np.save(f"./{log_dir}/results/embedding_{config_file}.npy", csv_)
         # csv_= np.reshape(csv_,(csv_.shape[0]*csv_.shape[1],2))
-        # np.savetxt(f"./{log_dir}/tmp_training/results/embedding_{config_file}.txt", csv_)
+        # np.savetxt(f"./{log_dir}/results/embedding_{config_file}.txt", csv_)
         plt.close()
 
 
@@ -3173,7 +3139,7 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/results/UMAP_{config_file}_{epoch}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/UMAP_{config_file}_{epoch}.tif", dpi=300)
         plt.close()
 
         fig = plt.figure(figsize=(12, 12))
@@ -3186,8 +3152,8 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                 plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1],
                             color=cmap.color(n), s=0.1)
         type_list = x[:, 5:6].clone().detach()
-        Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-        print(f'Accuracy: {np.round(Accuracy, 3)}   n_clusters: {n_clusters}')
+        accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
+        print(f'accuracy: {np.round(accuracy, 3)}   n_clusters: {n_clusters}')
         plt.close
 
         p = config.simulation.params
@@ -3234,7 +3200,7 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
             # plt.ylim([-0.1, 0.1])
             # plt.ylim([-0.03, 0.03])
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/results/func_all_{config_file}_{epoch}.tif",dpi=170.7)
+            plt.savefig(f"./{log_dir}/results/func_all_{config_file}_{epoch}.tif",dpi=170.7)
             rmserr_list = torch.stack(rmserr_list)
             rmserr_list = to_numpy(rmserr_list)
             print(f'all function RMS error: {np.round(np.mean(rmserr_list), 7)}+/-{np.round(np.std(rmserr_list), 7)}')
@@ -3252,11 +3218,11 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                     x_mesh = x_mesh_list[0][0].clone().detach()
                     i0 = imread(f'graphs_data/{node_value_map}')
 
-                    os.makedirs(f"./{log_dir}/tmp_training/results/video", exist_ok=True)
-                    os.makedirs(f"./{log_dir}/tmp_training/results/video/generated1", exist_ok=True)
-                    os.makedirs(f"./{log_dir}/tmp_training/results/video/generated2", exist_ok=True)
-                    os.makedirs(f"./{log_dir}/tmp_training/results/video/target", exist_ok=True)
-                    os.makedirs(f"./{log_dir}/tmp_training/results/video/field", exist_ok=True)
+                    os.makedirs(f"./{log_dir}/results/video", exist_ok=True)
+                    os.makedirs(f"./{log_dir}/results/video/generated1", exist_ok=True)
+                    os.makedirs(f"./{log_dir}/results/video/generated2", exist_ok=True)
+                    os.makedirs(f"./{log_dir}/results/video/target", exist_ok=True)
+                    os.makedirs(f"./{log_dir}/results/video/field", exist_ok=True)
 
                     print('Output per frame ...')
 
@@ -3281,7 +3247,7 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                         plt.xlim([0, 1])
                         plt.ylim([0, 1])
                         plt.tight_layout()
-                        plt.savefig(f"./{log_dir}/tmp_training/results/video/generated1/generated_1_{epoch}_{frame}.tif",
+                        plt.savefig(f"./{log_dir}/results/video/generated1/generated_1_{epoch}_{frame}.tif",
                                     dpi=150)
                         plt.close()
 
@@ -3300,7 +3266,7 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                         plt.xlim([0, 1])
                         plt.ylim([0, 1])
                         plt.tight_layout()
-                        plt.savefig(f"./{log_dir}/tmp_training/results/video/generated2/generated_2_{epoch}_{frame}.tif",
+                        plt.savefig(f"./{log_dir}/results/video/generated2/generated_2_{epoch}_{frame}.tif",
                                     dpi=150)
                         plt.close()
 
@@ -3319,7 +3285,7 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                         plt.xticks(fontsize=32.0)
                         plt.yticks(fontsize=32.0)
                         plt.tight_layout()
-                        plt.savefig(f"./{log_dir}/tmp_training/results/video/target/target_field_{epoch}_{frame}.tif",
+                        plt.savefig(f"./{log_dir}/results/video/target/target_field_{epoch}_{frame}.tif",
                                     dpi=150)
                         plt.close()
 
@@ -3342,7 +3308,7 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                         plt.xticks(fontsize=32.0)
                         plt.yticks(fontsize=32.0)
                         plt.tight_layout()
-                        plt.savefig(f"./{log_dir}/tmp_training/results/video/field/reconstructed_field_{epoch}_{frame}.tif",
+                        plt.savefig(f"./{log_dir}/results/video/field/reconstructed_field_{epoch}_{frame}.tif",
                                     dpi=150)
                         plt.close()
 
@@ -3364,11 +3330,11 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                     target = np.reshape(target, (n_nodes_per_axis, n_nodes_per_axis))
                     target = np.flipud(target)
 
-                    os.makedirs(f"./{log_dir}/tmp_training/results/rotation", exist_ok=True)
-                    os.makedirs(f"./{log_dir}/tmp_training/results/rotation/generated1", exist_ok=True)
-                    os.makedirs(f"./{log_dir}/tmp_training/results/rotation/generated2", exist_ok=True)
-                    os.makedirs(f"./{log_dir}/tmp_training/results/rotation/target", exist_ok=True)
-                    os.makedirs(f"./{log_dir}/tmp_training/results/rotation/field", exist_ok=True)
+                    os.makedirs(f"./{log_dir}/results/rotation", exist_ok=True)
+                    os.makedirs(f"./{log_dir}/results/rotation/generated1", exist_ok=True)
+                    os.makedirs(f"./{log_dir}/results/rotation/generated2", exist_ok=True)
+                    os.makedirs(f"./{log_dir}/results/rotation/target", exist_ok=True)
+                    os.makedirs(f"./{log_dir}/results/rotation/field", exist_ok=True)
 
 
                     match model_config.field_type:
@@ -3399,7 +3365,7 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                         plt.xlim([0, 1])
                         plt.ylim([0, 1])
                         plt.tight_layout()
-                        plt.savefig(f"./{log_dir}/tmp_training/results/rotation/generated1/generated_1_{epoch}_{angle}.tif", dpi=150)
+                        plt.savefig(f"./{log_dir}/results/rotation/generated1/generated_1_{epoch}_{angle}.tif", dpi=150)
                         plt.close()
 
                         fig = plt.figure(figsize=(12, 12))
@@ -3417,7 +3383,7 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                         plt.xlim([0, 1])
                         plt.ylim([0, 1])
                         plt.tight_layout()
-                        plt.savefig(f"./{log_dir}/tmp_training/results/rotation/generated2/generated_2_{epoch}_{angle}.tif", dpi=150)
+                        plt.savefig(f"./{log_dir}/results/rotation/generated2/generated_2_{epoch}_{angle}.tif", dpi=150)
                         plt.close()
                         y = ndimage.rotate(target, -angle, reshape=False, cval=np.mean(target) * 1.1)
                         fig_ = plt.figure(figsize=(12, 12))
@@ -3432,7 +3398,7 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                         plt.xticks(fontsize=32.0)
                         plt.yticks(fontsize=32.0)
                         plt.tight_layout()
-                        plt.savefig(f"./{log_dir}/tmp_training/results/rotation/target/target_field_{epoch}_{angle}.tif", dpi=150)
+                        plt.savefig(f"./{log_dir}/results/rotation/target/target_field_{epoch}_{angle}.tif", dpi=150)
                         plt.close()
 
                         match model_config.field_type:
@@ -3456,7 +3422,7 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                         plt.xticks(fontsize=32.0)
                         plt.yticks(fontsize=32.0)
                         plt.tight_layout()
-                        plt.savefig(f"./{log_dir}/tmp_training/results/rotation/field/reconstructed_field_{epoch}_{angle}.tif", dpi=150)
+                        plt.savefig(f"./{log_dir}/results/rotation/field/reconstructed_field_{epoch}_{angle}.tif", dpi=150)
                         plt.close()
 
                         RMSE= np.sqrt(np.mean((y - pred) ** 2))
@@ -3475,7 +3441,7 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                 plt.yticks(fontsize=32.0)
                 plt.ylim([0,1])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/results/ssim_{epoch}.tif", dpi=150)
+                plt.savefig(f"./{log_dir}/results/ssim_{epoch}.tif", dpi=150)
                 plt.close()
 
                 print(f'SSIM: {np.round(np.mean(SSIM_list), 3)}+/-{np.round(np.std(SSIM_list), 3)}')
@@ -3489,7 +3455,7 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                 plt.yticks(fontsize=32.0)
                 plt.ylim([0,1])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/results/rmse_{epoch}.tif", dpi=150)
+                plt.savefig(f"./{log_dir}/results/rmse_{epoch}.tif", dpi=150)
                 plt.close()
 
                 fig_ = plt.figure(figsize=(12, 12))
@@ -3501,7 +3467,7 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                 plt.yticks(fontsize=32.0)
                 plt.ylim([0,50])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/results/psnr_{epoch}.tif", dpi=150)
+                plt.savefig(f"./{log_dir}/results/psnr_{epoch}.tif", dpi=150)
                 plt.close()
 
             case 'tensor':
@@ -3523,11 +3489,11 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                 cbar.ax.tick_params(labelsize=32)
                 # cbar.set_label(r'$Coupling$',fontsize=64)
                 plt.tight_layout()
-                imsave(f"./{log_dir}/tmp_training/results/field_pic_{config_file}_{epoch}.tif", pts)
-                plt.savefig(f"./{log_dir}/tmp_training/results/field_{config_file}_{epoch}.tif", dpi=300)
-                # np.save(f"./{log_dir}/tmp_training/results/embedding_{config_file}.npy", csv_)
+                imsave(f"./{log_dir}/results/field_pic_{config_file}_{epoch}.tif", pts)
+                plt.savefig(f"./{log_dir}/results/field_{config_file}_{epoch}.tif", dpi=300)
+                # np.save(f"./{log_dir}/results/embedding_{config_file}.npy", csv_)
                 # csv_= np.reshape(csv_,(csv_.shape[0]*csv_.shape[1],2))
-                # np.savetxt(f"./{log_dir}/tmp_training/results/embedding_{config_file}.txt", csv_)
+                # np.savetxt(f"./{log_dir}/results/embedding_{config_file}.txt", csv_)
                 plt.close()
                 rmse = np.sqrt(np.mean((target-pts)**2))
                 print(f'RMSE: {rmse}')
@@ -3546,7 +3512,7 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                 plt.xlim([-vm*0.1, vm*1.5])
                 plt.ylim([-vm*0.1, vm*1.5])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/results/field_scatter_{config_file}_{epoch}.tif", dpi=300)
+                plt.savefig(f"./{log_dir}/results/field_scatter_{config_file}_{epoch}.tif", dpi=300)
 
                 x_data = np.reshape(pts,(n_nodes))
                 y_data = np.reshape(target,(n_nodes))
@@ -3574,7 +3540,7 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                 plt.xlim([-vm*0.1, vm*1.1])
                 plt.ylim([-vm*0.1, vm*1.1])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/results/field_scatter_{config_file}_{epoch}.tif", dpi=300)
+                plt.savefig(f"./{log_dir}/results/field_scatter_{config_file}_{epoch}.tif", dpi=300)
 
 def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
 
@@ -3673,7 +3639,7 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
     cbar = plt.colorbar(shrink=0.5)
     cbar.ax.tick_params(labelsize=32)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/results/true_coeff_{config_file}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/results/true_coeff_{config_file}.tif", dpi=300)
     plt.close()
 
     net_list = ['20', '0_1000', '0_2000', '0_5000', '1', '5']
@@ -3706,7 +3672,7 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/results/embedding_{config_file}_{net_}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{net_}.tif", dpi=300)
         plt.close()
 
         if not(has_pic):
@@ -3721,8 +3687,8 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
             new_labels = labels.copy()
             for n in range(n_node_types):
                 new_labels[labels == label_list[n]] = n
-            Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-            print(f'Accuracy: {Accuracy}  n_clusters: {n_clusters}')
+            accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
+            print(f'accuracy: {accuracy}  n_clusters: {n_clusters}')
 
             model_a_ = model.a[1].clone().detach()
             for n in range(n_clusters):
@@ -3837,7 +3803,7 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
             plt.yticks(fontsize=32.0)
             plt.title('First equation',fontsize=48)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/results/first_equation_{config_file}_{net_}.tif", dpi=300)
+            plt.savefig(f"./{log_dir}/results/first_equation_{config_file}_{net_}.tif", dpi=300)
             plt.close()
             cp = ['uu','uv','uw','vv','vw','ww','u','v','w']
             results = {
@@ -3859,7 +3825,7 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
             plt.yticks(fontsize=32.0)
             plt.title('Second equation',fontsize=48)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/results/second_equation_{config_file}_{net_}.tif", dpi=300)
+            plt.savefig(f"./{log_dir}/results/second_equation_{config_file}_{net_}.tif", dpi=300)
             plt.close()
             cp = ['uu','uv','uw','vv','vw','ww','u','v','w']
             results = {
@@ -3881,7 +3847,7 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
             plt.yticks(fontsize=32.0)
             plt.title('Third equation',fontsize=48)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/results/third_equation_{config_file}_{net_}.tif", dpi=300)
+            plt.savefig(f"./{log_dir}/results/third_equation_{config_file}_{net_}.tif", dpi=300)
             plt.close()
 
 
@@ -3906,7 +3872,7 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
             plt.yticks(fontsize=32.0)
             fmt = lambda x, pos: '{:.3%}'.format(x)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/results/diff_coeff_map_{config_file}_{net_}.tif", dpi=300)
+            plt.savefig(f"./{log_dir}/results/diff_coeff_map_{config_file}_{net_}.tif", dpi=300)
             plt.close()
 
             t_ = np.reshape(t, (n_nodes_per_axis*n_nodes_per_axis))
@@ -3924,7 +3890,7 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
             plt.xticks(fontsize=32.0)
             plt.yticks(fontsize=32.0)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/results/embedding_{config_file}_{net_}.tif", dpi=300)
+            plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{net_}.tif", dpi=300)
             plt.close()
 
     bContinuous=False
@@ -3982,7 +3948,7 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
                     plt.yticks(fontsize=32.0)
                     fmt = lambda x, pos: '{:.3%}'.format(x)
                     plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_training/results/diff_node_coeff_{config_file}_{net_}.tif", dpi=300)
+                    plt.savefig(f"./{log_dir}/results/diff_node_coeff_{config_file}_{net_}.tif", dpi=300)
                     plt.close()
 
         input_phi_list = torch.stack(input_phi_list)
@@ -4015,7 +3981,7 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
                 plt.yticks(fontsize=32.0)
                 fmt = lambda x, pos: '{:.3%}'.format(x)
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/results/diff_coeff_{config_file}_{net_}.tif", dpi=300)
+                plt.savefig(f"./{log_dir}/results/diff_coeff_{config_file}_{net_}.tif", dpi=300)
                 plt.close()
 
         fig_ = plt.figure(figsize=(12, 12))
@@ -4049,7 +4015,7 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
         r_squared = 1 - (ss_res / ss_tot)
         plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/results/scatter_{config_file}_{net_}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/scatter_{config_file}_{net_}.tif", dpi=300)
         plt.close()
 
         print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}")
@@ -4114,7 +4080,7 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
     plt.xticks(fontsize=32.0)
     plt.yticks(fontsize=32.0)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/results/True_Aij_{config_file}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/results/True_Aij_{config_file}.tif", dpi=300)
     plt.close()
     fig_ = plt.figure(figsize=(12, 12))
     axf = fig_.add_subplot(1, 1, 1)
@@ -4128,7 +4094,7 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
     cbar = plt.colorbar(shrink=0.5)
     cbar.ax.tick_params(labelsize=32)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/results/True_Aij_bar_{config_file}.tif", dpi=300)
+    plt.savefig(f"./{log_dir}/results/True_Aij_bar_{config_file}.tif", dpi=300)
     plt.close()
 
 
@@ -4168,7 +4134,7 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/results/embedding_{config_file}_{net_}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{net_}.tif", dpi=300)
         plt.close()
 
 
@@ -4204,7 +4170,7 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         plt.xticks(fontsize=32.0)
         plt.yticks(fontsize=32.0)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/results/Matrix_{config_file}_{net_}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/Matrix_{config_file}_{net_}.tif", dpi=300)
         plt.close()
 
         print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   offset: {np.round(lin_fit[1], 2)}  ")
@@ -4219,7 +4185,7 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         # plt.xticks(fontsize=32.0)
         # plt.yticks(fontsize=32.0)
         # plt.tight_layout()
-        # plt.savefig(f"./{log_dir}/tmp_training/results/Reconstructed_Aij_{config_file}_{net_}.tif", dpi=300)
+        # plt.savefig(f"./{log_dir}/results/Reconstructed_Aij_{config_file}_{net_}.tif", dpi=300)
         # plt.close()
 
         # fig_ = plt.figure(figsize=(12, 12))
@@ -4233,7 +4199,7 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         # # plt.scatter(to_numpy(uu), to_numpy(true_func) * to_numpy(ynorm), linewidth=8)
         # plt.ylabel(r'Update', fontsize=48)
         # plt.tight_layout()
-        # plt.savefig(f"./{log_dir}/tmp_training/results/Update_{config_file}_{net_}.tif", dpi=300)
+        # plt.savefig(f"./{log_dir}/results/Update_{config_file}_{net_}.tif", dpi=300)
         # plt.close()
 
 
@@ -4259,7 +4225,7 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         plt.ylabel(r'Reconstructed $\Phi(u)$', fontsize=64)
         plt.ylim([-0.25, 0.25])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/results/phi_u_{config_file}_{net_}.tif",dpi=170.7)
+        plt.savefig(f"./{log_dir}/results/phi_u_{config_file}_{net_}.tif",dpi=170.7)
         plt.close()
 
         embedding_ = model.a[1, :, :]
@@ -4297,15 +4263,15 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         plt.yticks(fontsize=32.0)
         plt.ylim([-0.25, 0.25])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/results/cluster_{config_file}_{net_}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/cluster_{config_file}_{net_}.tif", dpi=300)
         plt.close()
 
         new_labels = labels.copy()
         for n in range(n_particle_types):
             new_labels[labels == label_list[n]] = n
         type_list = x[:, 5:6].clone().detach()
-        Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-        print(f'Accuracy: {np.round(Accuracy, 3)}   n_clusters: {n_clusters}')
+        accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
+        print(f'accuracy: {np.round(accuracy, 3)}   n_clusters: {n_clusters}')
 
         model_a_ = model.a[1].clone().detach()
         for n in range(n_clusters):
@@ -4332,7 +4298,7 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         plt.yticks(fontsize=32.0)
         plt.ylim([-0.25, 0.25])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/results/true_phi_u_{config_file}_{net_}.tif",dpi=170.7)
+        plt.savefig(f"./{log_dir}/results/true_phi_u_{config_file}_{net_}.tif",dpi=170.7)
         plt.close()
 
         uu = torch.tensor(np.linspace(0, 3, 1000)).to(device)
@@ -4349,7 +4315,7 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         plt.scatter(to_numpy(uu), to_numpy(func), linewidth=8, c='k', label='Reconstructed')
         plt.ylim([-3,3])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/results/f_u_{config_file}_{net_}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/f_u_{config_file}_{net_}.tif", dpi=300)
         plt.close()
 
         fig_ = plt.figure(figsize=(12, 12))
@@ -4361,7 +4327,7 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         plt.scatter(to_numpy(uu), to_numpy(true_func), linewidth=8, c='k', label='Reconstructed')
         plt.ylim([-3,3])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/results/true_f_u_{config_file}_{net_}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/true_f_u_{config_file}_{net_}.tif", dpi=300)
         plt.close()
 
         bFit=False
@@ -4431,7 +4397,7 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
             plt.xticks(fontsize=32.0)
             plt.yticks(fontsize=32.0)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/results/Matrix_bis_{config_file}_{net_}.tif", dpi=300)
+            plt.savefig(f"./{log_dir}/results/Matrix_bis_{config_file}_{net_}.tif", dpi=300)
             plt.close()
 
             print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   offset: {np.round(lin_fit[1], 2)}  ")
@@ -4447,7 +4413,7 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
             plt.plot(to_numpy(uu), to_numpy(func)/ -1.878, linewidth=8, c='k', label='Reconstructed')
             plt.legend(fontsize=32.0)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/results/comparison_f_u_{config_file}_{net_}.tif", dpi=300)
+            plt.savefig(f"./{log_dir}/results/comparison_f_u_{config_file}_{net_}.tif", dpi=300)
             plt.close()
 
 
@@ -4466,7 +4432,7 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
             plt.legend(fontsize=32.0)
             plt.ylim([-0.25, 0.25])
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/results/comparison_phi_1_{config_file}_{net_}.tif", dpi=300)
+            plt.savefig(f"./{log_dir}/results/comparison_phi_1_{config_file}_{net_}.tif", dpi=300)
             plt.close()
 
             uu = uu.to(dtype=torch.float32)
@@ -4518,7 +4484,7 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         # plt.scatter(to_numpy(uu), to_numpy(msg_gt+phi_gt), s=40, c='r')
         plt.xlim([0, 3])
         plt.ylim([0, 1])
-        plt.savefig(f"./{log_dir}/tmp_training/results/model_{config_file}_{net_}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/model_{config_file}_{net_}.tif", dpi=300)
 
         fig_ = plt.figure(figsize=(12, 12))
         plt.scatter(to_numpy(uu), to_numpy(msg_gt+phi_gt), s=100)
@@ -4526,24 +4492,24 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         plt.scatter(to_numpy(uu), to_numpy(msg_gt), s=20)
         plt.xlim([0, 3])
         plt.ylim([0, 1])
-        plt.savefig(f"./{log_dir}/tmp_training/results/true_{config_file}_{net_}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/true_{config_file}_{net_}.tif", dpi=300)
 
         fig_ = plt.figure(figsize=(12, 12))
         plt.scatter(to_numpy(uu), to_numpy(msg + phi), s=100)
         plt.scatter(to_numpy(uu), to_numpy(msg_gt+phi_gt), s=20)
-        plt.savefig(f"./{log_dir}/tmp_training/results/comparison_all_{config_file}_{net_}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/comparison_all_{config_file}_{net_}.tif", dpi=300)
 
 
         fig_ = plt.figure(figsize=(12, 12))
         plt.scatter(to_numpy(msg_gt), to_numpy(msg), s=20, c='k')
-        plt.savefig(f"./{log_dir}/tmp_training/results/comparison_msg_{config_file}_{net_}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/comparison_msg_{config_file}_{net_}.tif", dpi=300)
 
         fig_ = plt.figure(figsize=(12, 12))
         plt.scatter(to_numpy(u_j_gt), to_numpy(activation_gt), s=20)
         plt.scatter(to_numpy(u_j), to_numpy(activation), s=20)
         plt.scatter(to_numpy(uu), to_numpy(phi_gt), s=20)
         plt.scatter(to_numpy(uu), to_numpy(phi), s=20)
-        plt.savefig(f"./{log_dir}/tmp_training/results/funky_comparison_{config_file}_{net_}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/funky_comparison_{config_file}_{net_}.tif", dpi=300)
 
         fig_ = plt.figure(figsize=(12, 12))
         plt.scatter(to_numpy(uu), to_numpy(phi), s=400, c='g', label='True')
@@ -4554,7 +4520,7 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         plt.yticks(fontsize=32.0)
         plt.legend(fontsize=32.0)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/results/phi_u_{config_file}_{net_}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/phi_u_{config_file}_{net_}.tif", dpi=300)
         plt.close()
 
 
@@ -4763,14 +4729,14 @@ if __name__ == '__main__':
     # config_list = ['boids_16_256_division_death_model_2']
     # config_list = ['wave_slit_test']
     # config_list = ['Coulomb_3_256']
-    config_list=['arbitrary_64_0_1','arbitrary_64_0_01', 'arbitrary_3', 'arbitrary_16', 'arbitrary_32']
+    config_list=['arbitrary_64_0_1','arbitrary_64_0_01'] #, 'arbitrary_3', 'arbitrary_16', 'arbitrary_32']
+    # config_list=['arbitrary_16_noise_0_1','arbitrary_16_noise_0_2', 'arbitrary_16_noise_0_3', 'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5']
+
+    epoch_list = [20]
 
     for config_file in config_list:
 
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-
-        epoch_list = [20]
-
         data_plot(config_file, epoch_list, device)
 
 
