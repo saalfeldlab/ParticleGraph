@@ -709,9 +709,6 @@ def data_plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
 
-    # plt.rcParams['text.usetex'] = True
-    # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
@@ -4261,7 +4258,7 @@ if __name__ == '__main__':
     # config_list = ['boids_16_256_division_death_model_2']
     # config_list = ['wave_slit_test']
     # config_list = ['Coulomb_3_256']
-    config_list = ['arbitrary_64_0_1', 'arbitrary_64_0_01', 'arbitrary_3', 'arbitrary_16', 'arbitrary_32']
+    # config_list = ['arbitrary_64_0_1', 'arbitrary_64_0_01', 'arbitrary_3', 'arbitrary_16', 'arbitrary_32']
     # config_list=['arbitrary_16_noise_0_1','arbitrary_16_noise_0_2', 'arbitrary_16_noise_0_3', 'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5']
 
     config_list = ['arbitrary_3_3']
