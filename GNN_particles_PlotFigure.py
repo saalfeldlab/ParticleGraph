@@ -13,6 +13,7 @@ import time
 from ParticleGraph.utils import *
 from ParticleGraph.fitting_models import *
 from ParticleGraph.kan import *
+
 # from pysr import PySRRegressor
 # import cv2
 
@@ -25,6 +26,7 @@ from ParticleGraph.embedding_cluster import *
 from ParticleGraph.utils import to_numpy, CustomColorMap, choose_boundary_values
 import matplotlib as mpl
 from matplotlib.ticker import FuncFormatter
+
 
 # matplotlib.use("Qt5Agg")
 
@@ -64,15 +66,14 @@ class Interaction_Particles_extract(MessagePassing):
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                             hidden_size=self.hidden_dim, device=self.device)
 
-
-
-        if simulation_config.has_cell_division :
+        if simulation_config.has_cell_division:
             self.a = nn.Parameter(
                 torch.tensor(np.ones((self.n_dataset, self.n_particles_max, 2)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
         else:
             self.a = nn.Parameter(
-                torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
+                torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)),
+                             device=self.device,
                              requires_grad=True, dtype=torch.float32))
 
         if self.update_type != 'none':
@@ -95,9 +96,9 @@ class Interaction_Particles_extract(MessagePassing):
         d_pos = x[:, 3:5]
         particle_id = x[:, 0:1]
         if has_field:
-            field = x[:,6:7]
+            field = x[:, 6:7]
         else:
-            field = torch.ones_like(x[:,6:7])
+            field = torch.ones_like(x[:, 6:7])
 
         pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id, field=field)
 
@@ -134,12 +135,12 @@ class Interaction_Particles_extract(MessagePassing):
                 in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
             case 'PDE_B' | 'PDE_B_bis':
                 in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
-                                     dpos_y_j[:, None], embedding_i), dim=-1)
+                                         dpos_y_j[:, None], embedding_i), dim=-1)
             case 'PDE_G':
                 in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None],
-                                         dpos_x_j[:, None], dpos_y_j[:, None],embedding_j),dim=-1)
+                                         dpos_x_j[:, None], dpos_y_j[:, None], embedding_j), dim=-1)
             case 'PDE_GS':
-                in_features = torch.cat((r[:, None], embedding_j),dim=-1)
+                in_features = torch.cat((r[:, None], embedding_j), dim=-1)
             case 'PDE_E':
                 in_features = torch.cat(
                     (delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
@@ -164,6 +165,8 @@ class Interaction_Particles_extract(MessagePassing):
         else:  # PDE_A
             return r * (p[0] * torch.exp(-r ** (2 * p[1]) / (2 * self.sigma ** 2)) - p[2] * torch.exp(
                 -r ** (2 * p[3]) / (2 * self.sigma ** 2)))
+
+
 class PDE_B_extract(MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -188,14 +191,14 @@ class PDE_B_extract(MessagePassing):
         return acc, sum, self.cohesion, self.alignment, self.separation, self.diffx, self.diffv, self.r, self.type
 
     def message(self, x_i, x_j):
-
         r = torch.sum(self.bc_dpos(x_j[:, 1:3] - x_i[:, 1:3]) ** 2, dim=1)  # distance squared
 
         pp = self.p[to_numpy(x_i[:, 5]), :]
 
         cohesion = pp[:, 0:1].repeat(1, 2) * self.a1 * self.bc_dpos(x_j[:, 1:3] - x_i[:, 1:3])
         alignment = pp[:, 1:2].repeat(1, 2) * self.a2 * self.bc_dpos(x_j[:, 3:5] - x_i[:, 3:5])
-        separation = pp[:, 2:3].repeat(1, 2) * self.a3 * self.bc_dpos(x_i[:, 1:3] - x_j[:, 1:3]) / (r[:, None].repeat(1, 2))
+        separation = pp[:, 2:3].repeat(1, 2) * self.a3 * self.bc_dpos(x_i[:, 1:3] - x_j[:, 1:3]) / (
+            r[:, None].repeat(1, 2))
 
         self.cohesion = cohesion
         self.alignment = alignment
@@ -212,6 +215,8 @@ class PDE_B_extract(MessagePassing):
         cohesion = p[0] * self.a1 * r
         separation = -p[2] * self.a3 / r
         return (cohesion + separation)
+
+
 class Mesh_RPS_extract(MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -257,7 +262,7 @@ class Mesh_RPS_extract(MessagePassing):
         return pred, input_phi, embedding
 
     def message(self, uvw_j, discrete_laplacian):
-        return discrete_laplacian[:,None] * uvw_j
+        return discrete_laplacian[:, None] * uvw_j
 
     def update(self, aggr_out):
         return aggr_out  # self.lin_node(aggr_out)
@@ -268,50 +273,20 @@ class Mesh_RPS_extract(MessagePassing):
     def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles,
                                     n_particle_types, n_particles, ynorm, epoch, log_dir, device):
 
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(1, 1, 1)
-        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-        ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
         embedding = get_embedding(model.a, 1)
-        for n in range(n_particle_types):
-            plt.scatter(embedding[index_particles[n], 0],
-                        embedding[index_particles[n], 1], color=cmap.color(n), s=400)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
-        plt.tight_layout()
-        # plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{epoch}.tif",dpi=170.7)
-        plt.close()
 
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(1, 1, 1)
-        ax.xaxis.get_major_formatter()._usetex = False
-        ax.yaxis.get_major_formatter()._usetex = False
-        func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
+        func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=False, config=config,
                                                             model_lin_edge=model.lin_edge, model_a=model.a,
                                                             dataset_number=1,
                                                             n_particles=n_particles, ynorm=ynorm,
                                                             types=to_numpy(x[:, 5]),
                                                             cmap=cmap, device=device)
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=64)
-        # xticks with sans serif font
-        plt.xticks(fontsize=32)
-        plt.yticks(fontsize=32)
-        plt.xlim([0, max_radius])
-        plt.ylim([-0.5E6, 0.5E6])
-        plt.tight_layout()
-        plt.close()
 
         labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding,
                                                           train_config.cluster_distance_threshold, index_particles,
                                                           n_particle_types, embedding_cluster)
 
         accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-        print(f'accuracy: {np.round(accuracy, 3)}   n_clusters: {n_clusters}')
 
         model_a_ = model.a[1].clone().detach()
         for n in range(n_clusters):
@@ -326,12 +301,7 @@ class Mesh_RPS_extract(MessagePassing):
         with torch.no_grad():
             model.a[1] = model_a_.clone().detach()
 
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(1, 1, 1)
-        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-        ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        fig, ax = fig_init()
         embedding = get_embedding(model_a_first, 1)
         csv_ = embedding
         np.save(f"./{log_dir}/results/embedding_{config_file}_{epoch}.npy", csv_)
@@ -345,8 +315,6 @@ class Mesh_RPS_extract(MessagePassing):
                             s=400, alpha=0.1)
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{epoch}.tif", dpi=170.7)
         plt.close()
@@ -365,6 +333,7 @@ def fig_init():
 
     return fig, ax
 
+
 def load_training_data(dataset_name, n_runs, log_dir, device):
     x_list = []
     y_list = []
@@ -377,14 +346,15 @@ def load_training_data(dataset_name, n_runs, log_dir, device):
         y_list.append(y)
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
-    print("vnorm:{:.2e},  ynorm:{:.2e}".format(to_numpy(vnorm),to_numpy(ynorm)))
+    print("vnorm:{:.2e},  ynorm:{:.2e}".format(to_numpy(vnorm), to_numpy(ynorm)))
     x = []
     y = []
 
     return x_list, y_list, vnorm, ynorm
 
-def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list, n_particle_types, n_particles, ynorm, epoch, log_dir, device):
 
+def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list,
+                                n_particle_types, n_particles, ynorm, epoch, log_dir, device):
     train_config = config.training
     max_radius = config.simulation.max_radius
 
@@ -399,16 +369,17 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
 
     fig, ax = fig_init()
     embedding = get_embedding(model.a, 1)
-    proj_interaction = (proj_interaction - np.min(proj_interaction)) / (np.max(proj_interaction) - np.min(proj_interaction)+1e-10)
+    proj_interaction = (proj_interaction - np.min(proj_interaction)) / (
+                np.max(proj_interaction) - np.min(proj_interaction) + 1e-10)
     for n in range(n_particle_types):
         plt.scatter(proj_interaction[index_particles[n], 0],
                     proj_interaction[index_particles[n], 1], color=cmap.color(n), s=200, alpha=0.1)
     plt.xlabel(r'UMAP 0', fontsize=64)
     plt.ylabel(r'UMAP 1', fontsize=64)
-    plt.xlim([-0.2,1.2])
-    plt.ylim([-0.2,1.2])
+    plt.xlim([-0.2, 1.2])
+    plt.ylim([-0.2, 1.2])
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/UMAP_{config_file}_{epoch}.tif",dpi=170.7)
+    plt.savefig(f"./{log_dir}/results/UMAP_{config_file}_{epoch}.tif", dpi=170.7)
     plt.close()
 
     labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding,
@@ -445,10 +416,11 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
     plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{epoch}.tif", dpi=170.7)
     plt.close()
 
-    return  accuracy, n_clusters, new_labels
+    return accuracy, n_clusters, new_labels
 
-def plot_embedding(index, model_a, dataset_number, index_particles, n_particles, n_particle_types, epoch, it, fig, ax, cmap, device):
 
+def plot_embedding(index, model_a, dataset_number, index_particles, n_particles, n_particle_types, epoch, it, fig, ax,
+                   cmap, device):
     embedding = get_embedding(model_a, dataset_number)
 
     plt.text(-0.25, 1.1, f'{index}', ha='left', va='top', transform=ax.transAxes, fontsize=12)
@@ -465,8 +437,9 @@ def plot_embedding(index, model_a, dataset_number, index_particles, n_particles,
 
     return embedding
 
-def plot_function(bVisu, index, model_name, model_MLP, model_a, dataset_number, label, pos, max_radius, ynorm, index_particles, n_particles, n_particle_types, epoch, it, fig, ax, cmap, device):
 
+def plot_function(bVisu, index, model_name, model_MLP, model_a, dataset_number, label, pos, max_radius, ynorm,
+                  index_particles, n_particles, n_particle_types, epoch, it, fig, ax, cmap, device):
     # print(f'plot functions epoch:{epoch} it: {it}')
 
     plt.text(-0.25, 1.1, f'{index}', ha='left', va='top', transform=ax.transAxes, fontsize=12)
@@ -478,24 +451,24 @@ def plot_function(bVisu, index, model_name, model_MLP, model_a, dataset_number, 
         match model_name:
             case 'PDE_A':
                 in_features = torch.cat((pos[:, None] / max_radius, 0 * pos[:, None],
-                                     pos[:, None] / max_radius, embedding_), dim=1)
+                                         pos[:, None] / max_radius, embedding_), dim=1)
             case 'PDE_A_bis':
                 in_features = torch.cat((pos[:, None] / max_radius, 0 * pos[:, None],
-                                     pos[:, None] / max_radius, embedding_, embedding_), dim=1)
+                                         pos[:, None] / max_radius, embedding_, embedding_), dim=1)
             case 'PDE_B' | 'PDE_B_bis':
                 in_features = torch.cat((pos[:, None] / max_radius, 0 * pos[:, None],
-                                     pos[:, None] / max_radius, 0 * pos[:, None], 0 * pos[:, None],
-                                     0 * pos[:, None], 0 * pos[:, None], embedding_), dim=1)
+                                         pos[:, None] / max_radius, 0 * pos[:, None], 0 * pos[:, None],
+                                         0 * pos[:, None], 0 * pos[:, None], embedding_), dim=1)
             case 'PDE_G':
                 in_features = torch.cat((pos[:, None] / max_radius, 0 * pos[:, None],
-                                     pos[:, None] / max_radius, 0 * pos[:, None], 0 * pos[:, None],
-                                     0 * pos[:, None], 0 * pos[:, None], embedding_), dim=1)
+                                         pos[:, None] / max_radius, 0 * pos[:, None], 0 * pos[:, None],
+                                         0 * pos[:, None], 0 * pos[:, None], embedding_), dim=1)
             case 'PDE_GS':
                 in_features = torch.cat((pos[:, None] / max_radius, embedding_), dim=1)
             case 'PDE_E':
                 in_features = torch.cat((pos[:, None] / max_radius, 0 * pos[:, None],
-                                     pos[:, None] / max_radius, embedding_, embedding_), dim=-1)
-            
+                                         pos[:, None] / max_radius, embedding_, embedding_), dim=-1)
+
         with torch.no_grad():
             func = model_MLP(in_features.float())
         func = func[:, 0]
@@ -516,11 +489,12 @@ def plot_function(bVisu, index, model_name, model_MLP, model_a, dataset_number, 
 
     return func_list
 
-def plot_umap(index, func_list, log_dir, n_neighbors, index_particles, n_particles, n_particle_types, embedding_cluster, epoch, it, fig, ax, cmap, device):
 
+def plot_umap(index, func_list, log_dir, n_neighbors, index_particles, n_particles, n_particle_types, embedding_cluster,
+              epoch, it, fig, ax, cmap, device):
     # print(f'plot umap epoch:{epoch} it: {it}')
     plt.text(-0.25, 1.1, f'{index}', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-    if False: # os.path.exists(os.path.join(log_dir, f'proj_interaction_{epoch}.npy')):
+    if False:  # os.path.exists(os.path.join(log_dir, f'proj_interaction_{epoch}.npy')):
         proj_interaction = np.load(os.path.join(log_dir, f'proj_interaction_{epoch}.npy'))
     else:
         new_index = np.random.permutation(func_list.shape[0])
@@ -553,8 +527,8 @@ def plot_umap(index, func_list, log_dir, n_neighbors, index_particles, n_particl
 
     return proj_interaction, new_labels, n_clusters
 
-def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoch, it, fig, ax):
 
+def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoch, it, fig, ax):
     # print(f'plot confusion matrix epoch:{epoch} it: {it}')
     plt.text(-0.25, 1.1, f'{index}', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     confusion_matrix = metrics.confusion_matrix(true_labels, new_labels)  # , normalize='true')
@@ -564,7 +538,7 @@ def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoc
     else:
         cm_display.plot(ax=fig.gca(), cmap='Blues', include_values=True, values_format='d', colorbar=False)
     accuracy = metrics.accuracy_score(true_labels, new_labels)
-    plt.title(f'accuracy: {np.round(accuracy,3)}', fontsize=12)
+    plt.title(f'accuracy: {np.round(accuracy, 3)}', fontsize=12)
     # print(f'accuracy: {np.round(accuracy,3)}')
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
@@ -573,51 +547,47 @@ def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoc
 
     return accuracy
 
+
 def plot_cell_rates(config, device, log_dir, n_frames, n_particles_max, n_particle_types, x_list, new_labels, cmap):
-
-
     print('plot cell rates ...')
     N_cells_alive = np.zeros((n_frames, n_particle_types))
     N_cells_dead = np.zeros((n_frames, n_particle_types))
 
     for it in trange(n_frames):
         x = x_list[0][it].clone().detach()
-        particle_index = to_numpy(x[:,0:1]).astype(int)
-        x[:,5:6] = torch.tensor(new_labels[particle_index], device=device)
+        particle_index = to_numpy(x[:, 0:1]).astype(int)
+        x[:, 5:6] = torch.tensor(new_labels[particle_index], device=device)
 
         for k in range(n_particle_types):
-            pos =torch.argwhere((x[:,5:6] == k) & (x[:,6:7] == 1))
+            pos = torch.argwhere((x[:, 5:6] == k) & (x[:, 6:7] == 1))
             N_cells_alive[it, k] = pos.shape[0]
-            pos =torch.argwhere((x[:,5:6] == k) & (x[:,6:7] == 0))
+            pos = torch.argwhere((x[:, 5:6] == k) & (x[:, 6:7] == 0))
             N_cells_dead[it, k] = pos.shape[0]
 
-    last_frame_growth = np.argwhere(np.diff(N_cells_alive[:,0], axis=0))
-    last_frame_growth = last_frame_growth[-1]-1
-    N_cells_alive = N_cells_alive[0:int(last_frame_growth),:]
-    N_cells_dead = N_cells_dead[0:int(last_frame_growth),:]
+    last_frame_growth = np.argwhere(np.diff(N_cells_alive[:, 0], axis=0))
+    last_frame_growth = last_frame_growth[-1] - 1
+    N_cells_alive = N_cells_alive[0:int(last_frame_growth), :]
+    N_cells_dead = N_cells_dead[0:int(last_frame_growth), :]
 
-    fig = plt.figure(figsize=(12, 12))
-    ax = fig.add_subplot(1, 1, 1)
+    fig, ax = fig_init()
     for k in range(n_particle_types):
-        plt.plot(np.arange(last_frame_growth), N_cells_alive[:, k], color=cmap.color(k), linewidth=4, label=f'Cell type {k} alive')
-    plt.xticks(fontsize=32.0)
-    plt.yticks(fontsize=32.0)
+        plt.plot(np.arange(last_frame_growth), N_cells_alive[:, k], color=cmap.color(k), linewidth=4,
+                 label=f'Cell type {k} alive')
     plt.xlabel(r'Frame', fontsize=64)
     plt.ylabel(r'Number of alive cells', fontsize=64)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/cell_alive_{config_file}.tif", dpi=300)
 
-    fig = plt.figure(figsize=(12, 12))
-    ax = fig.add_subplot(1, 1, 1)
+    fig, ax = fig_init()
     for k in range(n_particle_types):
-        plt.plot(np.arange(last_frame_growth), N_cells_dead[:, k], color=cmap.color(k), linewidth=4, label=f'Cell type {k} dead')
-    plt.xticks(fontsize=32.0)
-    plt.yticks(fontsize=32.0)
+        plt.plot(np.arange(last_frame_growth), N_cells_dead[:, k], color=cmap.color(k), linewidth=4,
+                 label=f'Cell type {k} dead')
     plt.xlabel(r'Frame', fontsize=64)
     plt.ylabel(r'Number of dead cells', fontsize=64)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/cell_dead_{config_file}.tif", dpi=300)
     plt.close()
+
 
 def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
     plt.rcParams['text.usetex'] = True
@@ -642,7 +612,7 @@ def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, dev
     embedding_cluster = EmbeddingCluster(config)
 
     x_list, y_list, vnorm, ynorm = load_training_data(dataset_name, n_runs, log_dir, device)
-    logger.info("vnorm:{:.2e},  ynorm:{:.2e}".format(to_numpy(vnorm),to_numpy(ynorm)))
+    logger.info("vnorm:{:.2e},  ynorm:{:.2e}".format(to_numpy(vnorm), to_numpy(ynorm)))
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
     x = x_list[1][0].clone().detach()
@@ -653,29 +623,34 @@ def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, dev
 
         net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
         print(f'network: {net}')
-        state_dict = torch.load(net,map_location=device)
+        state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
         model.eval()
 
         model_a_first = model.a.clone().detach()
         config.training.cluster_distance_threshold = 0.01
-        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list,
-                                    n_particle_types, n_particles, ynorm, epoch, log_dir, device)
-        print(f'final ressult     accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
-        logger.info(f'final ressult     accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
+                                                                       cmap, index_particles, type_list,
+                                                                       n_particle_types, n_particles, ynorm, epoch,
+                                                                       log_dir, device)
+        print(
+            f'final ressult     accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+        logger.info(
+            f'final ressult     accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
         fig, ax = fig_init()
-        p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt',map_location=device)
+        p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
         rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
         rmserr_list = []
-        for n in range(int(n_particles*(1-train_config.particle_dropout))):
+        for n in range(int(n_particles * (1 - train_config.particle_dropout))):
             embedding_ = model_a_first[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                             rr[:, None] / max_radius, embedding_), dim=1)
+                                     rr[:, None] / max_radius, embedding_), dim=1)
             with torch.no_grad():
                 func = model.lin_edge(in_features.float())
             func = func[:, 0]
-            true_func = model.psi(rr, p[to_numpy(type_list[n]).astype(int)].squeeze(), p[to_numpy(type_list[n]).astype(int)].squeeze())
+            true_func = model.psi(rr, p[to_numpy(type_list[n]).astype(int)].squeeze(),
+                                  p[to_numpy(type_list[n]).astype(int)].squeeze())
             rmserr_list.append(torch.sqrt(torch.mean((func * ynorm - true_func.squeeze()) ** 2)))
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
@@ -685,7 +660,7 @@ def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, dev
         plt.xlim([0, max_radius])
         plt.ylim(config.plotting.ylim)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/func_all_{config_file}_{epoch}.tif",dpi=170.7)
+        plt.savefig(f"./{log_dir}/results/func_all_{config_file}_{epoch}.tif", dpi=170.7)
         rmserr_list = torch.stack(rmserr_list)
         rmserr_list = to_numpy(rmserr_list)
         print("all function RMS error: {:.2e}+/-{:.2e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
@@ -703,7 +678,7 @@ def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, dev
         plt.xlabel(r'$d_{ij}$', fontsize=64)
         plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif",dpi=170.7)
+        plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=170.7)
         plt.close()
 
         rr = torch.tensor(np.linspace(-1.5 * max_radius, 1.5 * max_radius, 2000)).to(device)
@@ -723,6 +698,7 @@ def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, dev
         plt.tight_layout()
         torch.save(plots, f"./{log_dir}/results/plots_true_{config_file}_{epoch}.pt")
         plt.close()
+
 
 def data_plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger, device):
     plt.rcParams['text.usetex'] = True
@@ -750,7 +726,7 @@ def data_plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger
     n_runs = train_config.n_runs
 
     x_list, y_list, vnorm, ynorm = load_training_data(dataset_name, n_runs, log_dir, device)
-    logger.info("vnorm:{:.2e},  ynorm:{:.2e}".format(to_numpy(vnorm),to_numpy(ynorm)))
+    logger.info("vnorm:{:.2e},  ynorm:{:.2e}".format(to_numpy(vnorm), to_numpy(ynorm)))
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
     x = x_list[1][0].clone().detach()
@@ -761,16 +737,19 @@ def data_plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger
 
         net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
         print(f'network: {net}')
-        state_dict = torch.load(net,map_location=device)
+        state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
         model.eval()
 
         model_a_first = model.a.clone().detach()
-        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list,
-                                    n_particle_types, n_particles, ynorm, epoch, log_dir, device)
-        print(f'final ressult     accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
-        logger.info(f'final ressult     accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
-
+        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
+                                                                       cmap, index_particles, type_list,
+                                                                       n_particle_types, n_particles, ynorm, epoch,
+                                                                       log_dir, device)
+        print(
+            f'final ressult     accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+        logger.info(
+            f'final ressult     accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
         x = x_list[0][100].clone().detach()
         index_particles = get_index_particles(x, n_particle_types, dimension)
@@ -785,9 +764,11 @@ def data_plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger
         rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
         func_list = []
         for n in trange(edges.shape[1]):
-            embedding_1 = model.a[1, edges[0,n], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            embedding_2 = model.a[1, edges[1,n], :] * torch.ones((1000, config.graph_model.embedding_dim),device=device)
-            type = type_list[to_numpy(edges[0,n])].astype(int)
+            embedding_1 = model.a[1, edges[0, n], :] * torch.ones((1000, config.graph_model.embedding_dim),
+                                                                  device=device)
+            embedding_2 = model.a[1, edges[1, n], :] * torch.ones((1000, config.graph_model.embedding_dim),
+                                                                  device=device)
+            type = type_list[to_numpy(edges[0, n])].astype(int)
             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                      rr[:, None] / max_radius, embedding_1, embedding_2), dim=1)
             with torch.no_grad():
@@ -806,11 +787,12 @@ def data_plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger
         plt.close()
 
         fig, ax = fig_init()
-        p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt',map_location=device)
-        true_func=[]
+        p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
+        true_func = []
         for n in range(n_particle_types):
             for m in range(n_particle_types):
-                plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[3 * n + m], p[3 * n + m]).squeeze()), color=cmap.color(n), linewidth=8)
+                plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[3 * n + m], p[3 * n + m]).squeeze()),
+                         color=cmap.color(n), linewidth=8)
                 true_func.append(model.psi(rr, p[3 * n + m].squeeze(), p[n * 3 + m].squeeze()))
         plt.xlabel(r'$d_{ij}$', fontsize=64)
         plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=64)
@@ -820,20 +802,20 @@ def data_plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger
         plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=170.7)
         plt.close()
 
-        true_func_list=[]
+        true_func_list = []
         for k in trange(edges.shape[1]):
-                n = type_list[to_numpy(edges[0,k])].astype(int)
-                m = type_list[to_numpy(edges[1,k])].astype(int)
-                true_func_list.append(true_func[3 * n.squeeze() + m.squeeze()])
+            n = type_list[to_numpy(edges[0, k])].astype(int)
+            m = type_list[to_numpy(edges[1, k])].astype(int)
+            true_func_list.append(true_func[3 * n.squeeze() + m.squeeze()])
         func_list = torch.stack(func_list) * ynorm
         true_func_list = torch.stack(true_func_list)
-        rmserr_list = torch.sqrt(torch.mean((func_list - true_func_list) ** 2,axis=1))
+        rmserr_list = torch.sqrt(torch.mean((func_list - true_func_list) ** 2, axis=1))
         rmserr_list = to_numpy(rmserr_list)
         print("all function RMS error: {:.2e}+/-{:.2e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
         logger.info("all function RMS error: {:.2e}+/-{:.2e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
 
-def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, logger, device):
 
+def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, logger, device):
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
 
@@ -844,7 +826,7 @@ def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, 
     train_config = config.training
     model_config = config.graph_model
 
-    dimension=simulation_config.dimension
+    dimension = simulation_config.dimension
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
     dataset_name = config.dataset
@@ -858,8 +840,7 @@ def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, 
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
-
-    if  has_cell_division:
+    if has_cell_division:
         model_division = Division_Predictor(config, device)
         optimizer_division, n_total_params_division = set_trainable_division_parameters(model_division, lr=1E-3)
         logger.info(f"Total Trainable Divsion Params: {n_total_params_division}")
@@ -878,7 +859,7 @@ def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, 
 
         net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
         print(f'network: {net}')
-        state_dict = torch.load(net,map_location=device)
+        state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
 
         n_particle_types = 3
@@ -889,16 +870,9 @@ def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, 
         type = torch.zeros(int(n_particles / n_particle_types), device=device)
         for n in range(1, n_particle_types):
             type = torch.cat((type, n * torch.ones(int(n_particles / n_particle_types), device=device)), 0)
-        x[:,5]=type
+        x[:, 5] = type
 
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(1,1,1)
-        # ax.xaxis.get_major_formatter()._usetex = False
-        # ax.yaxis.get_major_formatter()._usetex = False
-        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-        ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        fig, ax = fig_init()
         embedding = get_embedding(model.a, 1)
         csv_ = embedding
         for n in range(n_particle_types):
@@ -906,22 +880,14 @@ def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, 
                         embedding[index_particles[n], 1], color=cmap.color(n), s=400, alpha=0.1)
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{epoch}.tif",dpi=170.7)
+        plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{epoch}.tif", dpi=170.7)
         np.save(f"./{log_dir}/results/embedding_{config_file}_{epoch}.npy", csv_)
         np.savetxt(f"./{log_dir}/results/embedding_{config_file}_{epoch}.txt", csv_)
         plt.close()
 
-
+        fig, ax = fig_init()
         rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(1,1,1)
-        # ax.xaxis.get_major_formatter()._usetex = False
-        # ax.yaxis.get_major_formatter()._usetex = False
-        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
         func_list = []
         csv_ = []
         csv_.append(to_numpy(rr))
@@ -933,30 +899,23 @@ def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, 
                 func = model.lin_edge(in_features.float())
             func = func[:, 0]
             func_list.append(func)
-            csv=to_numpy(func)
+            csv = to_numpy(func)
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
-                     color=cmap.color(n//1600), linewidth=8,alpha=0.1)
+                     color=cmap.color(n // 1600), linewidth=8, alpha=0.1)
         plt.xlabel(r'$d_{ij}$', fontsize=64)
         plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
-        plt.xticks(fontsize=32)
-        plt.yticks(fontsize=32)
         plt.xlim([0, max_radius])
         # plt.ylim([-0.15, 0.15])
         plt.ylim([-0.04, 0.03])
         # plt.ylim([-0.1, 0.06])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/func_{config_file}_{epoch}.tif",dpi=170.7)
+        plt.savefig(f"./{log_dir}/results/func_{config_file}_{epoch}.tif", dpi=170.7)
         np.save(f"./{log_dir}/results/func_{config_file}_{epoch}.npy", csv_)
         np.savetxt(f"./{log_dir}/results/func_{config_file}_{epoch}.txt", csv_)
         plt.close()
 
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(1,1,1)
-        # ax.xaxis.get_major_formatter()._usetex = False
-        # ax.yaxis.get_major_formatter()._usetex = False
-        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+        fig, ax = fig_init()
         if os.path.exists(f'graphs_data/graphs_{dataset_name}/model_p.pt'):
             p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt')
         else:
@@ -965,7 +924,8 @@ def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, 
         csv_ = []
         csv_.append(to_numpy(rr))
         for n in range(n_particles):
-            plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n//1600), linewidth=8,alpha=0.1)
+            plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n // 1600), linewidth=8,
+                     alpha=0.1)
             true_func_list.append(model.psi(rr, p[n], p[n]))
             csv_.append(to_numpy(model.psi(rr, p[n], p[n]).squeeze()))
         plt.xlabel(r'$d_{ij}$', fontsize=64)
@@ -977,7 +937,7 @@ def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, 
         plt.ylim([-0.04, 0.03])
         # plt.ylim([-0.1, 0.06])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif",dpi=170.7)
+        plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=170.7)
         np.save(f"./{log_dir}/results/true_func_{config_file}_{epoch}.npy", csv_)
         np.savetxt(f"./{log_dir}/results/true_func_{config_file}_{epoch}.txt", csv_)
         plt.close()
@@ -985,12 +945,12 @@ def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, 
         func_list = torch.stack(func_list) * ynorm
         true_func_list = torch.stack(true_func_list)
 
-        rmserr_list = torch.sqrt(torch.mean((func_list - true_func_list) ** 2,axis=1))
+        rmserr_list = torch.sqrt(torch.mean((func_list - true_func_list) ** 2, axis=1))
         rmserr_list = to_numpy(rmserr_list)
         print(f'all function RMS error: {np.round(np.mean(rmserr_list), 7)}+/-{np.round(np.std(rmserr_list), 7)}')
 
-def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
 
+def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
 
     dataset_name = config.dataset
@@ -1040,13 +1000,20 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
     fig = plt.figure(figsize=(10.5, 9.6))
     plt.ion()
     ax = fig.add_subplot(3, 3, 1)
-    embedding = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap,device)
-    embedding = embedding[0:int(n_particles*(1-train_config.particle_dropout))]
+    embedding = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax,
+                               cmap, device)
+    embedding = embedding[0:int(n_particles * (1 - train_config.particle_dropout))]
 
     ax = fig.add_subplot(3, 3, 2)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-    func_list = plot_function(False, 'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, 1, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, int(n_particles*(1-train_config.particle_dropout)), n_particle_types, 20, '$10^6$', fig, ax, cmap, device)
-    proj_interaction, new_labels, n_clusters = plot_umap('b)', func_list, log_dir, 500, index_particles, int(n_particles*(1-train_config.particle_dropout)), n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap,device)
+    func_list = plot_function(False, 'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, 1,
+                              to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles,
+                              int(n_particles * (1 - train_config.particle_dropout)), n_particle_types, 20, '$10^6$',
+                              fig, ax, cmap, device)
+    proj_interaction, new_labels, n_clusters = plot_umap('b)', func_list, log_dir, 500, index_particles,
+                                                         int(n_particles * (1 - train_config.particle_dropout)),
+                                                         n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax,
+                                                         cmap, device)
 
     match config.training.cluster_method:
         case 'kmeans_auto_plot':
@@ -1077,12 +1044,7 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
 
     print(f'accuracy: {accuracy}  n_clusters: {n_clusters}')
 
-    fig_ = plt.figure(figsize=(12, 12))
-    axf = fig_.add_subplot(1, 1, 1)
-    axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-    axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-    axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-    axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    fig, ax = fig_init()
     for n in range(n_clusters):
         pos = np.argwhere(labels == n)
         pos = np.array(pos)
@@ -1095,8 +1057,6 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
     label_list = np.array(label_list)
     plt.xlabel(r'UMAP 0', fontsize=64)
     plt.ylabel(r'UMAP 1', fontsize=64)
-    plt.xticks(fontsize=32.0)
-    plt.yticks(fontsize=32.0)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/UMAP_{config_file}.tif", dpi=300)
     plt.close()
@@ -1115,12 +1075,7 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
 
     embedding = get_embedding(model_a_first, 1)
 
-    fig_ = plt.figure(figsize=(12, 12))
-    axf = fig_.add_subplot(1, 1, 1)
-    axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-    axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-    axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-    axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    fig, ax = fig_init()
     csv_ = []
     for n in range(n_particle_types):
         plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n), s=400,
@@ -1128,8 +1083,6 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
         csv_.append(embedding[index_particles[n], :])
     plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
     plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
-    plt.xticks(fontsize=32.0)
-    plt.yticks(fontsize=32.0)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/embedding_{config_file}.tif", dpi=300)
     # csv_ = np.reshape(csv_, (csv_.shape[0]*csv_.shape[1], 2))
@@ -1237,7 +1190,6 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
     plt.xlim([0, 0.02])
     plt.ylim([0, 0.5E6])
 
-
     fig_ = plt.figure(figsize=(12, 12))
     ax = fig_.add_subplot(1, 1, 1)
     ax.xaxis.set_major_locator(plt.MaxNLocator(3))
@@ -1295,20 +1247,22 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
     plt.ylim([0, 5.5])
 
     threshold = 0.4
-    relative_error = np.abs(y_data-x_data)/x_data
-    pos = np.argwhere(relative_error<threshold)
-    pos_outliers = np.argwhere(relative_error>threshold)
+    relative_error = np.abs(y_data - x_data) / x_data
+    pos = np.argwhere(relative_error < threshold)
+    pos_outliers = np.argwhere(relative_error > threshold)
 
-    x_data_ = x_data[pos[:,0]]
-    y_data_ = y_data[pos[:,0]]
+    x_data_ = x_data[pos[:, 0]]
+    y_data_ = y_data[pos[:, 0]]
     lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
     residuals = y_data_ - linear_model(x_data_, *lin_fit)
     ss_res = np.sum(residuals ** 2)
     ss_tot = np.sum((y_data - np.mean(y_data_)) ** 2)
     r_squared = 1 - (ss_res / ss_tot)
-    plt.text(0.5, 4.5, f"$R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error>0.2)} / {n_particles}", fontsize=10)
+    plt.text(0.5, 4.5, f"$R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > 0.2)} / {n_particles}",
+             fontsize=10)
     plt.text(0.5, 5, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
-    print(f'R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}  outliers: {np.sum(relative_error>threshold)}  ')
+    print(
+        f'R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}  outliers: {np.sum(relative_error > threshold)}  ')
 
     fig_ = plt.figure(figsize=(12, 12))
     ax = fig_.add_subplot(1, 1, 1)
@@ -1319,7 +1273,7 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
     csv_.append(popt_list[:, 0])
     plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
     plt.scatter(p_list, popt_list[:, 0], color='k', s=50, alpha=0.5)
-    plt.scatter(p_list[pos_outliers[:,0]], popt_list[pos_outliers[:,0], 0], color='r', s=50)
+    plt.scatter(p_list[pos_outliers[:, 0]], popt_list[pos_outliers[:, 0], 0], color='r', s=50)
     plt.xticks(fontsize=32)
     plt.yticks(fontsize=32)
     plt.xlabel(r'True mass ', fontsize=64)
@@ -1335,8 +1289,9 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
 
     relative_error = np.abs(popt_list[:, 0] - p_list.squeeze()) / p_list.squeeze() * 100
 
-    print (f'all mass relative error: {np.round(np.mean(relative_error), 3)}+/-{np.round(np.std(relative_error), 3)}')
-    print (f'all mass relative error wo outliers: {np.round(np.mean(relative_error[pos[:,0]]), 3)}+/-{np.round(np.std(relative_error[pos[:,0]]), 3)}')
+    print(f'all mass relative error: {np.round(np.mean(relative_error), 3)}+/-{np.round(np.std(relative_error), 3)}')
+    print(
+        f'all mass relative error wo outliers: {np.round(np.mean(relative_error[pos[:, 0]]), 3)}+/-{np.round(np.std(relative_error[pos[:, 0]]), 3)}')
 
     ax = fig.add_subplot(3, 3, 8)
     plt.text(-0.25, 1.1, f'h)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
@@ -1372,7 +1327,6 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
     np.savetxt(f"./{log_dir}/results/exponent_{config_file}.txt", csv_)
     plt.close()
 
-
     # find last image file in logdir
     ax = fig.add_subplot(3, 3, 9)
     files = glob.glob(os.path.join(log_dir, 'tmp_recons/Fig*.tif'))
@@ -1395,8 +1349,8 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
     plt.savefig(f'./log/try_{config_file}/Fig_3.jpg', dpi=300)
     plt.close()
 
-def data_plot_gravity_continuous(config_file, epoch_list, log_dir, logger, device):
 
+def data_plot_gravity_continuous(config_file, epoch_list, log_dir, logger, device):
     # config_file = 'gravity_16'
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
@@ -1447,48 +1401,42 @@ def data_plot_gravity_continuous(config_file, epoch_list, log_dir, logger, devic
     fig = plt.figure(figsize=(10.5, 9.6))
     plt.ion()
     ax = fig.add_subplot(3, 3, 1)
-    embedding = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap,device)
+    embedding = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax,
+                               cmap, device)
 
     ax = fig.add_subplot(3, 3, 2)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-    func_list = plot_function(True, 'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, 1, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap, device)
+    func_list = plot_function(True, 'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, 1,
+                              to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles, n_particles,
+                              n_particle_types, 20, '$10^6$', fig, ax, cmap, device)
 
     model_a_first = model.a.clone().detach()
 
     embedding = get_embedding(model_a_first, 1)
 
-    fig_ = plt.figure(figsize=(12, 12))
-    axf = fig_.add_subplot(1, 1, 1)
-    axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-    axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-    axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-    axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    fig, ax = fig_init()
     csv_ = []
     for n in range(n_particle_types):
-        plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n%256), s=400,
+        plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n % 256),
+                    s=400,
                     alpha=0.1)
         csv_.append(embedding[index_particles[n], :])
     plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
     plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
-    plt.xticks(fontsize=32.0)
-    plt.yticks(fontsize=32.0)
     csv_ = np.array(csv_)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/embedding_{config_file}.tif", dpi=300)
     csv_ = np.array(csv_)
-    csv_ = np.reshape(csv_, (csv_.shape[0]*csv_.shape[1], 2))
+    csv_ = np.reshape(csv_, (csv_.shape[0] * csv_.shape[1], 2))
     np.save(f"./{log_dir}/results/embedding_{config_file}.npy", csv_)
     np.savetxt(f"./{log_dir}/results/embedding_{config_file}.txt", csv_)
     plt.close()
 
     p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
 
+    fig, ax = fig_init()
     type_list = x[:, 5:6].clone().detach()
     rmserr_list = []
-    fig = plt.figure(figsize=(12, 12))
-    ax = fig.add_subplot(1, 1, 1)
-    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
     csv_ = []
     csv_.append(to_numpy(rr))
     for n in range(int(n_particles * (1 - train_config.particle_dropout))):
@@ -1505,9 +1453,7 @@ def data_plot_gravity_continuous(config_file, epoch_list, log_dir, logger, devic
         rmserr_list.append(torch.sqrt(torch.mean((func * ynorm - true_func.squeeze()) ** 2)))
         plt.plot(to_numpy(rr),
                  to_numpy(func) * to_numpy(ynorm),
-                 color=cmap.color(n%256), linewidth=8, alpha=0.1)
-    plt.xticks(fontsize=32)
-    plt.yticks(fontsize=32)
+                 color=cmap.color(n % 256), linewidth=8, alpha=0.1)
     plt.xlabel(r'$d_{ij}$', fontsize=64)
     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij}$', fontsize=64)
     plt.xlim([0, max_radius])
@@ -1548,7 +1494,7 @@ def data_plot_gravity_continuous(config_file, epoch_list, log_dir, logger, devic
     csv_ = []
     csv_.append(to_numpy(rr))
     for n in range(n_particle_types - 1, -1, -1):
-        plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n%256), linewidth=8)
+        plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n % 256), linewidth=8)
         csv_.append(to_numpy(model.psi(rr, p[n], p[n]).squeeze()))
     plt.xticks(fontsize=32)
     plt.yticks(fontsize=32)
@@ -1587,8 +1533,8 @@ def data_plot_gravity_continuous(config_file, epoch_list, log_dir, logger, devic
     plt.text(-0.25, 1.1, f'g)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     x_data = p_list.squeeze()
     y_data = popt_list[:, 0]
-    x_data =np.delete(x_data,726)   # manual removal of one outlier which mess up the linear fit
-    y_data =np.delete(y_data,726)
+    x_data = np.delete(x_data, 726)  # manual removal of one outlier which mess up the linear fit
+    y_data = np.delete(y_data, 726)
 
     lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
     plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
@@ -1614,7 +1560,7 @@ def data_plot_gravity_continuous(config_file, epoch_list, log_dir, logger, devic
     csv_.append(y_data)
     plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
     for n in range(n_particles):
-        plt.scatter(p_list[n], popt_list[n, 0], color=cmap.color(n%256), s=400, alpha=0.1)
+        plt.scatter(p_list[n], popt_list[n, 0], color=cmap.color(n % 256), s=400, alpha=0.1)
     plt.xticks(fontsize=32)
     plt.yticks(fontsize=32)
     plt.xlim([0, 6])
@@ -1630,7 +1576,7 @@ def data_plot_gravity_continuous(config_file, epoch_list, log_dir, logger, devic
 
     relative_error = np.abs(x_data - y_data) / x_data * 100
 
-    print (f'all mass relative error: {np.round(np.mean(relative_error), 4)}+/-{np.round(np.std(relative_error), 4)}')
+    print(f'all mass relative error: {np.round(np.mean(relative_error), 4)}+/-{np.round(np.std(relative_error), 4)}')
 
     ax = fig.add_subplot(3, 3, 8)
     print('8')
@@ -1689,8 +1635,8 @@ def data_plot_gravity_continuous(config_file, epoch_list, log_dir, logger, devic
     plt.savefig(f'Fig3_{config_file}.jpg', dpi=300)
     plt.close()
 
-def data_plot_gravity_solar_system(config_file, epoch_list, log_dir, logger, device):
 
+def data_plot_gravity_solar_system(config_file, epoch_list, log_dir, logger, device):
     config_file = 'gravity_solar_system'
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
@@ -1739,13 +1685,14 @@ def data_plot_gravity_solar_system(config_file, epoch_list, log_dir, logger, dev
     fig = plt.figure(figsize=(10.5, 9.6))
     plt.ion()
     ax = fig.add_subplot(3, 3, 1)
-    embedding = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap,device)
+    embedding = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax,
+                               cmap, device)
 
     ax = fig.add_subplot(3, 3, 2)
     rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
     func_list = plot_function(True, 'b)', config.graph_model.particle_model_name, model.lin_edge,
                               model.a, 1, to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles,
-                              n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap,device)
+                              n_particles, n_particle_types, 20, '$10^6$', fig, ax, cmap, device)
 
     ax = fig.add_subplot(3, 3, 3)
 
@@ -1760,16 +1707,16 @@ def data_plot_gravity_solar_system(config_file, epoch_list, log_dir, logger, dev
     dataset = data.Data(x=x, edge_index=edge_index)
 
     with torch.no_grad():
-        y = model(dataset, data_id=1, training=False, vnorm=vnorm, phi=torch.zeros(1,device=device))  # acceleration estimation
+        y = model(dataset, data_id=1, training=False, vnorm=vnorm,
+                  phi=torch.zeros(1, device=device))  # acceleration estimation
     y = y * ynorm
 
-
-
     proj_interaction, new_labels, n_clusters = plot_umap('b)', func_list, log_dir, 500, index_particles,
-                                                         n_particles, n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax, cmap,device)
+                                                         n_particles, n_particle_types, embedding_cluster, 20, '$10^6$',
+                                                         fig, ax, cmap, device)
 
     ax = fig.add_subplot(3, 3, 3)
-    accuracy = plot_confusion_matrix('c)', to_numpy(x[:,5:6]), new_labels, n_particle_types, 20, '$10^6$', fig, ax)
+    accuracy = plot_confusion_matrix('c)', to_numpy(x[:, 5:6]), new_labels, n_particle_types, 20, '$10^6$', fig, ax)
     plt.tight_layout()
 
     model_a_ = model.a.clone().detach()
@@ -1912,8 +1859,8 @@ def data_plot_gravity_solar_system(config_file, epoch_list, log_dir, logger, dev
     plt.savefig('Fig3.jpg', dpi=300)
     plt.close()
 
-def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
 
+def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
     # config_file = 'Coulomb_3'
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
@@ -1949,7 +1896,7 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
-    epoch=20
+    epoch = 20
     net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt"
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
@@ -1959,9 +1906,10 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     # matplotlib.use("Qt5Agg")
 
-    accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list,
-                                n_particle_types, n_particles, ynorm, epoch, log_dir, device)
-
+    accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap,
+                                                                   index_particles, type_list,
+                                                                   n_particle_types, n_particles, ynorm, epoch, log_dir,
+                                                                   device)
 
     x = x_list[0][100].clone().detach()
     index_particles = get_index_particles(x, n_particle_types, dimension)
@@ -1975,10 +1923,7 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
 
     p = [2, 1, -1]
 
-    fig = plt.figure(figsize=(12, 12))
-    ax = fig.add_subplot(1, 1, 1)
-    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+    fig, ax = fig_init()
     func_list = []
     type_list_ = []
     for n in trange(edges.shape[1]):
@@ -1994,47 +1939,42 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
         func = func[:, 0]
         func_list.append(func)
     type_list_ = np.array(type_list_)
-
-    qiqj_list = [-2,-1,1,2,4]
-
+    qiqj_list = [-2, -1, 1, 2, 4]
     for n in qiqj_list:
-        pos = np.argwhere(type_list_==n)
-        if len(pos>0):
-            func = func_list[pos[:,0]]
+        pos = np.argwhere(type_list_ == n)
+        if len(pos > 0):
+            func = func_list[pos[:, 0]]
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
                      linewidth=1, alpha=0.1)
-
 
         plt.plot(to_numpy(rr),
                  to_numpy(func) * to_numpy(ynorm),
                  color=cmap.color(type), linewidth=8, alpha=0.1)
     plt.xlabel(r'$d_{ij}$', fontsize=64)
     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=64)
-    plt.xticks(fontsize=32)
-    plt.yticks(fontsize=32)
     plt.xlim([0, 0.02])
     plt.ylim([-0.5E6, 0.5E6])
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/func_{config_file}_{epoch}.tif", dpi=170.7)
     plt.close()
 
-    fig_ = plt.figure(figsize=(12,12))
+    fig_ = plt.figure(figsize=(12, 12))
     ax = fig_.add_subplot(1, 1, 1)
     ax.xaxis.set_major_locator(plt.MaxNLocator(3))
     ax.yaxis.set_major_locator(plt.MaxNLocator(3))
     ax.xaxis.set_major_formatter(FormatStrFormatter('%.3f'))
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
-    func_list=[]
+    func_list = []
     for n in range(n_clusters):
         pos = np.argwhere(new_labels == n).squeeze().astype(int)
-        if len(pos)>0:
+        if len(pos) > 0:
             embedding0 = model.a[1, pos[0], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             for m in range(n_clusters):
                 pos = np.argwhere(new_labels == m).squeeze().astype(int)
-                if len(pos)>0:
+                if len(pos) > 0:
                     embedding1 = model.a[1, pos[0], :] * torch.ones((1000, config.graph_model.embedding_dim),
-                                                                     device=device)
+                                                                    device=device)
                     in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                              rr[:, None] / max_radius, embedding0, embedding1), dim=1)
                     func = model.lin_edge(in_features.float())
@@ -2045,7 +1985,8 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
                     func_list.append(func * ynorm)
                     # temp = model.psi(rr, p[n], p[m])
                     # plt.plot(to_numpy(rr), np.array(temp.cpu()), linewidth=1)
-                    popt, pocv = curve_fit(power_model, to_numpy(rr), to_numpy(func * ynorm), bounds=([0, 1.5], [5., 2.5]))
+                    popt, pocv = curve_fit(power_model, to_numpy(rr), to_numpy(func * ynorm),
+                                           bounds=([0, 1.5], [5., 2.5]))
     plt.xlim([0, 0.01])
     plt.ylim([-2E6, 2E6])
     plt.xlabel(r'$d_{ij}$', fontsize=64)
@@ -2055,7 +1996,7 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/func_{config_file}_{epoch}.tif", dpi=170.7)
     csv_ = to_numpy(torch.stack(func_list))
-    csv_ = np.concatenate((csv_,to_numpy(rr[None,:])))
+    csv_ = np.concatenate((csv_, to_numpy(rr[None, :])))
     np.save(f"./{log_dir}/results/func_{config_file}_{epoch}.npy", csv_)
     np.savetxt(f"./{log_dir}/results/func_{config_file}_{epoch}.txt", csv_)
     plt.close()
@@ -2080,8 +2021,7 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
 
-
-    fig_ = plt.figure(figsize=(12,12))
+    fig_ = plt.figure(figsize=(12, 12))
     ax = fig_.add_subplot(1, 1, 1)
     ax.xaxis.set_major_locator(plt.MaxNLocator(3))
     ax.yaxis.set_major_locator(plt.MaxNLocator(3))
@@ -2113,7 +2053,6 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
     rmserr_list = torch.sqrt(torch.mean((func_list - true_func_list) ** 2, axis=1))
     rmserr_list = to_numpy(rmserr_list)
     print(f'all function RMS error: {np.round(np.mean(rmserr_list), 7)}+/-{np.round(np.std(rmserr_list), 7)}')
-
 
     p = [2, 1, -1]
     popt_list = []
@@ -2159,7 +2098,6 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
     M_p1 = np.reshape(popt_list[:, 0], (3, 3))
     # print(M_p1)
 
-
     # row_sum = np.sum(M_p,0)
     # A,B,C = row_sum[0], row_sum[1], row_sum[2]
     # M = [[-B, A+C, -B], [-C, -C, A+B], [C+B, -A, -A]]
@@ -2179,12 +2117,12 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
     plt.ylabel(r'Predicted $q_i q_j$', fontsize=12)
     plt.text(-1.8, 4.0, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
     residuals = y_data - linear_model(x_data, *lin_fit)
-    ss_res= np.sum(residuals**2)
+    ss_res = np.sum(residuals ** 2)
     ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
     r_squared = 1 - (ss_res / ss_tot)
     plt.text(-1.8, 3.4, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
-    plt.xlim([-2,5])
-    plt.ylim([-2,5])
+    plt.xlim([-2, 5])
+    plt.ylim([-2, 5])
     print(f'R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}')
 
     ax = fig.add_subplot(3, 3, 8)
@@ -2221,7 +2159,7 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
 
     print(f"Exponent: {np.round(np.mean(-popt_list[:, 1]), 5)}+/-{np.round(np.std(popt_list[:, 1]), 5)}")
     relative_error = np.abs(popt_list[:, 0] - ptrue_list.squeeze()) / np.abs(ptrue_list.squeeze()) * 100
-    print (f'all charge relative error: {np.round(np.mean(relative_error), 3)}+/-{np.round(np.std(relative_error), 3)}')
+    print(f'all charge relative error: {np.round(np.mean(relative_error), 3)}+/-{np.round(np.std(relative_error), 3)}')
 
     fig_ = plt.figure(figsize=(12, 12))
     ax = fig_.add_subplot(1, 1, 1)
@@ -2264,6 +2202,7 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
     plt.close()
     print(' ')
 
+
 def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
     # config_file = 'boids_16'
     # Load parameters from config file
@@ -2304,12 +2243,12 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         n_particles_max = np.load(os.path.join(log_dir, 'n_particles_max.npy'))
         config.simulation.n_particles_max = n_particles_max
 
-    net_list=['20'] #'0_0','0_2000','0_5000', '0_9800', '5', '20']
+    net_list = ['20']  # '0_0','0_2000','0_5000', '0_9800', '5', '20']
     epoch = 20
 
     for net_ in net_list:
 
-        print (f'Plot net_{net_} ...')
+        print(f'Plot net_{net_} ...')
 
         model, bc_pos, bc_dpos = choose_training_model(config, device)
         model = Interaction_Particles_extract(config, device, aggr_type=config.graph_model.aggr_type, bc_dpos=bc_dpos)
@@ -2323,26 +2262,30 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         rc('font', **{'family': 'serif', 'serif': ['Palatino']})
         matplotlib.use("Qt5Agg")
 
-        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list,
-                                    n_particle_types, n_particles, ynorm, epoch, log_dir, device)
+        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
+                                                                       cmap, index_particles, type_list,
+                                                                       n_particle_types, n_particles, ynorm, epoch,
+                                                                       log_dir, device)
         logger.info(' ')
         logger.info(f'accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}')
 
         it = 2000
         # compute model output for a given frame
         x = x_list[0][it].clone().detach()
-        particle_index = to_numpy(x[:,0:1]).astype(int)
-        x[:,5:6] = torch.tensor(new_labels[particle_index], device=device)  # set label found by clustering and mapperd to ground truth
-        pos = torch.argwhere(x[:,5:6] < n_particle_types).squeeze()
-        pos = to_numpy(pos[:,0]).astype(int)
+        particle_index = to_numpy(x[:, 0:1]).astype(int)
+        x[:, 5:6] = torch.tensor(new_labels[particle_index],
+                                 device=device)  # set label found by clustering and mapperd to ground truth
+        pos = torch.argwhere(x[:, 5:6] < n_particle_types).squeeze()
+        pos = to_numpy(pos[:, 0]).astype(int)
         # filter out cluster not associated with ground truth
-        x = x[pos,:]
+        x = x[pos, :]
         distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)  # threshold
         adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
         edge_index = adj_t.nonzero().t().contiguous()
         dataset = data.Data(x=x, edge_index=edge_index)
         with torch.no_grad():
-            y, in_features, lin_edge_out = model(dataset, data_id=1, training=False, vnorm=vnorm, phi=torch.zeros(1, device=device))  # acceleration estimation
+            y, in_features, lin_edge_out = model(dataset, data_id=1, training=False, vnorm=vnorm,
+                                                 phi=torch.zeros(1, device=device))  # acceleration estimation
         y = y * ynorm
         lin_edge_out = lin_edge_out * ynorm
 
@@ -2354,7 +2297,8 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         for n in range(n_particle_types):
             with torch.no_grad():
                 psi_output.append(model.psi(rr, torch.squeeze(p[n])))
-                y_B, sum, cohesion, alignment, separation, diffx, diffv, r, type = model_B(dataset)  # acceleration estimation
+                y_B, sum, cohesion, alignment, separation, diffx, diffv, r, type = model_B(
+                    dataset)  # acceleration estimation
         type = to_numpy(type)
         # cohesion_ = p[type, 0:1].repeat(1, 2) * model_B.a1 * diffx
         # alignment_ = p[type, 1:2].repeat(1, 2) * model_B.a2 * diffv
@@ -2365,15 +2309,13 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         # fig_ = plt.figure(figsize=(12, 12))
         # plt.scatter(to_numpy(sum), to_numpy(lin_edge_out), color='k', s=50, alpha=0.5)
 
-
-
         print('fitting with known function ...')
         cohesion_fit = np.zeros(n_particle_types)
         alignment_fit = np.zeros(n_particle_types)
         separation_fit = np.zeros(n_particle_types)
         indexes = np.unique(type)
         indexes = indexes.astype(int)
-        for loop in range (2):
+        for loop in range(2):
             for n in indexes:
                 pos = np.argwhere(type == n)
                 pos = pos[:, 0].astype(int)
@@ -2382,7 +2324,7 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
                 rdiff = to_numpy(r[pos])
                 x_data = np.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
                 y_data = to_numpy(torch.norm(lin_edge_out[pos, :], dim=1))
-                if loop==0:
+                if loop == 0:
                     lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox')
                 else:
                     lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox', p0=p00)
@@ -2393,10 +2335,7 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
 
         threshold = 0.25
 
-        fig_ = plt.figure(figsize=(12, 12))
-        ax = fig_.add_subplot(1, 1, 1)
-        ax.xaxis.set_major_formatter(FormatStrFormatter('%0.0f'))
-        ax.yaxis.set_major_formatter(FormatStrFormatter('%0.0f'))
+        fig, ax = fig_init()
         fmt = lambda x, pos: '{:.1f}e-4'.format((x) * 1e4, pos)
         ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
         ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
@@ -2414,8 +2353,6 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
             plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=400)
         plt.xlabel(r'True cohesion coeff. ', fontsize=56)
         plt.ylabel(r'Reconstructed cohesion coeff. ', fontsize=56)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
         plt.tight_layout()
         csv_ = []
         csv_.append(x_data)
@@ -2429,10 +2366,10 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         ss_res = np.sum(residuals ** 2)
         ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
         r_squared = 1 - (ss_res / ss_tot)
-        logger.info(f'cohesion slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
+        logger.info(
+            f'cohesion slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
 
-        fig_ = plt.figure(figsize=(12, 12))
-        ax = fig_.add_subplot(1, 1, 1)
+        fig, ax = fig_init()
         fmt = lambda x, pos: '{:.1f}e-2'.format((x) * 1e2, pos)
         ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
         ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
@@ -2450,8 +2387,6 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
             plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=400)
         plt.xlabel(r'True alignement coeff. ', fontsize=56)
         plt.ylabel(r'Reconstructed alignement coeff. ', fontsize=56)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
         plt.tight_layout()
         csv_ = []
         csv_.append(x_data)
@@ -2465,10 +2400,10 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         ss_res = np.sum(residuals ** 2)
         ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
         r_squared = 1 - (ss_res / ss_tot)
-        logger.info(f'alignment   slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
+        logger.info(
+            f'alignment   slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
 
-        fig_ = plt.figure(figsize=(12, 12))
-        ax = fig_.add_subplot(1, 1, 1)
+        fig, ax = fig_init()
         fmt = lambda x, pos: '{:.1f}e-7'.format((x) * 1e7, pos)
         ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
         ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
@@ -2486,8 +2421,6 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
             plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=400)
         plt.xlabel(r'True separation coeff. ', fontsize=56)
         plt.ylabel(r'Reconstructed separation coeff. ', fontsize=56)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
         plt.tight_layout()
         csv_ = []
         csv_.append(x_data)
@@ -2501,14 +2434,12 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         ss_res = np.sum(residuals ** 2)
         ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
         r_squared = 1 - (ss_res / ss_tot)
-        logger.info(f'separation   slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
-
-
+        logger.info(
+            f'separation   slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
 
         print('compare reconstructed interaction with ground truth...')
+        fig, ax = fig_init()
         rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(1, 1, 1)
         func_list = []
         true_func_list = []
         x = x_list[0][n_frames].clone().detach()
@@ -2520,12 +2451,12 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
             with torch.no_grad():
                 func = model.lin_edge(in_features.float())
             func = func[:, 0]
-            type = to_numpy(x[n,5]).astype(int)
-            if type<n_particle_types:
+            type = to_numpy(x[n, 5]).astype(int)
+            if type < n_particle_types:
                 func_list.append(func)
                 true_func = model_B.psi(rr, p[type])
                 true_func_list.append(true_func)
-                if (n % 10 == 0) :
+                if (n % 10 == 0):
                     plt.plot(to_numpy(rr),
                              to_numpy(func) * to_numpy(ynorm),
                              color=cmap.color(type), linewidth=4, alpha=0.25)
@@ -2539,16 +2470,13 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
         fmt = lambda x, pos: '{:.1f}e-5'.format((x) * 1e5, pos)
         ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/func_dij_{config_file}_{net_}.tif", dpi=300)
         plt.close()
 
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(1, 1, 1)
+        fig, ax = fig_init()
         for n in range(n_particle_types):
-            true_func  = model_B.psi(rr, p[n])
+            true_func = model_B.psi(rr, p[n])
             plt.plot(to_numpy(rr), to_numpy(true_func), color=cmap.color(n), linewidth=4)
         plt.ylim([-1E-4, 1E-4])
         plt.xlabel(r'$x_j-x_i$', fontsize=64)
@@ -2558,29 +2486,29 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
         fmt = lambda x, pos: '{:.1f}e-5'.format((x) * 1e5, pos)
         ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/true_func_dij_{config_file}_{net_}.tif", dpi=300)
 
         func_list = func_list * ynorm
-        func_list_ = torch.clamp(func_list, min=torch.tensor(-1.0E-4,device=device), max=torch.tensor(1.0E-4,device=device))
-        true_func_list_ = torch.clamp(true_func_list, min=torch.tensor(-1.0E-4, device=device),
+        func_list_ = torch.clamp(func_list, min=torch.tensor(-1.0E-4, device=device),
                                  max=torch.tensor(1.0E-4, device=device))
-        rmserr_list = torch.sqrt(torch.mean((func_list_ - true_func_list_) ** 2,1))
+        true_func_list_ = torch.clamp(true_func_list, min=torch.tensor(-1.0E-4, device=device),
+                                      max=torch.tensor(1.0E-4, device=device))
+        rmserr_list = torch.sqrt(torch.mean((func_list_ - true_func_list_) ** 2, 1))
         rmserr_list = to_numpy(rmserr_list)
         print(f'all function RMS error : {np.round(np.mean(rmserr_list), 8)}+/-{np.round(np.std(rmserr_list), 8)}')
         logger.info(' ')
-        logger.info(f'all function RMS error : {np.round(np.mean(rmserr_list), 8)}+/-{np.round(np.std(rmserr_list), 8)}')
+        logger.info(
+            f'all function RMS error : {np.round(np.mean(rmserr_list), 8)}+/-{np.round(np.std(rmserr_list), 8)}')
 
         if has_cell_division:
-
-            plot_cell_rates(config, device, log_dir, n_frames, n_particles_max, n_particle_types, x_list, new_labels, cmap)
+            plot_cell_rates(config, device, log_dir, n_frames, n_particles_max, n_particle_types, x_list, new_labels,
+                            cmap)
 
     logging.shutdown()
 
-def data_plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
 
+def data_plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
@@ -2656,26 +2584,20 @@ def data_plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
         coeff = np.reshape(coeff, (n_nodes_per_axis, n_nodes_per_axis)) * simulation_config.beta
         coeff = np.flipud(coeff)
     vm = np.max(coeff)
-    fig_ = plt.figure(figsize=(12, 12))
-    axf = fig_.add_subplot(1, 1, 1)
-    axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-    axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-    axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-    axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+
+    fig, ax = fig_init()
     fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
     axf.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
     axf.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
     plt.imshow(coeff, cmap=cc, vmin=0, vmax=vm)
     plt.xlabel(r'$x$', fontsize=64)
     plt.ylabel(r'$y$', fontsize=64)
-    plt.xticks(fontsize=32.0)
-    plt.yticks(fontsize=32.0)
     # cbar = plt.colorbar(shrink=0.5)
     # cbar.ax.tick_params(labelsize=32)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/true_wave_coeff_{config_file}.tif", dpi=300)
 
-    net_list=['0_1000','0_2000','0_5000', '1', '5', '20']
+    net_list = ['0_1000', '0_2000', '0_5000', '1', '5', '20']
 
     net_list = glob.glob(f"./log/try_{config_file}/models/*.pt")
 
@@ -2691,25 +2613,19 @@ def data_plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
 
         embedding = get_embedding(mesh_model.a, 1)
 
-        fig_ = plt.figure(figsize=(12, 12))
-        axf = fig_.add_subplot(1, 1, 1)
-        axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-        axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-        axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        fig, ax = fig_init()
         if has_pic:
             plt.scatter(embedding[:, 0], embedding[:, 1],
-                        color=cmap.color(np.round(coeff_*256).astype(int)), s=100, alpha=1)
+                        color=cmap.color(np.round(coeff_ * 256).astype(int)), s=100, alpha=1)
         else:
             for n in range(n_node_types):
-                    c_ = np.round(n / (n_node_types - 1) * 256).astype(int)
-                    plt.scatter(embedding[index_nodes[n], 0], embedding[index_nodes[n], 1], c=cmap.color(c_), s=200, alpha=1)
+                c_ = np.round(n / (n_node_types - 1) * 256).astype(int)
+                plt.scatter(embedding[index_nodes[n], 0], embedding[index_nodes[n], 1], c=cmap.color(c_), s=200,
+                            alpha=1)
         plt.xlabel(r'$a_{i0}$', fontsize=32)
         plt.ylabel(r'$a_{i1}$', fontsize=32)
         # plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
         # plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{net_}.tif", dpi=300)
         plt.close()
@@ -2733,12 +2649,7 @@ def data_plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
         t = np.reshape(t, (n_nodes_per_axis, n_nodes_per_axis))
         t = np.flipud(t)
 
-        fig_ = plt.figure(figsize=(12, 12))
-        axf = fig_.add_subplot(1, 1, 1)
-        axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-        axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-        axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        fig, ax = fig_init()
         fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
         axf.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
         axf.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
@@ -2747,8 +2658,6 @@ def data_plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
         # plt.ylabel(r'$y$', fontsize=64)
         plt.xlabel('x', fontsize=32)
         plt.ylabel('y', fontsize=32)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
         fmt = lambda x, pos: '{:.3%}'.format(x)
         # cbar = plt.colorbar(format=FuncFormatter(fmt),shrink=0.5)
         # cbar.ax.tick_params(labelsize=32)
@@ -2756,7 +2665,7 @@ def data_plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
         plt.savefig(f"./{log_dir}/results/wave_coeff_{config_file}_{net_}.tif", dpi=300)
         plt.close()
 
-        if not(has_pic):
+        if not (has_pic):
             proj_interaction = popt_list
             proj_interaction[:, 1] = proj_interaction[:, 0]
             match train_config.cluster_method:
@@ -2786,66 +2695,6 @@ def data_plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
 
             print(f'accuracy: {accuracy}  n_clusters: {n_clusters}')
 
-        if False:
-
-            convert_color = [0,2,3,4,1]
-            fig_ = plt.figure(figsize=(12, 12))
-            for n in range(n_nodes):
-                embedding_ = mesh_model.a[1, n, :] * torch.ones((200, 2), device=device)
-                in_features = torch.cat((rr[:, None], embedding_), dim=1)
-                h = mesh_model.lin_phi(in_features.float())
-                h = h[:, 0]
-                if (n % 4):
-                    if has_pic:
-                        plt.plot(to_numpy(rr), to_numpy(h) * to_numpy(hnorm), linewidth=4,
-                                 color=cmap.color(np.round(coeff_[n]*256).astype(int)), alpha=0.05)
-                    else:
-                        # plt.plot(to_numpy(rr), to_numpy(h) * to_numpy(hnorm), linewidth=4, color=cmap.color(new_labels[n]%256), alpha=0.05)
-                        c_ = np.round(convert_color[int(to_numpy(type_list[n]))]*256/(n_node_types-1))
-                        plt.plot(to_numpy(rr), to_numpy(h) * to_numpy(hnorm), linewidth=4, color=cmap.color(c_.astype(int)), alpha=0.01)
-            plt.xlabel(r'$\Delta u_{i}$', fontsize=64)
-            plt.ylabel(r'$\Phi (\ensuremath{\mathbf{a}}_i, \Delta u_i)$', fontsize=64)
-            plt.xticks(fontsize=32.0)
-            plt.yticks(fontsize=32.0)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/phi_{config_file}_{net_}.tif", dpi=300)
-            plt.close()
-
-            fig_ = plt.figure(figsize=(12, 12))
-            axf = fig_.add_subplot(1, 1, 1)
-
-            pos=torch.argwhere(mask_mesh==1)
-            pos=to_numpy(pos[:,0]).astype(int)
-            x_data = np.reshape(coeff, (n_nodes))
-            y_data = np.reshape(t, (n_nodes))
-            x_data = x_data.squeeze()
-            y_data = y_data.squeeze()
-            x_data = x_data[pos]
-            y_data = y_data[pos]
-
-            axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-            axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-            axf.xaxis.set_major_formatter(FormatStrFormatter('%.3f'))
-            axf.yaxis.set_major_formatter(FormatStrFormatter('%.3f'))
-            plt.scatter(x_data, y_data, c='k', s=100, alpha=0.01)
-            plt.ylabel(r'Reconstructed coefficients', fontsize=48)
-            plt.xlabel(r'True coefficients', fontsize=48)
-            plt.xticks(fontsize=32.0)
-            plt.yticks(fontsize=32.0)
-            plt.xlim([0, vm * 1.1])
-            plt.ylim([0, vm * 1.1])
-
-            lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-            residuals = y_data - linear_model(x_data, *lin_fit)
-            ss_res = np.sum(residuals ** 2)
-            ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-            r_squared = 1 - (ss_res / ss_tot)
-            plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/scatter_{config_file}_{net_}.tif", dpi=300)
-            plt.close()
-
-            print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   ")
 
 def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, device):
     print('')
@@ -2903,7 +2752,6 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
     mask_mesh = mesh_data['mask']
     mask_mesh = mask_mesh.repeat(batch_size, 1)
 
-
     # matplotlib.use("Qt5Agg")
     # plt.rcParams['text.usetex'] = True
     # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
@@ -2922,17 +2770,10 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
     if vm == 0:
         vm = 0.01
 
-    fig_ = plt.figure(figsize=(12, 12))
-    axf = fig_.add_subplot(1, 1, 1)
-    axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-    axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-    axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-    axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    fig, ax = fig_init()
     plt.imshow(target, cmap=cc, vmin=0, vmax=vm)
     plt.xlabel(r'$x$', fontsize=64)
     plt.ylabel(r'$y$', fontsize=64)
-    plt.xticks(fontsize=32.0)
-    plt.yticks(fontsize=32.0)
     cbar = plt.colorbar(shrink=0.5)
     cbar.ax.tick_params(labelsize=32)
     # cbar.set_label(r'$Coupling$',fontsize=64)
@@ -2967,22 +2808,21 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
         image_width = int(np.sqrt(n_nodes))
         if has_siren_time:
             model_f = Siren_Network(image_width=image_width, in_features=3, out_features=1, hidden_features=128,
-                                        hidden_layers=5, outermost_linear=True, device=device, first_omega_0=80,
-                                        hidden_omega_0=80.)
+                                    hidden_layers=5, outermost_linear=True, device=device, first_omega_0=80,
+                                    hidden_omega_0=80.)
         else:
             model_f = Siren_Network(image_width=image_width, in_features=2, out_features=1, hidden_features=64,
-                                        hidden_layers=3, outermost_linear=True, device=device, first_omega_0=80,
-                                        hidden_omega_0=80.)
+                                    hidden_layers=3, outermost_linear=True, device=device, first_omega_0=80,
+                                    hidden_omega_0=80.)
         model_f.to(device=device)
         model_f.eval()
-
 
     epoch_list = [20]
     for epoch in epoch_list:
         print(f'epoch: {epoch}')
 
         net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
-        state_dict = torch.load(net,map_location=device)
+        state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
 
         if has_siren:
@@ -2992,20 +2832,14 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
 
         embedding = get_embedding(model.a, 1)
 
-        fig_ = plt.figure(figsize=(12, 12))
-        axf = fig_.add_subplot(1, 1, 1)
-        axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-        axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-        axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        fig, ax = fig_init()
         csv_ = []
         for n in range(n_particle_types):
-            plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n), s=400, alpha=0.1)
+            plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n), s=400,
+                        alpha=0.1)
             csv_.append(embedding[index_particles[n], :])
         # plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
         # plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
         plt.tight_layout()
         # csv_ = np.array(csv_)
         plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{epoch}.tif", dpi=300)
@@ -3014,15 +2848,15 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
         # np.savetxt(f"./{log_dir}/results/embedding_{config_file}.txt", csv_)
         plt.close()
 
-
         rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
         func_list, proj_interaction = analyze_edge_function(rr=rr, vizualize=False, config=config,
-                                                                model_lin_edge=model.lin_edge, model_a=model.a,
-                                                                dataset_number=1,
-                                                                n_particles=int(n_particles*(1-train_config.particle_dropout)), ynorm=ynorm,
-                                                                types=to_numpy(x[:, 5]),
-                                                                cmap=cmap, device=device)
-
+                                                            model_lin_edge=model.lin_edge, model_a=model.a,
+                                                            dataset_number=1,
+                                                            n_particles=int(
+                                                                n_particles * (1 - train_config.particle_dropout)),
+                                                            ynorm=ynorm,
+                                                            types=to_numpy(x[:, 5]),
+                                                            cmap=cmap, device=device)
 
         match train_config.cluster_method:
             case 'kmeans':
@@ -3041,18 +2875,14 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                 new_projection = np.concatenate((proj_interaction, embedding), axis=-1)
                 labels, n_clusters = embedding_cluster.get(new_projection, 'distance')
 
-        fig_ = plt.figure(figsize=(12, 12))
-        axf = fig_.add_subplot(1, 1, 1)
-        axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-        axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-        axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        fig, ax = fig_init()
         axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
         for n in range(n_clusters):
             pos = np.argwhere(labels == n)
             pos = np.array(pos)
             if pos.size > 0:
                 print(f'cluster {n}  {len(pos)}')
-                plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=100,alpha=0.1)
+                plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=100, alpha=0.1)
         label_list = []
         for n in range(n_particle_types):
             tmp = labels[index_particles[n]]
@@ -3060,13 +2890,11 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
         label_list = np.array(label_list)
         plt.xlabel(r'UMAP-proj 0', fontsize=64)
         plt.ylabel(r'UMAP-proj 1', fontsize=64)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/UMAP_{config_file}_{epoch}.tif", dpi=300)
         plt.close()
 
-        fig = plt.figure(figsize=(12, 12))
+        fig, ax = fig_init()
         new_labels = labels.copy()
         for n in range(n_particle_types):
             new_labels[labels == label_list[n]] = n
@@ -3084,52 +2912,8 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
         if len(p) > 1:
             p = torch.tensor(p, device=device)
         else:
-            p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt',map_location=device)
+            p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
         model_a_first = model.a.clone().detach()
-
-        if False:
-            fig = plt.figure(figsize=(12, 12))
-            ax = fig.add_subplot(1,1,1)
-            ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-            ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-            csv_ = []
-            csv_.append(to_numpy(rr))
-            rmserr_list = []
-            for n in range(int(n_particles*(1-train_config.particle_dropout))):
-                embedding_ = model_a_first[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-                match config.graph_model.particle_model_name:
-                    case 'PDE_A' | 'PDE_ParticleField_A':
-                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                             rr[:, None] / max_radius, embedding_), dim=1)
-                    case 'PDE_B' | 'PDE_ParticleField_B':
-                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                                 torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
-                                                 0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-                with torch.no_grad():
-                    func = model.lin_edge(in_features.float())
-                func = func[:, 0]
-                csv_.append(to_numpy(func))
-                true_func = model.psi(rr, p[to_numpy(type_list[n]).astype(int)].squeeze(), p[to_numpy(type_list[n]).astype(int)].squeeze())
-                rmserr_list.append(torch.sqrt(torch.mean((func * ynorm - true_func) ** 2)))
-                plt.plot(to_numpy(rr),
-                         to_numpy(func) * to_numpy(ynorm),
-                         color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
-            plt.xticks(fontsize=32)
-            plt.yticks(fontsize=32)
-            # plt.xlabel(r'$d_{ij}$', fontsize=64)
-            # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
-            plt.xlim([0, max_radius])
-            # plt.ylim([-0.15, 0.15])
-            plt.ylim([-0.04, 0.03])
-            # plt.ylim([-0.1, 0.1])
-            # plt.ylim([-0.03, 0.03])
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/func_all_{config_file}_{epoch}.tif",dpi=170.7)
-            rmserr_list = torch.stack(rmserr_list)
-            rmserr_list = to_numpy(rmserr_list)
-            print(f'all function RMS error: {np.round(np.mean(rmserr_list), 7)}+/-{np.round(np.std(rmserr_list), 7)}')
-            plt.close()
-
 
         match config.graph_model.field_type:
 
@@ -3155,18 +2939,12 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                     SSIM_list = []
                     for frame in trange(0, n_frames):
                         x = x_list[0][frame].clone().detach()
-                        fig = plt.figure(figsize=(12, 12))
-                        axf = fig_.add_subplot(1, 1, 1)
-                        axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-                        axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-                        axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                        axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                        fig, ax = fig_init()
                         plt.xlabel(r'$x$', fontsize=64)
                         plt.ylabel(r'$y$', fontsize=64)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
                         for n in range(n_particle_types):
-                            plt.scatter(to_numpy(x[index_particles[n], 2]), 1-to_numpy(x[index_particles[n], 1]), s=s_p,
+                            plt.scatter(to_numpy(x[index_particles[n], 2]), 1 - to_numpy(x[index_particles[n], 1]),
+                                        s=s_p,
                                         color='k')
                         plt.xlim([0, 1])
                         plt.ylim([0, 1])
@@ -3175,18 +2953,12 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                                     dpi=150)
                         plt.close()
 
-                        fig = plt.figure(figsize=(12, 12))
-                        axf = fig_.add_subplot(1, 1, 1)
-                        axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-                        axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-                        axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                        axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                        fig, ax = fig_init()
                         plt.xlabel(r'$x$', fontsize=64)
                         plt.ylabel(r'$y$', fontsize=64)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
                         for n in range(n_particle_types):
-                            plt.scatter(to_numpy(x[index_particles[n], 2]), 1-to_numpy(x[index_particles[n], 1]), s=s_p)
+                            plt.scatter(to_numpy(x[index_particles[n], 2]), 1 - to_numpy(x[index_particles[n], 1]),
+                                        s=s_p)
                         plt.xlim([0, 1])
                         plt.ylim([0, 1])
                         plt.tight_layout()
@@ -3197,40 +2969,25 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                         i0_ = i0[frame]
                         y = i0_[(to_numpy(x_mesh[:, 2]) * 100).astype(int), (to_numpy(x_mesh[:, 1]) * 100).astype(int)]
                         y = np.reshape(y, (n_nodes_per_axis, n_nodes_per_axis))
-                        fig_ = plt.figure(figsize=(12, 12))
-                        axf = fig_.add_subplot(1, 1, 1)
-                        axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-                        axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-                        axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                        axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                        fig, ax = fig_init()
                         plt.imshow(y, cmap=cc, vmin=0, vmax=vm)
                         plt.xlabel(r'$x$', fontsize=64)
                         plt.ylabel(r'$y$', fontsize=64)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
                         plt.tight_layout()
                         plt.savefig(f"./{log_dir}/results/video/target/target_field_{epoch}_{frame}.tif",
                                     dpi=150)
                         plt.close()
 
-
                         pred = model_f(time=frame / n_frames) ** 2
                         pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
                         pred = to_numpy(torch.sqrt(pred))
                         pred = np.flipud(pred)
-                        fig_ = plt.figure(figsize=(12, 12))
-                        axf = fig_.add_subplot(1, 1, 1)
-                        axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-                        axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-                        axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                        axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                        pred=np.rot90(pred)
-                        pred =np.fliplr(pred)
+                        fig, ax = fig_init()
+                        pred = np.rot90(pred)
+                        pred = np.fliplr(pred)
                         plt.imshow(pred, cmap=cc, vmin=0, vmax=1)
                         plt.xlabel(r'$x$', fontsize=64)
                         plt.ylabel(r'$y$', fontsize=64)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
                         plt.tight_layout()
                         plt.savefig(f"./{log_dir}/results/video/field/reconstructed_field_{epoch}_{frame}.tif",
                                     dpi=150)
@@ -3260,7 +3017,6 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                     os.makedirs(f"./{log_dir}/results/rotation/target", exist_ok=True)
                     os.makedirs(f"./{log_dir}/results/rotation/field", exist_ok=True)
 
-
                     match model_config.field_type:
                         case 'siren':
                             angle_list = [0]
@@ -3273,35 +3029,22 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                     SSIM_list = []
                     for angle in angle_list:
 
-                        x=x_list[0][angle].clone().detach()
-                        fig = plt.figure(figsize=(12, 12))
-                        axf = fig_.add_subplot(1, 1, 1)
-                        axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-                        axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-                        axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                        axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                        x = x_list[0][angle].clone().detach()
+                        fig, ax = fig_init()
                         plt.xlabel(r'$x$', fontsize=64)
                         plt.ylabel(r'$y$', fontsize=64)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
                         for n in range(n_particle_types):
-                            plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]), s=s_p, color='k')
+                            plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]), s=s_p,
+                                        color='k')
                         plt.xlim([0, 1])
                         plt.ylim([0, 1])
                         plt.tight_layout()
                         plt.savefig(f"./{log_dir}/results/rotation/generated1/generated_1_{epoch}_{angle}.tif", dpi=150)
                         plt.close()
 
-                        fig = plt.figure(figsize=(12, 12))
-                        axf = fig_.add_subplot(1, 1, 1)
-                        axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-                        axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-                        axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                        axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                        fig, ax = fig_init()
                         plt.xlabel(r'$x$', fontsize=64)
                         plt.ylabel(r'$y$', fontsize=64)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
                         for n in range(n_particle_types):
                             plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]), s=s_p)
                         plt.xlim([0, 1])
@@ -3309,18 +3052,12 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                         plt.tight_layout()
                         plt.savefig(f"./{log_dir}/results/rotation/generated2/generated_2_{epoch}_{angle}.tif", dpi=150)
                         plt.close()
+
+                        fig, ax = fig_init()
                         y = ndimage.rotate(target, -angle, reshape=False, cval=np.mean(target) * 1.1)
-                        fig_ = plt.figure(figsize=(12, 12))
-                        axf = fig_.add_subplot(1, 1, 1)
-                        axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-                        axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-                        axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                        axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                         plt.imshow(y, cmap=cc, vmin=0, vmax=vm)
                         plt.xlabel(r'$x$', fontsize=64)
                         plt.ylabel(r'$y$', fontsize=64)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
                         plt.tight_layout()
                         plt.savefig(f"./{log_dir}/results/rotation/target/target_field_{epoch}_{angle}.tif", dpi=150)
                         plt.close()
@@ -3330,85 +3067,63 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                                 pred = model_f() ** 2
                             case 'siren_with_time':
                                 pred = model_f(time=angle / n_frames) ** 2
-                        pred = torch.reshape(pred,(n_nodes_per_axis,n_nodes_per_axis))
+                        pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
                         pred = to_numpy(torch.sqrt(pred))
                         pred = np.flipud(pred)
 
-                        fig_ = plt.figure(figsize=(12, 12))
-                        axf = fig_.add_subplot(1, 1, 1)
-                        axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-                        axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-                        axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                        axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                        fig, ax = fig_init()
                         plt.imshow(pred, cmap=cc, vmin=0, vmax=vm)
                         plt.xlabel(r'$x$', fontsize=64)
                         plt.ylabel(r'$y$', fontsize=64)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
                         plt.tight_layout()
-                        plt.savefig(f"./{log_dir}/results/rotation/field/reconstructed_field_{epoch}_{angle}.tif", dpi=150)
+                        plt.savefig(f"./{log_dir}/results/rotation/field/reconstructed_field_{epoch}_{angle}.tif",
+                                    dpi=150)
                         plt.close()
 
-                        RMSE= np.sqrt(np.mean((y - pred) ** 2))
+                        RMSE = np.sqrt(np.mean((y - pred) ** 2))
                         RMSE_list = np.concatenate((RMSE_list, [RMSE]))
                         PSNR = calculate_psnr(y, pred, max_value=np.max(y))
                         PSNR_list = np.concatenate((PSNR_list, [PSNR]))
                         SSIM = calculate_ssim(y, pred)
                         SSIM_list = np.concatenate((SSIM_list, [SSIM]))
 
-                fig_ = plt.figure(figsize=(12, 12))
-                axf = fig_.add_subplot(1, 1, 1)
-                plt.scatter(np.linspace(0, n_frames, len(SSIM_list)),SSIM_list, color='k', linewidth=4)
+                fig, ax = fig_init()
+                plt.scatter(np.linspace(0, n_frames, len(SSIM_list)), SSIM_list, color='k', linewidth=4)
                 plt.xlabel(r'$Frame$', fontsize=64)
                 plt.ylabel(r'$SSIM$', fontsize=64)
-                plt.xticks(fontsize=32.0)
-                plt.yticks(fontsize=32.0)
-                plt.ylim([0,1])
+                plt.ylim([0, 1])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/ssim_{epoch}.tif", dpi=150)
                 plt.close()
 
                 print(f'SSIM: {np.round(np.mean(SSIM_list), 3)}+/-{np.round(np.std(SSIM_list), 3)}')
 
-                fig_ = plt.figure(figsize=(12, 12))
-                axf = fig_.add_subplot(1, 1, 1)
-                plt.scatter(np.linspace(0, n_frames, len(SSIM_list)),RMSE_list, color='k', linewidth=4)
+                fig, ax = fig_init()
+                plt.scatter(np.linspace(0, n_frames, len(SSIM_list)), RMSE_list, color='k', linewidth=4)
                 plt.xlabel(r'$Frame$', fontsize=64)
                 plt.ylabel(r'RMSE', fontsize=64)
-                plt.xticks(fontsize=32.0)
-                plt.yticks(fontsize=32.0)
-                plt.ylim([0,1])
+                plt.ylim([0, 1])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/rmse_{epoch}.tif", dpi=150)
                 plt.close()
 
-                fig_ = plt.figure(figsize=(12, 12))
-                axf = fig_.add_subplot(1, 1, 1)
-                plt.scatter(np.linspace(0, n_frames, len(SSIM_list)),PSNR_list, color='k', linewidth=4)
+                fig, ax = fig_init()
+                plt.scatter(np.linspace(0, n_frames, len(SSIM_list)), PSNR_list, color='k', linewidth=4)
                 plt.xlabel(r'$Frame$', fontsize=64)
                 plt.ylabel(r'PSNR', fontsize=64)
-                plt.xticks(fontsize=32.0)
-                plt.yticks(fontsize=32.0)
-                plt.ylim([0,50])
+                plt.ylim([0, 50])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/psnr_{epoch}.tif", dpi=150)
                 plt.close()
 
             case 'tensor':
 
-                fig_ = plt.figure(figsize=(12, 12))
-                axf = fig_.add_subplot(1, 1, 1)
-                axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-                axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-                axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                pts = to_numpy(torch.reshape(model.field[1],(100,100)))
+                fig, ax = fig_init()
+                pts = to_numpy(torch.reshape(model.field[1], (100, 100)))
                 pts = np.flipud(pts)
-                plt.imshow(pts, cmap=cc,vmin=0,vmax=vm)
+                plt.imshow(pts, cmap=cc, vmin=0, vmax=vm)
                 plt.xlabel(r'$x$', fontsize=64)
                 plt.ylabel(r'$y$', fontsize=64)
-                plt.xticks(fontsize=32.0)
-                plt.yticks(fontsize=32.0)
                 cbar = plt.colorbar(shrink=0.5)
                 cbar.ax.tick_params(labelsize=32)
                 # cbar.set_label(r'$Coupling$',fontsize=64)
@@ -3419,27 +3134,20 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                 # csv_= np.reshape(csv_,(csv_.shape[0]*csv_.shape[1],2))
                 # np.savetxt(f"./{log_dir}/results/embedding_{config_file}.txt", csv_)
                 plt.close()
-                rmse = np.sqrt(np.mean((target-pts)**2))
+                rmse = np.sqrt(np.mean((target - pts) ** 2))
                 print(f'RMSE: {rmse}')
 
-                fig_ = plt.figure(figsize=(12, 12))
-                axf = fig_.add_subplot(1, 1, 1)
-                axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-                axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-                axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                plt.scatter(target,pts,c='k',s=100, alpha=0.1)
+                fig, ax = fig_init()
+                plt.scatter(target, pts, c='k', s=100, alpha=0.1)
                 plt.ylabel(r'Reconstructed coupling', fontsize=32)
                 plt.xlabel(r'True coupling', fontsize=32)
-                plt.xticks(fontsize=32.0)
-                plt.yticks(fontsize=32.0)
-                plt.xlim([-vm*0.1, vm*1.5])
-                plt.ylim([-vm*0.1, vm*1.5])
+                plt.xlim([-vm * 0.1, vm * 1.5])
+                plt.ylim([-vm * 0.1, vm * 1.5])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/field_scatter_{config_file}_{epoch}.tif", dpi=300)
 
-                x_data = np.reshape(pts,(n_nodes))
-                y_data = np.reshape(target,(n_nodes))
+                x_data = np.reshape(pts, (n_nodes))
+                y_data = np.reshape(target, (n_nodes))
                 threshold = 0.25
                 relative_error = np.abs(y_data - x_data)
                 print(f'outliers: {np.sum(relative_error > threshold)} / {n_particles}')
@@ -3461,13 +3169,13 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                 print(f"Slope: {np.round(lin_fit[0], 2)}")
 
                 plt.plot(x_data_, linear_model(x_data_, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-                plt.xlim([-vm*0.1, vm*1.1])
-                plt.ylim([-vm*0.1, vm*1.1])
+                plt.xlim([-vm * 0.1, vm * 1.1])
+                plt.ylim([-vm * 0.1, vm * 1.1])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/field_scatter_{config_file}_{epoch}.tif", dpi=300)
 
-def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
 
+def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
@@ -3548,18 +3256,15 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
         coeff = np.fliplr(coeff)
     vm = np.max(coeff)
     print(f'vm: {vm}')
-    fig_ = plt.figure(figsize=(12, 12))
-    axf = fig_.add_subplot(1, 1, 1)
-    axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-    axf.yaxis.set_major_locator(plt.MaxNLocator(3))
+
+    fig, ax = fig_init()
     fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
     axf.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
     axf.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
     plt.imshow(coeff, cmap=cc, vmin=0, vmax=vm)
     plt.xlabel(r'$x$', fontsize=64)
     plt.ylabel(r'$y$', fontsize=64)
-    plt.xticks(fontsize=32.0)
-    plt.yticks(fontsize=32.0)
+
     cbar = plt.colorbar(shrink=0.5)
     cbar.ax.tick_params(labelsize=32)
     plt.tight_layout()
@@ -3578,28 +3283,21 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
         embedding = get_embedding(model.a, 1)
         first_embedding = embedding
 
-        fig_ = plt.figure(figsize=(12, 12))
-        axf = fig_.add_subplot(1, 1, 1)
-        axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-        axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-        axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        fig, ax = fig_init()
         if has_pic:
             plt.scatter(embedding[:, 0], embedding[:, 1],
-                        color=cmap.color(np.round(coeff_*256).astype(int)), s=100, alpha=1)
+                        color=cmap.color(np.round(coeff_ * 256).astype(int)), s=100, alpha=1)
         else:
             for n in range(n_node_types):
-                    c_ = np.round(n / (n_node_types - 1) * 256).astype(int)
-                    plt.scatter(embedding[index_nodes[n], 0], embedding[index_nodes[n], 1], s=200)  # , color=cmap.color(c_)
+                c_ = np.round(n / (n_node_types - 1) * 256).astype(int)
+                plt.scatter(embedding[index_nodes[n], 0], embedding[index_nodes[n], 1], s=200)  # , color=cmap.color(c_)
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{net_}.tif", dpi=300)
         plt.close()
 
-        if not(has_pic):
+        if not (has_pic):
 
             print('domain clustering...')
             labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
@@ -3631,7 +3329,7 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
 
         if True:
 
-            k=2400
+            k = 2400
 
             # collect data from sing
             x_mesh = x_mesh_list[1][k].clone().detach()
@@ -3661,11 +3359,11 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
             increment = torch.cat((du[:, None], dv[:, None], dw[:, None]), dim=1)
             increment = increment.squeeze()
 
-            lin_fit_true = np.zeros((np.max(new_labels)+1, 3, 10))
-            lin_fit_reconstructed = np.zeros((np.max(new_labels)+1, 3, 10))
+            lin_fit_true = np.zeros((np.max(new_labels) + 1, 3, 10))
+            lin_fit_reconstructed = np.zeros((np.max(new_labels) + 1, 3, 10))
             eq_list = ['u', 'v', 'w']
             if has_pic:
-                n_node_types_list=[0]
+                n_node_types_list = [0]
             else:
                 n_node_types_list = np.arange(n_node_types)
             for n in np.unique(new_labels):
@@ -3673,7 +3371,7 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
                     pos = np.argwhere(to_numpy(mask_mesh.squeeze()) == 1)
                 else:
                     pos = np.argwhere((new_labels == n) & (to_numpy(mask_mesh.squeeze()) == 1))
-                    pos = pos[:,0].astype(int)
+                    pos = pos[:, 0].astype(int)
 
                 for it, eq in enumerate(eq_list):
                     fitting_model = reaction_diffusion_model(eq)
@@ -3683,102 +3381,89 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
                     u = to_numpy(uvw[pos, 0])
                     v = to_numpy(uvw[pos, 1])
                     w = to_numpy(uvw[pos, 2])
-                    x_data = np.concatenate((laplacian_u[:, None], laplacian_v[:, None], laplacian_w[:, None], u[:, None], v[:, None], w[:, None]), axis=1)
-                    y_data = to_numpy(increment[pos, 0+it:1+it])
-                    p0 = np.ones((10,1))
-                    lin_fit, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data), p0=np.squeeze(p0),method='trf')
+                    x_data = np.concatenate((laplacian_u[:, None], laplacian_v[:, None], laplacian_w[:, None],
+                                             u[:, None], v[:, None], w[:, None]), axis=1)
+                    y_data = to_numpy(increment[pos, 0 + it:1 + it])
+                    p0 = np.ones((10, 1))
+                    lin_fit, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data),
+                                                  p0=np.squeeze(p0), method='trf')
                     lin_fit_true[n, it] = lin_fit
-                    y_data = to_numpy(pred[pos, it:it+1])
-                    lin_fit, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data), p0=np.squeeze(p0), method='trf')
+                    y_data = to_numpy(pred[pos, it:it + 1])
+                    lin_fit, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data),
+                                                  p0=np.squeeze(p0), method='trf')
                     lin_fit_reconstructed[n, it] = lin_fit
 
-
-
-            coeff_reconstructed = np.round(np.median(lin_fit_reconstructed, axis=0),2)
-            diffusion_coeff_reconstructed = np.round(np.median(lin_fit_reconstructed, axis=1),2)[:,9]
-            coeff_true = np.round(np.median(lin_fit_true, axis=0),2)
-            diffusion_coeff_true = np.round(np.median(lin_fit_true, axis=1),2)[:,9]
+            coeff_reconstructed = np.round(np.median(lin_fit_reconstructed, axis=0), 2)
+            diffusion_coeff_reconstructed = np.round(np.median(lin_fit_reconstructed, axis=1), 2)[:, 9]
+            coeff_true = np.round(np.median(lin_fit_true, axis=0), 2)
+            diffusion_coeff_true = np.round(np.median(lin_fit_true, axis=1), 2)[:, 9]
 
             print(f'frame {k}')
-            print (f'coeff_reconstructed: {coeff_reconstructed}')
+            print(f'coeff_reconstructed: {coeff_reconstructed}')
             print(f'diffusion_coeff_reconstructed: {diffusion_coeff_reconstructed}')
             print(f'coeff_true: {coeff_true}')
             print(f'diffusion_coeff_true: {diffusion_coeff_true}')
 
-
-
-            cp = ['uu','uv','uw','vv','vw','ww','u','v','w']
+            cp = ['uu', 'uv', 'uw', 'vv', 'vw', 'ww', 'u', 'v', 'w']
             results = {
-                'True': coeff_true[0,0:9],
-                'Reconstructed': coeff_reconstructed[0,0:9],
+                'True': coeff_true[0, 0:9],
+                'Reconstructed': coeff_reconstructed[0, 0:9],
             }
             x = np.arange(len(cp))  # the label locations
             width = 0.25  # the width of the bars
             multiplier = 0
-            fig = plt.figure(figsize=(12, 12))
-            ax = fig.add_subplot(1, 1, 1)
+            fig, ax = fig_init()
             for attribute, measurement in results.items():
                 offset = width * multiplier
                 rects = ax.bar(x + offset, measurement, width, label=attribute)
                 multiplier += 1
-            ax.set_ylabel('Polynomial coefficient',fontsize=48)
-            ax.set_xticks(x + width, cp,fontsize=48)
-            plt.xticks(fontsize=32.0)
-            plt.yticks(fontsize=32.0)
-            plt.title('First equation',fontsize=48)
+            ax.set_ylabel('Polynomial coefficient', fontsize=48)
+            ax.set_xticks(x + width, cp, fontsize=48)
+            plt.title('First equation', fontsize=48)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/first_equation_{config_file}_{net_}.tif", dpi=300)
             plt.close()
-            cp = ['uu','uv','uw','vv','vw','ww','u','v','w']
+            cp = ['uu', 'uv', 'uw', 'vv', 'vw', 'ww', 'u', 'v', 'w']
             results = {
-                'True': coeff_true[1,0:9],
-                'Reconstructed': coeff_reconstructed[1,0:9],
+                'True': coeff_true[1, 0:9],
+                'Reconstructed': coeff_reconstructed[1, 0:9],
             }
             x = np.arange(len(cp))  # the label locations
             width = 0.25  # the width of the bars
             multiplier = 0
-            fig = plt.figure(figsize=(12, 12))
-            ax = fig.add_subplot(1, 1, 1)
+            fig, ax = fig_init()
             for attribute, measurement in results.items():
                 offset = width * multiplier
                 rects = ax.bar(x + offset, measurement, width, label=attribute)
                 multiplier += 1
-            ax.set_ylabel('Polynomial coefficient',fontsize=48)
-            ax.set_xticks(x + width, cp,fontsize=48)
-            plt.xticks(fontsize=32.0)
-            plt.yticks(fontsize=32.0)
-            plt.title('Second equation',fontsize=48)
+            ax.set_ylabel('Polynomial coefficient', fontsize=48)
+            ax.set_xticks(x + width, cp, fontsize=48)
+            plt.title('Second equation', fontsize=48)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/second_equation_{config_file}_{net_}.tif", dpi=300)
             plt.close()
-            cp = ['uu','uv','uw','vv','vw','ww','u','v','w']
+            cp = ['uu', 'uv', 'uw', 'vv', 'vw', 'ww', 'u', 'v', 'w']
             results = {
-                'True': coeff_true[2,0:9],
-                'Reconstructed': coeff_reconstructed[2,0:9],
+                'True': coeff_true[2, 0:9],
+                'Reconstructed': coeff_reconstructed[2, 0:9],
             }
             x = np.arange(len(cp))  # the label locations
             width = 0.25  # the width of the bars
             multiplier = 0
-            fig = plt.figure(figsize=(12, 12))
-            ax = fig.add_subplot(1, 1, 1)
+            fig, ax = fig_init()
             for attribute, measurement in results.items():
                 offset = width * multiplier
                 rects = ax.bar(x + offset, measurement, width, label=attribute)
                 multiplier += 1
-            ax.set_ylabel('Polynomial coefficient',fontsize=48)
-            ax.set_xticks(x + width, cp,fontsize=48)
-            plt.xticks(fontsize=32.0)
-            plt.yticks(fontsize=32.0)
-            plt.title('Third equation',fontsize=48)
+            ax.set_ylabel('Polynomial coefficient', fontsize=48)
+            ax.set_xticks(x + width, cp, fontsize=48)
+            plt.title('Third equation', fontsize=48)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/third_equation_{config_file}_{net_}.tif", dpi=300)
             plt.close()
 
-
-
-
-            fig_ = plt.figure(figsize=(12, 12))
-            t =diffusion_coeff_reconstructed [new_labels]
+            fig, ax = fig_init()
+            t = diffusion_coeff_reconstructed[new_labels]
             t_ = np.reshape(t, (n_nodes_per_axis, n_nodes_per_axis))
             t_ = np.flipud(t_)
             t_ = np.fliplr(t_)
@@ -3792,38 +3477,29 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
             plt.imshow(t_, cmap=cc, vmin=0, vmax=vm)
             plt.xlabel(r'$x$', fontsize=64)
             plt.ylabel(r'$y$', fontsize=64)
-            plt.xticks(fontsize=32.0)
-            plt.yticks(fontsize=32.0)
             fmt = lambda x, pos: '{:.3%}'.format(x)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/diff_coeff_map_{config_file}_{net_}.tif", dpi=300)
             plt.close()
 
-            t_ = np.reshape(t, (n_nodes_per_axis*n_nodes_per_axis))
-            fig_ = plt.figure(figsize=(12, 12))
-            axf = fig_.add_subplot(1, 1, 1)
-            axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-            axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-            axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-            axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+            t_ = np.reshape(t, (n_nodes_per_axis * n_nodes_per_axis))
 
+            fig, ax = fig_init()
             plt.scatter(first_embedding[:, 0], first_embedding[:, 1],
-                                s=200, c=t_, cmap='viridis', alpha=0.5,vmin=0,vmax=vm)
+                        s=200, c=t_, cmap='viridis', alpha=0.5, vmin=0, vmax=vm)
             plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
             plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
-            plt.xticks(fontsize=32.0)
-            plt.yticks(fontsize=32.0)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{net_}.tif", dpi=300)
             plt.close()
 
-    bContinuous=False
+    bContinuous = False
     if bContinuous:
-        laplacian_uvw_list=[]
-        uvw_list=[]
-        pred_list=[]
-        input_phi_list=[]
-        for k in trange(n_frames-1):
+        laplacian_uvw_list = []
+        uvw_list = []
+        pred_list = []
+        input_phi_list = []
+        for k in trange(n_frames - 1):
             x_mesh = x_mesh_list[1][k].clone().detach()
             dataset = data.Data(x=x_mesh, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
             with torch.no_grad():
@@ -3834,42 +3510,40 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
             uvw_list.append(uvw)
             input_phi_list.append(input_phi)
 
-        laplacian_uvw_list= torch.stack(laplacian_uvw_list)
+        laplacian_uvw_list = torch.stack(laplacian_uvw_list)
         uvw_list = torch.stack(uvw_list)
         pred_list = torch.stack(pred_list)
 
         print('Fit node level ...')
-        t = np.zeros((n_nodes,1))
+        t = np.zeros((n_nodes, 1))
         for n in trange(n_nodes):
             for it, eq in enumerate(eq_list[0]):
                 fitting_model = reaction_diffusion_model(eq)
-                laplacian_u = to_numpy(laplacian_uvw_list[:,n, 0].squeeze())
-                laplacian_v = to_numpy(laplacian_uvw_list[:,n, 1].squeeze())
-                laplacian_w = to_numpy(laplacian_uvw_list[:,n, 2].squeeze())
-                u = to_numpy(uvw_list[:,n, 0].squeeze())
-                v = to_numpy(uvw_list[:,n, 1].squeeze())
-                w = to_numpy(uvw_list[:,n,  2].squeeze())
-                x_data = np.concatenate((laplacian_u[:, None], laplacian_v[:, None], laplacian_w[:, None], u[:, None], v[:, None], w[:, None]),axis=1)
-                y_data = to_numpy(pred_list[:,n,it:it+1].squeeze())
-                lin_fit, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), y_data,  method='trf')
-                t[n]=lin_fit[-1:]
+                laplacian_u = to_numpy(laplacian_uvw_list[:, n, 0].squeeze())
+                laplacian_v = to_numpy(laplacian_uvw_list[:, n, 1].squeeze())
+                laplacian_w = to_numpy(laplacian_uvw_list[:, n, 2].squeeze())
+                u = to_numpy(uvw_list[:, n, 0].squeeze())
+                v = to_numpy(uvw_list[:, n, 1].squeeze())
+                w = to_numpy(uvw_list[:, n, 2].squeeze())
+                x_data = np.concatenate((laplacian_u[:, None], laplacian_v[:, None], laplacian_w[:, None], u[:, None],
+                                         v[:, None], w[:, None]), axis=1)
+                y_data = to_numpy(pred_list[:, n, it:it + 1].squeeze())
+                lin_fit, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), y_data, method='trf')
+                t[n] = lin_fit[-1:]
 
                 if ((n % 1000 == 0) | (n == n_nodes - 1)):
                     t_ = np.reshape(t, (n_nodes_per_axis, n_nodes_per_axis))
                     t_ = np.flipud(t_)
                     t_ = np.fliplr(t_)
-                    fig_ = plt.figure(figsize=(12, 12))
-                    axf = fig_.add_subplot(1, 1, 1)
-                    axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-                    axf.yaxis.set_major_locator(plt.MaxNLocator(3))
+
+                    fig, ax = fig_init()
                     fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
                     axf.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
                     axf.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
                     plt.imshow(t_ * to_numpy(hnorm), cmap=cc, vmin=0, vmax=1)
                     plt.xlabel(r'$x$', fontsize=64)
                     plt.ylabel(r'$y$', fontsize=64)
-                    plt.xticks(fontsize=32.0)
-                    plt.yticks(fontsize=32.0)
+
                     fmt = lambda x, pos: '{:.3%}'.format(x)
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/diff_node_coeff_{config_file}_{net_}.tif", dpi=300)
@@ -3878,31 +3552,27 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
         input_phi_list = torch.stack(input_phi_list)
         t = np.zeros((n_nodes, 1))
         for node in trange(n_nodes):
-            gg=[]
+            gg = []
             for sample in range(100):
                 k = 1 + np.random.randint(n_frames - 2)
-                input = input_phi_list[k,node,:].clone().detach().squeeze()
+                input = input_phi_list[k, node, :].clone().detach().squeeze()
                 input.requires_grad = True
-                L = model.lin_phi(input)[sample%3]
-                [g] = torch.autograd.grad(L,[input])
-                gg.append(g[sample%3])
-            t[node]=to_numpy(torch.median(torch.stack(gg)))
-            if ((node%1000==0)|(node==n_nodes-1)):
+                L = model.lin_phi(input)[sample % 3]
+                [g] = torch.autograd.grad(L, [input])
+                gg.append(g[sample % 3])
+            t[node] = to_numpy(torch.median(torch.stack(gg)))
+            if ((node % 1000 == 0) | (node == n_nodes - 1)):
                 t_ = np.reshape(t, (n_nodes_per_axis, n_nodes_per_axis))
                 t_ = np.flipud(t_)
                 t_ = np.fliplr(t_)
-                fig_ = plt.figure(figsize=(12, 12))
-                axf = fig_.add_subplot(1, 1, 1)
-                axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-                axf.yaxis.set_major_locator(plt.MaxNLocator(3))
+
+                fig, ax = fig_init()
                 fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
                 axf.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
                 axf.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-                plt.imshow(t_*to_numpy(hnorm), cmap=cc, vmin=0,vmax=vm)
+                plt.imshow(t_ * to_numpy(hnorm), cmap=cc, vmin=0, vmax=vm)
                 plt.xlabel(r'$x$', fontsize=64)
                 plt.ylabel(r'$y$', fontsize=64)
-                plt.xticks(fontsize=32.0)
-                plt.yticks(fontsize=32.0)
                 fmt = lambda x, pos: '{:.3%}'.format(x)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/diff_coeff_{config_file}_{net_}.tif", dpi=300)
@@ -3927,8 +3597,6 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
         plt.scatter(x_data, y_data, c='k', s=100, alpha=0.01)
         plt.ylabel(r'Reconstructed diffusion coeff.', fontsize=48)
         plt.xlabel(r'True diffusion coeff.', fontsize=48)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
         plt.xlim([0, vm * 1.1])
         plt.ylim([0, vm * 1.1])
 
@@ -3944,8 +3612,8 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
 
         print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}")
 
-def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
 
+def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
@@ -3966,7 +3634,7 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
 
     embedding_cluster = EmbeddingCluster(config)
 
-    n_runs = min(2,n_runs)
+    n_runs = min(2, n_runs)
 
     x_list = []
     y_list = []
@@ -3994,33 +3662,19 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
     gt_weight = to_numpy(adjacency[adj_t])
     norm_gt_weight = max(gt_weight)
 
-    fig_ = plt.figure(figsize=(12, 12))
-    axf = fig_.add_subplot(1, 1, 1)
-    axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-    axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-    axf.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
-    axf.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+    fig, ax = fig_init()
     plt.imshow(to_numpy(adjacency) / norm_gt_weight, cmap=cc, vmin=0, vmax=0.1)
-    plt.xticks(fontsize=32.0)
-    plt.yticks(fontsize=32.0)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/True_Aij_{config_file}.tif", dpi=300)
     plt.close()
-    fig_ = plt.figure(figsize=(12, 12))
-    axf = fig_.add_subplot(1, 1, 1)
-    axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-    axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-    axf.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
-    axf.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+
+    fig, ax = fig_init()
     plt.imshow(to_numpy(adjacency) / norm_gt_weight, cmap=cc, vmin=0, vmax=0.1)
-    plt.xticks(fontsize=32.0)
-    plt.yticks(fontsize=32.0)
     cbar = plt.colorbar(shrink=0.5)
     cbar.ax.tick_params(labelsize=32)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/True_Aij_bar_{config_file}.tif", dpi=300)
     plt.close()
-
 
     # plt.rcParams['text.usetex'] = True
     # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
@@ -4028,7 +3682,7 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
 
     GT_model, bc_pos, bc_dpos = choose_model(config, device=device)
 
-    net_list = ['20','25','30','39'] # [,'1','5','10'] # , '0', '1', '5']
+    net_list = ['20', '25', '30', '39']  # [,'1','5','10'] # , '0', '1', '5']
     # net_list = glob.glob(f"./log/try_{config_file}/models/*.pt")
 
     for net_ in net_list:
@@ -4044,23 +3698,16 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         print(f'net: {net}')
         embedding = get_embedding(model.a, 1)
 
-        fig_ = plt.figure(figsize=(12, 12))
-        axf = fig_.add_subplot(1, 1, 1)
-        axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-        axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-        axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        fig, ax = fig_init()
         for n in range(n_particle_types):
-                c_ = np.round(n / (n_particle_types - 1) * 256).astype(int)
-                plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=400, alpha=0.1)  # , color=cmap.color(c_)
+            c_ = np.round(n / (n_particle_types - 1) * 256).astype(int)
+            plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=400,
+                        alpha=0.1)  # , color=cmap.color(c_)
         # plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
         # plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{net_}.tif", dpi=300)
         plt.close()
-
 
         k = 500
         x = x_list[1][k].clone().detach()
@@ -4072,17 +3719,13 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         edge_index = adj_t.nonzero().t().contiguous()
         edge_attr_adjacency = adjacency[adj_t]
         dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
-        fig_ = plt.figure(figsize=(12, 12))
-        axf = fig_.add_subplot(1, 1, 1)
-        axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-        axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-        axf.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-        axf.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+
+        fig, ax = fig_init()
         gt_weight = to_numpy(adjacency[adj_t])
         pred_weight = to_numpy(model.weight_ij[adj_t])
         plt.scatter(gt_weight, pred_weight, s=200, c='k')
-        x_data=gt_weight
-        y_data=pred_weight.squeeze()
+        x_data = gt_weight
+        y_data = pred_weight.squeeze()
         lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
         residuals = y_data - linear_model(x_data, *lin_fit)
         ss_res = np.sum(residuals ** 2)
@@ -4091,91 +3734,51 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
         plt.ylabel('Reconstructed $A_{ij}$ values', fontsize=64)
         plt.xlabel('True network $A_{ij}$ values', fontsize=64)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/Matrix_{config_file}_{net_}.tif", dpi=300)
         plt.close()
 
         print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   offset: {np.round(lin_fit[1], 2)}  ")
 
-        # fig_ = plt.figure(figsize=(12, 12))
-        # axf = fig_.add_subplot(1, 1, 1)
-        # axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-        # axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-        # axf.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
-        # axf.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
-        # plt.imshow(to_numpy(model.A), cmap=cc)
-        # plt.xticks(fontsize=32.0)
-        # plt.yticks(fontsize=32.0)
-        # plt.tight_layout()
-        # plt.savefig(f"./{log_dir}/results/Reconstructed_Aij_{config_file}_{net_}.tif", dpi=300)
-        # plt.close()
-
-        # fig_ = plt.figure(figsize=(12, 12))
-        # axf = fig_.add_subplot(1, 1, 1)
-        # for n in range(n_particles):
-        #     embedding_ = torch.tensor(embedding[n, :],device=device)
-        #     input =torch.cat((uu[:,None],torch.ones_like(uu[:,None])*embedding_),dim=1)
-        #     with torch.no_grad():
-        #         func = model.lin_phi(input.float())
-        #     plt.plot(to_numpy(uu), to_numpy(func), linewidth=4, alpha=0.1, color=cmap.color(to_numpy(type_list[n])))
-        # # plt.scatter(to_numpy(uu), to_numpy(true_func) * to_numpy(ynorm), linewidth=8)
-        # plt.ylabel(r'Update', fontsize=48)
-        # plt.tight_layout()
-        # plt.savefig(f"./{log_dir}/results/Update_{config_file}_{net_}.tif", dpi=300)
-        # plt.close()
-
-
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(1,1,1)
+        fig, ax = fig_init()
         uu = x[:, 6:7].squeeze()
         ax.xaxis.get_major_formatter()._usetex = False
         ax.yaxis.get_major_formatter()._usetex = False
         uu = torch.tensor(np.linspace(0, 3, 1000)).to(device)
         print(n_particles)
         func_list, proj_interaction = analyze_edge_function(rr=uu, vizualize=True, config=config,
-                                                                model_lin_edge=model.lin_phi, model_a=model.a,
-                                                                dataset_number=1,
-                                                                n_particles=int(n_particles*(1-train_config.particle_dropout)), ynorm=ynorm,
-                                                                types=to_numpy(x[:, 5]),
-                                                                cmap=cmap, device=device)
+                                                            model_lin_edge=model.lin_phi, model_a=model.a,
+                                                            dataset_number=1,
+                                                            n_particles=int(
+                                                                n_particles * (1 - train_config.particle_dropout)),
+                                                            ynorm=ynorm,
+                                                            types=to_numpy(x[:, 5]),
+                                                            cmap=cmap, device=device)
         # plt.xlabel(r'$d_{ij}$', fontsize=64)
         # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
-        # xticks with sans serif font
-        plt.xticks(fontsize=32)
-        plt.yticks(fontsize=32)
         plt.xlabel(r'$u$', fontsize=64)
         plt.ylabel(r'Reconstructed $\Phi(u)$', fontsize=64)
         plt.ylim([-0.25, 0.25])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/phi_u_{config_file}_{net_}.tif",dpi=170.7)
+        plt.savefig(f"./{log_dir}/results/phi_u_{config_file}_{net_}.tif", dpi=170.7)
         plt.close()
 
         embedding_ = model.a[1, :, :]
-        u = torch.tensor(0.5,device=device).float()
-        u = u * torch.ones((n_particles, 1),device=device)
+        u = torch.tensor(0.5, device=device).float()
+        u = u * torch.ones((n_particles, 1), device=device)
         in_features = torch.cat((u, embedding_), dim=1)
         with torch.no_grad():
             func = model.lin_phi(in_features.float())
-        func = func[:,0]
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(1,1,1)
-        for n in range(n_particle_types):
-            plt.scatter(0 * to_numpy(func[index_particles[n]]), to_numpy(func[index_particles[n]]), s=200, alpha=0.05)
-        proj_interaction = to_numpy(func[:,None])
+        func = func[:, 0]
+        proj_interaction = to_numpy(func[:, None])
         labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
-        fig_ = plt.figure(figsize=(12, 12))
-        axf = fig_.add_subplot(1, 1, 1)
-        axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-        axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-        axf.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+
+        fig, ax = fig_init()
         for n in range(n_clusters):
             pos = np.argwhere(labels == n)
             pos = np.array(pos)
             if pos.size > 0:
-                plt.scatter(np.ones_like(pos)*0.5, proj_interaction[pos, 0], color=cmap.color(n), s=400,alpha=0.1)
+                plt.scatter(np.ones_like(pos) * 0.5, proj_interaction[pos, 0], color=cmap.color(n), s=400, alpha=0.1)
         label_list = []
         for n in range(n_particle_types):
             tmp = labels[index_particles[n]]
@@ -4183,8 +3786,6 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         label_list = np.array(label_list)
         plt.xlabel(r'$u$', fontsize=64)
         plt.ylabel(r'$\Phi(u)$', fontsize=64)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
         plt.ylim([-0.25, 0.25])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/cluster_{config_file}_{net_}.tif", dpi=300)
@@ -4208,53 +3809,46 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         with torch.no_grad():
             model.a[1] = model_a_.clone().detach()
 
+        fig, ax = fig_init()
         uu = torch.tensor(np.linspace(0, 3, 1000)).to(device)
         p = config.simulation.params
         if len(p) > 1:
             p = torch.tensor(p, device=device)
         fig_ = plt.figure(figsize=(12, 12))
         for n in range(n_particle_types):
-            phi = -p[n,0]*uu + p[n,1]*torch.tanh(uu)
+            phi = -p[n, 0] * uu + p[n, 1] * torch.tanh(uu)
             plt.plot(to_numpy(uu), to_numpy(phi), linewidth=8)
         plt.xlabel(r'$u$', fontsize=64)
         plt.ylabel(r'True $\Phi(u)$', fontsize=64)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
         plt.ylim([-0.25, 0.25])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/true_phi_u_{config_file}_{net_}.tif",dpi=170.7)
+        plt.savefig(f"./{log_dir}/results/true_phi_u_{config_file}_{net_}.tif", dpi=170.7)
         plt.close()
 
         uu = torch.tensor(np.linspace(0, 3, 1000)).to(device)
         with torch.no_grad():
-            func = model.lin_edge(uu[:,None].float())
-        true_func = torch.tanh(uu[:,None].float())
+            func = model.lin_edge(uu[:, None].float())
+        true_func = torch.tanh(uu[:, None].float())
 
-        fig_ = plt.figure(figsize=(12, 12))
-        axf = fig_.add_subplot(1, 1, 1)
+        fig, ax = fig_init()
         plt.xlabel(r'$u$', fontsize=64)
         plt.ylabel(r'Reconstructed $f(u)$', fontsize=64)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
         plt.scatter(to_numpy(uu), to_numpy(func), linewidth=8, c='k', label='Reconstructed')
-        plt.ylim([-3,3])
+        plt.ylim([-3, 3])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/f_u_{config_file}_{net_}.tif", dpi=300)
         plt.close()
 
-        fig_ = plt.figure(figsize=(12, 12))
-        axf = fig_.add_subplot(1, 1, 1)
+        fig, ax = fig_init()
         plt.xlabel(r'$u$', fontsize=64)
         plt.ylabel(r'True $f(u)$', fontsize=64)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
         plt.scatter(to_numpy(uu), to_numpy(true_func), linewidth=8, c='k', label='Reconstructed')
-        plt.ylim([-3,3])
+        plt.ylim([-3, 3])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/true_f_u_{config_file}_{net_}.tif", dpi=300)
         plt.close()
 
-        bFit=False
+        bFit = False
 
         if bFit:
             uu = torch.tensor(np.linspace(0, 3, 1000)).to(device)
@@ -4299,17 +3893,13 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
             edge_index = adj_t.nonzero().t().contiguous()
             edge_attr_adjacency = adjacency[adj_t]
             dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
-            fig_ = plt.figure(figsize=(12, 12))
-            axf = fig_.add_subplot(1, 1, 1)
-            axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-            axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-            axf.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-            axf.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+
+            fig, ax = fig_init()
             gt_weight = to_numpy(adjacency[adj_t])
             pred_weight = to_numpy(model.weight_ij[adj_t]) * -1.878
             plt.scatter(gt_weight, pred_weight, s=200, c='k')
-            x_data=gt_weight
-            y_data=pred_weight.squeeze()
+            x_data = gt_weight
+            y_data = pred_weight.squeeze()
             lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
             residuals = y_data - linear_model(x_data, *lin_fit)
             ss_res = np.sum(residuals ** 2)
@@ -4318,41 +3908,33 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
             plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
             plt.ylabel('Reconstructed $A_{ij}$ values', fontsize=64)
             plt.xlabel('True network $A_{ij}$ values', fontsize=64)
-            plt.xticks(fontsize=32.0)
-            plt.yticks(fontsize=32.0)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/Matrix_bis_{config_file}_{net_}.tif", dpi=300)
             plt.close()
 
-            print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   offset: {np.round(lin_fit[1], 2)}  ")
+            print(
+                f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   offset: {np.round(lin_fit[1], 2)}  ")
 
-
-            fig_ = plt.figure(figsize=(12, 12))
-            axf = fig_.add_subplot(1, 1, 1)
+            fig, ax = fig_init()
             plt.xlabel(r'$u$', fontsize=64)
             plt.ylabel(r'Reconstructed $f(u)$', fontsize=64)
-            plt.xticks(fontsize=32.0)
-            plt.yticks(fontsize=32.0)
             plt.plot(to_numpy(uu), to_numpy(true_func), linewidth=20, c='g', label='True')
-            plt.plot(to_numpy(uu), to_numpy(func)/ -1.878, linewidth=8, c='k', label='Reconstructed')
+            plt.plot(to_numpy(uu), to_numpy(func) / -1.878, linewidth=8, c='k', label='Reconstructed')
             plt.legend(fontsize=32.0)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/comparison_f_u_{config_file}_{net_}.tif", dpi=300)
             plt.close()
 
-
             uu = torch.tensor(np.linspace(0, 3, 1000)).to(device)
-            fig_ = plt.figure(figsize=(12, 12))
+            fig, ax = fig_init()
             n = 0
             pos = np.argwhere(labels == n).squeeze().astype(int)
-            func = torch.mean(func_list[pos,:],dim=0)
-            true_func = -to_numpy(uu) * to_numpy(p[n,0]) + to_numpy(p[n,1]) * np.tanh(to_numpy(uu))
-            plt.plot(to_numpy(uu), true_func, linewidth=20, label='True', c='orange') #xkcd:sky blue') #'orange') #
+            func = torch.mean(func_list[pos, :], dim=0)
+            true_func = -to_numpy(uu) * to_numpy(p[n, 0]) + to_numpy(p[n, 1]) * np.tanh(to_numpy(uu))
+            plt.plot(to_numpy(uu), true_func, linewidth=20, label='True', c='orange')  # xkcd:sky blue') #'orange') #
             plt.plot(to_numpy(uu), to_numpy(func), linewidth=8, c='k', label='Reconstructed')
             plt.xlabel(r'$u$', fontsize=64)
             plt.ylabel(r'Reconstructed $\Phi_1(u)$', fontsize=64)
-            plt.xticks(fontsize=32.0)
-            plt.yticks(fontsize=32.0)
             plt.legend(fontsize=32.0)
             plt.ylim([-0.25, 0.25])
             plt.tight_layout()
@@ -4401,7 +3983,7 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         activation_gt = GT_model.activation
         uu = x[:, 6:7].squeeze()
 
-        fig_ = plt.figure(figsize=(12, 12))
+        fig, ax = fig_init()
         plt.scatter(to_numpy(uu), to_numpy(msg + phi), s=100)
         plt.scatter(to_numpy(uu), to_numpy(phi), s=20)
         plt.scatter(to_numpy(uu), to_numpy(msg), s=20)
@@ -4409,44 +3991,45 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         plt.xlim([0, 3])
         plt.ylim([0, 1])
         plt.savefig(f"./{log_dir}/results/model_{config_file}_{net_}.tif", dpi=300)
+        plt.close()
 
-        fig_ = plt.figure(figsize=(12, 12))
-        plt.scatter(to_numpy(uu), to_numpy(msg_gt+phi_gt), s=100)
+        fig, ax = fig_init()
+        plt.scatter(to_numpy(uu), to_numpy(msg_gt + phi_gt), s=100)
         plt.scatter(to_numpy(uu), to_numpy(phi_gt), s=20)
         plt.scatter(to_numpy(uu), to_numpy(msg_gt), s=20)
         plt.xlim([0, 3])
         plt.ylim([0, 1])
         plt.savefig(f"./{log_dir}/results/true_{config_file}_{net_}.tif", dpi=300)
+        plt.close()
 
-        fig_ = plt.figure(figsize=(12, 12))
+        fig, ax = fig_init()
         plt.scatter(to_numpy(uu), to_numpy(msg + phi), s=100)
-        plt.scatter(to_numpy(uu), to_numpy(msg_gt+phi_gt), s=20)
+        plt.scatter(to_numpy(uu), to_numpy(msg_gt + phi_gt), s=20)
         plt.savefig(f"./{log_dir}/results/comparison_all_{config_file}_{net_}.tif", dpi=300)
+        fig, ax = fig_init()
 
-
-        fig_ = plt.figure(figsize=(12, 12))
+        fig, ax = fig_init()
         plt.scatter(to_numpy(msg_gt), to_numpy(msg), s=20, c='k')
         plt.savefig(f"./{log_dir}/results/comparison_msg_{config_file}_{net_}.tif", dpi=300)
+        fig, ax = fig_init()
 
-        fig_ = plt.figure(figsize=(12, 12))
+        fig, ax = fig_init()
         plt.scatter(to_numpy(u_j_gt), to_numpy(activation_gt), s=20)
         plt.scatter(to_numpy(u_j), to_numpy(activation), s=20)
         plt.scatter(to_numpy(uu), to_numpy(phi_gt), s=20)
         plt.scatter(to_numpy(uu), to_numpy(phi), s=20)
         plt.savefig(f"./{log_dir}/results/funky_comparison_{config_file}_{net_}.tif", dpi=300)
+        fig, ax = fig_init()
 
-        fig_ = plt.figure(figsize=(12, 12))
+        fig, ax = fig_init()
         plt.scatter(to_numpy(uu), to_numpy(phi), s=400, c='g', label='True')
         plt.scatter(to_numpy(uu), to_numpy(phi_gt), s=20, c='k', label='Reconstructed')
         plt.xlabel(r'$u$', fontsize=64)
         plt.ylabel(r'$f(u)$', fontsize=64)
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
         plt.legend(fontsize=32.0)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/phi_u_{config_file}_{net_}.tif", dpi=300)
         plt.close()
-
 
         # model_kan = KAN(width=[1, 1], grid=5, k=3, seed=0)
         # model_kan.train(dataset, opt="LBFGS", steps=20, lamb=0.01, lamb_entropy=10.)
@@ -4466,6 +4049,7 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         #     model_kan.train(dataset, steps=100)
         #     formula, variables = model_kan.symbolic_formula()
         #     print(formula)
+
 
 def data_video_validation(config_file, epoch_list, log_dir, logger, device):
     print('')
@@ -4493,14 +4077,15 @@ def data_video_validation(config_file, epoch_list, log_dir, logger, device):
     for n in trange(N_files):
         generated = imread(graph_files[n])
         reconstructed = imread(recons_files[n])
-        frame = np.concatenate((generated[:,:,0:3], reconstructed[:,:,0:3]), axis=1)
+        frame = np.concatenate((generated[:, :, 0:3], reconstructed[:, :, 0:3]), axis=1)
         # out.write(frame)
-        imsave(f"video_tmp/{config_file}/{dataset_name}_{10000+n}.tif", frame)
+        imsave(f"video_tmp/{config_file}/{dataset_name}_{10000 + n}.tif", frame)
 
     # Release the video writer
     # out.release()
 
     # print("Video saved as 'output.avi'")
+
 
 def data_video_training(config_file, epoch_list, log_dir, logger, device):
     print('')
@@ -4532,7 +4117,7 @@ def data_video_training(config_file, epoch_list, log_dir, logger, device):
     os.makedirs(f"video_tmp/{config_file}_training", exist_ok=True)
 
     for n in trange(embedding.shape[0]):
-        fig = plt.figure(figsize=(16,8))
+        fig = plt.figure(figsize=(16, 8))
         ax = fig.add_subplot(1, 2, 1)
         ax.imshow(embedding[n, :, :, 0:3])
         plt.xlabel(r'$a_{i0}$', fontsize=32)
@@ -4541,30 +4126,36 @@ def data_video_training(config_file, epoch_list, log_dir, logger, device):
         plt.yticks([])
         match config_file:
             case 'wave_slit':
-                if n<50:
-                    plt.text(0, 1.1, f'epoch = 0,   it = {n*200}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
+                if n < 50:
+                    plt.text(0, 1.1, f'epoch = 0,   it = {n * 200}', ha='left', va='top', transform=ax.transAxes,
+                             fontsize=32)
                 else:
-                    plt.text(0, 1.1, f'Epoch={n-49}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
+                    plt.text(0, 1.1, f'Epoch={n - 49}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
             case 'arbitrary_3':
                 if n < 17:
-                    plt.text(0, 1.1, f'epoch = 0,   it = {n * 200}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
+                    plt.text(0, 1.1, f'epoch = 0,   it = {n * 200}', ha='left', va='top', transform=ax.transAxes,
+                             fontsize=32)
                 else:
                     plt.text(0, 1.1, f'epoch = {n - 16}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
             case 'arbitrary_3_field_video_bison_siren_with_time':
-                if n<13*3:
-                    plt.text(0, 1.1, f'epoch= {n//13} ,   it = {(n%13)*500}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
+                if n < 13 * 3:
+                    plt.text(0, 1.1, f'epoch= {n // 13} ,   it = {(n % 13) * 500}', ha='left', va='top',
+                             transform=ax.transAxes, fontsize=32)
                 else:
-                    plt.text(0, 1.1, f'epoch = {n-13*3+3}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
+                    plt.text(0, 1.1, f'epoch = {n - 13 * 3 + 3}', ha='left', va='top', transform=ax.transAxes,
+                             fontsize=32)
             case 'arbitrary_64_256':
-                if n<51:
-                    plt.text(0, 1.1, f'epoch= 0 ,   it = {n*200}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
+                if n < 51:
+                    plt.text(0, 1.1, f'epoch= 0 ,   it = {n * 200}', ha='left', va='top', transform=ax.transAxes,
+                             fontsize=32)
                 else:
-                    plt.text(0, 1.1, f'epoch = {n-50}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
+                    plt.text(0, 1.1, f'epoch = {n - 50}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
             case 'boids_16_256' | 'gravity_16':
-                if n<50:
-                    plt.text(0, 1.1, f'epoch = 0,   it = {n*200}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
+                if n < 50:
+                    plt.text(0, 1.1, f'epoch = 0,   it = {n * 200}', ha='left', va='top', transform=ax.transAxes,
+                             fontsize=32)
                 else:
-                    plt.text(0, 1.1, f'Epoch={n-49}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
+                    plt.text(0, 1.1, f'Epoch={n - 49}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
 
         ax = fig.add_subplot(1, 2, 2)
         ax.imshow(function[n, :, :, 0:3])
@@ -4592,13 +4183,13 @@ def data_video_training(config_file, epoch_list, log_dir, logger, device):
                 fmt = lambda x, pos: '{:.2f}'.format(-x / 1000 * 0.7 + 0.3, pos)
                 ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
             case 'arbitrary_64_256':
-                fmt = lambda x, pos: '{:.2f}'.format(-x/1000*0.7+0.3, pos)
+                fmt = lambda x, pos: '{:.2f}'.format(-x / 1000 * 0.7 + 0.3, pos)
                 ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
             case 'boids_16_256':
-                fmt = lambda x, pos: '{:.2f}e-4'.format((-x/1000+0.5)*2, pos)
+                fmt = lambda x, pos: '{:.2f}e-4'.format((-x / 1000 + 0.5) * 2, pos)
                 ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
             case 'boids_16_256' | 'gravity_16':
-                fmt = lambda x, pos: '{:.1f}e5'.format((1-x / 1000) * 5, pos)
+                fmt = lambda x, pos: '{:.1f}e5'.format((1 - x / 1000) * 5, pos)
                 ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
 
         # ax = fig.add_subplot(1, 3, 3)
@@ -4606,14 +4197,14 @@ def data_video_training(config_file, epoch_list, log_dir, logger, device):
 
         plt.tight_layout()
         plt.tight_layout()
-        plt.savefig(f"video_tmp/{config_file}_training/training_{config_file}_{10000+n}.tif", dpi=64)
+        plt.savefig(f"video_tmp/{config_file}_training/training_{config_file}_{10000 + n}.tif", dpi=64)
         plt.close()
 
     # plt.text(0, 1.05, f'Frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
     # ax.tick_params(axis='both', which='major', pad=15)
 
-def data_plot(config_file, epoch_list, device):
 
+def data_plot(config_file, epoch_list, device):
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
@@ -4627,12 +4218,16 @@ def data_plot(config_file, epoch_list, device):
     model_config = config.graph_model
 
     print(' ')
-    if train_config.sparsity !='none':
-        print(f'GNN trained with simulation {model_config.particle_model_name} ({simulation_config.n_particle_types} types), with cluster method: {train_config.cluster_method}   threshold: {train_config.cluster_distance_threshold}')
-        logger.info(f'GNN trained with simulation {model_config.particle_model_name} ({simulation_config.n_particle_types} types), with cluster method: {train_config.cluster_method}   threshold: {train_config.cluster_distance_threshold}')
+    if train_config.sparsity != 'none':
+        print(
+            f'GNN trained with simulation {model_config.particle_model_name} ({simulation_config.n_particle_types} types), with cluster method: {train_config.cluster_method}   threshold: {train_config.cluster_distance_threshold}')
+        logger.info(
+            f'GNN trained with simulation {model_config.particle_model_name} ({simulation_config.n_particle_types} types), with cluster method: {train_config.cluster_method}   threshold: {train_config.cluster_distance_threshold}')
     else:
-        print(f'GNN trained with simulation {model_config.particle_model_name} ({simulation_config.n_particle_types} types), no clustering')
-        logger.info(f'GNN trained with simulation {model_config.particle_model_name} ({simulation_config.n_particle_types} types), no clustering')
+        print(
+            f'GNN trained with simulation {model_config.particle_model_name} ({simulation_config.n_particle_types} types), no clustering')
+        logger.info(
+            f'GNN trained with simulation {model_config.particle_model_name} ({simulation_config.n_particle_types} types), no clustering')
 
     match config.graph_model.particle_model_name:
         case 'PDE_A':
@@ -4648,7 +4243,8 @@ def data_plot(config_file, epoch_list, device):
 
     match config.graph_model.mesh_model_name:
         case 'WaveMesh':
-            data_plot_wave(config_file=config_file, epoch_list=epoch_list, log_dir=log_dir, logger=logger, cc='viridis', device=device)
+            data_plot_wave(config_file=config_file, epoch_list=epoch_list, log_dir=log_dir, logger=logger, cc='viridis',
+                           device=device)
 
     for handler in logger.handlers[:]:
         handler.close()
@@ -4665,17 +4261,15 @@ if __name__ == '__main__':
     # config_list = ['boids_16_256_division_death_model_2']
     # config_list = ['wave_slit_test']
     # config_list = ['Coulomb_3_256']
-    config_list=['arbitrary_64_0_1','arbitrary_64_0_01', 'arbitrary_3', 'arbitrary_16', 'arbitrary_32']
+    config_list = ['arbitrary_64_0_1', 'arbitrary_64_0_01', 'arbitrary_3', 'arbitrary_16', 'arbitrary_32']
     # config_list=['arbitrary_16_noise_0_1','arbitrary_16_noise_0_2', 'arbitrary_16_noise_0_3', 'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5']
 
-    config_list=['arbitrary_3_3']
+    config_list = ['arbitrary_3_3']
     epoch_list = [20]
 
     for config_file in config_list:
-
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         data_plot(config_file, epoch_list, device)
-
 
         # data_plot_attraction_repulsion_short(config_file, device=device)
         # data_plot_boids(config_file)
