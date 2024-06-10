@@ -326,8 +326,8 @@ def fig_init():
     ax.tick_params(axis='both', which='major', pad=15)
     ax.xaxis.set_major_locator(plt.MaxNLocator(3))
     ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-    ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+    ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
     plt.xticks(fontsize=32.0)
     plt.yticks(fontsize=32.0)
 
@@ -812,11 +812,13 @@ def data_plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger
 
 
 def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, logger, device):
+    plt.rcParams['text.usetex'] = True
+    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+    matplotlib.rcParams['savefig.pad_inches'] = 0
+    matplotlib.use("Qt5Agg")
+
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
-
-    # plt.rcParams['text.usetex'] = True
-    # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
     simulation_config = config.simulation
     train_config = config.training
@@ -827,29 +829,18 @@ def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, 
     n_particles = simulation_config.n_particles
     dataset_name = config.dataset
     max_radius = config.simulation.max_radius
-    min_radius = config.simulation.min_radius
     n_runs = train_config.n_runs
+    cmap = CustomColorMap(config=config)
 
     embedding_cluster = EmbeddingCluster(config)
 
     x_list, y_list, vnorm, ynorm = load_training_data(dataset_name, n_runs, log_dir, device)
-
+    logger.info("vnorm:{:.2e},  ynorm:{:.2e}".format(to_numpy(vnorm), to_numpy(ynorm)))
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-
-    if has_cell_division:
-        model_division = Division_Predictor(config, device)
-        optimizer_division, n_total_params_division = set_trainable_division_parameters(model_division, lr=1E-3)
-        logger.info(f"Total Trainable Divsion Params: {n_total_params_division}")
-        logger.info(f'Learning rates: 1E-3')
 
     x = x_list[1][0].clone().detach()
     index_particles = get_index_particles(x, n_particle_types, dimension)
     type_list = get_type_list(x, dimension)
-
-    # matplotlib.use("Qt5Agg")
-    plt.rcParams['text.usetex'] = True
-    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-    matplotlib.rcParams['savefig.pad_inches'] = 0
 
     for epoch in epoch_list:
 
@@ -863,10 +854,6 @@ def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, 
         for n in range(n_particle_types):
             index_particles.append(
                 np.arange((n_particles // n_particle_types) * n, (n_particles // n_particle_types) * (n + 1)))
-        type = torch.zeros(int(n_particles / n_particle_types), device=device)
-        for n in range(1, n_particle_types):
-            type = torch.cat((type, n * torch.ones(int(n_particles / n_particle_types), device=device)), 0)
-        x[:, 5] = type
 
         fig, ax = fig_init()
         embedding = get_embedding(model.a, 1)
@@ -902,9 +889,7 @@ def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, 
         plt.xlabel(r'$d_{ij}$', fontsize=64)
         plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
         plt.xlim([0, max_radius])
-        # plt.ylim([-0.15, 0.15])
-        plt.ylim([-0.04, 0.03])
-        # plt.ylim([-0.1, 0.06])
+        plt.ylim(config.plotting.ylim)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/func_{config_file}_{epoch}.tif", dpi=170.7)
         np.save(f"./{log_dir}/results/func_{config_file}_{epoch}.npy", csv_)
@@ -912,10 +897,7 @@ def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, 
         plt.close()
 
         fig, ax = fig_init()
-        if os.path.exists(f'graphs_data/graphs_{dataset_name}/model_p.pt'):
-            p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt')
-        else:
-            p = config.simulation.params
+        p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt')
         true_func_list = []
         csv_ = []
         csv_.append(to_numpy(rr))
@@ -929,9 +911,7 @@ def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, 
         plt.xticks(fontsize=32)
         plt.yticks(fontsize=32)
         plt.xlim([0, max_radius])
-        # plt.ylim([-0.15, 0.15])
-        plt.ylim([-0.04, 0.03])
-        # plt.ylim([-0.1, 0.06])
+        plt.ylim(config.plotting.ylim)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=170.7)
         np.save(f"./{log_dir}/results/true_func_{config_file}_{epoch}.npy", csv_)
@@ -943,7 +923,8 @@ def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, 
 
         rmserr_list = torch.sqrt(torch.mean((func_list - true_func_list) ** 2, axis=1))
         rmserr_list = to_numpy(rmserr_list)
-        print(f'all function RMS error: {np.round(np.mean(rmserr_list), 7)}+/-{np.round(np.std(rmserr_list), 7)}')
+        print("all function RMS error: {:.2e}+/-{:.2e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+        logger.info("all function RMS error: {:.2e}+/-{:.2e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
 
 
 def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
@@ -4227,7 +4208,10 @@ def data_plot(config_file, epoch_list, device):
 
     match config.graph_model.particle_model_name:
         case 'PDE_A':
-            data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device)
+            if simulation_config.non_discrete_level>0:
+                data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, logger, device)
+            else:
+                data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device)
         case 'PDE_A_bis':
             data_plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger, device)
         case 'PDE_B':
@@ -4257,10 +4241,9 @@ if __name__ == '__main__':
     # config_list = ['boids_16_256_division_death_model_2']
     # config_list = ['wave_slit_test']
     # config_list = ['Coulomb_3_256']
-    # config_list = ['arbitrary_64_0_1', 'arbitrary_64_0_01', 'arbitrary_3', 'arbitrary_16', 'arbitrary_32']
-    # config_list=['arbitrary_16_noise_0_1','arbitrary_16_noise_0_2', 'arbitrary_16_noise_0_3', 'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5']
+    config_list = ['arbitrary_64_0_1', 'arbitrary_64_0_01', 'arbitrary_3', 'arbitrary_16', 'arbitrary_32', 'arbitrary_16_noise_0_1', 'arbitrary_16_noise_0_2', 'arbitrary_16_noise_0_3', 'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5']
 
-    config_list = ['arbitrary_3_3']
+    # config_list = ['arbitrary_3_continuous']
     epoch_list = [20]
 
     for config_file in config_list:
