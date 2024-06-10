@@ -36,7 +36,6 @@ training:
   small_init_batch_size: False
   n_runs: 2
   sparsity: 'none'
-  cluster_method: 'none'
   cluster_distance_threshold: 0.1
   data_augmentation: True
   data_augmentation_loop: 100
