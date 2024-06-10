@@ -93,12 +93,11 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         if has_field:
             field = x[:,6:7]
         else:
-            field = torch.ones_like(x[:,6:7])
+            field = torch.ones_like(x[:,0:1])
 
         pos = x[:, 1:self.dimension+1]
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
         particle_id = x[:, 0:1]
-        field = x[:, 6:7]
 
         pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id, field=field)
 
@@ -156,7 +155,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
                 in_features = torch.cat(
                     (delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
 
-        out = self.lin_edge(in_features) * field_j
+        out = self.lin_edge(in_features) * field_j.repeat(2,1)
 
         if self.model == 'PDE_B':
             self.diffx = delta_pos * self.max_radius

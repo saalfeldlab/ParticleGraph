@@ -52,7 +52,6 @@ def data_train_particles(config, config_file, device):
     data_augmentation = train_config.data_augmentation
     data_augmentation_loop = train_config.data_augmentation_loop
     target_batch_size = train_config.batch_size
-    sub_batches = train_config.sub_batches
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
     has_ghost = train_config.n_ghosts > 0
@@ -266,13 +265,13 @@ def data_train_particles(config, config_file, device):
         # white background
         # plt.style.use('classic')
 
-        ax = fig.add_subplot(1, 6, 1)
+        ax = fig.add_subplot(1, 5, 1)
         plt.plot(list_loss, color='k')
         plt.xlim([0, n_epochs])
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
 
-        ax = fig.add_subplot(1, 6, 2)
+        ax = fig.add_subplot(1, 5, 2)
         embedding = get_embedding(model.a, 1)
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0],
@@ -281,7 +280,7 @@ def data_train_particles(config, config_file, device):
         plt.ylabel('Embedding 1', fontsize=12)
 
         if (simulation_config.n_interactions < 100):
-            ax = fig.add_subplot(1, 6, 3)
+            ax = fig.add_subplot(1, 5, 3)
             func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
                                                                 model_lin_edge=model.lin_edge, model_a=model.a,
                                                                 n_nodes = 0,
@@ -294,8 +293,7 @@ def data_train_particles(config, config_file, device):
                                                               train_config.cluster_distance_threshold, index_particles,
                                                               n_particle_types, embedding_cluster)
 
-
-            ax = fig.add_subplot(1, 6, 5)
+            ax = fig.add_subplot(1, 5, 4)
             new_labels = labels.copy()
             for n in range(n_particle_types):
                 new_labels == n
@@ -307,7 +305,7 @@ def data_train_particles(config, config_file, device):
             print(f'accuracy: {np.round(accuracy, 3)}   n_clusters: {n_clusters}')
             logger.info(f'accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}')
 
-            ax = fig.add_subplot(1, 6, 6)
+            ax = fig.add_subplot(1, 5, 5)
             model_a_ = model.a[1].clone().detach()
             for n in range(n_clusters):
                 pos = np.argwhere(labels == n).squeeze().astype(int)
@@ -328,8 +326,7 @@ def data_train_particles(config, config_file, device):
             plt.xticks(fontsize=10.0)
             plt.yticks(fontsize=10.0)
 
-            if (replace_with_cluster) & (
-                    (epoch == 1 * n_epochs // 4) | (epoch == 2 * n_epochs // 4) | (epoch == 3 * n_epochs // 4)):
+            if (replace_with_cluster) & (epoch // sparsity_freq > 0) & (epoch < n_epochs-sparsity_freq + 1):
                 match train_config.sparsity:
                     case 'replace_embedding':
                         # Constrain embedding domain
@@ -407,7 +404,7 @@ def data_train_particles(config, config_file, device):
                         logger.info(f'regul_embedding: replaced')
                         plt.text(0, 1.1, f'Replaced', ha='left', va='top', transform=ax.transAxes, fontsize=10)
             else:
-                if epoch > 3 * n_epochs // 4 + 1:
+                if epoch > n_epochs - sparsity_freq + 2:
                     lr_embedding = train_config.learning_rate_embedding_end
                     lr = train_config.learning_rate_end
                     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
