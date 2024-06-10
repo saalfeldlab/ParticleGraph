@@ -81,6 +81,7 @@ class GraphModelConfig(BaseModel):
 
     field_type: str = 'tensor'
 
+
     # def get_instance(self, **kwargs):
     #     return GraphModel(**self.model_dump(), **kwargs)
 

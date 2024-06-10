@@ -153,10 +153,12 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
             dpos_x_j = new_dpos_x_j
             dpos_y_j = new_dpos_y_j
 
+
         embedding_i = self.a[self.data_id, to_numpy(particle_id_i), :].squeeze()
         # embedding_j = self.a[self.data_id, to_numpy(particle_id_j), :].squeeze()
 
         match self.model:
+
             case 'PDE_ParticleField_A':
                     in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
             case 'PDE_ParticleField_B':

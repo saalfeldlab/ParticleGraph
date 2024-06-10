@@ -508,7 +508,7 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, index_par
             plt.savefig(f"./{log_dir}/tmp_training/embedding/function/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
             plt.close()
 
-def analyze_edge_function(rr=[], vizualize=False, config=None, model_lin_edge=[], model_a=None, n_nodes=0, dataset_number = 0, n_particles=None, ynorm=None, types=None, cmap=None, device=None):
+def analyze_edge_function(rr=[], vizualize=False, config=None, model_lin_edge=[], model_a=None, n_nodes=0, dataset_number = 0, n_particles=None, ynorm=None, types=None, cmap=None, dimension=2, device=None):
     func_list = []
 
     model_config = config.graph_model
@@ -614,7 +614,8 @@ def choose_training_model(model_config, device):
     model_name = model_config.graph_model.particle_model_name
     match model_name:
         case 'PDE_ParticleField_A' | 'PDE_ParticleField_B':
-            model = Interaction_Particle_Field(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
+            model = Interaction_Particle_Field(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos,
+                                          dimension=dimension)
             model.edges = []
         case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G':
             if has_no_tracking:
@@ -713,13 +714,7 @@ def get_type_list(x, dimension):
     return type_list
 
 
-    subset_length = len(alive) // n_subset
-    index = n * subset_length
 
-    pos = torch.argwhere((edges[1] >= index) & (edges[1] < index + subset_length))
-    pos = to_numpy(pos.squeeze())
-    edges = edges[:, pos]
 
-    sub_indexes = np.arange(index, index + subset_length)
 
 

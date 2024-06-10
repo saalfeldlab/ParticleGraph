@@ -113,27 +113,6 @@ def choose_boundary_values(bc_name):
         case _:
             raise ValueError(f'Unknown boundary condition {bc_name}')
 
-def choose_boundary_np_values(bc_name):
-    def identity(x):
-        return x
-
-    def np_periodic(x):
-        return np.remainder(x, 1.0)  # in [0, 1)
-
-    def np_shifted_periodic(x):
-        try:
-            return np.remainder(x - 0.5, 1.0) - 0.5  # in [-0.5, 0.5)
-        except:
-            print('pb')
-
-    match bc_name:
-        case 'no':
-            return identity, identity
-        case 'periodic':
-            return np_periodic, np_shifted_periodic
-        case _:
-            raise ValueError(f'Unknown boundary condition {bc_name}')
-
 
 def grads2D(params):
     params_sx = torch.roll(params, -1, 0)

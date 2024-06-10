@@ -589,6 +589,7 @@ def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoc
 
     return Accuracy
 
+
 def plot_cell_rates(config, device, log_dir, n_frames, n_particles_max, n_particle_types, x_list, new_labels, cmap):
 
 
@@ -634,6 +635,7 @@ def plot_cell_rates(config, device, log_dir, n_frames, n_particles_max, n_partic
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/cell_dead_{config_file}.tif", dpi=300)
     plt.close()
+
 
 def data_plot_attraction_repulsion(config_file, epoch_list, device):
     print('')
@@ -4326,11 +4328,15 @@ def data_plot_signal(config_file, cc, device):
     train_config = config.training
     model_config = config.graph_model
 
+    max_radius = config.simulation.max_radius
+    min_radius = config.simulation.min_radius
     n_frames = config.simulation.n_frames
     n_runs = config.training.n_runs
     n_particle_types = simulation_config.n_particle_types
+    aggr_type = config.graph_model.aggr_type
+    delta_t = config.simulation.delta_t
     cmap = CustomColorMap(config=config)
-
+    dimension = simulation_config.dimension
 
     embedding_cluster = EmbeddingCluster(config)
 
@@ -4358,6 +4364,7 @@ def data_plot_signal(config_file, cc, device):
     print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
 
     print('Update variables ...')
+    # update variable if particle_dropout, cell_division, etc ...
     x = x_list[1][n_frames - 1].clone().detach()
     index_particles = get_index_particles(x, n_particle_types, dimension)
     type_list = get_type_list(x, dimension)
@@ -4406,7 +4413,7 @@ def data_plot_signal(config_file, cc, device):
 
     GT_model, bc_pos, bc_dpos = choose_model(config, device=device)
 
-    net_list = ['20']
+    net_list = ['20','25','30','39'] # [,'1','5','10'] # , '0', '1', '5']
     # net_list = glob.glob(f"./log/try_{config_file}/models/*.pt")
 
     for net_ in net_list:
@@ -4414,6 +4421,7 @@ def data_plot_signal(config_file, cc, device):
         net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{net_}.pt"
         # net_ = net.split('graphs')[1]
 
+        net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{net_}.pt"
         model, bc_pos, bc_dpos = choose_training_model(config, device)
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
@@ -4449,6 +4457,7 @@ def data_plot_signal(config_file, cc, device):
         edge_index = adj_t.nonzero().t().contiguous()
         edge_attr_adjacency = adjacency[adj_t]
         dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
+        fig_ = plt.figure(figsize=(12, 12))
         axf = fig_.add_subplot(1, 1, 1)
         axf.xaxis.set_major_locator(plt.MaxNLocator(3))
         axf.yaxis.set_major_locator(plt.MaxNLocator(3))
@@ -4505,7 +4514,7 @@ def data_plot_signal(config_file, cc, device):
 
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(1,1,1)
-        uu = x[:, 4:5].squeeze()
+        uu = x[:, 6:7].squeeze()
         ax.xaxis.get_major_formatter()._usetex = False
         ax.yaxis.get_major_formatter()._usetex = False
         uu = torch.tensor(np.linspace(0, 3, 1000)).to(device)
@@ -4514,7 +4523,7 @@ def data_plot_signal(config_file, cc, device):
                                                                 model_lin_edge=model.lin_phi, model_a=model.a,
                                                                 dataset_number=1,
                                                                 n_particles=int(n_particles*(1-train_config.particle_dropout)), ynorm=ynorm,
-                                                                types=to_numpy(x[:, 3]),
+                                                                types=to_numpy(x[:, 5]),
                                                                 cmap=cmap, device=device)
         # plt.xlabel(r'$d_{ij}$', fontsize=64)
         # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
@@ -4569,7 +4578,7 @@ def data_plot_signal(config_file, cc, device):
         new_labels = labels.copy()
         for n in range(n_particle_types):
             new_labels[labels == label_list[n]] = n
-        type_list = x[:, 3:4].clone().detach()
+        type_list = x[:, 5:6].clone().detach()
         Accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
         print(f'Accuracy: {np.round(Accuracy, 3)}   n_clusters: {n_clusters}')
 
@@ -4775,7 +4784,7 @@ def data_plot_signal(config_file, cc, device):
         du_gt, msg_gt, phi_gt = GT_model(dataset, return_all=True)
         u_j_gt = GT_model.u_j
         activation_gt = GT_model.activation
-        uu = x[:, 4:5].squeeze()
+        uu = x[:, 6:7].squeeze()
 
         fig_ = plt.figure(figsize=(12, 12))
         plt.scatter(to_numpy(uu), to_numpy(msg + phi), s=100)
@@ -5042,7 +5051,7 @@ if __name__ == '__main__':
         # data_plot_RD(config_file,cc='viridis')
         # data_plot_particle_field(config_file, mode='figures', cc='grey', device=device)
         # data_plot_wave(config_file,cc='viridis')
-        data_plot_signal(config_file,cc='viridis')
+        # data_plot_signal(config_file,cc='viridis')
 
         # data_video_validation(config_file,device=device)
         # data_video_training(config_file,device=device)

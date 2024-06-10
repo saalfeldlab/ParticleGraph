@@ -58,7 +58,7 @@ class Signal_Propagation(pyg.nn.MessagePassing):
         self.data_id = data_id
         x, edge_index = data.x, data.edge_index
 
-        u = data.x[:, 4:5]
+        u = data.x[:, 6:7]
 
         msg = self.propagate(edge_index, u=u)
 
@@ -93,6 +93,7 @@ class Signal_Propagation(pyg.nn.MessagePassing):
         weight_ij = A[to_numpy(edge_index_i),to_numpy(edge_index_j),None]
         self.weight_ij_ = weight_ij
         self.weight_ij = A.clone().detach()
+
         self.activation = self.lin_edge(u_j)
         self.u_j = u_j
 

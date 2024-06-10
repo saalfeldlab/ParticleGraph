@@ -40,7 +40,6 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         self.hidden_dim = model_config.hidden_dim
         self.n_layers = model_config.n_mp_layers
         self.n_particles = simulation_config.n_particles
-        self.n_particles_max = simulation_config.n_particles_max
         self.max_radius = simulation_config.max_radius
         self.data_augmentation = train_config.data_augmentation
         self.noise_level = train_config.noise_level
@@ -70,7 +69,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
                              requires_grad=True, dtype=torch.float32))
         else:
             self.a = nn.Parameter(
-                torch.tensor(np.ones((self.n_dataset, int(self.n_particles_max) + self.n_ghosts, self.embedding_dim)), device=self.device,
+                torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
 
 
@@ -93,7 +92,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         if has_field:
             field = x[:,6:7]
         else:
-            field = torch.ones_like(x[:,0:1])
+            field = torch.ones_like(x[:,6:7])
 
         pos = x[:, 1:self.dimension+1]
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
@@ -155,7 +154,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
                 in_features = torch.cat(
                     (delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
 
-        out = self.lin_edge(in_features) * field_j.repeat(2,1)
+        out = self.lin_edge(in_features) * field_j
 
         if self.model == 'PDE_B':
             self.diffx = delta_pos * self.max_radius

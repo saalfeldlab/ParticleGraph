@@ -6,7 +6,7 @@ from torch_geometric.utils.convert import to_networkx
 from GNN_particles_Ntype import *
 from simple_pid import PID
 
-def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5,
+def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
 
     has_particle_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
@@ -54,7 +54,6 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
     has_particle_dropout = training_config.particle_dropout > 0
     cmap = CustomColorMap(config=config)
     dataset_name = config.dataset
-    marker_size = config.plotting.marker_size
 
     if config.data_folder_name != 'none':
         print(f'Generating from data ...')
@@ -62,49 +61,39 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         return
 
     folder = f'./graphs_data/graphs_{dataset_name}/'
-    os.makedirs(folder, exist_ok=True)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/generated_data/', exist_ok=True)
     if erase:
         files = glob.glob(f"{folder}/*")
         for f in files:
             if (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (
                     f != 'generation_code.py'):
                 os.remove(f)
-        files = glob.glob(f'./graphs_data/graphs_{dataset_name}/generated_data/*')
-        for f in files:
-            os.remove(f)
+    os.makedirs(folder, exist_ok=True)
+    os.makedirs(f'./graphs_data/graphs_{dataset_name}/generated_data/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/generated_data/*')
+    for f in files:
+        os.remove(f)
 
-    logging.basicConfig(filename=f'./graphs_data/graphs_{dataset_name}/generator.log', format='%(asctime)s %(message)s', filemode='w')
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    logger.info(config)
+    model, bc_pos, bc_dpos = choose_model(config, device=device)
+    particle_dropout_mask = np.arange(n_particles)
+    if has_particle_dropout:
+        draw = np.random.permutation(np.arange(n_particles))
+        cut = int(n_particles * (1 - training_config.particle_dropout))
+        particle_dropout_mask = draw[0:cut]
+        inv_particle_dropout_mask = draw[cut:]
+        x_removed_list = []
+    if has_adjacency_matrix:
+        mat = scipy.io.loadmat(simulation_config.connectivity_file)
+        adjacency = torch.tensor(mat['A'], device=device)
+        adj_t = adjacency > 0
+        edge_index = adj_t.nonzero().t().contiguous()
+        edge_attr_adjacency = adjacency[adj_t]
 
     for run in range(config.training.n_runs):
-
-        torch.cuda.empty_cache()
-
-        model, bc_pos, bc_dpos = choose_model(config, device=device)
-        config.simulation.params = model.p
-
-        particle_dropout_mask = np.arange(n_particles)
-        if has_particle_dropout:
-            draw = np.random.permutation(np.arange(n_particles))
-            cut = int(n_particles * (1 - training_config.particle_dropout))
-            particle_dropout_mask = draw[0:cut]
-            inv_particle_dropout_mask = draw[cut:]
-            x_removed_list = []
-        if has_adjacency_matrix:
-            mat = scipy.io.loadmat(simulation_config.connectivity_file)
-            adjacency = torch.tensor(mat['A'], device=device)
-            adj_t = adjacency > 0
-            edge_index = adj_t.nonzero().t().contiguous()
-            edge_attr_adjacency = adjacency[adj_t]
 
         n_particles = simulation_config.n_particles
 
         x_list = []
         y_list = []
-        edge_p_p_list = []
 
         # initialize particle and graph states
         X1, V1, T1, H1, A1, N1 = init_particles(config, device=device)
@@ -131,30 +120,20 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                 (N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                  H1.clone().detach(), A1.clone().detach()), 1)
 
-            if has_signal:
-                x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), T1.clone().detach(), H1.clone().detach()), 1)
-            else:
-                x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach()), 1)
-
             # compute connectivity rule
             if has_adjacency_matrix:
+                adj_t = adjacency > 0
+                edge_index = adj_t.nonzero().t().contiguous()
                 dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
             else:
-                with torch.no_grad():
-                    edge_index = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                    edge_index = ((edge_index < max_radius ** 2) & (edge_index > min_radius ** 2)).float() * 1
-                    edge_index = edge_index.nonzero().t().contiguous()
-                    edge_p_p_list.append(to_numpy(edge_index))
-                    dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=[])
+                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+                adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                edge_index = adj_t.nonzero().t().contiguous()
+                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=[])
 
             # model prediction
             with torch.no_grad():
                 y = model(dataset)
-            if it % 100  == 0:
-                t, r, a = get_gpu_memory_map(device)
-                logger.info(f"GPU memory: total {t} reserved {r} allocated {a}")
-                logger.info(f'{x.shape[0]} particles,  {edge_index.shape[1]} edges, max_radius: {np.round(max_radius,3)},')
-                logger.info(f'max_radius {max_radius} {edge_index.shape[1]}')
 
             # append list
             if (it >= 0) & bSave:
@@ -180,6 +159,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                 else:
                     V1 = y
                 X1 = bc_pos(X1 + V1 * delta_t)
+            A1 = A1 + delta_t
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
@@ -199,7 +179,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                     s_p = 100
                     for n in range(n_particle_types):
                             plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                                        s=marker_size, color='k')
+                                        s=s_p, color='k')
                     if training_config.particle_dropout > 0:
                         plt.scatter(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
                                     x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), s=25, color='k',
@@ -229,7 +209,33 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
 
                 if 'color' in style:
 
-                    if model_config.signal_model_name == 'PDE_N':
+                    if model_config.particle_model_name == 'PDE_O':
+                        fig = plt.figure(figsize=(12, 12))
+                        plt.scatter(H1[:, 0].detach().cpu().numpy(), H1[:, 1].detach().cpu().numpy(), s=100,
+                                    c=np.sin(to_numpy(H1[:, 2])), vmin=-1, vmax=1, cmap='viridis')
+                        plt.xlim([0, 1])
+                        plt.ylim([0, 1])
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Lut_Fig_{run}_{it}.jpg",
+                                    dpi=170.7)
+                        plt.close()
+
+                        fig = plt.figure(figsize=(12, 12))
+                        # plt.scatter(H1[:, 0].detach().cpu().numpy(), H1[:, 1].detach().cpu().numpy(), s=5, c='b')
+                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=10, c='lawngreen',
+                                    alpha=0.75)
+                        plt.xlim([0, 1])
+                        plt.ylim([0, 1])
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Rot_{run}_Fig{it}.jpg",
+                                    dpi=170.7)
+                        plt.close()
+
+                    elif model_config.signal_model_name == 'PDE_N':
 
                         matplotlib.rcParams['savefig.pad_inches'] = 0
                         fig = plt.figure(figsize=(12, 12))
@@ -242,7 +248,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                                     vmin=0, vmax=3)
                         plt.xlim([-1.5, 1.5])
                         plt.ylim([-1.5, 1.5])
-                        plt.text(0, 1.1, f'frame {it}, {n_particles} particles', ha='left', va='top', transform=ax.transAxes, fontsize=24)
+                        plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=24)
                         # cbar = plt.colorbar(shrink=0.5)
                         # cbar.ax.tick_params(labelsize=32)
                         plt.xticks([])
@@ -252,8 +258,22 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                                     dpi=42.675)
                         plt.close()
 
+                    elif (model_config.particle_model_name == 'PDE_A') & (dimension == 3):
+
+                        fig = plt.figure(figsize=(12, 12))
+                        ax = fig.add_subplot(111, projection='3d')
+                        for n in range(n_particle_types):
+                            ax.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                                       to_numpy(x[index_particles[n], 3]), s=50, color=cmap.color(n))
+                        ax.set_xlim([0, 1])
+                        ax.set_ylim([0, 1])
+                        ax.set_zlim([0, 1])
+                        pl.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
+                        plt.close()
+
                     else:
                         # matplotlib.use("Qt5Agg")
+
                         matplotlib.rcParams['savefig.pad_inches'] = 0
                         fig = plt.figure(figsize=(12, 12))
                         ax = fig.add_subplot(1, 1, 1)
@@ -291,18 +311,17 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                             ax.tick_params(axis='both', which='major', pad=15)
                             plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
                         else:
-                            plt.axis('off')
+                            plt.xticks([])
+                            plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.tif", dpi=80)
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.tif", dpi=170.7)
+                        # plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{10000+it}.tif", dpi=42.675)
                         plt.close()
 
         if bSave:
             torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
-            torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
-            np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}',*edge_p_p_list)
-            torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p_{run}.pt')
             if has_particle_dropout:
-                np.save(f'graphs_data/graphs_{dataset_name}/x_removed_list_{run}.pt',x_removed_list)
+                torch.save(x_removed_list, f'graphs_data/graphs_{dataset_name}/x_removed_list_{run}.pt')
                 np.save(f'graphs_data/graphs_{dataset_name}/particle_dropout_mask.npy', particle_dropout_mask)
                 np.save(f'graphs_data/graphs_{dataset_name}/inv_particle_dropout_mask.npy', inv_particle_dropout_mask)
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
@@ -468,7 +487,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 y = model(dataset, has_field=True)
                 y = y * alive[:,None].repeat(1,2)
 
-            if it % 100  == 0:
+            if (it) % 25 == 0:
                 t, r, a = get_gpu_memory_map(device)
                 logger.info(f"GPU memory: total {t} reserved {r} allocated {a}")
                 logger.info(f'{x.shape[0]} particles,  {edge_index.shape[1]} edges, max_radius: {np.round(max_radius,3)},')
@@ -616,35 +635,31 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
     n_frames = simulation_config.n_frames
     cmap = CustomColorMap(config=config)
     dataset_name = config.dataset
-    marker_size = config.plotting.marker_size
 
     folder = f'./graphs_data/graphs_{dataset_name}/'
-
-    os.makedirs(folder, exist_ok=True)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/generated_data/', exist_ok=True)
     if erase:
         files = glob.glob(f"{folder}/*")
         for f in files:
             if (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (
                     f != 'generation_code.py'):
                 os.remove(f)
-        files = glob.glob(f'./graphs_data/graphs_{dataset_name}/generated_data/*')
-        for f in files:
-            os.remove(f)
-
+    os.makedirs(folder, exist_ok=True)
+    os.makedirs(f'./graphs_data/graphs_{dataset_name}/generated_data/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/generated_data/*')
+    for f in files:
+        os.remove(f)
     mesh_model = choose_mesh_model(config, device=device)
-    if 'pics' in simulation_config.node_type_map:
-        i0 = imread(f'graphs_data/{simulation_config.node_type_map}')
-        values = i0[(to_numpy(X1_mesh[:, 0]) * 255).astype(int), (to_numpy(X1_mesh[:, 1]) * 255).astype(int)]
-        values = np.reshape(values, len(X1_mesh))
-        mesh_model.coeff = torch.tensor(values, device=device, dtype=torch.float32)[:, None]
 
     for run in range(config.training.n_runs):
 
         X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, model_mesh=mesh_model, device=device)
         torch.save(mesh_data, f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt')
         mask_mesh = mesh_data['mask'].squeeze()
-
+        if 'pics' in simulation_config.node_type_map:
+            i0 = imread(f'graphs_data/{simulation_config.node_type_map}')
+            values = i0[(to_numpy(X1_mesh[:, 0]) * 255).astype(int), (to_numpy(X1_mesh[:, 1]) * 255).astype(int)]
+            values = np.reshape(values,len(X1_mesh))
+            mesh_model.coeff = torch.tensor(values, device=device, dtype=torch.float32)[:, None]
 
         time.sleep(0.5)
         x_mesh_list=[]
@@ -814,7 +829,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
     has_particle_dropout = training_config.particle_dropout > 0
     cmap = CustomColorMap(config=config)
     dataset_name = config.dataset
-    marker_size = config.plotting.marker_size
 
     if config.data_folder_name != 'none':
         generate_from_data(config=config, device=device, visualize=visualize, folder=folder, step=step)
@@ -1050,12 +1064,15 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     matplotlib.rcParams['savefig.pad_inches'] = 0
                     fig = plt.figure(figsize=(12, 12))
                     ax = fig.add_subplot(1, 1, 1)
+                    s_p = 50
+                    if simulation_config.has_cell_division:
+                        s_p = 25
                     if False:  # config.simulation.non_discrete_level>0:
-                        plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=marker_size, color='k')
+                        plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=s_p, color='k')
                     else:
                         for n in range(n_particle_types):
                             plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                                        s=marker_size, color='k')
+                                        s=s_p, color='k')
                     if training_config.particle_dropout > 0:
                         plt.scatter(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
                                     x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), s=25, color='k',

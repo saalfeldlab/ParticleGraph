@@ -6,7 +6,7 @@ import matplotlib
 from tifffile import imread
 from ParticleGraph.generators import PDE_A, PDE_B, PDE_B_bis, PDE_E, PDE_G, PDE_GS, PDE_N, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, \
     PDE_Laplacian, PDE_O
-from ParticleGraph.utils import choose_boundary_values, choose_boundary_np_values
+from ParticleGraph.utils import choose_boundary_values
 from ParticleGraph.data_loaders import load_solar_system
 from time import sleep
 import numpy as np
@@ -37,10 +37,11 @@ def choose_model(config, device):
     model_signal_name = config.graph_model.signal_model_name
     aggr_type = config.graph_model.aggr_type
     n_particles = config.simulation.n_particles
+    n_node_types = config.simulation.n_node_types
+    n_nodes = config.simulation.n_nodes
     n_particle_types = config.simulation.n_particle_types
-    dimension = config.simulation.dimension
-
     bc_pos, bc_dpos = choose_boundary_values(config.simulation.boundary)
+    dimension = config.simulation.dimension
 
     params = config.simulation.params
 
@@ -67,6 +68,11 @@ def choose_model(config, device):
             sigma = config.simulation.sigma
             p = p if n_particle_types == 1 else torch.squeeze(p)
             model = PDE_A(aggr_type=aggr_type, p=torch.squeeze(p), sigma=sigma, bc_dpos=bc_dpos, dimension=dimension)
+            # matplotlib.use("Qt5Agg")
+            # rr = torch.tensor(np.linspace(0, 0.075, 1000)).to(device)
+            # for n in range(n_particles):
+            #     func= model.psi(rr,p[n])
+            #     plt.plot(rr.detach().cpu().numpy(),func.detach().cpu().numpy(),c='k',alpha=0.01)
         case 'PDE_B' | 'PDE_ParticleField_B':
             p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
             if params[0] != [-1]:
@@ -74,7 +80,7 @@ def choose_model(config, device):
                     p[n] = torch.tensor(params[n])
             else:
                 print(p)
-            model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos, dimension=dimension)
+            model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
         case 'PDE_B_bis':
             p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
             if params[0] != [-1]:
@@ -189,7 +195,6 @@ def init_particles(config, device):
     n_particles = simulation_config.n_particles
     n_particle_types = simulation_config.n_particle_types
     dimension = simulation_config.dimension
-    has_cell_division = simulation_config.has_cell_division
 
     dpos_init = simulation_config.dpos_init
 
@@ -237,15 +242,17 @@ def init_cells(config, device):
     n_particles = simulation_config.n_particles
     n_particle_types = simulation_config.n_particle_types
     dimension = simulation_config.dimension
+    has_cell_division = simulation_config.has_cell_division
 
     dpos_init = simulation_config.dpos_init
+
 
 
     if config.simulation.cell_cycle_length != [-1]:
         cycle_length = torch.tensor(config.simulation.cell_cycle_length, device=device)
     else:
         cycle_length = torch.clamp(torch.abs(torch.ones(n_particle_types, 1, device=device) * 250 + torch.randn(n_particle_types, 1, device=device) * 50), min=100, max=700)
-
+    # 400
     if config.simulation.cell_death_rate != [-1]:
         cell_death_rate = torch.tensor(config.simulation.cell_death_rate, device=device)
     else:
