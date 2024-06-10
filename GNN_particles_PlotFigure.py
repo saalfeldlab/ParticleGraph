@@ -548,21 +548,33 @@ def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoc
     return accuracy
 
 
-def plot_cell_rates(config, device, log_dir, n_frames, n_particles_max, n_particle_types, x_list, new_labels, cmap):
+def plot_cell_rates(config, device, log_dir, n_particle_types, x_list, new_labels, cmap):
+
+    n_frames = config.simulation.n_frames
+    n_particles_max = config.simulation.n_particles_max
+
     print('plot cell rates ...')
     N_cells_alive = np.zeros((n_frames, n_particle_types))
     N_cells_dead = np.zeros((n_frames, n_particle_types))
+    division_list=[]
 
     for it in trange(n_frames):
+
         x = x_list[0][it].clone().detach()
         particle_index = to_numpy(x[:, 0:1]).astype(int)
         x[:, 5:6] = torch.tensor(new_labels[particle_index], device=device)
+        if it == 0:
+            x_=x_list[0][it].clone().detach()
+        else:
+            x_=torch.concatenate((x_,x),axis=0)
 
         for k in range(n_particle_types):
             pos = torch.argwhere((x[:, 5:6] == k) & (x[:, 6:7] == 1))
             N_cells_alive[it, k] = pos.shape[0]
             pos = torch.argwhere((x[:, 5:6] == k) & (x[:, 6:7] == 0))
             N_cells_dead[it, k] = pos.shape[0]
+
+    x_list=[]
 
     last_frame_growth = np.argwhere(np.diff(N_cells_alive[:, 0], axis=0))
     last_frame_growth = last_frame_growth[-1] - 1
@@ -575,8 +587,11 @@ def plot_cell_rates(config, device, log_dir, n_frames, n_particles_max, n_partic
                  label=f'Cell type {k} alive')
     plt.xlabel(r'Frame', fontsize=64)
     plt.ylabel(r'Number of alive cells', fontsize=64)
+    ax.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/cell_alive_{config_file}.tif", dpi=300)
+    plt.close()
 
     fig, ax = fig_init()
     for k in range(n_particle_types):
@@ -584,9 +599,22 @@ def plot_cell_rates(config, device, log_dir, n_frames, n_particles_max, n_partic
                  label=f'Cell type {k} dead')
     plt.xlabel(r'Frame', fontsize=64)
     plt.ylabel(r'Number of dead cells', fontsize=64)
+    ax.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/cell_dead_{config_file}.tif", dpi=300)
     plt.close()
+
+    pos = torch.argwhere(x_[:, 7:8] == 1)
+    pos = to_numpy(pos[:, 0]).astype(int)
+    division_list = torch.concatenate((x_[pos, 5:6], x_[pos, 8:9]), axis=1)
+
+    fig, ax = fig_init()
+    for k in range(n_particle_types):
+        pos = torch.argwhere(division_list[:, 0] == k)
+        pos = to_numpy(pos[:, 0]).astype(int)
+        if len(pos>0):
+            plt.hist(to_numpy(division_list[pos, 1:2]), bins=30, color=cmap.color(k), edgecolor='black')
 
 
 def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
@@ -2181,14 +2209,13 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
 
 
 def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
-    # config_file = 'boids_16'
-    # Load parameters from config file
+    plt.rcParams['text.usetex'] = True
+    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+    matplotlib.rcParams['savefig.pad_inches'] = 0
+    matplotlib.use("Qt5Agg")
+
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-
     dataset_name = config.dataset
-    embedding_cluster = EmbeddingCluster(config)
-
-    # print(config.pretty())
 
     cmap = CustomColorMap(config=config)
 
@@ -2200,18 +2227,19 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
     n_particle_types = config.simulation.n_particle_types
-    n_particles = config.simulation.n_particles
     n_runs = config.training.n_runs
     has_cell_division = config.simulation.has_cell_division
 
-    print('Load data ...')
+    embedding_cluster = EmbeddingCluster(config)
+
+    print('load data ...')
     x_list = []
     y_list = []
     x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_1.pt', map_location=device))
     y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_1.pt', map_location=device))
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
-    x = x_list[0][n_frames].clone().detach()
+    x = x_list[0][-1].clone().detach()
 
     index_particles = get_index_particles(x, n_particle_types, dimension)
     type_list = get_type_list(x, dimension)
@@ -2220,24 +2248,16 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         n_particles_max = np.load(os.path.join(log_dir, 'n_particles_max.npy'))
         config.simulation.n_particles_max = n_particles_max
 
-    net_list = ['20']  # '0_0','0_2000','0_5000', '0_9800', '5', '20']
-    epoch = 20
 
-    for net_ in net_list:
-
-        print(f'Plot net_{net_} ...')
+    for epoch in epoch_list:
 
         model, bc_pos, bc_dpos = choose_training_model(config, device)
         model = Interaction_Particles_extract(config, device, aggr_type=config.graph_model.aggr_type, bc_dpos=bc_dpos)
 
-        net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{net_}.pt"
+        net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt"
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
         model.eval()
-
-        plt.rcParams['text.usetex'] = True
-        rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-        matplotlib.use("Qt5Agg")
 
         accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
                                                                        cmap, index_particles, type_list,
@@ -2246,15 +2266,17 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         logger.info(' ')
         logger.info(f'accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}')
 
+        if has_cell_division:
+            plot_cell_rates(config, device, log_dir, n_particle_types, x_list, new_labels, cmap)
+
         it = 2000
+
         # compute model output for a given frame
         x = x_list[0][it].clone().detach()
         particle_index = to_numpy(x[:, 0:1]).astype(int)
-        x[:, 5:6] = torch.tensor(new_labels[particle_index],
-                                 device=device)  # set label found by clustering and mapperd to ground truth
+        x[:, 5:6] = torch.tensor(new_labels[particle_index], device=device)  # set label found by clustering and mapperd to ground truth
         pos = torch.argwhere(x[:, 5:6] < n_particle_types).squeeze()
-        pos = to_numpy(pos[:, 0]).astype(int)
-        # filter out cluster not associated with ground truth
+        pos = to_numpy(pos[:, 0]).astype(int) # filter out cluster not associated with ground truth
         x = x[pos, :]
         distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)  # threshold
         adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
@@ -2286,7 +2308,7 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         # fig_ = plt.figure(figsize=(12, 12))
         # plt.scatter(to_numpy(sum), to_numpy(lin_edge_out), color='k', s=50, alpha=0.5)
 
-        print('fitting with known function ...')
+        print('fitting with known functions ...')
         cohesion_fit = np.zeros(n_particle_types)
         alignment_fit = np.zeros(n_particle_types)
         separation_fit = np.zeros(n_particle_types)
@@ -2334,17 +2356,16 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         csv_ = []
         csv_.append(x_data)
         csv_.append(y_data)
-        plt.savefig(f"./{log_dir}/results/cohesion_{config_file}_{net_}.tif", dpi=300)
-        np.save(f"./{log_dir}/results/cohesion_{config_file}_{net_}.npy", csv_)
-        np.savetxt(f"./{log_dir}/results/cohesion_{config_file}_{net_}.txt", csv_)
+        plt.savefig(f"./{log_dir}/results/cohesion_{config_file}_{epoch}.tif", dpi=300)
+        np.save(f"./{log_dir}/results/cohesion_{config_file}_{epoch}.npy", csv_)
+        np.savetxt(f"./{log_dir}/results/cohesion_{config_file}_{epoch}.txt", csv_)
         plt.close()
         logger.info(' ')
         residuals = y_data_ - linear_model(x_data_, *lin_fit)
         ss_res = np.sum(residuals ** 2)
         ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
         r_squared = 1 - (ss_res / ss_tot)
-        logger.info(
-            f'cohesion slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
+        logger.info(f'cohesion slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
 
         fig, ax = fig_init()
         fmt = lambda x, pos: '{:.1f}e-2'.format((x) * 1e2, pos)
@@ -2368,17 +2389,16 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         csv_ = []
         csv_.append(x_data)
         csv_.append(y_data)
-        plt.savefig(f"./{log_dir}/results/alignment_{config_file}_{net_}.tif", dpi=300)
-        np.save(f"./{log_dir}/results/alignment_{config_file}_{net_}.npy", csv_)
-        np.savetxt(f"./{log_dir}/results/alignement_{config_file}_{net_}.txt", csv_)
+        plt.savefig(f"./{log_dir}/results/alignment_{config_file}_{epoch}.tif", dpi=300)
+        np.save(f"./{log_dir}/results/alignment_{config_file}_{epoch}.npy", csv_)
+        np.savetxt(f"./{log_dir}/results/alignement_{config_file}_{epoch}.txt", csv_)
         plt.close()
         logger.info(' ')
         residuals = y_data_ - linear_model(x_data_, *lin_fit)
         ss_res = np.sum(residuals ** 2)
         ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
         r_squared = 1 - (ss_res / ss_tot)
-        logger.info(
-            f'alignment   slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
+        logger.info(f'alignment   slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
 
         fig, ax = fig_init()
         fmt = lambda x, pos: '{:.1f}e-7'.format((x) * 1e7, pos)
@@ -2402,24 +2422,23 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         csv_ = []
         csv_.append(x_data)
         csv_.append(y_data)
-        plt.savefig(f"./{log_dir}/results/separation_{config_file}_{net_}.tif", dpi=300)
-        np.save(f"./{log_dir}/results/separation_{config_file}_{net_}.npy", csv_)
-        np.savetxt(f"./{log_dir}/results/separation_{config_file}_{net_}.txt", csv_)
+        plt.savefig(f"./{log_dir}/results/separation_{config_file}_{epoch}.tif", dpi=300)
+        np.save(f"./{log_dir}/results/separation_{config_file}_{epoch}.npy", csv_)
+        np.savetxt(f"./{log_dir}/results/separation_{config_file}_{epoch}.txt", csv_)
         plt.close()
         logger.info(' ')
         residuals = y_data_ - linear_model(x_data_, *lin_fit)
         ss_res = np.sum(residuals ** 2)
         ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
         r_squared = 1 - (ss_res / ss_tot)
-        logger.info(
-            f'separation   slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
+        logger.info(f'separation   slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
 
         print('compare reconstructed interaction with ground truth...')
         fig, ax = fig_init()
         rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
         func_list = []
         true_func_list = []
-        x = x_list[0][n_frames].clone().detach()
+        x = x_list[0][-1].clone().detach()
         for n in np.arange(len(x)):
             embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
@@ -2448,7 +2467,7 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         fmt = lambda x, pos: '{:.1f}e-5'.format((x) * 1e5, pos)
         ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/func_dij_{config_file}_{net_}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/func_dij_{config_file}_{epoch}.tif", dpi=300)
         plt.close()
 
         fig, ax = fig_init()
@@ -2464,7 +2483,7 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         fmt = lambda x, pos: '{:.1f}e-5'.format((x) * 1e5, pos)
         ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/true_func_dij_{config_file}_{net_}.tif", dpi=300)
+        plt.savefig(f"./{log_dir}/results/true_func_dij_{config_file}_{epoch}.tif", dpi=300)
 
         func_list = func_list * ynorm
         func_list_ = torch.clamp(func_list, min=torch.tensor(-1.0E-4, device=device),
@@ -2473,16 +2492,8 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
                                       max=torch.tensor(1.0E-4, device=device))
         rmserr_list = torch.sqrt(torch.mean((func_list_ - true_func_list_) ** 2, 1))
         rmserr_list = to_numpy(rmserr_list)
-        print(f'all function RMS error : {np.round(np.mean(rmserr_list), 8)}+/-{np.round(np.std(rmserr_list), 8)}')
-        logger.info(' ')
-        logger.info(
-            f'all function RMS error : {np.round(np.mean(rmserr_list), 8)}+/-{np.round(np.std(rmserr_list), 8)}')
-
-        if has_cell_division:
-            plot_cell_rates(config, device, log_dir, n_frames, n_particles_max, n_particle_types, x_list, new_labels,
-                            cmap)
-
-    logging.shutdown()
+        print("all function RMS error: {:.2e}+/-{:.2e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+        logger.info("all function RMS error: {:.2e}+/-{:.2e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
 
 
 def data_plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
@@ -4237,12 +4248,11 @@ if __name__ == '__main__':
     print(f'device {device}')
 
     # config_list = ['boids_16_256_bison_siren_with_time_2']
-    # config_list = ['boids_16_256']
-    # config_list = ['boids_16_256_division_death_model_2']
+    # config_list = ['boids_16_256','boids_32_256','boids_64_256']
+    config_list = ['boids_16_256_division_death_model_2']
     # config_list = ['wave_slit_test']
     # config_list = ['Coulomb_3_256']
-    config_list = ['arbitrary_64_0_1', 'arbitrary_64_0_01', 'arbitrary_3', 'arbitrary_16', 'arbitrary_32', 'arbitrary_16_noise_0_1', 'arbitrary_16_noise_0_2', 'arbitrary_16_noise_0_3', 'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5']
-
+    # config_list = ['arbitrary_64_0_1', 'arbitrary_64_0_01', 'arbitrary_3', 'arbitrary_16', 'arbitrary_32', 'arbitrary_16_noise_0_1', 'arbitrary_16_noise_0_2', 'arbitrary_16_noise_0_3', 'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5']
     # config_list = ['arbitrary_3_continuous']
     epoch_list = [20]
 
