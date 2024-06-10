@@ -351,6 +351,24 @@ class Mesh_RPS_extract(MessagePassing):
         plt.savefig(f"./{log_dir}/tmp_training/results/embedding_{config_file}_{epoch}.tif", dpi=170.7)
         plt.close()
 
+def load_training_data(dataset_name, n_runs, log_dir, device):
+    x_list = []
+    y_list = []
+    print('Load data ...')
+    for run in trange(n_runs):
+        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
+        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
+        x_list.append(x)
+        y_list.append(y)
+    vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
+    ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
+    print("vnorm:{:.2e},  ynorm:{:.2e}".format(to_numpy(vnorm),to_numpy(ynorm)))
+    x = []
+    y = []
+    print('done ...')
+
+    return x_list, y_list, vnorm, ynorm
+
 def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list, n_particle_types, n_particles, ynorm, epoch, log_dir, device):
     simulation_config = config.simulation
     train_config = config.training
@@ -421,7 +439,6 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
                                                       n_particle_types, embedding_cluster)
 
     accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-    print(f'accuracy: {np.round(accuracy, 3)}   n_clusters: {n_clusters}')
 
     model_a_ = model.a[1].clone().detach()
     for n in range(n_clusters):
@@ -635,11 +652,13 @@ def plot_cell_rates(config, device, log_dir, n_frames, n_particles_max, n_partic
     plt.savefig(f"./{log_dir}/tmp_training/results/cell_dead_{config_file}.tif", dpi=300)
     plt.close()
 
-def data_plot_attraction_repulsion(config_file, epoch_list, device):
+def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
     print('')
 
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+    matplotlib.rcParams['savefig.pad_inches'] = 0
+    matplotlib.use("Qt5Agg")
 
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
@@ -653,88 +672,19 @@ def data_plot_attraction_repulsion(config_file, epoch_list, device):
     dimension = simulation_config.dimension
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
-    n_frames = simulation_config.n_frames
-    has_mesh = (config.graph_model.mesh_model_name != '')
     max_radius = config.simulation.max_radius
     cmap = CustomColorMap(config=config)
     n_runs = train_config.n_runs
 
     embedding_cluster = EmbeddingCluster(config)
 
-    l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
-    print('log_dir: {}'.format(log_dir))
-    logging.basicConfig(filename=f'{log_dir}/results.log', format='%(asctime)s %(message)s', filemode='w')
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-
-    x_list = []
-    y_list = []
-    print('Load data ...')
-    for run in trange(n_runs):
-        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
-        x_list.append(x)
-        y_list.append(y)
-
-    vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
-    ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
-    time.sleep(0.5)
-    print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
-    if has_mesh:
-        x_mesh_list = []
-        y_mesh_list = []
-        for run in trange(n_runs):
-            x_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
-            x_mesh_list.append(x_mesh)
-            h = torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
-            y_mesh_list.append(h)
-        h = y_mesh_list[0][0].clone().detach()
-        for run in range(n_runs):
-            for k in range(n_frames):
-                h = torch.cat((h, y_mesh_list[run][k].clone().detach()), 0)
-        hnorm = torch.std(h)
-        torch.save(hnorm, os.path.join(log_dir, 'hnorm.pt'))
-        print(f'hnorm: {to_numpy(hnorm)}')
-        time.sleep(0.5)
-
-        mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_1.pt', map_location=device)
-
-        mask_mesh = mesh_data['mask']
-        # mesh_pos = mesh_data['mesh_pos']
-        edge_index_mesh = mesh_data['edge_index']
-        edge_weight_mesh = mesh_data['edge_weight']
-        # face = mesh_data['face']
-
-        mask_mesh = mask_mesh.repeat(batch_size, 1)
-
-    h=[]
-    x=[]
-    y=[]
-
-    print('done ...')
-
+    x_list, y_list, vnorm, ynorm = load_training_data(dataset_name, n_runs, log_dir, device)
+    logger.info("vnorm:{:.2e},  ynorm:{:.2e}".format(to_numpy(vnorm),to_numpy(ynorm)))
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
     x = x_list[1][0].clone().detach()
     index_particles = get_index_particles(x, n_particle_types, dimension)
     type_list = get_type_list(x, dimension)
-
-    time.sleep(0.5)
-
-    # matplotlib.use("Qt5Agg")
-    # plt.rcParams['text.usetex'] = True
-    # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-    matplotlib.rcParams['savefig.pad_inches'] = 0
-    # style = {
-    #     "pgf.rcfonts": False,
-    #     "pgf.texsystem": "pdflatex",
-    #     "text.usetex": True,
-    #     "font.family": "sans-serif"
-    # }
-    # matplotlib.rcParams.update(style)
-    # plt.rcParams["font.sans-serif"] = ["Helvetica Neue", "HelveticaNeue", "Helvetica-Neue", "Helvetica", "Arial",
-    #                                    "Liberation"]
 
     for epoch in epoch_list:
 
@@ -744,28 +694,20 @@ def data_plot_attraction_repulsion(config_file, epoch_list, device):
         model.load_state_dict(state_dict['model_state_dict'])
         model.eval()
 
-        # matplotlib.use("Qt5Agg")
-        plt.rcParams['text.usetex'] = True
-        rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-
         model_a_first = model.a.clone().detach()
+        config.training.cluster_distance_threshold = 0.01
         accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list,
                                     n_particle_types, n_particles, ynorm, epoch, log_dir, device)
+        print(f'accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}    epoch: {epoch}   method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+        logger.info(f'accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}    epoch: {epoch}   method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
-        # matplotlib.use("Qt5Agg")
-
-        p = config.simulation.params
-        if len(p) > 1:
-            p = torch.tensor(p, device=device)
-        else:
-            p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt',map_location=device)
-        rmserr_list = []
-
-        rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(1,1,1)
         ax.xaxis.set_major_locator(plt.MaxNLocator(3))
         ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+        p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt',map_location=device)
+        rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+        rmserr_list = []
         for n in range(int(n_particles*(1-train_config.particle_dropout))):
             embedding_ = model_a_first[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
@@ -783,57 +725,14 @@ def data_plot_attraction_repulsion(config_file, epoch_list, device):
         plt.xlabel(r'$d_{ij}$', fontsize=64)
         plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
         plt.xlim([0, max_radius])
-        plt.ylim([-0.04, 0.03])
+        plt.ylim(config.plotting.ylim)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/results/func_all_{config_file}_{epoch}.tif",dpi=170.7)
         rmserr_list = torch.stack(rmserr_list)
         rmserr_list = to_numpy(rmserr_list)
-        print(f'all function RMS error: {np.round(np.mean(rmserr_list), 7)}+/-{np.round(np.std(rmserr_list), 7)}')
+        print("all function RMS error: {:.2e}+/-{:.2e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+        logger.info("all function RMS error: {:.2e}+/-{:.2e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
         plt.close()
-
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(1,1,1)
-        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-        plots = []
-        rr = torch.tensor(np.linspace(0, 1.5*max_radius, 1000)).to(device)
-        plots.append(rr)
-        for n in range(n_particle_types):
-            embedding_ = model.a[1, index_particles[n][0], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            match config.graph_model.particle_model_name:
-                case 'PDE_A':
-                    in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                             rr[:, None] / max_radius, embedding_), dim=1)
-                case 'PDE_A_bis':
-                    in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                             rr[:, None] / max_radius, embedding_, embedding_), dim=1)
-                case 'PDE_B' | 'PDE_B_bis':
-                    in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                             rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
-                                             0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-                case 'PDE_G':
-                    in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                             rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
-                                             0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-                case 'PDE_GS':
-                    in_features = torch.cat((rr[:, None] / max_radius, embedding_), dim=1)
-                case 'PDE_E':
-                    in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                             rr[:, None] / max_radius, embedding_, embedding_), dim=-1)
-            with torch.no_grad():
-                func = model.lin_edge(in_features.float())
-            func = func[:, 0]
-            plots.append(func)
-            plt.plot(to_numpy(rr),
-                     to_numpy(func) * to_numpy(ynorm), linewidth=8, alpha=1)
-        plt.xticks(fontsize=32)
-        plt.yticks(fontsize=32)
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
-        plt.xlim([0, 2*max_radius])
-        plt.ylim([-0.04, 0.03])
-        plt.tight_layout()
-        torch.save(plots,f"./{log_dir}/tmp_training/results/plots_{config_file}_{epoch}.pt")
 
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(1,1,1)
@@ -847,10 +746,7 @@ def data_plot_attraction_repulsion(config_file, epoch_list, device):
         plt.xticks(fontsize=32)
         plt.yticks(fontsize=32)
         plt.xlim([0, max_radius])
-        plt.ylim([-0.04, 0.03])
-        # plt.ylim([-0.1, 0.1])
-        # plt.xlim([0, 0.02])
-        # plt.ylim([0, 0.5E6])
+        plt.ylim(config.plotting.ylim)
         plt.xlabel(r'$d_{ij}$', fontsize=64)
         plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
         plt.tight_layout()
@@ -870,8 +766,8 @@ def data_plot_attraction_repulsion(config_file, epoch_list, device):
             t = model.psi(rr, p[n], p[n])
             plt.plot(to_numpy(rr), to_numpy(t), color=cmap.color(n), linewidth=8)
             plots.append(model.psi(rr, p[n], p[n]).squeeze())
-        # plt.xlabel(r'$d_{ij}$', fontsize=64)
-        # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+        plt.xlabel(r'$d_{ij}$', fontsize=64)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
         plt.xticks(fontsize=32)
         plt.yticks(fontsize=32)
         plt.xlim([-max_radius * 1.5, max_radius * 1.5])
@@ -886,7 +782,7 @@ def data_plot_attraction_repulsion(config_file, epoch_list, device):
         torch.save(plots, f"./{log_dir}/tmp_training/results/plots_true_{config_file}_{epoch}.pt")
         plt.close()
 
-def data_plot_attraction_repulsion_asym(config_file, epoch_list, device):
+def data_plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger, device):
     print('')
 
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
@@ -906,38 +802,12 @@ def data_plot_attraction_repulsion_asym(config_file, epoch_list, device):
     min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
-    dataset_name = config.dataset
     max_radius = config.simulation.max_radius
     cmap = CustomColorMap(config=config)
     embedding_cluster = EmbeddingCluster(config)
     n_runs = train_config.n_runs
 
-    l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
-    print('log_dir: {}'.format(log_dir))
-    logging.basicConfig(filename=f'{log_dir}/results.log', format='%(asctime)s %(message)s', filemode='w')
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-
-    x_list = []
-    y_list = []
-    print('Load data ...')
-    for run in trange(n_runs):
-        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
-        x_list.append(x)
-        y_list.append(y)
-
-    vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
-    ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
-
-    time.sleep(0.5)
-    print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
-
-    x=[]
-    y=[]
-
-    print('done ...')
+    x_list, y_list, vnorm, ynorm = load_training_data(dataset_name, n_runs, log_dir, device)
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
@@ -1058,7 +928,7 @@ def data_plot_attraction_repulsion_asym(config_file, epoch_list, device):
         rmserr_list = to_numpy(rmserr_list)
         print(f'all function RMS error: {np.round(np.mean(rmserr_list), 7)}+/-{np.round(np.std(rmserr_list), 7)}')
 
-def data_plot_attraction_repulsion_continuous(config_file, epoch_list, device):
+def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, logger, device):
     print('')
 
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
@@ -1077,63 +947,13 @@ def data_plot_attraction_repulsion_continuous(config_file, epoch_list, device):
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
     dataset_name = config.dataset
-    n_frames = simulation_config.n_frames
-    has_mesh = (config.graph_model.mesh_model_name != '')
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
     n_runs = train_config.n_runs
 
     embedding_cluster = EmbeddingCluster(config)
 
-    l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
-    print('log_dir: {}'.format(log_dir))
-    logging.basicConfig(filename=f'{log_dir}/results.log', format='%(asctime)s %(message)s', filemode='w')
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-
-    x_list = []
-    y_list = []
-    print('Load data ...')
-    for run in trange(n_runs):
-        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
-        x_list.append(x)
-        y_list.append(y)
-
-    vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
-    ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
-    time.sleep(0.5)
-    print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
-    if has_mesh:
-        x_mesh_list = []
-        y_mesh_list = []
-        for run in trange(n_runs):
-            x_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
-            x_mesh_list.append(x_mesh)
-            h = torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
-            y_mesh_list.append(h)
-        h = y_mesh_list[0][0].clone().detach()
-        for run in range(n_runs):
-            for k in range(n_frames):
-                h = torch.cat((h, y_mesh_list[run][k].clone().detach()), 0)
-        hnorm = torch.std(h)
-        torch.save(hnorm, os.path.join(log_dir, 'hnorm.pt'))
-        print(f'hnorm: {to_numpy(hnorm)}')
-        time.sleep(0.5)
-
-        mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_1.pt', map_location=device)
-
-        mask_mesh = mesh_data['mask']
-        edge_index_mesh = mesh_data['edge_index']
-        edge_weight_mesh = mesh_data['edge_weight']
-        mask_mesh = mask_mesh.repeat(batch_size, 1)
-
-    h=[]
-    x=[]
-    y=[]
-
-    print('done ...')
+    x_list, y_list, vnorm, ynorm = load_training_data(dataset_name, n_runs, log_dir, device)
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
@@ -1147,9 +967,6 @@ def data_plot_attraction_repulsion_continuous(config_file, epoch_list, device):
     x = x_list[1][0].clone().detach()
     index_particles = get_index_particles(x, n_particle_types, dimension)
     type_list = get_type_list(x, dimension)
-
-    time.sleep(0.5)
-
 
     # matplotlib.use("Qt5Agg")
     plt.rcParams['text.usetex'] = True
@@ -1282,7 +1099,7 @@ def data_plot_attraction_repulsion_continuous(config_file, epoch_list, device):
         rmserr_list = to_numpy(rmserr_list)
         print(f'all function RMS error: {np.round(np.mean(rmserr_list), 7)}+/-{np.round(np.std(rmserr_list), 7)}')
 
-def data_plot_gravity(config_file, device):
+def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
 
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
 
@@ -1303,13 +1120,6 @@ def data_plot_gravity(config_file, device):
     n_particle_types = config.simulation.n_particle_types
     n_particles = config.simulation.n_particles
     n_runs = config.training.n_runs
-
-    l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
-    print('log_dir: {}'.format(log_dir))
-    logging.basicConfig(filename=f'{log_dir}/results.log', format='%(asctime)s %(message)s', filemode='w')
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
 
     time.sleep(0.5)
 
@@ -1695,7 +1505,7 @@ def data_plot_gravity(config_file, device):
     plt.savefig(f'./log/try_{config_file}/Fig_3.jpg', dpi=300)
     plt.close()
 
-def data_plot_gravity_continuous(config_file, device):
+def data_plot_gravity_continuous(config_file, epoch_list, log_dir, logger, device):
 
     # config_file = 'gravity_16'
     # Load parameters from config file
@@ -1718,13 +1528,6 @@ def data_plot_gravity_continuous(config_file, device):
     n_particle_types = config.simulation.n_particle_types
     n_particles = config.simulation.n_particles
     n_runs = config.training.n_runs
-
-    l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
-    print('log_dir: {}'.format(log_dir))
-    logging.basicConfig(filename=f'{log_dir}/results.log', format='%(asctime)s %(message)s', filemode='w')
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
 
     time.sleep(0.5)
 
@@ -1996,7 +1799,7 @@ def data_plot_gravity_continuous(config_file, device):
     plt.savefig(f'Fig3_{config_file}.jpg', dpi=300)
     plt.close()
 
-def data_plot_gravity_solar_system(config_file, device):
+def data_plot_gravity_solar_system(config_file, epoch_list, log_dir, logger, device):
 
     config_file = 'gravity_solar_system'
     # Load parameters from config file
@@ -2017,13 +1820,6 @@ def data_plot_gravity_solar_system(config_file, device):
     n_runs = config.training.n_runs
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
-
-    l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
-    print('log_dir: {}'.format(log_dir))
-    logging.basicConfig(filename=f'{log_dir}/results.log', format='%(asctime)s %(message)s', filemode='w')
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
 
     time.sleep(0.5)
 
@@ -2226,7 +2022,7 @@ def data_plot_gravity_solar_system(config_file, device):
     plt.savefig('Fig3.jpg', dpi=300)
     plt.close()
 
-def data_plot_Coulomb(config_file, device):
+def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
 
     # config_file = 'Coulomb_3'
     # Load parameters from config file
@@ -2249,13 +2045,6 @@ def data_plot_Coulomb(config_file, device):
     n_particle_types = config.simulation.n_particle_types
     n_particles = config.simulation.n_particles
     n_runs = config.training.n_runs
-
-    l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
-    print('log_dir: {}'.format(log_dir))
-    logging.basicConfig(filename=f'{log_dir}/results.log', format='%(asctime)s %(message)s', filemode='w')
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
 
     x_list = []
     y_list = []
@@ -2585,7 +2374,7 @@ def data_plot_Coulomb(config_file, device):
     plt.close()
     print(' ')
 
-def data_plot_boids(config_file, device):
+def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
     # config_file = 'boids_16'
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
@@ -2608,16 +2397,6 @@ def data_plot_boids(config_file, device):
     n_particles = config.simulation.n_particles
     n_runs = config.training.n_runs
     has_cell_division = config.simulation.has_cell_division
-    n_frames = config.simulation.n_frames
-
-
-
-    l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
-    print('log_dir: {}'.format(log_dir))
-    logging.basicConfig(filename=f'{log_dir}/results.log', format='%(asctime)s %(message)s', filemode='w')
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
 
     print('Load data ...')
     x_list = []
@@ -2910,7 +2689,7 @@ def data_plot_boids(config_file, device):
 
     logging.shutdown()
 
-def data_plot_wave(config_file, cc='viridis'):
+def data_plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
 
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
@@ -2932,13 +2711,6 @@ def data_plot_wave(config_file, cc='viridis'):
     cmap = CustomColorMap(config=config)
     node_type_map = simulation_config.node_type_map
     has_pic = 'pics' in simulation_config.node_type_map
-
-    l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
-    print('log_dir: {}'.format(log_dir))
-    logging.basicConfig(filename=f'{log_dir}/results.log', format='%(asctime)s %(message)s', filemode='w')
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
 
     vnorm = torch.tensor(1.0, device=device)
     ynorm = torch.tensor(1.0, device=device)
@@ -3185,7 +2957,7 @@ def data_plot_wave(config_file, cc='viridis'):
 
             print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   ")
 
-def data_plot_particle_field(config_file, cc, device):
+def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, device):
     print('')
 
     # plt.rcParams['text.usetex'] = True
@@ -3221,13 +2993,6 @@ def data_plot_particle_field(config_file, cc, device):
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     embedding_cluster = EmbeddingCluster(config)
     n_runs = train_config.n_runs
-
-    l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
-    print('log_dir: {}'.format(log_dir))
-    logging.basicConfig(filename=f'{log_dir}/results.log', format='%(asctime)s %(message)s', filemode='w')
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
 
     x_list = []
     y_list = []
@@ -3811,7 +3576,7 @@ def data_plot_particle_field(config_file, cc, device):
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_training/results/field_scatter_{config_file}_{epoch}.tif", dpi=300)
 
-def data_plot_RD(config_file, cc, device):
+def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
 
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
@@ -3836,13 +3601,6 @@ def data_plot_RD(config_file, cc, device):
     has_pic = 'pics' in simulation_config.node_type_map
 
     embedding_cluster = EmbeddingCluster(config)
-
-    l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
-    print('log_dir: {}'.format(log_dir))
-    logging.basicConfig(filename=f'{log_dir}/results.log', format='%(asctime)s %(message)s', filemode='w')
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
 
     vnorm = torch.tensor(1.0, device=device)
     ynorm = torch.tensor(1.0, device=device)
@@ -4296,7 +4054,7 @@ def data_plot_RD(config_file, cc, device):
 
         print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}")
 
-def data_plot_signal(config_file, cc, device):
+def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
 
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
@@ -4317,13 +4075,6 @@ def data_plot_signal(config_file, cc, device):
     dimension = simulation_config.dimension
 
     embedding_cluster = EmbeddingCluster(config)
-
-    l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
-    print('log_dir: {}'.format(log_dir))
-    logging.basicConfig(filename=f'{log_dir}/results.log', format='%(asctime)s %(message)s', filemode='w')
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
 
     n_runs = min(2,n_runs)
 
@@ -4826,7 +4577,7 @@ def data_plot_signal(config_file, cc, device):
         #     formula, variables = model_kan.symbolic_formula()
         #     print(formula)
 
-def data_video_validation(config_file, device):
+def data_video_validation(config_file, epoch_list, log_dir, logger, device):
     print('')
 
     # Load parameters from config file
@@ -4838,13 +4589,6 @@ def data_video_validation(config_file, device):
     model_config = config.graph_model
 
     print(f'Save movie ... {model_config.particle_model_name} {model_config.mesh_model_name}')
-
-    l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
-    print('log_dir: {}'.format(log_dir))
-    logging.basicConfig(filename=f'{log_dir}/results.log', format='%(asctime)s %(message)s', filemode='w')
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
 
     graph_files = glob.glob(f"./graphs_data/graphs_{dataset_name}/generated_data/*")
     N_files = len(graph_files)
@@ -4868,7 +4612,7 @@ def data_video_validation(config_file, device):
 
     # print("Video saved as 'output.avi'")
 
-def data_video_training(config_file, device):
+def data_video_training(config_file, epoch_list, log_dir, logger, device):
     print('')
 
     # Load parameters from config file
@@ -4887,15 +4631,7 @@ def data_video_training(config_file, device):
     elif config.graph_model.mesh_model_name != '':
         config_model = config.graph_model.mesh_model_name
 
-
     print(f'Save movie ... {model_config.particle_model_name} {model_config.mesh_model_name}')
-
-    l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
-    print('log_dir: {}'.format(log_dir))
-    logging.basicConfig(filename=f'{log_dir}/results.log', format='%(asctime)s %(message)s', filemode='w')
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
 
     embedding = imread(f"{log_dir}/embedding.tif")
     function = imread(f"{log_dir}/function.tif")
@@ -4986,6 +4722,36 @@ def data_video_training(config_file, device):
     # plt.text(0, 1.05, f'Frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
     # ax.tick_params(axis='both', which='major', pad=15)
 
+def data_plot(config_file, epoch_list, device):
+
+    l_dir = os.path.join('.', 'log')
+    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
+    print('log_dir: {}'.format(log_dir))
+
+    logging.basicConfig(filename=f'{log_dir}/results.log', format='%(asctime)s %(message)s', filemode='w')
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+
+    match config.graph_model.particle_model_name:
+        case 'PDE_A':
+            data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device)
+        case 'PDE_A_bis':
+            data_plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger, device)
+        case 'PDE_B':
+            data_plot_boids(config_file, epoch_list, log_dir, logger, device)
+        case 'PDE_E':
+            data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device)
+        case 'PDE_ParticleField_B' | 'PDE_ParticleField_A':
+            data_plot_particle_field(config_file, 'grey', device)
+
+    match config.graph_model.mesh_model_name:
+        case 'WaveMesh':
+            data_plot_wave(config_file=config_file, epoch_list=epoch_list, log_dir=log_dir, logger=logger, cc='viridis', device=device)
+
+    for handler in logger.handlers[:]:
+        handler.close()
+        logger.removeHandler(handler)
+
 
 if __name__ == '__main__':
 
@@ -4994,10 +4760,10 @@ if __name__ == '__main__':
 
     # config_list = ['boids_16_256_bison_siren_with_time_2']
     # config_list = ['boids_16_256']
-    config_list = ['boids_16_256_division_death_model_2']
+    # config_list = ['boids_16_256_division_death_model_2']
     # config_list = ['wave_slit_test']
     # config_list = ['Coulomb_3_256']
-    config_list=['try_arbitrary_64_0_1']
+    config_list=['arbitrary_64_0_1','arbitrary_64_0_01', 'arbitrary_3', 'arbitrary_16', 'arbitrary_32']
 
     for config_file in config_list:
 
@@ -5005,21 +4771,9 @@ if __name__ == '__main__':
 
         epoch_list = [20]
 
-        match config.graph_model.particle_model_name:
-            case 'PDE_A':
-                data_plot_attraction_repulsion(config_file, epoch_list, device)
-            case 'PDE_A_bis':
-                data_plot_attraction_repulsion_asym(config_file, epoch_list, device)
-            case 'PDE_B':
-                data_plot_boids(config_file, device)
-            case 'PDE_E':
-                data_plot_Coulomb(config_file, device)
-            case 'PDE_ParticleField_B' | 'PDE_ParticleField_A':
-                data_plot_particle_field(config_file, 'grey', device)
+        data_plot(config_file, epoch_list, device)
 
-        match config.graph_model.mesh_model_name:
-            case 'WaveMesh':
-                data_plot_wave(config_file,cc='viridis', device=device)
+
 
 
 

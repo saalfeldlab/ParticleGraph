@@ -92,6 +92,7 @@ class PlottingConfig(BaseModel):
     colormap: str = 'tab10'
     arrow_length: int = 10
     marker_size: int = 100
+    ylim: list[float] = [-0.1, 0.1]
 
 
 class TrainingConfig(BaseModel):

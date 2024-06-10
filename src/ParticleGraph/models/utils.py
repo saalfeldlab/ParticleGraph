@@ -26,6 +26,7 @@ import matplotlib as mpl
 import networkx as nx
 from torch_geometric.utils.convert import to_networkx
 # matplotlib.use("Qt5Agg")
+import warnings
 
 def get_embedding(model_a=None, dataset_number = 0):
     embedding = []
@@ -576,14 +577,17 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_lin_edge=[]
                      color=cmap.color(types[n].astype(int)), linewidth=2, alpha=0.25)
     func_list = torch.stack(func_list)
     coeff_norm = to_numpy(func_list)
-    if coeff_norm.shape[0] > 1000:
-        new_index = np.random.permutation(coeff_norm.shape[0])
-        new_index = new_index[0:min(1000, coeff_norm.shape[0])]
-        trans = umap.UMAP(n_neighbors=500, n_components=2, transform_queue_size=0, random_state=config.training.seed).fit(coeff_norm[new_index])
-        proj_interaction = trans.transform(coeff_norm)
-    else:
-        trans = umap.UMAP(n_neighbors=100, n_components=2, transform_queue_size=0).fit(coeff_norm)
-        proj_interaction = trans.transform(coeff_norm)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        if coeff_norm.shape[0] > 1000:
+            new_index = np.random.permutation(coeff_norm.shape[0])
+            new_index = new_index[0:min(1000, coeff_norm.shape[0])]
+            trans = umap.UMAP(n_neighbors=500, n_components=2, transform_queue_size=0, random_state=config.training.seed).fit(coeff_norm[new_index])
+            proj_interaction = trans.transform(coeff_norm)
+        else:
+            trans = umap.UMAP(n_neighbors=100, n_components=2, transform_queue_size=0).fit(coeff_norm)
+            proj_interaction = trans.transform(coeff_norm)
 
     if vizualize:
         if config.graph_model.particle_model_name == 'PDE_GS':
