@@ -320,14 +320,14 @@ class Mesh_RPS_extract(MessagePassing):
         plt.close()
 
 
-def fig_init():
+def fig_init(formatx='%.2f', formaty='%.2f'):
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(1, 1, 1)
     ax.tick_params(axis='both', which='major', pad=15)
     ax.xaxis.set_major_locator(plt.MaxNLocator(3))
     ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-    ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-    ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    ax.xaxis.set_major_formatter(FormatStrFormatter(formatx))
+    ax.yaxis.set_major_formatter(FormatStrFormatter(formaty))
     plt.xticks(fontsize=32.0)
     plt.yticks(fontsize=32.0)
 
@@ -1012,7 +1012,7 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
 
         fig, ax = fig_init()
         p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
-        rr = torch.tensor(np.linspace(1E-4, max_radius, 1000)).to(device)
+        rr = torch.tensor(np.linspace(0.8E-3, max_radius, 1000)).to(device)
         rmserr_list = []
         for n in range(int(n_particles * (1 - train_config.particle_dropout))):
             embedding_ = model_a_first[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
@@ -1042,7 +1042,7 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
         logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
         plt.close()
 
-        fig, ax = fig_init()
+        fig, ax = fig_init(formatx='%.3f', formaty='%.0f')
         plots = []
         plots.append(rr)
         for n in range(n_particle_types):
@@ -1050,359 +1050,94 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
             plots.append(model.psi(rr, p[n], p[n]).squeeze())
         plt.xlim([0, 0.02])
         plt.ylim([0, 0.5E6])
-        ax.xaxis.set_major_formatter(FormatStrFormatter('%.3f'))
-        ax.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
         plt.xlabel(r'$d_{ij}$', fontsize=64)
         plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=170.7)
         plt.close()
 
-
-
-    fig = plt.figure(figsize=(10.5, 9.6))
-    plt.ion()
-    ax = fig.add_subplot(3, 3, 1)
-    embedding = plot_embedding('a)', model.a, 1, index_particles, n_particles, n_particle_types, 20, '$10^6$', fig, ax,
-                               cmap, device)
-    embedding = embedding[0:int(n_particles * (1 - train_config.particle_dropout))]
-
-    ax = fig.add_subplot(3, 3, 2)
-    rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-    func_list = plot_function(False, 'b)', config.graph_model.particle_model_name, model.lin_edge, model.a, 1,
-                              to_numpy(x[:, 5]).astype(int), rr, max_radius, ynorm, index_particles,
-                              int(n_particles * (1 - train_config.particle_dropout)), n_particle_types, 20, '$10^6$',
-                              fig, ax, cmap, device)
-    proj_interaction, new_labels, n_clusters = plot_umap('b)', func_list, log_dir, 500, index_particles,
-                                                         int(n_particles * (1 - train_config.particle_dropout)),
-                                                         n_particle_types, embedding_cluster, 20, '$10^6$', fig, ax,
-                                                         cmap, device)
-
-    match config.training.cluster_method:
-        case 'kmeans_auto_plot':
-            labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
-        case 'kmeans_auto_embedding':
-            labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
-            proj_interaction = embedding
-        case 'distance_plot':
-            labels, n_clusters = embedding_cluster.get(proj_interaction, 'distance', thresh=0.5)
-        case 'distance_embedding':
-            labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=0.5)
-            proj_interaction = embedding
-        case 'distance_both':
-            new_projection = np.concatenate((proj_interaction, embedding), axis=-1)
-            labels, n_clusters = embedding_cluster.get(new_projection, 'distance')
-
-    ax = fig.add_subplot(3, 3, 3)
-
-    label_list = []
-    for n in range(n_particle_types):
-        tmp = labels[index_particles[n]]
-        label_list.append(np.round(np.median(tmp)))
-    label_list = np.array(label_list)
-    new_labels = labels.copy()
-    for n in range(n_particle_types):
-        new_labels[labels == label_list[n]] = n
-    accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-
-    print(f'accuracy: {accuracy}  n_clusters: {n_clusters}')
-
-    fig, ax = fig_init()
-    for n in range(n_clusters):
-        pos = np.argwhere(labels == n)
-        pos = np.array(pos)
-        if pos.size > 0:
-            plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=200, alpha=0.1)
-    label_list = []
-    for n in range(n_particle_types):
-        tmp = labels[index_particles[n]]
-        label_list.append(np.round(np.median(tmp)))
-    label_list = np.array(label_list)
-    plt.xlabel(r'UMAP 0', fontsize=64)
-    plt.ylabel(r'UMAP 1', fontsize=64)
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/UMAP_{config_file}.tif", dpi=300)
-    plt.close()
-
-    model_a_first = model.a.clone().detach()
-
-    model_a_ = model.a[1].clone().detach()
-    for k in range(n_clusters):
-        pos = np.argwhere(new_labels == k).squeeze().astype(int)
-        if len(pos) > 0:
-            temp = model_a_[pos, :].clone().detach()
-            model_a_[pos, :] = torch.median(temp, dim=0).values.repeat((len(pos), 1))
-    with torch.no_grad():
-        for n in range(model.a.shape[0]):
-            model.a[n] = model_a_
-
-    embedding = get_embedding(model_a_first, 1)
-
-    fig, ax = fig_init()
-    csv_ = []
-    for n in range(n_particle_types):
-        plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n), s=400,
-                    alpha=0.1)
-        csv_.append(embedding[index_particles[n], :])
-    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/embedding_{config_file}.tif", dpi=300)
-    # csv_ = np.reshape(csv_, (csv_.shape[0]*csv_.shape[1], 2))
-    # np.save(f"./{log_dir}/results/embedding_{config_file}.npy", csv_)
-    # np.savetxt(f"./{log_dir}/results/embedding_{config_file}.txt", csv_)
-    plt.close()
-
-    ax = fig.add_subplot(3, 3, 4)
-    plt.text(-0.25, 1.1, f'd)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-    plt.title(r'Clustered particle embedding', fontsize=12)
-    for n in range(n_particle_types):
-        pos = np.argwhere(new_labels == n).squeeze().astype(int)
-        if len(pos) > 0:
-            plt.scatter(embedding[pos[0], 0], embedding[pos[0], 1], color=cmap.color(n), s=6)
-    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=12)
-    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=12)
-    plt.xticks(fontsize=10.0)
-    plt.yticks(fontsize=10.0)
-    plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
-
-    ax = fig.add_subplot(3, 3, 5)
-    plt.text(-0.25, 1.1, f'e)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-    plt.title(r'Interaction functions (model)', fontsize=12)
-    func_list = []
-    for n in range(n_particle_types):
-        pos = np.argwhere(new_labels == n).squeeze().astype(int)
-        if len(pos) > 0:
-            embedding = model.a[0, pos[0], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+        rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
+        plot_list = []
+        for n in range(int(n_particles * (1 - train_config.particle_dropout))):
+            embedding_ = model_a_first[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                      rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
-                                     0 * rr[:, None], 0 * rr[:, None], embedding), dim=1)
+                                     0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
             with torch.no_grad():
-                func = model.lin_edge(in_features.float())
-            func = func[:, 0]
-            func_list.append(func)
-            plt.plot(to_numpy(rr),
-                     to_numpy(func) * to_numpy(ynorm),
-                     color=cmap.color(n), linewidth=1)
-    plt.xlabel(r'$d_{ij}$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij}$', fontsize=12)
-    plt.xticks(fontsize=10.0)
-    plt.yticks(fontsize=10.0)
-    plt.xlim([0, 0.02])
-    plt.ylim([0, 0.5E6])
-    plt.text(.05, .94, f'e: 20 it: $10^6$', ha='left', va='top', transform=ax.transAxes, fontsize=10)
+                pred = model.lin_edge(in_features.float())
+            pred = pred[:, 0]
+            plot_list.append(pred * ynorm)
+        p = np.linspace(0.5, 5, n_particle_types)
+        popt_list = []
+        for n in range(int(n_particles * (1 - train_config.particle_dropout))):
+            popt, pcov = curve_fit(power_model, to_numpy(rr), to_numpy(plot_list[n]))
+            popt_list.append(popt)
+        popt_list = np.array(popt_list)
+        p_list = p[to_numpy(type_list).astype(int)]
 
-    p = config.simulation.params
-    if len(p) > 1:
-        p = torch.tensor(p, device=device)
-    else:
-        p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
+        x_data = p_list.squeeze()
+        y_data = popt_list[:, 0]
+        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
 
-    type_list = x[:, 5:6].clone().detach()
-    rmserr_list = []
-    fig_ = plt.figure(figsize=(12, 12))
-    ax = fig_.add_subplot(1, 1, 1)
-    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-    csv_ = []
-    csv_.append(to_numpy(rr))
-    for n in range(int(n_particles * (1 - train_config.particle_dropout))):
-        embedding_ = model_a_first[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                 rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
-                                 0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-        with torch.no_grad():
-            func = model.lin_edge(in_features.float())
-        func = func[:, 0]
-        csv_.append(to_numpy(func))
-        true_func = model.psi(rr, p[to_numpy(type_list[n]).astype(int)].squeeze(),
-                              p[to_numpy(type_list[n]).astype(int)].squeeze())
-        rmserr_list.append(torch.sqrt(torch.mean((func * ynorm - true_func.squeeze()) ** 2)))
-        plt.plot(to_numpy(rr),
-                 to_numpy(func) * to_numpy(ynorm),
-                 color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
-    plt.xticks(fontsize=32)
-    plt.yticks(fontsize=32)
-    plt.xlabel(r'$d_{ij}$', fontsize=64)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij}$', fontsize=64)
-    plt.xlim([0, max_radius])
-    plt.xlim([0, 0.02])
-    plt.ylim([0, 0.5E6])
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/func_all{config_file}.tif", dpi=300)
-    csv_ = np.array(csv_)
-    np.save(f"./{log_dir}/results/func_all{config_file}.npy", csv_)
-    np.savetxt(f"./{log_dir}/results/func_all{config_file}.txt", csv_)
-    plt.close()
+        threshold = 0.4
+        relative_error = np.abs(y_data - x_data) / x_data
+        pos = np.argwhere(relative_error < threshold)
+        pos_outliers = np.argwhere(relative_error > threshold)
+        x_data_ = x_data[pos[:, 0]]
+        y_data_ = y_data[pos[:, 0]]
+        lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
+        residuals = y_data_ - linear_model(x_data_, *lin_fit)
+        ss_res = np.sum(residuals ** 2)
+        ss_tot = np.sum((y_data - np.mean(y_data_)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot)
+        print(f'R^2$: {np.round(r_squared, 2)}  Slope: {np.round(lin_fit[0], 2)}  outliers: {np.sum(relative_error > threshold)}  ')
+        logger.info(f'R^2$: {np.round(r_squared, 2)}  Slope: {np.round(lin_fit[0], 2)}  outliers: {np.sum(relative_error > threshold)}  ')
 
-    rmserr_list = torch.stack(rmserr_list)
-    rmserr_list = to_numpy(rmserr_list)
-    print(f'all function RMS error: {np.round(np.mean(rmserr_list), 7)}+/-{np.round(np.std(rmserr_list), 7)}')
+        fig, ax = fig_init()
+        csv_ = []
+        csv_.append(p_list)
+        csv_.append(popt_list[:, 0])
+        plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+        plt.scatter(p_list, popt_list[:, 0], color='k', s=50, alpha=0.5)
+        plt.scatter(p_list[pos_outliers[:, 0]], popt_list[pos_outliers[:, 0], 0], color='r', s=50)
+        plt.xlabel(r'True mass ', fontsize=64)
+        plt.ylabel(r'Reconstructed mass ', fontsize=64)
+        plt.xlim([0, 5.5])
+        plt.ylim([0, 5.5])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/mass{config_file}.tif", dpi=300)
+        # csv_ = np.array(csv_)
+        # np.save(f"./{log_dir}/results/mass{config_file}.npy", csv_)
+        # np.savetxt(f"./{log_dir}/results/mass{config_file}.txt", csv_)
+        plt.close()
 
-    ax = fig.add_subplot(3, 3, 6)
-    plt.text(-0.25, 1.1, f'k)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-    plt.title(r'Interaction functions (true)', fontsize=12)
-    p = np.linspace(0.5, 5, n_particle_types)
-    p = torch.tensor(p, device=device)
-    for n in range(n_particle_types - 1, -1, -1):
-        plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n), linewidth=1)
-    plt.xlabel(r'$d_{ij}$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij}$', fontsize=12)
-    plt.xticks(fontsize=10.0)
-    plt.yticks(fontsize=10.0)
-    plt.xlim([0, 0.02])
-    plt.ylim([0, 0.5E6])
+        relative_error = np.abs(popt_list[:, 0] - p_list.squeeze()) / p_list.squeeze() * 100
 
-    fig_ = plt.figure(figsize=(12, 12))
-    ax = fig_.add_subplot(1, 1, 1)
-    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-    p = np.linspace(0.5, 5, n_particle_types)
-    p = torch.tensor(p, device=device)
-    csv_ = []
-    csv_.append(to_numpy(rr))
-    for n in range(n_particle_types - 1, -1, -1):
-        plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n), linewidth=8)
-        csv_.append(to_numpy(model.psi(rr, p[n], p[n]).squeeze()))
-    plt.xticks(fontsize=32)
-    plt.yticks(fontsize=32)
-    plt.xlim([0, 0.02])
-    plt.ylim([0, 0.5E6])
-    plt.xlabel(r'$d_{ij}$', fontsize=64)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/true_func{config_file}.tif", dpi=300)
-    csv_ = np.array(csv_)
-    np.save(f"./{log_dir}/results/true_func{config_file}.npy", csv_)
-    np.savetxt(f"./{log_dir}/results/true_func{config_file}.txt", csv_)
-    plt.close()
+        print(f'mass relative error: {np.round(np.mean(relative_error), 2)}+/-{np.round(np.std(relative_error), 2)}')
+        print(f'mass relative error wo outliers: {np.round(np.mean(relative_error[pos[:, 0]]), 2)}+/-{np.round(np.std(relative_error[pos[:, 0]]), 2)}')
+        logger.info(f'mass relative error: {np.round(np.mean(relative_error), 2)}+/-{np.round(np.std(relative_error), 2)}')
+        logger.info(f'mass relative error wo outliers: {np.round(np.mean(relative_error[pos[:, 0]]), 2)}+/-{np.round(np.std(relative_error[pos[:, 0]]), 2)}')
 
-    rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-    plot_list = []
-    for n in range(int(n_particles * (1 - train_config.particle_dropout))):
-        embedding_ = model_a_first[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                 rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
-                                 0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-        with torch.no_grad():
-            pred = model.lin_edge(in_features.float())
-        pred = pred[:, 0]
-        plot_list.append(pred * ynorm)
-    p = np.linspace(0.5, 5, n_particle_types)
-    popt_list = []
-    for n in range(int(n_particles * (1 - train_config.particle_dropout))):
-        popt, pcov = curve_fit(power_model, to_numpy(rr), to_numpy(plot_list[n]))
-        popt_list.append(popt)
-    popt_list = np.array(popt_list)
 
-    p_list = p[to_numpy(type_list).astype(int)]
+        fig, ax = fig_init()
+        csv_ = []
+        csv_.append(p_list.squeeze())
+        csv_.append(-popt_list[:, 1])
+        csv_ = np.array(csv_)
+        plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+        plt.scatter(p_list, -popt_list[:, 1], color='k', s=50, alpha=0.5)
+        plt.xlim([0, 5.5])
+        plt.ylim([-4, 0])
+        plt.xlabel(r'True mass', fontsize=64)
+        plt.ylabel(r'Reconstructed exponent', fontsize=64)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/exponent_{config_file}.tif", dpi=300)
+        np.save(f"./{log_dir}/results/exponent_{config_file}.npy", csv_)
+        np.savetxt(f"./{log_dir}/results/exponent_{config_file}.txt", csv_)
+        plt.close()
 
-    x_data = p_list.squeeze()
-    y_data = popt_list[:, 0]
-    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-
-    threshold = 0.4
-    relative_error = np.abs(y_data - x_data) / x_data
-    pos = np.argwhere(relative_error < threshold)
-    pos_outliers = np.argwhere(relative_error > threshold)
-    x_data_ = x_data[pos[:, 0]]
-    y_data_ = y_data[pos[:, 0]]
-    lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
-    residuals = y_data_ - linear_model(x_data_, *lin_fit)
-    ss_res = np.sum(residuals ** 2)
-    ss_tot = np.sum((y_data - np.mean(y_data_)) ** 2)
-    r_squared = 1 - (ss_res / ss_tot)
-    plt.text(0.5, 4.5, f"$R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > 0.2)} / {n_particles}",
-             fontsize=10)
-    plt.text(0.5, 5, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
-    print(
-        f'R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}  outliers: {np.sum(relative_error > threshold)}  ')
-
-    fig_ = plt.figure(figsize=(12, 12))
-    ax = fig_.add_subplot(1, 1, 1)
-    ax.xaxis.set_major_locator(plt.MaxNLocator(5))
-    ax.yaxis.set_major_locator(plt.MaxNLocator(5))
-    csv_ = []
-    csv_.append(p_list)
-    csv_.append(popt_list[:, 0])
-    plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-    plt.scatter(p_list, popt_list[:, 0], color='k', s=50, alpha=0.5)
-    plt.scatter(p_list[pos_outliers[:, 0]], popt_list[pos_outliers[:, 0], 0], color='r', s=50)
-    plt.xticks(fontsize=32)
-    plt.yticks(fontsize=32)
-    plt.xlabel(r'True mass ', fontsize=64)
-    plt.ylabel(r'Reconstructed mass ', fontsize=64)
-    plt.xlim([0, 5.5])
-    plt.ylim([0, 5.5])
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/mass{config_file}.tif", dpi=300)
-    # csv_ = np.array(csv_)
-    # np.save(f"./{log_dir}/results/mass{config_file}.npy", csv_)
-    # np.savetxt(f"./{log_dir}/results/mass{config_file}.txt", csv_)
-    plt.close()
-
-    relative_error = np.abs(popt_list[:, 0] - p_list.squeeze()) / p_list.squeeze() * 100
-
-    print(f'all mass relative error: {np.round(np.mean(relative_error), 3)}+/-{np.round(np.std(relative_error), 3)}')
-    print(
-        f'all mass relative error wo outliers: {np.round(np.mean(relative_error[pos[:, 0]]), 3)}+/-{np.round(np.std(relative_error[pos[:, 0]]), 3)}')
-
-    ax = fig.add_subplot(3, 3, 8)
-    plt.text(-0.25, 1.1, f'h)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-    plt.scatter(p_list, -popt_list[:, 1], color='k', s=20)
-    plt.xlim([0, 5.5])
-    plt.ylim([-4, 0])
-    plt.title(r'Reconstructed exponent', fontsize=12)
-    plt.xlabel(r'True mass ', fontsize=12)
-    plt.ylabel(r'Exponent fit ', fontsize=12)
-    plt.text(0.5, -0.5, f"Exponent: {np.round(np.mean(-popt_list[:, 1]), 3)}+/-{np.round(np.std(popt_list[:, 1]), 3)}",
-             fontsize=10)
-    print(f"Exponent: {np.round(np.mean(-popt_list[:, 1]), 3)}+/-{np.round(np.std(popt_list[:, 1]), 3)}")
-
-    fig_ = plt.figure(figsize=(12, 12))
-    ax = fig_.add_subplot(1, 1, 1)
-    ax.xaxis.set_major_locator(plt.MaxNLocator(5))
-    ax.yaxis.set_major_locator(plt.MaxNLocator(5))
-    csv_ = []
-    csv_.append(p_list.squeeze())
-    csv_.append(-popt_list[:, 1])
-    csv_ = np.array(csv_)
-    plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-    plt.scatter(p_list, -popt_list[:, 1], color='k', s=50, alpha=0.5)
-    plt.xlim([0, 5.5])
-    plt.ylim([-4, 0])
-    plt.xticks(fontsize=32)
-    plt.yticks(fontsize=32)
-    plt.xlabel(r'True mass', fontsize=64)
-    plt.ylabel(r'Reconstructed exponent', fontsize=64)
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/exponent_{config_file}.tif", dpi=300)
-    np.save(f"./{log_dir}/results/exponent_{config_file}.npy", csv_)
-    np.savetxt(f"./{log_dir}/results/exponent_{config_file}.txt", csv_)
-    plt.close()
-
-    # find last image file in logdir
-    ax = fig.add_subplot(3, 3, 9)
-    files = glob.glob(os.path.join(log_dir, 'tmp_recons/Fig*.tif'))
-    files.sort(key=os.path.getmtime)
-    if len(files) > 0:
-        last_file = files[-1]
-        # load image file with imageio
-        image = imageio.imread(last_file)
-        print('12')
-        plt.text(-0.25, 1.1, f'l)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-        plt.title(r'Rollout inference (frame 1000)', fontsize=12)
-        plt.imshow(image)
-        # rmove xtick
-        plt.xticks([])
-        plt.yticks([])
-
-    time.sleep(1)
-    plt.tight_layout()
-    # plt.savefig('Fig3.pdf', format="pdf", dpi=300)
-    plt.savefig(f'./log/try_{config_file}/Fig_3.jpg', dpi=300)
-    plt.close()
-
+        print(f'exponent: {np.round(np.mean(-popt_list[:, 1]), 2)}+/-{np.round(np.std(-popt_list[:, 1]), 2)}')
+        logger.info(f'mass relative error: {np.round(np.mean(-popt_list[:, 1]), 2)}+/-{np.round(np.std(-popt_list[:, 1]), 2)}')
 
 def data_plot_gravity_continuous(config_file, epoch_list, log_dir, logger, device):
     # config_file = 'gravity_16'
@@ -2013,12 +1748,7 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
     plt.savefig(f"./{log_dir}/results/func_{config_file}_{epoch}.tif", dpi=170.7)
     plt.close()
 
-    fig_ = plt.figure(figsize=(12, 12))
-    ax = fig_.add_subplot(1, 1, 1)
-    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-    ax.xaxis.set_major_formatter(FormatStrFormatter('%.3f'))
-    ax.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+    fig, ax = fig_init()
     func_list = []
     for n in range(n_clusters):
         pos = np.argwhere(new_labels == n).squeeze().astype(int)
@@ -2045,8 +1775,6 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
     plt.ylim([-2E6, 2E6])
     plt.xlabel(r'$d_{ij}$', fontsize=64)
     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij}$', fontsize=64)
-    plt.xticks(fontsize=32)
-    plt.yticks(fontsize=32)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/func_{config_file}_{epoch}.tif", dpi=170.7)
     csv_ = to_numpy(torch.stack(func_list))
@@ -2055,32 +1783,7 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
     np.savetxt(f"./{log_dir}/results/func_{config_file}_{epoch}.txt", csv_)
     plt.close()
 
-    ax = fig.add_subplot(3, 3, 6)
-    plt.text(-0.25, 1.1, f'f)', ha='right', va='top', transform=ax.transAxes, fontsize=12)
-    plt.title(r'Interaction functions (true)', fontsize=12)
-    p = config.simulation.params
-    if len(p) > 0:
-        p = torch.tensor(p, device=device)
-    else:
-        p = torch.load(f'graphs_data/graphs_{dataset_name}/p.pt')
-    psi_output = []
-    for m in range(n_particle_types):
-        for n in range(n_particle_types):
-            temp = model.psi(rr, p[n], p[m])
-            plt.plot(to_numpy(rr), np.array(temp.cpu()), linewidth=1)
-    plt.xlim([0, 0.02])
-    plt.ylim([-0.5E6, 0.5E6])
-    plt.xlabel(r'$d_{ij}$', fontsize=12)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij}$', fontsize=12)
-    plt.xticks(fontsize=10.0)
-    plt.yticks(fontsize=10.0)
-
-    fig_ = plt.figure(figsize=(12, 12))
-    ax = fig_.add_subplot(1, 1, 1)
-    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-    ax.xaxis.set_major_formatter(FormatStrFormatter('%.3f'))
-    ax.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+    fig, ax = fig_init()
     csv_ = []
     csv_.append(to_numpy(rr))
     true_func_list = []
@@ -2094,8 +1797,6 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
     plt.ylim([-2E6, 2E6])
     plt.xlabel(r'$d_{ij}$', fontsize=64)
     plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij}$', fontsize=64)
-    plt.xticks(fontsize=32)
-    plt.yticks(fontsize=32)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/true_func_{config_file}_{epoch}.tif", dpi=170.7)
     np.save(f"./{log_dir}/results/true_func_{config_file}_{epoch}.npy", csv_)
@@ -4329,7 +4030,7 @@ if __name__ == '__main__':
     config_list = ['gravity_16']
     # config_list = ['wave_slit_test']
     # config_list = ['Coulomb_3_256']
-    config_list = ['arbitrary_64', 'arbitrary_64_0_1', 'arbitrary_64_0_01', 'arbitrary_64_0_005'] #, 'arbitrary_3', 'arbitrary_16', 'arbitrary_32', 'arbitrary_16_noise_0_1', 'arbitrary_16_noise_0_2', 'arbitrary_16_noise_0_3', 'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5']
+    # config_list = ['arbitrary_64', 'arbitrary_64_0_1', 'arbitrary_64_0_01', 'arbitrary_64_0_005'] #, 'arbitrary_3', 'arbitrary_16', 'arbitrary_32', 'arbitrary_16_noise_0_1', 'arbitrary_16_noise_0_2', 'arbitrary_16_noise_0_3', 'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5']
     # config_list = ['arbitrary_3_continuous']
     epoch_list = [20]
 
