@@ -695,11 +695,11 @@ def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, dev
 
     x_list, y_list, vnorm, ynorm = load_training_data(dataset_name, n_runs, log_dir, device)
     logger.info("vnorm:{:.2e},  ynorm:{:.2e}".format(to_numpy(vnorm), to_numpy(ynorm)))
-    model, bc_pos, bc_dpos = choose_training_model(config, device)
-
     x = x_list[1][0].clone().detach()
     index_particles = get_index_particles(x, n_particle_types, dimension)
     type_list = get_type_list(x, dimension)
+
+    model, bc_pos, bc_dpos = choose_training_model(config, device)
 
     for epoch in epoch_list:
 
@@ -1023,8 +1023,6 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
 
     x_list, y_list, vnorm, ynorm = load_training_data(dataset_name, n_runs, log_dir, device)
     logger.info("vnorm:{:.2e},  ynorm:{:.2e}".format(to_numpy(vnorm), to_numpy(ynorm)))
-    model, bc_pos, bc_dpos = choose_training_model(config, device)
-
     x = x_list[0][0].clone().detach()
     index_particles = get_index_particles(x, n_particle_types, dimension)
     type_list = get_type_list(x, dimension)
@@ -1183,7 +1181,6 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
         sys.stdout = text_trap
         popt_list = []
         for n in range(0,int(n_particles * (1 - train_config.particle_dropout))):
-            print(n)
             model_pysrr, max_index, max_value = symbolic_regression(rr, plot_list[n])
             # print(f'{p_list[n].squeeze()}/x0**2, {model_pysrr.sympy(max_index)}')
             logger.info(f'{np.round(p_list[n].squeeze(),2)}/x0**2, pysrr found {model_pysrr.sympy(max_index)}')
@@ -1484,8 +1481,6 @@ def data_plot_gravity_continuous(config_file, epoch_list, log_dir, logger, devic
         logger.info(f'pysrr_mass relative error wo outliers: {np.round(np.mean(relative_error[pos[:, 0]]), 2)}+/-{np.round(np.std(relative_error[pos[:, 0]]), 2)}')
 
 
-
-
 def data_plot_gravity_solar_system(config_file, epoch_list, log_dir, logger, device):
     config_file = 'gravity_solar_system'
     # Load parameters from config file
@@ -1711,16 +1706,9 @@ def data_plot_gravity_solar_system(config_file, epoch_list, log_dir, logger, dev
 
 
 def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
-    # config_file = 'Coulomb_3'
-    # Load parameters from config file
+
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-
     dataset_name = config.dataset
-    embedding_cluster = EmbeddingCluster(config)
-
-    # print(config.pretty())
-
-    cmap = CustomColorMap(config=config)
 
     simulation_config = config.simulation
     train_config = config.training
@@ -1732,291 +1720,126 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
     n_particle_types = config.simulation.n_particle_types
     n_particles = config.simulation.n_particles
     n_runs = config.training.n_runs
+    cmap = CustomColorMap(config=config)
 
-    x_list = []
-    y_list = []
-    print('Load data ...')
-    time.sleep(1)
-    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device))
-    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_0.pt', map_location=device))
-    ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
+    embedding_cluster = EmbeddingCluster(config)
+
+    x_list, y_list, vnorm, ynorm = load_training_data(dataset_name, n_runs, log_dir, device)
+    logger.info("vnorm:{:.2e},  ynorm:{:.2e}".format(to_numpy(vnorm), to_numpy(ynorm)))
     x = x_list[0][0].clone().detach()
     index_particles = get_index_particles(x, n_particle_types, dimension)
     type_list = get_type_list(x, dimension)
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
-    epoch = 20
-    net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt"
-    state_dict = torch.load(net, map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
-    model.eval()
+    for epoch in epoch_list:
 
-    plt.rcParams['text.usetex'] = True
-    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-    # matplotlib.use("Qt5Agg")
+        net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt"
+        state_dict = torch.load(net, map_location=device)
+        model.load_state_dict(state_dict['model_state_dict'])
+        model.eval()
 
-    accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap,
+        model_a_first = model.a.clone().detach()
+        config.training.cluster_distance_threshold = 0.01
+        config.training.cluster_method = 'distance_embedding'
+        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap,
                                                                    index_particles, type_list,
                                                                    n_particle_types, n_particles, ynorm, epoch, log_dir,
                                                                    device)
 
-    x = x_list[0][100].clone().detach()
-    index_particles = get_index_particles(x, n_particle_types, dimension)
-    type_list = to_numpy(get_type_list(x, dimension))
-    distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-    adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-    t = torch.Tensor([max_radius ** 2])
-    edges = adj_t.nonzero().t().contiguous()
-    indexes = np.random.randint(0, edges.shape[1], 5000)
-    edges = edges[:, indexes]
+        print(
+            f'final result     accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+        logger.info(
+            f'final result     accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
-    p = [2, 1, -1]
+        x = x_list[0][100].clone().detach()
+        index_particles = get_index_particles(x, n_particle_types, dimension)
+        type_list = to_numpy(get_type_list(x, dimension))
+        distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+        edges = adj_t.nonzero().t().contiguous()
+        indexes = np.random.randint(0, edges.shape[1], 5000)
+        edges = edges[:, indexes]
 
-    fig, ax = fig_init()
-    func_list = []
-    type_list_ = []
-    for n in trange(edges.shape[1]):
-        embedding_1 = model.a[1, edges[0, n], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-        embedding_2 = model.a[1, edges[1, n], :] * torch.ones((1000, config.graph_model.embedding_dim),
-                                                              device=device)
-        # type = p[type_list[to_numpy(edges[0, n])].astype(int).squeeze()] * p[type_list[to_numpy(edges[1, n])].astype(int).squeeze()]
-        # type_list_.append(type)
-        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                 rr[:, None] / max_radius, embedding_1, embedding_2), dim=1)
-        with torch.no_grad():
-            func = model.lin_edge(in_features.float())
-        func = func[:, 0]
-        func_list.append(func)
-    type_list_ = np.array(type_list_)
-    qiqj_list = [-2, -1, 1, 2, 4]
-    for n in qiqj_list:
-        pos = np.argwhere(type_list_ == n)
-        if len(pos > 0):
-            func = func_list[pos[:, 0]]
+        p = [2, 1, -1]
+
+        fig, ax = fig_init(formatx='%.3f', formaty='%.0f')
+        func_list = []
+        rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
+        table_qiqj = np.zeros((10,1))
+        tmp = np.array([-2, -1, 1, 2, 4])
+        table_qiqj[tmp.astype(int)+2]=np.arange(5)[:,None]
+        qiqj_list=[]
+        for n in trange(edges.shape[1]):
+            embedding_1 = model.a[1, edges[0, n], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+            embedding_2 = model.a[1, edges[1, n], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+            qiqj = p[type_list[to_numpy(edges[0, n])].astype(int).squeeze()] * p[type_list[to_numpy(edges[1, n])].astype(int).squeeze()]
+            qiqj_list.append(qiqj)
+            type = table_qiqj[qiqj+2].astype(int).squeeze()
+
+            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                     rr[:, None] / max_radius, embedding_1, embedding_2), dim=1)
+            with torch.no_grad():
+                func = model.lin_edge(in_features.float())
+            func = func[:, 0]
+            func_list.append(func * ynorm)
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
-                     linewidth=1, alpha=0.1)
+                     color=cmap.color(type), linewidth=8, alpha=0.1)
 
-        plt.plot(to_numpy(rr),
-                 to_numpy(func) * to_numpy(ynorm),
-                 color=cmap.color(type), linewidth=8, alpha=0.1)
-    plt.xlabel(r'$d_{ij}$', fontsize=64)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=64)
-    plt.xlim([0, 0.02])
-    plt.ylim([-0.5E6, 0.5E6])
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/func_{config_file}_{epoch}.tif", dpi=170.7)
-    plt.close()
+        plt.xlabel(r'$d_{ij}$', fontsize=64)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=64)
+        plt.xlim([0, 0.02])
+        plt.ylim([-0.5E6, 0.5E6])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/func_{config_file}_{epoch}.tif", dpi=170.7)
+        plt.close()
 
-    fig, ax = fig_init()
-    func_list = []
-    for n in range(n_clusters):
-        pos = np.argwhere(new_labels == n).squeeze().astype(int)
-        if len(pos) > 0:
-            embedding0 = model.a[1, pos[0], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            for m in range(n_clusters):
-                pos = np.argwhere(new_labels == m).squeeze().astype(int)
-                if len(pos) > 0:
-                    embedding1 = model.a[1, pos[0], :] * torch.ones((1000, config.graph_model.embedding_dim),
-                                                                    device=device)
-                    in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                             rr[:, None] / max_radius, embedding0, embedding1), dim=1)
-                    func = model.lin_edge(in_features.float())
-                    func = func[:, 0]
-                    plt.plot(to_numpy(rr),
-                             to_numpy(func) * to_numpy(ynorm),
-                             linewidth=8, alpha=0.5)
-                    func_list.append(func * ynorm)
-                    # temp = model.psi(rr, p[n], p[m])
-                    # plt.plot(to_numpy(rr), np.array(temp.cpu()), linewidth=1)
-                    popt, pocv = curve_fit(power_model, to_numpy(rr), to_numpy(func * ynorm),
-                                           bounds=([0, 1.5], [5., 2.5]))
-    plt.xlim([0, 0.01])
-    plt.ylim([-2E6, 2E6])
-    plt.xlabel(r'$d_{ij}$', fontsize=64)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij}$', fontsize=64)
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/func_{config_file}_{epoch}.tif", dpi=170.7)
-    csv_ = to_numpy(torch.stack(func_list))
-    csv_ = np.concatenate((csv_, to_numpy(rr[None, :])))
-    np.save(f"./{log_dir}/results/func_{config_file}_{epoch}.npy", csv_)
-    np.savetxt(f"./{log_dir}/results/func_{config_file}_{epoch}.txt", csv_)
-    plt.close()
-
-    fig, ax = fig_init()
-    csv_ = []
-    csv_.append(to_numpy(rr))
-    true_func_list = []
-    for n in range(n_particle_types):
-        for m in range(n_particle_types):
-            temp = model.psi(rr, p[n], p[m])
+        fig, ax = fig_init(formatx='%.3f', formaty='%.0f')
+        csv_ = []
+        csv_.append(to_numpy(rr))
+        true_func_list = []
+        for n in trange(edges.shape[1]):
+            temp = model.psi(rr, p[type_list[to_numpy(edges[0, n])].astype(int).squeeze()], p[type_list[to_numpy(edges[1, n])].astype(int).squeeze()] )
             true_func_list.append(temp)
-            plt.plot(to_numpy(rr), np.array(temp.cpu()), linewidth=8, alpha=0.5)
+            type = p[type_list[to_numpy(edges[0, n])].astype(int).squeeze()] * p[type_list[to_numpy(edges[1, n])].astype(int).squeeze()]
+            type = table_qiqj[type+2].astype(int).squeeze()
+            plt.plot(to_numpy(rr), np.array(temp.cpu()), linewidth=8, color=cmap.color(type))
             csv_.append(to_numpy(temp.squeeze()))
-    plt.xlim([0, 0.01])
-    plt.ylim([-2E6, 2E6])
-    plt.xlabel(r'$d_{ij}$', fontsize=64)
-    plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij}$', fontsize=64)
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/true_func_{config_file}_{epoch}.tif", dpi=170.7)
-    np.save(f"./{log_dir}/results/true_func_{config_file}_{epoch}.npy", csv_)
-    np.savetxt(f"./{log_dir}/results/true_func_{config_file}_{epoch}.txt", csv_)
-    plt.close()
+        plt.xlim([0, 0.02])
+        plt.ylim([-0.5E6, 0.5E6])
+        plt.xlabel(r'$d_{ij}$', fontsize=64)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=64)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/true_func_{config_file}_{epoch}.tif", dpi=170.7)
+        np.save(f"./{log_dir}/results/true_func_{config_file}_{epoch}.npy", csv_)
+        np.savetxt(f"./{log_dir}/results/true_func_{config_file}_{epoch}.txt", csv_)
+        plt.close()
 
-    func_list = torch.stack(func_list)
-    true_func_list = torch.stack(true_func_list)
-    rmserr_list = torch.sqrt(torch.mean((func_list - true_func_list) ** 2, axis=1))
-    rmserr_list = to_numpy(rmserr_list)
-    print(f'all function RMS error: {np.round(np.mean(rmserr_list), 7)}+/-{np.round(np.std(rmserr_list), 7)}')
+        func_list = torch.stack(func_list)
+        true_func_list = torch.stack(true_func_list)
+        rmserr_list = torch.sqrt(torch.mean((func_list - true_func_list) ** 2, axis=1))
+        rmserr_list = to_numpy(rmserr_list)
+        print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+        logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
 
-    p = [2, 1, -1]
-    popt_list = []
-    ptrue_list = []
-    nn = 0
-    for m in range(n_particle_types):
-        for n in range(n_particle_types):
-            if func_list[nn][10] < 0:
-                popt, pocv = curve_fit(power_model, to_numpy(rr),
-                                       -to_numpy(func_list[nn]), bounds=([0, 1.5], [5., 2.5]))
-            else:
-                popt, pocv = curve_fit(power_model, to_numpy(rr),
-                                       to_numpy(func_list[nn]), bounds=([0, 1.5], [5., 2.5]))
-                popt[0] = -popt[0]
-            nn += 1
-            popt_list.append(popt)
-            ptrue_list.append(-p[n] * p[m])
-    bounds0 = np.mean(popt_list, 0)[1] - 1E-10
-    bounds1 = np.mean(popt_list, 0)[1] + 1E-10
-    popt_list = np.array(popt_list)
-    ptrue_list = -np.array(ptrue_list)
-    M_p0 = np.reshape(popt_list[:, 0], (3, 3))
-    # print(M_p0)
-    # print(f"Exponent: {np.round(np.mean(-popt_list[:, 1]), 5)}+/-{np.round(np.std(popt_list[:, 1]), 5)}")
-    popt_list = []
-    ptrue_list = []
-    nn = 0
-    for m in range(n_particle_types):
-        for n in range(n_particle_types):
-            if func_list[nn][10] < 0:
-                popt, pocv = curve_fit(power_model, to_numpy(rr),
-                                       -to_numpy(func_list[nn]), bounds=([0, bounds0], [5., bounds1]))
-            else:
-                popt, pocv = curve_fit(power_model, to_numpy(rr),
-                                       to_numpy(func_list[nn]), bounds=([0, bounds0], [5., bounds1]))
-                popt[0] = -popt[0]
-            nn += 1
-            popt_list.append(popt)
-            ptrue_list.append(-p[n] * p[m])
-    popt_list = np.array(popt_list)
-    ptrue_list = -np.array(ptrue_list)
-    M_ptrue = np.reshape(ptrue_list, (3, 3))
-    M_p1 = np.reshape(popt_list[:, 0], (3, 3))
-    # print(M_p1)
+        text_trap = StringIO()
+        sys.stdout = text_trap
+        popt_list = []
+        qiqj_list=np.array(qiqj_list)
+        for n in range(0,edges.shape[1],50):
+            model_pysrr, max_index, max_value = symbolic_regression(rr, func_list[n])
+            print(f'{-qiqj_list[n]}/x0**2, {model_pysrr.sympy(max_index)}')
+            logger.info(f'{-qiqj_list[n]}/x0**2, pysrr found {model_pysrr.sympy(max_index)}')
 
-    # row_sum = np.sum(M_p,0)
-    # A,B,C = row_sum[0], row_sum[1], row_sum[2]
-    # M = [[-B, A+C, -B], [-C, -C, A+B], [C+B, -A, -A]]
-    # b = np.array([0, 0, 0])
-    # b = [2 , 1 , -1]
-    # np.matmul(M,b)
-    # x = linalg.solve(M, b)
+            expr = model_pysrr.sympy(max_index).as_terms()[0]
+            popt_list.append(-expr[0][1][0][0])
 
-    ax = fig.add_subplot(3, 3, 7)
-    plt.title(r'Reconstructed charges', fontsize=12)
-    plt.text(-0.25, 1.1, f'g)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-    x_data = ptrue_list
-    y_data = popt_list[:, 0]
-    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-    plt.plot(ptrue_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
-    plt.scatter(ptrue_list, popt_list[:, 0], color='k', s=20)
-    plt.ylabel(r'Predicted $q_i q_j$', fontsize=12)
-    plt.text(-1.8, 4.0, f"Slope: {np.round(lin_fit[0], 2)}", fontsize=10)
-    residuals = y_data - linear_model(x_data, *lin_fit)
-    ss_res = np.sum(residuals ** 2)
-    ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-    r_squared = 1 - (ss_res / ss_tot)
-    plt.text(-1.8, 3.4, f"$R^2$: {np.round(r_squared, 3)}", fontsize=10)
-    plt.xlim([-2, 5])
-    plt.ylim([-2, 5])
-    print(f'R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}')
+        np.save(f"./{log_dir}/results/coeff_pysrr.npy", popt_list)
+        np.save(f"./{log_dir}/results/qiqj.npy", qiqj_list)
 
-    ax = fig.add_subplot(3, 3, 8)
-    plt.title(r'Reconstructed exponent', fontsize=12)
-    plt.text(-0.25, 1.1, f'h)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-    plt.scatter(ptrue_list, -popt_list[:, 1], color='k', s=20)
-    plt.ylim([-4, 0])
-    plt.ylabel(r'Exponent fit ', fontsize=12)
-    plt.text(-2, -0.5, f"Exponent: {np.round(np.mean(-popt_list[:, 1]), 5)}+/-{np.round(np.std(popt_list[:, 1]), 5)}",
-             fontsize=10)
-    print(f"Exponent: {np.round(np.mean(-popt_list[:, 1]), 5)}+/-{np.round(np.std(popt_list[:, 1]), 5)}")
 
-    fig_ = plt.figure(figsize=(12, 12))
-    ax = fig_.add_subplot(1, 1, 1)
-    # ax.xaxis.set_major_locator(plt.MaxNLocator(5))
-    # ax.yaxis.set_major_locator(plt.MaxNLocator(5))
-    csv_ = []
-    csv_.append(ptrue_list)
-    csv_.append(popt_list[:, 0])
-    plt.plot(ptrue_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-    plt.scatter(ptrue_list, popt_list[:, 0], color='k', s=400)
-    plt.xticks(fontsize=32)
-    plt.yticks(fontsize=32)
-    plt.xlabel(r'True $q_i q_j$', fontsize=64)
-    plt.ylabel(r'Reconstructed $q_i q_j$', fontsize=64)
-    plt.xlim([-3, 5])
-    plt.ylim([-3, 5])
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/qiqj_{config_file}.tif", dpi=300)
-    csv_ = np.array(csv_)
-    np.save(f"./{log_dir}/results/qiqj_{config_file}.npy", csv_)
-    np.savetxt(f"./{log_dir}/results/qiqj_{config_file}.txt", csv_)
-    plt.close
 
-    print(f"Exponent: {np.round(np.mean(-popt_list[:, 1]), 5)}+/-{np.round(np.std(popt_list[:, 1]), 5)}")
-    relative_error = np.abs(popt_list[:, 0] - ptrue_list.squeeze()) / np.abs(ptrue_list.squeeze()) * 100
-    print(f'all charge relative error: {np.round(np.mean(relative_error), 3)}+/-{np.round(np.std(relative_error), 3)}')
-
-    fig_ = plt.figure(figsize=(12, 12))
-    ax = fig_.add_subplot(1, 1, 1)
-    # ax.xaxis.set_major_locator(plt.MaxNLocator(5))
-    # ax.yaxis.set_major_locator(plt.MaxNLocator(5))
-    csv_ = []
-    csv_.append(ptrue_list.squeeze())
-    csv_.append(-popt_list[:, 1])
-    csv_ = np.array(csv_)
-    plt.scatter(ptrue_list, -popt_list[:, 1], color='k', s=400)
-    plt.xlim([-3, 5])
-    plt.ylim([-4, 0])
-    plt.xticks(fontsize=32)
-    plt.yticks(fontsize=32)
-    plt.xlabel(r'True $q_i q_j$', fontsize=64)
-    plt.ylabel(r'Reconstructed exponent', fontsize=64)
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/exponent_{config_file}.tif", dpi=300)
-    np.save(f"./{log_dir}/results/exponent_{config_file}.npy", csv_)
-    np.savetxt(f"./{log_dir}/results/exponent_{config_file}.txt", csv_)
-    plt.close()
-
-    # find last image file in logdir
-    ax = fig.add_subplot(3, 3, 9)
-    files = glob.glob(os.path.join(log_dir, 'tmp_recons/Fig*.tif'))
-    files.sort(key=os.path.getmtime)
-    if len(files) > 0:
-        last_file = files[-1]
-
-        image = imageio.imread(last_file)
-        plt.text(-0.25, 1.1, f'l)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
-        plt.title(r'Rollout inference (frame 2000)', fontsize=12)
-        plt.imshow(image)
-        plt.xticks([])
-        plt.yticks([])
-
-    time.sleep(1)
-    plt.tight_layout()
-    plt.savefig('Fig4.jpg', dpi=300)
-    plt.close()
-    print(' ')
 
 
 def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
@@ -2074,8 +1897,10 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
                                                                        cmap, index_particles, type_list,
                                                                        n_particle_types, n_particles, ynorm, epoch,
                                                                        log_dir, device)
-        logger.info(' ')
-        logger.info(f'accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}')
+        print(
+            f'final result     accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+        logger.info(
+            f'final result     accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
         if has_cell_division:
             plot_cell_rates(config, device, log_dir, n_particle_types, x_list, new_labels, cmap)
@@ -4094,11 +3919,13 @@ if __name__ == '__main__':
     # config_list = ['boids_16_256_bison_siren_with_time_2']
     # config_list = ['boids_16_256','boids_32_256','boids_64_256']
     # config_list = ['boids_16_256_division_death_model_2']
-    config_list = ['gravity_100']
+    config_list = ['Coulomb_3_256']
     # config_list = ['wave_slit_test']
     # config_list = ['Coulomb_3_256']
     # config_list = ['arbitrary_64', 'arbitrary_64_0_1', 'arbitrary_64_0_01', 'arbitrary_64_0_005'] #, 'arbitrary_3', 'arbitrary_16', 'arbitrary_32', 'arbitrary_16_noise_0_1', 'arbitrary_16_noise_0_2', 'arbitrary_16_noise_0_3', 'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5']
     # config_list = ['arbitrary_3_continuous']
+    # config_list = ['gravity_100']
+
     epoch_list = [20]
 
     for config_file in config_list:

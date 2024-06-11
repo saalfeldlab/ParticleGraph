@@ -418,7 +418,7 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, index_par
     plt.xticks([])
     plt.yticks([])
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/particle_{dataset_name}_{epoch}_{N}.tif", dpi=87)
+    plt.savefig(f"./{log_dir}/tmp_training/particle/particle_{dataset_name}_{epoch}_{N}.tif", dpi=87)
     plt.close()
 
     match model_config.particle_model_name:
