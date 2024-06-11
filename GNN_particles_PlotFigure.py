@@ -360,6 +360,24 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
 
     print('analyze GNN ...')
 
+    fig, ax = fig_init()
+    embedding = get_embedding(model.a, 1)
+    csv_ = embedding
+    np.save(f"./{log_dir}/results/embedding_{config_file}_{epoch}.npy", csv_)
+    np.savetxt(f"./{log_dir}/results/embedding_{config_file}_{epoch}.txt", csv_)
+    if n_particle_types > 1000:
+        plt.scatter(embedding[:, 0], embedding[:, 1], c=to_numpy(x[:, 5]) / n_particles, s=10,
+                    cmap=cc)
+    else:
+        for n in range(n_particle_types):
+            plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n),
+                        s=400, alpha=0.1)
+    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
+    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/results/first_embedding_{config_file}_{epoch}.tif", dpi=170.7)
+    plt.close()
+
     func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=False, config=config,
                                                         model_lin_edge=model.lin_edge, model_a=model.a,
                                                         dataset_number=1,
@@ -538,7 +556,7 @@ def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoc
     else:
         cm_display.plot(ax=fig.gca(), cmap='Blues', include_values=True, values_format='d', colorbar=False)
     accuracy = metrics.accuracy_score(true_labels, new_labels)
-    plt.title(f'accuracy: {np.round(accuracy, 3)}', fontsize=12)
+    plt.title(f'accuracy: {np.round(accuracy, 2)}', fontsize=12)
     # print(f'accuracy: {np.round(accuracy,3)}')
     plt.xticks(fontsize=10.0)
     plt.yticks(fontsize=10.0)
@@ -618,10 +636,6 @@ def plot_cell_rates(config, device, log_dir, n_particle_types, x_list, new_label
 
 
 def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
-    plt.rcParams['text.usetex'] = True
-    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-    matplotlib.rcParams['savefig.pad_inches'] = 0
-    matplotlib.use("Qt5Agg")
 
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
@@ -662,9 +676,9 @@ def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, dev
                                                                        n_particle_types, n_particles, ynorm, epoch,
                                                                        log_dir, device)
         print(
-            f'final ressult     accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+            f'final ressult     accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
         logger.info(
-            f'final ressult     accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+            f'final ressult     accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
         fig, ax = fig_init()
         p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
@@ -691,8 +705,8 @@ def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, dev
         plt.savefig(f"./{log_dir}/results/func_all_{config_file}_{epoch}.tif", dpi=170.7)
         rmserr_list = torch.stack(rmserr_list)
         rmserr_list = to_numpy(rmserr_list)
-        print("all function RMS error: {:.2e}+/-{:.2e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
-        logger.info("all function RMS error: {:.2e}+/-{:.2e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+        print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+        logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
         plt.close()
 
         fig, ax = fig_init()
@@ -729,10 +743,6 @@ def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, dev
 
 
 def data_plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger, device):
-    plt.rcParams['text.usetex'] = True
-    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-    matplotlib.rcParams['savefig.pad_inches'] = 0
-    matplotlib.use("Qt5Agg")
 
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
@@ -772,9 +782,9 @@ def data_plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger
                                                                        n_particle_types, n_particles, ynorm, epoch,
                                                                        log_dir, device)
         print(
-            f'final ressult     accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+            f'final ressult     accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
         logger.info(
-            f'final ressult     accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+            f'final ressult     accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
         x = x_list[0][100].clone().detach()
         index_particles = get_index_particles(x, n_particle_types, dimension)
@@ -835,15 +845,11 @@ def data_plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger
         true_func_list = torch.stack(true_func_list)
         rmserr_list = torch.sqrt(torch.mean((func_list - true_func_list) ** 2, axis=1))
         rmserr_list = to_numpy(rmserr_list)
-        print("all function RMS error: {:.2e}+/-{:.2e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
-        logger.info("all function RMS error: {:.2e}+/-{:.2e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+        print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+        logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
 
 
 def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, logger, device):
-    plt.rcParams['text.usetex'] = True
-    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-    matplotlib.rcParams['savefig.pad_inches'] = 0
-    matplotlib.use("Qt5Agg")
 
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
@@ -951,56 +957,108 @@ def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, 
 
         rmserr_list = torch.sqrt(torch.mean((func_list - true_func_list) ** 2, axis=1))
         rmserr_list = to_numpy(rmserr_list)
-        print("all function RMS error: {:.2e}+/-{:.2e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
-        logger.info("all function RMS error: {:.2e}+/-{:.2e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+        print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+        logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
 
 
 def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
-    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
 
+    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
-    embedding_cluster = EmbeddingCluster(config)
+
 
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
     dimension = simulation_config.dimension
 
-    # print(config.pretty())
-
-    cmap = CustomColorMap(config=config)
-
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
     n_particle_types = config.simulation.n_particle_types
     n_particles = config.simulation.n_particles
     n_runs = config.training.n_runs
+    cmap = CustomColorMap(config=config)
 
-    time.sleep(0.5)
+    embedding_cluster = EmbeddingCluster(config)
 
-    x_list = []
-    y_list = []
-    print('Load data ...')
-    time.sleep(1)
-    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_1.pt', map_location=device))
-    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_1.pt', map_location=device))
-    vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
-    ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
+    x_list, y_list, vnorm, ynorm = load_training_data(dataset_name, n_runs, log_dir, device)
+    logger.info("vnorm:{:.2e},  ynorm:{:.2e}".format(to_numpy(vnorm), to_numpy(ynorm)))
+    model, bc_pos, bc_dpos = choose_training_model(config, device)
+
     x = x_list[0][0].clone().detach()
-
     index_particles = get_index_particles(x, n_particle_types, dimension)
     type_list = get_type_list(x, dimension)
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
-    net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_20.pt"
-    state_dict = torch.load(net, map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
-    model.eval()
+    for epoch in epoch_list:
 
-    plt.rcParams['text.usetex'] = True
-    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-    # matplotlib.use("Qt5Agg")
+        net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
+        print(f'network: {net}')
+        state_dict = torch.load(net, map_location=device)
+        model.load_state_dict(state_dict['model_state_dict'])
+        model.eval()
+
+        model_a_first = model.a.clone().detach()
+        config.training.cluster_distance_threshold = 0.01
+        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
+                                                                       cmap, index_particles, type_list,
+                                                                       n_particle_types, n_particles, ynorm, epoch,
+                                                                       log_dir, device)
+        print(
+            f'final ressult     accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+        logger.info(
+            f'final ressult     accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+
+        fig, ax = fig_init()
+        p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
+        rr = torch.tensor(np.linspace(1E-4, max_radius, 1000)).to(device)
+        rmserr_list = []
+        for n in range(int(n_particles * (1 - train_config.particle_dropout))):
+            embedding_ = model_a_first[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                     rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                     0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+            with torch.no_grad():
+                func = model.lin_edge(in_features.float())
+            func = func[:, 0]
+            true_func = model.psi(rr, p[to_numpy(type_list[n]).astype(int)].squeeze(),
+                                  p[to_numpy(type_list[n]).astype(int)].squeeze())
+            rmserr_list.append(torch.sqrt(torch.mean((func * ynorm - true_func.squeeze()) ** 2)))
+            plt.plot(to_numpy(rr),
+                     to_numpy(func) * to_numpy(ynorm),
+                     color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
+        plt.xlabel(r'$d_{ij}$', fontsize=64)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+        plt.xlim([0, 0.02])
+        plt.ylim([0, 0.5E6])
+        ax.xaxis.set_major_formatter(FormatStrFormatter('%.3f'))
+        ax.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/func_all_{config_file}_{epoch}.tif", dpi=170.7)
+        rmserr_list = torch.stack(rmserr_list)
+        rmserr_list = to_numpy(rmserr_list)
+        print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+        logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+        plt.close()
+
+        fig, ax = fig_init()
+        plots = []
+        plots.append(rr)
+        for n in range(n_particle_types):
+            plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n), linewidth=8)
+            plots.append(model.psi(rr, p[n], p[n]).squeeze())
+        plt.xlim([0, 0.02])
+        plt.ylim([0, 0.5E6])
+        ax.xaxis.set_major_formatter(FormatStrFormatter('%.3f'))
+        ax.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+        plt.xlabel(r'$d_{ij}$', fontsize=64)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=170.7)
+        plt.close()
+
+
 
     fig = plt.figure(figsize=(10.5, 9.6))
     plt.ion()
@@ -1219,6 +1277,7 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
     np.savetxt(f"./{log_dir}/results/true_func{config_file}.txt", csv_)
     plt.close()
 
+    rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
     plot_list = []
     for n in range(int(n_particles * (1 - train_config.particle_dropout))):
         embedding_ = model_a_first[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
@@ -1238,24 +1297,14 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
 
     p_list = p[to_numpy(type_list).astype(int)]
 
-    ax = fig.add_subplot(3, 3, 7)
-    plt.text(-0.25, 1.1, f'g)', ha='left', va='top', transform=ax.transAxes, fontsize=12)
     x_data = p_list.squeeze()
     y_data = popt_list[:, 0]
     lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-    plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=0.5)
-    plt.scatter(p_list, popt_list[:, 0], color='k', s=20)
-    plt.title(r'Reconstructed masses', fontsize=12)
-    plt.xlabel(r'True mass ', fontsize=12)
-    plt.ylabel(r'Predicted mass ', fontsize=12)
-    plt.xlim([0, 5.5])
-    plt.ylim([0, 5.5])
 
     threshold = 0.4
     relative_error = np.abs(y_data - x_data) / x_data
     pos = np.argwhere(relative_error < threshold)
     pos_outliers = np.argwhere(relative_error > threshold)
-
     x_data_ = x_data[pos[:, 0]]
     y_data_ = y_data[pos[:, 0]]
     lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
@@ -2264,7 +2313,7 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
                                                                        n_particle_types, n_particles, ynorm, epoch,
                                                                        log_dir, device)
         logger.info(' ')
-        logger.info(f'accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}')
+        logger.info(f'accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}')
 
         if has_cell_division:
             plot_cell_rates(config, device, log_dir, n_particle_types, x_list, new_labels, cmap)
@@ -2492,8 +2541,8 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
                                       max=torch.tensor(1.0E-4, device=device))
         rmserr_list = torch.sqrt(torch.mean((func_list_ - true_func_list_) ** 2, 1))
         rmserr_list = to_numpy(rmserr_list)
-        print("all function RMS error: {:.2e}+/-{:.2e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
-        logger.info("all function RMS error: {:.2e}+/-{:.2e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+        print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+        logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
 
 
 def data_plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
@@ -2893,7 +2942,7 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                             color=cmap.color(n), s=0.1)
         type_list = x[:, 5:6].clone().detach()
         accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-        print(f'accuracy: {np.round(accuracy, 3)}   n_clusters: {n_clusters}')
+        print(f'accuracy: {np.round(accuracy, 2)}   n_clusters: {n_clusters}')
         plt.close
 
         p = config.simulation.params
@@ -3784,7 +3833,7 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
             new_labels[labels == label_list[n]] = n
         type_list = x[:, 5:6].clone().detach()
         accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-        print(f'accuracy: {np.round(accuracy, 3)}   n_clusters: {n_clusters}')
+        print(f'accuracy: {np.round(accuracy, 2)}   n_clusters: {n_clusters}')
 
         model_a_ = model.a[1].clone().detach()
         for n in range(n_clusters):
@@ -4193,19 +4242,39 @@ def data_video_training(config_file, epoch_list, log_dir, logger, device):
 
 
 def data_plot(config_file, epoch_list, device):
+    plt.rcParams['text.usetex'] = True
+    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+    matplotlib.rcParams['savefig.pad_inches'] = 0
+    matplotlib.use("Qt5Agg")
+
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
+
 
     logging.basicConfig(filename=f'{log_dir}/results.log', format='%(asctime)s %(message)s', filemode='w')
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
 
+    loss = torch.load(f'{log_dir}/loss.pt')
+    fig, ax = fig_init()
+    plt.plot(loss, color='k', linewidth=4)
+    plt.xlim([0, 20])
+    plt.ylabel('Loss', fontsize=64)
+    plt.xlabel('Epochs', fontsize=64)
+    ax.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
+    ax.yaxis.set_major_formatter(FormatStrFormatter('%.3f'))
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/results/loss_{config_file}.tif", dpi=170.7)
+    plt.close()
+
+    print('final loss {:.3e}'.format(loss[-1]))
+    logger.info('final loss {:.3e}'.format(loss[-1]))
+
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
 
-    print(' ')
     if train_config.sparsity != 'none':
         print(
             f'GNN trained with simulation {model_config.particle_model_name} ({simulation_config.n_particle_types} types), with cluster method: {train_config.cluster_method}   threshold: {train_config.cluster_distance_threshold}')
@@ -4227,10 +4296,12 @@ def data_plot(config_file, epoch_list, device):
             data_plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger, device)
         case 'PDE_B':
             data_plot_boids(config_file, epoch_list, log_dir, logger, device)
-        case 'PDE_E':
-            data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device)
         case 'PDE_ParticleField_B' | 'PDE_ParticleField_A':
             data_plot_particle_field(config_file, 'grey', device)
+        case 'PDE_E':
+            data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device)
+        case 'PDE_G':
+            data_plot_gravity(config_file, epoch_list, log_dir, logger, device)
 
     match config.graph_model.mesh_model_name:
         case 'WaveMesh':
@@ -4241,18 +4312,24 @@ def data_plot(config_file, epoch_list, device):
         handler.close()
         logger.removeHandler(handler)
 
+    print(' ')
+    print(' ')
+
 
 if __name__ == '__main__':
 
     device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    print(' ')
     print(f'device {device}')
-
+    print(' ')
+    
     # config_list = ['boids_16_256_bison_siren_with_time_2']
     # config_list = ['boids_16_256','boids_32_256','boids_64_256']
-    config_list = ['boids_16_256_division_death_model_2']
+    # config_list = ['boids_16_256_division_death_model_2']
+    config_list = ['gravity_16']
     # config_list = ['wave_slit_test']
     # config_list = ['Coulomb_3_256']
-    # config_list = ['arbitrary_64_0_1', 'arbitrary_64_0_01', 'arbitrary_3', 'arbitrary_16', 'arbitrary_32', 'arbitrary_16_noise_0_1', 'arbitrary_16_noise_0_2', 'arbitrary_16_noise_0_3', 'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5']
+    config_list = ['arbitrary_64', 'arbitrary_64_0_1', 'arbitrary_64_0_01', 'arbitrary_64_0_005'] #, 'arbitrary_3', 'arbitrary_16', 'arbitrary_32', 'arbitrary_16_noise_0_1', 'arbitrary_16_noise_0_2', 'arbitrary_16_noise_0_3', 'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5']
     # config_list = ['arbitrary_3_continuous']
     epoch_list = [20]
 

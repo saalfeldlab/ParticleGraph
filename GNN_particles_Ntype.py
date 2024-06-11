@@ -51,6 +51,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_no_tracking_b']
     # config_list = ['arbitrary_64']
 
+
     seed_list = np.arange(10)
 
     for config_file in config_list:
