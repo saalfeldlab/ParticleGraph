@@ -26,7 +26,6 @@ from ParticleGraph.embedding_cluster import *
 from ParticleGraph.utils import to_numpy, CustomColorMap, choose_boundary_values
 import matplotlib as mpl
 from matplotlib.ticker import FuncFormatter
-from pysr import PySRRegressor
 from io import StringIO
 import sys
 
@@ -610,29 +609,43 @@ def plot_cell_rates(config, device, log_dir, n_particle_types, x_list, new_label
 
     n_frames = config.simulation.n_frames
     n_particles_max = config.simulation.n_particles_max
+    cell_cycle_length = np.array(config.simulation.cell_cycle_length)
 
     print('plot cell rates ...')
     N_cells_alive = np.zeros((n_frames, n_particle_types))
     N_cells_dead = np.zeros((n_frames, n_particle_types))
-    division_list=[]
 
-    for it in trange(n_frames):
+    if os.path.exists(f"./{log_dir}/results/x_.npy"):
+        x_ = np.load(f"./{log_dir}/results/x_.npy")
+        N_cells_alive = np.load(f"./{log_dir}/results/cell_alive.npy")
+        N_cells_dead = np.load(f"./{log_dir}/results/cell_dead.npy")
+    else:
+        for it in trange(n_frames):
 
-        x = x_list[0][it].clone().detach()
-        particle_index = to_numpy(x[:, 0:1]).astype(int)
-        x[:, 5:6] = torch.tensor(new_labels[particle_index], device=device)
-        if it == 0:
-            x_=x_list[0][it].clone().detach()
-        else:
-            x_=torch.concatenate((x_,x),axis=0)
+            x = x_list[0][it].clone().detach()
+            particle_index = to_numpy(x[:, 0:1]).astype(int)
+            x[:, 5:6] = torch.tensor(new_labels[particle_index], device=device)
+            if it == 0:
+                x_=x_list[0][it].clone().detach()
+            else:
+                x_=torch.concatenate((x_,x),axis=0)
 
-        for k in range(n_particle_types):
-            pos = torch.argwhere((x[:, 5:6] == k) & (x[:, 6:7] == 1))
-            N_cells_alive[it, k] = pos.shape[0]
-            pos = torch.argwhere((x[:, 5:6] == k) & (x[:, 6:7] == 0))
-            N_cells_dead[it, k] = pos.shape[0]
+            for k in range(n_particle_types):
+                pos = torch.argwhere((x[:, 5:6] == k) & (x[:, 6:7] == 1))
+                N_cells_alive[it, k] = pos.shape[0]
+                pos = torch.argwhere((x[:, 5:6] == k) & (x[:, 6:7] == 0))
+                N_cells_dead[it, k] = pos.shape[0]
 
-    x_list=[]
+        x_list=[]
+        x_ = to_numpy(x_)
+
+    print('save data ...')
+
+    np.save(f"./{log_dir}/results/cell_alive.npy",N_cells_alive)
+    np.save(f"./{log_dir}/results/cell_dead.npy",N_cells_dead)
+    np.save(f"./{log_dir}/results/x_.npy",x_)
+
+    print('plot results ...')
 
     last_frame_growth = np.argwhere(np.diff(N_cells_alive[:, 0], axis=0))
     last_frame_growth = last_frame_growth[-1] - 1
@@ -663,16 +676,47 @@ def plot_cell_rates(config, device, log_dir, n_particle_types, x_list, new_label
     plt.savefig(f"./{log_dir}/results/cell_dead_{config_file}.tif", dpi=300)
     plt.close()
 
-    pos = torch.argwhere(x_[:, 7:8] == 1)
-    pos = to_numpy(pos[:, 0]).astype(int)
-    division_list = torch.concatenate((x_[pos, 5:6], x_[pos, 8:9]), axis=1)
 
-    fig, ax = fig_init()
+    pos = np.argwhere(x_[:, 7:8] > 0)
+    pos = pos[:, 0]
+    division_list = np.concatenate((x_[pos, 5:6], x_[pos, 7:8]), axis=1)
+
+    reconstructed_cell_cycle_length = np.zeros((n_particle_types, 1))
+
+
     for k in range(n_particle_types):
-        pos = torch.argwhere(division_list[:, 0] == k)
-        pos = to_numpy(pos[:, 0]).astype(int)
+        pos = np.argwhere(division_list[:, 0] == k)
+        pos = pos[:, 0]
         if len(pos>0):
-            plt.hist(to_numpy(division_list[pos, 1:2]), bins=30, color=cmap.color(k), edgecolor='black')
+            print(f'Cell type {k} division rate: {np.mean(division_list[pos, 1:2])}+/-{np.std(division_list[pos, 1:2])}')
+            logger.info(f'Cell type {k} division rate: {np.mean(division_list[pos, 1:2])}+/-{np.std(division_list[pos, 1:2])}')
+            reconstructed_cell_cycle_length[k] = np.mean(division_list[pos, 1:2])
+
+    x_data = cell_cycle_length
+    y_data = reconstructed_cell_cycle_length
+    lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+    residuals = y_data - linear_model(x_data, *lin_fit)
+    ss_res = np.sum(residuals ** 2)
+    ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+    r_squared = 1 - (ss_res / ss_tot)
+    print(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
+    logger.info(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
+
+    fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
+    plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+    plt.scatter(cell_cycle_length,reconstructed_cell_cycle_length, color=cmap.color(np.arange(n_particle_types)), s=200)
+    plt.xlabel(r'True cell cycle length', fontsize=32)
+    plt.ylabel(r'Reconstructed cell cycle length', fontsize=32)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/results/cell_cycle_length_{config_file}.tif", dpi=1.7)
+
+
+
+
+
+
+
+
 
 
 def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
@@ -1823,35 +1867,51 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
         print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
         logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
 
-        text_trap = StringIO()
-        sys.stdout = text_trap
-        popt_list = []
-        qiqj_list=np.array(qiqj_list)
-        for n in range(0,edges.shape[1],50):
-            model_pysrr, max_index, max_value = symbolic_regression(rr, func_list[n])
-            print(f'{-qiqj_list[n]}/x0**2, {model_pysrr.sympy(max_index)}')
-            logger.info(f'{-qiqj_list[n]}/x0**2, pysrr found {model_pysrr.sympy(max_index)}')
+        if os.path.exists(f"./{log_dir}/results/coeff_pysrr.npy"):
+            popt_list = np.load(f"./{log_dir}/results/coeff_pysrr.npy")
+            qiqj_list = np.load(f"./{log_dir}/results/qiqj.npy")
 
-            expr = model_pysrr.sympy(max_index).as_terms()[0]
-            popt_list.append(-expr[0][1][0][0])
+        else:
+            print('curve fitiing ...')
+            text_trap = StringIO()
+            sys.stdout = text_trap
+            popt_list = []
+            qiqj_list = np.array(qiqj_list)
+            for n in range(0,edges.shape[1],5):
+                model_pysrr, max_index, max_value = symbolic_regression(rr, func_list[n])
+                print(f'{-qiqj_list[n]}/x0**2, {model_pysrr.sympy(max_index)}')
+                logger.info(f'{-qiqj_list[n]}/x0**2, pysrr found {model_pysrr.sympy(max_index)}')
 
-        np.save(f"./{log_dir}/results/coeff_pysrr.npy", popt_list)
-        np.save(f"./{log_dir}/results/qiqj.npy", qiqj_list)
+                expr = model_pysrr.sympy(max_index).as_terms()[0]
+                popt_list.append(-expr[0][1][0][0])
 
+            np.save(f"./{log_dir}/results/coeff_pysrr.npy", popt_list)
+            np.save(f"./{log_dir}/results/qiqj.npy", qiqj_list)
 
+        x_data = qiqj_list
+        y_data = popt_list
+        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+        residuals = y_data - linear_model(x_data, *lin_fit)
+        ss_res = np.sum(residuals ** 2)
+        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot)
+        print(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
+        logger.info(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
 
+        fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
+        plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+        plt.scatter(cell_cycle_length, reconstructed_cell_cycle_length, color=cmap.color(np.arange(n_particle_types)),
+                    s=200)
+        plt.xlabel(r'True cell cycle length', fontsize=32)
+        plt.ylabel(r'Reconstructed cell cycle length', fontsize=32)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/qiqj_{config_file}.tif", dpi=1.7)
 
 
 def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
-    plt.rcParams['text.usetex'] = True
-    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-    matplotlib.rcParams['savefig.pad_inches'] = 0
-    matplotlib.use("Qt5Agg")
 
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
-
-    cmap = CustomColorMap(config=config)
 
     simulation_config = config.simulation
     train_config = config.training
@@ -1863,6 +1923,7 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
     n_particle_types = config.simulation.n_particle_types
     n_runs = config.training.n_runs
     has_cell_division = config.simulation.has_cell_division
+    cmap = CustomColorMap(config=config)
 
     embedding_cluster = EmbeddingCluster(config)
 
@@ -1881,7 +1942,6 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
     if has_cell_division:
         n_particles_max = np.load(os.path.join(log_dir, 'n_particles_max.npy'))
         config.simulation.n_particles_max = n_particles_max
-
 
     for epoch in epoch_list:
 
@@ -3832,7 +3892,7 @@ def data_plot(config_file, epoch_list, device):
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     matplotlib.rcParams['savefig.pad_inches'] = 0
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
@@ -3842,9 +3902,6 @@ def data_plot(config_file, epoch_list, device):
     logging.basicConfig(filename=f'{log_dir}/results.log', format='%(asctime)s %(message)s', filemode='w')
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
-
-
-
 
     simulation_config = config.simulation
     train_config = config.training
@@ -3863,13 +3920,11 @@ def data_plot(config_file, epoch_list, device):
 
     if os.path.exists(f'{log_dir}/loss.pt'):
         loss = torch.load(f'{log_dir}/loss.pt')
-        fig, ax = fig_init()
+        fig, ax = fig_init(formatx='%.0f', formaty='%.5f')
         plt.plot(loss, color='k', linewidth=4)
         plt.xlim([0, 20])
         plt.ylabel('Loss', fontsize=64)
         plt.xlabel('Epochs', fontsize=64)
-        ax.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
-        ax.yaxis.set_major_formatter(FormatStrFormatter('%.3f'))
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/loss_{config_file}.tif", dpi=170.7)
         plt.close()
@@ -3918,13 +3973,13 @@ if __name__ == '__main__':
     
     # config_list = ['boids_16_256_bison_siren_with_time_2']
     # config_list = ['boids_16_256','boids_32_256','boids_64_256']
-    # config_list = ['boids_16_256_division_death_model_2']
-    config_list = ['Coulomb_3_256']
+    config_list = ['boids_16_256_division_death_model_2']
+    # config_list = ['Coulomb_3_256']
     # config_list = ['wave_slit_test']
     # config_list = ['Coulomb_3_256']
     # config_list = ['arbitrary_64', 'arbitrary_64_0_1', 'arbitrary_64_0_01', 'arbitrary_64_0_005'] #, 'arbitrary_3', 'arbitrary_16', 'arbitrary_32', 'arbitrary_16_noise_0_1', 'arbitrary_16_noise_0_2', 'arbitrary_16_noise_0_3', 'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5']
     # config_list = ['arbitrary_3_continuous']
-    # config_list = ['gravity_100']
+    # config_list = ['arbitrary_64_0_01']
 
     epoch_list = [20]
 

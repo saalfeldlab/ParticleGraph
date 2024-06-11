@@ -3,6 +3,7 @@ from shutil import copyfile
 
 import networkx as nx
 import scipy.io
+from pysr import PySRRegressor
 import torch
 # import networkx as nx
 import torch.nn as nn
