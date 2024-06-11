@@ -26,6 +26,12 @@ from ParticleGraph.embedding_cluster import *
 from ParticleGraph.utils import to_numpy, CustomColorMap, choose_boundary_values
 import matplotlib as mpl
 from matplotlib.ticker import FuncFormatter
+from pysr import PySRRegressor
+from io import StringIO
+import sys
+
+
+
 
 
 # matplotlib.use("Qt5Agg")
@@ -351,6 +357,40 @@ def load_training_data(dataset_name, n_runs, log_dir, device):
     y = []
 
     return x_list, y_list, vnorm, ynorm
+
+
+def symbolic_regression(x,y):
+
+    x = x.to(dtype=torch.float32)
+    y = y.to(dtype=torch.float32)
+    dataset = {}
+    dataset['train_input'] = x[:, None]
+    dataset['test_input'] = x[:, None]
+    dataset['train_label'] = y[:, None]
+    dataset['test_label'] = y[:, None]
+
+    model_pysrr = PySRRegressor(
+        niterations=30,  # < Increase me for better results
+        binary_operators=["*", "+", "-", "/"],
+        unary_operators=["square", "cube", "exp"],
+        random_state=0,
+        temp_equation_file=True
+    )
+
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        model_pysrr.fit(to_numpy(dataset["train_input"]), to_numpy(dataset["train_label"]))
+
+    # print(model_pysrr)
+    # print(model_pysrr.equations_)
+
+    score = model_pysrr.equations_['score'][0:10]
+    max_index = score.argmax()
+    max_value = score[max_index]
+    print(model_pysrr.sympy(max_index))
+
+    return model_pysrr, max_index, max_value
+
 
 
 def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list,
@@ -1057,6 +1097,7 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
         plt.close()
 
         rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
+        # rr = torch.tensor(np.linspace(1E-3, 0.02, 1000)).to(device)
         plot_list = []
         for n in range(int(n_particles * (1 - train_config.particle_dropout))):
             embedding_ = model_a_first[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
@@ -1068,12 +1109,13 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
             pred = pred[:, 0]
             plot_list.append(pred * ynorm)
         p = np.linspace(0.5, 5, n_particle_types)
+        p_list = p[to_numpy(type_list).astype(int)]
+
         popt_list = []
         for n in range(int(n_particles * (1 - train_config.particle_dropout))):
             popt, pcov = curve_fit(power_model, to_numpy(rr), to_numpy(plot_list[n]))
             popt_list.append(popt)
         popt_list = np.array(popt_list)
-        p_list = p[to_numpy(type_list).astype(int)]
 
         x_data = p_list.squeeze()
         y_data = popt_list[:, 0]
@@ -1138,6 +1180,15 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
 
         print(f'exponent: {np.round(np.mean(-popt_list[:, 1]), 2)}+/-{np.round(np.std(-popt_list[:, 1]), 2)}')
         logger.info(f'mass relative error: {np.round(np.mean(-popt_list[:, 1]), 2)}+/-{np.round(np.std(-popt_list[:, 1]), 2)}')
+
+        text_trap = StringIO()
+        sys.stdout = text_trap
+        for n in range(0,int(n_particles * (1 - train_config.particle_dropout)),50):
+            print(n)
+            model_pysrr, max_index, max_value = symbolic_regression(rr, plot_list[n])
+            # print(f'{p_list[n].squeeze()}/x0**2, {model_pysrr.sympy(max_index)}')
+            logger.info(f'{np.round(p_list[n].squeeze(),2)}/x0**2, pysrr found {model_pysrr.sympy(max_index)}')
+        sys.stdout = sys.__stdout__
 
 def data_plot_gravity_continuous(config_file, epoch_list, log_dir, logger, device):
     # config_file = 'gravity_16'

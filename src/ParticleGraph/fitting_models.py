@@ -80,3 +80,5 @@ def reaction_diffusion_model_L(variable_name):
             return lambda x, cc: _aux_reaction_diffusion_L(x, cc, 1)
         case 'w':
             return lambda x, cc: _aux_reaction_diffusion_L(x, cc, 2)
+
+
