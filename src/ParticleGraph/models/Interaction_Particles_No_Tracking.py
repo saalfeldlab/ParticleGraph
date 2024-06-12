@@ -65,7 +65,7 @@ class Interaction_Particles_No_Tracking(pyg.nn.MessagePassing):
                                 hidden_size=self.hidden_dim, device=self.device)
 
         self.a = nn.Parameter(
-            torch.tensor(np.ones((self.n_dataset, int(self.n_frames), int(self.n_particles), self.embedding_dim)), device=self.device,
+            torch.tensor(np.ones((int(self.n_frames)*int(self.n_particles), self.embedding_dim)), device=self.device,
                          requires_grad=True, dtype=torch.float32))
 
 
@@ -73,9 +73,8 @@ class Interaction_Particles_No_Tracking(pyg.nn.MessagePassing):
             self.lin_update = MLP(input_size=self.output_size + self.embedding_dim + 2, output_size=self.output_size,
                                   nlayers=self.n_layers_update, hidden_size=self.hidden_dim_update, device=self.device)
 
-    def forward(self, data=[], data_id=[], training=[], vnorm=[], phi=[], frame=[], has_field=False):
+    def forward(self, data=[], training=[], vnorm=[], phi=[], frame=[], has_field=False):
 
-        self.data_id = data_id
         self.frame = frame
         self.vnorm = vnorm
         self.cos_phi = torch.cos(phi)
@@ -102,7 +101,7 @@ class Interaction_Particles_No_Tracking(pyg.nn.MessagePassing):
         log_var = log_var.repeat(1,2)
         sigma = torch.exp(0.5 * log_var) + 1e-10
         eps = torch.randn_like(sigma)
-        return mu + sigma * eps, log_var, sigma
+        return mu + 0 * sigma * eps, 0* log_var, 0 * sigma
 
         return pred
 
@@ -132,8 +131,8 @@ class Interaction_Particles_No_Tracking(pyg.nn.MessagePassing):
             dpos_x_j = new_dpos_x_j
             dpos_y_j = new_dpos_y_j
 
-        embedding_i = self.a[self.data_id, self.frame, to_numpy(particle_id_i), :].squeeze()
-        embedding_j = self.a[self.data_id, self.frame, to_numpy(particle_id_j), :].squeeze()
+        embedding_i = self.a[to_numpy(particle_id_i), :].squeeze()
+        embedding_j = self.a[to_numpy(particle_id_j), :].squeeze()
 
         match self.model:
             case 'PDE_A'|'PDE_ParticleField_A':

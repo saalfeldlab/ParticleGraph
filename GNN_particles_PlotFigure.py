@@ -13,10 +13,6 @@ import time
 from ParticleGraph.utils import *
 from ParticleGraph.fitting_models import *
 from ParticleGraph.kan import *
-import torch
-import torch.nn as nn
-# from pysr import PySRRegressor
-# import cv2
 
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
@@ -1881,6 +1877,9 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         type_list = []
         diffx_list = []
         diffv_list = []
+        cohesion_list=[]
+        alignment_list=[]
+        separation_list=[]
         r_list = []
         for it in range(0,n_frames//2,n_frames//40):
             print(it)
@@ -1909,8 +1908,7 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
             for n in range(n_particle_types):
                 with torch.no_grad():
                     psi_output.append(model.psi(rr, torch.squeeze(p[n])))
-                    y_B, sum, cohesion, alignment, separation, diffx, diffv, r, type = model_B(
-                        dataset)  # acceleration estimation
+                    y_B, sum, cohesion, alignment, separation, diffx, diffv, r, type = model_B(dataset)  # acceleration estimation
 
             if it==0:
                 lin_edge_out_list=lin_edge_out
@@ -1918,12 +1916,19 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
                 diffv_list=diffv
                 r_list=r
                 type_list=type
+                cohesion_list = cohesion
+                alignment_list = alignment
+                separation_list = separation
             else:
                 lin_edge_out_list=torch.cat((lin_edge_out_list,lin_edge_out),dim=0)
                 diffx_list=torch.cat((diffx_list,diffx),dim=0)
                 diffv_list=torch.cat((diffv_list,diffv),dim=0)
                 r_list=torch.cat((r_list,r),dim=0)
                 type_list=torch.cat((type_list,type),dim=0)
+                cohesion_list=torch.cat((cohesion_list,cohesion),dim=0)
+                alignment_list=torch.cat((alignment_list,alignment),dim=0)
+                separation_list=torch.cat((separation_list,separation),dim=0)
+
         type_list = to_numpy(type_list)
 
         print(f'fitting with known functions {len(type_list)} points ...')
@@ -1933,22 +1938,23 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         indexes = np.unique(type_list)
         indexes = indexes.astype(int)
 
-        for n in indexes:
-            pos = np.argwhere(type_list == n)
-            pos = pos[:, 0].astype(int)
-            xdiff = diffx_list[pos, 0:1]
-            vdiff = diffv_list[pos, 0:1]
-            rdiff = r_list[pos]
-            x_data = torch.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
-            y_data = lin_edge_out_list[pos, 0:1]
-            xdiff = diffx_list[pos, 1:2]
-            vdiff = diffv_list[pos, 1:2]
-            rdiff = r_list[pos]
-            tmp = torch.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
-            x_data = torch.cat((x_data, tmp), dim=0)
-            tmp = lin_edge_out_list[pos, 1:2]
-            y_data = torch.cat((y_data, tmp), dim=0)
-            model_pysrr, max_index, max_value = symbolic_regression_multi(x_data, y_data)
+        if False:
+            for n in indexes:
+                pos = np.argwhere(type_list == n)
+                pos = pos[:, 0].astype(int)
+                xdiff = diffx_list[pos, 0:1]
+                vdiff = diffv_list[pos, 0:1]
+                rdiff = r_list[pos]
+                x_data = torch.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
+                y_data = lin_edge_out_list[pos, 0:1]
+                xdiff = diffx_list[pos, 1:2]
+                vdiff = diffv_list[pos, 1:2]
+                rdiff = r_list[pos]
+                tmp = torch.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
+                x_data = torch.cat((x_data, tmp), dim=0)
+                tmp = lin_edge_out_list[pos, 1:2]
+                y_data = torch.cat((y_data, tmp), dim=0)
+                model_pysrr, max_index, max_value = symbolic_regression_multi(x_data, y_data)
 
         for loop in range(2):
             for n in indexes:

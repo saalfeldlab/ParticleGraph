@@ -1,32 +1,17 @@
-import matplotlib
-import matplotlib.pyplot as plt
-# matplotlib.use("Qt5Agg")
-import numpy as np
-import torch
+
 import umap
-import vispy.scene
-import vispy.plot as vp
-import vispy.io as io
 from matplotlib.ticker import FormatStrFormatter
-from scipy.optimize import curve_fit
-from vispy.scene import visuals
-from ParticleGraph.fitting_models import linear_model
 from ParticleGraph.models import Interaction_Particles, Interaction_Particle_Field, Signal_Propagation, Mesh_Laplacian, \
     Mesh_RPS, Mesh_RPS_bis, Interaction_Particles_No_Tracking
-from ParticleGraph.utils import choose_boundary_values
-from ParticleGraph.utils import to_numpy
-from matplotlib import rc
-import matplotlib as mpl
-import networkx as nx
-from torch_geometric.utils.convert import to_networkx
 
 from GNN_particles_Ntype import *
-from ParticleGraph.models.utils import *
 import matplotlib as mpl
 import networkx as nx
 from torch_geometric.utils.convert import to_networkx
-# matplotlib.use("Qt5Agg")
 import warnings
+
+def linear_model(x, a, b):
+    return a * x + b
 
 def get_embedding(model_a=None, dataset_number = 0):
     embedding = []

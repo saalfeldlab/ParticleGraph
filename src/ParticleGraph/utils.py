@@ -79,10 +79,12 @@ def norm_velocity(xx, dimension, device):
         nvz = np.array(xx[:, 6].detach().cpu())
         vz01, vz99 = symmetric_cutoff(nvz)
 
-    return torch.tensor([vx01, vx99, vy01, vy99, vx, vy], device=device)
+    # return torch.tensor([vx01, vx99, vy01, vy99, vx, vy], device=device)
 
+    return torch.tensor([vx], device=device)
 
 def norm_acceleration(yy, device):
+
     ax = torch.std(yy[:, 0])
     ay = torch.std(yy[:, 1])
     nax = np.array(yy[:, 0].detach().cpu())
@@ -90,7 +92,9 @@ def norm_acceleration(yy, device):
     nay = np.array(yy[:, 1].detach().cpu())
     ay01, ay99 = symmetric_cutoff(nay)
 
-    return torch.tensor([ax01, ax99, ay01, ay99, ax, ay], device=device)
+    # return torch.tensor([ax01, ax99, ay01, ay99, ax, ay], device=device)
+
+    return torch.tensor([ax], device=device)
 
 
 def choose_boundary_values(bc_name):

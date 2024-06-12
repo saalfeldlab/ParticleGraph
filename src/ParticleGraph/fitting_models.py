@@ -155,6 +155,13 @@ def symbolic_regression_multi(x,y):
 
     x = x.to(dtype=torch.float32)
     y = y.to(dtype=torch.float32)
+
+    y = 1*x[:,0] + 2*x[:,1] + 3*x[:,0]/(x[:,2]+1E-10)
+
+    x[:, 0] = x[:, 0] / torch.std(x[:, 0])
+    x[:, 1] = x[:, 1] / torch.std(x[:, 1])
+    x[:, 2] = x[:, 2] / torch.std(x[:, 2])
+
     dataset = {}
     dataset['train_input'] = x
     dataset['test_input'] = x
@@ -166,19 +173,23 @@ def symbolic_regression_multi(x,y):
         binary_operators=["*", "+", "-"],
         unary_operators=["inv(x) = 1/x"],
         extra_sympy_mappings={"inv": lambda x: 1 / x},
+        constraints = {"mult": 1, "add": 1, "subb": 1, "inv": 1},
         nested_constraints={
-            "*": {"inv":1, "*": 0, "+": 1, "-": 1},
-            "-": {"inv": 1, "*": 1, "+": 0, "-": 0},
-            "+": {"inv": 1, "*": 1, "+": 0, "-": 0},
+            "*": {"inv": 1, "*": 0, "+": 1, "-": 1},
+            "+": {"inv": 1, "*": 1, "+": 0, "-": 1},
+            "-": {"inv": 1, "*": 1, "+": 1, "-": 0},
             "inv": {"inv":0, "*": 0, "+": 0, "-": 0}},
         select_k_features = 3,
         random_state=0,
         maxsize=100,
-        weight_randomize=0.8,
-        temp_equation_file=True,
+        weight_randomize=1,
+        temp_equation_file=False,
         batching=True,
         model_selection='accuracy',
-        batch_size=32)
+        batch_size=8,
+        ncycles_per_iteration=5000,
+        progress=True,
+        verbosity=0)
 
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
@@ -192,8 +203,8 @@ def symbolic_regression_multi(x,y):
     ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
     ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
     plt.scatter(to_numpy(y), y_, s=0.1, c='k',alpha=0.1)
-    plt.xlim([-1E-4, 1E-4])
-    plt.ylim([-1E-4, 1E-4])
+    # plt.xlim([-1E-4, 1E-4])
+    # plt.ylim([-1E-4, 1E-4])
     plt.tight_layout()
 
     score = model_pysrr.equations_['score'][0:10]
