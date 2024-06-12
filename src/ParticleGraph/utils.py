@@ -13,6 +13,7 @@ from torchvision.transforms import CenterCrop
 import numpy as np
 import matplotlib.pyplot as plt
 from skimage.metrics import structural_similarity as ssim
+from matplotlib.ticker import FormatStrFormatter
 
 def to_numpy(tensor: torch.Tensor) -> np.ndarray:
     """
@@ -282,3 +283,18 @@ def bundle_fields(data: Data, *names: str) -> torch.Tensor:
             tensor = tensor.unsqueeze(-1)
         tensors.append(tensor)
     return torch.concatenate(tensors, dim=-1)
+
+
+def fig_init(formatx='%.2f', formaty='%.2f'):
+    fig = plt.figure(figsize=(12, 12))
+    ax = fig.add_subplot(1, 1, 1)
+    ax.tick_params(axis='both', which='major', pad=15)
+    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+    ax.xaxis.set_major_formatter(FormatStrFormatter(formatx))
+    ax.yaxis.set_major_formatter(FormatStrFormatter(formaty))
+    plt.xticks(fontsize=32.0)
+    plt.yticks(fontsize=32.0)
+
+    return fig, ax
+

@@ -324,20 +324,6 @@ class Mesh_RPS_extract(MessagePassing):
         plt.close()
 
 
-def fig_init(formatx='%.2f', formaty='%.2f'):
-    fig = plt.figure(figsize=(12, 12))
-    ax = fig.add_subplot(1, 1, 1)
-    ax.tick_params(axis='both', which='major', pad=15)
-    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-    ax.xaxis.set_major_formatter(FormatStrFormatter(formatx))
-    ax.yaxis.set_major_formatter(FormatStrFormatter(formaty))
-    plt.xticks(fontsize=32.0)
-    plt.yticks(fontsize=32.0)
-
-    return fig, ax
-
-
 def load_training_data(dataset_name, n_runs, log_dir, device):
     x_list = []
     y_list = []
@@ -1891,73 +1877,88 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         if has_cell_division:
             plot_cell_rates(config, device, log_dir, n_particle_types, x_list, new_labels, cmap, logger)
 
-        it = 2000
-
-        # compute model output for a given frame
-        x = x_list[0][it].clone().detach()
-        particle_index = to_numpy(x[:, 0:1]).astype(int)
-        x[:, 5:6] = torch.tensor(new_labels[particle_index], device=device)  # set label found by clustering and mapperd to ground truth
-        pos = torch.argwhere(x[:, 5:6] < n_particle_types).squeeze()
-        pos = to_numpy(pos[:, 0]).astype(int) # filter out cluster not associated with ground truth
-        x = x[pos, :]
-        distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)  # threshold
-        adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
-        edge_index = adj_t.nonzero().t().contiguous()
-        dataset = data.Data(x=x, edge_index=edge_index)
-        with torch.no_grad():
-            y, in_features, lin_edge_out = model(dataset, data_id=1, training=False, vnorm=vnorm,
-                                                 phi=torch.zeros(1, device=device))  # acceleration estimation
-        y = y * ynorm
-        lin_edge_out = lin_edge_out * ynorm
-
-        # compute ground truth output
-        p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
-        model_B = PDE_B_extract(aggr_type=config.graph_model.aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
-        rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
-        psi_output = []
-        for n in range(n_particle_types):
+        lin_edge_out_list = []
+        type_list = []
+        diffx_list = []
+        diffv_list = []
+        r_list = []
+        for it in range(0,n_frames//2,n_frames//40):
+            print(it)
+            x = x_list[0][it].clone().detach()
+            particle_index = to_numpy(x[:, 0:1]).astype(int)
+            x[:, 5:6] = torch.tensor(new_labels[particle_index],
+                                     device=device)  # set label found by clustering and mapperd to ground truth
+            pos = torch.argwhere(x[:, 5:6] < n_particle_types).squeeze()
+            pos = to_numpy(pos[:, 0]).astype(int)  # filter out cluster not associated with ground truth
+            x = x[pos, :]
+            distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)  # threshold
+            adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
+            edge_index = adj_t.nonzero().t().contiguous()
+            dataset = data.Data(x=x, edge_index=edge_index)
             with torch.no_grad():
-                psi_output.append(model.psi(rr, torch.squeeze(p[n])))
-                y_B, sum, cohesion, alignment, separation, diffx, diffv, r, type = model_B(
-                    dataset)  # acceleration estimation
-        type = to_numpy(type)
+                y, in_features, lin_edge_out = model(dataset, data_id=1, training=False, vnorm=vnorm,
+                                                     phi=torch.zeros(1, device=device))  # acceleration estimation
+            y = y * ynorm
+            lin_edge_out = lin_edge_out * ynorm
 
+            # compute ground truth output
+            p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
+            model_B = PDE_B_extract(aggr_type=config.graph_model.aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
+            rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+            psi_output = []
+            for n in range(n_particle_types):
+                with torch.no_grad():
+                    psi_output.append(model.psi(rr, torch.squeeze(p[n])))
+                    y_B, sum, cohesion, alignment, separation, diffx, diffv, r, type = model_B(
+                        dataset)  # acceleration estimation
 
-        print('fitting with known functions ...')
+            if it==0:
+                lin_edge_out_list=lin_edge_out
+                diffx_list=diffx
+                diffv_list=diffv
+                r_list=r
+                type_list=type
+            else:
+                lin_edge_out_list=torch.cat((lin_edge_out_list,lin_edge_out),dim=0)
+                diffx_list=torch.cat((diffx_list,diffx),dim=0)
+                diffv_list=torch.cat((diffv_list,diffv),dim=0)
+                r_list=torch.cat((r_list,r),dim=0)
+                type_list=torch.cat((type_list,type),dim=0)
+        type_list = to_numpy(type_list)
+
+        print(f'fitting with known functions {len(type_list)} points ...')
         cohesion_fit = np.zeros(n_particle_types)
         alignment_fit = np.zeros(n_particle_types)
         separation_fit = np.zeros(n_particle_types)
-        indexes = np.unique(type)
+        indexes = np.unique(type_list)
         indexes = indexes.astype(int)
 
         for n in indexes:
-            pos = np.argwhere(type == n)
+            pos = np.argwhere(type_list == n)
             pos = pos[:, 0].astype(int)
-            xdiff = diffx[pos, 0:1]
-            vdiff = diffv[pos, 0:1]
-            rdiff = r[pos]
+            xdiff = diffx_list[pos, 0:1]
+            vdiff = diffv_list[pos, 0:1]
+            rdiff = r_list[pos]
             x_data = torch.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
-            y_data = lin_edge_out[pos, 0:1]
-
+            y_data = lin_edge_out_list[pos, 0:1]
+            xdiff = diffx_list[pos, 1:2]
+            vdiff = diffv_list[pos, 1:2]
+            rdiff = r_list[pos]
+            tmp = torch.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
+            x_data = torch.cat((x_data, tmp), dim=0)
+            tmp = lin_edge_out_list[pos, 1:2]
+            y_data = torch.cat((y_data, tmp), dim=0)
             model_pysrr, max_index, max_value = symbolic_regression_multi(x_data, y_data)
-
-            cohesion_fit[int(n)] = lin_fit[0]
-            alignment_fit[int(n)] = lin_fit[1]
-            separation_fit[int(n)] = lin_fit[2]
-
-
-
-
 
         for loop in range(2):
             for n in indexes:
-                pos = np.argwhere(type == n)
+                pos = np.argwhere(type_list == n)
                 pos = pos[:, 0].astype(int)
-                xdiff = to_numpy(diffx[pos, :])
-                vdiff = to_numpy(diffv[pos, :])
-                rdiff = to_numpy(r[pos])
+                xdiff = to_numpy(diffx_list[pos, :])
+                vdiff = to_numpy(diffv_list[pos, :])
+                rdiff = to_numpy(r_list[pos])
                 x_data = np.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
-                y_data = to_numpy(torch.norm(lin_edge_out[pos, :], dim=1))
+                y_data = to_numpy(torch.norm(lin_edge_out_list[pos, :], dim=1))
                 if loop == 0:
                     lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox')
                 else:
@@ -3847,7 +3848,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_64', 'arbitrary_64_0_1', 'arbitrary_64_0_01', 'arbitrary_64_0_005'] #, 'arbitrary_3', 'arbitrary_16', 'arbitrary_32', 'arbitrary_16_noise_0_1', 'arbitrary_16_noise_0_2', 'arbitrary_16_noise_0_3', 'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5']
     # config_list = ['arbitrary_3_continuous']
     # config_list = ['arbitrary_64_0_01']
-    config_list = ['boids_16_256']
+    config_list = ['boids_16_256','boids_32_256','boids_64_256']
 
     epoch_list = [20]
 
