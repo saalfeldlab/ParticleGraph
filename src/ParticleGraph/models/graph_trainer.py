@@ -5,7 +5,7 @@ import random
 
 def data_train(config, config_file, device):
 
-    # matplotlib.use("Qt5Agg")
+    matplotlib.use("Qt5Agg")
 
     seed = config.training.seed
 
@@ -28,7 +28,7 @@ def data_train(config, config_file, device):
     elif has_cell_division:
         data_train_cell(config, config_file, device)
     elif has_no_tracking:
-        data_train_no_tracking(config, config_file, device)
+        data_train_tracking(config, config_file, device)
     else:
         data_train_particles(config, config_file, device)
 
@@ -417,7 +417,7 @@ def data_train_particles(config, config_file, device):
         plt.close()
 
 
-def data_train_no_tracking(config, config_file, device):
+def data_train_tracking(config, config_file, device):
     print('')
 
     simulation_config = config.simulation
@@ -579,43 +579,72 @@ def data_train_no_tracking(config, config_file, device):
         plt.savefig(f"./{log_dir}/tmp_training/embedding/before_particle_{dataset_name}_{epoch}_{N}.tif",dpi=87)
         plt.close()
 
-        for k in range(n_frames-1):
-            x = x_list[k].clone().detach()
-            distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
-            adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-            edges = adj_t.nonzero().t().contiguous()
-            dataset = data.Data(x=x[:, :], edge_index=edges)
-            y = x_list[k + 1].clone().detach()
-            y = y[:, 1:3]
-            with torch.no_grad():
-                pred, logvar, sigma = model(dataset, training=False, vnorm=vnorm, phi=torch.zeros(1, device=device))
-            x_pred = bc_pos(x[:, 1:3] + pred * delta_t)
-            distance = torch.sum(bc_dpos(x[:, None, 1:3] - y[None, :, :]) ** 2, dim=2)
-
-            result = distance.min(dim=0)
-            min_value = result.values
-            min_index = result.indices
-
-            if epoch%2 == 0:
-                x_list[k+1][min_index, 0:1] = x_list[k][:, 0:1].clone().detach()
-            else:
-                x_list[k]=index_l[k].clone().detach()
-
-            with torch.no_grad():
-                model.a[(k+1)*n_particles:(k+2)*n_particles,:] = model.a[k*n_particles + min_index,:].clone().detach()
-
         if epoch%2 == 0:
+
             print('from cell to track training')
             logger.info('from cell to track training')
+
+            for k in trange(n_frames-1):
+                x = x_list[k].clone().detach()
+                distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
+                adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+                edges = adj_t.nonzero().t().contiguous()
+                dataset = data.Data(x=x[:, :], edge_index=edges)
+                y = x_list[k + 1].clone().detach()
+                y = y[:, 1:3]
+                with torch.no_grad():
+                    pred, logvar, sigma = model(dataset, training=False, vnorm=vnorm, phi=torch.zeros(1, device=device))
+                x_pred = bc_pos(x[:, 1:3] + pred * delta_t)
+                distance = torch.sum(bc_dpos(x[:, None, 1:3] - y[None, :, :]) ** 2, dim=2)
+
+                result = distance.min(dim=0)
+                min_value = result.values
+                min_index = result.indices
+
+                x_list[k+1][min_index, 0:1] = x_list[k][:, 0:1].clone().detach()
+
             x_ = torch.stack(x_list)
             x_ = torch.reshape(x_, (x_.shape[0] * x_.shape[1], x_.shape[2]))
+            x_ = x_[0:n_frames*n_particles]
             x_ = to_numpy(x_[:,0])
+            indexes = np.unique(x_)
+
+            for k in indexes:
+                pos = np.argwhere(x_ == k)
+                if len(pos>0):
+                    pos=pos[:,0]
+                    model_a = torch.median(model.a[pos,:])
+                    model_a = model_a.clone().detach()
+                    model_a = model_a.repeat(len(pos),1)
+                    with torch.no_grad():
+                        model.a[pos,:] = model_a
+
             print(f'{len(np.unique(x_))} tracks,  first track index: {np.min(x_)},  last track index: {np.max(x_)}')
             logger.info(f'{len(np.unique(x_))} tracks,  first track index: {np.min(x_)},  last track index: {np.max(x_)}')
             x_ = []
+
         else:
+
             print('from track to cell training')
             logger.info('from track to cell training')
+
+            x_ = torch.stack(x_list)
+            x_ = torch.reshape(x_, (x_.shape[0] * x_.shape[1], x_.shape[2]))
+            x_ = x_[0:n_frames * n_particles]
+            x_ = to_numpy(x_[:, 0])
+
+            for k in indexes:
+                pos = np.argwhere(x_ == k)
+                if len(pos > 0):
+                    pos = pos[:, 0]
+                    model_a = model.a[pos[0], :]
+                    model_a = model_a.clone().detach()
+                    model_a = model_a.repeat(len(pos), 1)
+                    with torch.no_grad():
+                        model.a[pos, :] = model_a
+
+            for k in range(n_frames):
+                x_list[k][:, 0] = index_l[k].clone().detach()
 
         fig = plt.figure(figsize=(8, 8))
         for k in range(0,n_frames-2,n_frames//10):
@@ -625,10 +654,8 @@ def data_train_no_tracking(config, config_file, device):
         plt.xticks([])
         plt.yticks([])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/particle/embedding{dataset_name}_{epoch}_{N}.tif",dpi=87)
+        plt.savefig(f"./{log_dir}/tmp_training/embedding/after_particle_{dataset_name}_{epoch}_{N}.tif", dpi=87)
         plt.close()
-
-
 
 
 def data_train_cell(config, config_file, device):
