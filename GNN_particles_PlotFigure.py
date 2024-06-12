@@ -1872,24 +1872,6 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
                 qiqj.append(qiqj_list[n])
             qiqj_list = np.array(qiqj)
 
-            threshold = 0.25
-
-            fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
-            x_data = qiqj_list.squeeze()
-            y_data = popt_list.squeeze()
-
-            lin_fit, r_squared, relative_error, outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
-
-            plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-            plt.scatter(qiqj_list, popt_list, color='k', s=200, alpha=0.1)
-            plt.xlim([-5, 5])
-            plt.ylim([-5, 5])
-            plt.xlabel(r'Reconstructed $q_i q_j$', fontsize=32)
-            plt.ylabel(r'True $q_i q_j$', fontsize=32)
-            plt.tight_layout()
-            logger.info(
-                f'cohesion slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
-
         else:
             print('curve fitting ...')
             text_trap = StringIO()
@@ -1907,24 +1889,25 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
             np.save(f"./{log_dir}/results/coeff_pysrr.npy", popt_list)
             np.save(f"./{log_dir}/results/qiqj.npy", qiqj_list)
 
-        x_data = qiqj_list
-        y_data = popt_list
-        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-        residuals = y_data - linear_model(x_data, *lin_fit)
-        ss_res = np.sum(residuals ** 2)
-        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-        r_squared = 1 - (ss_res / ss_tot)
-        print(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
-        logger.info(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
+        threshold = 0.25
 
         fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
+        x_data = qiqj_list.squeeze()
+        y_data = popt_list.squeeze()
+
+        lin_fit, r_squared, relative_error, outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
+
         plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-        plt.scatter(cell_cycle_length, reconstructed_cell_cycle_length, color=cmap.color(np.arange(n_particle_types)),
-                    s=200)
-        plt.xlabel(r'True cell cycle length', fontsize=32)
-        plt.ylabel(r'Reconstructed cell cycle length', fontsize=32)
+        plt.scatter(qiqj_list, popt_list, color='k', s=200, alpha=0.1)
+        plt.xlim([-5, 5])
+        plt.ylim([-5, 5])
+        plt.xlabel(r'Reconstructed $q_i q_j$', fontsize=32)
+        plt.ylabel(r'True $q_i q_j$', fontsize=32)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/qiqj_{config_file}.tif", dpi=1.7)
+        plt.savefig(f"./{log_dir}/results/qiqj_{config_file}_{epoch}.tif", dpi=1.7)
+        plt.close()
+        logger.info(
+            f'cohesion slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
 
 
 def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
