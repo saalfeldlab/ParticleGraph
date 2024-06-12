@@ -5,7 +5,7 @@ import random
 
 def data_train(config, config_file, device):
 
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
 
     seed = config.training.seed
 
@@ -613,7 +613,7 @@ def data_train_tracking(config, config_file, device):
                 pos = np.argwhere(x_ == k)
                 if len(pos>0):
                     pos=pos[:,0]
-                    model_a = torch.median(model.a[pos,:])
+                    model_a = torch.median(model.a[pos,:],dim=0).values
                     model_a = model_a.clone().detach()
                     model_a = model_a.repeat(len(pos),1)
                     with torch.no_grad():
@@ -621,17 +621,11 @@ def data_train_tracking(config, config_file, device):
 
             print(f'{len(np.unique(x_))} tracks,  first track index: {np.min(x_)},  last track index: {np.max(x_)}')
             logger.info(f'{len(np.unique(x_))} tracks,  first track index: {np.min(x_)},  last track index: {np.max(x_)}')
-            x_ = []
 
         else:
 
             print('from track to cell training')
             logger.info('from track to cell training')
-
-            x_ = torch.stack(x_list)
-            x_ = torch.reshape(x_, (x_.shape[0] * x_.shape[1], x_.shape[2]))
-            x_ = x_[0:n_frames * n_particles]
-            x_ = to_numpy(x_[:, 0])
 
             for k in indexes:
                 pos = np.argwhere(x_ == k)

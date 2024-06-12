@@ -31,7 +31,7 @@ plotting:
   arrow_length: 2
 
 training:
-  n_epochs: 20
+  n_epochs: 10
   has_no_tracking: True
   batch_size: 1
   small_init_batch_size: True
@@ -46,7 +46,7 @@ training:
   learning_rate_embedding_start: 1.0E-4
   learning_rate_embedding_end: 1.0E-4
   device: 'auto'
-  coeff_loss1: 1
+  coeff_loss1: 100
   coeff_loss2: 1
 
 
