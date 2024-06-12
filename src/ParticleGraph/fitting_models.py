@@ -168,6 +168,8 @@ def symbolic_regression_multi(x,y):
         extra_sympy_mappings={"inv": lambda x: 1 / x},
         nested_constraints={
             "*": {"inv":1, "*": 0, "+": 1, "-": 1},
+            "-": {"inv": 1, "*": 1, "+": 0, "-": 0},
+            "+": {"inv": 1, "*": 1, "+": 0, "-": 0},
             "inv": {"inv":0, "*": 0, "+": 0, "-": 0}},
         select_k_features = 3,
         random_state=0,
