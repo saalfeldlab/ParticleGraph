@@ -1877,14 +1877,18 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
             fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
             x_data = qiqj_list.squeeze()
             y_data = popt_list.squeeze()
-            lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+
+            lin_fit, r_squared, relative_error, outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
+
             plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
             plt.scatter(qiqj_list, popt_list, color='k', s=200, alpha=0.1)
             plt.xlim([-5, 5])
             plt.ylim([-5, 5])
-            plt.xlabel(r'True charge', fontsize=32)
-            plt.ylabel(r'Reconstructed charge', fontsize=32)
+            plt.xlabel(r'Reconstructed $q_i q_j$', fontsize=32)
+            plt.ylabel(r'True $q_i q_j$', fontsize=32)
             plt.tight_layout()
+            logger.info(
+                f'cohesion slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
 
         else:
             print('curve fitting ...')
@@ -2049,7 +2053,7 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         y_data = np.abs(cohesion_fit)
         x_data = x_data[indexes]
         y_data = y_data[indexes]
-        lin_fit, r_squared, relative_error, n_outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
+        lin_fit, r_squared, relative_error, outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
 
         fig, ax = fig_init()
         fmt = lambda x, pos: '{:.1f}e-4'.format((x) * 1e4, pos)
@@ -2069,7 +2073,7 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         y_data = alignment_fit
         x_data = x_data[indexes]
         y_data = y_data[indexes]
-        lin_fit, r_squared, relative_error, n_outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
+        lin_fit, r_squared, relative_error, outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
 
         fig, ax = fig_init()
         fmt = lambda x, pos: '{:.1f}e-2'.format((x) * 1e2, pos)
@@ -2089,7 +2093,7 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         y_data = separation_fit
         x_data = x_data[indexes]
         y_data = y_data[indexes]
-        lin_fit, r_squared, relative_error, n_outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
+        lin_fit, r_squared, relative_error, outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
 
         fig, ax = fig_init()
         fmt = lambda x, pos: '{:.1f}e-7'.format((x) * 1e7, pos)
@@ -3950,13 +3954,13 @@ if __name__ == '__main__':
     # config_list = ['boids_16_256_bison_siren_with_time_2']
     # config_list = ['boids_16_256','boids_32_256','boids_64_256']
     # config_list = ['boids_16_256_division_death_model_2']
-    # config_list = ['Coulomb_3_256']
+    config_list = ['Coulomb_3_256']
     # config_list = ['wave_slit_test']
     # config_list = ['Coulomb_3_256']
     # config_list = ['arbitrary_64', 'arbitrary_64_0_1', 'arbitrary_64_0_01', 'arbitrary_64_0_005'] #, 'arbitrary_3', 'arbitrary_16', 'arbitrary_32', 'arbitrary_16_noise_0_1', 'arbitrary_16_noise_0_2', 'arbitrary_16_noise_0_3', 'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5']
     # config_list = ['arbitrary_3_continuous']
     # config_list = ['arbitrary_64_0_01']
-    config_list = ['boids_16_256']
+    # config_list = ['boids_16_256']
 
     epoch_list = [20]
 
