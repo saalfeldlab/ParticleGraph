@@ -1,5 +1,5 @@
 import numpy as np
-
+from scipy.optimize import curve_fit
 
 def power_model(x, a, b):
     return a / (x ** b)
@@ -81,4 +81,32 @@ def reaction_diffusion_model_L(variable_name):
         case 'w':
             return lambda x, cc: _aux_reaction_diffusion_L(x, cc, 2)
 
+    def linear_fit(x_data=[], y_data=[], threshold=10):
 
+        relative_error = np.abs(y_data - x_data) / x_data
+        n_outliers = np.argwhere(relative_error < threshold)
+        x_data_ = x_data[pos[:, 0]]
+        y_data_ = y_data[pos[:, 0]]
+        lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
+        logger.info(' ')
+        residuals = y_data_ - linear_model(x_data_, *lin_fit)
+        ss_res = np.sum(residuals ** 2)
+        ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot)
+
+        return lin_fit, r_squared, relative_error, n_outliers, x_data, y_data
+
+
+def linear_fit(x_data=[], y_data=[], threshold=10):
+    relative_error = np.abs(y_data - x_data) / x_data
+    n_outliers = np.argwhere(relative_error < threshold)
+    x_data_ = x_data[n_outliers[:, 0]]
+    y_data_ = y_data[n_outliers[:, 0]]
+    lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
+    logger.info(' ')
+    residuals = y_data_ - linear_model(x_data_, *lin_fit)
+    ss_res = np.sum(residuals ** 2)
+    ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
+    r_squared = 1 - (ss_res / ss_tot)
+
+    return lin_fit, r_squared, relative_error, n_outliers, x_data, y_data

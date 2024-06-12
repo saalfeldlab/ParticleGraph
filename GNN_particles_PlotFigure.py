@@ -605,10 +605,9 @@ def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoc
     return accuracy
 
 
-def plot_cell_rates(config, device, log_dir, n_particle_types, x_list, new_labels, cmap):
+def plot_cell_rates(config, device, log_dir, n_particle_types, x_list, new_labels, cmap, logger):
 
     n_frames = config.simulation.n_frames
-    n_particles_max = config.simulation.n_particles_max
     cell_cycle_length = np.array(config.simulation.cell_cycle_length)
 
     print('plot cell rates ...')
@@ -639,11 +638,11 @@ def plot_cell_rates(config, device, log_dir, n_particle_types, x_list, new_label
         x_list=[]
         x_ = to_numpy(x_)
 
-    print('save data ...')
+        print('save data ...')
 
-    np.save(f"./{log_dir}/results/cell_alive.npy",N_cells_alive)
-    np.save(f"./{log_dir}/results/cell_dead.npy",N_cells_dead)
-    np.save(f"./{log_dir}/results/x_.npy",x_)
+        np.save(f"./{log_dir}/results/cell_alive.npy", N_cells_alive)
+        np.save(f"./{log_dir}/results/cell_dead.npy", N_cells_dead)
+        np.save(f"./{log_dir}/results/x_.npy", x_)
 
     print('plot results ...')
 
@@ -680,9 +679,7 @@ def plot_cell_rates(config, device, log_dir, n_particle_types, x_list, new_label
     pos = np.argwhere(x_[:, 7:8] > 0)
     pos = pos[:, 0]
     division_list = np.concatenate((x_[pos, 5:6], x_[pos, 7:8]), axis=1)
-
     reconstructed_cell_cycle_length = np.zeros((n_particle_types, 1))
-
 
     for k in range(n_particle_types):
         pos = np.argwhere(division_list[:, 0] == k)
@@ -693,7 +690,7 @@ def plot_cell_rates(config, device, log_dir, n_particle_types, x_list, new_label
             reconstructed_cell_cycle_length[k] = np.mean(division_list[pos, 1:2])
 
     x_data = cell_cycle_length
-    y_data = reconstructed_cell_cycle_length
+    y_data = reconstructed_cell_cycle_length.squeeze()
     lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
     residuals = y_data - linear_model(x_data, *lin_fit)
     ss_res = np.sum(residuals ** 2)
@@ -708,7 +705,8 @@ def plot_cell_rates(config, device, log_dir, n_particle_types, x_list, new_label
     plt.xlabel(r'True cell cycle length', fontsize=32)
     plt.ylabel(r'Reconstructed cell cycle length', fontsize=32)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/cell_cycle_length_{config_file}.tif", dpi=1.7)
+    plt.savefig(f"./{log_dir}/results/cell_cycle_length_{config_file}.tif", dpi=170)
+    plt.close()
 
 
 
@@ -1820,7 +1818,6 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
             qiqj = p[type_list[to_numpy(edges[0, n])].astype(int).squeeze()] * p[type_list[to_numpy(edges[1, n])].astype(int).squeeze()]
             qiqj_list.append(qiqj)
             type = table_qiqj[qiqj+2].astype(int).squeeze()
-
             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                      rr[:, None] / max_radius, embedding_1, embedding_2), dim=1)
             with torch.no_grad():
@@ -1870,9 +1867,27 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
         if os.path.exists(f"./{log_dir}/results/coeff_pysrr.npy"):
             popt_list = np.load(f"./{log_dir}/results/coeff_pysrr.npy")
             qiqj_list = np.load(f"./{log_dir}/results/qiqj.npy")
+            qiqj=[]
+            for n in range(0,len(qiqj_list),5):
+                qiqj.append(qiqj_list[n])
+            qiqj_list = np.array(qiqj)
+
+            threshold = 0.25
+
+            fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
+            x_data = qiqj_list.squeeze()
+            y_data = popt_list.squeeze()
+            lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+            plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+            plt.scatter(qiqj_list, popt_list, color='k', s=200, alpha=0.1)
+            plt.xlim([-5, 5])
+            plt.ylim([-5, 5])
+            plt.xlabel(r'True charge', fontsize=32)
+            plt.ylabel(r'Reconstructed charge', fontsize=32)
+            plt.tight_layout()
 
         else:
-            print('curve fitiing ...')
+            print('curve fitting ...')
             text_trap = StringIO()
             sys.stdout = text_trap
             popt_list = []
@@ -1963,7 +1978,7 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
             f'final result     accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
         if has_cell_division:
-            plot_cell_rates(config, device, log_dir, n_particle_types, x_list, new_labels, cmap)
+            plot_cell_rates(config, device, log_dir, n_particle_types, x_list, new_labels, cmap, logger)
 
         it = 2000
 
@@ -2030,103 +2045,64 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
 
         threshold = 0.25
 
-        fig, ax = fig_init()
-        fmt = lambda x, pos: '{:.1f}e-4'.format((x) * 1e4, pos)
-        ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
         x_data = np.abs(to_numpy(p[:, 0]) * 0.5E-5)
         y_data = np.abs(cohesion_fit)
         x_data = x_data[indexes]
         y_data = y_data[indexes]
-        relative_error = np.abs(y_data - x_data) / x_data
-        pos = np.argwhere(relative_error < threshold)
-        x_data_ = x_data[pos[:, 0]]
-        y_data_ = y_data[pos[:, 0]]
-        lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
+        lin_fit, r_squared, relative_error, n_outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
+
+        fig, ax = fig_init()
+        fmt = lambda x, pos: '{:.1f}e-4'.format((x) * 1e4, pos)
+        ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+        ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
         plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
         for id, n in enumerate(indexes):
             plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=400)
         plt.xlabel(r'True cohesion coeff. ', fontsize=56)
         plt.ylabel(r'Reconstructed cohesion coeff. ', fontsize=56)
         plt.tight_layout()
-        csv_ = []
-        csv_.append(x_data)
-        csv_.append(y_data)
         plt.savefig(f"./{log_dir}/results/cohesion_{config_file}_{epoch}.tif", dpi=300)
-        np.save(f"./{log_dir}/results/cohesion_{config_file}_{epoch}.npy", csv_)
-        np.savetxt(f"./{log_dir}/results/cohesion_{config_file}_{epoch}.txt", csv_)
         plt.close()
-        logger.info(' ')
-        residuals = y_data_ - linear_model(x_data_, *lin_fit)
-        ss_res = np.sum(residuals ** 2)
-        ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
-        r_squared = 1 - (ss_res / ss_tot)
         logger.info(f'cohesion slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
+
+        x_data = np.abs(to_numpy(p[:, 1]) * 5E-4)
+        y_data = alignment_fit
+        x_data = x_data[indexes]
+        y_data = y_data[indexes]
+        lin_fit, r_squared, relative_error, n_outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
 
         fig, ax = fig_init()
         fmt = lambda x, pos: '{:.1f}e-2'.format((x) * 1e2, pos)
         ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
         ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        x_data = np.abs(to_numpy(p[:, 1]) * 5E-4)
-        y_data = alignment_fit
-        x_data = x_data[indexes]
-        y_data = y_data[indexes]
-        relative_error = np.abs(y_data - x_data) / x_data
-        pos = np.argwhere(relative_error < threshold)
-        x_data_ = x_data[pos[:, 0]]
-        y_data_ = y_data[pos[:, 0]]
-        lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
         plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
         for id, n in enumerate(indexes):
             plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=400)
         plt.xlabel(r'True alignement coeff. ', fontsize=56)
         plt.ylabel(r'Reconstructed alignement coeff. ', fontsize=56)
         plt.tight_layout()
-        csv_ = []
-        csv_.append(x_data)
-        csv_.append(y_data)
         plt.savefig(f"./{log_dir}/results/alignment_{config_file}_{epoch}.tif", dpi=300)
-        np.save(f"./{log_dir}/results/alignment_{config_file}_{epoch}.npy", csv_)
-        np.savetxt(f"./{log_dir}/results/alignement_{config_file}_{epoch}.txt", csv_)
         plt.close()
-        logger.info(' ')
-        residuals = y_data_ - linear_model(x_data_, *lin_fit)
-        ss_res = np.sum(residuals ** 2)
-        ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
-        r_squared = 1 - (ss_res / ss_tot)
         logger.info(f'alignment   slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
+
+        x_data = np.abs(to_numpy(p[:, 2]) * 1E-8)
+        y_data = separation_fit
+        x_data = x_data[indexes]
+        y_data = y_data[indexes]
+        lin_fit, r_squared, relative_error, n_outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
 
         fig, ax = fig_init()
         fmt = lambda x, pos: '{:.1f}e-7'.format((x) * 1e7, pos)
         ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
         ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        x_data = np.abs(to_numpy(p[:, 2]) * 1E-8)
-        y_data = separation_fit
-        x_data = x_data[indexes]
-        y_data = y_data[indexes]
-        relative_error = np.abs(y_data - x_data) / x_data
-        pos = np.argwhere(relative_error < threshold)
-        x_data_ = x_data[pos[:, 0]]
-        y_data_ = y_data[pos[:, 0]]
-        lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
         plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
         for id, n in enumerate(indexes):
             plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=400)
         plt.xlabel(r'True separation coeff. ', fontsize=56)
         plt.ylabel(r'Reconstructed separation coeff. ', fontsize=56)
         plt.tight_layout()
-        csv_ = []
-        csv_.append(x_data)
-        csv_.append(y_data)
         plt.savefig(f"./{log_dir}/results/separation_{config_file}_{epoch}.tif", dpi=300)
-        np.save(f"./{log_dir}/results/separation_{config_file}_{epoch}.npy", csv_)
-        np.savetxt(f"./{log_dir}/results/separation_{config_file}_{epoch}.txt", csv_)
         plt.close()
-        logger.info(' ')
-        residuals = y_data_ - linear_model(x_data_, *lin_fit)
-        ss_res = np.sum(residuals ** 2)
-        ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
-        r_squared = 1 - (ss_res / ss_tot)
         logger.info(f'separation   slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
 
         print('compare reconstructed interaction with ground truth...')
@@ -3892,7 +3868,7 @@ def data_plot(config_file, epoch_list, device):
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     matplotlib.rcParams['savefig.pad_inches'] = 0
-    # matplotlib.use("Qt5Agg")
+    matplotlib.use("Qt5Agg")
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
@@ -3973,13 +3949,14 @@ if __name__ == '__main__':
     
     # config_list = ['boids_16_256_bison_siren_with_time_2']
     # config_list = ['boids_16_256','boids_32_256','boids_64_256']
-    config_list = ['boids_16_256_division_death_model_2']
+    # config_list = ['boids_16_256_division_death_model_2']
     # config_list = ['Coulomb_3_256']
     # config_list = ['wave_slit_test']
     # config_list = ['Coulomb_3_256']
     # config_list = ['arbitrary_64', 'arbitrary_64_0_1', 'arbitrary_64_0_01', 'arbitrary_64_0_005'] #, 'arbitrary_3', 'arbitrary_16', 'arbitrary_32', 'arbitrary_16_noise_0_1', 'arbitrary_16_noise_0_2', 'arbitrary_16_noise_0_3', 'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5']
     # config_list = ['arbitrary_3_continuous']
     # config_list = ['arbitrary_64_0_01']
+    config_list = ['boids_16_256']
 
     epoch_list = [20]
 
