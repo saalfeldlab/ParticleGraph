@@ -286,7 +286,8 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                     if n % 5 == 0:
                         plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
                                  color=cmap.color(int(n // (n_particles / n_particle_types))), linewidth=2)
-                # plt.ylim([-1E-4, 1E-4])
+                if not(has_no_tracking):
+                    plt.ylim([-1E-4, 1E-4])
                 plt.xlim([-max_radius, max_radius])
                 # plt.xlabel(r'$x_j-x_i$', fontsize=64)
                 # plt.ylabel(r'$f_{ij}$', fontsize=64)
@@ -385,7 +386,8 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                                  to_numpy(func*ynorm),
                                  linewidth=2,
                                  color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
-                # plt.ylim(config.plotting.ylim)
+                if not (has_no_tracking):
+                    plt.ylim(config.plotting.ylim)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
                 plt.close()
@@ -516,7 +518,10 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_lin_edge=[]
 
 
     for n in range(n_particles):
-        embedding_ = model_a[dataset_number, n_nodes+n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+        if config.training.has_no_tracking:
+            embedding_ = model_a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+        else:
+            embedding_ = model_a[dataset_number, n_nodes+n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
         max_radius = config.simulation.max_radius
         if config.graph_model.particle_model_name != '':
             config_model = config.graph_model.particle_model_name

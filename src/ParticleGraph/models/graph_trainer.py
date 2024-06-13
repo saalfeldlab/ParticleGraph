@@ -668,8 +668,9 @@ def data_train_tracking(config, config_file, device):
         plt.savefig(f"./{log_dir}/tmp_training/before_particle_{dataset_name}_{epoch}_{N}.tif",dpi=87)
         plt.close()
 
-        fig = plt.figure(figsize=(8, 8))
         if epoch%2 == 0:
+
+            fig = plt.figure(figsize=(8, 8))
 
             print('from cell to track training')
             logger.info('from cell to track training')
@@ -711,6 +712,8 @@ def data_train_tracking(config, config_file, device):
             x_ = to_numpy(x_[:,0])
             indexes = np.unique(x_)
 
+            np.save(f"./{log_dir}/tmp_training/indexes_{dataset_name}_{epoch}_{N}.npy", x_)
+
             for k in indexes:
                 pos = np.argwhere(x_ == k)
                 if len(pos>0):
@@ -728,6 +731,8 @@ def data_train_tracking(config, config_file, device):
 
             print('from track to cell training')
             logger.info('from track to cell training')
+
+            np.save(f"./{log_dir}/tmp_training/indexes_{dataset_name}_{epoch}_{N}.npy", x_)
 
             for k in indexes:
                 pos = np.argwhere(x_ == k)
