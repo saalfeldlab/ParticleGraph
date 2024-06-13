@@ -32,7 +32,7 @@ plotting:
   ylim: [-5E-5, 5E-5]
 
 training:
-  n_epochs: 1
+  n_epochs: 20
   has_no_tracking: True
   batch_size: 1
   small_init_batch_size: True

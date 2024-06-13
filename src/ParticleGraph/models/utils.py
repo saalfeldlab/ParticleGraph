@@ -219,7 +219,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
     else:
         fig = plt.figure(figsize=(8, 8))
         if has_no_tracking:
-            embedding = to_numpy(model.a_current)
+            embedding = to_numpy(model.a)
         else:
             embedding = get_embedding(model.a, 1)
         for n in range(n_particle_types):
@@ -236,7 +236,10 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 ax = fig.add_subplot(1, 2, 1)
                 rr = torch.tensor(np.logspace(7, 9, 1000)).to(device)
                 for n in range(n_particles):
-                    embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
+                    if has_no_tracking:
+                        embedding_ = model.a[n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
+                    else:
+                        embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
                     in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                              rr[:, None] / simulation_config.max_radius, 10 ** embedding_), dim=1)
                     with torch.no_grad():
@@ -270,7 +273,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 func_list = []
                 for n in range(n_particles):
                     if has_no_tracking:
-                        embedding_ = model.a_current[n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
+                        embedding_ = model.a[n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
                     else:
                         embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
                     in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
@@ -283,7 +286,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                     if n % 5 == 0:
                         plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
                                  color=cmap.color(int(n // (n_particles / n_particle_types))), linewidth=2)
-                plt.ylim([-1E-4, 1E-4])
+                # plt.ylim([-1E-4, 1E-4])
                 plt.xlim([-max_radius, max_radius])
                 # plt.xlabel(r'$x_j-x_i$', fontsize=64)
                 # plt.ylabel(r'$f_{ij}$', fontsize=64)
@@ -352,7 +355,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 rr = torch.tensor(np.linspace(0, simulation_config.max_radius, 200)).to(device)
                 for n in range(n_particles):
                     if has_no_tracking:
-                        embedding_ = model.a_current[n, :] * torch.ones((200, model_config.embedding_dim), device=device)
+                        embedding_ = model.a[n, :] * torch.ones((200, model_config.embedding_dim), device=device)
                     else:
                         embedding_ = model.a[1, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
                     if (model_config.particle_model_name == 'PDE_A'):
