@@ -2,7 +2,7 @@
 import umap
 from matplotlib.ticker import FormatStrFormatter
 from ParticleGraph.models import Interaction_Particles, Interaction_Particle_Field, Signal_Propagation, Mesh_Laplacian, \
-    Mesh_RPS, Mesh_RPS_bis, Interaction_Particles_No_Tracking
+    Mesh_RPS, Mesh_RPS_bis, Interaction_Particle_Tracking
 
 from GNN_particles_Ntype import *
 import matplotlib as mpl
@@ -200,7 +200,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
         plt.xticks([])
         plt.yticks([])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/particle/{dataset_name}_{epoch}_{N}.tif",dpi=87)
+        plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif",dpi=87)
         plt.close()
 
         fig = plt.figure(figsize=(8, 8))
@@ -227,7 +227,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
         plt.xticks([])
         plt.yticks([])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/particle/particle_{dataset_name}_{epoch}_{N}.tif",dpi=87)
+        plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif",dpi=87)
         plt.close()
 
         match model_config.particle_model_name:
@@ -382,7 +382,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                                  to_numpy(func*ynorm),
                                  linewidth=2,
                                  color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
-                plt.ylim(config.plotting.ylim)
+                # plt.ylim(config.plotting.ylim)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
                 plt.close()
@@ -608,7 +608,7 @@ def choose_training_model(model_config, device):
             model.edges = []
         case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G':
             if has_no_tracking:
-                model=Interaction_Particles_No_Tracking(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
+                model=Interaction_Particle_Tracking(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             else:
                 model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []

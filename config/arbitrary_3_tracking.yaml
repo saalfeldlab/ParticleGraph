@@ -19,7 +19,7 @@ graph_model:
   mesh_model_name: ''
   prediction: 'first_derivative'
   input_size: 5
-  output_size: 3
+  output_size: 2
   hidden_dim: 128
   n_mp_layers: 5
   aggr_type: 'mean'
@@ -29,9 +29,10 @@ graph_model:
 plotting:
   colormap: 'tab10'
   arrow_length: 2
+  ylim: [-5E-5, 5E-5]
 
 training:
-  n_epochs: 20
+  n_epochs: 1
   has_no_tracking: True
   batch_size: 1
   small_init_batch_size: True
@@ -39,12 +40,8 @@ training:
   sparsity: 'replace_embedding_function'
   cluster_method: 'distance_plot'
   data_augmentation: True
-  data_augmentation_loop: 200
+  data_augmentation_loop: 1
   fix_cluster_embedding: True
-  learning_rate_start: 1.0E-4
-  learning_rate_end: 5.0E-5
-  learning_rate_embedding_start: 1.0E-4
-  learning_rate_embedding_end: 1.0E-4
   device: 'auto'
   coeff_loss1: 1
   coeff_loss2: 1
