@@ -226,7 +226,7 @@ def data_train_particles(config, config_file, device):
                     loss = ((pred - y_batch) / (y_batch)).norm(2) / 1E9
 
             visualize_embedding = True
-            if visualize_embedding & (((epoch < 3 ) & (N % 500 == 0)) | (N==0)):
+            if visualize_embedding & (((epoch < 3 ) & (N%(Niter//100) == 0)) | (N==0)):
                 plot_training(config=config, dataset_name=dataset_name, log_dir=log_dir,
                               epoch=epoch, N=N, x=x, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
                               index_particles=index_particles, n_particles=n_particles,
@@ -609,7 +609,7 @@ def data_train_tracking(config, config_file, device):
             # loss2 = 0 * pred.norm(2) / (vnorm**2) * config.training.coeff_loss2
 
             visualize_embedding = True
-            if visualize_embedding & (((epoch < 3 ) & (N % 500 == 0)) | (N==0)):
+            if visualize_embedding & (((epoch < 3 ) & (N % (Niter//100) == 0)) | (N==0)):
                 print(N)
                 fig = plt.figure(figsize=(8, 8))
                 plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=10, c='k', alpha=0.05)
@@ -666,7 +666,7 @@ def data_train_tracking(config, config_file, device):
         plt.xticks([])
         plt.yticks([])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/embedding/before_particle_{dataset_name}_{epoch}_{N}.tif",dpi=87)
+        plt.savefig(f"./{log_dir}/tmp_training/before_particle_{dataset_name}_{epoch}_{N}.tif",dpi=87)
         plt.close()
 
         if epoch%2 == 0:
@@ -739,7 +739,7 @@ def data_train_tracking(config, config_file, device):
         plt.xticks([])
         plt.yticks([])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/embedding/after_particle_{dataset_name}_{epoch}_{N}.tif", dpi=87)
+        plt.savefig(f"./{log_dir}/tmp_training/after_particle_{dataset_name}_{epoch}_{N}.tif", dpi=87)
         plt.close()
 
 
