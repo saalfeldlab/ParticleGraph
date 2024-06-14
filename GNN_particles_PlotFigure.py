@@ -837,9 +837,13 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
             result = distance.min(dim=1)
             min_value = result.values
             min_index = result.indices
-            plt.scatter(np.arange(len(min_index)), to_numpy(min_index), s=10, c='k', alpha=0.05)
-            tracking_index += np.sum(
-                (to_numpy(min_index) - np.arange(len(min_index)) == 0)) / n_frames / n_particles * 100
+
+            true_index = np.arange(len(min_index))
+            reconstructed_index = to_numpy(min_index)
+            for n in range(n_particle_types):
+                plt.scatter(true_index[index_particles[n]], reconstructed_index[index_particles[n]], s=1, c=cmap.color(n), alpha=0.05)
+
+            tracking_index += np.sum((to_numpy(min_index) - np.arange(len(min_index)) == 0)) / n_frames / n_particles * 100
             x_list[1][k + 1][min_index, 0:1] = x_list[1][k][:, 0:1].clone().detach()
 
         x_ = torch.stack(x_list[1])
@@ -848,7 +852,7 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
         x_ = to_numpy(x_[:, 0])
         indexes = np.unique(x_)
 
-        plt.xlabel(r'Particle index', fontsize=32)
+        plt.xlabel(r'True particle index', fontsize=32)
         plt.ylabel(r'Particle index in next frame', fontsize=32)
         plt.xticks([])
         plt.yticks([])
@@ -859,6 +863,19 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
         logger.info(f'tracking index: {tracking_index}')
         print(f'{len(indexes)} tracks')
         logger.info(f'{len(indexes)} tracks')
+
+        fig,ax = fig_init()
+        for k in trange(0,n_frames-2):
+            embedding = to_numpy(model.a[k*n_particles:(k+1)*n_particles,:].clone().detach())
+            for n in range(n_particle_types):
+                plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=1, c=cmap.color(n), alpha=0.025)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+        plt.tight_layout()
+        plt.xlim([-40, 40])
+        plt.ylim([-40, 40])
+        plt.savefig(f"./{log_dir}/results/all_embedding_{config_file}_{epoch}.tif", dpi=170.7)
+        plt.close()
 
         model_a_first = model.a.clone().detach()
         config.training.cluster_distance_threshold = 0.01
@@ -930,6 +947,29 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
         plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
         plt.tight_layout()
         torch.save(plots, f"./{log_dir}/results/plots_true_{config_file}_{epoch}.pt")
+        plt.close()
+
+        for k in indexes:
+            pos = np.argwhere(x_ == k)
+            if len(pos > 0):
+                pos = pos[:, 0]
+                model_a = torch.median(model.a[pos, :], dim=0).values
+                model_a = model_a.clone().detach()
+                model_a = model_a.repeat(len(pos), 1)
+                with torch.no_grad():
+                    model.a[pos, :] = model_a
+
+        fig,ax = fig_init()
+        for k in trange(0,n_frames-2):
+            embedding = to_numpy(model.a[k*n_particles:(k+1)*n_particles,:].clone().detach())
+            for n in range(n_particle_types):
+                plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=1, c=cmap.color(n), alpha=0.0025)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+        plt.xlim([-40, 40])
+        plt.ylim([-40, 40])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/track_embedding_{config_file}_{epoch}.tif", dpi=170.7)
         plt.close()
 
 
@@ -3943,7 +3983,7 @@ def data_plot(config_file, epoch_list, device):
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     matplotlib.rcParams['savefig.pad_inches'] = 0
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
@@ -4032,7 +4072,7 @@ if __name__ == '__main__':
     # config_list = ['boids_16_256','boids_32_256','boids_64_256']
     config_list = ['arbitrary_3_tracking']
 
-    epoch_list = ['3_0']   # ['0_3500','0','1']
+    epoch_list = ['0_500','0_1000','0_2000','0_5000','0_10000','0_20000','0_49000','0','0_corrected','1_500','1_1000','1_2000','1_5000','1_10000','1_20000','1_49000','1','1_corrected','2_500','2_1000','2_2000','2_5000','2_10000','2_20000','2_49000','2','2_corrected']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
