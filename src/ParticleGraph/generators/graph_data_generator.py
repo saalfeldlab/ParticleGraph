@@ -173,7 +173,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                 elif simulation_config.angular_Bernouilli != [-1]:
                     z_i = stats.bernoulli(b[3]).rvs(n_particles)
                     phi = np.array([g.rvs() for g in generative_m[z_i]]) / 360 * np.pi * 2
-                    phi = torch.tensor(phi, device=device)
+                    phi = torch.tensor(phi, device=device, dtype=torch.float32)
                     cos_phi = torch.cos(phi)
                     sin_phi = torch.sin(phi)
                     new_vx = cos_phi * V1[:, 0] - sin_phi * V1[:, 1]
