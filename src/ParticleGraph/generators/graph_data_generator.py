@@ -5,13 +5,13 @@ from torch_geometric.utils.convert import to_networkx
 
 from GNN_particles_Ntype import *
 from simple_pid import PID
+from scipy import stats
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
 
     has_particle_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
     has_mesh = (config.graph_model.mesh_model_name != '')
-    has_signal = (config.graph_model.signal_model_name != '')
     has_cell_divsion = config.simulation.has_cell_division
 
     if has_particle_field:
@@ -88,6 +88,10 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         edge_index = adj_t.nonzero().t().contiguous()
         edge_attr_adjacency = adjacency[adj_t]
 
+    if simulation_config.angular_Bernouilli != [-1]:
+        b = simulation_config.angular_Bernouilli
+        generative_m = np.array([stats.norm(b[0], b[2]), stats.norm(b[1], b[2])])
+
     for run in range(config.training.n_runs):
 
         n_particles = simulation_config.n_particles
@@ -158,7 +162,27 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                     V1 += y * delta_t
                 else:
                     V1 = y
-                X1 = bc_pos(X1 + V1 * delta_t)
+                if simulation_config.angular_sigma > 0:
+                    phi =torch.randn(n_particles, device=device) * simulation_config.angular_sigma / 360 * np.pi * 2
+                    cos_phi = torch.cos(phi)
+                    sin_phi = torch.sin(phi)
+                    new_vx = cos_phi * V1[:, 0] - sin_phi * V1[:, 1]
+                    new_vy = sin_phi * V1[:, 0] + cos_phi * V1[:, 1]
+                    V1p = torch.cat((new_vx[:,None],new_vy[:,None]), 1).clone().detach()
+                    X1 = bc_pos(X1 + V1p * delta_t)
+                elif simulation_config.angular_Bernouilli != [-1]:
+                    z_i = stats.bernoulli(b[3]).rvs(n_particles)
+                    phi = np.array([g.rvs() for g in generative_m[z_i]]) / 360 * np.pi * 2
+                    phi = torch.tensor(phi, device=device)
+                    cos_phi = torch.cos(phi)
+                    sin_phi = torch.sin(phi)
+                    new_vx = cos_phi * V1[:, 0] - sin_phi * V1[:, 1]
+                    new_vy = sin_phi * V1[:, 0] + cos_phi * V1[:, 1]
+                    V1p = torch.cat((new_vx[:,None],new_vy[:,None]), 1).clone().detach()
+                    X1 = bc_pos(X1 + V1p * delta_t)
+
+                else:
+                    X1 = bc_pos(X1 + V1 * delta_t)
             A1 = A1 + delta_t
 
             # output plots
@@ -620,6 +644,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
 
     logging.shutdown()
+
 
 def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
