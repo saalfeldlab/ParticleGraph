@@ -841,13 +841,24 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
             tracking_index += np.sum(
                 (to_numpy(min_index) - np.arange(len(min_index)) == 0)) / n_frames / n_particles * 100
             x_list[1][k + 1][min_index, 0:1] = x_list[1][k][:, 0:1].clone().detach()
+
+        x_ = torch.stack(x_list[1])
+        x_ = torch.reshape(x_, (x_.shape[0] * x_.shape[1], x_.shape[2]))
+        x_ = x_[0:(n_frames - 1) * n_particles]
+        x_ = to_numpy(x_[:, 0])
+        indexes = np.unique(x_)
+
+        plt.xlabel(r'Particle index', fontsize=32)
+        plt.ylabel(r'Particle index in next frame', fontsize=32)
         plt.xticks([])
         plt.yticks([])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/proxy_tracking_{config_file}.tif", dpi=170.7)
+        plt.savefig(f"./{log_dir}/results/proxy_tracking_{config_file}_{epoch}.tif", dpi=170.7)
         plt.close()
         print(f'tracking index: {tracking_index}')
         logger.info(f'tracking index: {tracking_index}')
+        print(f'{len(indexes)} tracks')
+        logger.info(f'{len(indexes)} tracks')
 
         model_a_first = model.a.clone().detach()
         config.training.cluster_distance_threshold = 0.01
@@ -880,7 +891,7 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
         plt.xlabel(r'$d_{ij}$', fontsize=64)
         plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
         plt.xlim([0, max_radius])
-        # plt.ylim(config.plotting.ylim)
+        plt.ylim(config.plotting.ylim)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/func_all_{config_file}_{epoch}.tif", dpi=170.7)
         rmserr_list = torch.stack(rmserr_list)
@@ -4021,7 +4032,7 @@ if __name__ == '__main__':
     # config_list = ['boids_16_256','boids_32_256','boids_64_256']
     config_list = ['arbitrary_3_tracking']
 
-    epoch_list = [1]
+    epoch_list = ['3_0']   # ['0_3500','0','1']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
