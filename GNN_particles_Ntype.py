@@ -46,11 +46,11 @@ if __name__ == '__main__':
     # config_list = ['boids_16_256_test_cell_division_c']
     # config_list = ['boids_16_256_division_death_model_2']
     # config_list = ['arbitrary_3_tracking']
-    # config_list = ['arbitrary_3_division_death_tracking']
+    config_list = ['arbitrary_3_division_death_tracking']
     # config_list = ['boids_16_256_tracking']
     # config_list = ['arbitrary_64']
     # config_list = ['arbitrary_3_angle_10']
-    config_list = ['arbitrary_3_Bernouilli_10']
+    # config_list = ['arbitrary_3_Bernouilli_10']
     # config_list = ['arbitrary_3_tracking_angle_10']
     # config_list = ['arbitrary_3_tracking_Bernouilli_10']
 
