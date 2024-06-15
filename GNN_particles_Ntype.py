@@ -49,8 +49,10 @@ if __name__ == '__main__':
     config_list = ['arbitrary_3_division_death_tracking']
     # config_list = ['boids_16_256_tracking']
     # config_list = ['arbitrary_64']
-    # config_list = ['arbitrary_3_angle_20','arbitrary_3_angle_30','arbitrary_3_Bernouilli_20','arbitrary_3_Bernouilli_30']
-    # config_list = ['arbitrary_3_tracking_angle_20','arbitrary_3_tracking_angle_30','arbitrary_3_tracking_Bernouilli_20','arbitrary_3_tracking_Bernouilli_20']
+    # config_list = ['arbitrary_3_angle_10','arbitrary_3_angle_20','arbitrary_3_angle_30']
+    # config_list=  ['arbitrary_3_Bernouilli_10','arbitrary_3_Bernouilli_20','arbitrary_3_Bernouilli_30']
+    # config_list = ['arbitrary_3_tracking_angle_10','arbitrary_3_tracking_angle_20','arbitrary_3_tracking_angle_30']
+    # config_list = ['arbitrary_3_tracking_Bernouilli_10','arbitrary_3_tracking_Bernouilli_20','arbitrary_3_tracking_Bernouilli_30']
 
     seed_list = np.arange(10)
 

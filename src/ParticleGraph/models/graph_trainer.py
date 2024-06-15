@@ -994,12 +994,14 @@ def data_train_cell_tracking(config, config_file, device):
                 plt.savefig(f"./{log_dir}/tmp_training/particle/{dataset_name}_{epoch}_{N}.tif")
                 plt.close()
 
-                plot_training(config=config, dataset_name=dataset_name, log_dir=log_dir,
-                              epoch=epoch, N=N, x=x, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
-                              index_particles=index_particles, n_particles=n_particles,
-                              n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
+                x_ = x_list[1][n_frames - 1].clone().detach()
+                index_particles = get_index_particles(x_, n_particle_types, dimension)
+                plot_training_cell(config=config, dataset_name=dataset_name, log_dir=log_dir,
+                              epoch=epoch, N=N, model=model, index_particles=index_particles, n_particle_types=n_particle_types, type_list=type_list, ynorm=ynorm, cmap=cmap, device=device)
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+                t, r, a = get_gpu_memory_map(device)
+                logger.info(f"GPU memory: total {t} reserved {r} allocated {a}")
 
             loss.backward()
             optimizer.step()
@@ -1072,9 +1074,12 @@ def data_train_cell_tracking(config, config_file, device):
                 print(f'tracking index: {tracking_index}')
                 logger.info(f'tracking index: {tracking_index}')
 
-                x_ = torch.stack(x_list[1])
-                x_ = torch.reshape(x_, (x_.shape[0] * x_.shape[1], x_.shape[2]))
-                x_ = x_[0:(n_frames-1)*n_particles]
+                for k in range(n_frames-1):
+                    if k==0:
+                        x_ = x_list[1][k].clone().detach()
+                    else:
+                        x_ = torch.cat((x_,x_list[1][k]),0)
+                    x_=torch.cat((x_,x_list[1][k]),1)
                 x_ = to_numpy(x_[:,0])
                 indexes = np.unique(x_)
 
@@ -1118,16 +1123,16 @@ def data_train_cell_tracking(config, config_file, device):
                 for k in range(n_frames):
                     x_list[1][k][:, 0] = index_l[k].clone().detach()
 
-        fig = plt.figure(figsize=(8, 8))
-        for k in range(0,n_frames-2,n_frames//10):
-            embedding = to_numpy(model.a[k*n_particles:(k+1)*n_particles,:].clone().detach())
-            for n in range(n_particle_types):
-                plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=20, c=cmap.color(n))
-        plt.xticks([])
-        plt.yticks([])
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/all_particle_{dataset_name}_{epoch}_{N}.tif", dpi=87)
-        plt.close()
+        # fig = plt.figure(figsize=(8, 8))
+        # for k in range(0,n_frames-2,n_frames//10):
+        #     embedding = to_numpy(model.a[k*n_particles:(k+1)*n_particles,:].clone().detach())
+        #     for n in range(n_particle_types):
+        #         plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=20, c=cmap.color(n))
+        # plt.xticks([])
+        # plt.yticks([])
+        # plt.tight_layout()
+        # plt.savefig(f"./{log_dir}/tmp_training/all_particle_{dataset_name}_{epoch}_{N}.tif", dpi=87)
+        # plt.close()
 
         lr_embedding = train_config.learning_rate_embedding_start * n_frames
         lr = train_config.learning_rate_start

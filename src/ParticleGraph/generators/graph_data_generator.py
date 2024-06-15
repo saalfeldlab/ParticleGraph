@@ -139,6 +139,24 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
             with torch.no_grad():
                 y = model(dataset)
 
+            if simulation_config.angular_sigma > 0:
+                phi = torch.randn(n_particles, device=device) * simulation_config.angular_sigma / 360 * np.pi * 2
+                cos_phi = torch.cos(phi)
+                sin_phi = torch.sin(phi)
+                new_vx = cos_phi * y[:, 0] - sin_phi * y[:, 1]
+                new_vy = sin_phi * y[:, 0] + cos_phi * y[:, 1]
+                y = torch.cat((new_vx[:, None], new_vy[:, None]), 1).clone().detach()
+            if simulation_config.angular_Bernouilli != [-1]:
+                z_i = stats.bernoulli(b[3]).rvs(n_particles)
+                phi = np.array([g.rvs() for g in generative_m[z_i]]) / 360 * np.pi * 2
+                phi = torch.tensor(phi, device=device, dtype=torch.float32)
+                cos_phi = torch.cos(phi)
+                sin_phi = torch.sin(phi)
+                new_vx = cos_phi * y[:, 0] - sin_phi * y[:, 1]
+                new_vy = sin_phi * y[:, 0] + cos_phi * y[:, 1]
+                y = torch.cat((new_vx[:, None], new_vy[:, None]), 1).clone().detach()
+
+
             # append list
             if (it >= 0) & bSave:
                 if has_particle_dropout:
@@ -162,27 +180,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                     V1 += y * delta_t
                 else:
                     V1 = y
-                if simulation_config.angular_sigma > 0:
-                    phi =torch.randn(n_particles, device=device) * simulation_config.angular_sigma / 360 * np.pi * 2
-                    cos_phi = torch.cos(phi)
-                    sin_phi = torch.sin(phi)
-                    new_vx = cos_phi * V1[:, 0] - sin_phi * V1[:, 1]
-                    new_vy = sin_phi * V1[:, 0] + cos_phi * V1[:, 1]
-                    V1p = torch.cat((new_vx[:,None],new_vy[:,None]), 1).clone().detach()
-                    X1 = bc_pos(X1 + V1p * delta_t)
-                elif simulation_config.angular_Bernouilli != [-1]:
-                    z_i = stats.bernoulli(b[3]).rvs(n_particles)
-                    phi = np.array([g.rvs() for g in generative_m[z_i]]) / 360 * np.pi * 2
-                    phi = torch.tensor(phi, device=device, dtype=torch.float32)
-                    cos_phi = torch.cos(phi)
-                    sin_phi = torch.sin(phi)
-                    new_vx = cos_phi * V1[:, 0] - sin_phi * V1[:, 1]
-                    new_vy = sin_phi * V1[:, 0] + cos_phi * V1[:, 1]
-                    V1p = torch.cat((new_vx[:,None],new_vy[:,None]), 1).clone().detach()
-                    X1 = bc_pos(X1 + V1p * delta_t)
-
-                else:
-                    X1 = bc_pos(X1 + V1 * delta_t)
+                X1 = bc_pos(X1 + V1 * delta_t)
             A1 = A1 + delta_t
 
             # output plots
