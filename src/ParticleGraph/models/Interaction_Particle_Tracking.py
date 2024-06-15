@@ -67,7 +67,7 @@ class Interaction_Particle_Tracking(pyg.nn.MessagePassing):
 
         if simulation_config.has_cell_division :
             self.a = nn.Parameter(
-                torch.tensor(np.ones((self.n_dataset, self.n_frames * self.n_particles_max, 2)), device=self.device,
+                torch.tensor(np.ones((self.n_frames * self.n_particles_max, 2)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
         else:
             self.a = nn.Parameter(

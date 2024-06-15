@@ -372,7 +372,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
     cmap = CustomColorMap(config=config)
     dataset_name = config.dataset
     marker_size = config.plotting.marker_size
-    radius_pid = simulation_config.radius_pid
 
     max_radius_list = []
     edges_len_list = []
