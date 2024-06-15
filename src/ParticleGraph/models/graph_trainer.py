@@ -7,7 +7,7 @@ import random
 
 def data_train(config, config_file, device):
 
-    # matplotlib.use("Qt5Agg")
+    matplotlib.use("Qt5Agg")
 
     seed = config.training.seed
 
@@ -593,7 +593,8 @@ def data_train_tracking(config, config_file, device):
 
             x_next = x_list[run][k+1]
             x_next = x_next[:,1:3].clone().detach()
-            x_pred = (x[:,1:3] + delta_t * pred)
+            x_pred = (x[:,1:3] + delta_t * pred).clone().detach()
+
 
             # y_ = bc_dpos(x_next - x[:, 1:3]) / delta_t /ynorm
             # pred_ = (x_pred - x[:, 1:3]) / delta_t
@@ -962,7 +963,7 @@ def data_train_cell_tracking(config, config_file, device):
 
             x_next = x_list[run][k+1]
             x_next = x_next[:,1:3].clone().detach()
-            x_pred = (x[:,1:3] + delta_t * pred)
+            x_pred = (x[:,1:3] + delta_t * pred).clone().detach()
 
             # y_ = bc_dpos(x_next - x[:, 1:3]) / delta_t /ynorm
             # pred_ = (x_pred - x[:, 1:3]) / delta_t

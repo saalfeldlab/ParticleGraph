@@ -111,7 +111,7 @@ def choose_boundary_values(bc_name):
         return torch.remainder(x - 0.5, 1.0) - 0.5  # in [-0.5, 0.5)
 
     def shifted_periodic_special(x):
-        return torch.remainder(x - 0.5, 1.0) + (x>10)*10    # to discard dead cells set at x=10
+        return torch.remainder(x - 0.5, 1.0) - 0.5 + (x>10)*10    # to discard dead cells set at x=10
 
 
     match bc_name:
@@ -120,7 +120,7 @@ def choose_boundary_values(bc_name):
         case 'periodic':
             return periodic, shifted_periodic
         case 'periodic_special':
-            return periodic_special, shifted_periodic_special
+            return periodic, shifted_periodic
         case _:
             raise ValueError(f'Unknown boundary condition {bc_name}')
 
