@@ -428,9 +428,9 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, index_par
             func_list = []
             for n in range(n_particles):
                 if has_no_tracking:
-                    embedding_ = model.a[n, :] * torch.ones((200, model_config.embedding_dim), device=device)
+                    embedding_ = model.a[n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
                 else:
-                    embedding_ = model.a[1, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
+                    embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
                 in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                          torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
                                          0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)

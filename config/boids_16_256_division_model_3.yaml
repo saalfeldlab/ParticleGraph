@@ -1,5 +1,5 @@
 description: 'Boids 16 different types, division'
-dataset: 'boids_16_256_division_death_rnd'
+dataset: 'boids_16_256_division_model_3'
 
 simulation:
   params: [[-1]]
@@ -7,14 +7,13 @@ simulation:
   cell_death_rate: [1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4]
   min_radius: 0.001
   max_radius: 0.04
-  radius_pid: true
   max_edges: 500000
   n_particles: 512
   has_cell_division: True
   n_particles_max: 20000
   n_particle_types: 16
   n_interactions: 16
-  n_frames: 8000
+  n_frames: 12000
   sigma: 0.005
   delta_t: 0.5
   dpos_init: 5.0E-4
@@ -36,17 +35,20 @@ graph_model:
 plotting:
   colormap: 'tab20'
   arrow_length: 5
-  marker_size: 20
+  marker_size: 10
+  ylim: [-1.0E-4,1.0E-4]
 
 training:
-  n_epochs: 40
+  n_epochs: 20
   batch_size: 1
   small_init_batch_size: False
   sub_batches: 4
-  n_runs: 1
+  n_runs: 2
   noise_level: 0
+  sparsity: 'replace_embedding'
+  cluster_method: 'distance_plot'
   data_augmentation: True
-  data_augmentation_loop: 100
+  data_augmentation_loop: 50
   fix_cluster_embedding: True
   device: 'auto'
 

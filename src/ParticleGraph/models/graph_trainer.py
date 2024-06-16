@@ -174,7 +174,7 @@ def data_train_particles(config, config_file, device):
             dataset_batch = []
             for batch in range(batch_size):
 
-                k = np.random.randint(n_frames - 2)
+                k = np.random.randint(n_frames - 1)
 
                 x = x_list[run][k].clone().detach()
 
@@ -490,7 +490,7 @@ def data_train_tracking(config, config_file, device):
     # model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
-    lr_embedding = train_config.learning_rate_embedding_start * n_frames
+    lr_embedding = train_config.learning_rate_embedding_start * 200
     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
     logger.info(f"Total Trainable Params: {n_total_params}")
     logger.info(f'Learning rates: {lr}, {lr_embedding}')
@@ -775,7 +775,7 @@ def data_train_tracking(config, config_file, device):
         plt.savefig(f"./{log_dir}/tmp_training/all_particle_{dataset_name}_{epoch}_{N}.tif", dpi=87)
         plt.close()
 
-        lr_embedding = train_config.learning_rate_embedding_start * n_frames
+        lr_embedding = train_config.learning_rate_embedding_start * 200
         lr = train_config.learning_rate_start
         optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
         logger.info(f'Learning rates: {lr}, {lr_embedding}')
@@ -871,7 +871,7 @@ def data_train_cell_tracking(config, config_file, device):
     # model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
-    lr_embedding = train_config.learning_rate_embedding_start * n_frames
+    lr_embedding = train_config.learning_rate_embedding_start * 200
     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
     logger.info(f"Total Trainable Params: {n_total_params}")
     logger.info(f'Learning rates: {lr}, {lr_embedding}')
@@ -1163,7 +1163,7 @@ def data_train_cell_tracking(config, config_file, device):
         # plt.savefig(f"./{log_dir}/tmp_training/all_particle_{dataset_name}_{epoch}_{N}.tif", dpi=87)
         # plt.close()
 
-        lr_embedding = train_config.learning_rate_embedding_start * n_frames
+        lr_embedding = train_config.learning_rate_embedding_start * 200
         lr = train_config.learning_rate_start
         optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
         logger.info(f'Learning rates: {lr}, {lr_embedding}')
@@ -1380,7 +1380,7 @@ def data_train_cell(config, config_file, device):
                 loss = ((pred[mask_cell_alive] - y_batch[mask_cell_alive])).norm(2)
 
             visualize_embedding = True
-            if visualize_embedding & (((epoch < 3 ) & (N % 500 == 0)) | (N==0)):
+            if visualize_embedding & (((epoch < 3 ) & (N%(Niter//100) == 0)) | (N==0)):
                 x_ = x_list[1][n_frames - 1].clone().detach()
                 index_particles = get_index_particles(x_, n_particle_types, dimension)
                 plot_training_cell(config=config, dataset_name=dataset_name, log_dir=log_dir,
