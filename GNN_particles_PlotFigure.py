@@ -805,6 +805,14 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
     for epoch in epoch_list:
+        pos = epoch.find('_')
+        if pos>0:
+            epoch_ = epoch[0:pos]
+        else:
+            epoch_ = epoch
+        embedding_type = int(epoch_)%2
+        print(f'{epoch}, {epoch_}, {embedding_type}')
+
 
         net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
         print(f'network: {net}')
