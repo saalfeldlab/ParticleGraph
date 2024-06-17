@@ -45,7 +45,7 @@ training:
   device: 'auto'
   coeff_loss1: 1
   coeff_loss2: 1
-  sequence: ['cell to track','track to cell']
+  sequence: ['to track','to cell']
 
 
 

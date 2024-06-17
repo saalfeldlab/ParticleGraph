@@ -656,10 +656,10 @@ def data_train_tracking(config, config_file, device):
 
             match current_sequence:
 
-                case 'cell to track':
+                case 'to track':
 
-                    print('from cell to track training')
-                    logger.info('from cell to track training')
+                    print('to track training')
+                    logger.info('to track training')
 
                     fig = plt.figure(figsize=(8, 8))
                     tracking_index = 0
@@ -721,15 +721,16 @@ def data_train_tracking(config, config_file, device):
                     print(f'{len(np.unique(x_))} tracks,  first track index: {np.min(x_)},  last track index: {np.max(x_)}')
                     logger.info(f'{len(np.unique(x_))} tracks,  first track index: {np.min(x_)},  last track index: {np.max(x_)}')
 
+                    # embedding to be optimized > normal learning rate
+                    # functions to be optimized > normal learning rate
+
                     lr_embedding = train_config.learning_rate_embedding_start
                     lr = train_config.learning_rate_start
-                    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-                    logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
-                case 'track to cell':
+                case 'to cell':
 
-                    print('from track to cell training')
-                    logger.info('from track to cell training')
+                    print('to cell training')
+                    logger.info('to cell training')
 
                     for k in indexes:
                         pos = np.argwhere(x_ == k)
@@ -744,7 +745,74 @@ def data_train_tracking(config, config_file, device):
                     for k in range(n_frames):
                         x_list[1][k][:, 0] = index_l[k].clone().detach()
 
-        np.save(f"./{log_dir}/tmp_training/indexes_{dataset_name}_{epoch}_{N}.npy", indexes)
+                    # embedding to be optimized > fast learning rate
+                    # functions are fixed > slow learning rate
+
+                    lr_embedding = train_config.learning_rate_embedding_start * 200
+                    lr = train_config.learning_rate_start / 200
+
+
+                case 'to function':
+
+                    type_list = to_numpy(x_[indexes, 5])
+                    config.training.cluster_distance_threshold = 0.1
+                    func_list, proj_interaction = analyze_edge_function_tracking(rr=[], vizualize=False, config=config,
+                                                                                 model_lin_edge=model.lin_edge, model_a=model.a,
+                                                                                 n_particles=n_particles, ynorm=ynorm,
+                                                                                 indexes=indexes, type_list=type_list,
+                                                                                 cmap=cmap, embedding_type=1,
+                                                                                 device=device)
+
+                    fig, ax = fig_init()
+                    proj_interaction = (proj_interaction - np.min(proj_interaction)) / (np.max(proj_interaction) - np.min(proj_interaction) + 1e-10)
+                    for n, k in enumerate(indexes):
+                        plt.scatter(proj_interaction[int(n), 0], proj_interaction[int(n), 1], s=1,
+                                    color=cmap.color(int(type_list[int(n)])), alpha=0.25)
+                    plt.xlabel(r'UMAP 0', fontsize=64)
+                    plt.ylabel(r'UMAP 1', fontsize=64)
+                    plt.xlim([-0.2, 1.2])
+                    plt.ylim([-0.2, 1.2])
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/training/UMAP_{config_file}_{epoch}.tif", dpi=170.7)
+                    plt.close()
+
+                    labels, n_clusters, new_labels = sparsify_cluster(config.training.cluster_method, proj_interaction,
+                                                                      embedding,
+                                                                      config.training.cluster_distance_threshold,
+                                                                      index_particles,
+                                                                      n_particle_types, embedding_cluster)
+
+                    accuracy = metrics.accuracy_score(type_list, new_labels)
+
+                    print(f'accuracy: {np.round(accuracy, 3)}   n_clusters: {n_clusters}')
+                    logger.info(f'accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}')
+
+                    for n in range(n_clusters):
+                        pos = np.argwhere(new_labels == n).squeeze().astype(int)
+                        if pos.size > 0:
+                            median_center = model.a[indexes[pos], :]
+                            median_center = torch.median(median_center, dim=0).values
+                            model.a[indexes[pos], :] = median_center
+                    for n,k in enumerate(indexes):
+                        pos = np.argwhere(x_ == k)
+                        x_[pos] = new_labels[n]
+
+                    index = 0
+                    for k in range(n_frames):
+                        new_index = x_[index, index + n_particles]
+                        x_list[1][k][:, 0] = torch.tensor(new_index, device=device)
+                        index += n_particles
+
+                    # embedding to be fixed > slow learning rate
+                    # functions to be optimized > normal learning rate
+
+                    lr_embedding = train_config.learning_rate_embedding_start / 200
+                    lr = train_config.learning_rate_start
+
+        optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+        logger.info(f'Learning rates: {lr}, {lr_embedding}')
+
+        np.save(f"./{log_dir}/tmp_training/indexes_{dataset_name}_{epoch}_{N+1}.npy", indexes)
 
         fig = plt.figure(figsize=(8, 8))
         for k in range(0,n_frames-2,n_frames//10):
@@ -757,10 +825,7 @@ def data_train_tracking(config, config_file, device):
         plt.savefig(f"./{log_dir}/tmp_training/all_particle_{dataset_name}_{epoch}_{N+1}.tif", dpi=87)
         plt.close()
 
-        lr_embedding = train_config.learning_rate_embedding_start * 200
-        lr = train_config.learning_rate_start
-        optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-        logger.info(f'Learning rates: {lr}, {lr_embedding}')
+
 
 
 def data_train_cell_tracking(config, config_file, device):

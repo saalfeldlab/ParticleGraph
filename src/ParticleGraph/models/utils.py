@@ -512,7 +512,7 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, index_par
             plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif", dpi=87)
             plt.close()
 
-def analyze_edge_function_tracking(rr=[], vizualize=False, config=None, model_lin_edge=[], model_a=None, n_nodes=0, dataset_number = 0, n_particles=None, ynorm=None, indexes=None, type_list=None, cmap=None, dimension=2, embedding_type=0, device=None):
+def analyze_edge_function_tracking(rr=[], vizualize=False, config=None, model_lin_edge=[], model_a=None, n_particles=None, ynorm=None, indexes=None, type_list=None, cmap=None, dimension=2, embedding_type=0, device=None):
 
 
     model_config = config.graph_model
@@ -610,7 +610,6 @@ def analyze_edge_function_tracking(rr=[], vizualize=False, config=None, model_li
         plt.ylabel('MLP [a.u]', fontsize=12)
 
     return func_list, proj_interaction
-
 
 def analyze_edge_function(rr=[], vizualize=False, config=None, model_lin_edge=[], model_a=None, n_nodes=0, dataset_number = 0, n_particles=None, ynorm=None, types=None, cmap=None, dimension=2, device=None):
 

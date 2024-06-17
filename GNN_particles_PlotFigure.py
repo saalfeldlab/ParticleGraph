@@ -372,7 +372,6 @@ def plot_embedding_func_cluster_tracking(model, config, config_file, embedding_c
 
     func_list, proj_interaction = analyze_edge_function_tracking(rr=[], vizualize=False, config=config,
                                                         model_lin_edge=model.lin_edge, model_a=model.a,
-                                                        dataset_number=1,
                                                         n_particles=n_particles, ynorm=ynorm,
                                                         indexes=indexes, type_list = type_list,
                                                         cmap=cmap, embedding_type = embedding_type, device=device)
@@ -929,7 +928,6 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
         logger.info(f'tracking errors: {np.sum(tracking_index_list)}')
 
         type_list = to_numpy(x_[indexes,5])
-
 
         model_a_first = model.a.clone().detach()
         config.training.cluster_distance_threshold = 0.01
