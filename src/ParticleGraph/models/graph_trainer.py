@@ -284,7 +284,6 @@ def data_train_particles(config, config_file, device):
 
         if (simulation_config.n_interactions < 100):
 
-
             ax = fig.add_subplot(1, 5, 3)
             func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
                                                                 model_lin_edge=model.lin_edge, model_a=model.a,
@@ -779,9 +778,6 @@ def data_train_tracking(config, config_file, device):
         lr = train_config.learning_rate_start
         optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
         logger.info(f'Learning rates: {lr}, {lr_embedding}')
-
-        torch.save({'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_corrected.pt'))
 
 
 def data_train_cell_tracking(config, config_file, device):

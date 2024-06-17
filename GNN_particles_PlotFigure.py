@@ -338,11 +338,74 @@ def load_training_data(dataset_name, n_runs, log_dir, device):
     return x_list, y_list, vnorm, ynorm
 
 
+def plot_embedding_func_cluster_tracking(model, config, config_file, embedding_cluster, cmap, index_particles, indexes, type_list,
+                                n_particle_types, n_particles, ynorm, epoch, log_dir, embedding_type, device):
 
-def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list,
+    print('analyze GNN ...')
+
+    if embedding_type == 1:
+        embedding = to_numpy(model.a.clone().detach())
+        fig, ax = fig_init()
+        for n, k in enumerate(indexes):
+            plt.scatter(embedding[int(k), 0], embedding[int(k), 1], s=1, color=cmap.color(int(type_list[int(n)])), alpha=0.25)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+        plt.xlim([-40, 40])
+        plt.ylim([-40, 40])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/all_embedding_{config_file}_{epoch}.tif", dpi=170.7)
+        plt.close()
+    else:
+        fig, ax = fig_init()
+        for k in trange(0, config.simulation.n_frames - 2):
+            embedding = to_numpy(model.a[k * n_particles:(k + 1) * n_particles, :].clone().detach())
+            for n in range(n_particle_types):
+                plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=1,
+                            c=cmap.color(n), alpha=0.025)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+        plt.xlim([-40, 40])
+        plt.ylim([-40, 40])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/all_embedding_{config_file}_{epoch}.tif", dpi=170.7)
+        plt.close()
+
+    func_list, proj_interaction = analyze_edge_function_tracking(rr=[], vizualize=False, config=config,
+                                                        model_lin_edge=model.lin_edge, model_a=model.a,
+                                                        dataset_number=1,
+                                                        n_particles=n_particles, ynorm=ynorm,
+                                                        indexes=indexes, type_list = type_list,
+                                                        cmap=cmap, embedding_type = embedding_type, device=device)
+
+    fig, ax = fig_init()
+    proj_interaction = (proj_interaction - np.min(proj_interaction)) / (
+                np.max(proj_interaction) - np.min(proj_interaction) + 1e-10)
+    if embedding_type == 1:
+        for n, k in enumerate(indexes):
+            plt.scatter(proj_interaction[int(n), 0], proj_interaction[int(n), 1], s=1, color=cmap.color(int(type_list[int(n)])), alpha=0.25)
+    else:
+        for n in range(n_particle_types):
+            plt.scatter(proj_interaction[index_particles[n], 0],
+                        proj_interaction[index_particles[n], 1], color=cmap.color(n), s=200, alpha=0.1)
+    plt.xlabel(r'UMAP 0', fontsize=64)
+    plt.ylabel(r'UMAP 1', fontsize=64)
+    plt.xlim([-0.2, 1.2])
+    plt.ylim([-0.2, 1.2])
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/results/UMAP_{config_file}_{epoch}.tif", dpi=170.7)
+    plt.close()
+
+    labels, n_clusters, new_labels = sparsify_cluster(config.training.cluster_method, proj_interaction, embedding,
+                                                      config.training.cluster_distance_threshold, index_particles,
+                                                      n_particle_types, embedding_cluster)
+
+    accuracy = metrics.accuracy_score(type_list, new_labels)
+
+
+
+
+def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, indexes,
                                 n_particle_types, n_particles, ynorm, epoch, log_dir, device):
-    config.training = config.training
-    max_radius = config.simulation.max_radius
 
     print('analyze GNN ...')
 
@@ -372,7 +435,6 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
                                                         cmap=cmap, device=device)
 
     fig, ax = fig_init()
-    embedding = get_embedding(model.a, 1)
     proj_interaction = (proj_interaction - np.min(proj_interaction)) / (
                 np.max(proj_interaction) - np.min(proj_interaction) + 1e-10)
     for n in range(n_particle_types):
@@ -389,36 +451,22 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
     labels, n_clusters, new_labels = sparsify_cluster(config.training.cluster_method, proj_interaction, embedding,
                                                       config.training.cluster_distance_threshold, index_particles,
                                                       n_particle_types, embedding_cluster)
+
     accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
 
-    if config.training.has_no_tracking:
-        model_a_ = model.a[0:n_particles].clone().detach()
-        for n in range(n_clusters):
-            pos = np.argwhere(labels == n).squeeze().astype(int)
-            pos = np.array(pos)
-            if pos.size > 0:
-                median_center = model_a_[pos, :]
-                median_center = torch.median(median_center, dim=0).values
-                model_a_[pos, :] = median_center
-        with torch.no_grad():
-            model.a[0:n_particles] = model_a_.clone().detach()
-    else:
-        model_a_ = model.a[1].clone().detach()
-        for n in range(n_clusters):
-            pos = np.argwhere(labels == n).squeeze().astype(int)
-            pos = np.array(pos)
-            if pos.size > 0:
-                median_center = model_a_[pos, :]
-                median_center = torch.median(median_center, dim=0).values
-                model_a_[pos, :] = median_center
-        with torch.no_grad():
-            model.a[1] = model_a_.clone().detach()
+    model_a_ = model.a[1].clone().detach()
+    for n in range(n_clusters):
+        pos = np.argwhere(labels == n).squeeze().astype(int)
+        pos = np.array(pos)
+        if pos.size > 0:
+            median_center = model_a_[pos, :]
+            median_center = torch.median(median_center, dim=0).values
+            model_a_[pos, :] = median_center
+    with torch.no_grad():
+        model.a[1] = model_a_.clone().detach()
 
     fig, ax = fig_init()
-    if config.training.has_no_tracking:
-        embedding = to_numpy(model.a)
-    else:
-        embedding = get_embedding(model.a, 1)
+    embedding = get_embedding(model.a, 1)
     if n_particle_types > 1000:
         plt.scatter(embedding[:, 0], embedding[:, 1], c=to_numpy(x[:, 5]) / n_particles, s=10,
                     cmap=cc)
@@ -812,6 +860,7 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
             epoch_ = epoch
         embedding_type = int(epoch_)%2
         print(f'{epoch}, {epoch_}, {embedding_type}')
+        logger.info(f'{epoch}, {epoch_}, {embedding_type}')
 
 
         net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
@@ -844,7 +893,7 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
             true_index = np.arange(len(min_index))
             reconstructed_index = to_numpy(min_index)
             for n in range(n_particle_types):
-                plt.scatter(true_index[index_particles[n]], reconstructed_index[index_particles[n]], s=1, c=cmap.color(n), alpha=0.05)
+                plt.scatter(true_index[index_particles[n]], reconstructed_index[index_particles[n]], s=1, color=cmap.color(n), alpha=0.05)
 
             tracking_index += np.sum((to_numpy(min_index) - np.arange(len(min_index)) == 0)) / n_frames / n_particles * 100
             tracking_index_list.append(np.sum((to_numpy(min_index) - np.arange(len(min_index)) == 0)))
@@ -857,13 +906,11 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
 
         plt.xlabel(r'True particle index', fontsize=32)
         plt.ylabel(r'Particle index in next frame', fontsize=32)
-        plt.xticks([])
-        plt.yticks([])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/proxy_tracking_{config_file}_{epoch}.tif", dpi=170.7)
         plt.close()
-        print(f'tracking index: {tracking_index}')
-        logger.info(f'tracking index: {tracking_index}')
+        print(f'tracking index: {np.round(tracking_index,3)}')
+        logger.info(f'tracking index: {np.round(tracking_index,3)}')
         print(f'{len(indexes)} tracks')
         logger.info(f'{len(indexes)} tracks')
 
@@ -881,57 +928,79 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
         print(f'tracking errors: {np.sum(tracking_index_list)}')
         logger.info(f'tracking errors: {np.sum(tracking_index_list)}')
 
-        embedding = to_numpy(model.a.clone().detach())
-        fig, ax = fig_init()
-        for k in indexes:
-            plt.scatter(embedding[int(k), 0], embedding[int(k), 1], s=1, c=cmap.color(int(to_numpy(x_[int(k),5]))), alpha=0.25)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
-        plt.xlim([-40, 40])
-        plt.ylim([-40, 40])
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/all_embedding_{config_file}_{epoch}.tif", dpi=170.7)
-        plt.close()
+        type_list = to_numpy(x_[indexes,5])
+
 
         model_a_first = model.a.clone().detach()
         config.training.cluster_distance_threshold = 0.01
-        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
-                                                                       cmap, index_particles, type_list,
+        accuracy, n_clusters, new_labels = plot_embedding_func_cluster_tracking(model, config, config_file, embedding_cluster,
+                                                                       cmap, index_particles, indexes, type_list,
                                                                        n_particle_types, n_particles, ynorm, epoch,
-                                                                       log_dir, device)
+                                                                       log_dir, embedding_type, device)
         print(
             f'final result     accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
         logger.info(
             f'final result     accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
-        fig, ax = fig_init()
-        p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
-        rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
-        rmserr_list = []
-        for n in indexes:
-            embedding_ = model_a_first[int(n), :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                     rr[:, None] / max_radius, embedding_), dim=1)
-            with torch.no_grad():
-                func = model.lin_edge(in_features.float())
-            func = func[:, 0]
-            true_func = model.psi(rr, p[int(to_numpy(x_[int(n),5]))].squeeze(),
-                                  p[int(to_numpy(x_[int(n),5]))].squeeze())
-            rmserr_list.append(torch.sqrt(torch.mean((func - true_func.squeeze()) ** 2)))
-            plt.plot(to_numpy(rr),
-                     to_numpy(func),
-                     color=cmap.color(int(to_numpy(x_[int(n),5]))), linewidth=8, alpha=0.1)
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
-        plt.xlim([0, max_radius])
-        plt.ylim(config.plotting.ylim)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/func_all_{config_file}_{epoch}.tif", dpi=170.7)
-        rmserr_list = torch.stack(rmserr_list)
-        rmserr_list = to_numpy(rmserr_list)
-        print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
-        logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
-        plt.close()
+
+        if embedding_type==1:
+            fig, ax = fig_init()
+            p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
+            rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+            rmserr_list = []
+            for n in indexes:
+                embedding_ = model_a_first[int(n), :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                         rr[:, None] / max_radius, embedding_), dim=1)
+                with torch.no_grad():
+                    func = model.lin_edge(in_features.float())
+                func = func[:, 0]
+                true_func = model.psi(rr, p[int(to_numpy(x_[int(n),5]))].squeeze(),
+                                      p[int(to_numpy(x_[int(n),5]))].squeeze())
+                rmserr_list.append(torch.sqrt(torch.mean((func - true_func.squeeze()) ** 2)))
+                plt.plot(to_numpy(rr),
+                         to_numpy(func),
+                         color=cmap.color(int(to_numpy(x_[int(n),5]))), linewidth=8, alpha=0.1)
+            plt.xlabel(r'$d_{ij}$', fontsize=64)
+            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+            plt.xlim([0, max_radius])
+            plt.ylim(config.plotting.ylim)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/func_all_{config_file}_{epoch}.tif", dpi=170.7)
+            rmserr_list = torch.stack(rmserr_list)
+            rmserr_list = to_numpy(rmserr_list)
+            print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+            logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+            plt.close()
+        else:
+            fig, ax = fig_init()
+            p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
+            rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+            rmserr_list = []
+            for n in range(int(n_particles * (1 - config.training.particle_dropout))):
+                embedding_ = model_a_first[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                         rr[:, None] / max_radius, embedding_), dim=1)
+                with torch.no_grad():
+                    func = model.lin_edge(in_features.float())
+                func = func[:, 0]
+                true_func = model.psi(rr, p[to_numpy(type_list[n]).astype(int)].squeeze(),
+                                      p[to_numpy(type_list[n]).astype(int)].squeeze())
+                rmserr_list.append(torch.sqrt(torch.mean((func - true_func.squeeze()) ** 2)))
+                plt.plot(to_numpy(rr),
+                         to_numpy(func),
+                         color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
+            plt.xlabel(r'$d_{ij}$', fontsize=64)
+            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+            plt.xlim([0, max_radius])
+            plt.ylim(config.plotting.ylim)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/func_all_{config_file}_{epoch}.tif", dpi=170.7)
+            rmserr_list = torch.stack(rmserr_list)
+            rmserr_list = to_numpy(rmserr_list)
+            print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+            logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+            plt.close()
 
         fig, ax = fig_init()
         plots = []
@@ -945,46 +1014,6 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
         plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=170.7)
-        plt.close()
-
-        rr = torch.tensor(np.linspace(-1.5 * max_radius, 1.5 * max_radius, 2000)).to(device)
-        fig, ax = fig_init()
-        plots = []
-        plots.append(rr)
-        for n in range(n_particle_types):
-            t = model.psi(rr, p[n], p[n])
-            plt.plot(to_numpy(rr), to_numpy(t), color=cmap.color(n), linewidth=8)
-            plots.append(model.psi(rr, p[n], p[n]).squeeze())
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
-        plt.xlim([-max_radius * 1.5, max_radius * 1.5])
-        plt.ylim(config.plotting.ylim)
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
-        plt.tight_layout()
-        plt.close()
-
-        for k in indexes:
-            pos = np.argwhere(x_ == k)
-            if len(pos > 0):
-                pos = pos[:, 0]
-                model_a = torch.median(model.a[pos, :], dim=0).values
-                model_a = model_a.clone().detach()
-                model_a = model_a.repeat(len(pos), 1)
-                with torch.no_grad():
-                    model.a[pos, :] = model_a
-
-        fig,ax = fig_init()
-        for k in trange(0,n_frames-2):
-            embedding = to_numpy(model.a[k*n_particles:(k+1)*n_particles,:].clone().detach())
-            for n in range(n_particle_types):
-                plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=1, c=cmap.color(n), alpha=0.0025)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
-        plt.xlim([-40, 40])
-        plt.ylim([-40, 40])
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/track_embedding_{config_file}_{epoch}.tif", dpi=170.7)
         plt.close()
 
 
@@ -3995,10 +4024,10 @@ def data_video_training(config_file, epoch_list, log_dir, logger, device):
 
 
 def data_plot(config_file, epoch_list, device):
-    # plt.rcParams['text.usetex'] = True
-    # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+    plt.rcParams['text.usetex'] = True
+    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     matplotlib.rcParams['savefig.pad_inches'] = 0
-    # matplotlib.use("Qt5Agg")
+    matplotlib.use("Qt5Agg")
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
@@ -4089,7 +4118,9 @@ if __name__ == '__main__':
 
     # epoch_list =
 
-    epoch_list = ['0_500','0_1000','0_2000','0_5000','0_10000','0_20000','0_49000','0','0_corrected','1_500','1_1000','1_2000','1_5000','1_10000','1_20000','1_49000','1','1_corrected','2_500','2_1000','2_2000','2_5000','2_10000','2_20000','2_49000','2','2_corrected','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20']
+    # epoch_list = ['0_500','0_1000','0_2000','0_5000','0_10000','0_20000','0_49000','0','1_500','1_1000','1_2000','1_5000','1_10000','1_20000','1_49000','1','2_500','2_1000','2_2000','2_5000','2_10000','2_20000','2_49000','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20']
+
+    epoch_list = ['1']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')

@@ -512,8 +512,8 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, index_par
             plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif", dpi=87)
             plt.close()
 
-def analyze_edge_function(rr=[], vizualize=False, config=None, model_lin_edge=[], model_a=None, n_nodes=0, dataset_number = 0, n_particles=None, ynorm=None, types=None, cmap=None, dimension=2, device=None):
-    func_list = []
+def analyze_edge_function_tracking(rr=[], vizualize=False, config=None, model_lin_edge=[], model_a=None, n_nodes=0, dataset_number = 0, n_particles=None, ynorm=None, indexes=None, type_list=None, cmap=None, dimension=2, embedding_type=0, device=None):
+
 
     model_config = config.graph_model
     max_radius = config.simulation.max_radius
@@ -529,13 +529,111 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_lin_edge=[]
         else:
             rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
 
+    if embedding_type == 1:
+        n_list = indexes
+    else:
+        n_list = range(n_particles)
 
+    func_list = []
+    for n, k  in enumerate(n_list):
+        embedding_ = model_a[int(k), :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+        if config.graph_model.particle_model_name != '':
+            config_model = config.graph_model.particle_model_name
+        elif config.graph_model.signal_model_name != '':
+            config_model = config.graph_model.signal_model_name
+        elif config.graph_model.mesh_model_name != '':
+            config_model = config.graph_model.mesh_model_name
+
+        match config_model:
+            case 'PDE_A':
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                         rr[:, None] / max_radius, embedding_), dim=1)
+            case 'PDE_ParticleField_A':
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                         rr[:, None] / max_radius, embedding_), dim=1)
+            case 'PDE_A_bis':
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                         rr[:, None] / max_radius, embedding_, embedding_), dim=1)
+            case 'PDE_B':
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                         rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                         0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+            case 'PDE_ParticleField_B':
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                         rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                         0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+            case 'PDE_GS':
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None], rr[:, None] / max_radius, 10**embedding_), dim=1)
+            case 'PDE_G':
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                         rr[:, None] / max_radius, 0 * rr[:, None],
+                                         0 * rr[:, None],
+                                         0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+            case 'PDE_E':
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                         rr[:, None] / max_radius, embedding_, embedding_), dim=1)
+            case 'PDE_N':
+                in_features = torch.cat((rr[:, None], embedding_), dim=1)
+        with torch.no_grad():
+            func = model_lin_edge(in_features.float())
+        func = func[:, 0]
+        func_list.append(func)
+        if ((n % 5 == 0) | (config.graph_model.particle_model_name=='PDE_GS')) & vizualize:
+            plt.plot(to_numpy(rr),
+                     to_numpy(func) * to_numpy(ynorm),
+                     color=cmap.color(int(type_list[int(n)])), linewidth=2, alpha=0.25)
+    func_list = torch.stack(func_list)
+    coeff_norm = to_numpy(func_list)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        if coeff_norm.shape[0] > 1000:
+            new_index = np.random.permutation(coeff_norm.shape[0])
+            new_index = new_index[0:min(1000, coeff_norm.shape[0])]
+            trans = umap.UMAP(n_neighbors=500, n_components=2, transform_queue_size=0, random_state=config.training.seed).fit(coeff_norm[new_index])
+            proj_interaction = trans.transform(coeff_norm)
+        else:
+            trans = umap.UMAP(n_neighbors=100, n_components=2, transform_queue_size=0).fit(coeff_norm)
+            proj_interaction = trans.transform(coeff_norm)
+
+    if vizualize:
+        if config.graph_model.particle_model_name == 'PDE_GS':
+            plt.xscale('log')
+            plt.yscale('log')
+        if config.graph_model.particle_model_name == 'PDE_G':
+            plt.xscale('log')
+            plt.yscale('log')
+            plt.xlim([1E-3, 0.2])
+        if config.graph_model.particle_model_name == 'PDE_E':
+            plt.xlim([0, 0.05])
+        plt.xlabel('Distance [a.u]', fontsize=12)
+        plt.ylabel('MLP [a.u]', fontsize=12)
+
+    return func_list, proj_interaction
+
+
+def analyze_edge_function(rr=[], vizualize=False, config=None, model_lin_edge=[], model_a=None, n_nodes=0, dataset_number = 0, n_particles=None, ynorm=None, types=None, cmap=None, dimension=2, device=None):
+
+    model_config = config.graph_model
+    max_radius = config.simulation.max_radius
+    min_radius = config.simulation.min_radius
+
+    if rr==[]:
+        if model_config.particle_model_name == 'PDE_G':
+            rr = torch.tensor(np.linspace(0, max_radius * 1.3, 1000)).to(device)
+        elif model_config.particle_model_name == 'PDE_GS':
+            rr = torch.tensor(np.logspace(7, 9, 1000)).to(device)
+        elif model_config.particle_model_name == 'PDE_E':
+            rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
+        else:
+            rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+
+    func_list = []
     for n in range(n_particles):
         if config.training.has_no_tracking:
             embedding_ = model_a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
         else:
             embedding_ = model_a[dataset_number, n_nodes+n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-        max_radius = config.simulation.max_radius
         if config.graph_model.particle_model_name != '':
             config_model = config.graph_model.particle_model_name
         elif config.graph_model.signal_model_name != '':
