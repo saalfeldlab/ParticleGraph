@@ -20,7 +20,8 @@ from sklearn import metrics
 from matplotlib import rc
 import matplotlib
 import networkx as nx
-# matplotlib.use("Qt5Agg")
+
+# TEST
 
 from ParticleGraph.config import ParticleGraphConfig
 from ParticleGraph.generators.particle_initialization import init_particles, init_mesh
