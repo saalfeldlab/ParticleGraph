@@ -386,7 +386,7 @@ def plot_training_tracking (config, dataset_name, log_dir, current_sequence, ind
     min_radius = config.simulation.min_radius
     embedding = to_numpy(model.a)
 
-    if current_sequence == 'to track':
+    if (current_sequence == 'to track'):
         fig = plt.figure(figsize=(8, 8))
         embedding = to_numpy(model.a)
         for n in range(n_particle_types):
@@ -396,19 +396,20 @@ def plot_training_tracking (config, dataset_name, log_dir, current_sequence, ind
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=87)
         plt.close()
-    elif current_sequence == 'to cell':
+    elif (current_sequence == 'to cell') | (current_sequence == 'to function'):
         fig, ax = fig_init()
         for n, k in enumerate(indexes):
-            plt.scatter(embedding[int(k), 0], embedding[int(k), 1], s=1, color=cmap.color(int(type_list[int(n)])), alpha=0.25)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+            if len(indexes) > 100:
+                plt.scatter(embedding[int(k), 0], embedding[int(k), 1], s=1, color=cmap.color(int(type_list[int(n)])), alpha=0.25)
+            else:
+                plt.scatter(embedding[int(k), 0], embedding[int(k), 1], s=1, color=cmap.color(int(type_list[int(n)])), alpha=1)
         plt.xlim([-40, 40])
         plt.ylim([-40, 40])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/all_embedding_{config_file}_{epoch}.tif", dpi=170.7)
+        plt.savefig(f"./{log_dir}/tmp_training/embedding/all_embedding_{dataset_name}_{epoch}_{N}.tif", dpi=170.7)
         plt.close()
 
-    if current_sequence == 'to track':
+    if (current_sequence == 'to track'):
         fig, ax = fig_init()
         rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
         for n in range(int(n_particles * (1 - config.training.particle_dropout))):
@@ -420,25 +421,29 @@ def plot_training_tracking (config, dataset_name, log_dir, current_sequence, ind
             func = func[:, 0]
             plt.plot(to_numpy(rr),
                      to_numpy(func),
-                     color=cmap.color(int(type_list[n])), linewidth=8, alpha=0.1)
+                     color=cmap.color(int(type_list[n])), linewidth=2, alpha=0.25)
         plt.xlim([0, max_radius])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
         plt.close()
-    elif current_sequence == 'to cell':
+    elif (current_sequence == 'to cell') | (current_sequence == 'to function'):
         fig, ax = fig_init()
         rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
-        for n in indexes:
-            embedding_ = model.a[int(n), :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+        for n, k in enumerate(indexes):
+            embedding_ = model.a[int(k), :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                      rr[:, None] / max_radius, embedding_), dim=1)
             with torch.no_grad():
                 func = model.lin_edge(in_features.float())
             func = func[:, 0]
-            plt.plot(to_numpy(rr),
-                     to_numpy(func),
-                     color=cmap.color(int(type_list[int(n)])), linewidth=8, alpha=0.1)
-
+            if len(indexes) > 100:
+                plt.plot(to_numpy(rr),
+                         to_numpy(func),
+                         color=cmap.color(int(type_list[int(n)])), linewidth=2, alpha=0.25)
+            else:
+                plt.plot(to_numpy(rr),
+                         to_numpy(func),
+                         color=cmap.color(int(type_list[int(n)])), linewidth=2, alpha=1)
         plt.xlim([0, max_radius])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
@@ -566,7 +571,6 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, index_par
 
 def analyze_edge_function_tracking(rr=[], vizualize=False, config=None, model_lin_edge=[], model_a=None, n_particles=None, ynorm=None, indexes=None, type_list=None, cmap=None, dimension=2, embedding_type=0, device=None):
 
-
     model_config = config.graph_model
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
@@ -595,7 +599,6 @@ def analyze_edge_function_tracking(rr=[], vizualize=False, config=None, model_li
             config_model = config.graph_model.signal_model_name
         elif config.graph_model.mesh_model_name != '':
             config_model = config.graph_model.mesh_model_name
-
         match config_model:
             case 'PDE_A':
                 in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],

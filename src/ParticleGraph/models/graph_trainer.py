@@ -481,9 +481,10 @@ def data_train_tracking(config, config_file, device):
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
     print('Loading existing model ...')
-    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_1.pt"
-    # state_dict = torch.load(net,map_location=device)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0.pt"
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
+    indexes = np.load(f"./{log_dir}/tmp_training/indexes_{dataset_name}_{0}.npy")
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start * 200
@@ -534,6 +535,8 @@ def data_train_tracking(config, config_file, device):
     for epoch in range(n_epochs + 1):
 
         current_sequence = config.training.sequence[epoch % sequence_length]
+        if current_sequence == 'to track':
+            type_list = to_numpy(type_list_first)
 
         if (epoch == 1) & (has_ghost):
             mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
@@ -617,11 +620,6 @@ def data_train_tracking(config, config_file, device):
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_training/particle/{dataset_name}_{epoch}_{N}.tif")
                 plt.close()
-
-                if current_sequence == 'to track':
-                    type_list = to_numpy(type_list_first)
-                elif current_sequence == 'to cell':
-                    type_list = to_numpy(x_[indexes, 5])
 
                 plot_training_tracking (config=config, dataset_name=dataset_name, log_dir=log_dir, current_sequence=current_sequence, indexes=indexes,
                               epoch=epoch, N=N, model=model, index_particles=index_particles, n_particles=n_particles,
@@ -709,8 +707,9 @@ def data_train_tracking(config, config_file, device):
                     x_ = torch.stack(x_list[1])
                     x_ = torch.reshape(x_, (x_.shape[0] * x_.shape[1], x_.shape[2]))
                     x_ = x_[0:(n_frames-1)*n_particles]
+                    indexes = np.unique(to_numpy(x_[:,0]))
+                    type_list = to_numpy(x_[indexes.astype(int),5])
                     x_ = to_numpy(x_[:,0])
-                    indexes = np.unique(x_)
 
                     for k in indexes:
                         pos = np.argwhere(x_ == k)
@@ -1180,8 +1179,6 @@ def data_train_cell_tracking(config, config_file, device):
                 print('from track to cell training')
                 logger.info('from track to cell training')
 
-                np.save(f"./{log_dir}/tmp_training/indexes_{dataset_name}_{epoch}_{N}.npy", x_)
-
                 for k in indexes:
                     pos = np.argwhere(x_ == k)
                     if len(pos > 0):
@@ -1206,13 +1203,12 @@ def data_train_cell_tracking(config, config_file, device):
         # plt.savefig(f"./{log_dir}/tmp_training/all_particle_{dataset_name}_{epoch}_{N}.tif", dpi=87)
         # plt.close()
 
+        np.save(f"./{log_dir}/tmp_training/indexes_{dataset_name}_{epoch}_{N}.npy", x_)
+
         lr_embedding = train_config.learning_rate_embedding_start * 200
         lr = train_config.learning_rate_start
         optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
         logger.info(f'Learning rates: {lr}, {lr_embedding}')
-
-        torch.save({'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_corrected.pt'))
 
 
 def data_train_cell(config, config_file, device):
