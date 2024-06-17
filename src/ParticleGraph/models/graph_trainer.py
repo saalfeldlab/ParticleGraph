@@ -646,8 +646,6 @@ def data_train_tracking(config, config_file, device):
 
             lr_embedding = train_config.learning_rate_embedding_end
             lr = train_config.learning_rate_end
-            optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-            logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
         else:
 
@@ -688,9 +686,11 @@ def data_train_tracking(config, config_file, device):
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_training/proxy_tracking_{dataset_name}_{epoch}_{N+1}.tif", dpi=87)
+                    plt.savefig(f"./{log_dir}/tmp_training/proxy_tracking_{dataset_name}_{epoch}.tif", dpi=87)
                     plt.close()
 
+                    print(f'tracking index: {np.round(tracking_index, 3)}')
+                    logger.info(f'tracking index: {np.round(tracking_index, 3)}')
                     print(f'tracking errors: {np.sum(tracking_index_list)}')
                     logger.info(f'tracking errors: {np.sum(tracking_index_list)}')
 
@@ -699,7 +699,7 @@ def data_train_tracking(config, config_file, device):
                     plt.ylabel(r'tracking errors', fontsize=64)
                     plt.xlabel(r'frame', fontsize=64)
                     plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/tmp_training/tracking_error_{config_file}_{epoch}_{N}.tif", dpi=170.7)
+                    plt.savefig(f"./{log_dir}/tmp_training/tracking_error_{config_file}_{epoch}.tif", dpi=170.7)
                     plt.close()
 
                     x_ = torch.stack(x_list[1])
@@ -717,9 +717,6 @@ def data_train_tracking(config, config_file, device):
                             model_a = model_a.repeat(len(pos),1)
                             with torch.no_grad():
                                 model.a[pos,:] = model_a
-
-                    print(f'{len(np.unique(x_))} tracks,  first track index: {np.min(x_)},  last track index: {np.max(x_)}')
-                    logger.info(f'{len(np.unique(x_))} tracks,  first track index: {np.min(x_)},  last track index: {np.max(x_)}')
 
                     # embedding to be optimized > normal learning rate
                     # functions to be optimized > normal learning rate
@@ -812,7 +809,7 @@ def data_train_tracking(config, config_file, device):
         optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
         logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
-        np.save(f"./{log_dir}/tmp_training/indexes_{dataset_name}_{epoch}_{N+1}.npy", indexes)
+        np.save(f"./{log_dir}/tmp_training/indexes_{dataset_name}_{epoch}.npy", indexes)
 
         fig = plt.figure(figsize=(8, 8))
         for k in range(0,n_frames-2,n_frames//10):
@@ -822,10 +819,8 @@ def data_train_tracking(config, config_file, device):
         plt.xticks([])
         plt.yticks([])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/all_particle_{dataset_name}_{epoch}_{N+1}.tif", dpi=87)
+        plt.savefig(f"./{log_dir}/tmp_training/all_particle_{dataset_name}_{epoch}.tif", dpi=87)
         plt.close()
-
-
 
 
 def data_train_cell_tracking(config, config_file, device):
