@@ -398,15 +398,17 @@ def plot_training_tracking (config, dataset_name, log_dir, current_sequence, ind
         plt.close()
     elif (current_sequence == 'to cell') | (current_sequence == 'to function'):
         fig, ax = fig_init()
-        for n, k in enumerate(indexes):
-            if len(indexes) > 100:
-                plt.scatter(embedding[int(k), 0], embedding[int(k), 1], s=1, color=cmap.color(int(type_list[int(n)])), alpha=0.25)
+        for n in range(n_particle_types):
+            pos = np.argwhere(type_list == n)
+            pos = pos[:,0]
+            if len(pos) > 100:
+                plt.scatter(embedding[indexes[pos.astype(int)].astype(int), 0], embedding[indexes[pos.astype(int)].astype(int), 1], s=1, alpha=0.25)
             else:
-                plt.scatter(embedding[int(k), 0], embedding[int(k), 1], s=1, color=cmap.color(int(type_list[int(n)])), alpha=1)
+                plt.scatter(embedding[indexes[pos.astype(int)].astype(int), 0], embedding[indexes[pos.astype(int)].astype(int), 1], s=1, alpha=1)
         plt.xlim([-40, 40])
         plt.ylim([-40, 40])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/embedding/all_embedding_{dataset_name}_{epoch}_{N}.tif", dpi=170.7)
+        plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=170.7)
         plt.close()
 
     if (current_sequence == 'to track'):

@@ -481,10 +481,10 @@ def data_train_tracking(config, config_file, device):
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
     print('Loading existing model ...')
-    net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0.pt"
-    state_dict = torch.load(net,map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
-    indexes = np.load(f"./{log_dir}/tmp_training/indexes_{dataset_name}_{0}.npy")
+    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0.pt"
+    # state_dict = torch.load(net,map_location=device)
+    # model.load_state_dict(state_dict['model_state_dict'])
+    # indexes = np.load(f"./{log_dir}/tmp_training/indexes_{dataset_name}_{0}.npy")
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start * 200
@@ -802,6 +802,9 @@ def data_train_tracking(config, config_file, device):
                         new_index = x_[index, index + n_particles]
                         x_list[1][k][:, 0] = torch.tensor(new_index, device=device)
                         index += n_particles
+
+                    indexes = np.unique(new_labels)
+                    type_list = indexes
 
                     # embedding to be fixed > slow learning rate
                     # functions to be optimized > normal learning rate
