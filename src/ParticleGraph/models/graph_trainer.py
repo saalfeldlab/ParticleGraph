@@ -435,19 +435,16 @@ def data_train_tracking(config, config_file, device):
     min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
     delta_t = simulation_config.delta_t
-    noise_level = train_config.noise_level
     dataset_name = config.dataset
-    n_frames = simulation_config.n_frames
     data_augmentation = train_config.data_augmentation
     data_augmentation_loop = train_config.data_augmentation_loop
-    replace_with_cluster = 'replace' in train_config.sparsity
-    sparsity_freq = train_config.sparsity_freq
     has_ghost = train_config.n_ghosts > 0
     n_ghosts = train_config.n_ghosts
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     embedding_cluster = EmbeddingCluster(config)
     n_runs = train_config.n_runs
     n_frames = simulation_config.n_frames
+    sequence_length = len(config.training.sequence)
 
     l_dir, log_dir, logger = create_log_dir(config, config_file)
     print(f'Graph files N: {n_runs}')
@@ -507,11 +504,13 @@ def data_train_tracking(config, config_file, device):
     config.simulation.n_particles = n_particles
     index_particles = get_index_particles(x, n_particle_types, dimension)
     type_list = get_type_list(x, dimension)
+    type_list_first = type_list.clone().detach()
     print(f'N particles: {n_particles} {len(torch.unique(type_list))} types')
     logger.info(f'N particles:  {n_particles} {len(torch.unique(type_list))} types')
 
     index_l = []
     index = 0
+    indexes = []
     for k in range(n_frames):
         new_index = torch.arange(index, index + n_particles)
         index_l.append(new_index)
@@ -533,6 +532,8 @@ def data_train_tracking(config, config_file, device):
     list_loss = []
     time.sleep(1)
     for epoch in range(n_epochs + 1):
+
+        current_sequence = config.training.sequence[epoch % sequence_length]
 
         if (epoch == 1) & (has_ghost):
             mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
@@ -606,6 +607,7 @@ def data_train_tracking(config, config_file, device):
 
             visualize_embedding = True
             if visualize_embedding & (((epoch < 3 ) & (N % (Niter//100) == 0)) | (N==0)):
+
                 fig = plt.figure(figsize=(8, 8))
                 plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=10, c='k', alpha=0.05)
                 plt.scatter(to_numpy(x_next[:, 0]), to_numpy(x_next[:, 1]), s=10, c='r', alpha=0.1)
@@ -616,10 +618,15 @@ def data_train_tracking(config, config_file, device):
                 plt.savefig(f"./{log_dir}/tmp_training/particle/{dataset_name}_{epoch}_{N}.tif")
                 plt.close()
 
-                plot_training(config=config, dataset_name=dataset_name, log_dir=log_dir,
-                              epoch=epoch, N=N, x=x, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
-                              index_particles=index_particles, n_particles=n_particles,
-                              n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
+                if current_sequence == 'to track':
+                    type_list = to_numpy(type_list_first)
+                elif current_sequence == 'to cell':
+                    type_list = to_numpy(x_[indexes, 5])
+
+                plot_training_tracking (config=config, dataset_name=dataset_name, log_dir=log_dir, current_sequence=current_sequence, indexes=indexes,
+                              epoch=epoch, N=N, model=model, index_particles=index_particles, n_particles=n_particles,
+                              n_particle_types=n_particle_types, type_list=type_list, cmap=cmap, device=device)
+
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
@@ -648,9 +655,6 @@ def data_train_tracking(config, config_file, device):
             lr = train_config.learning_rate_end
 
         else:
-
-            sequence_length = len(config.training.sequence)
-            current_sequence = config.training.sequence[epoch%sequence_length]
 
             match current_sequence:
 

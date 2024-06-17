@@ -864,7 +864,6 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
         print(f'{epoch}, {epoch_}, {embedding_type}')
         logger.info(f'{epoch}, {epoch_}, {embedding_type}')
 
-
         net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
         print(f'network: {net}')
         state_dict = torch.load(net, map_location=device)
@@ -936,6 +935,7 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
             type_list = to_numpy(type_list_first)
 
         config.training.cluster_distance_threshold = 0.01
+        model_a_first = model.a.clone().detach()
         accuracy, n_clusters, new_labels = plot_embedding_func_cluster_tracking(model, config, config_file, embedding_cluster, cmap, index_particles, indexes, type_list,
                                 n_particle_types, n_particles, ynorm, epoch, log_dir, embedding_type, device)
         print(
@@ -956,12 +956,12 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
                 with torch.no_grad():
                     func = model.lin_edge(in_features.float())
                 func = func[:, 0]
-                true_func = model.psi(rr, p[int(to_numpy(x_[int(n),5]))].squeeze(),
-                                      p[int(to_numpy(x_[int(n),5]))].squeeze())
+                true_func = model.psi(rr, p[int(type_list[n])].squeeze(),
+                                      p[int(type_list[n])].squeeze())
                 rmserr_list.append(torch.sqrt(torch.mean((func - true_func.squeeze()) ** 2)))
                 plt.plot(to_numpy(rr),
                          to_numpy(func),
-                         color=cmap.color(int(to_numpy(x_[int(n),5]))), linewidth=8, alpha=0.1)
+                         color=cmap.color(int(type_list[int(n)])), linewidth=8, alpha=0.1)
             plt.xlabel(r'$d_{ij}$', fontsize=64)
             plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
             plt.xlim([0, max_radius])
@@ -985,12 +985,12 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
                 with torch.no_grad():
                     func = model.lin_edge(in_features.float())
                 func = func[:, 0]
-                true_func = model.psi(rr, p[to_numpy(type_list[n]).astype(int)].squeeze(),
-                                      p[to_numpy(type_list[n]).astype(int)].squeeze())
+                true_func = model.psi(rr, p[int(type_list[n])].squeeze(),
+                                      p[int(type_list[n])].squeeze())
                 rmserr_list.append(torch.sqrt(torch.mean((func - true_func.squeeze()) ** 2)))
                 plt.plot(to_numpy(rr),
                          to_numpy(func),
-                         color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
+                         color=cmap.color(int(type_list[n])), linewidth=8, alpha=0.1)
             plt.xlabel(r'$d_{ij}$', fontsize=64)
             plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
             plt.xlim([0, max_radius])
@@ -1004,11 +1004,8 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
             plt.close()
 
         fig, ax = fig_init()
-        plots = []
-        plots.append(rr)
         for n in range(n_particle_types):
             plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n), linewidth=8)
-            plots.append(model.psi(rr, p[n], p[n]).squeeze())
         plt.xlim([0, max_radius])
         plt.ylim(config.plotting.ylim)
         plt.xlabel(r'$d_{ij}$', fontsize=64)
