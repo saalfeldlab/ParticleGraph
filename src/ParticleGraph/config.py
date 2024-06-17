@@ -133,6 +133,8 @@ class TrainingConfig(BaseModel):
     recursive_loop: int = 0
     sub_batches: int = 1
 
+    sequence: list[str] = ['cell to track','track to cell']
+
     cluster_method: Literal['kmeans', 'kmeans_auto_plot', 'kmeans_auto_embedding', 'distance_plot', 'distance_embedding', 'distance_both', 'inconsistent_plot', 'inconsistent_embedding', 'none'] = 'distance_plot'
     cluster_distance_threshold: float = 0.01
     cluster_connectivity: Literal['single','average'] = 'single'
