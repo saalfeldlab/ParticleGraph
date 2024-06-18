@@ -218,7 +218,10 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                     dpi=87)
     else:
         fig = plt.figure(figsize=(8, 8))
-        embedding = get_embedding(model.a, 1)
+        if has_no_tracking:
+            embedding = to_numpy(model.a)
+        else:
+            embedding = get_embedding(model.a, 1)
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=20)
         plt.xticks([])
@@ -283,7 +286,8 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                     if n % 5 == 0:
                         plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
                                  color=cmap.color(int(n // (n_particles / n_particle_types))), linewidth=2)
-                plt.ylim([-1E-4, 1E-4])
+                if not(has_no_tracking):
+                    plt.ylim([-1E-4, 1E-4])
                 plt.xlim([-max_radius, max_radius])
                 # plt.xlabel(r'$x_j-x_i$', fontsize=64)
                 # plt.ylabel(r'$f_{ij}$', fontsize=64)
@@ -336,11 +340,18 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 fig = plt.figure(figsize=(12, 12))
                 if axis:
                     ax = fig.add_subplot(1, 1, 1)
+                    # ax.xaxis.get_major_formatter()._usetex = False
+                    # ax.yaxis.get_major_formatter()._usetex = False
                     ax.xaxis.set_major_locator(plt.MaxNLocator(3))
                     ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+                    # plt.xlabel(r'$d_{ij}$', fontsize=64)
+                    # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
                     plt.xticks(fontsize=32)
                     plt.yticks(fontsize=32)
                     plt.xlim([0, simulation_config.max_radius])
+                    # plt.ylim([-0.15, 0.15])
+                    # plt.ylim([-0.04, 0.03])
+                    # plt.ylim([-0.1, 0.1])
                     plt.tight_layout()
                 rr = torch.tensor(np.linspace(0, simulation_config.max_radius, 200)).to(device)
                 for n in range(n_particles):
@@ -375,7 +386,8 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                                  to_numpy(func*ynorm),
                                  linewidth=2,
                                  color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
-                plt.ylim(config.plotting.ylim)
+                if not (has_no_tracking):
+                    plt.ylim(config.plotting.ylim)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
                 plt.close()
