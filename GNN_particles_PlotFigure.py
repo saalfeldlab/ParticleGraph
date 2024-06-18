@@ -961,7 +961,7 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
                 rmserr_list.append(torch.sqrt(torch.mean((func - true_func.squeeze()) ** 2)))
                 plt.plot(to_numpy(rr),
                          to_numpy(func),
-                         color=cmap.color(int(type_list[int(n)])), linewidth=8, alpha=0.1)
+                         color=cmap.color(int(type_list[int(n)])), linewidth=2, alpha=0.1)
             plt.xlabel(r'$d_{ij}$', fontsize=64)
             plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
             plt.xlim([0, max_radius])
@@ -990,7 +990,7 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
                 rmserr_list.append(torch.sqrt(torch.mean((func - true_func.squeeze()) ** 2)))
                 plt.plot(to_numpy(rr),
                          to_numpy(func),
-                         color=cmap.color(int(type_list[n])), linewidth=8, alpha=0.1)
+                         color=cmap.color(int(type_list[n])), linewidth=2, alpha=0.1)
             plt.xlabel(r'$d_{ij}$', fontsize=64)
             plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
             plt.xlim([0, max_radius])
@@ -4025,7 +4025,7 @@ def data_plot(config_file, epoch_list, device):
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     matplotlib.rcParams['savefig.pad_inches'] = 0
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
@@ -4101,6 +4101,8 @@ if __name__ == '__main__':
     print(' ')
     print(f'device {device}')
     print(' ')
+
+
     
     # config_list = ['boids_16_256_bison_siren_with_time_2']
     # config_list = ['boids_16_256','boids_32_256','boids_64_256']
@@ -4114,7 +4116,7 @@ if __name__ == '__main__':
     # config_list = ['boids_16_256','boids_32_256','boids_64_256']
     config_list = ['arbitrary_3_tracking']
 
-    epoch_list = ['0_500','0_1000','0_2000','0_5000','0_10000','0_20000','0_49000'] #,'0','1_500','1_1000','1_2000','1_5000','1_10000','1_20000','1_49000','1','2_500','2_1000','2_2000','2_5000','2_10000','2_20000','2_49000','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20']
+    epoch_list = ['0_500','0_1000','0_2000','0_5000','0_10000'] #,'0_20000','0_49000'] #,'0','1_500','1_1000','1_2000','1_5000','1_10000','1_20000','1_49000','1','2_500','2_1000','2_2000','2_5000','2_10000','2_20000','2_49000','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
