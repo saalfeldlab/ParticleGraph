@@ -438,13 +438,9 @@ def data_train_tracking(config, config_file, device):
     delta_t = simulation_config.delta_t
     noise_level = train_config.noise_level
     dataset_name = config.dataset
-    n_frames = simulation_config.n_frames
     data_augmentation = train_config.data_augmentation
     data_augmentation_loop = train_config.data_augmentation_loop
-    replace_with_cluster = 'replace' in train_config.sparsity
-    sparsity_freq = train_config.sparsity_freq
     has_ghost = train_config.n_ghosts > 0
-    n_ghosts = train_config.n_ghosts
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     embedding_cluster = EmbeddingCluster(config)
     n_runs = train_config.n_runs
@@ -519,15 +515,6 @@ def data_train_tracking(config, config_file, device):
         x_list[1][k][:, 0] = new_index
         index += n_particles
 
-    if has_ghost:
-
-        ghosts_particles = Ghost_Particles(config, n_particles, vnorm, device)
-        optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.ghost_pos], lr=1E-4)
-        mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
-        mask_ghost = np.tile(mask_ghost, batch_size)
-        mask_ghost = np.argwhere(mask_ghost == 1)
-        mask_ghost = mask_ghost[:, 0].astype(int)
-
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop} iterations per epoch')
     logger.info(f'{n_frames * data_augmentation_loop} iterations per epoch')
@@ -555,17 +542,6 @@ def data_train_tracking(config, config_file, device):
             k = np.random.randint(n_frames)
             x = x_list[run][k].clone().detach()
 
-            if has_ghost:
-                x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k, bc_pos=bc_pos)
-                if ghosts_particles.boids:
-                    distance = torch.sum(bc_dpos(x_ghost[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                    ind_np = torch.min(distance,axis=1)[1]
-                    x_ghost[:,3:5] = x[ind_np, 3:5].clone().detach()
-                x = torch.cat((x, x_ghost), 0)
-
-                with torch.no_grad():
-                    model.a[run,n_particles:n_particles+n_ghosts] = model.a[run,ghosts_particles.embedding_index].clone().detach()   # sample ghost embedding
-
             distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
             adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
             t = torch.Tensor([max_radius ** 2])
@@ -588,26 +564,26 @@ def data_train_tracking(config, config_file, device):
                 pred[:, 0] = new_x
                 pred[:, 1] = new_y
 
-            if has_ghost:
-                loss = ((pred[mask_ghost] - y)).norm(2)
-
             x_next = x_list[run][k+1]
-            x_next = x_next[:,1:3].clone().detach()
-            x_pred = (x[:,1:3] + delta_t * pred)
-
+            x_pos_next = x_next[:,1:3].clone().detach()
+            x_pos_pred = (x[:,1:3] + delta_t * pred)
 
             # y_ = bc_dpos(x_next - x[:, 1:3]) / delta_t /ynorm
             # pred_ = (x_pred - x[:, 1:3]) / delta_t
             # loss = (pred - y).norm(2)
             # loss = (pred_ - y_).norm(2)
 
-            distance = torch.sum(bc_dpos(x_pred[:, None, :] - x_next[None, :, :]) ** 2, dim=2)
+            distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
             result = distance.min(dim=1)
             min_value = result.values
             min_index = result.indices
-            pred__ = min_value / delta_t**2
+            pos_pre = min_value / delta_t**2
 
-            loss = torch.sum(pred__)
+            cell_index = x[:, 0].to(torch.int64).clone().detach()
+            cell_index_next = x_next[min_index,0].to(torch.int64)
+            embedding_loss = (model.a[cell_index] - model.a[cell_index_next]).norm(2)
+
+            loss = torch.sum(pos_pre) * config.training.coeff_loss1 + embedding_loss * config.training.coeff_loss2
 
             # loss1 = min_value.norm(2) / (vnorm**2) * config.training.coeff_loss1
             # loss1 = (x_pred[:, None, 1:3] - y[None, :, :]).norm(2)
@@ -615,16 +591,6 @@ def data_train_tracking(config, config_file, device):
 
             visualize_embedding = True
             if visualize_embedding & (((epoch < 3 ) & (N % (Niter//100) == 0)) | (N==0)):
-                print(N)
-                fig = plt.figure(figsize=(8, 8))
-                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=10, c='k', alpha=0.05)
-                plt.scatter(to_numpy(x_next[:, 0]), to_numpy(x_next[:, 1]), s=10, c='r', alpha=0.1)
-                plt.scatter(to_numpy(x_pred[:, 0]), to_numpy(x_pred[:, 1]), s=10, c='b', alpha=0.1)
-                plt.xlim([0.2, 0.8])
-                plt.ylim([0.2, 0.8])
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/particle/{dataset_name}_{epoch}_{N}.tif")
-                plt.close()
 
                 plot_training(config=config, dataset_name=dataset_name, log_dir=log_dir,
                               epoch=epoch, N=N, x=x, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
@@ -636,14 +602,6 @@ def data_train_tracking(config, config_file, device):
             loss.backward()
             optimizer.step()
 
-            if has_ghost:
-                optimizer_ghost_particles.step()
-                # if (N > 0) & (N % 1000 == 0) & (train_config.ghost_method == 'MLP'):
-                #     fig = plt.figure(figsize=(8, 8))
-                #     plt.imshow(to_numpy(ghosts_particles.data[run, :, 120, :].squeeze()))
-                #     fig.savefig(f"{log_dir}/tmp_training/embedding/ghosts_{N}.jpg", dpi=300)
-                #     plt.close()
-
             total_loss += loss.item()
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles))
@@ -653,15 +611,10 @@ def data_train_tracking(config, config_file, device):
         list_loss.append(total_loss / (N + 1) / n_particles)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
-        if has_ghost:
-            torch.save({'model_state_dict': ghosts_particles.state_dict(),
-                        'optimizer_state_dict': optimizer_ghost_particles.state_dict()}, os.path.join(log_dir, 'models', f'best_ghost_particles_with_{n_runs - 1}_graphs_{epoch}.pt'))
-
         if epoch>18:
 
             lr_embedding = train_config.learning_rate_embedding_end
             lr = train_config.learning_rate_end
-            optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
             logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
         else:
@@ -988,9 +941,9 @@ def data_train_cell_tracking(config, config_file, device):
             result = distance.min(dim=1)
             min_value = result.values
             min_index = result.indices
-            pred__ = min_value / delta_t**2
+            pos_pre = min_value / delta_t**2
 
-            loss = torch.sum(pred__)
+            loss = torch.sum(pos_pre)
 
             # loss1 = min_value.norm(2) / (vnorm**2) * config.training.coeff_loss1
             # loss1 = (x_pred[:, None, 1:3] - y[None, :, :]).norm(2)
