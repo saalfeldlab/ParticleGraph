@@ -94,6 +94,7 @@ class PlottingConfig(BaseModel):
     arrow_length: int = 10
     marker_size: int = 100
     ylim: list[float] = [-0.1, 0.1]
+    embedding_lim: list[float] = [-40, 40]
 
 
 class TrainingConfig(BaseModel):

@@ -350,8 +350,8 @@ def plot_embedding_func_cluster_tracking(model, config, config_file, embedding_c
             plt.scatter(embedding[int(k), 0], embedding[int(k), 1], s=1, color=cmap.color(int(type_list[int(n)])), alpha=0.25)
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
-        plt.xlim([-40, 40])
-        plt.ylim([-40, 40])
+        plt.xlim(config.plotting.embedding_lim)
+        plt.ylim(config.plotting.embedding_lim)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/all_embedding_{config_file}_{epoch}.tif", dpi=170.7)
         plt.close()
@@ -364,8 +364,8 @@ def plot_embedding_func_cluster_tracking(model, config, config_file, embedding_c
                             color=cmap.color(n), alpha=0.025)
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
-        plt.xlim([-40, 40])
-        plt.ylim([-40, 40])
+        plt.xlim(config.plotting.embedding_lim)
+        plt.ylim(config.plotting.embedding_lim)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/all_embedding_{config_file}_{epoch}.tif", dpi=170.7)
         plt.close()
@@ -385,7 +385,7 @@ def plot_embedding_func_cluster_tracking(model, config, config_file, embedding_c
     else:
         for n in range(n_particle_types):
             plt.scatter(proj_interaction[index_particles[n], 0],
-                        proj_interaction[index_particles[n], 1], color=cmap.color(n), s=200, alpha=0.1)
+                        proj_interaction[index_particles[n], 1], color=cmap.color(n), s=1, alpha=0.25)
     plt.xlabel(r'UMAP 0', fontsize=64)
     plt.ylabel(r'UMAP 1', fontsize=64)
     plt.xlim([-0.2, 1.2])
@@ -854,7 +854,13 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
+    accuracy_list_=[]
+    tracking_index_list_=[]
+    tracking_errors_list_=[]
+
     for epoch in epoch_list:
+        print('')
+        logger.info('')
         pos = epoch.find('_')
         if pos>0:
             epoch_ = epoch[0:pos]
@@ -915,6 +921,8 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
         print(f'{len(indexes)} tracks')
         logger.info(f'{len(indexes)} tracks')
 
+        tracking_index_list_.append(tracking_index)
+
         tracking_index_list = np.array(tracking_index_list)
         tracking_index_list = n_particles - tracking_index_list
 
@@ -929,20 +937,23 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
         print(f'tracking errors: {np.sum(tracking_index_list)}')
         logger.info(f'tracking errors: {np.sum(tracking_index_list)}')
 
+        tracking_errors_list_.append(np.sum(tracking_index_list))
+
         if embedding_type==1:
             type_list = to_numpy(x_[indexes,5])
         else:
             type_list = to_numpy(type_list_first)
 
-        config.training.cluster_distance_threshold = 0.01
+        config.training.cluster_distance_threshold = 0.1
         model_a_first = model.a.clone().detach()
         accuracy, n_clusters, new_labels = plot_embedding_func_cluster_tracking(model, config, config_file, embedding_cluster, cmap, index_particles, indexes, type_list,
                                 n_particle_types, n_particles, ynorm, epoch, log_dir, embedding_type, device)
         print(
-            f'final result     accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+            f'accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
         logger.info(
-            f'final result     accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+            f'accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
+        accuracy_list_.append(accuracy)
 
         if embedding_type==1:
             fig, ax = fig_init()
@@ -1010,6 +1021,22 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=170.7)
         plt.close()
+
+        fig, ax = fig_init()
+        plt.plot(tracking_index_list_, color='k', linewidth=2)
+        plt.ylabel(r'tracking_index', fontsize=64)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/tracking_index_list_{config_file}.tif", dpi=170.7)
+        fig, ax = fig_init()
+        plt.plot(accuracy_list_, color='k', linewidth=2)
+        plt.ylabel(r'accuracy', fontsize=64)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/accuracy_list_{config_file}.tif", dpi=170.7)
+        fig, ax = fig_init()
+        plt.plot(tracking_errors_list_, color='k', linewidth=2)
+        plt.ylabel(r'tracking_errors', fontsize=64)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/tracking_errors_list_{config_file}.tif", dpi=170.7)
 
 
 def data_plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger, device):
@@ -4111,9 +4138,9 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_continuous']
     # config_list = ['arbitrary_64_0_01']
     # config_list = ['boids_16_256','boids_32_256','boids_64_256']
-    config_list = ['arbitrary_3_tracking_test']
+    config_list = ['arbitrary_3_tracking_bis']
 
-    epoch_list = ['0_500','0_1000','0_2000','0_5000','0_10000', '0_20000','0_49000', '1_0', '1_500','1_1000','1_2000','1_5000','1_10000','1_20000','1_49000','2_0','2_500','2_1000','2_2000','2_5000','2_10000','2_20000','2_49000','5_0','10_0','15_0','20_0']
+    epoch_list = ['1_500', '0_500','0_1000','0_2000','0_5000','0_10000', '0_20000','0_49000', '1_0', '1_500','1_1000','1_2000','1_5000','1_10000','1_20000','1_49000','2_0','2_500','2_1000','2_2000','2_5000','2_10000','2_20000','2_49000','5_0','10_0','15_0','20_0']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')

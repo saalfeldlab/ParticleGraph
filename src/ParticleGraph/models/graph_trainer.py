@@ -539,7 +539,10 @@ def data_train_tracking(config, config_file, device):
             sin_phi = torch.sin(phi)
 
             run = 1 + np.random.randint(n_runs - 1)
+
             k = np.random.randint(n_frames)
+            # k = int(N % n_frames)
+
             x = x_list[run][k].clone().detach()
 
             distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)

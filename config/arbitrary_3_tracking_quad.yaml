@@ -30,7 +30,6 @@ plotting:
   colormap: 'tab10'
   arrow_length: 2
   ylim: [-0.04, 0.03]
-  embedding_lim: [-10, 10]
 
 training:
   n_epochs: 20
@@ -39,7 +38,7 @@ training:
   small_init_batch_size: True
   n_runs: 2
   sparsity: 'replace_embedding_function'
-  cluster_method: 'distance_embedding'
+  cluster_method: 'distance_plot'
   data_augmentation: True
   data_augmentation_loop: 200
   fix_cluster_embedding: True
