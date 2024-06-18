@@ -345,9 +345,11 @@ def plot_embedding_func_cluster_tracking(model, config, config_file, embedding_c
 
     if embedding_type == 1:
         embedding = to_numpy(model.a.clone().detach())
+        embedding = embedding[indexes.astype(int)]
         fig, ax = fig_init()
-        for n, k in enumerate(indexes):
-            plt.scatter(embedding[int(k), 0], embedding[int(k), 1], s=1, color=cmap.color(int(type_list[int(n)])), alpha=0.25)
+        for n in range(n_particle_types):
+            pos = np.argwhere(type_list == n).squeeze().astype(int)
+            plt.scatter(embedding[pos, 0], embedding[pos, 1], s=1, alpha=0.25)
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
         plt.xlim(config.plotting.embedding_lim)
@@ -377,11 +379,11 @@ def plot_embedding_func_cluster_tracking(model, config, config_file, embedding_c
                                                         cmap=cmap, embedding_type = embedding_type, device=device)
 
     fig, ax = fig_init()
-    proj_interaction = (proj_interaction - np.min(proj_interaction)) / (
-                np.max(proj_interaction) - np.min(proj_interaction) + 1e-10)
+    proj_interaction = (proj_interaction - np.min(proj_interaction)) / (np.max(proj_interaction) - np.min(proj_interaction) + 1e-10)
     if embedding_type == 1:
-        for n, k in enumerate(indexes):
-            plt.scatter(proj_interaction[int(n), 0], proj_interaction[int(n), 1], s=1, color=cmap.color(int(type_list[int(n)])), alpha=0.25)
+        for n in range(n_particle_types):
+            pos = np.argwhere(type_list == n).squeeze().astype(int)
+            plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], s=1, alpha=0.25)
     else:
         for n in range(n_particle_types):
             plt.scatter(proj_interaction[index_particles[n], 0],
@@ -394,11 +396,23 @@ def plot_embedding_func_cluster_tracking(model, config, config_file, embedding_c
     plt.savefig(f"./{log_dir}/results/UMAP_{config_file}_{epoch}.tif", dpi=170.7)
     plt.close()
 
+    embedding = to_numpy(model.a.clone().detach())
+    if embedding_type == 1:
+        embedding = embedding[indexes.astype(int)]
+    else:
+        embedding = embedding[0:n_particles]
+
+
     labels, n_clusters, new_labels = sparsify_cluster(config.training.cluster_method, proj_interaction, embedding,
                                                       config.training.cluster_distance_threshold, index_particles,
                                                       n_particle_types, embedding_cluster)
 
     accuracy = metrics.accuracy_score(type_list, new_labels)
+
+    fig, ax = fig_init()
+    for n in np.unique(labels):
+        pos = np.argwhere(labels == n).squeeze().astype(int)
+        plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], s=1, alpha=0.25)
 
     return accuracy, n_clusters, new_labels
 
@@ -4127,7 +4141,6 @@ if __name__ == '__main__':
     print(' ')
 
 
-    
     # config_list = ['boids_16_256_bison_siren_with_time_2']
     # config_list = ['boids_16_256','boids_32_256','boids_64_256']
     # config_list = ['boids_16_256_division_death_model_2']
@@ -4140,7 +4153,7 @@ if __name__ == '__main__':
     # config_list = ['boids_16_256','boids_32_256','boids_64_256']
     config_list = ['arbitrary_3_tracking_bis']
 
-    epoch_list = ['1_500', '0_500','0_1000','0_2000','0_5000','0_10000', '0_20000','0_49000', '1_0', '1_500','1_1000','1_2000','1_5000','1_10000','1_20000','1_49000','2_0','2_500','2_1000','2_2000','2_5000','2_10000','2_20000','2_49000','5_0','10_0','15_0','20_0']
+    epoch_list = ['0_500','0_1000','0_2000','0_5000','0_10000', '0_20000','0_49000', '1_0', '1_500','1_1000','1_2000','1_5000','1_10000','1_20000','1_49000','2_0','2_500','2_1000','2_2000','2_5000','2_10000','2_20000','2_49000','5_0','10_0','15_0','20_0']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
