@@ -2454,64 +2454,68 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     print(table)
     print(f"Total Trainable Params: {total_params}")
 
-    if has_mesh:
-        mesh_model, bc_pos, bc_dpos = choose_training_model(config, device)
-        state_dict = torch.load(net, map_location=device)
-        mesh_model.load_state_dict(state_dict['model_state_dict'])
-        mesh_model.eval()
+    if test_simulation:
+        model, bc_pos, bc_dpos = choose_model(config, device=device)
     else:
-        state_dict = torch.load(net, map_location=device)
-        model.load_state_dict(state_dict['model_state_dict'])
-        model.eval()
-        mesh_model = None
-    if has_siren:
-
-        model_f_p = model
-        model_f_f = choose_mesh_model(config, device=device)
-
-        image_width = int(np.sqrt(n_nodes))
-        if has_siren_time:
-            model_f = Siren_Network(image_width=image_width, in_features=3, out_features=1, hidden_features=128,
-                                    hidden_layers=5, outermost_linear=True, device=device, first_omega_0=80,
-                                    hidden_omega_0=80.)
-        else:
-            model_f = Siren_Network(image_width=image_width, in_features=2, out_features=1, hidden_features=64,
-                                    hidden_layers=3, outermost_linear=True, device=device, first_omega_0=80,
-                                    hidden_omega_0=80.)
-
-        net = f'./log/try_{config_file}/models/best_model_f_with_1_graphs_{best_model}.pt'
-        state_dict = torch.load(net, map_location=device)
-        model_f.load_state_dict(state_dict['model_state_dict'])
-
-        model_f.to(device=device)
-        model_f.eval()
-
-        table = PrettyTable(["Modules", "Parameters"])
-        total_params = 0
-        for name, parameter in model_f.named_parameters():
-            if not parameter.requires_grad:
-                continue
-            param = parameter.numel()
-            table.add_row([name, param])
-            total_params += param
-
-        print(table)
-        print(f"Total Trainable Params: {total_params}")
-
-
-        if has_division:
-            model_division = Division_Predictor(config, device)
-            net = f"./log/try_{config_file}/models/best_model_division_with_{n_runs - 1}_graphs_20.pt"
+        if has_mesh:
+            mesh_model, bc_pos, bc_dpos = choose_training_model(config, device)
             state_dict = torch.load(net, map_location=device)
-            model_division.load_state_dict(state_dict['model_state_dict'])
-            model_division.eval()
-        if os.path.isfile(os.path.join(log_dir, f'labels_{best_model}.pt')):
-            print('Use learned labels')
-            labels = torch.load(os.path.join(log_dir, f'labels_{best_model}.pt'))
+            mesh_model.load_state_dict(state_dict['model_state_dict'])
+            mesh_model.eval()
+        else:
+            state_dict = torch.load(net, map_location=device)
+            model.load_state_dict(state_dict['model_state_dict'])
+            model.eval()
+            mesh_model = None
+        if has_siren:
+
+            model_f_p = model
+            model_f_f = choose_mesh_model(config, device=device)
+
+            image_width = int(np.sqrt(n_nodes))
+            if has_siren_time:
+                model_f = Siren_Network(image_width=image_width, in_features=3, out_features=1, hidden_features=128,
+                                        hidden_layers=5, outermost_linear=True, device=device, first_omega_0=80,
+                                        hidden_omega_0=80.)
+            else:
+                model_f = Siren_Network(image_width=image_width, in_features=2, out_features=1, hidden_features=64,
+                                        hidden_layers=3, outermost_linear=True, device=device, first_omega_0=80,
+                                        hidden_omega_0=80.)
+
+            net = f'./log/try_{config_file}/models/best_model_f_with_1_graphs_{best_model}.pt'
+            state_dict = torch.load(net, map_location=device)
+            model_f.load_state_dict(state_dict['model_state_dict'])
+
+            model_f.to(device=device)
+            model_f.eval()
+
+            table = PrettyTable(["Modules", "Parameters"])
+            total_params = 0
+            for name, parameter in model_f.named_parameters():
+                if not parameter.requires_grad:
+                    continue
+                param = parameter.numel()
+                table.add_row([name, param])
+                total_params += param
+
+            print(table)
+            print(f"Total Trainable Params: {total_params}")
+
+
+            if has_division:
+                model_division = Division_Predictor(config, device)
+                net = f"./log/try_{config_file}/models/best_model_division_with_{n_runs - 1}_graphs_20.pt"
+                state_dict = torch.load(net, map_location=device)
+                model_division.load_state_dict(state_dict['model_state_dict'])
+                model_division.eval()
+            if os.path.isfile(os.path.join(log_dir, f'labels_{best_model}.pt')):
+                print('Use learned labels')
+                labels = torch.load(os.path.join(log_dir, f'labels_{best_model}.pt'))
+        first_embedding = model.a[1].data.clone().detach()
 
 
     n_sub_population = n_particles // n_particle_types
-    first_embedding = model.a[1].data.clone().detach()
+
     first_index_particles = []
     for n in range(n_particle_types):
         index = np.arange(n_particles * n // n_particle_types, n_particles * (n + 1) // n_particle_types)
@@ -2727,7 +2731,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 edge_index = adj_t.nonzero().t().contiguous()
                 dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
                 if test_simulation:
-                    y = y0 / ynorm
+                    # y = y0 / ynorm
+                    dataset.x[:,5] = x0[:,5]
+                    index_particles = get_index_particles(dataset.x, n_particle_types, dimension)
+                    y = model(dataset) / ynorm
                 else:
                     with torch.no_grad():
                         y = model(dataset, data_id=1, training=False, vnorm=vnorm,
@@ -2745,16 +2752,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 else:
                     x[:, 3:5] = y
 
-            if has_division:
-                x_time = torch.concatenate((x[:, 0:1], torch.ones_like(x[:, 0:1], device=device) * it), dim=1)
-                with torch.no_grad():
-                    y_time = model_division(x_time, data_id=0)
-                gt_y_time = y_list[0][it].clone().detach()
-
             x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t)  # position update
 
 
-        A1 = A1 + delta_t
+        # A1 = A1 + delta_t
 
         if (it % step == 0) & (it >= 0) & visualize:
             # print(f'RMSE = {np.round(rmserr.item(), 4)}')

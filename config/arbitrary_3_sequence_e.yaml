@@ -35,8 +35,7 @@ plotting:
 
 training:
   n_epochs: 20
-  has_no_tracking: True
-  batch_size: 1
+  batch_size: 8
   small_init_batch_size: True
   n_runs: 2
   sparsity: 'none'

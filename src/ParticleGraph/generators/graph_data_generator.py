@@ -75,6 +75,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         os.remove(f)
 
     model, bc_pos, bc_dpos = choose_model(config, device=device)
+
     particle_dropout_mask = np.arange(n_particles)
     if has_particle_dropout:
         draw = np.random.permutation(np.arange(n_particles))
@@ -1185,6 +1186,4 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             torch.save(y_mesh_list, f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt')
             torch.save(edge_p_p_list, f'graphs_data/graphs_{dataset_name}/edge_p_p_list{run}.pt')
             torch.save(edge_f_p_list, f'graphs_data/graphs_{dataset_name}/edge_f_p_list{run}.pt')
-            torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
-            torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
             torch.save(model_p_p.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
