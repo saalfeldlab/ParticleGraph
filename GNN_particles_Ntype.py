@@ -50,7 +50,9 @@ if __name__ == '__main__':
     # config_list=  ['arbitrary_3_Bernouilli_10','arbitrary_3_Bernouilli_20','arbitrary_3_Bernouilli_30']
     # config_list = ['arbitrary_3_tracking_angle_10','arbitrary_3_tracking_angle_20','arbitrary_3_tracking_angle_30']
     # config_list = ['arbitrary_3_tracking_Bernouilli_10','arbitrary_3_tracking_Bernouilli_20','arbitrary_3_tracking_Bernouilli_30']
-    config_list = ['arbitrary_3_tracking_6']
+    # config_list = ['arbitrary_3_tracking_6']
+    config_list = ['arbitrary_3_sequence']
+    # config_list = ['arbitrary_3_field_video_bison_bis']
 
 
     seed_list = np.arange(10)
@@ -63,7 +65,7 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='frame color', alpha=1, erase=True, bSave=True, step=25)  # config.simulation.n_frames // 1)
-        data_train(config, config_file, device)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='frame color', alpha=1, erase=True, bSave=True, step=2)  # config.simulation.n_frames // 1)
+        # data_train(config, config_file, device)
         # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 25, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 

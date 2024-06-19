@@ -101,11 +101,6 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
 
         # initialize particle and graph states
         X1, V1, T1, H1, A1, N1 = init_particles(config, device=device)
-        index_particles = []
-        for n in range(n_particle_types):
-            pos = torch.argwhere(T1 == n)
-            pos = to_numpy(pos[:, 0].squeeze()).astype(int)
-            index_particles.append(pos)
         if has_adjacency_matrix:
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                  H1.clone().detach(), A1.clone().detach()), 1)
@@ -121,8 +116,10 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
             x = torch.concatenate(
-                (N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
+                (N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1[it,:,None].clone().detach(),
                  H1.clone().detach(), A1.clone().detach()), 1)
+
+            index_particles = get_index_particles(x, n_particle_types, dimension)  # can be different from frame to frame
 
             # compute connectivity rule
             if has_adjacency_matrix:
@@ -852,10 +849,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
     cmap = CustomColorMap(config=config)
     dataset_name = config.dataset
 
-    if config.data_folder_name != 'none':
-        generate_from_data(config=config, device=device, visualize=visualize, folder=folder, step=step)
-        return
-
     folder = f'./graphs_data/graphs_{dataset_name}/'
     if erase:
         files = glob.glob(f"{folder}/*")
@@ -870,7 +863,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         os.remove(f)
     copyfile(os.path.realpath(__file__), os.path.join(folder, 'generation_code.py'))
 
-    config.graph_model.particle_model_name = 'PDE_ParticleField_B'
     model_p_p, bc_pos, bc_dpos = choose_model(config, device=device)
     model_f_p = model_p_p
 
@@ -904,10 +896,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         x_mesh_list = []
         y_mesh_list = []
         edge_p_p_list = []
-        edge_p_f_list = []
-        edge_f_f_list = []
         edge_f_p_list = []
-
 
         # initialize particle and mesh states
         X1, V1, T1, H1, A1, N1 = init_particles(config, device=device)
@@ -921,15 +910,9 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
         torch.save(mesh_data, f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt')
         mask_mesh = mesh_data['mask'].squeeze()
-        index_particles = []
-        for n in range(n_particle_types):
-            pos = torch.argwhere(T1 == n)
-            pos = to_numpy(pos[:, 0].squeeze()).astype(int)
-            index_particles.append(pos)
 
         time.sleep(0.5)
         for it in trange(simulation_config.start_frame, n_frames + 1):
-
 
             if ('siren' in model_config.field_type) & (it >= 0):
 
@@ -944,8 +927,10 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     im = torch.reshape(H1_mesh[:, 0:1], (n_nodes_per_axis, n_nodes_per_axis))
                 # io.imsave(f"graphs_data/graphs_{dataset_name}/generated_data/rotated_image_{it}.tif", to_numpy(im))
 
-            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
+            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1[it,:,None].clone().detach(),
                                    H1.clone().detach(), A1.clone().detach()), 1)
+
+            index_particles = get_index_particles(x, n_particle_types, dimension)
 
             x_mesh = torch.concatenate(
                 (N1_mesh.clone().detach(), X1_mesh.clone().detach(), V1_mesh.clone().detach(),
