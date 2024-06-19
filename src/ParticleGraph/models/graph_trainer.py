@@ -446,6 +446,7 @@ def data_train_tracking(config, config_file, device):
     n_runs = train_config.n_runs
     n_frames = simulation_config.n_frames
     sequence_length = len(config.training.sequence)
+    has_sequence = config.training.sequence != ['none']
 
     l_dir, log_dir, logger = create_log_dir(config, config_file)
     print(f'Graph files N: {n_runs}')
@@ -583,11 +584,11 @@ def data_train_tracking(config, config_file, device):
             min_index = result.indices
             pos_pre = min_value / delta_t**2
 
-            cell_index = x[:, 0].to(torch.int64).clone().detach()
-            cell_index_next = x_next[min_index,0].to(torch.int64)
-            embedding_loss = (model.a[cell_index] - model.a[cell_index_next]).norm(2)
+            # cell_index = x[:, 0].to(torch.int64).clone().detach()
+            # cell_index_next = x_next[min_index,0].to(torch.int64)
+            # embedding_loss = (model.a[cell_index] - model.a[cell_index_next]).norm(2)
 
-            loss = torch.sum(pos_pre) * config.training.coeff_loss1 + embedding_loss * config.training.coeff_loss2
+            loss = torch.sum(pos_pre) # * config.training.coeff_loss1 + embedding_loss * config.training.coeff_loss2
 
             # loss1 = min_value.norm(2) / (vnorm**2) * config.training.coeff_loss1
             # loss1 = (x_pred[:, None, 1:3] - y[None, :, :]).norm(2)
@@ -621,7 +622,7 @@ def data_train_tracking(config, config_file, device):
             lr = train_config.learning_rate_end
             logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
-        else:
+        elif has_sequence:
 
             if epoch%sequence_length == 0:
 

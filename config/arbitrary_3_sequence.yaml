@@ -35,15 +35,19 @@ plotting:
 
 training:
   n_epochs: 20
-  batch_size: 8
-  small_init_batch_size: False
+  has_no_tracking: True
+  batch_size: 1
+  small_init_batch_size: True
   n_runs: 2
   sparsity: 'replace_embedding_function'
   cluster_method: 'distance_plot'
   data_augmentation: True
-  data_augmentation_loop: 100
+  data_augmentation_loop: 200
   fix_cluster_embedding: True
   device: 'auto'
+  coeff_loss1: 1
+  coeff_loss2: 1
+  sequence: ['none']
 
 
 
