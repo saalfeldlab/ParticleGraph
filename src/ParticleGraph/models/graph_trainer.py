@@ -73,6 +73,7 @@ def data_train_particles(config, config_file, device):
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     embedding_cluster = EmbeddingCluster(config)
     n_runs = train_config.n_runs
+    has_state = config.simulation.state_type != ['discrete']
 
     l_dir, log_dir, logger = create_log_dir(config, config_file)
     print(f'Graph files N: {n_runs}')
@@ -136,6 +137,14 @@ def data_train_particles(config, config_file, device):
     type_list = get_type_list(x, dimension)
     print(f'N particles: {n_particles} {len(torch.unique(type_list))} types')
     logger.info(f'N particles:  {n_particles} {len(torch.unique(type_list))} types')
+    if has_state:
+        index_l = []
+        index = 0
+        for k in range(n_frames):
+            new_index = torch.arange(index, index + n_particles)
+            index_l.append(new_index)
+            x_list[1][k][:, 0] = new_index
+            index += n_particles
 
     if has_ghost:
 
@@ -447,7 +456,7 @@ def data_train_tracking(config, config_file, device):
     n_runs = train_config.n_runs
     n_frames = simulation_config.n_frames
     sequence_length = len(config.training.sequence)
-    has_sequence = config.training.sequence != ['none']
+    has_sequence = (config.training.sequence != ['none'])
 
     l_dir, log_dir, logger = create_log_dir(config, config_file)
     print(f'Graph files N: {n_runs}')
@@ -733,16 +742,16 @@ def data_train_tracking(config, config_file, device):
                 for k in range(n_frames):
                     x_list[1][k][:, 0] = index_l[k].clone().detach()
 
-        fig = plt.figure(figsize=(8, 8))
-        for k in range(0,n_frames-2,n_frames//10):
-            embedding = to_numpy(model.a[k*n_particles:(k+1)*n_particles,:].clone().detach())
-            for n in range(n_particle_types):
-                plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=20, c=cmap.color(n))
-        plt.xticks([])
-        plt.yticks([])
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/all_particle_{dataset_name}_{epoch}_{N}.tif", dpi=87)
-        plt.close()
+            fig = plt.figure(figsize=(8, 8))
+            for k in range(0,n_frames-2,n_frames//10):
+                embedding = to_numpy(model.a[k*n_particles:(k+1)*n_particles,:].clone().detach())
+                for n in range(n_particle_types):
+                    plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=20, c=cmap.color(n))
+            plt.xticks([])
+            plt.yticks([])
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/tmp_training/all_particle_{dataset_name}_{epoch}.tif", dpi=87)
+            plt.close()
 
         lr_embedding = train_config.learning_rate_embedding_start * 200
         lr = train_config.learning_rate_start

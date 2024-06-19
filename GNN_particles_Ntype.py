@@ -44,7 +44,6 @@ if __name__ == '__main__':
     config_list = ['arbitrary_3_sequence_e']
     # config_list = ['arbitrary_3_field_video_bison_bis']
 
-
     seed_list = np.arange(10)
 
     for config_file in config_list:
