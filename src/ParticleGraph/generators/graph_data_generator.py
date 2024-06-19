@@ -333,7 +333,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                             plt.xticks([])
                             plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.tif", dpi=170.7)
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.tif", dpi=80) # 170.7)
                         # plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{10000+it}.tif", dpi=42.675)
                         plt.close()
 

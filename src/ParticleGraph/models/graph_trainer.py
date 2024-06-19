@@ -445,6 +445,7 @@ def data_train_tracking(config, config_file, device):
     embedding_cluster = EmbeddingCluster(config)
     n_runs = train_config.n_runs
     n_frames = simulation_config.n_frames
+    sequence_length = len(config.training.sequence)
 
     l_dir, log_dir, logger = create_log_dir(config, config_file)
     print(f'Graph files N: {n_runs}')
@@ -622,7 +623,7 @@ def data_train_tracking(config, config_file, device):
 
         else:
 
-            if epoch%2 == 0:
+            if epoch%sequence_length == 0:
 
                 fig = plt.figure(figsize=(8, 8))
 
@@ -700,7 +701,7 @@ def data_train_tracking(config, config_file, device):
                 optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
                 logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
-            else:
+            elif epoch%sequence_length == 1:
 
                 print('from track to cell training')
                 logger.info('from track to cell training')

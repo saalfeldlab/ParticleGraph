@@ -847,6 +847,7 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
     n_runs = config.training.n_runs
     n_frames = config.simulation.n_frames
     delta_t = config.simulation.delta_t
+    sequence_length = len(config.training.sequence)
 
     embedding_cluster = EmbeddingCluster(config)
 
@@ -879,7 +880,7 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
             epoch_ = epoch[0:pos]
         else:
             epoch_ = epoch
-        embedding_type = int(epoch_)%2
+        embedding_type = int(epoch_)%sequence_length
         print(f'{epoch}, {epoch_}, {embedding_type}')
         logger.info(f'{epoch}, {epoch_}, {embedding_type}')
 
