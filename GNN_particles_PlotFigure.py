@@ -418,7 +418,6 @@ def plot_embedding_func_cluster_tracking(model, config, config_file, embedding_c
 
 
 
-
 def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, indexes,
                                 n_particle_types, n_particles, ynorm, epoch, log_dir, device):
 
