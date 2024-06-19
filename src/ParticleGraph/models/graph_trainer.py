@@ -20,6 +20,9 @@ def data_train(config, config_file, device):
     has_particle_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
     has_cell_division = config.simulation.has_cell_division
     has_no_tracking = config.training.has_no_tracking
+    dataset_name = config.dataset
+    print('')
+    print(f'dataset_name: {dataset_name}')
 
     if has_particle_field:
         data_train_particle_field(config, config_file, device)
@@ -38,7 +41,6 @@ def data_train(config, config_file, device):
 
 
 def data_train_particles(config, config_file, device):
-    print('')
 
     simulation_config = config.simulation
     train_config = config.training
@@ -422,7 +424,6 @@ def data_train_particles(config, config_file, device):
 
 
 def data_train_tracking(config, config_file, device):
-    print('')
 
     simulation_config = config.simulation
     train_config = config.training
@@ -743,7 +744,6 @@ def data_train_tracking(config, config_file, device):
 
 
 def data_train_cell_tracking(config, config_file, device):
-    print('')
 
     simulation_config = config.simulation
     train_config = config.training
@@ -1131,7 +1131,6 @@ def data_train_cell_tracking(config, config_file, device):
 
 
 def data_train_cell(config, config_file, device):
-    print('')
 
     simulation_config = config.simulation
     train_config = config.training
@@ -1400,8 +1399,6 @@ def data_train_cell(config, config_file, device):
 
 
 def data_train_mesh(config, config_file, device):
-
-    print('')
 
     simulation_config = config.simulation
     train_config = config.training
@@ -1757,7 +1754,6 @@ def data_train_mesh(config, config_file, device):
 
 
 def data_train_particle_field(config, config_file, device):
-    print('')
 
     simulation_config = config.simulation
     train_config = config.training
@@ -2114,8 +2110,6 @@ def data_train_particle_field(config, config_file, device):
 
 
 def data_train_signal(config, config_file, device):
-
-    print('')
 
     simulation_config = config.simulation
     train_config = config.training

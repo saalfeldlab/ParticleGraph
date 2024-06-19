@@ -13,6 +13,9 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
     has_particle_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
     has_mesh = (config.graph_model.mesh_model_name != '')
     has_cell_divsion = config.simulation.has_cell_division
+    dataset_name = config.dataset
+    print('')
+    print(f'dataset_name: {dataset_name}')
 
     if has_particle_field:
         data_generate_particle_field(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=False, step=step,
@@ -34,8 +37,6 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
 
 def data_generate_particle(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,
                            ratio=1, scenario='none', device=None, bSave=True):
-    print('')
-
     simulation_config = config.simulation
     training_config = config.training
     model_config = config.graph_model
@@ -349,8 +350,6 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
 
 def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,
                            ratio=1, scenario='none', device=None, bSave=True):
-    print('')
-
     simulation_config = config.simulation
     training_config = config.training
     model_config = config.graph_model
@@ -642,8 +641,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
 def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
-    print('')
-
     simulation_config = config.simulation
     training_config = config.training
     model_config = config.graph_model
@@ -827,8 +824,6 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
 
 def data_generate_particle_field(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
-    print('')
-
     simulation_config = config.simulation
     training_config = config.training
     model_config = config.graph_model
