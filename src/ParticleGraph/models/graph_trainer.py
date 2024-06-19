@@ -242,10 +242,50 @@ def data_train_particles(config, config_file, device):
 
             visualize_embedding = True
             if visualize_embedding & (((epoch < 3 ) & (N%(Niter//100) == 0)) | (N==0)):
-                plot_training(config=config, dataset_name=dataset_name, log_dir=log_dir,
-                              epoch=epoch, N=N, x=x, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
-                              index_particles=index_particles, n_particles=n_particles,
-                              n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
+                if has_state:
+                    model_a = model.a[1].clone().detach()
+                    fig, ax = fig_init()
+                    for k in trange(config.simulation.n_frames - 2):
+                        embedding = to_numpy(model_a[k * n_particles:(k + 1) * n_particles, :].clone().detach())
+                        index_particles = get_index_particles(x_list[1][k].clone().detach(), n_particle_types,
+                                                              dimension)
+                        for n in range(n_particle_types):
+                            plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=1,
+                                        color=cmap.color(n), alpha=0.025)
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=80)
+                    plt.close()
+
+                    type_list = torch.stack(x_list[1]).clone().detach()
+                    t = to_numpy(type_list[:, :, 5])
+                    type_list = to_numpy(type_list[:, :, 5].flatten())
+                    type_list = type_list[0:len(type_list) - n_particles]
+
+                    fig, ax = fig_init()
+                    rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+                    for n in trange(5000):
+                        sample = np.random.randint(0, len(type_list))
+                        type = type_list[sample].astype(int)
+                        embedding_ = model_a[sample, :] * torch.ones((1000, config.graph_model.embedding_dim),
+                                                                     device=device)
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / max_radius, embedding_), dim=1)
+                        with torch.no_grad():
+                            func = model.lin_edge(in_features.float())
+                        func = func[:, 0]
+                        plt.plot(to_numpy(rr),
+                                 to_numpy(func) * to_numpy(ynorm),
+                                 color=cmap.color(type), linewidth=2, alpha=0.1)
+                    plt.xlim([0, max_radius])
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif", dpi=80)
+                    plt.close()
+
+                else:
+                    plot_training(config=config, dataset_name=dataset_name, log_dir=log_dir,
+                                  epoch=epoch, N=N, x=x, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
+                                  index_particles=index_particles, n_particles=n_particles,
+                                  n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
@@ -617,10 +657,42 @@ def data_train_tracking(config, config_file, device):
                 plt.savefig(f"./{log_dir}/tmp_training/particle/{dataset_name}_{epoch}_{N}.tif")
                 plt.close()
 
-                plot_training(config=config, dataset_name=dataset_name, log_dir=log_dir,
-                              epoch=epoch, N=N, x=x, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
-                              index_particles=index_particles, n_particles=n_particles,
-                              n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
+                model_a = model.a.clone().detach()
+                fig, ax = fig_init()
+                for k in trange(config.simulation.n_frames - 2):
+                    embedding = to_numpy(model_a[k * n_particles:(k + 1) * n_particles, :].clone().detach())
+                    index_particles = get_index_particles(x_list[1][k].clone().detach(), n_particle_types, dimension)
+                    for n in range(n_particle_types):
+                        plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=1,
+                                    color=cmap.color(n), alpha=0.025)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=80)
+                plt.close()
+
+                type_list = torch.stack(x_list[1]).clone().detach()
+                t = to_numpy(type_list[:, :, 5])
+                type_list = to_numpy(type_list[:, :, 5].flatten())
+                type_list = type_list[0:len(type_list) - n_particles]
+
+                fig, ax = fig_init()
+                rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+                for n in trange(5000):
+                    sample = np.random.randint(0, len(type_list))
+                    type = type_list[sample].astype(int)
+                    embedding_ = model_a[sample, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                    in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                             rr[:, None] / max_radius, embedding_), dim=1)
+                    with torch.no_grad():
+                        func = model.lin_edge(in_features.float())
+                    func = func[:, 0]
+                    plt.plot(to_numpy(rr),
+                             to_numpy(func) * to_numpy(ynorm),
+                             color=cmap.color(type), linewidth=2, alpha=0.1)
+                plt.xlim([0, max_radius])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif", dpi=80)
+                plt.close()
+
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 

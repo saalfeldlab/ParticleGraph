@@ -41,7 +41,7 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_tracking_angle_10','arbitrary_3_tracking_angle_20','arbitrary_3_tracking_angle_30']
     # config_list = ['arbitrary_3_tracking_Bernouilli_10','arbitrary_3_tracking_Bernouilli_20','arbitrary_3_tracking_Bernouilli_30']
     # config_list = ['arbitrary_3_tracking_bis']
-    config_list = ['arbitrary_3_sequence_tracking_e']
+    config_list = ['arbitrary_3_sequence_e']
     # config_list = ['arbitrary_3_field_video_bison_bis']
     # config_list = ['arbitrary_3_test']
 
