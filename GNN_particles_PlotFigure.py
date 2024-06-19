@@ -4151,9 +4151,12 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_3_continuous']
     # config_list = ['arbitrary_64_0_01']
     # config_list = ['boids_16_256','boids_32_256','boids_64_256']
-    config_list = ['arbitrary_3_tracking_bis']
+    # config_list = ['arbitrary_3_tracking_bis']
+    config_list = ['arbitrary_3_sequence']
+
 
     epoch_list = ['0_500','0_1000','0_2000','0_5000','0_10000', '0_20000','0_49000', '1_0', '1_500','1_1000','1_2000','1_5000','1_10000','1_20000','1_49000','2_0','2_500','2_1000','2_2000','2_5000','2_10000','2_20000','2_49000','5_0','10_0','15_0','20_0']
+    # epoch_list = ['0_10000', '0_20000', '0_30000']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')

@@ -1,5 +1,5 @@
 description: 'attraction-repulsion with 3 types particles'
-dataset: 'arbitrary_3_sequence'
+dataset: 'arbitrary_3_sequence_b'
 
 simulation:
   params: [[1.6233, 1.0413, 1.6012, 1.5615], [1.7667, 1.8308, 1.0855, 1.9055], [1.7226, 1.7850, 1.0584, 1.8579]]
@@ -14,7 +14,7 @@ simulation:
   dpos_init: 0
   boundary: 'periodic'
   state_type: 'sequence'
-  state_params: [2.0E9]
+  state_params: [1000]
 
 graph_model:
   particle_model_name: 'PDE_A'
