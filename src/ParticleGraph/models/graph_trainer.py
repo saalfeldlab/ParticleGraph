@@ -598,6 +598,16 @@ def data_train_tracking(config, config_file, device):
             visualize_embedding = True
             if visualize_embedding & (((epoch < 3 ) & (N % (Niter//100) == 0)) | (N==0)):
 
+                fig = plt.figure(figsize=(8, 8))
+                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=10, c='k', alpha=0.05)
+                plt.scatter(to_numpy(x_pos_next[:, 0]), to_numpy(x_pos_next[:, 1]), s=10, c='r', alpha=0.1)
+                plt.scatter(to_numpy(x_pos_pred[:, 0]), to_numpy(x_pos_pred[:, 1]), s=10, c='b', alpha=0.1)
+                plt.xlim([0.2, 0.8])
+                plt.ylim([0.2, 0.8])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_training/particle/{dataset_name}_{epoch}_{N}.tif")
+                plt.close()
+
                 plot_training(config=config, dataset_name=dataset_name, log_dir=log_dir,
                               epoch=epoch, N=N, x=x, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
                               index_particles=index_particles, n_particles=n_particles,
