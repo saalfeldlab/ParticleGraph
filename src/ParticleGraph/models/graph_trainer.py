@@ -130,7 +130,7 @@ def data_train_particles(config, config_file, device):
     logger.info(f'initial batch_size: {batch_size}')
 
     print('Update variables ...')
-    x = x_list[1][n_frames - 1].clone().detach()
+    x = x_list[1][0].clone().detach()
     n_particles = x.shape[0]
     config.simulation.n_particles = n_particles
     index_particles = get_index_particles(x, n_particle_types, dimension)
