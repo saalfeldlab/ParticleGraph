@@ -73,7 +73,7 @@ def data_train_particles(config, config_file, device):
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     embedding_cluster = EmbeddingCluster(config)
     n_runs = train_config.n_runs
-    has_state = config.simulation.state_type != ['discrete']
+    has_state = (config.simulation.state_type != 'discrete')
 
     l_dir, log_dir, logger = create_log_dir(config, config_file)
     print(f'Graph files N: {n_runs}')
