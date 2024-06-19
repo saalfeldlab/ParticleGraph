@@ -845,6 +845,7 @@ def data_plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logge
     cmap = CustomColorMap(config=config)
     n_runs = config.training.n_runs
     n_frames = config.simulation.n_frames
+    has_no_tracking = config.training.has_no_tracking
 
     embedding_cluster = EmbeddingCluster(config)
 
@@ -864,9 +865,14 @@ def data_plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logge
         model.load_state_dict(state_dict['model_state_dict'])
         model.eval()
 
+        if has_no_tracking == False:
+            model_a = model.a[1].clone().detach()
+        else:
+            model_a = model.a.clone().detach()
+
         fig, ax = fig_init()
         for k in trange(config.simulation.n_frames - 2):
-            embedding = to_numpy(model.a[1,k * n_particles:(k + 1) * n_particles, :].clone().detach())
+            embedding = to_numpy(model_a[k * n_particles:(k + 1) * n_particles, :].clone().detach())
             index_particles = get_index_particles(x_list[1][k].clone().detach(), n_particle_types, dimension)
             for n in range(n_particle_types):
                 plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=1,
@@ -876,8 +882,6 @@ def data_plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logge
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/first_embedding_{config_file}_{epoch}.tif", dpi=170.7)
         plt.close()
-
-        model_a_first = model.a.clone().detach()
         # config.training.cluster_distance_threshold = 0.01
         # accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
         #                                                                cmap, index_particles, type_list,
@@ -897,7 +901,7 @@ def data_plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logge
         plt.imshow(t, aspect='auto')
 
         fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
-        t = to_numpy(model.a[1, :, 0].clone().detach())
+        t = to_numpy(model_a[:, 0])
         t = np.reshape(t, (n_frames, n_particles))
         plt.imshow(t, aspect='auto')
 
@@ -908,7 +912,7 @@ def data_plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logge
         for n in trange(5000):
             sample = np.random.randint(0, len(type_list))
             type = type_list[sample].astype(int)
-            embedding_ = model_a_first[1, sample, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+            embedding_ = model_a[sample, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                      rr[:, None] / max_radius, embedding_), dim=1)
             with torch.no_grad():
@@ -923,7 +927,7 @@ def data_plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logge
         plt.xlabel(r'$d_{ij}$', fontsize=64)
         plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
         plt.xlim([0, max_radius])
-        plt.ylim(config.plotting.ylim)
+        # plt.ylim(config.plotting.ylim)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/func_all_{config_file}_{epoch}.tif", dpi=170.7)
         rmserr_list = torch.stack(rmserr_list)
@@ -4287,11 +4291,11 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_64_0_01']
     # config_list = ['boids_16_256','boids_32_256','boids_64_256']
     # config_list = ['arbitrary_3_tracking_bis']
-    config_list = ['arbitrary_3_sequence_e']
+    config_list = ['arbitrary_3_sequence_tracking_e']
 
 
     # epoch_list = ['0_500','0_1000','0_2000','0_5000','0_10000', '0_20000','0_49000', '1_0', '1_500','1_1000','1_2000','1_5000','1_10000','1_20000','1_49000','2_0','2_500','2_1000','2_2000','2_5000','2_10000','2_20000','2_49000','5_0','10_0','15_0','20_0']
-    epoch_list = ['2_0']
+    epoch_list = ['0_30000']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
