@@ -2566,21 +2566,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 table.add_row([name, param])
                 total_params += param
 
-            print(table)
-            print(f"Total Trainable Params: {total_params}")
-
-
-            if has_division:
-                model_division = Division_Predictor(config, device)
-                net = f"./log/try_{config_file}/models/best_model_division_with_{n_runs - 1}_graphs_20.pt"
-                state_dict = torch.load(net, map_location=device)
-                model_division.load_state_dict(state_dict['model_state_dict'])
-                model_division.eval()
-            if os.path.isfile(os.path.join(log_dir, f'labels_{best_model}.pt')):
-                print('Use learned labels')
-                labels = torch.load(os.path.join(log_dir, f'labels_{best_model}.pt'))
+            if verbose:
+                print(table)
+                print(f"Total Trainable Params: {total_params}")
         first_embedding = model.a[1].data.clone().detach()
-
 
     n_sub_population = n_particles // n_particle_types
 
@@ -2711,28 +2700,12 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 pred = mesh_model(dataset_mesh, data_id=1)
             x[mask_mesh.squeeze(), 7:8] += pred[mask_mesh.squeeze()] * hnorm * delta_t
             x[mask_mesh.squeeze(), 6:7] += x[mask_mesh.squeeze(), 7:8] * delta_t
-            if False:
-                y_batch = y0/hnorm
-                matplotlib.use("Qt5Agg")
-                fig=plt.figure(figsize=(8,8))
-                t = to_numpy(pred)
-                t = np.reshape(t, (100, 100))
-                plt.imshow(t)
-                plt.colorbar()
-                fig = plt.figure(figsize=(8, 8))
-                t_ = to_numpy(y_batch)
-                t_ = np.reshape(t_, (100, 100))
-                plt.imshow(t_)
-                plt.colorbar()
-                fig = plt.figure(figsize=(8, 8))
-                plt.scatter(t_,t)
         elif (model_config.mesh_model_name == 'RD_RPS_Mesh') | (model_config.mesh_model_name=='RD_RPS_Mesh_bis'):
             with torch.no_grad():
                 pred = mesh_model(dataset_mesh, data_id=1)
                 x[mask_mesh.squeeze(), 6:9] += pred[mask_mesh.squeeze()] * hnorm * delta_t
                 x[mask_mesh.squeeze(), 6:9] = torch.clamp(x[mask_mesh.squeeze(), 6:9], 0, 1)
         elif has_field:
-
             match model_config.field_type:
                 case 'tensor':
                     x_mesh[:, 6:7] = model.field[run]
@@ -2885,11 +2858,11 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     s_p = 25
                 for n in range(n_particle_types):
                     if has_field:
-                        plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                    1-x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
+                        plt.scatter(x[index_particles[n], 2].detach().cpu().numpy(),
+                                    1-x[index_particles[n], 1].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
                     else:
-                        plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                                    x[index_particles[n], 2].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
+                        plt.scatter(x[index_particles[n], 2].detach().cpu().numpy(),
+                                    x[index_particles[n], 1].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
             if 'latex' in style:
                 plt.xlabel(r'$x$', fontsize=64)
                 plt.ylabel(r'$y$', fontsize=64)

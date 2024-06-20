@@ -700,8 +700,9 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_lin_edge=[]
             plt.xlim([1E-3, 0.2])
         if config.graph_model.particle_model_name == 'PDE_E':
             plt.xlim([0, 0.05])
-        plt.xlabel('Distance [a.u]', fontsize=12)
-        plt.ylabel('MLP [a.u]', fontsize=12)
+        plt.xlabel('Distance [a.u]', fontsize=64)
+        plt.ylabel('MLP [a.u]', fontsize=64)
+        plt.tight_layout()
 
     return func_list, proj_interaction
 

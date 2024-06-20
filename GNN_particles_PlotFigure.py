@@ -2731,8 +2731,8 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
 
     x_list = []
     y_list = []
-    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device))
-    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_0.pt', map_location=device))
+    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_1.pt', map_location=device))
+    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_1.pt', map_location=device))
     ynorm = torch.load(f'./log/try_{dataset_name}/ynorm.pt', map_location=device).to(device)
     vnorm = torch.load(f'./log/try_{dataset_name}/vnorm.pt', map_location=device).to(device)
 
@@ -2813,7 +2813,6 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
         model_f.to(device=device)
         model_f.eval()
 
-    epoch_list = [20]
     for epoch in epoch_list:
         print(f'epoch: {epoch}')
 
@@ -2826,90 +2825,47 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
             state_dict = torch.load(net, map_location=device)
             model_f.load_state_dict(state_dict['model_state_dict'])
 
-        embedding = get_embedding(model.a, 1)
+        config.training.cluster_method = 'distance_plot'
+        config.training.cluster_distance_threshold = 0.01
+        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
+                                                                       cmap, index_particles, type_list,
+                                                                       n_particle_types, n_particles, ynorm, epoch,
+                                                                       log_dir, device)
+        print(
+            f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+        logger.info(
+            f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
-        fig, ax = fig_init()
-        csv_ = []
-        for n in range(n_particle_types):
-            plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n), s=400,
-                        alpha=0.1)
-            csv_.append(embedding[index_particles[n], :])
-        # plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-        # plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
-        plt.tight_layout()
-        # csv_ = np.array(csv_)
-        plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{epoch}.tif", dpi=300)
-        # np.save(f"./{log_dir}/results/embedding_{config_file}.npy", csv_)
-        # csv_= np.reshape(csv_,(csv_.shape[0]*csv_.shape[1],2))
-        # np.savetxt(f"./{log_dir}/results/embedding_{config_file}.txt", csv_)
-        plt.close()
-
-        rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
-        func_list, proj_interaction = analyze_edge_function(rr=rr, vizualize=False, config=config,
-                                                            model_lin_edge=model.lin_edge, model_a=model.a,
-                                                            dataset_number=1,
-                                                            n_particles=int(
-                                                                n_particles * (1 - config.training.particle_dropout)),
-                                                            ynorm=ynorm,
-                                                            types=to_numpy(x[:, 5]),
-                                                            cmap=cmap, device=device)
-
-        match config.training.cluster_method:
-            case 'kmeans':
-                labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans')
-            case 'kmeans_auto_plot':
-                labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
-            case 'kmeans_auto_embedding':
-                labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
-                proj_interaction = embedding
-            case 'distance_plot':
-                labels, n_clusters = embedding_cluster.get(proj_interaction, 'distance')
-            case 'distance_embedding':
-                labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=0.05)
-                proj_interaction = embedding
-            case 'distance_both':
-                new_projection = np.concatenate((proj_interaction, embedding), axis=-1)
-                labels, n_clusters = embedding_cluster.get(new_projection, 'distance')
-
-        fig, ax = fig_init()
-        axf.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        for n in range(n_clusters):
-            pos = np.argwhere(labels == n)
-            pos = np.array(pos)
-            if pos.size > 0:
-                print(f'cluster {n}  {len(pos)}')
-                plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=100, alpha=0.1)
-        label_list = []
-        for n in range(n_particle_types):
-            tmp = labels[index_particles[n]]
-            label_list.append(np.round(np.median(tmp)))
-        label_list = np.array(label_list)
-        plt.xlabel(r'UMAP-proj 0', fontsize=64)
-        plt.ylabel(r'UMAP-proj 1', fontsize=64)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/UMAP_{config_file}_{epoch}.tif", dpi=300)
-        plt.close()
-
-        fig, ax = fig_init()
-        new_labels = labels.copy()
-        for n in range(n_particle_types):
-            new_labels[labels == label_list[n]] = n
-            pos = np.argwhere(labels == label_list[n])
-            pos = np.array(pos)
-            if pos.size > 0:
-                plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1],
-                            color=cmap.color(n), s=0.1)
-        type_list = x[:, 5:6].clone().detach()
-        accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-        print(f'accuracy: {np.round(accuracy, 2)}   n_clusters: {n_clusters}')
-        plt.close
-
-        p = config.simulation.params
-        if len(p) > 1:
-            p = torch.tensor(p, device=device)
-        else:
-            p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
         model_a_first = model.a.clone().detach()
+        fig, ax = fig_init()
+        p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
+        rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+        rmserr_list = []
+        for n in range(int(n_particles * (1 - config.training.particle_dropout))):
+            embedding_ = model_a_first[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                     rr[:, None] / max_radius, embedding_), dim=1)
+            with torch.no_grad():
+                func = model.lin_edge(in_features.float())
+                func = func[:, 0]
+            true_func = model.psi(rr, p[to_numpy(type_list[n]).astype(int)].squeeze(),
+                                  p[to_numpy(type_list[n]).astype(int)].squeeze())
+            rmserr_list.append(torch.sqrt(torch.mean((func * ynorm - true_func.squeeze()) ** 2)))
+            plt.plot(to_numpy(rr),
+                     to_numpy(func) * to_numpy(ynorm),
+                     color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
+        plt.xlabel(r'$d_{ij}$', fontsize=64)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+        plt.xlim([0, max_radius])
+        plt.ylim(config.plotting.ylim)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/func_all_{config_file}_{epoch}.tif", dpi=170.7)
+        rmserr_list = torch.stack(rmserr_list)
+        rmserr_list = to_numpy(rmserr_list)
+        print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+        logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+        plt.close()
+
 
         match config.graph_model.field_type:
 
@@ -2939,7 +2895,7 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                         plt.xlabel(r'$x$', fontsize=64)
                         plt.ylabel(r'$y$', fontsize=64)
                         for n in range(n_particle_types):
-                            plt.scatter(to_numpy(x[index_particles[n], 2]), 1 - to_numpy(x[index_particles[n], 1]),
+                            plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
                                         s=s_p,
                                         color='k')
                         plt.xlim([0, 1])
@@ -2953,7 +2909,7 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                         plt.xlabel(r'$x$', fontsize=64)
                         plt.ylabel(r'$y$', fontsize=64)
                         for n in range(n_particle_types):
-                            plt.scatter(to_numpy(x[index_particles[n], 2]), 1 - to_numpy(x[index_particles[n], 1]),
+                            plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
                                         s=s_p)
                         plt.xlim([0, 1])
                         plt.ylim([0, 1])
@@ -2965,7 +2921,7 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                         i0_ = i0[frame]
                         y = i0_[(to_numpy(x_mesh[:, 2]) * 100).astype(int), (to_numpy(x_mesh[:, 1]) * 100).astype(int)]
                         y = np.reshape(y, (n_nodes_per_axis, n_nodes_per_axis))
-                        fig, ax = fig_init()
+                        fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
                         plt.imshow(y, cmap=cc, vmin=0, vmax=vm)
                         plt.xlabel(r'$x$', fontsize=64)
                         plt.ylabel(r'$y$', fontsize=64)
@@ -2978,10 +2934,11 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                         pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
                         pred = to_numpy(torch.sqrt(pred))
                         pred = np.flipud(pred)
-                        fig, ax = fig_init()
-                        pred = np.rot90(pred)
+                        fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
+                        pred = np.rot90(pred,1)
                         pred = np.fliplr(pred)
-                        plt.imshow(pred, cmap=cc, vmin=0, vmax=1)
+                        # pred = np.flipud(pred)
+                        plt.imshow(pred, cmap=cc, vmin=0, vmax=vm)
                         plt.xlabel(r'$x$', fontsize=64)
                         plt.ylabel(r'$y$', fontsize=64)
                         plt.tight_layout()
@@ -4188,7 +4145,7 @@ def data_plot(config_file, epoch_list, device):
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     matplotlib.rcParams['savefig.pad_inches'] = 0
-    # matplotlib.use("Qt5Agg")
+    matplotlib.use("Qt5Agg")
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
@@ -4237,7 +4194,7 @@ def data_plot(config_file, epoch_list, device):
         case 'PDE_B':
             data_plot_boids(config_file, epoch_list, log_dir, logger, device)
         case 'PDE_ParticleField_B' | 'PDE_ParticleField_A':
-            data_plot_particle_field(config_file, 'grey', device)
+            data_plot_particle_field(config_file, epoch_list, log_dir, logger, 'grey', device)
         case 'PDE_E':
             data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device)
         case 'PDE_G':
@@ -4254,6 +4211,21 @@ def data_plot(config_file, epoch_list, device):
     for handler in logger.handlers[:]:
         handler.close()
         logger.removeHandler(handler)
+
+
+def get_figure(index):
+
+    epoch_list = ['20']
+    match index:
+        case 3:
+            config_list = ['arbitrary_3', 'arbitrary_3_3', 'arbitrary_3_continuous', 'arbitrary_16', 'arbitrary_32','arbitrary_64']
+        case 4:
+            config_list = ['arbitrary_3_field_video_bison_bis']
+            epoch_list = ['4_0']
+        case _:
+            config_list = ['arbitrary_3']
+
+    return config_list,epoch_list
 
 
 
@@ -4276,12 +4248,10 @@ if __name__ == '__main__':
     # config_list = ['arbitrary_64_0_01']
     # config_list = ['boids_16_256','boids_32_256','boids_64_256']
     # config_list = ['arbitrary_3_tracking_bis']
-
-    # Figure 3
-    config_list = ['arbitrary_3','arbitrary_3_3','arbitrary_3_continuous','arbitrary_16','arbitrary_32','arbitrary_64']
-    epoch_list = ['20']
-
     # epoch_list = ['0_500','0_1000','0_2000','0_5000','0_10000', '0_20000','0_49000', '1_0', '1_500','1_1000','1_2000','1_5000','1_10000','1_20000','1_49000','2_0','2_500','2_1000','2_2000','2_5000','2_10000','2_20000','2_49000','5_0','10_0','15_0','20_0']
+
+
+    config_list,epoch_list = get_figure(4)
 
 
     for config_file in config_list:
@@ -4290,7 +4260,7 @@ if __name__ == '__main__':
         data_plot(config_file, epoch_list, device)
         
         # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
-        #           best_model=20, run=1, step=config.simulation.n_frames // 25, test_simulation=False,
+        #           best_model=20, run=1, step=1, test_simulation=False,
         #           sample_embedding=False, device=device)  # config.simulation.n_frames // 7
 
         print(' ')
