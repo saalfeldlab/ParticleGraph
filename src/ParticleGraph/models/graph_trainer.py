@@ -2471,8 +2471,6 @@ def data_train_signal(config, config_file, device):
 
 
 def data_test(config=None, config_file=None, visualize=False, style='color frame', verbose=True, best_model=20, step=15, ratio=1, run=1, test_simulation=False, sample_embedding = False, device=[]):
-    print('')
-
     dataset_name = config.dataset
     simulation_config = config.simulation
     model_config = config.graph_model
@@ -2487,8 +2485,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
     n_nodes = simulation_config.n_nodes
-    n_node_types = simulation_config.n_node_types
-    node_type_map = simulation_config.node_type_map
     n_runs = training_config.n_runs
     n_frames = simulation_config.n_frames
     delta_t = simulation_config.delta_t
@@ -2498,20 +2494,16 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     has_siren_time = 'siren_with_time' in model_config.field_type
     has_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
 
-    print(f'Test data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
-    print('log_dir: {}'.format(log_dir))
     files = glob.glob(f"./{log_dir}/tmp_recons/*")
     for f in files:
         os.remove(f)
-    graph_files = glob.glob(f"graphs_data/graphs_{dataset_name}/x_list*")
     if best_model == -1:
         net = f"./log/try_{config_file}/models/best_model_with_{n_runs-1}_graphs.pt"
     else:
         net = f"./log/try_{config_file}/models/best_model_with_{n_runs-1}_graphs_{best_model}.pt"
-    print(f'network: {net}')
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
     table = PrettyTable(["Modules", "Parameters"])
@@ -2523,8 +2515,12 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         table.add_row([name, param])
         total_params += param
 
-    print(table)
-    print(f"Total Trainable Params: {total_params}")
+    if verbose:
+        print(f'Test data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+        print('log_dir: {}'.format(log_dir))
+        print(f'network: {net}')
+        print(table)
+        print(f"Total Trainable Params: {total_params}")
 
     if test_simulation:
         model, bc_pos, bc_dpos = choose_model(config, device=device)
@@ -2592,6 +2588,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     for n in range(n_particle_types):
         index = np.arange(n_particles * n // n_particle_types, n_particles * (n + 1) // n_particle_types)
         first_index_particles.append(index)
+
     if only_mesh:
         vnorm = torch.tensor(1.0, device=device)
         ynorm = torch.tensor(1.0, device=device)
@@ -2622,11 +2619,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         x = x_list[0][0].clone().detach()
         n_particles = x.shape[0]
         config.simulation.n_particles = n_particles
-        print(f'N particles: {n_particles}')
-        index_particles = []
-        for n in range(n_particle_types):
-            index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
-            index_particles.append(index.squeeze())
+        index_particles = get_index_particles(x, n_particle_types,dimension)
         x_mesh = x_mesh_list[0][0].clone().detach()
     else:
         x_list = []
@@ -2638,27 +2631,18 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         x = x_list[0][0].clone().detach()
         n_particles = x.shape[0]
         config.simulation.n_particles = n_particles
-        print(f'N particles: {n_particles}')
-        index_particles = []
-        for n in range(n_particle_types):
-            index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
-            index_particles.append(index.squeeze())
+        index_particles = get_index_particles(x, n_particle_types, dimension)
 
     if sample_embedding:
         model_a_ = nn.Parameter(
-            torch.tensor(np.ones((int(n_particles), model.embedding_dim)),
-                         device=device,
-                         requires_grad=False, dtype=torch.float32))
+            torch.tensor(np.ones((int(n_particles), model.embedding_dim)),device=device,requires_grad=False, dtype=torch.float32))
         for n in range(n_particles):
             t = to_numpy(x[n,5]).astype(int)
             index=first_index_particles[t][np.random.randint(n_sub_population)]
             with torch.no_grad():
                 model_a_[n] = first_embedding[index].clone().detach()
-
         model.a = nn.Parameter(
-            torch.tensor(np.ones((model.n_dataset,int(n_particles), model.embedding_dim)),
-                         device=device,
-                         requires_grad=False, dtype=torch.float32))
+            torch.tensor(np.ones((model.n_dataset,int(n_particles), model.embedding_dim)),device=device,requires_grad=False, dtype=torch.float32))
         with torch.no_grad():
             for n in range(model.a.shape[0]):
                 model.a[n] = model_a_
@@ -2826,27 +2810,16 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t)  # position update
 
-
         # A1 = A1 + delta_t
 
         if (it % step == 0) & (it >= 0) & visualize:
-            # print(f'RMSE = {np.round(rmserr.item(), 4)}')
-
-            # plt.style.use('dark_background')
-
-            # matplotlib.use("Qt5Agg")
-            matplotlib.rcParams['savefig.pad_inches'] = 0
 
             if 'latex' in style:
                 plt.rcParams['text.usetex'] = True
                 rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
-            fig = plt.figure(figsize=(12, 12))
-            ax = fig.add_subplot(1, 1, 1)
-            ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-            ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-            ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-            ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+            fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
+
             if has_mesh:
                 pts = x[:, 1:3].detach().cpu().numpy()
                 tri = Delaunay(pts)
@@ -3021,29 +2994,11 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.savefig(f"./{log_dir}/tmp_recons/Ghost3_{config_file}_{it}.tif", dpi=170.7)
                 plt.close()
 
-    print(f'RMSE = {np.round(np.mean(rmserr_list), 6)} +/- {np.round(np.std(rmserr_list), 6)}')
-
-    # plt.rcParams['text.usetex'] = True
-    # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-    matplotlib.rcParams['savefig.pad_inches'] = 0
-
-    if n_particle_types>1000:
-        n_particle_types = 3
-    index_particles = []
-    for n in range(n_particle_types):
-        index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
-        index_particles.append(index.squeeze())
-
-    # fig = plt.figure(figsize=(12, 12))
-    # ax = fig.add_subplot(1, 1, 1)
-    # x0_next = x_list[0][it + 1].clone().detach()
-    # plt.scatter(x[:, 1].detach().cpu().numpy(), x[:, 2].detach().cpu().numpy(), s=50)
-    # plt.scatter(x0_next[:, 1].detach().cpu().numpy(), x0_next[:, 2].detach().cpu().numpy(), s=50)
+    print('RMSE {:.3e}+/-{:.3e}'.format(np.mean(rmserr_list), np.std(rmserr_list)))
 
     if True:
         rmserr_list = np.array(rmserr_list)
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(1, 1, 1)
+        fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
         x_ = np.arange(len(rmserr_list))
         y_ = rmserr_list
         plt.scatter(x_,y_,c='k')
@@ -3052,12 +3007,11 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         plt.xlabel(r'$Epochs$', fontsize=64)
         plt.ylabel(r'$RMSE$', fontsize=64)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/rmserr_{config_file}_plot.tif", dpi=170.7)
+        plt.savefig(f"./{log_dir}/results/rmserr_{config_file}_plot.tif", dpi=170.7)
 
     if True:
 
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(1, 1, 1)
+        fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
         x0_next = x_list[0][it].clone().detach()
         if has_field:
             x0_next[:,2] = torch.ones_like(x0_next[:,2]) - x0_next[:,2]
@@ -3068,14 +3022,12 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         temp3 = torch.tensor(np.arange(n_particles) + n_particles, device=device)
         temp4 = torch.concatenate((temp2[:, None], temp3[:, None]), 1)
         temp4 = torch.t(temp4)
-        distance3 = torch.sqrt(torch.sum(bc_dpos(x[:, 1:3] - x0_next[:, 1:3]) ** 2, 1))
         distance4 = torch.sqrt(torch.sum((x[:, 1:3] - x0_next[:, 1:3]) ** 2, 1))
         p = torch.argwhere(distance4 < 0.3)
         pos = dict(enumerate(np.array((temp1[:, 1:3]).detach().cpu()), 0))
         dataset = data.Data(x=temp1[:, 1:3], edge_index=torch.squeeze(temp4[:, p]))
         vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
         nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,ax=ax,edge_color='r', width=8)
-        ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True)
         for n in range(n_particle_types):
             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
                         x[index_particles[n], 2].detach().cpu().numpy(), s=100, color=cmap.color(n))
@@ -3083,27 +3035,18 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         plt.ylim([0, 1])
         # plt.xlim([-2, 2])
         # plt.ylim([-2, 2])
-        plt.xticks(fontsize=32)
-        plt.yticks(fontsize=32)
         plt.xlabel(r'$x$', fontsize=64)
         plt.ylabel(r'$y$', fontsize=64)
-        # plt.text(0,0.9,f'RMS error: {np.round(np.mean(rmserr_list) * 100, 2)} +/- {np.round(np.std(rmserr_list) * 100, 2)} %')
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/rmserr_{config_file}_{it+2}.tif", dpi=170.7)
+        plt.savefig(f"./{log_dir}/results/rmserr_{config_file}_{it}.tif", dpi=170.7)
 
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(1, 1, 1)
-        ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True)
+        fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
         for n in range(n_particle_types):
             plt.scatter(x0_next[index_particles[n], 1].detach().cpu().numpy(),
                         x0_next[index_particles[n], 2].detach().cpu().numpy(), s=100, color=cmap.color(n))
         plt.xlim([0, 1])
         plt.ylim([0, 1])
-        # plt.xlim([-2, 2])
-        # plt.ylim([-2, 2])
-        plt.xticks(fontsize=32)
-        plt.yticks(fontsize=32)
         plt.xlabel(r'$x$', fontsize=64)
         plt.ylabel(r'$y$', fontsize=64)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/GT_{config_file}_{it+2}.tif", dpi=170.7)
+        plt.savefig(f"./{log_dir}/results/GT_{config_file}_{it}.tif", dpi=170.7)

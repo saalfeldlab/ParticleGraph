@@ -83,6 +83,7 @@ def norm_velocity(xx, dimension, device):
 
     return torch.tensor([vx], device=device)
 
+
 def norm_acceleration(yy, device):
 
     ax = torch.std(yy[:, 0])

@@ -341,8 +341,6 @@ def load_training_data(dataset_name, n_runs, log_dir, device):
 def plot_embedding_func_cluster_tracking(model, config, config_file, embedding_cluster, cmap, index_particles, indexes, type_list,
                                 n_particle_types, n_particles, ynorm, epoch, log_dir, embedding_type, device):
 
-    print('analyze GNN ...')
-
     if embedding_type == 1:
         embedding = to_numpy(model.a.clone().detach())
         embedding = embedding[indexes.astype(int)]
@@ -417,11 +415,8 @@ def plot_embedding_func_cluster_tracking(model, config, config_file, embedding_c
     return accuracy, n_clusters, new_labels
 
 
-
-def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, indexes,
+def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap, index_particles, type_list,
                                 n_particle_types, n_particles, ynorm, epoch, log_dir, device):
-
-    print('analyze GNN ...')
 
     fig, ax = fig_init()
     if config.training.has_no_tracking:
@@ -761,15 +756,23 @@ def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, dev
         model.eval()
 
         model_a_first = model.a.clone().detach()
+        config.training.cluster_method = 'distance_embedding'
         config.training.cluster_distance_threshold = 0.01
         accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
                                                                        cmap, index_particles, type_list,
                                                                        n_particle_types, n_particles, ynorm, epoch,
                                                                        log_dir, device)
-        print(
-            f'final result     accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
-        logger.info(
-            f'final result     accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+        print(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+        logger.info(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+
+        config.training.cluster_method = 'distance_plot'
+        config.training.cluster_distance_threshold = 0.01
+        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
+                                                                       cmap, index_particles, type_list,
+                                                                       n_particle_types, n_particles, ynorm, epoch,
+                                                                       log_dir, device)
+        print(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+        logger.info(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
         fig, ax = fig_init()
         p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
@@ -781,7 +784,7 @@ def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, dev
                                      rr[:, None] / max_radius, embedding_), dim=1)
             with torch.no_grad():
                 func = model.lin_edge(in_features.float())
-            func = func[:, 0]
+                func = func[:, 0]
             true_func = model.psi(rr, p[to_numpy(type_list[n]).astype(int)].squeeze(),
                                   p[to_numpy(type_list[n]).astype(int)].squeeze())
             rmserr_list.append(torch.sqrt(torch.mean((func * ynorm - true_func.squeeze()) ** 2)))
@@ -812,24 +815,6 @@ def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, dev
         plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=170.7)
-        plt.close()
-
-        rr = torch.tensor(np.linspace(-1.5 * max_radius, 1.5 * max_radius, 2000)).to(device)
-        fig, ax = fig_init()
-        plots = []
-        plots.append(rr)
-        for n in range(n_particle_types):
-            t = model.psi(rr, p[n], p[n])
-            plt.plot(to_numpy(rr), to_numpy(t), color=cmap.color(n), linewidth=8)
-            plots.append(model.psi(rr, p[n], p[n]).squeeze())
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
-        plt.xlim([-max_radius * 1.5, max_radius * 1.5])
-        plt.ylim(config.plotting.ylim)
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
-        plt.tight_layout()
-        torch.save(plots, f"./{log_dir}/results/plots_true_{config_file}_{epoch}.pt")
         plt.close()
 
 
@@ -4200,12 +4185,11 @@ def data_plot(config_file, epoch_list, device):
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     matplotlib.rcParams['savefig.pad_inches'] = 0
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
-
 
     logging.basicConfig(filename=f'{log_dir}/results.log', format='%(asctime)s %(message)s', filemode='w')
     logger = logging.getLogger()
@@ -4301,7 +4285,11 @@ if __name__ == '__main__':
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config_file, epoch_list, device)
 
-        # data_video_validation(config_file,device=device)
-        # data_video_training(config_file,device=device)
+        data_plot(config_file, epoch_list, device)
+        
+        data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
+                  best_model=20, run=1, step=config.simulation.n_frames // 25, test_simulation=False,
+                  sample_embedding=False, device=device)  # config.simulation.n_frames // 7
+
+
