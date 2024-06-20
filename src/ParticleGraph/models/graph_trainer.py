@@ -347,10 +347,10 @@ def data_train_particles(config, config_file, device):
 
             labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding, train_config.cluster_distance_threshold, index_particles, n_particle_types, embedding_cluster)
 
-            accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-
-            print(f'accuracy: {np.round(accuracy, 3)}   n_clusters: {n_clusters}')
-            logger.info(f'accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}')
+            if not(has_state):
+                accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
+                print(f'accuracy: {np.round(accuracy, 3)}   n_clusters: {n_clusters}')
+                logger.info(f'accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}')
 
             ax = fig.add_subplot(1, 5, 4)
             for n in np.unique(new_labels):
