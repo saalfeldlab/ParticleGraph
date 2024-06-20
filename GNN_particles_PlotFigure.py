@@ -4145,7 +4145,6 @@ def data_plot(config_file, epoch_list, device):
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     matplotlib.rcParams['savefig.pad_inches'] = 0
-    matplotlib.use("Qt5Agg")
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
@@ -4236,20 +4235,7 @@ if __name__ == '__main__':
     print(f'device {device}')
     print(' ')
 
-
-    # config_list = ['boids_16_256_bison_siren_with_time_2']
-    # config_list = ['boids_16_256','boids_32_256','boids_64_256']
-    # config_list = ['boids_16_256_division_death_model_2']
-    # config_list = ['Coulomb_3_256']
-    # config_list = ['wave_slit_test']
-    # config_list = ['Coulomb_3_256']
-    # config_list = ['arbitrary_64', 'arbitrary_64_0_1', 'arbitrary_64_0_01', 'arbitrary_64_0_005'] #, 'arbitrary_3', 'arbitrary_16', 'arbitrary_32', 'arbitrary_16_noise_0_1', 'arbitrary_16_noise_0_2', 'arbitrary_16_noise_0_3', 'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5']
-    # config_list = ['arbitrary_3_continuous']
-    # config_list = ['arbitrary_64_0_01']
-    # config_list = ['boids_16_256','boids_32_256','boids_64_256']
-    # config_list = ['arbitrary_3_tracking_bis']
-    # epoch_list = ['0_500','0_1000','0_2000','0_5000','0_10000', '0_20000','0_49000', '1_0', '1_500','1_1000','1_2000','1_5000','1_10000','1_20000','1_49000','2_0','2_500','2_1000','2_2000','2_5000','2_10000','2_20000','2_49000','5_0','10_0','15_0','20_0']
-
+    # matplotlib.use("Qt5Agg")
 
     config_list,epoch_list = get_figure(4)
 
@@ -4257,11 +4243,11 @@ if __name__ == '__main__':
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
 
-        data_plot(config_file, epoch_list, device)
+        # data_plot(config_file, epoch_list, device)
         
-        # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
-        #           best_model=20, run=1, step=1, test_simulation=False,
-        #           sample_embedding=False, device=device)  # config.simulation.n_frames // 7
+        data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
+                  best_model=3, run=1, step=4, test_simulation=False,
+                  sample_embedding=False, device=device)  # config.simulation.n_frames // 7
 
         print(' ')
         print(' ')

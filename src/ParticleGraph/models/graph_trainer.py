@@ -2857,12 +2857,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 if simulation_config.has_cell_division:
                     s_p = 25
                 for n in range(n_particle_types):
-                    if has_field:
-                        plt.scatter(x[index_particles[n], 2].detach().cpu().numpy(),
-                                    1-x[index_particles[n], 1].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
-                    else:
-                        plt.scatter(x[index_particles[n], 2].detach().cpu().numpy(),
-                                    x[index_particles[n], 1].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
+                    plt.scatter(x[index_particles[n], 2].detach().cpu().numpy(),
+                                x[index_particles[n], 1].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
             if 'latex' in style:
                 plt.xlabel(r'$x$', fontsize=64)
                 plt.ylabel(r'$y$', fontsize=64)
