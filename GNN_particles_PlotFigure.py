@@ -755,16 +755,6 @@ def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, dev
         model.load_state_dict(state_dict['model_state_dict'])
         model.eval()
 
-        model_a_first = model.a.clone().detach()
-        config.training.cluster_method = 'distance_embedding'
-        config.training.cluster_distance_threshold = 0.01
-        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
-                                                                       cmap, index_particles, type_list,
-                                                                       n_particle_types, n_particles, ynorm, epoch,
-                                                                       log_dir, device)
-        print(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
-        logger.info(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
-
         config.training.cluster_method = 'distance_plot'
         config.training.cluster_distance_threshold = 0.01
         accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
@@ -773,6 +763,19 @@ def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, dev
                                                                        log_dir, device)
         print(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
         logger.info(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+
+        model_a_first = model.a.clone().detach()
+        threshold_list= [0.01] #, 0.02, 0.03, 0.04, 0.05, 0.075, 0.1]
+        for threshold in threshold_list:
+            config.training.cluster_method = 'distance_embedding'
+            config.training.cluster_distance_threshold = threshold
+            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
+                                                                           cmap, index_particles, type_list,
+                                                                           n_particle_types, n_particles, ynorm, epoch,
+                                                                           log_dir, device)
+            print(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+            logger.info(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+
 
         fig, ax = fig_init()
         p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
@@ -4252,8 +4255,6 @@ def data_plot(config_file, epoch_list, device):
         handler.close()
         logger.removeHandler(handler)
 
-    print(' ')
-    print(' ')
 
 
 if __name__ == '__main__':
@@ -4288,8 +4289,11 @@ if __name__ == '__main__':
 
         data_plot(config_file, epoch_list, device)
         
-        data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
-                  best_model=20, run=1, step=config.simulation.n_frames // 25, test_simulation=False,
-                  sample_embedding=False, device=device)  # config.simulation.n_frames // 7
+        # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
+        #           best_model=20, run=1, step=config.simulation.n_frames // 25, test_simulation=False,
+        #           sample_embedding=False, device=device)  # config.simulation.n_frames // 7
+
+        print(' ')
+        print(' ')
 
 

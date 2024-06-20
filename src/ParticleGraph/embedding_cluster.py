@@ -8,7 +8,7 @@ from sklearn.metrics import silhouette_score
 class EmbeddingCluster:
     def __init__(self, config):
         self.n_interactions = config.simulation.n_interactions
-        self.cluster_connectivity = config.training.cluster_connectivity
+        self.cluster_connectivity = config.training.cluster_connectivity    # 'single' (default) or 'average'
 
     def get(self, data, method, thresh=2.5):
 

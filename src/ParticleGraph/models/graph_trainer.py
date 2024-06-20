@@ -2632,6 +2632,12 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         n_particles = x.shape[0]
         config.simulation.n_particles = n_particles
         index_particles = get_index_particles(x, n_particle_types, dimension)
+        if config.graph_model.particle_model_name=='PDE_A_bis':
+            index_particles=[]
+            for n in range(3):
+                index = np.arange(n_particles * n // 3, n_particles * (n + 1) // 3)
+                index_particles.append(index)
+
 
     if sample_embedding:
         model_a_ = nn.Parameter(
@@ -2994,7 +3000,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.savefig(f"./{log_dir}/tmp_recons/Ghost3_{config_file}_{it}.tif", dpi=170.7)
                 plt.close()
 
-    print('RMSE {:.3e}+/-{:.3e}'.format(np.mean(rmserr_list), np.std(rmserr_list)))
+    print('average rollout RMS {:.3e}+/-{:.3e}'.format(np.mean(rmserr_list), np.std(rmserr_list)))
 
     if True:
         rmserr_list = np.array(rmserr_list)
