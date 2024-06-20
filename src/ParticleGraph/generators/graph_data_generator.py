@@ -104,7 +104,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         # initialize particle and graph states
         X1, V1, T1, H1, A1, N1 = init_particles(config, device=device)
         if has_adjacency_matrix:
-            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
+            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1[0,:,None].clone().detach(),
                  H1.clone().detach(), A1.clone().detach()), 1)
             adj_t = adjacency > 0
             edge_index = adj_t.nonzero().t().contiguous()
@@ -269,14 +269,14 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                                     vmin=0, vmax=3)
                         plt.xlim([-1.5, 1.5])
                         plt.ylim([-1.5, 1.5])
-                        plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=24)
+                        # plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=24)
                         # cbar = plt.colorbar(shrink=0.5)
                         # cbar.ax.tick_params(labelsize=32)
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{10000 + it}.tif",
-                                    dpi=42.675)
+                                    dpi=170.7)
                         plt.close()
 
                     elif (model_config.particle_model_name == 'PDE_A') & (dimension == 3):
