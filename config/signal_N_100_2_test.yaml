@@ -1,5 +1,5 @@
 description: 'Gravity model with 16 different particle types'
-dataset: 'signal_N_100_test'
+dataset: 'signal_N_100'
 
 simulation:
     connectivity_file: 'graphs_data/Brain.mat'
@@ -36,12 +36,8 @@ plotting:
     arrow_length: 1
 
 training:
-<<<<<<<< HEAD:config/signal_N_100_test.yaml
-    n_epochs: 20
-========
     n_epochs: 0
     recursive_loop: 2
->>>>>>>> fix_training:config/signal_N_100_2_test.yaml
     batch_size: 1
     small_init_batch_size: False
     n_runs: 100
