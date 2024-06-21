@@ -79,7 +79,7 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dat
                         embedding[index_particles[n], 1], color=cmap.color(n), s=200)  #
 
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/particle/{model_name}_{dataset_name}_embedding_{epoch}_{N}.tif", dpi=170.7)
+    plt.savefig(f"./{log_dir}/tmp_training/embedding/{model_name}_{dataset_name}_embedding_{epoch}_{N}.tif", dpi=170.7)
     plt.close()
 
     fig = plt.figure(figsize=(12, 12))
@@ -700,8 +700,8 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_lin_edge=[]
             plt.xlim([1E-3, 0.2])
         if config.graph_model.particle_model_name == 'PDE_E':
             plt.xlim([0, 0.05])
-        plt.xlabel('Distance [a.u]', fontsize=64)
-        plt.ylabel('MLP [a.u]', fontsize=64)
+        plt.xlabel('Distance [a.u]')
+        plt.ylabel('MLP [a.u]')
         plt.tight_layout()
 
     return func_list, proj_interaction
