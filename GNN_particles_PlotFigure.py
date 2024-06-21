@@ -437,7 +437,7 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
     plt.close()
 
     fig, ax = fig_init()
-    func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
+    func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=False, config=config,
                                                         model_lin_edge=model.lin_edge, model_a=model.a,
                                                         dataset_number=1,
                                                         n_particles=n_particles, ynorm=ynorm,
@@ -759,6 +759,7 @@ def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, dev
 
         config.training.cluster_method = 'distance_plot'
         config.training.cluster_distance_threshold = 0.01
+        model_a_first = model.a.clone().detach()
         accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
                                                                        cmap, index_particles, type_list,
                                                                        n_particle_types, n_particles, ynorm, epoch,
@@ -766,7 +767,7 @@ def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, dev
         print(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
         logger.info(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
-        model_a_first = model.a.clone().detach()
+        model.a[1] = model_a_first.clone().detach()
         threshold_list= [0.01] #, 0.02, 0.03, 0.04, 0.05, 0.075, 0.1]
         for threshold in threshold_list:
             config.training.cluster_method = 'distance_embedding'
@@ -4240,9 +4241,9 @@ if __name__ == '__main__':
     print(f'device {device}')
     print(' ')
 
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
 
-    config_list,epoch_list = get_figure(4)
+    config_list,epoch_list = get_figure(3)
 
 
     for config_file in config_list:
@@ -4250,9 +4251,9 @@ if __name__ == '__main__':
 
         data_plot(config_file, epoch_list, device)
 
-        # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
-        #           best_model=3, run=1, step=1, test_simulation=False,
-        #           sample_embedding=False, device=device)  # config.simulation.n_frames // 7
+        data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
+                  best_model=3, run=1, step=config.simulation.n_frames // 7, test_simulation=False,
+                  sample_embedding=False, device=device)  # config.simulation.n_frames // 7
 
         print(' ')
         print(' ')

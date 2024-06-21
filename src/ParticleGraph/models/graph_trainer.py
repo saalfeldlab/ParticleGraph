@@ -1864,6 +1864,7 @@ def data_train_particle_field(config, config_file, device):
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     embedding_cluster = EmbeddingCluster(config)
     n_runs = train_config.n_runs
+    sparsity_freq = train_config.sparsity_freq
 
     l_dir, log_dir, logger = create_log_dir(config, config_file)
     print(f'Graph files N: {n_runs}')
