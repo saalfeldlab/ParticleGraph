@@ -2871,7 +2871,7 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
 
             case 'siren_with_time' | 'siren':
 
-                s_p = 50
+                s_p = 100
 
                 if has_video:
 
@@ -2896,7 +2896,7 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                         plt.ylabel(r'$y$', fontsize=64)
                         for n in range(n_particle_types):
                             plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
-                                        s=s_p,
+                                        s=s_p/2,
                                         color='k')
                         plt.xlim([0, 1])
                         plt.ylim([0, 1])
@@ -4247,10 +4247,10 @@ if __name__ == '__main__':
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
 
-        data_plot(config_file, epoch_list, device)
+        # data_plot(config_file, epoch_list, device)
 
         data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
-                  best_model=3, run=1, step=4, test_simulation=False,
+                  best_model=3, run=1, step=42, test_simulation=False,
                   sample_embedding=False, device=device)  # config.simulation.n_frames // 7
 
         print(' ')
