@@ -2731,8 +2731,8 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
 
     x_list = []
     y_list = []
-    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_1.pt', map_location=device))
-    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_1.pt', map_location=device))
+    x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device))
+    y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_0.pt', map_location=device))
     ynorm = torch.load(f'./log/try_{dataset_name}/ynorm.pt', map_location=device).to(device)
     vnorm = torch.load(f'./log/try_{dataset_name}/vnorm.pt', map_location=device).to(device)
 
@@ -4243,11 +4243,11 @@ if __name__ == '__main__':
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
 
-        # data_plot(config_file, epoch_list, device)
-        
-        data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
-                  best_model=3, run=1, step=4, test_simulation=False,
-                  sample_embedding=False, device=device)  # config.simulation.n_frames // 7
+        data_plot(config_file, epoch_list, device)
+        #
+        # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
+        #           best_model=3, run=1, step=4, test_simulation=False,
+        #           sample_embedding=False, device=device)  # config.simulation.n_frames // 7
 
         print(' ')
         print(' ')

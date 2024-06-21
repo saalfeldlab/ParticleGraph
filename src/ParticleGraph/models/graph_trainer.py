@@ -2981,12 +2981,11 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
     if True:
 
-        fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
+        fig = plt.figure(figsize=(12, 12))
         x0_next = x_list[0][it].clone().detach()
         if has_field:
             x0_next[:,2] = torch.ones_like(x0_next[:,2]) - x0_next[:,2]
             x[:, 2] = torch.ones_like(x[:,2]) - x[:, 2]
-
         temp1 = torch.cat((x, x0_next), 0)
         temp2 = torch.tensor(np.arange(n_particles), device=device)
         temp3 = torch.tensor(np.arange(n_particles) + n_particles, device=device)
@@ -3000,23 +2999,40 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,ax=ax,edge_color='r', width=8)
         for n in range(n_particle_types):
             plt.scatter(x[index_particles[n], 1].detach().cpu().numpy(),
-                        x[index_particles[n], 2].detach().cpu().numpy(), s=100, color=cmap.color(n))
+                        x[index_particles[n], 2].detach().cpu().numpy(), s=50, color=cmap.color(n))
+        ax.tick_params(axis='both', which='major', pad=15)
         plt.xlim([0, 1])
         plt.ylim([0, 1])
-        # plt.xlim([-2, 2])
-        # plt.ylim([-2, 2])
         plt.xlabel(r'$x$', fontsize=64)
         plt.ylabel(r'$y$', fontsize=64)
+        formatx = '%.2f'
+        formaty = '%.2f'
+        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+        ax.xaxis.set_major_formatter(FormatStrFormatter(formatx))
+        ax.yaxis.set_major_formatter(FormatStrFormatter(formaty))
+        plt.xticks(fontsize=32.0)
+        plt.yticks(fontsize=32.0)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/rmserr_{config_file}_{it}.tif", dpi=170.7)
+        plt.close()
 
-        fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
+        fig = plt.figure(figsize=(12, 12))
         for n in range(n_particle_types):
             plt.scatter(x0_next[index_particles[n], 1].detach().cpu().numpy(),
-                        x0_next[index_particles[n], 2].detach().cpu().numpy(), s=100, color=cmap.color(n))
+                        x0_next[index_particles[n], 2].detach().cpu().numpy(), s=50, color=cmap.color(n))
         plt.xlim([0, 1])
         plt.ylim([0, 1])
         plt.xlabel(r'$x$', fontsize=64)
         plt.ylabel(r'$y$', fontsize=64)
+        formatx = '%.2f'
+        formaty = '%.2f'
+        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+        ax.xaxis.set_major_formatter(FormatStrFormatter(formatx))
+        ax.yaxis.set_major_formatter(FormatStrFormatter(formaty))
+        plt.xticks(fontsize=32.0)
+        plt.yticks(fontsize=32.0)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/GT_{config_file}_{it}.tif", dpi=170.7)
+        plt.close()
