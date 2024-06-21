@@ -2718,7 +2718,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         config.simulation.n_particles = n_particles
         index_particles = get_index_particles(x, n_particle_types, dimension)
 
-
     if sample_embedding:
         model_a_ = nn.Parameter(
             torch.tensor(np.ones((int(n_particles), model.embedding_dim)),device=device,requires_grad=False, dtype=torch.float32))
@@ -3092,14 +3091,14 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         distance4 = torch.sqrt(torch.sum((x[:, 1:3] - x0_next[:, 1:3]) ** 2, 1))
         p = torch.argwhere(distance4 < 0.3)
 
-        temp1_ = temp1[:, 1:3].clone().detach()
+        temp1_ = temp1[:, [2, 1]].clone().detach()
         pos = dict(enumerate(np.array((temp1_).detach().cpu()), 0))
         dataset = data.Data(x=temp1_, edge_index=torch.squeeze(temp4[:, p]))
         vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
         nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,ax=ax,edge_color='r', width=4)
-        # for n in range(n_particle_types):
-        #     plt.scatter(x[index_particles[n], 2].detach().cpu().numpy(),
-        #                 x[index_particles[n], 1].detach().cpu().numpy(), s=100, color=cmap.color(n))
+        for n in range(n_particle_types):
+            plt.scatter(x[index_particles[n], 2].detach().cpu().numpy(),
+                        x[index_particles[n], 1].detach().cpu().numpy(), s=50, color=cmap.color(n))
         plt.xlim([0, 1])
         plt.ylim([0, 1])
         plt.xlabel(r'$x$', fontsize=64)
