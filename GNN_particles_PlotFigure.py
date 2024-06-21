@@ -2871,7 +2871,7 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
 
             case 'siren_with_time' | 'siren':
 
-                s_p = 100
+                s_p = 50
 
                 if has_video:
 
@@ -2891,7 +2891,7 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                     SSIM_list = []
                     for frame in trange(0, n_frames):
                         x = x_list[0][frame].clone().detach()
-                        fig, ax = fig_init()
+                        fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
                         plt.xlabel(r'$x$', fontsize=64)
                         plt.ylabel(r'$y$', fontsize=64)
                         for n in range(n_particle_types):
@@ -2905,7 +2905,7 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                                     dpi=150)
                         plt.close()
 
-                        fig, ax = fig_init()
+                        fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
                         plt.xlabel(r'$x$', fontsize=64)
                         plt.ylabel(r'$y$', fontsize=64)
                         for n in range(n_particle_types):
@@ -2925,6 +2925,10 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                         plt.imshow(y, cmap=cc, vmin=0, vmax=vm)
                         plt.xlabel(r'$x$', fontsize=64)
                         plt.ylabel(r'$y$', fontsize=64)
+                        fmtx = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
+                        fmty = lambda x, pos: '{:.1f}'.format((100-x) / 100, pos)
+                        ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmty))
+                        ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmtx))
                         plt.tight_layout()
                         plt.savefig(f"./{log_dir}/results/video/target/target_field_{epoch}_{frame}.tif",
                                     dpi=150)
@@ -3208,8 +3212,8 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
 
     fig, ax = fig_init()
     fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
-    axf.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-    axf.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+    ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+    ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
     plt.imshow(coeff, cmap=cc, vmin=0, vmax=vm)
     plt.xlabel(r'$x$', fontsize=64)
     plt.ylabel(r'$y$', fontsize=64)
@@ -4220,7 +4224,7 @@ def get_figure(index):
             config_list = ['arbitrary_3', 'arbitrary_3_3', 'arbitrary_3_continuous', 'arbitrary_16', 'arbitrary_32','arbitrary_64']
         case 4:
             config_list = ['arbitrary_3_field_video_bison_bis']
-            epoch_list = ['4_0']
+            epoch_list = ['20']
         case _:
             config_list = ['arbitrary_3']
 
@@ -4244,10 +4248,10 @@ if __name__ == '__main__':
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
 
         data_plot(config_file, epoch_list, device)
-        #
-        # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
-        #           best_model=3, run=1, step=4, test_simulation=False,
-        #           sample_embedding=False, device=device)  # config.simulation.n_frames // 7
+
+        data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
+                  best_model=3, run=1, step=4, test_simulation=False,
+                  sample_embedding=False, device=device)  # config.simulation.n_frames // 7
 
         print(' ')
         print(' ')
