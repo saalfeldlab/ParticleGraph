@@ -304,8 +304,8 @@ def fig_init(formatx='%.2f', formaty='%.2f'):
     ax.yaxis.set_major_locator(plt.MaxNLocator(3))
     ax.xaxis.set_major_formatter(FormatStrFormatter(formatx))
     ax.yaxis.set_major_formatter(FormatStrFormatter(formaty))
-    plt.xticks(fontsize=32.0)
-    plt.yticks(fontsize=32.0)
+    plt.xticks(fontsize=48.0)
+    plt.yticks(fontsize=48.0)
 
     return fig, ax
 

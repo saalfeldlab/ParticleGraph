@@ -312,8 +312,8 @@ class Mesh_RPS_extract(MessagePassing):
             for n in range(n_particle_types):
                 plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n),
                             s=400, alpha=0.1)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{epoch}.tif", dpi=170.7)
         plt.close()
@@ -348,8 +348,8 @@ def plot_embedding_func_cluster_tracking(model, config, config_file, embedding_c
         for n in range(n_particle_types):
             pos = np.argwhere(type_list == n).squeeze().astype(int)
             plt.scatter(embedding[pos, 0], embedding[pos, 1], s=1, alpha=0.25)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
         plt.xlim(config.plotting.embedding_lim)
         plt.ylim(config.plotting.embedding_lim)
         plt.tight_layout()
@@ -362,8 +362,8 @@ def plot_embedding_func_cluster_tracking(model, config, config_file, embedding_c
             for n in range(n_particle_types):
                 plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=1,
                             color=cmap.color(n), alpha=0.025)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
         plt.xlim(config.plotting.embedding_lim)
         plt.ylim(config.plotting.embedding_lim)
         plt.tight_layout()
@@ -386,8 +386,8 @@ def plot_embedding_func_cluster_tracking(model, config, config_file, embedding_c
         for n in range(n_particle_types):
             plt.scatter(proj_interaction[index_particles[n], 0],
                         proj_interaction[index_particles[n], 1], color=cmap.color(n), s=1, alpha=0.25)
-    plt.xlabel(r'UMAP 0', fontsize=64)
-    plt.ylabel(r'UMAP 1', fontsize=64)
+    plt.xlabel(r'UMAP 0', fontsize=78)
+    plt.ylabel(r'UMAP 1', fontsize=78)
     plt.xlim([-0.2, 1.2])
     plt.ylim([-0.2, 1.2])
     plt.tight_layout()
@@ -430,8 +430,8 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n),
                         s=400, alpha=0.1)
-    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
+    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/first_embedding_{config_file}_{epoch}.tif", dpi=170.7)
     plt.close()
@@ -451,8 +451,8 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
     for n in range(n_particle_types):
         plt.scatter(proj_interaction[index_particles[n], 0],
                     proj_interaction[index_particles[n], 1], color=cmap.color(n), s=200, alpha=0.1)
-    plt.xlabel(r'UMAP 0', fontsize=64)
-    plt.ylabel(r'UMAP 1', fontsize=64)
+    plt.xlabel(r'UMAP 0', fontsize=78)
+    plt.ylabel(r'UMAP 1', fontsize=78)
     plt.xlim([-0.2, 1.2])
     plt.ylim([-0.2, 1.2])
     plt.tight_layout()
@@ -485,8 +485,8 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n),
                         s=100, alpha=0.1)
-    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+    plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
+    plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{epoch}.tif", dpi=170.7)
     plt.close()
@@ -673,8 +673,8 @@ def plot_cell_rates(config, device, log_dir, n_particle_types, x_list, new_label
     for k in range(n_particle_types):
         plt.plot(np.arange(last_frame_growth), N_cells_alive[:, k], color=cmap.color(k), linewidth=4,
                  label=f'Cell type {k} alive')
-    plt.xlabel(r'Frame', fontsize=64)
-    plt.ylabel(r'Number of alive cells', fontsize=64)
+    plt.xlabel(r'Frame', fontsize=78)
+    plt.ylabel(r'Number of alive cells', fontsize=78)
     ax.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
     plt.tight_layout()
@@ -685,8 +685,8 @@ def plot_cell_rates(config, device, log_dir, n_particle_types, x_list, new_label
     for k in range(n_particle_types):
         plt.plot(np.arange(last_frame_growth), N_cells_dead[:, k], color=cmap.color(k), linewidth=4,
                  label=f'Cell type {k} dead')
-    plt.xlabel(r'Frame', fontsize=64)
-    plt.ylabel(r'Number of dead cells', fontsize=64)
+    plt.xlabel(r'Frame', fontsize=78)
+    plt.ylabel(r'Number of dead cells', fontsize=78)
     ax.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
     plt.tight_layout()
@@ -784,8 +784,8 @@ def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, dev
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
                      color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+        plt.xlabel(r'$d_{ij}$', fontsize=78)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
         plt.xlim([0, max_radius])
         plt.ylim(config.plotting.ylim)
         plt.tight_layout()
@@ -804,8 +804,8 @@ def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, dev
             plots.append(model.psi(rr, p[n], p[n]).squeeze())
         plt.xlim([0, max_radius])
         plt.ylim(config.plotting.ylim)
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+        plt.xlabel(r'$d_{ij}$', fontsize=78)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=170.7)
         plt.close()
@@ -855,8 +855,8 @@ def data_plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logge
             for n in range(n_particle_types):
                 plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=1,
                             color=cmap.color(n), alpha=0.025)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/first_embedding_{config_file}_{epoch}.tif", dpi=170.7)
         plt.close()
@@ -893,8 +893,8 @@ def data_plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logge
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
                      color=cmap.color(type), linewidth=2, alpha=0.1)
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+        plt.xlabel(r'$d_{ij}$', fontsize=78)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
         plt.xlim([0, max_radius])
         # plt.ylim(config.plotting.ylim)
         plt.tight_layout()
@@ -913,8 +913,8 @@ def data_plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logge
             plots.append(model.psi(rr, p[n], p[n]).squeeze())
         plt.xlim([0, max_radius])
         plt.ylim(config.plotting.ylim)
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+        plt.xlabel(r'$d_{ij}$', fontsize=78)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=170.7)
         plt.close()
@@ -927,12 +927,12 @@ def data_plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logge
             t = model.psi(rr, p[n], p[n])
             plt.plot(to_numpy(rr), to_numpy(t), color=cmap.color(n), linewidth=8)
             plots.append(model.psi(rr, p[n], p[n]).squeeze())
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+        plt.xlabel(r'$d_{ij}$', fontsize=78)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
         plt.xlim([-max_radius * 1.5, max_radius * 1.5])
         plt.ylim(config.plotting.ylim)
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+        plt.xlabel(r'$d_{ij}$', fontsize=78)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
         plt.tight_layout()
         torch.save(plots, f"./{log_dir}/results/plots_true_{config_file}_{epoch}.pt")
         plt.close()
@@ -1048,8 +1048,8 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
 
         fig,ax = fig_init(formatx='%.0f', formaty='%.0f')
         plt.plot(np.arange(n_frames), tracking_index_list, color='k', linewidth=2)
-        plt.ylabel(r'tracking errors', fontsize=64)
-        plt.xlabel(r'frame', fontsize=64)
+        plt.ylabel(r'tracking errors', fontsize=78)
+        plt.xlabel(r'frame', fontsize=78)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/tracking_error_{config_file}_{epoch}.tif", dpi=170.7)
         plt.close()
@@ -1093,8 +1093,8 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
                 plt.plot(to_numpy(rr),
                          to_numpy(func),
                          color=cmap.color(int(type_list[int(n)])), linewidth=2, alpha=0.1)
-            plt.xlabel(r'$d_{ij}$', fontsize=64)
-            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+            plt.xlabel(r'$d_{ij}$', fontsize=78)
+            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
             plt.xlim([0, max_radius])
             plt.ylim(config.plotting.ylim)
             plt.tight_layout()
@@ -1119,8 +1119,8 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
                 true_func = model.psi(rr, p[int(type_list[n,0])],p[int(type_list[n,0])])
                 rmserr_list.append(torch.sqrt(torch.mean((func - true_func.squeeze()) ** 2)))
                 plt.plot(to_numpy(rr), to_numpy(func), color=cmap.color(int(type_list[n,0])), linewidth=2, alpha=0.1)
-            plt.xlabel(r'$d_{ij}$', fontsize=64)
-            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+            plt.xlabel(r'$d_{ij}$', fontsize=78)
+            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
             plt.xlim([0, max_radius])
             plt.ylim(config.plotting.ylim)
             plt.tight_layout()
@@ -1136,25 +1136,25 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
             plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n], p[n])), color=cmap.color(n), linewidth=8)
         plt.xlim([0, max_radius])
         plt.ylim(config.plotting.ylim)
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+        plt.xlabel(r'$d_{ij}$', fontsize=78)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=170.7)
         plt.close()
 
         fig, ax = fig_init()
         plt.plot(tracking_index_list_, color='k', linewidth=2)
-        plt.ylabel(r'tracking_index', fontsize=64)
+        plt.ylabel(r'tracking_index', fontsize=78)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/tracking_index_list_{config_file}.tif", dpi=170.7)
         fig, ax = fig_init()
         plt.plot(accuracy_list_, color='k', linewidth=2)
-        plt.ylabel(r'accuracy', fontsize=64)
+        plt.ylabel(r'accuracy', fontsize=78)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/accuracy_list_{config_file}.tif", dpi=170.7)
         fig, ax = fig_init()
         plt.plot(tracking_errors_list_, color='k', linewidth=2)
-        plt.ylabel(r'tracking_errors', fontsize=64)
+        plt.ylabel(r'tracking_errors', fontsize=78)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/tracking_errors_list_{config_file}.tif", dpi=170.7)
 
@@ -1227,8 +1227,8 @@ def data_plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
                      color=cmap.color(type), linewidth=8)
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=64)
+        plt.xlabel(r'$d_{ij}$', fontsize=78)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=78)
         plt.ylim(config.plotting.ylim)
         plt.xlim([0, max_radius])
         plt.tight_layout()
@@ -1242,8 +1242,8 @@ def data_plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger
             for m in range(n_particle_types):
                 true_func.append(model.psi(rr, p[n, m].squeeze(), p[n, m].squeeze()))
                 plt.plot(to_numpy(rr), to_numpy(model.psi(rr, p[n,m], p[n,m]).squeeze()), color=cmap.color(n), linewidth=8)
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=64)
+        plt.xlabel(r'$d_{ij}$', fontsize=78)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=78)
         plt.ylim(config.plotting.ylim)
         plt.xlim([0, max_radius])
         plt.tight_layout()
@@ -1305,8 +1305,8 @@ def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, 
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0],
                         embedding[index_particles[n], 1], color=cmap.color(n), s=400, alpha=0.1)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{epoch}.tif", dpi=170.7)
         np.save(f"./{log_dir}/results/embedding_{config_file}_{epoch}.npy", csv_)
@@ -1330,8 +1330,8 @@ def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, 
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
                      color=cmap.color(n // 1600), linewidth=8, alpha=0.1)
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+        plt.xlabel(r'$d_{ij}$', fontsize=78)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
         plt.xlim([0, max_radius])
         plt.ylim(config.plotting.ylim)
         plt.tight_layout()
@@ -1350,8 +1350,8 @@ def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, 
                      alpha=0.1)
             true_func_list.append(model.psi(rr, p[n], p[n]))
             csv_.append(to_numpy(model.psi(rr, p[n], p[n]).squeeze()))
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+        plt.xlabel(r'$d_{ij}$', fontsize=78)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
         plt.xticks(fontsize=32)
         plt.yticks(fontsize=32)
         plt.xlim([0, max_radius])
@@ -1431,8 +1431,8 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
                      color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+        plt.xlabel(r'$d_{ij}$', fontsize=78)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
         plt.xlim([0, 0.02])
         plt.ylim([0, 0.5E6])
         ax.xaxis.set_major_formatter(FormatStrFormatter('%.3f'))
@@ -1453,8 +1453,8 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
             plots.append(model.psi(rr, p[n], p[n]).squeeze())
         plt.xlim([0, 0.02])
         plt.ylim([0, 0.5E6])
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+        plt.xlabel(r'$d_{ij}$', fontsize=78)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=170.7)
         plt.close()
@@ -1503,8 +1503,8 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
         plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
         plt.scatter(p_list, popt_list[:, 0], color='k', s=50, alpha=0.5)
         plt.scatter(p_list[pos_outliers[:, 0]], popt_list[pos_outliers[:, 0], 0], color='r', s=50)
-        plt.xlabel(r'True mass ', fontsize=64)
-        plt.ylabel(r'Reconstructed mass ', fontsize=64)
+        plt.xlabel(r'True mass ', fontsize=78)
+        plt.ylabel(r'Reconstructed mass ', fontsize=78)
         plt.xlim([0, 5.5])
         plt.ylim([0, 5.5])
         plt.tight_layout()
@@ -1531,8 +1531,8 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
         plt.scatter(p_list, -popt_list[:, 1], color='k', s=50, alpha=0.5)
         plt.xlim([0, 5.5])
         plt.ylim([-4, 0])
-        plt.xlabel(r'True mass', fontsize=64)
-        plt.ylabel(r'Reconstructed exponent', fontsize=64)
+        plt.xlabel(r'True mass', fontsize=78)
+        plt.ylabel(r'Reconstructed exponent', fontsize=78)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/exponent_{config_file}.tif", dpi=170)
         np.save(f"./{log_dir}/results/exponent_{config_file}.npy", csv_)
@@ -1583,8 +1583,8 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
         csv_.append(popt_list)
         plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
         plt.scatter(p_list, popt_list, color='k', s=50, alpha=0.5)
-        plt.xlabel(r'True mass ', fontsize=64)
-        plt.ylabel(r'Reconstructed mass ', fontsize=64)
+        plt.xlabel(r'True mass ', fontsize=78)
+        plt.ylabel(r'Reconstructed mass ', fontsize=78)
         plt.xlim([0, 5.5])
         plt.ylim([0, 5.5])
         plt.tight_layout()
@@ -1640,8 +1640,8 @@ def data_plot_gravity_continuous(config_file, epoch_list, log_dir, logger, devic
             plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n % 256),
                         s=400,
                         alpha=0.1)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/embedding_{config_file}.tif", dpi=170)
         plt.close()
@@ -1667,8 +1667,8 @@ def data_plot_gravity_continuous(config_file, epoch_list, log_dir, logger, devic
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
                      color=cmap.color(n % 256), linewidth=8, alpha=0.1)
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+        plt.xlabel(r'$d_{ij}$', fontsize=78)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
         plt.xlim([0, max_radius])
         plt.xlim([0, 0.02])
         plt.ylim([0, 0.5E6])
@@ -1694,8 +1694,8 @@ def data_plot_gravity_continuous(config_file, epoch_list, log_dir, logger, devic
             csv_.append(to_numpy(model.psi(rr, p[n], p[n]).squeeze()))
         plt.xlim([0, 0.02])
         plt.ylim([0, 0.5E6])
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+        plt.xlabel(r'$d_{ij}$', fontsize=78)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=300)
         csv_ = np.array(csv_)
@@ -1744,8 +1744,8 @@ def data_plot_gravity_continuous(config_file, epoch_list, log_dir, logger, devic
         plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
         plt.scatter(p_list, popt_list[:, 0], color='k', s=50, alpha=0.5)
         plt.scatter(p_list[pos_outliers[:, 0]], popt_list[pos_outliers[:, 0], 0], color='r', s=50)
-        plt.xlabel(r'True mass ', fontsize=64)
-        plt.ylabel(r'Reconstructed mass ', fontsize=64)
+        plt.xlabel(r'True mass ', fontsize=78)
+        plt.ylabel(r'Reconstructed mass ', fontsize=78)
         plt.xlim([0, 5.5])
         plt.ylim([0, 5.5])
         plt.tight_layout()
@@ -1769,8 +1769,8 @@ def data_plot_gravity_continuous(config_file, epoch_list, log_dir, logger, devic
         plt.scatter(p_list, -popt_list[:, 1], color='k', s=50, alpha=0.5)
         plt.xlim([0, 5.5])
         plt.ylim([-4, 0])
-        plt.xlabel(r'True mass', fontsize=64)
-        plt.ylabel(r'Reconstructed exponent', fontsize=64)
+        plt.xlabel(r'True mass', fontsize=78)
+        plt.ylabel(r'Reconstructed exponent', fontsize=78)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/exponent_{config_file}.tif", dpi=300)
         np.save(f"./{log_dir}/results/exponent_{config_file}.npy", csv_)
@@ -1822,8 +1822,8 @@ def data_plot_gravity_continuous(config_file, epoch_list, log_dir, logger, devic
         csv_.append(popt_list)
         plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
         plt.scatter(p_list, popt_list, color='k', s=50, alpha=0.5)
-        plt.xlabel(r'True mass ', fontsize=64)
-        plt.ylabel(r'Reconstructed mass ', fontsize=64)
+        plt.xlabel(r'True mass ', fontsize=78)
+        plt.ylabel(r'Reconstructed mass ', fontsize=78)
         plt.xlim([0, 5.5])
         plt.ylim([0, 5.5])
         plt.tight_layout()
@@ -2137,8 +2137,8 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
                      to_numpy(func) * to_numpy(ynorm),
                      color=cmap.color(type), linewidth=8, alpha=0.1)
 
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=64)
+        plt.xlabel(r'$d_{ij}$', fontsize=78)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=78)
         plt.xlim([0, 0.02])
         plt.ylim([-0.5E6, 0.5E6])
         plt.tight_layout()
@@ -2158,8 +2158,8 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
             csv_.append(to_numpy(temp.squeeze()))
         plt.xlim([0, 0.02])
         plt.ylim([-0.5E6, 0.5E6])
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=64)
+        plt.xlabel(r'$d_{ij}$', fontsize=78)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, \ensuremath{\mathbf{a}}_j, d_{ij})$', fontsize=78)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/true_func_{config_file}_{epoch}.tif", dpi=170.7)
         np.save(f"./{log_dir}/results/true_func_{config_file}_{epoch}.npy", csv_)
@@ -2462,8 +2462,8 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         func_list = torch.stack(func_list)
         true_func_list = torch.stack(true_func_list)
         plt.ylim([-1E-4, 1E-4])
-        plt.xlabel(r'$x_j-x_i$', fontsize=64)
-        plt.ylabel(r'$f_{ij}$', fontsize=64)
+        plt.xlabel(r'$x_j-x_i$', fontsize=78)
+        plt.ylabel(r'$f_{ij}$', fontsize=78)
         ax.xaxis.set_major_locator(plt.MaxNLocator(3))
         ax.yaxis.set_major_locator(plt.MaxNLocator(5))
         ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
@@ -2478,8 +2478,8 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
             true_func = model_B.psi(rr, p[n])
             plt.plot(to_numpy(rr), to_numpy(true_func), color=cmap.color(n), linewidth=4)
         plt.ylim([-1E-4, 1E-4])
-        plt.xlabel(r'$x_j-x_i$', fontsize=64)
-        plt.ylabel(r'$f_{ij}$', fontsize=64)
+        plt.xlabel(r'$x_j-x_i$', fontsize=78)
+        plt.ylabel(r'$f_{ij}$', fontsize=78)
         ax.xaxis.set_major_locator(plt.MaxNLocator(3))
         ax.yaxis.set_major_locator(plt.MaxNLocator(5))
         ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
@@ -2576,8 +2576,8 @@ def data_plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
     axf.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
     axf.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
     plt.imshow(coeff, cmap=cc, vmin=0, vmax=vm)
-    plt.xlabel(r'$x$', fontsize=64)
-    plt.ylabel(r'$y$', fontsize=64)
+    plt.xlabel(r'$x$', fontsize=78)
+    plt.ylabel(r'$y$', fontsize=78)
     # cbar = plt.colorbar(shrink=0.5)
     # cbar.ax.tick_params(labelsize=32)
     plt.tight_layout()
@@ -2610,8 +2610,8 @@ def data_plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
                             alpha=1)
         plt.xlabel(r'$a_{i0}$', fontsize=32)
         plt.ylabel(r'$a_{i1}$', fontsize=32)
-        # plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-        # plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+        # plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
+        # plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{net_}.tif", dpi=300)
         plt.close()
@@ -2640,8 +2640,8 @@ def data_plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
         axf.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
         axf.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
         plt.imshow(t, cmap=cc, vmin=0, vmax=vm)
-        # plt.xlabel(r'$x$', fontsize=64)
-        # plt.ylabel(r'$y$', fontsize=64)
+        # plt.xlabel(r'$x$', fontsize=78)
+        # plt.ylabel(r'$y$', fontsize=78)
         plt.xlabel('x', fontsize=32)
         plt.ylabel('y', fontsize=32)
         fmt = lambda x, pos: '{:.3%}'.format(x)
@@ -2750,16 +2750,16 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
 
     fig, ax = fig_init()
     plt.imshow(target, cmap=cc, vmin=0, vmax=vm)
-    plt.xlabel(r'$x$', fontsize=64)
-    plt.ylabel(r'$y$', fontsize=64)
+    plt.xlabel(r'$x$', fontsize=78)
+    plt.ylabel(r'$y$', fontsize=78)
     cbar = plt.colorbar(shrink=0.5)
     cbar.ax.tick_params(labelsize=32)
-    # cbar.set_label(r'$Coupling$',fontsize=64)
+    # cbar.set_label(r'$Coupling$',fontsize=78)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/target_field.tif", dpi=300)
     plt.close()
 
-    print('Create models ...')
+    print('create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
     x = x_list[0][0].clone().detach()
@@ -2835,8 +2835,8 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
                      color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=2, alpha=0.1)
-        plt.xlabel(r'$d_{ij}$', fontsize=64)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
+        plt.xlabel(r'$d_{ij}$', fontsize=78)
+        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
         plt.xlim([0, max_radius])
         plt.ylim(config.plotting.ylim)
         plt.tight_layout()
@@ -2873,8 +2873,8 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                     for frame in trange(0, n_frames):
                         x = x_list[0][frame].clone().detach()
                         fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
-                        plt.xlabel(r'$x$', fontsize=64)
-                        plt.ylabel(r'$y$', fontsize=64)
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
                         for n in range(n_particle_types):
                             plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
                                         s=s_p/2,
@@ -2887,8 +2887,8 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                         plt.close()
 
                         fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
-                        plt.xlabel(r'$x$', fontsize=64)
-                        plt.ylabel(r'$y$', fontsize=64)
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
                         for n in range(n_particle_types):
                             plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
                                         s=s_p)
@@ -2904,8 +2904,8 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                         y = np.reshape(y, (n_nodes_per_axis, n_nodes_per_axis))
                         fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
                         plt.imshow(y, cmap=cc, vmin=0, vmax=vm)
-                        plt.xlabel(r'$x$', fontsize=64)
-                        plt.ylabel(r'$y$', fontsize=64)
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
                         fmtx = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
                         fmty = lambda x, pos: '{:.1f}'.format((100-x) / 100, pos)
                         ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmty))
@@ -2924,8 +2924,8 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                         pred = np.fliplr(pred)
                         # pred = np.flipud(pred)
                         plt.imshow(pred, cmap=cc, vmin=0, vmax=vm)
-                        plt.xlabel(r'$x$', fontsize=64)
-                        plt.ylabel(r'$y$', fontsize=64)
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
                         plt.tight_layout()
                         plt.savefig(f"./{log_dir}/results/video/field/reconstructed_field_{epoch}_{frame}.tif",
                                     dpi=150)
@@ -2937,6 +2937,24 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                         PSNR_list = np.concatenate((PSNR_list, [PSNR]))
                         SSIM = calculate_ssim(y, pred)
                         SSIM_list = np.concatenate((SSIM_list, [SSIM]))
+                        if frame==0:
+                            y_list = [y]
+                            pred_list = [pred]
+                        else:
+                            y_list = np.concatenate((y_list, [y]))
+                            pred_list = np.concatenate((pred_list, [pred]))
+
+                    fig, ax = fig_init(formatx='%.2f', formaty='%.2f')
+                    plt.scatter(y_list, pred_list, color='k', s=0.1, alpha=0.01)
+                    plt.xlabel('True latent coeff.', fontsize=78)
+                    plt.ylabel('Recons. latent coeff.', fontsize=78)
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/cues_scatter_{epoch}.tif", dpi=170)
+                    plt.close()
+
+                    r, p_value = pearsonr(y_list.flatten(), pred_list.flatten())
+                    print(f"Pearson's r: {r:.4f}, p-value: {p_value:.6f}")
+
 
                 else:
 
@@ -2969,8 +2987,8 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
 
                         x = x_list[0][angle].clone().detach()
                         fig, ax = fig_init()
-                        plt.xlabel(r'$x$', fontsize=64)
-                        plt.ylabel(r'$y$', fontsize=64)
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
                         for n in range(n_particle_types):
                             plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]), s=s_p,
                                         color='k')
@@ -2981,8 +2999,8 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                         plt.close()
 
                         fig, ax = fig_init()
-                        plt.xlabel(r'$x$', fontsize=64)
-                        plt.ylabel(r'$y$', fontsize=64)
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
                         for n in range(n_particle_types):
                             plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]), s=s_p)
                         plt.xlim([0, 1])
@@ -2994,8 +3012,8 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                         fig, ax = fig_init()
                         y = ndimage.rotate(target, -angle, reshape=False, cval=np.mean(target) * 1.1)
                         plt.imshow(y, cmap=cc, vmin=0, vmax=vm)
-                        plt.xlabel(r'$x$', fontsize=64)
-                        plt.ylabel(r'$y$', fontsize=64)
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
                         plt.tight_layout()
                         plt.savefig(f"./{log_dir}/results/rotation/target/target_field_{epoch}_{angle}.tif", dpi=150)
                         plt.close()
@@ -3011,8 +3029,8 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
 
                         fig, ax = fig_init()
                         plt.imshow(pred, cmap=cc, vmin=0, vmax=vm)
-                        plt.xlabel(r'$x$', fontsize=64)
-                        plt.ylabel(r'$y$', fontsize=64)
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
                         plt.tight_layout()
                         plt.savefig(f"./{log_dir}/results/rotation/field/reconstructed_field_{epoch}_{angle}.tif",
                                     dpi=150)
@@ -3027,8 +3045,8 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
 
                 fig, ax = fig_init()
                 plt.scatter(np.linspace(0, n_frames, len(SSIM_list)), SSIM_list, color='k', linewidth=4)
-                plt.xlabel(r'$Frame$', fontsize=64)
-                plt.ylabel(r'$SSIM$', fontsize=64)
+                plt.xlabel(r'$Frame$', fontsize=78)
+                plt.ylabel(r'$SSIM$', fontsize=78)
                 plt.ylim([0, 1])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/ssim_{epoch}.tif", dpi=150)
@@ -3038,8 +3056,8 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
 
                 fig, ax = fig_init()
                 plt.scatter(np.linspace(0, n_frames, len(SSIM_list)), RMSE_list, color='k', linewidth=4)
-                plt.xlabel(r'$Frame$', fontsize=64)
-                plt.ylabel(r'RMSE', fontsize=64)
+                plt.xlabel(r'$Frame$', fontsize=78)
+                plt.ylabel(r'RMSE', fontsize=78)
                 plt.ylim([0, 1])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/rmse_{epoch}.tif", dpi=150)
@@ -3047,8 +3065,8 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
 
                 fig, ax = fig_init()
                 plt.scatter(np.linspace(0, n_frames, len(SSIM_list)), PSNR_list, color='k', linewidth=4)
-                plt.xlabel(r'$Frame$', fontsize=64)
-                plt.ylabel(r'PSNR', fontsize=64)
+                plt.xlabel(r'$Frame$', fontsize=78)
+                plt.ylabel(r'PSNR', fontsize=78)
                 plt.ylim([0, 50])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/psnr_{epoch}.tif", dpi=150)
@@ -3060,11 +3078,11 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                 pts = to_numpy(torch.reshape(model.field[1], (100, 100)))
                 pts = np.flipud(pts)
                 plt.imshow(pts, cmap=cc, vmin=0, vmax=vm)
-                plt.xlabel(r'$x$', fontsize=64)
-                plt.ylabel(r'$y$', fontsize=64)
+                plt.xlabel(r'$x$', fontsize=78)
+                plt.ylabel(r'$y$', fontsize=78)
                 cbar = plt.colorbar(shrink=0.5)
                 cbar.ax.tick_params(labelsize=32)
-                # cbar.set_label(r'$Coupling$',fontsize=64)
+                # cbar.set_label(r'$Coupling$',fontsize=78)
                 plt.tight_layout()
                 imsave(f"./{log_dir}/results/field_pic_{config_file}_{epoch}.tif", pts)
                 plt.savefig(f"./{log_dir}/results/field_{config_file}_{epoch}.tif", dpi=300)
@@ -3196,8 +3214,8 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
     ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
     ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
     plt.imshow(coeff, cmap=cc, vmin=0, vmax=vm)
-    plt.xlabel(r'$x$', fontsize=64)
-    plt.ylabel(r'$y$', fontsize=64)
+    plt.xlabel(r'$x$', fontsize=78)
+    plt.ylabel(r'$y$', fontsize=78)
 
     cbar = plt.colorbar(shrink=0.5)
     cbar.ax.tick_params(labelsize=32)
@@ -3225,8 +3243,8 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
             for n in range(n_node_types):
                 c_ = np.round(n / (n_node_types - 1) * 256).astype(int)
                 plt.scatter(embedding[index_nodes[n], 0], embedding[index_nodes[n], 1], s=200)  # , color=cmap.color(c_)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{net_}.tif", dpi=300)
         plt.close()
@@ -3409,8 +3427,8 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
             axf.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
             axf.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
             plt.imshow(t_, cmap=cc, vmin=0, vmax=vm)
-            plt.xlabel(r'$x$', fontsize=64)
-            plt.ylabel(r'$y$', fontsize=64)
+            plt.xlabel(r'$x$', fontsize=78)
+            plt.ylabel(r'$y$', fontsize=78)
             fmt = lambda x, pos: '{:.3%}'.format(x)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/diff_coeff_map_{config_file}_{net_}.tif", dpi=300)
@@ -3421,8 +3439,8 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
             fig, ax = fig_init()
             plt.scatter(first_embedding[:, 0], first_embedding[:, 1],
                         s=200, c=t_, cmap='viridis', alpha=0.5, vmin=0, vmax=vm)
-            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
+            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{net_}.tif", dpi=300)
             plt.close()
@@ -3475,8 +3493,8 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
                     axf.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
                     axf.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
                     plt.imshow(t_ * to_numpy(hnorm), cmap=cc, vmin=0, vmax=1)
-                    plt.xlabel(r'$x$', fontsize=64)
-                    plt.ylabel(r'$y$', fontsize=64)
+                    plt.xlabel(r'$x$', fontsize=78)
+                    plt.ylabel(r'$y$', fontsize=78)
 
                     fmt = lambda x, pos: '{:.3%}'.format(x)
                     plt.tight_layout()
@@ -3505,8 +3523,8 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
                 axf.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
                 axf.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
                 plt.imshow(t_ * to_numpy(hnorm), cmap=cc, vmin=0, vmax=vm)
-                plt.xlabel(r'$x$', fontsize=64)
-                plt.ylabel(r'$y$', fontsize=64)
+                plt.xlabel(r'$x$', fontsize=78)
+                plt.ylabel(r'$y$', fontsize=78)
                 fmt = lambda x, pos: '{:.3%}'.format(x)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/diff_coeff_{config_file}_{net_}.tif", dpi=300)
@@ -3633,8 +3651,8 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
             c_ = np.round(n / (n_particle_types - 1) * 256).astype(int)
             plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=400,
                         alpha=0.1)  # , color=cmap.color(c_)
-        # plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=64)
-        # plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=64)
+        # plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
+        # plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{net_}.tif", dpi=300)
         plt.close()
@@ -3662,8 +3680,8 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
         r_squared = 1 - (ss_res / ss_tot)
         plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-        plt.ylabel('Reconstructed $A_{ij}$ values', fontsize=64)
-        plt.xlabel('True network $A_{ij}$ values', fontsize=64)
+        plt.ylabel('Reconstructed $A_{ij}$ values', fontsize=78)
+        plt.xlabel('True network $A_{ij}$ values', fontsize=78)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/Matrix_{config_file}_{net_}.tif", dpi=300)
         plt.close()
@@ -3684,10 +3702,10 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
                                                             ynorm=ynorm,
                                                             types=to_numpy(x[:, 5]),
                                                             cmap=cmap, device=device)
-        # plt.xlabel(r'$d_{ij}$', fontsize=64)
-        # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
-        plt.xlabel(r'$u$', fontsize=64)
-        plt.ylabel(r'Reconstructed $\Phi(u)$', fontsize=64)
+        # plt.xlabel(r'$d_{ij}$', fontsize=78)
+        # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+        plt.xlabel(r'$u$', fontsize=78)
+        plt.ylabel(r'Reconstructed $\Phi(u)$', fontsize=78)
         plt.ylim([-0.25, 0.25])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/phi_u_{config_file}_{net_}.tif", dpi=170.7)
@@ -3714,8 +3732,8 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
             tmp = labels[index_particles[n]]
             label_list.append(np.round(np.median(tmp)))
         label_list = np.array(label_list)
-        plt.xlabel(r'$u$', fontsize=64)
-        plt.ylabel(r'$\Phi(u)$', fontsize=64)
+        plt.xlabel(r'$u$', fontsize=78)
+        plt.ylabel(r'$\Phi(u)$', fontsize=78)
         plt.ylim([-0.25, 0.25])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/cluster_{config_file}_{net_}.tif", dpi=300)
@@ -3748,8 +3766,8 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         for n in range(n_particle_types):
             phi = -p[n, 0] * uu + p[n, 1] * torch.tanh(uu)
             plt.plot(to_numpy(uu), to_numpy(phi), linewidth=8)
-        plt.xlabel(r'$u$', fontsize=64)
-        plt.ylabel(r'True $\Phi(u)$', fontsize=64)
+        plt.xlabel(r'$u$', fontsize=78)
+        plt.ylabel(r'True $\Phi(u)$', fontsize=78)
         plt.ylim([-0.25, 0.25])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/true_phi_u_{config_file}_{net_}.tif", dpi=170.7)
@@ -3761,8 +3779,8 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         true_func = torch.tanh(uu[:, None].float())
 
         fig, ax = fig_init()
-        plt.xlabel(r'$u$', fontsize=64)
-        plt.ylabel(r'Reconstructed $f(u)$', fontsize=64)
+        plt.xlabel(r'$u$', fontsize=78)
+        plt.ylabel(r'Reconstructed $f(u)$', fontsize=78)
         plt.scatter(to_numpy(uu), to_numpy(func), linewidth=8, c='k', label='Reconstructed')
         plt.ylim([-3, 3])
         plt.tight_layout()
@@ -3770,8 +3788,8 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         plt.close()
 
         fig, ax = fig_init()
-        plt.xlabel(r'$u$', fontsize=64)
-        plt.ylabel(r'True $f(u)$', fontsize=64)
+        plt.xlabel(r'$u$', fontsize=78)
+        plt.ylabel(r'True $f(u)$', fontsize=78)
         plt.scatter(to_numpy(uu), to_numpy(true_func), linewidth=8, c='k', label='Reconstructed')
         plt.ylim([-3, 3])
         plt.tight_layout()
@@ -3836,8 +3854,8 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
             ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
             r_squared = 1 - (ss_res / ss_tot)
             plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-            plt.ylabel('Reconstructed $A_{ij}$ values', fontsize=64)
-            plt.xlabel('True network $A_{ij}$ values', fontsize=64)
+            plt.ylabel('Reconstructed $A_{ij}$ values', fontsize=78)
+            plt.xlabel('True network $A_{ij}$ values', fontsize=78)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/Matrix_bis_{config_file}_{net_}.tif", dpi=300)
             plt.close()
@@ -3846,8 +3864,8 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
                 f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   offset: {np.round(lin_fit[1], 2)}  ")
 
             fig, ax = fig_init()
-            plt.xlabel(r'$u$', fontsize=64)
-            plt.ylabel(r'Reconstructed $f(u)$', fontsize=64)
+            plt.xlabel(r'$u$', fontsize=78)
+            plt.ylabel(r'Reconstructed $f(u)$', fontsize=78)
             plt.plot(to_numpy(uu), to_numpy(true_func), linewidth=20, c='g', label='True')
             plt.plot(to_numpy(uu), to_numpy(func) / -1.878, linewidth=8, c='k', label='Reconstructed')
             plt.legend(fontsize=32.0)
@@ -3863,8 +3881,8 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
             true_func = -to_numpy(uu) * to_numpy(p[n, 0]) + to_numpy(p[n, 1]) * np.tanh(to_numpy(uu))
             plt.plot(to_numpy(uu), true_func, linewidth=20, label='True', c='orange')  # xkcd:sky blue') #'orange') #
             plt.plot(to_numpy(uu), to_numpy(func), linewidth=8, c='k', label='Reconstructed')
-            plt.xlabel(r'$u$', fontsize=64)
-            plt.ylabel(r'Reconstructed $\Phi_1(u)$', fontsize=64)
+            plt.xlabel(r'$u$', fontsize=78)
+            plt.ylabel(r'Reconstructed $\Phi_1(u)$', fontsize=78)
             plt.legend(fontsize=32.0)
             plt.ylim([-0.25, 0.25])
             plt.tight_layout()
@@ -3954,8 +3972,8 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         fig, ax = fig_init()
         plt.scatter(to_numpy(uu), to_numpy(phi), s=400, c='g', label='True')
         plt.scatter(to_numpy(uu), to_numpy(phi_gt), s=20, c='k', label='Reconstructed')
-        plt.xlabel(r'$u$', fontsize=64)
-        plt.ylabel(r'$f(u)$', fontsize=64)
+        plt.xlabel(r'$u$', fontsize=78)
+        plt.ylabel(r'$f(u)$', fontsize=78)
         plt.legend(fontsize=32.0)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/phi_u_{config_file}_{net_}.tif", dpi=300)
@@ -4155,8 +4173,8 @@ def data_plot(config_file, epoch_list, device):
         fig, ax = fig_init(formatx='%.0f', formaty='%.5f')
         plt.plot(loss, color='k', linewidth=4)
         plt.xlim([0, 20])
-        plt.ylabel('Loss', fontsize=64)
-        plt.xlabel('Epochs', fontsize=64)
+        plt.ylabel('Loss', fontsize=78)
+        plt.xlabel('Epochs', fontsize=78)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/loss_{config_file}.tif", dpi=170.7)
         plt.close()
@@ -4202,9 +4220,9 @@ def get_figure(index):
     epoch_list = ['20']
     match index:
         case 3:
-            config_list = ['arbitrary_3', 'arbitrary_3_3', 'arbitrary_3_continuous', 'arbitrary_16', 'arbitrary_32','arbitrary_64']
+            config_list = ['arbitrary_3', 'arbitrary_3_bis', 'arbitrary_3_3', 'arbitrary_3_continuous', 'arbitrary_16', 'arbitrary_32','arbitrary_64']
         case 4:
-            config_list = ['arbitrary_3_field_video_bison_bis']
+            config_list = ['arbitrary_3_field_video_bison_bis','arbitrary_3_field_video_bison_ter']
             epoch_list = ['20']
         case _:
             config_list = ['arbitrary_3']
@@ -4221,19 +4239,19 @@ if __name__ == '__main__':
 
     # matplotlib.use("Qt5Agg")
 
-    config_list,epoch_list = get_figure(3)
+    f= [3,4]
+    for f in f_list:
+        config_list,epoch_list = get_figure(f)
+        for config_file in config_list:
+            config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
 
+            data_plot(config_file, epoch_list, device)
 
-    for config_file in config_list:
-        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+            data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
+                      best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False,
+                      sample_embedding=False, device=device)  # config.simulation.n_frames // 7
 
-        data_plot(config_file, epoch_list, device)
-
-        data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
-                  best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False,
-                  sample_embedding=False, device=device)  # config.simulation.n_frames // 7
-
-        print(' ')
-        print(' ')
+            print(' ')
+            print(' ')
 
 

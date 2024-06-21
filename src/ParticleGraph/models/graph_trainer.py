@@ -3098,7 +3098,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         nx.draw_networkx(vis, pos=pos, node_size=0, linewidths=0, with_labels=False,ax=ax,edge_color='r', width=4)
         for n in range(n_particle_types):
             plt.scatter(x[index_particles[n], 2].detach().cpu().numpy(),
-                        x[index_particles[n], 1].detach().cpu().numpy(), s=50, color=cmap.color(n))
+                        x[index_particles[n], 1].detach().cpu().numpy(), s=100, color=cmap.color(n))
         plt.xlim([0, 1])
         plt.ylim([0, 1])
         plt.xlabel(r'$x$', fontsize=64)
