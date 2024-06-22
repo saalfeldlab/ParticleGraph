@@ -213,14 +213,14 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         plt.xlim([-2, 2])
                         plt.ylim([-2, 2])
                     if 'latex' in style:
-                        plt.xlabel(r'$x$', fontsize=64)
-                        plt.ylabel(r'$y$', fontsize=64)
-                        plt.xticks(fontsize=32.0)
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
+                        plt.xticks(fontsize=48.0)
                     elif 'frame' in style:
-                        plt.xlabel(r'$x$', fontsize=64)
-                        plt.ylabel(r'$y$', fontsize=64)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
                     else:
                         plt.xticks([])
                         plt.yticks([])
@@ -267,13 +267,26 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                         plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=200, c=to_numpy(H1[:, 0]), cmap='cool',
                                     vmin=0, vmax=3)
-                        plt.xlim([-1.5, 1.5])
-                        plt.ylim([-1.5, 1.5])
+                        plt.xlim([-1.2, 1.2])
+                        plt.ylim([-1.2, 1.2])
                         # plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=24)
                         # cbar = plt.colorbar(shrink=0.5)
                         # cbar.ax.tick_params(labelsize=32)
-                        plt.xticks([])
-                        plt.yticks([])
+                        if 'latex' in style:
+                            plt.xlabel(r'$x$', fontsize=78)
+                            plt.ylabel(r'$y$', fontsize=78)
+                            plt.xticks(fontsize=48.0)
+                            plt.yticks(fontsize=48.0)
+                        elif 'frame' in style:
+                            plt.xlabel('x', fontsize=48)
+                            plt.ylabel('y', fontsize=48)
+                            plt.xticks(fontsize=48.0)
+                            plt.yticks(fontsize=48.0)
+                            ax.tick_params(axis='both', which='major', pad=15)
+                            plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=48)
+                        else:
+                            plt.xticks([])
+                            plt.yticks([])
                         plt.tight_layout()
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{10000 + it}.tif",
                                     dpi=170.7)
@@ -320,17 +333,17 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                             plt.xlim([-2, 2])
                             plt.ylim([-2, 2])
                         if 'latex' in style:
-                            plt.xlabel(r'$x$', fontsize=64)
-                            plt.ylabel(r'$y$', fontsize=64)
-                            plt.xticks(fontsize=32.0)
-                            plt.yticks(fontsize=32.0)
+                            plt.xlabel(r'$x$', fontsize=78)
+                            plt.ylabel(r'$y$', fontsize=78)
+                            plt.xticks(fontsize=48.0)
+                            plt.yticks(fontsize=48.0)
                         elif 'frame' in style:
-                            plt.xlabel('x', fontsize=32)
-                            plt.ylabel('y', fontsize=32)
-                            plt.xticks(fontsize=32.0)
-                            plt.yticks(fontsize=32.0)
+                            plt.xlabel('x', fontsize=48)
+                            plt.ylabel('y', fontsize=48)
+                            plt.xticks(fontsize=48.0)
+                            plt.yticks(fontsize=48.0)
                             ax.tick_params(axis='both', which='major', pad=15)
-                            plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
+                            plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=48)
                         else:
                             plt.xticks([])
                             plt.yticks([])
@@ -553,14 +566,14 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     plt.xlim([0, 1])
                     plt.ylim([0, 1])
                     if 'latex' in style:
-                        plt.xlabel(r'$x$', fontsize=64)
-                        plt.ylabel(r'$y$', fontsize=64)
-                        plt.xticks(fontsize=32.0)
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
+                        plt.xticks(fontsize=48.0)
                     elif 'frame' in style:
-                        plt.xlabel(r'$x$', fontsize=64)
-                        plt.ylabel(r'$y$', fontsize=64)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
                     else:
                         plt.xticks([])
                         plt.yticks([])
@@ -593,10 +606,10 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     plt.xlim([0, 1])
                     plt.ylim([0, 1])
                     if 'latex' in style:
-                        plt.xlabel(r'$x$', fontsize=64)
-                        plt.ylabel(r'$y$', fontsize=64)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
                     elif 'frame' in style:
                         plt.xlabel('x', fontsize=13)
                         plt.ylabel('y', fontsize=16)
@@ -798,17 +811,17 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
                             # plt.yticks([])
                             # plt.axis('off')`
                     if 'latex' in style:
-                        plt.xlabel(r'$x$', fontsize=64)
-                        plt.ylabel(r'$y$', fontsize=64)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
                     elif 'frame' in style:
-                        plt.xlabel('x', fontsize=32)
-                        plt.ylabel('y', fontsize=32)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
+                        plt.xlabel('x', fontsize=48)
+                        plt.ylabel('y', fontsize=48)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
                         ax.tick_params(axis='both', which='major', pad=15)
-                        plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
+                        plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=48)
                     else:
                         plt.xticks([])
                         plt.yticks([])
@@ -1102,6 +1115,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     ax.yaxis.set_major_locator(plt.MaxNLocator(3))
                     ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                     ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                    ax.tick_params(axis='both', which='major', pad=15)
                     # if (has_mesh | (simulation_config.boundary == 'periodic')):
                     #     ax = plt.axes([0, 0, 1, 1], frameon=False)
                     # else:
@@ -1109,7 +1123,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     # ax.get_xaxis().set_visible(False)
                     # ax.get_yaxis().set_visible(False)
                     # plt.autoscale(tight=True)
-                    s_p = 100
+                    s_p = 50
                     for n in range(n_particle_types):
                             plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
                                         s=s_p, color=cmap.color(n))
@@ -1118,15 +1132,15 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     # plt.xlim([-2,2])
                     # plt.ylim([-2,2])
                     if 'latex' in style:
-                        plt.xlabel(r'$x$', fontsize=64)
-                        plt.ylabel(r'$y$', fontsize=64)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
                     elif 'frame' in style:
-                        plt.xlabel('x', fontsize=64)
-                        plt.ylabel('y', fontsize=64)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
+                        plt.xlabel('x', fontsize=78)
+                        plt.ylabel('y', fontsize=78)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
                     else:
                         plt.xticks([])
                         plt.yticks([])
@@ -1149,25 +1163,24 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     ax.yaxis.set_major_locator(plt.MaxNLocator(3))
                     ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                     ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                    ax.tick_params(axis='both', which='major', pad=15)
                     plt.scatter(to_numpy(x_mesh[0:n_nodes, 2]), to_numpy(x_mesh[0:n_nodes, 1]), c=to_numpy(x_mesh[0:n_nodes, 6]),cmap='grey',s=5)
                     plt.xlim([0,1])
                     plt.ylim([0,1])
                     for n in range(n_particles):
-                        plt.arrow(x=to_numpy(x[n, 2]), y=to_numpy(x[n, 1]), dx=to_numpy(V1_[n,1])*2.5, dy=to_numpy(V1_[n,0])*2.5, color=cmap.color(type_list[n].astype(int)), head_width=0.004, length_includes_head=True)
-
-
+                        plt.arrow(x=to_numpy(x[n, 2]), y=to_numpy(x[n, 1]), dx=to_numpy(V1_[n,1])*3.5, dy=to_numpy(V1_[n,0])*3.5, color=cmap.color(type_list[n].astype(int)), head_width=0.004, length_includes_head=True)
                     # plt.xlim([-2,2])
                     # plt.ylim([-2,2])
                     if 'latex' in style:
-                        plt.xlabel(r'$x$', fontsize=64)
-                        plt.ylabel(r'$y$', fontsize=64)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
                     elif 'frame' in style:
-                        plt.xlabel('x', fontsize=64)
-                        plt.ylabel('y', fontsize=64)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
+                        plt.xlabel('x', fontsize=78)
+                        plt.ylabel('y', fontsize=78)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
                     else:
                         plt.xticks([])
                         plt.yticks([])

@@ -40,7 +40,7 @@ training:
     recursive_loop: 2
     batch_size: 1
     small_init_batch_size: False
-    n_runs: 2
+    n_runs: 100
     large_range: False
     learning_rate_start: 0.000001
     learning_rate_end: 0.0000005

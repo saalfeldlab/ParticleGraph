@@ -2717,13 +2717,19 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         n_particles = x.shape[0]
         config.simulation.n_particles = n_particles
         index_particles = get_index_particles(x, n_particle_types, dimension)
+        if n_particle_types>1000:
+            index_particles = []
+            for n in range(3):
+                index = np.arange(n_particles * n // 3, n_particles * (n + 1) // 3)
+                index_particles.append(index)
+                n_particle_types = 3
 
     if sample_embedding:
         model_a_ = nn.Parameter(
             torch.tensor(np.ones((int(n_particles), model.embedding_dim)),device=device,requires_grad=False, dtype=torch.float32))
         for n in range(n_particles):
             t = to_numpy(x[n,5]).astype(int)
-            index=first_index_particles[t][np.random.randint(n_sub_population)]
+            index = first_index_particles[t][np.random.randint(n_sub_population)]
             with torch.no_grad():
                 model_a_[n] = first_embedding[index].clone().detach()
         model.a = nn.Parameter(
@@ -3101,8 +3107,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                         x[index_particles[n], 1].detach().cpu().numpy(), s=100, color=cmap.color(n))
         plt.xlim([0, 1])
         plt.ylim([0, 1])
-        plt.xlabel(r'$x$', fontsize=64)
-        plt.ylabel(r'$y$', fontsize=64)
+        plt.xlabel(r'$x$', fontsize=78)
+        plt.ylabel(r'$y$', fontsize=78)
         formatx = '%.1f'
         formaty = '%.1f'
         ax.tick_params(left=True, bottom=True, labelleft=True, labelbottom=True, axis='both', which='major', pad=15)
@@ -3110,8 +3116,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         ax.yaxis.set_major_locator(plt.MaxNLocator(3))
         ax.xaxis.set_major_formatter(FormatStrFormatter(formatx))
         ax.yaxis.set_major_formatter(FormatStrFormatter(formaty))
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
+        plt.xticks(fontsize=48.0)
+        plt.yticks(fontsize=48.0)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/rmserr_{config_file}_{it}.tif", dpi=170.7)
         plt.close()

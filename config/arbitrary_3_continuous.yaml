@@ -28,7 +28,7 @@ graph_model:
   update_type: 'none'
 
 plotting:
-  colormap: 'tab20'
+  colormap: 'tab10'
   arrow_length: 2
   ylim: [-0.04, 0.03]
 

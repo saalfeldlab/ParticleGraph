@@ -43,6 +43,7 @@ def set_device(device=None):
             device = 'cpu'
     return device
 
+
 def get_gpu_memory_map(device=None):
     print(' ')
     t = np.round(torch.cuda.get_device_properties(device).total_memory/1E9,2)
