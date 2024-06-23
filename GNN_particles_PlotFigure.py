@@ -437,17 +437,22 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
     plt.close()
 
     fig, ax = fig_init()
-
-    model_MLP_ = model.lin_edge
-    model_MLP_ = model.lin_phi
-
-    func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=False, config=config,
+    if config.graph_model.signal_model_name == 'PDE_N':
+        model_MLP_ = model.lin_phi
+    else:
+        model_MLP_ = torch.round(model.lin_edge,2)
+    func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
                                                         model_MLP=model_MLP_, model_a=model.a,
                                                         dataset_number=1,
                                                         n_particles=n_particles, ynorm=ynorm,
                                                         types=to_numpy(type_list),
                                                         cmap=cmap, device=device)
     plt.close()
+
+    # trans = umap.UMAP(n_neighbors=100, n_components=2, init='spectral').fit(func_list_)
+    # proj_interaction = trans.transform(func_list_)
+    # tsne = TSNE(n_components=2, random_state=0)
+    # proj_interaction =  tsne.fit_transform(func_list_)
 
     fig, ax = fig_init()
     proj_interaction = (proj_interaction - np.min(proj_interaction)) / (
@@ -3642,56 +3647,12 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         print(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
         logger.info(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
-
-        embedding = get_embedding(model.a, 1)
         fig, ax = fig_init()
-        for n in range(n_particle_types):
-            c_ = np.round(n / (n_particle_types - 1) * 256).astype(int)
-            plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=400,
-                        alpha=0.1)  # , color=cmap.color(c_)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/first_embedding_{config_file}_{epoch}.tif", dpi=300)
-        plt.close()
-
-        k = 500
-        x = x_list[1][k].clone().detach()
-        dataset = data.Data(x=x[:, :], edge_index=model.edges)
-        y = y_list[1][k].clone().detach()
-        pred = model(dataset, data_id=1)
-        adj_t = adjacency > 0
-        edge_index = adj_t.nonzero().t().contiguous()
-        edge_attr_adjacency = adjacency[adj_t]
-        dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
-
-        fig, ax = fig_init()
-        gt_weight = to_numpy(adjacency[adj_t])
-        pred_weight = to_numpy(model.weight_ij[adj_t])
-        plt.scatter(gt_weight, pred_weight, s=200, c='k')
-        x_data = gt_weight
-        y_data = pred_weight.squeeze()
-        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-        residuals = y_data - linear_model(x_data, *lin_fit)
-        ss_res = np.sum(residuals ** 2)
-        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-        r_squared = 1 - (ss_res / ss_tot)
-        plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-        plt.ylabel('Reconstructed $A_{ij}$ values', fontsize=56)
-        plt.xlabel('True $A_{ij}$ values', fontsize=56)
-        plt.tight_layout()
-        print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   offset: {np.round(lin_fit[1], 2)}  ")
-        logger.info(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   offset: {np.round(lin_fit[1], 2)}  ")
-        plt.savefig(f"./{log_dir}/results/weight_{config_file}_{epoch}.tif", dpi=300)
-        plt.close()
-
-        fig, ax = fig_init()
-        uu = x[:, 6:7].squeeze()
         ax.xaxis.get_major_formatter()._usetex = False
         ax.yaxis.get_major_formatter()._usetex = False
-        uu = torch.tensor(np.linspace(0, 3, 1000)).to(device)
+        rr = torch.tensor(np.linspace(0, 3, 1000)).to(device)
         print(n_particles)
-        func_list, proj_interaction = analyze_edge_function(rr=uu, vizualize=True, config=config,
+        func_list, proj_interaction = analyze_edge_function(rr=rr, vizualize=True, config=config,
                                                             model_MLP=model.lin_phi, model_a=model.a,
                                                             dataset_number=1,
                                                             n_particles=int(
@@ -3742,6 +3703,7 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         type_list = x[:, 5:6].clone().detach()
         accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
         print(f'accuracy: {np.round(accuracy, 2)}   n_clusters: {n_clusters}')
+        logger.info(f'accuracy: {np.round(accuracy, 2)}   n_clusters: {n_clusters}')
 
         model_a_ = model.a[1].clone().detach()
         for n in range(n_clusters):
@@ -3825,14 +3787,15 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
 
             model_pysrr.fit(to_numpy(dataset["train_input"]), to_numpy(dataset["train_label"]))
 
-            print(model_pysrr)
-            print(model_pysrr.equations_)
+            expr = model_pysrr.sympy(2).as_terms()[0]
+            coeff = expr[0][1][0][0]
+            print(expr)
+            logger.info(expr)
 
             k = 500
             x = x_list[1][k].clone().detach()
             dataset = data.Data(x=x[:, :], edge_index=model.edges)
             y = y_list[1][k].clone().detach()
-            y = y
             pred = model(dataset, data_id=1)
             adj_t = adjacency > 0
             edge_index = adj_t.nonzero().t().contiguous()
@@ -3841,7 +3804,7 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
 
             fig, ax = fig_init()
             gt_weight = to_numpy(adjacency[adj_t])
-            pred_weight = to_numpy(model.weight_ij[adj_t]) * -1.878
+            pred_weight = to_numpy(model.weight_ij[adj_t]) * coeff
             plt.scatter(gt_weight, pred_weight, s=200, c='k')
             x_data = gt_weight
             y_data = pred_weight.squeeze()
@@ -3854,17 +3817,18 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
             plt.ylabel('Reconstructed $A_{ij}$ values', fontsize=78)
             plt.xlabel('True network $A_{ij}$ values', fontsize=78)
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/Matrix_bis_{config_file}_{epoch}.tif", dpi=300)
+            plt.savefig(f"./{log_dir}/results/Aij_{config_file}_{epoch}.tif", dpi=300)
             plt.close()
 
             print(
                 f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   offset: {np.round(lin_fit[1], 2)}  ")
+            logger.info(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   offset: {np.round(lin_fit[1], 2)}  ")
 
             fig, ax = fig_init()
             plt.xlabel(r'$u$', fontsize=78)
             plt.ylabel(r'Reconstructed $f(u)$', fontsize=78)
             plt.plot(to_numpy(uu), to_numpy(true_func), linewidth=20, c='g', label='True')
-            plt.plot(to_numpy(uu), to_numpy(func) / -1.878, linewidth=8, c='k', label='Reconstructed')
+            plt.plot(to_numpy(uu), to_numpy(func) / coeff, linewidth=8, c='k', label='Reconstructed')
             plt.legend(fontsize=32.0)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/comparison_f_u_{config_file}_{epoch}.tif", dpi=300)
@@ -3895,13 +3859,13 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
             dataset['test_label'] = func[:, None]
 
             model_pysrr = PySRRegressor(
-                niterations=300,  # < Increase me for better results
+                niterations=30,  # < Increase me for better results
                 binary_operators=["+", "*"],
                 unary_operators=[
                     "tanh"
                 ],
                 random_state=0,
-                temp_equation_file=True
+                temp_equation_file=False
             )
             model_pysrr.fit(to_numpy(dataset["train_input"]), to_numpy(dataset["train_label"]))
 

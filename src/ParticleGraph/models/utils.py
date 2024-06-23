@@ -629,7 +629,7 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
         elif config_model == 'PDE_E':
             rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
         elif config_model == 'PDE_N':
-            rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+            rr = torch.tensor(np.linspace(0, 2, 1000)).to(device)
         else:
             rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
 
@@ -671,29 +671,27 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
             case 'PDE_N':
                 in_features = torch.cat((rr[:, None], embedding_), dim=1)
         with torch.no_grad():
-            if config_model == 'PDE_N':
-                func = model_MLP(in_features.float())
-            else:
-                func = model_MLP(in_features.float())
+            func = model_MLP(in_features.float())
+
         func = func[:, 0]
         func_list.append(func)
-        if ((n % 5 == 0) | (config.graph_model.particle_model_name=='PDE_GS') | (config.graph_model.signal_model_name=='PDE_N')) & vizualize:
+        if ((n % 5 == 0) | (config.graph_model.particle_model_name=='PDE_GS') | (config_model=='PDE_N')) & vizualize:
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
                      color=cmap.color(types[n].astype(int)), linewidth=2, alpha=0.25)
     func_list = torch.stack(func_list)
-    coeff_norm = to_numpy(func_list)
+    func_list_ = to_numpy(func_list)
 
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
-        if coeff_norm.shape[0] > 1000:
-            new_index = np.random.permutation(coeff_norm.shape[0])
-            new_index = new_index[0:min(1000, coeff_norm.shape[0])]
-            trans = umap.UMAP(n_neighbors=500, n_components=2, transform_queue_size=0, random_state=config.training.seed).fit(coeff_norm[new_index])
-            proj_interaction = trans.transform(coeff_norm)
+        if func_list_.shape[0] > 1000:
+            new_index = np.random.permutation(func_list_.shape[0])
+            new_index = new_index[0:min(1000, func_list_.shape[0])]
+            trans = umap.UMAP(n_neighbors=500, n_components=2, transform_queue_size=0, random_state=config.training.seed).fit(func_list_[new_index])
+            proj_interaction = trans.transform(func_list_)
         else:
-            trans = umap.UMAP(n_neighbors=100, n_components=2, transform_queue_size=0).fit(coeff_norm)
-            proj_interaction = trans.transform(coeff_norm)
+            trans = umap.UMAP(n_neighbors=100, n_components=2, transform_queue_size=0).fit(func_list_)
+            proj_interaction = trans.transform(func_list_)
 
     if vizualize:
         if config.graph_model.particle_model_name == 'PDE_GS':
