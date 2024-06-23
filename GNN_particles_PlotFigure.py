@@ -3700,28 +3700,131 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         new_labels = labels.copy()
         for n in range(n_particle_types):
             new_labels[labels == label_list[n]] = n
-        type_list = x[:, 5:6].clone().detach()
         accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
         print(f'accuracy: {np.round(accuracy, 2)}   n_clusters: {n_clusters}')
         logger.info(f'accuracy: {np.round(accuracy, 2)}   n_clusters: {n_clusters}')
 
-        model_a_ = model.a[1].clone().detach()
-        for n in range(n_clusters):
-            pos = np.argwhere(labels == n).squeeze().astype(int)
-            pos = np.array(pos)
-            if pos.size > 0:
-                median_center = model_a_[pos, :]
-                median_center = torch.median(median_center, dim=0).values
-                model_a_[pos, :] = median_center
+        # model_a_ = model.a[1].clone().detach()
+        # for n in range(n_clusters):
+        #     pos = np.argwhere(labels == n).squeeze().astype(int)
+        #     pos = np.array(pos)
+        #     if pos.size > 0:
+        #         median_center = model_a_[pos, :]
+        #         median_center = torch.median(median_center, dim=0).values
+        #         model_a_[pos, :] = median_center
+        # with torch.no_grad():
+        #     model.a[1] = model_a_.clone().detach()
+
+        uu = torch.tensor(np.linspace(0, 3, 1000)).to(device)
+        in_features = uu[:, None]
         with torch.no_grad():
-            model.a[1] = model_a_.clone().detach()
+            func = model.lin_edge(in_features.float())
+            func = func[:, 0]
+        uu = uu.to(dtype=torch.float32)
+        func = func.to(dtype=torch.float32)
+
+        model_pysrr = PySRRegressor(
+            niterations=30,  # < Increase me for better results
+            binary_operators=["+", "*"],
+            unary_operators=[
+                "cos",
+                "exp",
+                "sin",
+                "tanh"
+            ],
+            random_state=0,
+            temp_equation_file=True
+        )
+
+        model_pysrr.fit(to_numpy(uu[:, None]), to_numpy(func[:, None]))
+        # model_pysrr, m, v = symbolic_regression(uu,func)
+
+        expr = model_pysrr.sympy(2).as_terms()[0]
+        coeff = expr[0][1][0][0]
+        print(expr)
+        logger.info(expr)
+
+        k = 500
+        x = x_list[1][k].clone().detach()
+        dataset = data.Data(x=x[:, :], edge_index=model.edges)
+        pred = model(dataset, data_id=1)
+
+        fig, ax = fig_init()
+        gt_weight = to_numpy(adjacency[adj_t])
+        pred_weight = to_numpy(model.weight_ij[adj_t]) * coeff
+        plt.scatter(gt_weight, pred_weight, s=200, c='k')
+        x_data = gt_weight
+        y_data = pred_weight.squeeze()
+        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+        residuals = y_data - linear_model(x_data, *lin_fit)
+        ss_res = np.sum(residuals ** 2)
+        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot)
+        plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+        plt.ylabel('Reconstructed $A_{ij}$ values', fontsize=56)
+        plt.xlabel('True network $A_{ij}$ values', fontsize=56)
+        print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   offset: {np.round(lin_fit[1], 2)}  ")
+        logger.info(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   offset: {np.round(lin_fit[1], 2)}  ")
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/Aij_{config_file}_{epoch}.tif", dpi=300)
+        plt.close()
+
+        true_func = torch.tanh(uu)
+        fig, ax = fig_init()
+        plt.xlabel(r'$u$', fontsize=78)
+        plt.ylabel(r'$f(u)$', fontsize=78)
+        plt.plot(to_numpy(uu), to_numpy(true_func), linewidth=20, c='g', label='True')
+        plt.plot(to_numpy(uu), to_numpy(func) / coeff, linewidth=8, c='k', label='Reconstructed')
+        plt.legend(fontsize=32.0)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/comparison_f_u_{config_file}_{epoch}.tif", dpi=300)
+        plt.close()
+
+        p = config.simulation.params
+        uu = torch.tensor(np.linspace(0, 3, 1000)).to(device)
+        fig, ax = fig_init()
+        func = torch.mean(func_list[0, :], dim=0)
+        true_func = -to_numpy(uu) * to_numpy(p[n, 0]) + to_numpy(p[n, 1]) * np.tanh(to_numpy(uu))
+        plt.plot(to_numpy(uu), true_func, linewidth=20, label='True', c='orange')  # xkcd:sky blue') #'orange') #
+        plt.plot(to_numpy(uu), to_numpy(func), linewidth=8, c='k', label='Reconstructed')
+        plt.xlabel(r'$u$', fontsize=78)
+        plt.ylabel(r'Reconstructed $\Phi_1(u)$', fontsize=78)
+        plt.legend(fontsize=32.0)
+        plt.ylim([-0.25, 0.25])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/comparison_phi_1_{config_file}_{epoch}.tif", dpi=300)
+        plt.close()
+
+        uu = uu.to(dtype=torch.float32)
+        func = func.to(dtype=torch.float32)
+        dataset = {}
+        dataset['train_input'] = uu[:, None]
+        dataset['test_input'] = uu[:, None]
+        dataset['train_label'] = func[:, None]
+        dataset['test_label'] = func[:, None]
+
+        model_pysrr = PySRRegressor(
+            niterations=30,  # < Increase me for better results
+            binary_operators=["+", "*"],
+            unary_operators=[
+                "tanh"
+            ],
+            random_state=0,
+            temp_equation_file=False
+        )
+        model_pysrr.fit(to_numpy(dataset["train_input"]), to_numpy(dataset["train_label"]))
+
+        print(model_pysrr)
+        print(model_pysrr.equations_)
+
+        # for col in model_pysrr.equations_.columns:
+        #     print(col)
 
         fig, ax = fig_init()
         uu = torch.tensor(np.linspace(0, 3, 1000)).to(device)
         p = config.simulation.params
         if len(p) > 1:
             p = torch.tensor(p, device=device)
-        fig_ = plt.figure(figsize=(12, 12))
         for n in range(n_particle_types):
             phi = -p[n, 0] * uu + p[n, 1] * torch.tanh(uu)
             plt.plot(to_numpy(uu), to_numpy(phi), linewidth=8)
@@ -3731,149 +3834,6 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/true_phi_u_{config_file}_{epoch}.tif", dpi=170.7)
         plt.close()
-
-        uu = torch.tensor(np.linspace(0, 3, 1000)).to(device)
-        with torch.no_grad():
-            func = model.lin_edge(uu[:, None].float())
-        true_func = torch.tanh(uu[:, None].float())
-
-        fig, ax = fig_init()
-        plt.xlabel(r'$u$', fontsize=56)
-        plt.ylabel(r'Reconstructed $f(u)$', fontsize=56)
-        plt.scatter(to_numpy(uu), to_numpy(func), linewidth=8, c='k', label='Reconstructed')
-        plt.ylim([-3, 3])
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/f_u_{config_file}_{epoch}.tif", dpi=300)
-        plt.close()
-
-        fig, ax = fig_init()
-        plt.xlabel(r'$u$', fontsize=78)
-        plt.ylabel(r'True $f(u)$', fontsize=78)
-        plt.scatter(to_numpy(uu), to_numpy(true_func), linewidth=8, c='k', label='Reconstructed')
-        plt.ylim([-3, 3])
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/true_f_u_{config_file}_{epoch}.tif", dpi=300)
-        plt.close()
-
-        bFit = False
-
-        if bFit:
-            uu = torch.tensor(np.linspace(0, 3, 1000)).to(device)
-            in_features = uu[:, None]
-            with torch.no_grad():
-                func = model.lin_edge(in_features.float())
-                func = func[:, 0]
-
-            uu = uu.to(dtype=torch.float32)
-            func = func.to(dtype=torch.float32)
-            dataset = {}
-            dataset['train_input'] = uu[:, None]
-            dataset['test_input'] = uu[:, None]
-            dataset['train_label'] = func[:, None]
-            dataset['test_label'] = func[:, None]
-
-            model_pysrr = PySRRegressor(
-                niterations=30,  # < Increase me for better results
-                binary_operators=["+", "*"],
-                unary_operators=[
-                    "cos",
-                    "exp",
-                    "sin",
-                    "tanh"
-                ],
-                random_state=0,
-                temp_equation_file=True
-            )
-
-            model_pysrr.fit(to_numpy(dataset["train_input"]), to_numpy(dataset["train_label"]))
-
-            expr = model_pysrr.sympy(2).as_terms()[0]
-            coeff = expr[0][1][0][0]
-            print(expr)
-            logger.info(expr)
-
-            k = 500
-            x = x_list[1][k].clone().detach()
-            dataset = data.Data(x=x[:, :], edge_index=model.edges)
-            y = y_list[1][k].clone().detach()
-            pred = model(dataset, data_id=1)
-            adj_t = adjacency > 0
-            edge_index = adj_t.nonzero().t().contiguous()
-            edge_attr_adjacency = adjacency[adj_t]
-            dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
-
-            fig, ax = fig_init()
-            gt_weight = to_numpy(adjacency[adj_t])
-            pred_weight = to_numpy(model.weight_ij[adj_t]) * coeff
-            plt.scatter(gt_weight, pred_weight, s=200, c='k')
-            x_data = gt_weight
-            y_data = pred_weight.squeeze()
-            lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-            residuals = y_data - linear_model(x_data, *lin_fit)
-            ss_res = np.sum(residuals ** 2)
-            ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-            r_squared = 1 - (ss_res / ss_tot)
-            plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-            plt.ylabel('Reconstructed $A_{ij}$ values', fontsize=78)
-            plt.xlabel('True network $A_{ij}$ values', fontsize=78)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/Aij_{config_file}_{epoch}.tif", dpi=300)
-            plt.close()
-
-            print(
-                f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   offset: {np.round(lin_fit[1], 2)}  ")
-            logger.info(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   offset: {np.round(lin_fit[1], 2)}  ")
-
-            fig, ax = fig_init()
-            plt.xlabel(r'$u$', fontsize=78)
-            plt.ylabel(r'Reconstructed $f(u)$', fontsize=78)
-            plt.plot(to_numpy(uu), to_numpy(true_func), linewidth=20, c='g', label='True')
-            plt.plot(to_numpy(uu), to_numpy(func) / coeff, linewidth=8, c='k', label='Reconstructed')
-            plt.legend(fontsize=32.0)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/comparison_f_u_{config_file}_{epoch}.tif", dpi=300)
-            plt.close()
-
-            uu = torch.tensor(np.linspace(0, 3, 1000)).to(device)
-            fig, ax = fig_init()
-            n = 0
-            pos = np.argwhere(labels == n).squeeze().astype(int)
-            func = torch.mean(func_list[pos, :], dim=0)
-            true_func = -to_numpy(uu) * to_numpy(p[n, 0]) + to_numpy(p[n, 1]) * np.tanh(to_numpy(uu))
-            plt.plot(to_numpy(uu), true_func, linewidth=20, label='True', c='orange')  # xkcd:sky blue') #'orange') #
-            plt.plot(to_numpy(uu), to_numpy(func), linewidth=8, c='k', label='Reconstructed')
-            plt.xlabel(r'$u$', fontsize=78)
-            plt.ylabel(r'Reconstructed $\Phi_1(u)$', fontsize=78)
-            plt.legend(fontsize=32.0)
-            plt.ylim([-0.25, 0.25])
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/comparison_phi_1_{config_file}_{epoch}.tif", dpi=300)
-            plt.close()
-
-            uu = uu.to(dtype=torch.float32)
-            func = func.to(dtype=torch.float32)
-            dataset = {}
-            dataset['train_input'] = uu[:, None]
-            dataset['test_input'] = uu[:, None]
-            dataset['train_label'] = func[:, None]
-            dataset['test_label'] = func[:, None]
-
-            model_pysrr = PySRRegressor(
-                niterations=30,  # < Increase me for better results
-                binary_operators=["+", "*"],
-                unary_operators=[
-                    "tanh"
-                ],
-                random_state=0,
-                temp_equation_file=False
-            )
-            model_pysrr.fit(to_numpy(dataset["train_input"]), to_numpy(dataset["train_label"]))
-
-            print(model_pysrr)
-            print(model_pysrr.equations_)
-
-            # for col in model_pysrr.equations_.columns:
-            #     print(col)
 
         k = 500
         x = x_list[1][k].clone().detach()
