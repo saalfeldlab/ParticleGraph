@@ -512,7 +512,7 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, index_par
             plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif", dpi=87)
             plt.close()
 
-def analyze_edge_function_tracking(rr=[], vizualize=False, config=None, model_lin_edge=[], model_a=None, n_particles=None, ynorm=None, indexes=None, type_list=None, cmap=None, dimension=2, embedding_type=0, device=None):
+def analyze_edge_function_tracking(rr=[], vizualize=False, config=None, model_MLP=[], model_a=None, n_particles=None, ynorm=None, indexes=None, type_list=None, cmap=None, dimension=2, embedding_type=0, device=None):
 
     model_config = config.graph_model
     max_radius = config.simulation.max_radius
@@ -573,7 +573,7 @@ def analyze_edge_function_tracking(rr=[], vizualize=False, config=None, model_li
             case 'PDE_N':
                 in_features = torch.cat((rr[:, None], embedding_), dim=1)
         with torch.no_grad():
-            func = model_lin_edge(in_features.float())
+            func = model_MLP(in_features.float())
         func = func[:, 0]
         func_list.append(func)
         if ((n % 5 == 0) | (config.graph_model.particle_model_name=='PDE_GS')) & vizualize:
@@ -609,19 +609,27 @@ def analyze_edge_function_tracking(rr=[], vizualize=False, config=None, model_li
 
     return func_list, proj_interaction
 
-def analyze_edge_function(rr=[], vizualize=False, config=None, model_lin_edge=[], model_a=None, n_nodes=0, dataset_number = 0, n_particles=None, ynorm=None, types=None, cmap=None, dimension=2, device=None):
+def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], model_a=None, n_nodes=0, dataset_number = 0, n_particles=None, ynorm=None, types=None, cmap=None, dimension=2, device=None):
 
-    model_config = config.graph_model
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
 
+    if config.graph_model.particle_model_name != '':
+        config_model = config.graph_model.particle_model_name
+    elif config.graph_model.signal_model_name != '':
+        config_model = config.graph_model.signal_model_name
+    elif config.graph_model.mesh_model_name != '':
+        config_model = config.graph_model.mesh_model_name
+
     if rr==[]:
-        if model_config.particle_model_name == 'PDE_G':
+        if config_model == 'PDE_G':
             rr = torch.tensor(np.linspace(0, max_radius * 1.3, 1000)).to(device)
-        elif model_config.particle_model_name == 'PDE_GS':
+        elif config_model == 'PDE_GS':
             rr = torch.tensor(np.logspace(7, 9, 1000)).to(device)
-        elif model_config.particle_model_name == 'PDE_E':
+        elif config_model == 'PDE_E':
             rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
+        elif config_model == 'PDE_N':
+            rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
         else:
             rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
 
@@ -631,12 +639,6 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_lin_edge=[]
             embedding_ = model_a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
         else:
             embedding_ = model_a[dataset_number, n_nodes+n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-        if config.graph_model.particle_model_name != '':
-            config_model = config.graph_model.particle_model_name
-        elif config.graph_model.signal_model_name != '':
-            config_model = config.graph_model.signal_model_name
-        elif config.graph_model.mesh_model_name != '':
-            config_model = config.graph_model.mesh_model_name
 
         match config_model:
             case 'PDE_A':
@@ -669,10 +671,13 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_lin_edge=[]
             case 'PDE_N':
                 in_features = torch.cat((rr[:, None], embedding_), dim=1)
         with torch.no_grad():
-            func = model_lin_edge(in_features.float())
+            if config_model == 'PDE_N':
+                func = model_MLP(in_features.float())
+            else:
+                func = model_MLP(in_features.float())
         func = func[:, 0]
         func_list.append(func)
-        if ((n % 5 == 0) | (config.graph_model.particle_model_name=='PDE_GS')) & vizualize:
+        if ((n % 5 == 0) | (config.graph_model.particle_model_name=='PDE_GS') | (config.graph_model.signal_model_name=='PDE_N')) & vizualize:
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
                      color=cmap.color(types[n].astype(int)), linewidth=2, alpha=0.25)

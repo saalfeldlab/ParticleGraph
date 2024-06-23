@@ -275,7 +275,7 @@ class Mesh_RPS_extract(MessagePassing):
         embedding = get_embedding(model.a, 1)
 
         func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=False, config=config,
-                                                            model_lin_edge=model.lin_edge, model_a=model.a,
+                                                            model_MLP=model.lin_edge, model_a=model.a,
                                                             dataset_number=1,
                                                             n_particles=n_particles, ynorm=ynorm,
                                                             types=to_numpy(x[:, 5]),
@@ -371,7 +371,7 @@ def plot_embedding_func_cluster_tracking(model, config, config_file, embedding_c
         plt.close()
 
     func_list, proj_interaction = analyze_edge_function_tracking(rr=[], vizualize=False, config=config,
-                                                        model_lin_edge=model.lin_edge, model_a=model.a,
+                                                        model_MLP=model.lin_edge, model_a=model.a,
                                                         n_particles=n_particles, ynorm=ynorm,
                                                         indexes=indexes, type_list = type_list,
                                                         cmap=cmap, embedding_type = embedding_type, device=device)
@@ -437,8 +437,12 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
     plt.close()
 
     fig, ax = fig_init()
+
+    model_MLP_ = model.lin_edge
+    model_MLP_ = model.lin_phi
+
     func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=False, config=config,
-                                                        model_lin_edge=model.lin_edge, model_a=model.a,
+                                                        model_MLP=model_MLP_, model_a=model.a,
                                                         dataset_number=1,
                                                         n_particles=n_particles, ynorm=ynorm,
                                                         types=to_numpy(type_list),
@@ -3573,11 +3577,9 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
 
     embedding_cluster = EmbeddingCluster(config)
 
-    n_runs = min(2, n_runs)
-
     x_list = []
     y_list = []
-    for run in trange(n_runs):
+    for run in trange(2):
         x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
         y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(x)
@@ -3599,21 +3601,20 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
     adj_t = adjacency > 0
     edge_index = adj_t.nonzero().t().contiguous()
     gt_weight = to_numpy(adjacency[adj_t])
-    norm_gt_weight = max(gt_weight)
 
-    fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
-    plt.imshow(to_numpy(adjacency) / norm_gt_weight, cmap='viridis', vmin=0, vmax=0.1)
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/True_Aij_{config_file}.tif", dpi=300)
-    plt.close()
+    # fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
+    # plt.imshow(to_numpy(adjacency) / norm_gt_weight, cmap='viridis', vmin=0, vmax=0.1)
+    # plt.tight_layout()
+    # plt.savefig(f"./{log_dir}/results/True_Aij_{config_file}.tif", dpi=300)
+    # plt.close()
 
-    fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
-    plt.imshow(to_numpy(adjacency) / norm_gt_weight,  cmap='viridis', vmin=0, vmax=0.1)
-    cbar = plt.colorbar(shrink=0.5)
-    cbar.ax.tick_params(labelsize=32)
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/True_Aij_bar_{config_file}.tif", dpi=300)
-    plt.close()
+    # fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
+    # plt.imshow(to_numpy(adjacency) / norm_gt_weight,  cmap='viridis', vmin=0, vmax=0.1)
+    # cbar = plt.colorbar(shrink=0.5)
+    # cbar.ax.tick_params(labelsize=32)
+    # plt.tight_layout()
+    # plt.savefig(f"./{log_dir}/results/True_Aij_bar_{config_file}.tif", dpi=300)
+    # plt.close()
 
     # plt.rcParams['text.usetex'] = True
     # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
@@ -3624,12 +3625,23 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
 
     for epoch in epoch_list:
 
-        net = f"./log/try_{config_file}/models/best_model_with_{config.training.n_runs - 1}_graphs_{epoch}.pt"
+        net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt"
         model, bc_pos, bc_dpos = choose_training_model(config, device)
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
         model.edges = edge_index
         print(f'net: {net}')
+
+        model_a_first = model.a.clone().detach()
+        config.training.cluster_method = 'distance_plot'
+        config.training.cluster_distance_threshold = 0.01
+        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
+                                                                       cmap, index_particles, type_list,
+                                                                       n_particle_types, n_particles, ynorm, epoch,
+                                                                       log_dir, device)
+        print(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+        logger.info(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+
 
         embedding = get_embedding(model.a, 1)
         fig, ax = fig_init()
@@ -3647,7 +3659,6 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         x = x_list[1][k].clone().detach()
         dataset = data.Data(x=x[:, :], edge_index=model.edges)
         y = y_list[1][k].clone().detach()
-        y = y
         pred = model(dataset, data_id=1)
         adj_t = adjacency > 0
         edge_index = adj_t.nonzero().t().contiguous()
@@ -3667,12 +3678,12 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         r_squared = 1 - (ss_res / ss_tot)
         plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
         plt.ylabel('Reconstructed $A_{ij}$ values', fontsize=56)
-        plt.xlabel('True network $A_{ij}$ values', fontsize=56)
+        plt.xlabel('True $A_{ij}$ values', fontsize=56)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/Matrix_{config_file}_{epoch}.tif", dpi=300)
-        plt.close()
-
         print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   offset: {np.round(lin_fit[1], 2)}  ")
+        logger.info(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   offset: {np.round(lin_fit[1], 2)}  ")
+        plt.savefig(f"./{log_dir}/results/weight_{config_file}_{epoch}.tif", dpi=300)
+        plt.close()
 
         fig, ax = fig_init()
         uu = x[:, 6:7].squeeze()
@@ -3681,7 +3692,7 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         uu = torch.tensor(np.linspace(0, 3, 1000)).to(device)
         print(n_particles)
         func_list, proj_interaction = analyze_edge_function(rr=uu, vizualize=True, config=config,
-                                                            model_lin_edge=model.lin_phi, model_a=model.a,
+                                                            model_MLP=model.lin_phi, model_a=model.a,
                                                             dataset_number=1,
                                                             n_particles=int(
                                                                 n_particles * (1 - config.training.particle_dropout)),
@@ -3692,11 +3703,13 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
         plt.xlabel(r'$u$', fontsize=56)
         plt.ylabel(r'Reconstructed $\Phi(u)$', fontsize=56)
-        plt.ylim([-0.25, 0.25])
+        plt.ylim([-0.05,0.15])
+        plt.xlim([0,2])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/phi_u_{config_file}_{epoch}.tif", dpi=170.7)
+        plt.savefig(f"./{log_dir}/results/reconstructed_phi_u_{config_file}_{epoch}.tif", dpi=170.7)
         plt.close()
 
+        fig, ax = fig_init()
         embedding_ = model.a[1, :, :]
         u = torch.tensor(0.5, device=device).float()
         u = u * torch.ones((n_particles, 1), device=device)
@@ -3706,8 +3719,6 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         func = func[:, 0]
         proj_interaction = to_numpy(func[:, None])
         labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
-
-        fig, ax = fig_init()
         for n in range(n_clusters):
             pos = np.argwhere(labels == n)
             pos = np.array(pos)
@@ -4210,12 +4221,15 @@ def get_figure(index):
 
     epoch_list = ['20']
     match index:
-        case 3:
+        case '3':
             config_list = ['arbitrary_3_continuous', 'arbitrary_3', 'arbitrary_3_3', 'arbitrary_16', 'arbitrary_32','arbitrary_64']
-        case 4:
+        case '4':
             config_list = ['arbitrary_3_field_video_bison_quad']
-        case 5:
-            config_list = ['signal_N_100_2']
+        case '5':
+            config_list = ['signal_N_100_2_a', 'signal_N_100_2_b', 'signal_N_100_2_c', 'signal_N_100_2_d']
+        case 'supp1':
+            config_list = ['arbitrary_3']
+            epoch_list= ['0_0', '0_200', '0_1000', '5', '20']
         case _:
             config_list = ['arbitrary_3']
 
@@ -4231,7 +4245,7 @@ if __name__ == '__main__':
 
     matplotlib.use("Qt5Agg")
 
-    f_list = [5]
+    f_list = ['5']
     for f in f_list:
         config_list,epoch_list = get_figure(f)
         for config_file in config_list:
@@ -4240,7 +4254,7 @@ if __name__ == '__main__':
             data_plot(config_file, epoch_list, device)
 
             # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
-            #           best_model=20, run=0, step=config.simulation.n_frames // 7, test_simulation=False,
+            #           best_model=20, run=0, step=64, test_simulation=False,
             #           sample_embedding=False, device=device)  # config.simulation.n_frames // 7
 
             print(' ')

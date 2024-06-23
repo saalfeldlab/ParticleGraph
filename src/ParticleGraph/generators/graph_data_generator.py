@@ -186,7 +186,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
 
                 # plt.style.use('dark_background')
-                # matplotlib.use("Qt5Agg")
+                matplotlib.use("Qt5Agg")
 
                 if 'latex' in style:
                     plt.rcParams['text.usetex'] = True
@@ -194,9 +194,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
 
                 if 'bw' in style:
 
-                    matplotlib.rcParams['savefig.pad_inches'] = 0
-                    fig = plt.figure(figsize=(12, 12))
-                    ax = fig.add_subplot(1, 1, 1)
+                    fig, ax = fig_init(formatx="%.1f", formaty="%.1f")
                     s_p = 100
                     for n in range(n_particle_types):
                             plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
@@ -216,6 +214,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         plt.xlabel(r'$x$', fontsize=78)
                         plt.ylabel(r'$y$', fontsize=78)
                         plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
                     elif 'frame' in style:
                         plt.xlabel(r'$x$', fontsize=78)
                         plt.ylabel(r'$y$', fontsize=78)
@@ -308,15 +307,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                     else:
                         # matplotlib.use("Qt5Agg")
 
-                        matplotlib.rcParams['savefig.pad_inches'] = 0
-                        fig = plt.figure(figsize=(12, 12))
-                        ax = fig.add_subplot(1, 1, 1)
-                        ax.xaxis.get_major_formatter()._usetex = False
-                        ax.yaxis.get_major_formatter()._usetex = False
-                        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-                        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-                        ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                        fig, ax = fig_init(formatx="%.1f", formaty="%.1f")
                         s_p = 100
                         for n in range(n_particle_types):
                                 plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
@@ -1145,7 +1136,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                         plt.xticks([])
                         plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=42.675)
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
                     plt.close()
 
                     matplotlib.rcParams['savefig.pad_inches'] = 0
@@ -1168,7 +1159,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     plt.xlim([0,1])
                     plt.ylim([0,1])
                     for n in range(n_particles):
-                        plt.arrow(x=to_numpy(x[n, 2]), y=to_numpy(x[n, 1]), dx=to_numpy(V1_[n,1])*3.5, dy=to_numpy(V1_[n,0])*3.5, color=cmap.color(type_list[n].astype(int)), head_width=0.004, length_includes_head=True)
+                        plt.arrow(x=to_numpy(x[n, 2]), y=to_numpy(x[n, 1]), dx=to_numpy(V1_[n,1])*4.25, dy=to_numpy(V1_[n,0])*4.25, color=cmap.color(type_list[n].astype(int)), head_width=0.004, length_includes_head=True)
                     # plt.xlim([-2,2])
                     # plt.ylim([-2,2])
                     if 'latex' in style:
@@ -1185,7 +1176,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                         plt.xticks([])
                         plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Arrow_{run}_{it}.jpg", dpi=42.675)
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Arrow_{run}_{it}.jpg", dpi=170.7)
                     plt.close()
 
         if bSave:

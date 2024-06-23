@@ -339,7 +339,7 @@ def data_train_particles(config, config_file, device):
 
             ax = fig.add_subplot(1, 5, 3)
             func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
-                                                                model_lin_edge=model.lin_edge, model_a=model.a,
+                                                                model_MLP=model.lin_edge, model_a=model.a,
                                                                 n_nodes = 0,
                                                                 dataset_number=1,
                                                                 n_particles=n_particles, ynorm=ynorm,
@@ -2183,7 +2183,7 @@ def data_train_particle_field(config, config_file, device):
 
         ax = fig.add_subplot(1, 5, 3)
         func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
-                                                            model_lin_edge=model.lin_edge, model_a=model.a,
+                                                            model_MLP=model.lin_edge, model_a=model.a,
                                                             n_nodes=0,
                                                             dataset_number=1,
                                                             n_particles=n_particles, ynorm=ynorm,
@@ -2894,7 +2894,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
             fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
-
             if has_mesh:
                 pts = x[:, 1:3].detach().cpu().numpy()
                 tri = Delaunay(pts)

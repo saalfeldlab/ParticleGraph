@@ -298,8 +298,37 @@ def bundle_fields(data: Data, *names: str) -> torch.Tensor:
 
 
 def fig_init(formatx='%.2f', formaty='%.2f'):
+    # from matplotlib import rc, font_manager
+    # from numpy import arange, cos, pi
+    # from matplotlib.pyplot import figure, axes, plot, xlabel, ylabel, title, \
+    #     grid, savefig, show
+    # sizeOfFont = 12
+    # fontProperties = {'family': 'sans-serif', 'sans-serif': ['Helvetica'],
+    #                   'weight': 'normal', 'size': sizeOfFont}
+    # ticks_font = font_manager.FontProperties(family='sans-serif', style='normal',
+    #                                          size=sizeOfFont, weight='normal', stretch='normal')
+    # rc('text', usetex=True)
+    # rc('font', **fontProperties)
+    # figure(1, figsize=(6, 4))
+    # ax = axes([0.1, 0.1, 0.8, 0.7])
+    # t = arange(0.0, 1.0 + 0.01, 0.01)
+    # s = cos(2 * 2 * pi * t) + 2
+    # plot(t, s)
+    # for label in ax.get_xticklabels():
+    #     label.set_fontproperties(ticks_font)
+    # for label in ax.get_yticklabels():
+    #     label.set_fontproperties(ticks_font)
+    # xlabel(r'\textbf{time (s)}')
+    # ylabel(r'\textit{voltage (mV)}', fontsize=16, family='Helvetica')
+    # title(r"\TeX\ is Number $\displaystyle\sum_{n=1}^\infty\frac{-e^{i\pi}}{2^n}$!",
+    #       fontsize=16, color='r')
+
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(1, 1, 1)
+    plt.xticks([])
+    plt.yticks([])
+    # ax.xaxis.get_major_formatter()._usetex = False
+    # ax.yaxis.get_major_formatter()._usetex = False
     ax.tick_params(axis='both', which='major', pad=15)
     ax.xaxis.set_major_locator(plt.MaxNLocator(3))
     ax.yaxis.set_major_locator(plt.MaxNLocator(3))
@@ -307,6 +336,7 @@ def fig_init(formatx='%.2f', formaty='%.2f'):
     ax.yaxis.set_major_formatter(FormatStrFormatter(formaty))
     plt.xticks(fontsize=48.0)
     plt.yticks(fontsize=48.0)
+
 
     return fig, ax
 
