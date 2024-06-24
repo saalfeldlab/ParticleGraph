@@ -117,8 +117,14 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         time.sleep(0.5)
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
+            # calculate type change
+            if simulation_config.state_type == 'sequence':
+                sample = torch.rand((len(T1), 1), device=device)
+                sample = (sample < (1 / config.simulation.state_params[0])) * torch.randint(0, n_particle_types,(len(T1), 1), device=device)
+                T1 = (T1 + sample) % n_particle_types
+
             x = torch.concatenate(
-                (N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1[it,:,None].clone().detach(),
+                (N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                  H1.clone().detach(), A1.clone().detach()), 1)
 
             index_particles = get_index_particles(x, n_particle_types, dimension)  # can be different from frame to frame
@@ -930,7 +936,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     im = torch.reshape(H1_mesh[:, 0:1], (n_nodes_per_axis, n_nodes_per_axis))
                 # io.imsave(f"graphs_data/graphs_{dataset_name}/generated_data/rotated_image_{it}.tif", to_numpy(im))
 
-            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1[it,:,None].clone().detach(),
+            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                                    H1.clone().detach(), A1.clone().detach()), 1)
 
             index_particles = get_index_particles(x, n_particle_types, dimension)

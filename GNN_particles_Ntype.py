@@ -35,7 +35,9 @@ from ParticleGraph.utils import *
 
 if __name__ == '__main__':
 
-    config_list =['boids_16_256_division_sequence']
+    # config_list =['boids_16_256_division_sequence']
+    config_list =['arbitrary_3_sequence']
+
     seed_list = np.arange(10)
 
     for config_file in config_list:

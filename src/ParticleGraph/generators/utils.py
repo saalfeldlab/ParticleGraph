@@ -236,20 +236,7 @@ def init_particles(config, device):
         case _:
             pass
 
-    type_full = type.repeat(1,n_frames+1).t()
-    if config.simulation.state_type == 'sequence':
-        sample = torch.rand((n_frames+1,n_particles), device=device)
-        sample = (sample < (1/config.simulation.state_params[0])) * 1.0
-        for k in range(10, n_frames+1):
-            change = torch.argwhere(sample[k] == 1.0)
-            if len(change) > 0:
-                type_sample = torch.randint(0, n_particle_types, (len(change),), device=device).float()
-                if len(change) == 1:
-                    type_full[k:, change[0]] = type_sample.repeat(n_frames - k + 1, 1)
-                else:
-                    type_full[k:, change.squeeze()] = type_sample.repeat(n_frames-k+1, 1)
-
-    return pos, dpos, type_full, features, age, particle_id
+    return pos, dpos, type, features, age, particle_id
 
 
 def init_cells(config, device):
