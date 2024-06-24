@@ -45,6 +45,7 @@ def choose_model(config, device):
 
     params = config.simulation.params
 
+    # create GNN depending in type specified in config file
     match particle_model_name:
         case 'PDE_A' | 'PDE_ParticleField_A' :
             p = torch.ones(n_particle_types, 4, device=device) + torch.rand(n_particle_types, 4, device=device)
@@ -247,6 +248,7 @@ def init_particles(config, device):
                     type_full[k:, change[0]] = type_sample.repeat(n_frames - k + 1, 1)
                 else:
                     type_full[k:, change.squeeze()] = type_sample.repeat(n_frames-k+1, 1)
+
     return pos, dpos, type_full, features, age, particle_id
 
 

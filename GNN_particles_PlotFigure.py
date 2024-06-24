@@ -3993,7 +3993,7 @@ def data_video_training(config_file, epoch_list, log_dir, logger, device):
     # ax.tick_params(axis='both', which='major', pad=15)
 
 
-def data_plot(config_file, epoch_list, device):
+def data_plot(config, config_file, epoch_list, device):
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     matplotlib.rcParams['savefig.pad_inches'] = 0
@@ -4070,7 +4070,7 @@ def data_plot(config_file, epoch_list, device):
         logger.removeHandler(handler)
 
 
-def get_figure(index):
+def get_figures(index):
 
     epoch_list = ['20']
     match index:
@@ -4092,7 +4092,7 @@ def get_figure(index):
         match index:
             case '3' | '4' | '5' :
 
-                data_plot(config_file, epoch_list, device)
+                data_plot(config=config, config_file=config_file, epoch_list=epoch_list, device=device)
 
                 data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
                           best_model=20, run=0, step=64, test_simulation=False,
@@ -4118,6 +4118,6 @@ if __name__ == '__main__':
 
     f_list = ['5']
     for f in f_list:
-        config_list,epoch_list = get_figure(f)
+        config_list,epoch_list = get_figures(f)
 
 

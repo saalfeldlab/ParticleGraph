@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import networkx as nx
+import torch
 from torch_geometric.utils.convert import to_networkx
 
 from GNN_particles_Ntype import *
@@ -73,6 +74,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
     for f in files:
         os.remove(f)
 
+    # create GNN
     model, bc_pos, bc_dpos = choose_model(config, device=device)
 
     particle_dropout_mask = np.arange(n_particles)
@@ -477,6 +479,13 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         pos = torch.argwhere(T1 == n)
                         pos = to_numpy(pos[:, 0].squeeze()).astype(int)
                         index_particles.append(pos)
+
+            # calculate cell type change
+            if simulation_config.state_type == 'sequence':
+                sample = torch.rand((len(T1), 1), device=device)
+                sample = (sample < (1 / config.simulation.state_params[0])) * torch.randint(0, n_particle_types,(len(T1), 1), device=device)
+                T1 = (T1 + sample) % n_particle_types
+
 
             A1 = A1 + delta_t   # update age
 
