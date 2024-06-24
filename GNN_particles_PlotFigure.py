@@ -4086,6 +4086,24 @@ def get_figure(index):
         case _:
             config_list = ['arbitrary_3']
 
+    for config_file in config_list:
+        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+
+        match index:
+            case '3' | '4' | '5' :
+
+                data_plot(config_file, epoch_list, device)
+
+                data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
+                          best_model=20, run=0, step=64, test_simulation=False,
+                          sample_embedding=False, device=device)  # config.simulation.n_frames // 7
+
+
+        print(' ')
+        print(' ')
+
+
+
     return config_list,epoch_list
 
 
@@ -4101,16 +4119,5 @@ if __name__ == '__main__':
     f_list = ['5']
     for f in f_list:
         config_list,epoch_list = get_figure(f)
-        for config_file in config_list:
-            config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-
-            data_plot(config_file, epoch_list, device)
-
-            # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
-            #           best_model=20, run=0, step=64, test_simulation=False,
-            #           sample_embedding=False, device=device)  # config.simulation.n_frames // 7
-
-            print(' ')
-            print(' ')
 
 
