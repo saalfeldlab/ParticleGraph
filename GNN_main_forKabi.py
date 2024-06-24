@@ -38,7 +38,7 @@ from GNN_particles_Ntype import *
 if __name__ == '__main__':
 
 
-    config_list = ['arbitrary_3']
+    config_list = ['arbitrary_3_field_video_bison']
 
     for config_file in config_list:
         # Load parameters from config file
