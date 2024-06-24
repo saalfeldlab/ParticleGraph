@@ -4,7 +4,6 @@ import networkx as nx
 from torch_geometric.utils.convert import to_networkx
 
 from GNN_particles_Ntype import *
-from simple_pid import PID
 from scipy import stats
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
@@ -13,6 +12,9 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
     has_particle_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
     has_mesh = (config.graph_model.mesh_model_name != '')
     has_cell_divsion = config.simulation.has_cell_division
+    dataset_name = config.dataset
+    print('')
+    print(f'dataset_name: {dataset_name}')
 
     if has_particle_field:
         data_generate_particle_field(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=False, step=step,
@@ -34,8 +36,6 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
 
 def data_generate_particle(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,
                            ratio=1, scenario='none', device=None, bSave=True):
-    print('')
-
     simulation_config = config.simulation
     training_config = config.training
     model_config = config.graph_model
@@ -74,6 +74,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         os.remove(f)
 
     model, bc_pos, bc_dpos = choose_model(config, device=device)
+
     particle_dropout_mask = np.arange(n_particles)
     if has_particle_dropout:
         draw = np.random.permutation(np.arange(n_particles))
@@ -101,14 +102,8 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
 
         # initialize particle and graph states
         X1, V1, T1, H1, A1, N1 = init_particles(config, device=device)
-        index_particles = []
-        for n in range(n_particle_types):
-            pos = torch.argwhere(T1 == n)
-            pos = to_numpy(pos[:, 0].squeeze()).astype(int)
-            index_particles.append(pos)
         if has_adjacency_matrix:
-            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
-                 H1.clone().detach(), A1.clone().detach()), 1)
+            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1[0,:,None].clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
             adj_t = adjacency > 0
             edge_index = adj_t.nonzero().t().contiguous()
             dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
@@ -121,8 +116,10 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
             x = torch.concatenate(
-                (N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
+                (N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1[it,:,None].clone().detach(),
                  H1.clone().detach(), A1.clone().detach()), 1)
+
+            index_particles = get_index_particles(x, n_particle_types, dimension)  # can be different from frame to frame
 
             # compute connectivity rule
             if has_adjacency_matrix:
@@ -186,18 +183,13 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
 
-                # plt.style.use('dark_background')
-                # matplotlib.use("Qt5Agg")
-
                 if 'latex' in style:
                     plt.rcParams['text.usetex'] = True
                     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
                 if 'bw' in style:
 
-                    matplotlib.rcParams['savefig.pad_inches'] = 0
-                    fig = plt.figure(figsize=(12, 12))
-                    ax = fig.add_subplot(1, 1, 1)
+                    fig, ax = fig_init(formatx="%.1f", formaty="%.1f")
                     s_p = 100
                     for n in range(n_particle_types):
                             plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
@@ -214,14 +206,15 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         plt.xlim([-2, 2])
                         plt.ylim([-2, 2])
                     if 'latex' in style:
-                        plt.xlabel(r'$x$', fontsize=64)
-                        plt.ylabel(r'$y$', fontsize=64)
-                        plt.xticks(fontsize=32.0)
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
                     elif 'frame' in style:
-                        plt.xlabel(r'$x$', fontsize=64)
-                        plt.ylabel(r'$y$', fontsize=64)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
                     else:
                         plt.xticks([])
                         plt.yticks([])
@@ -267,17 +260,29 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                         ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                         plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=200, c=to_numpy(H1[:, 0]), cmap='cool',
-                                    vmin=0, vmax=3)
-                        plt.xlim([-1.5, 1.5])
-                        plt.ylim([-1.5, 1.5])
-                        plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=24)
+                                    vmin=0, vmax=1)
+                        plt.xlim([-1.2, 1.2])
+                        plt.ylim([-1.2, 1.2])
+                        # plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=24)
                         # cbar = plt.colorbar(shrink=0.5)
                         # cbar.ax.tick_params(labelsize=32)
-                        plt.xticks([])
-                        plt.yticks([])
+                        if 'latex' in style:
+                            plt.xlabel(r'$x$', fontsize=78)
+                            plt.ylabel(r'$y$', fontsize=78)
+                            plt.xticks(fontsize=48.0)
+                            plt.yticks(fontsize=48.0)
+                        elif 'frame' in style:
+                            plt.xlabel('x', fontsize=48)
+                            plt.ylabel('y', fontsize=48)
+                            plt.xticks(fontsize=48.0)
+                            plt.yticks(fontsize=48.0)
+                            ax.tick_params(axis='both', which='major', pad=15)
+                            plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=48)
+                        else:
+                            plt.xticks([])
+                            plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{10000 + it}.tif",
-                                    dpi=42.675)
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{10000 + it}.tif", dpi=70)
                         plt.close()
 
                     elif (model_config.particle_model_name == 'PDE_A') & (dimension == 3):
@@ -296,15 +301,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                     else:
                         # matplotlib.use("Qt5Agg")
 
-                        matplotlib.rcParams['savefig.pad_inches'] = 0
-                        fig = plt.figure(figsize=(12, 12))
-                        ax = fig.add_subplot(1, 1, 1)
-                        ax.xaxis.get_major_formatter()._usetex = False
-                        ax.yaxis.get_major_formatter()._usetex = False
-                        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-                        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-                        ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                        fig, ax = fig_init(formatx="%.1f", formaty="%.1f")
                         s_p = 100
                         for n in range(n_particle_types):
                                 plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
@@ -321,22 +318,22 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                             plt.xlim([-2, 2])
                             plt.ylim([-2, 2])
                         if 'latex' in style:
-                            plt.xlabel(r'$x$', fontsize=64)
-                            plt.ylabel(r'$y$', fontsize=64)
-                            plt.xticks(fontsize=32.0)
-                            plt.yticks(fontsize=32.0)
+                            plt.xlabel(r'$x$', fontsize=78)
+                            plt.ylabel(r'$y$', fontsize=78)
+                            plt.xticks(fontsize=48.0)
+                            plt.yticks(fontsize=48.0)
                         elif 'frame' in style:
-                            plt.xlabel('x', fontsize=32)
-                            plt.ylabel('y', fontsize=32)
-                            plt.xticks(fontsize=32.0)
-                            plt.yticks(fontsize=32.0)
+                            plt.xlabel('x', fontsize=48)
+                            plt.ylabel('y', fontsize=48)
+                            plt.xticks(fontsize=48.0)
+                            plt.yticks(fontsize=48.0)
                             ax.tick_params(axis='both', which='major', pad=15)
-                            plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
+                            plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=48)
                         else:
                             plt.xticks([])
                             plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.tif", dpi=170.7)
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.tif", dpi=80) # 170.7)
                         # plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{10000+it}.tif", dpi=42.675)
                         plt.close()
 
@@ -352,8 +349,6 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
 
 def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,
                            ratio=1, scenario='none', device=None, bSave=True):
-    print('')
-
     simulation_config = config.simulation
     training_config = config.training
     model_config = config.graph_model
@@ -556,14 +551,14 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     plt.xlim([0, 1])
                     plt.ylim([0, 1])
                     if 'latex' in style:
-                        plt.xlabel(r'$x$', fontsize=64)
-                        plt.ylabel(r'$y$', fontsize=64)
-                        plt.xticks(fontsize=32.0)
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
+                        plt.xticks(fontsize=48.0)
                     elif 'frame' in style:
-                        plt.xlabel(r'$x$', fontsize=64)
-                        plt.ylabel(r'$y$', fontsize=64)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
                     else:
                         plt.xticks([])
                         plt.yticks([])
@@ -596,10 +591,10 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     plt.xlim([0, 1])
                     plt.ylim([0, 1])
                     if 'latex' in style:
-                        plt.xlabel(r'$x$', fontsize=64)
-                        plt.ylabel(r'$y$', fontsize=64)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
                     elif 'frame' in style:
                         plt.xlabel('x', fontsize=13)
                         plt.ylabel('y', fontsize=16)
@@ -645,8 +640,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
 def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
-    print('')
-
     simulation_config = config.simulation
     training_config = config.training
     model_config = config.graph_model
@@ -803,17 +796,17 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
                             # plt.yticks([])
                             # plt.axis('off')`
                     if 'latex' in style:
-                        plt.xlabel(r'$x$', fontsize=64)
-                        plt.ylabel(r'$y$', fontsize=64)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
                     elif 'frame' in style:
-                        plt.xlabel('x', fontsize=32)
-                        plt.ylabel('y', fontsize=32)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
+                        plt.xlabel('x', fontsize=48)
+                        plt.ylabel('y', fontsize=48)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
                         ax.tick_params(axis='both', which='major', pad=15)
-                        plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=32)
+                        plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=48)
                     else:
                         plt.xticks([])
                         plt.yticks([])
@@ -830,8 +823,6 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
 
 def data_generate_particle_field(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
-    print('')
-
     simulation_config = config.simulation
     training_config = config.training
     model_config = config.graph_model
@@ -852,10 +843,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
     cmap = CustomColorMap(config=config)
     dataset_name = config.dataset
 
-    if config.data_folder_name != 'none':
-        generate_from_data(config=config, device=device, visualize=visualize, folder=folder, step=step)
-        return
-
     folder = f'./graphs_data/graphs_{dataset_name}/'
     if erase:
         files = glob.glob(f"{folder}/*")
@@ -870,7 +857,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         os.remove(f)
     copyfile(os.path.realpath(__file__), os.path.join(folder, 'generation_code.py'))
 
-    config.graph_model.particle_model_name = 'PDE_ParticleField_B'
     model_p_p, bc_pos, bc_dpos = choose_model(config, device=device)
     model_f_p = model_p_p
 
@@ -904,10 +890,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         x_mesh_list = []
         y_mesh_list = []
         edge_p_p_list = []
-        edge_p_f_list = []
-        edge_f_f_list = []
         edge_f_p_list = []
-
 
         # initialize particle and mesh states
         X1, V1, T1, H1, A1, N1 = init_particles(config, device=device)
@@ -921,15 +904,9 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
         torch.save(mesh_data, f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt')
         mask_mesh = mesh_data['mask'].squeeze()
-        index_particles = []
-        for n in range(n_particle_types):
-            pos = torch.argwhere(T1 == n)
-            pos = to_numpy(pos[:, 0].squeeze()).astype(int)
-            index_particles.append(pos)
 
         time.sleep(0.5)
         for it in trange(simulation_config.start_frame, n_frames + 1):
-
 
             if ('siren' in model_config.field_type) & (it >= 0):
 
@@ -944,8 +921,10 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     im = torch.reshape(H1_mesh[:, 0:1], (n_nodes_per_axis, n_nodes_per_axis))
                 # io.imsave(f"graphs_data/graphs_{dataset_name}/generated_data/rotated_image_{it}.tif", to_numpy(im))
 
-            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
+            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1[it,:,None].clone().detach(),
                                    H1.clone().detach(), A1.clone().detach()), 1)
+
+            index_particles = get_index_particles(x, n_particle_types, dimension)
 
             x_mesh = torch.concatenate(
                 (N1_mesh.clone().detach(), X1_mesh.clone().detach(), V1_mesh.clone().detach(),
@@ -1121,6 +1100,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     ax.yaxis.set_major_locator(plt.MaxNLocator(3))
                     ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                     ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                    ax.tick_params(axis='both', which='major', pad=15)
                     # if (has_mesh | (simulation_config.boundary == 'periodic')):
                     #     ax = plt.axes([0, 0, 1, 1], frameon=False)
                     # else:
@@ -1128,7 +1108,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     # ax.get_xaxis().set_visible(False)
                     # ax.get_yaxis().set_visible(False)
                     # plt.autoscale(tight=True)
-                    s_p = 100
+                    s_p = 50
                     for n in range(n_particle_types):
                             plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
                                         s=s_p, color=cmap.color(n))
@@ -1137,20 +1117,20 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     # plt.xlim([-2,2])
                     # plt.ylim([-2,2])
                     if 'latex' in style:
-                        plt.xlabel(r'$x$', fontsize=64)
-                        plt.ylabel(r'$y$', fontsize=64)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
                     elif 'frame' in style:
-                        plt.xlabel('x', fontsize=64)
-                        plt.ylabel('y', fontsize=64)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
+                        plt.xlabel('x', fontsize=78)
+                        plt.ylabel('y', fontsize=78)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
                     else:
                         plt.xticks([])
                         plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=42.675)
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
                     plt.close()
 
                     matplotlib.rcParams['savefig.pad_inches'] = 0
@@ -1168,30 +1148,29 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     ax.yaxis.set_major_locator(plt.MaxNLocator(3))
                     ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                     ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                    ax.tick_params(axis='both', which='major', pad=15)
                     plt.scatter(to_numpy(x_mesh[0:n_nodes, 2]), to_numpy(x_mesh[0:n_nodes, 1]), c=to_numpy(x_mesh[0:n_nodes, 6]),cmap='grey',s=5)
                     plt.xlim([0,1])
                     plt.ylim([0,1])
                     for n in range(n_particles):
-                        plt.arrow(x=to_numpy(x[n, 2]), y=to_numpy(x[n, 1]), dx=to_numpy(V1_[n,1])*2.5, dy=to_numpy(V1_[n,0])*2.5, color=cmap.color(type_list[n].astype(int)), head_width=0.004, length_includes_head=True)
-
-
+                        plt.arrow(x=to_numpy(x[n, 2]), y=to_numpy(x[n, 1]), dx=to_numpy(V1_[n,1])*4.25, dy=to_numpy(V1_[n,0])*4.25, color=cmap.color(type_list[n].astype(int)), head_width=0.004, length_includes_head=True)
                     # plt.xlim([-2,2])
                     # plt.ylim([-2,2])
                     if 'latex' in style:
-                        plt.xlabel(r'$x$', fontsize=64)
-                        plt.ylabel(r'$y$', fontsize=64)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
                     elif 'frame' in style:
-                        plt.xlabel('x', fontsize=64)
-                        plt.ylabel('y', fontsize=64)
-                        plt.xticks(fontsize=32.0)
-                        plt.yticks(fontsize=32.0)
+                        plt.xlabel('x', fontsize=78)
+                        plt.ylabel('y', fontsize=78)
+                        plt.xticks(fontsize=48.0)
+                        plt.yticks(fontsize=48.0)
                     else:
                         plt.xticks([])
                         plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Arrow_{run}_{it}.jpg", dpi=42.675)
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Arrow_{run}_{it}.jpg", dpi=170.7)
                     plt.close()
 
         if bSave:
@@ -1205,6 +1184,4 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             torch.save(y_mesh_list, f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt')
             torch.save(edge_p_p_list, f'graphs_data/graphs_{dataset_name}/edge_p_p_list{run}.pt')
             torch.save(edge_f_p_list, f'graphs_data/graphs_{dataset_name}/edge_f_p_list{run}.pt')
-            torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
-            torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
             torch.save(model_p_p.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')

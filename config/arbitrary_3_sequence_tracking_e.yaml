@@ -1,22 +1,20 @@
 description: 'attraction-repulsion with 3 types particles'
-dataset: 'arbitrary_3_ter'
+dataset: 'arbitrary_3_sequence_e'
 
 simulation:
   params: [[1.6233, 1.0413, 1.6012, 1.5615], [1.7667, 1.8308, 1.0855, 1.9055], [1.7226, 1.7850, 1.0584, 1.8579]]
-  cell_cycle_length: [100, 125, 200]
-  cell_death_rate: [1,2,3]
   min_radius: 0
   max_radius: 0.075
-  n_particles: 2400
+  n_particles: 4800
   n_particle_types: 3
   n_interactions: 3
-  has_cell_division: False
-  n_particles_max: 20000
-  n_frames: 1000
+  n_frames: 250
   sigma: 0.005
-  delta_t: 0.025
+  delta_t: 0.1
   dpos_init: 0
-  boundary: 'periodic_special'
+  boundary: 'periodic'
+  state_type: 'sequence'
+  state_params: [100]
 
 graph_model:
   particle_model_name: 'PDE_A'
@@ -33,6 +31,7 @@ graph_model:
 plotting:
   colormap: 'tab10'
   arrow_length: 2
+  ylim: [-0.04, 0.03]
 
 training:
   n_epochs: 20
@@ -40,12 +39,15 @@ training:
   batch_size: 1
   small_init_batch_size: True
   n_runs: 2
-  sparsity: 'replace_embedding_function'
+  sparsity: 'none'
   cluster_method: 'distance_plot'
   data_augmentation: True
-  data_augmentation_loop: 100
+  data_augmentation_loop: 200
   fix_cluster_embedding: True
   device: 'auto'
+  coeff_loss1: 1
+  coeff_loss2: 1
+  sequence: ['none']
 
 
 

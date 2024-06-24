@@ -27,6 +27,8 @@ class SimulationConfig(BaseModel):
     n_particles_max: int = 20000
     n_particle_types: int = 5
     n_interactions: int = 5
+    state_type: Literal['discrete', 'sequence', 'continuous'] = 'discrete'
+    state_params: list[float] =[-1]
     non_discrete_level: float = 0
     n_nodes: Optional[int] = None
     n_node_types: Optional[int] = None
@@ -94,6 +96,7 @@ class PlottingConfig(BaseModel):
     arrow_length: int = 10
     marker_size: int = 100
     ylim: list[float] = [-0.1, 0.1]
+    embedding_lim: list[float] = [-40, 40]
 
 
 class TrainingConfig(BaseModel):

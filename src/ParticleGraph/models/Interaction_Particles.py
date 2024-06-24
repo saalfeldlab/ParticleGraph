@@ -55,6 +55,8 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         self.bc_dpos = bc_dpos
         self.n_ghosts = int(train_config.n_ghosts)
         self.dimension = dimension
+        self.has_state = config.simulation.state_type != 'discrete'
+        self.n_frames = simulation_config.n_frames
 
         if train_config.large_range:
             self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
@@ -68,9 +70,16 @@ class Interaction_Particles(pyg.nn.MessagePassing):
                 torch.tensor(np.ones((self.n_dataset, self.n_particles_max, 2)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
         else:
-            self.a = nn.Parameter(
-                torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
-                             requires_grad=True, dtype=torch.float32))
+
+            if self.has_state:
+                self.a = nn.Parameter(
+                    torch.tensor(np.ones((self.n_dataset, int(self.n_frames * (self.n_particles + self.n_ghosts)), self.embedding_dim)),
+                                 device=self.device,
+                                 requires_grad=True, dtype=torch.float32))
+            else :
+                self.a = nn.Parameter(
+                    torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
+                                 requires_grad=True, dtype=torch.float32))
 
 
         if self.update_type != 'none':
