@@ -1,8 +1,7 @@
 
 import umap
 from matplotlib.ticker import FormatStrFormatter
-from ParticleGraph.models import Interaction_Particles, Interaction_Particle_Field, Signal_Propagation, Mesh_Laplacian, \
-    Mesh_RPS, Mesh_RPS_bis, Interaction_Particle_Tracking
+from ParticleGraph.models import Interaction_Particles, Interaction_Particle_Field, Signal_Propagation, Mesh_Laplacian, Mesh_RPS, Interaction_Particle_Tracking
 
 from GNN_particles_Ntype import *
 import matplotlib as mpl

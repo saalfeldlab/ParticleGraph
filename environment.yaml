@@ -21,7 +21,7 @@ dependencies:
   - astropy
   - vispy
   - scikit-image
-  - opencv-python
+  - pysr
   - pip:
     - geomloss
     - torch_geometric

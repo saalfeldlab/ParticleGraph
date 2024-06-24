@@ -4,7 +4,6 @@ import networkx as nx
 from torch_geometric.utils.convert import to_networkx
 
 from GNN_particles_Ntype import *
-from simple_pid import PID
 from scipy import stats
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
@@ -104,8 +103,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         # initialize particle and graph states
         X1, V1, T1, H1, A1, N1 = init_particles(config, device=device)
         if has_adjacency_matrix:
-            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1[0,:,None].clone().detach(),
-                 H1.clone().detach(), A1.clone().detach()), 1)
+            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1[0,:,None].clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
             adj_t = adjacency > 0
             edge_index = adj_t.nonzero().t().contiguous()
             dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
@@ -185,9 +183,6 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
 
-                # plt.style.use('dark_background')
-                matplotlib.use("Qt5Agg")
-
                 if 'latex' in style:
                     plt.rcParams['text.usetex'] = True
                     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
@@ -265,7 +260,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                         ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                         plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=200, c=to_numpy(H1[:, 0]), cmap='cool',
-                                    vmin=0, vmax=3)
+                                    vmin=0, vmax=1)
                         plt.xlim([-1.2, 1.2])
                         plt.ylim([-1.2, 1.2])
                         # plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=24)
@@ -287,8 +282,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                             plt.xticks([])
                             plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{10000 + it}.tif",
-                                    dpi=170.7)
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{10000 + it}.tif", dpi=70)
                         plt.close()
 
                     elif (model_config.particle_model_name == 'PDE_A') & (dimension == 3):

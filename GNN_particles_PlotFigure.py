@@ -3664,7 +3664,7 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
         plt.xlabel(r'$u$', fontsize=56)
         plt.ylabel(r'Reconstructed $\Phi(u)$', fontsize=56)
-        plt.ylim([-0.05,0.15])
+        # plt.ylim([-0.05,0.15])
         plt.xlim([0,2])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/reconstructed_phi_u_{config_file}_{epoch}.tif", dpi=170.7)
@@ -3733,7 +3733,7 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
                 "tanh"
             ],
             random_state=0,
-            temp_equation_file=True
+            temp_equation_file=False
         )
 
         model_pysrr.fit(to_numpy(uu[:, None]), to_numpy(func[:, None]))
@@ -3780,125 +3780,59 @@ def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         plt.savefig(f"./{log_dir}/results/comparison_f_u_{config_file}_{epoch}.tif", dpi=300)
         plt.close()
 
-        p = config.simulation.params
-        uu = torch.tensor(np.linspace(0, 3, 1000)).to(device)
+        # Analysis of \Phi(u)
+
         fig, ax = fig_init()
-        func = torch.mean(func_list[0, :], dim=0)
-        true_func = -to_numpy(uu) * to_numpy(p[n, 0]) + to_numpy(p[n, 1]) * np.tanh(to_numpy(uu))
-        plt.plot(to_numpy(uu), true_func, linewidth=20, label='True', c='orange')  # xkcd:sky blue') #'orange') #
+        uu = torch.tensor(np.linspace(0, 10, 1000)).to(device)
+        uu = uu.to(dtype=torch.float32)
+        type=0
+        p = config.simulation.params
+        if len(p) > 1:
+            p = torch.tensor(p, device=device)
+        with torch.no_grad():
+            embedding_ = model.a[1, 0, :] * torch.ones((1000, config.graph_model.embedding_dim),device=device)
+            in_features = torch.cat((uu[:, None],embedding_), dim=1)
+            func = model.lin_phi(in_features)
+        true_func = -to_numpy(uu) * to_numpy(p[type, 0]) + to_numpy(p[type, 1]) * np.tanh(to_numpy(uu))
+        plt.plot(to_numpy(uu), true_func[:,None], linewidth=20, label='True', c='orange')  # xkcd:sky blue') #'orange') #
         plt.plot(to_numpy(uu), to_numpy(func), linewidth=8, c='k', label='Reconstructed')
         plt.xlabel(r'$u$', fontsize=78)
         plt.ylabel(r'Reconstructed $\Phi_1(u)$', fontsize=78)
         plt.legend(fontsize=32.0)
-        plt.ylim([-0.25, 0.25])
+        plt.ylim([-0.75, 0.25])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/comparison_phi_1_{config_file}_{epoch}.tif", dpi=300)
         plt.close()
 
-        uu = uu.to(dtype=torch.float32)
-        func = func.to(dtype=torch.float32)
-        dataset = {}
-        dataset['train_input'] = uu[:, None]
-        dataset['test_input'] = uu[:, None]
-        dataset['train_label'] = func[:, None]
-        dataset['test_label'] = func[:, None]
-
         model_pysrr = PySRRegressor(
-            niterations=30,  # < Increase me for better results
-            binary_operators=["+", "*"],
+            niterations=100,  # < Increase me for better results
             unary_operators=[
                 "tanh"
             ],
             random_state=0,
-            temp_equation_file=False
+            temp_equation_file=False,
+            maxsize=10,
+            maxdepth=4
         )
-        model_pysrr.fit(to_numpy(dataset["train_input"]), to_numpy(dataset["train_label"]))
+        model_pysrr.fit(to_numpy(uu[:, None]), true_func[:, None])
 
-        print(model_pysrr)
-        print(model_pysrr.equations_)
 
-        # for col in model_pysrr.equations_.columns:
-        #     print(col)
 
-        fig, ax = fig_init()
-        uu = torch.tensor(np.linspace(0, 3, 1000)).to(device)
-        p = config.simulation.params
-        if len(p) > 1:
-            p = torch.tensor(p, device=device)
-        for n in range(n_particle_types):
-            phi = -p[n, 0] * uu + p[n, 1] * torch.tanh(uu)
-            plt.plot(to_numpy(uu), to_numpy(phi), linewidth=8)
-        plt.xlabel(r'$u$', fontsize=78)
-        plt.ylabel(r'True $\Phi(u)$', fontsize=78)
-        plt.ylim([-0.25, 0.25])
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/true_phi_u_{config_file}_{epoch}.tif", dpi=170.7)
-        plt.close()
+        model_pysrr = PySRRegressor(
+            niterations=100,  # < Increase me for better results
+            unary_operators=[
+                "tanh"
+            ],
+            random_state=0,
+            temp_equation_file=False,
+            maxsize=15,
+            maxdepth=3
+        )
+        model_pysrr.fit(to_numpy(uu[:, None]), to_numpy(func))
 
-        k = 500
-        x = x_list[1][k].clone().detach()
-        dataset = data.Data(x=x[:, :], edge_index=model.edges)
-        y = y_list[1][k].clone().detach()
-        y = y
-        pred, msg, phi, input_phi = model(dataset, data_id=1, return_all=True)
-        u_j = model.u_j
-        activation = model.activation
-        adj_t = adjacency > 0
-        edge_index = adj_t.nonzero().t().contiguous()
-        edge_attr_adjacency = adjacency[adj_t]
-        dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
-        du_gt, msg_gt, phi_gt = GT_model(dataset, return_all=True)
-        u_j_gt = GT_model.u_j
-        activation_gt = GT_model.activation
-        uu = x[:, 6:7].squeeze()
 
-        fig, ax = fig_init()
-        plt.scatter(to_numpy(uu), to_numpy(msg + phi), s=100)
-        plt.scatter(to_numpy(uu), to_numpy(phi), s=20)
-        plt.scatter(to_numpy(uu), to_numpy(msg), s=20)
-        # plt.scatter(to_numpy(uu), to_numpy(msg_gt+phi_gt), s=40, c='r')
-        plt.xlim([0, 3])
-        plt.ylim([0, 1])
-        plt.savefig(f"./{log_dir}/results/model_{config_file}_{epoch}.tif", dpi=300)
-        plt.close()
 
-        fig, ax = fig_init()
-        plt.scatter(to_numpy(uu), to_numpy(msg_gt + phi_gt), s=100)
-        plt.scatter(to_numpy(uu), to_numpy(phi_gt), s=20)
-        plt.scatter(to_numpy(uu), to_numpy(msg_gt), s=20)
-        plt.xlim([0, 3])
-        plt.ylim([0, 1])
-        plt.savefig(f"./{log_dir}/results/true_{config_file}_{epoch}.tif", dpi=300)
-        plt.close()
 
-        fig, ax = fig_init()
-        plt.scatter(to_numpy(uu), to_numpy(msg + phi), s=100)
-        plt.scatter(to_numpy(uu), to_numpy(msg_gt + phi_gt), s=20)
-        plt.savefig(f"./{log_dir}/results/comparison_all_{config_file}_{epoch}.tif", dpi=300)
-        fig, ax = fig_init()
-
-        fig, ax = fig_init()
-        plt.scatter(to_numpy(msg_gt), to_numpy(msg), s=20, c='k')
-        plt.savefig(f"./{log_dir}/results/comparison_msg_{config_file}_{epoch}.tif", dpi=300)
-        fig, ax = fig_init()
-
-        fig, ax = fig_init()
-        plt.scatter(to_numpy(u_j_gt), to_numpy(activation_gt), s=20)
-        plt.scatter(to_numpy(u_j), to_numpy(activation), s=20)
-        plt.scatter(to_numpy(uu), to_numpy(phi_gt), s=20)
-        plt.scatter(to_numpy(uu), to_numpy(phi), s=20)
-        plt.savefig(f"./{log_dir}/results/funky_comparison_{config_file}_{epoch}.tif", dpi=300)
-        fig, ax = fig_init()
-
-        fig, ax = fig_init()
-        plt.scatter(to_numpy(uu), to_numpy(phi), s=400, c='g', label='True')
-        plt.scatter(to_numpy(uu), to_numpy(phi_gt), s=20, c='k', label='Reconstructed')
-        plt.xlabel(r'$u$', fontsize=78)
-        plt.ylabel(r'$f(u)$', fontsize=78)
-        plt.legend(fontsize=32.0)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/phi_u_{config_file}_{epoch}.tif", dpi=300)
-        plt.close()
 
         # model_kan = KAN(width=[1, 1], grid=5, k=3, seed=0)
         # model_kan.train(dataset, opt="LBFGS", steps=20, lamb=0.01, lamb_entropy=10.)
@@ -4080,6 +4014,7 @@ def data_plot(config_file, epoch_list, device):
 
     os.makedirs(os.path.join(log_dir, 'results'), exist_ok=True)
 
+
     if config.training.sparsity != 'none':
         print(
             f'GNN trained with simulation {config.graph_model.particle_model_name} ({config.simulation.n_particle_types} types), with cluster method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
@@ -4167,7 +4102,7 @@ if __name__ == '__main__':
     print(f'device {device}')
     print(' ')
 
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
 
     f_list = ['5']
     for f in f_list:
