@@ -49,7 +49,7 @@ if __name__ == '__main__':
 
     # matplotlib.use("Qt5Agg")
 
-    config_list = ['wave_slit', 'RD_RPS_2', 'gravity_16', 'boids_16_256', 'Coulomb_3', 'arbitrary_3', 'arbitrary_3_3', 'arbitrary_16', 'arbitrary_32', 'arbitrary_64', 'boids_16_256_division', 'arbitrary_3_sequence', 'arbitrary_3_field_video_bison']
+    config_list = ['arbitrary_3', 'arbitrary_3_3', 'arbitrary_16', 'arbitrary_32', 'arbitrary_64', 'gravity_16', 'boids_16_256', 'Coulomb_3', 'arbitrary_3_sequence', 'arbitrary_3_field_video_bison', 'boids_16_256_division', 'wave_slit', 'RD_RPS_1']
 
 
     for config_file in config_list:
