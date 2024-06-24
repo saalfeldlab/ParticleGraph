@@ -33,20 +33,27 @@ from ParticleGraph.models.Ghost_Particles import Ghost_Particles
 from ParticleGraph.models.utils import *
 from ParticleGraph.utils import *
 
+
+from GNN_particles_Ntype import *
+
+
+# matplotlib.use("Qt5Agg")
+
+
 if __name__ == '__main__':
 
-    config_list =['arbitrary_3']
-    seed_list = np.arange(10)
+    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    print(' ')
+    print(f'device {device}')
+    print(' ')
+
+    # matplotlib.use("Qt5Agg")
+
+    config_list = ['boids_16_256_division', 'arbitrary_3_sequence', 'arbitrary_3_division', 'arbitrary_3_field_video_bison', 'arbitrary_sequence', 'arbitrary_3', 'arbitrary_3_continuous', 'arbitrary_3_3', 'arbitrary_16', 'arbitrary_32', 'arbitrary_64']
+
 
     for config_file in config_list:
-        # for seed in seed_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        # config.dataset = f'{config.dataset}_{seed}'
 
-        device = set_device(config.training.device)
-        print(f'device {device}')
-
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='frame color', alpha=1, erase=True, bSave=True, step=10) #config.simulation.n_frames // 2)
-        # data_train(config, config_file, device)
-        # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False, best_model=20, run=0, step=83, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='frame color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 100)
 

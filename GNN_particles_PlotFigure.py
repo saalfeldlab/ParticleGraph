@@ -1,18 +1,13 @@
-import matplotlib.cm as cmplt
+
 import matplotlib.pyplot as plt
-import numpy as np
-import torch
 from matplotlib.ticker import FormatStrFormatter
 from torch_geometric.nn import MessagePassing
 import torch_geometric.utils as pyg_utils
-import os
 from ParticleGraph.MLP import MLP
 import imageio
 from matplotlib import rc
-import time
-from ParticleGraph.utils import *
 from ParticleGraph.fitting_models import *
-from ParticleGraph.kan import *
+# from ParticleGraph.kan import *
 
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
@@ -22,7 +17,6 @@ from GNN_particles_Ntype import *
 from ParticleGraph.embedding_cluster import *
 from ParticleGraph.utils import to_numpy, CustomColorMap, choose_boundary_values
 import matplotlib as mpl
-from matplotlib.ticker import FuncFormatter
 from io import StringIO
 import sys
 from scipy.stats import pearsonr
