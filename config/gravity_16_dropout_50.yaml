@@ -38,9 +38,9 @@ training:
     particle_dropout: 0.5
     ghost_method: 'tensor'
     n_ghosts: 500
-    sparsity: 'none'
-    data_augmentation: True
-    data_augmentation_loop: 100
+    sparsity: 'replace_embedding_function'
     cluster_method: 'distance_plot'
+    data_augmentation: True
+    data_augmentation_loop: 200
     fix_cluster_embedding: False
     device: 'auto'

@@ -4,6 +4,8 @@ import torch
 from GNN_particles_Ntype import *
 from ParticleGraph.models.utils import *
 from ParticleGraph.models.Siren_Network import *
+from ParticleGraph.models.Ghost_Particles import *
+
 import random
 
 def data_train(config, config_file, device):

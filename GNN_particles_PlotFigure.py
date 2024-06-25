@@ -416,6 +416,9 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
         embedding = to_numpy(model.a[0:n_particles])
     else:
         embedding = get_embedding(model.a, 1)
+    if config.training.particle_dropout > 0:
+        embedding = embedding[0:n_particles]
+
     if n_particle_types > 1000:
         plt.scatter(embedding[:, 0], embedding[:, 1], c=to_numpy(x[:, 5]) / n_particles, s=10,
                     cmap=cc)
@@ -740,6 +743,8 @@ def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, dev
     max_radius = config.simulation.max_radius
     cmap = CustomColorMap(config=config)
     n_runs = config.training.n_runs
+    has_particle_dropout = config.training.particle_dropout > 0
+    dataset_name = config.dataset
 
     embedding_cluster = EmbeddingCluster(config)
 
@@ -748,6 +753,7 @@ def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, dev
     x = x_list[1][0].clone().detach()
     index_particles = get_index_particles(x, n_particle_types, dimension)
     type_list = get_type_list(x, dimension)
+    n_particles = x.shape[0]
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
@@ -4098,7 +4104,7 @@ def get_figures(index):
         case 'supp8':
             config_list = ['arbitrary_16', 'arbitrary_16_noise_0_3', 'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5']
         case 'supp10':
-            config_list = ['arbitrary_3_dropout_10_no_ghost', 'arbitrary_3_dropout_10', 'arbitrary_3_dropout_30']
+            config_list = ['arbitrary_3_dropout_30', 'arbitrary_3_dropout_10', 'arbitrary_3_dropout_10_no_ghost']
         case _:
             config_list = ['arbitrary_3']
 
@@ -4170,8 +4176,6 @@ def get_figures(index):
             data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
                       best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
                       sample_embedding=True, ratio = 3, device=device)
-
-
 
 
     print(' ')
