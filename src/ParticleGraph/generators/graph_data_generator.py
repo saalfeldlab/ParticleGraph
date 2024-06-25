@@ -36,8 +36,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                                         scenario=scenario, device=device, bSave=bSave)
 
 
-def data_generate_particle(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,
-                           ratio=1, scenario='none', device=None, bSave=True):
+def data_generate_particle(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=None, bSave=True):
     simulation_config = config.simulation
     training_config = config.training
     model_config = config.graph_model
@@ -187,7 +186,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                 else:
                     V1 = y
                 X1 = bc_pos(X1 + V1 * delta_t)
-            A1 = A1 + delta_t
+            A1 = A1 + 1
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
@@ -493,7 +492,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 sample = (sample < (1 / config.simulation.state_params[0])) * torch.randint(0, n_particle_types,(len(T1), 1), device=device)
                 T1 = (T1 + sample) % n_particle_types
 
-            A1 = A1 + delta_t   # update age
+            A1 = A1 + 1   # update age
 
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
 
@@ -1014,7 +1013,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 V1 = y
             X1 = bc_pos(X1 + V1 * delta_t)
 
-            A1 = A1 + delta_t
+            A1 = A1 + 1
 
             # Mesh update
             x_mesh_list.append(x_mesh.clone().detach())

@@ -760,6 +760,19 @@ def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, dev
         model.eval()
 
         model_a_first = model.a.clone().detach()
+
+        config.training.cluster_method = 'distance_plot'
+        config.training.cluster_distance_threshold = 0.01
+        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
+                                                                       cmap, index_particles, type_list,
+                                                                       n_particle_types, n_particles, ynorm, epoch,
+                                                                       log_dir, device)
+        print(
+            f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+        logger.info(
+            f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+        model.load_state_dict(state_dict['model_state_dict'])
+        model.eval()
         config.training.cluster_method = 'distance_embedding'
         config.training.cluster_distance_threshold = 0.01
         accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
@@ -4082,17 +4095,23 @@ def get_figures(index):
         case 'supp1':
             config_list = ['arbitrary_3']
             epoch_list= ['0_0', '0_200', '0_1000', '20']
+        case 'supp8':
+            config_list = ['arbitrary_16', 'arbitrary_16_noise_0_3', 'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5']
+        case 'supp10':
+            config_list = ['arbitrary_3_dropout_10_no_ghost', 'arbitrary_3_dropout_10', 'arbitrary_3_dropout_30']
         case _:
             config_list = ['arbitrary_3']
 
     match index:
-        case '3' | '4' | '5':
+        case '3' | '4' | '5'| 'supp8' | 'supp10':
             for config_file in config_list:
                 config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
                 data_plot(config=config, config_file=config_file, epoch_list=epoch_list, device=device)
                 data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
                                   best_model=20, run=0, step=64, test_simulation=False,
                                   sample_embedding=False, device=device)  # config.simulation.n_frames // 7
+                print(' ')
+                print(' ')
 
         case 'supp1':
             config = ParticleGraphConfig.from_yaml(f'./config/arbitrary_3.yaml')
@@ -4109,22 +4128,22 @@ def get_figures(index):
         case 'supp3':
             config_file = 'arbitrary_3_bis'
             config = ParticleGraphConfig.from_yaml(f'./config/arbitrary_3_bis.yaml')
-            # data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True,
-            #               scenario='stripes', ratio = 1, bSave=True, step=config.simulation.n_frames // 3)
+            data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True,
+                          scenario='stripes', ratio = 1, bSave=True, step=config.simulation.n_frames // 3)
             data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
                       best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
                       sample_embedding=False, device=device)
             config_file = 'arbitrary_3_ter'
             config = ParticleGraphConfig.from_yaml(f'./config/arbitrary_3_ter.yaml')
-            # data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True,
-            #               scenario='pattern', ratio = 1, bSave=True, step=config.simulation.n_frames // 3)
+            data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True,
+                          scenario='pattern', ratio = 1, bSave=True, step=config.simulation.n_frames // 3)
             data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
                       best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
                       sample_embedding=True, device=device)
             config_file = 'arbitrary_3_quad'
             config = ParticleGraphConfig.from_yaml(f'./config/arbitrary_3_quad.yaml')
-            # # data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True,
-            # #               scenario='pattern', ratio = 3, bSave=True, step=config.simulation.n_frames // 3)
+            # data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True,
+            #               scenario='pattern', ratio = 3, bSave=True, step=config.simulation.n_frames // 3)
             data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
                       best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
                       sample_embedding=True, ratio = 3, device=device)
@@ -4172,7 +4191,7 @@ if __name__ == '__main__':
 
     # matplotlib.use("Qt5Agg")
 
-    f_list = ['supp4']
+    f_list = ['supp10']
     for f in f_list:
         config_list,epoch_list = get_figures(f)
 

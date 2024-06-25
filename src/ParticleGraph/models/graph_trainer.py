@@ -148,7 +148,6 @@ def data_train_particles(config, config_file, device):
             index += n_particles
 
     if has_ghost:
-
         ghosts_particles = Ghost_Particles(config, n_particles, vnorm, device)
         optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.ghost_pos], lr=1E-4)
         mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))

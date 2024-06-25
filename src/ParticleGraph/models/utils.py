@@ -633,7 +633,7 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
             rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
 
     func_list = []
-    for n in range(n_particles):
+    for n in range(int(n_particles * (1-config.training.particle_dropout))):
         if config.training.has_no_tracking:
             embedding_ = model_a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
         else:
@@ -678,6 +678,7 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
                      color=cmap.color(types[n].astype(int)), linewidth=2, alpha=0.25)
+
     func_list = torch.stack(func_list)
     func_list_ = to_numpy(func_list)
 
