@@ -191,10 +191,10 @@ def initialize_random_values(n, device):
     return torch.ones(n, 1, device=device) + torch.rand(n, 1, device=device)
 
 
-def init_particles(config, scenario, device):
+def init_particles(config=[], scenario='none', ratio=1, device=[]):
     simulation_config = config.simulation
     n_frames = config.simulation.n_frames
-    n_particles = simulation_config.n_particles
+    n_particles = simulation_config.n_particles * ratio
     n_particle_types = simulation_config.n_particle_types
     dimension = simulation_config.dimension
 

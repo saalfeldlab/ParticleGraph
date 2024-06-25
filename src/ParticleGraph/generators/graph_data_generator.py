@@ -104,7 +104,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         y_list = []
 
         # initialize particle and graph states
-        X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, device=device)
+        X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
         if has_adjacency_matrix:
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1[0,:,None].clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
             adj_t = adjacency > 0
@@ -908,7 +908,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         edge_f_p_list = []
 
         # initialize particle and mesh states
-        X1, V1, T1, H1, A1, N1 = init_particles(config, device=device)
+        X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
         X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, model_mesh=model_f_f, device=device)
 
         # matplotlib.use("Qt5Agg")

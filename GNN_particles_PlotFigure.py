@@ -4081,7 +4081,7 @@ def get_figures(index):
             config_list = ['signal_N_100_2_a', 'signal_N_100_2_b', 'signal_N_100_2_c', 'signal_N_100_2_d']
         case 'supp1':
             config_list = ['arbitrary_3']
-            epoch_list= ['0_0', '0_200', '0_1000', '5', '20']
+            epoch_list= ['0_0', '0_200', '0_1000', '20']
         case _:
             config_list = ['arbitrary_3']
 
@@ -4106,11 +4106,23 @@ def get_figures(index):
                               best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
                               sample_embedding=False, device=device)
 
-        case 'supp2':
+        case 'supp3':
             config_file = 'arbitrary_3'
-            config = ParticleGraphConfig.from_yaml(f'./config/arbitrary_3.yaml')
+            config = ParticleGraphConfig.from_yaml(f'./config/arbitrary_3_bis.yaml')
             data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True,
-                          scenario='stripes', ratio = 4, bSave=True, step=config.simulation.n_frames // 3)
+                          scenario='stripes', ratio = 1, bSave=True, step=config.simulation.n_frames // 3)
+            data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
+                      best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
+                      sample_embedding=False, device=device)
+            config = ParticleGraphConfig.from_yaml(f'./config/arbitrary_3_ter.yaml')
+            data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True,
+                          scenario='pattern', ratio = 1, bSave=True, step=config.simulation.n_frames // 3)
+            data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
+                      best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
+                      sample_embedding=False, device=device)
+            config = ParticleGraphConfig.from_yaml(f'./config/arbitrary_3_quad.yaml')
+            data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True,
+                          scenario='pattern', ratio = 4, bSave=True, step=config.simulation.n_frames // 3)
             data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
                       best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
                       sample_embedding=False, device=device)
@@ -4135,7 +4147,7 @@ if __name__ == '__main__':
 
     # matplotlib.use("Qt5Agg")
 
-    f_list = ['supp1']
+    f_list = ['supp3']
     for f in f_list:
         config_list,epoch_list = get_figures(f)
 
