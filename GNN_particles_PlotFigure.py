@@ -4107,24 +4107,24 @@ def get_figures(index):
                               sample_embedding=False, device=device)
 
         case 'supp3':
-            # config_file = 'arbitrary_3_bis'
-            # config = ParticleGraphConfig.from_yaml(f'./config/arbitrary_3_bis.yaml')
+            config_file = 'arbitrary_3_bis'
+            config = ParticleGraphConfig.from_yaml(f'./config/arbitrary_3_bis.yaml')
             # data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True,
             #               scenario='stripes', ratio = 1, bSave=True, step=config.simulation.n_frames // 3)
-            # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
-            #           best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
-            #           sample_embedding=False, device=device)
-            # config_file = 'arbitrary_3_ter'
-            # config = ParticleGraphConfig.from_yaml(f'./config/arbitrary_3_ter.yaml')
+            data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
+                      best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
+                      sample_embedding=False, device=device)
+            config_file = 'arbitrary_3_ter'
+            config = ParticleGraphConfig.from_yaml(f'./config/arbitrary_3_ter.yaml')
             # data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True,
             #               scenario='pattern', ratio = 1, bSave=True, step=config.simulation.n_frames // 3)
-            # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
-            #           best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
-            #           sample_embedding=False, device=device)
+            data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
+                      best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
+                      sample_embedding=True, device=device)
             config_file = 'arbitrary_3_quad'
             config = ParticleGraphConfig.from_yaml(f'./config/arbitrary_3_quad.yaml')
-            # data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True,
-            #               scenario='pattern', ratio = 3, bSave=True, step=config.simulation.n_frames // 3)
+            # # data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True,
+            # #               scenario='pattern', ratio = 3, bSave=True, step=config.simulation.n_frames // 3)
             data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
                       best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
                       sample_embedding=True, ratio = 3, device=device)
