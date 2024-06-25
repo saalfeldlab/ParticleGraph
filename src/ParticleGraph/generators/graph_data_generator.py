@@ -2,9 +2,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import networkx as nx
 import torch
-from torch_geometric.utils.convert import to_networkx
-
+from ParticleGraph.generators.utils import *
+from ParticleGraph.models.utils import *
 from GNN_particles_Ntype import *
+
 from scipy import stats
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
@@ -19,19 +20,19 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
 
     if has_particle_field:
         data_generate_particle_field(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=False, step=step,
-                                     alpha=0.2, ratio=1,
+                                     alpha=0.2, ratio=ratio,
                                      scenario='none', device=None, bSave=True)
     elif has_mesh:
         data_generate_mesh(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
-                                        alpha=0.2, ratio=1,
+                                        alpha=0.2, ratio=ratio,
                                         scenario=scenario, device=device, bSave=bSave)
     elif has_cell_divsion:
          data_generate_cell(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
-                                        alpha=0.2, ratio=1,
+                                        alpha=0.2, ratio=ratio,
                                         scenario=scenario, device=device, bSave=bSave)
     else:
         data_generate_particle(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
-                                        alpha=0.2, ratio=1,
+                                        alpha=0.2, ratio=ratio,
                                         scenario=scenario, device=device, bSave=bSave)
 
 
@@ -103,7 +104,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         y_list = []
 
         # initialize particle and graph states
-        X1, V1, T1, H1, A1, N1 = init_particles(config, device=device)
+        X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, device=device)
         if has_adjacency_matrix:
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1[0,:,None].clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
             adj_t = adjacency > 0
@@ -267,7 +268,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         ax.yaxis.set_major_locator(plt.MaxNLocator(3))
                         ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                         ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=200, c=to_numpy(H1[:, 0]), cmap='cool',
+                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=200, c=to_numpy(H1[:, 0]), cmap='cool',
                                     vmin=0, vmax=1)
                         plt.xlim([-1.2, 1.2])
                         plt.ylim([-1.2, 1.2])
@@ -298,7 +299,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         fig = plt.figure(figsize=(12, 12))
                         ax = fig.add_subplot(111, projection='3d')
                         for n in range(n_particle_types):
-                            ax.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                            ax.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
                                        to_numpy(x[index_particles[n], 3]), s=50, color=cmap.color(n))
                         ax.set_xlim([0, 1])
                         ax.set_ylim([0, 1])
@@ -312,14 +313,14 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         fig, ax = fig_init(formatx="%.1f", formaty="%.1f")
                         s_p = 100
                         for n in range(n_particle_types):
-                                plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                                plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
                                             s=s_p, color=cmap.color(n))
                         if training_config.particle_dropout > 0:
-                            plt.scatter(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
-                                        x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), s=25, color='k',
+                            plt.scatter(x[inv_particle_dropout_mask, 2].detach().cpu().numpy(),
+                                        x[inv_particle_dropout_mask, 1].detach().cpu().numpy(), s=25, color='k',
                                         alpha=0.75)
-                            plt.plot(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
-                                     x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), '+', color='w')
+                            plt.plot(x[inv_particle_dropout_mask, 2].detach().cpu().numpy(),
+                                     x[inv_particle_dropout_mask, 1].detach().cpu().numpy(), '+', color='w')
                         plt.xlim([0, 1])
                         plt.ylim([0, 1])
                         if 'PDE_G' in model_config.particle_model_name:
@@ -491,7 +492,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 sample = torch.rand((len(T1), 1), device=device)
                 sample = (sample < (1 / config.simulation.state_params[0])) * torch.randint(0, n_particle_types,(len(T1), 1), device=device)
                 T1 = (T1 + sample) % n_particle_types
-
 
             A1 = A1 + delta_t   # update age
 

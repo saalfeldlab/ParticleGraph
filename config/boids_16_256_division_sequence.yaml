@@ -19,7 +19,7 @@ simulation:
   boundary: 'periodic'
   start_frame: 0
   state_type: 'sequence'
-  state_params: [ 1000 ]
+  state_params: [ 3000 ]
 
 graph_model:
   particle_model_name: 'PDE_B'

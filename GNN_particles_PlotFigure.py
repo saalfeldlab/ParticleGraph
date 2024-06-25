@@ -7,7 +7,6 @@ from ParticleGraph.MLP import MLP
 import imageio
 from matplotlib import rc
 from ParticleGraph.fitting_models import *
-# from ParticleGraph.kan import *
 
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
@@ -434,7 +433,7 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
     if config.graph_model.signal_model_name == 'PDE_N':
         model_MLP_ = model.lin_phi
     else:
-        model_MLP_ = torch.round(model.lin_edge,2)
+        model_MLP_ = model.lin_edge
     func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
                                                         model_MLP=model_MLP_, model_a=model.a,
                                                         dataset_number=1,
@@ -4086,21 +4085,41 @@ def get_figures(index):
         case _:
             config_list = ['arbitrary_3']
 
-    for config_file in config_list:
-        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-
-        match index:
-            case '3' | '4' | '5' :
-
+    match index:
+        case '3' | '4' | '5':
+            for config_file in config_list:
+                config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
                 data_plot(config=config, config_file=config_file, epoch_list=epoch_list, device=device)
-
                 data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
-                          best_model=20, run=0, step=64, test_simulation=False,
-                          sample_embedding=False, device=device)  # config.simulation.n_frames // 7
+                                  best_model=20, run=0, step=64, test_simulation=False,
+                                  sample_embedding=False, device=device)  # config.simulation.n_frames // 7
+
+        case 'supp1':
+            config = ParticleGraphConfig.from_yaml(f'./config/arbitrary_3.yaml')
+            data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 3)
+            config = ParticleGraphConfig.from_yaml(f'./config/arbitrary_3_bis.yaml')
+            data_generate(config, device=device, visualize=True, run_vizualized=0, style='latex bw', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 3)
+            for config_file in config_list:
+                config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+                data_plot(config=config, config_file=config_file, epoch_list=epoch_list, device=device)
+            data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
+                              best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
+                              sample_embedding=False, device=device)
+
+        case 'supp2':
+            config_file = 'arbitrary_3'
+            config = ParticleGraphConfig.from_yaml(f'./config/arbitrary_3.yaml')
+            data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True,
+                          scenario='stripes', ratio = 4, bSave=True, step=config.simulation.n_frames // 3)
+            data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
+                      best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
+                      sample_embedding=False, device=device)
 
 
-        print(' ')
-        print(' ')
+
+
+    print(' ')
+    print(' ')
 
 
 
@@ -4116,7 +4135,7 @@ if __name__ == '__main__':
 
     # matplotlib.use("Qt5Agg")
 
-    f_list = ['5']
+    f_list = ['supp1']
     for f in f_list:
         config_list,epoch_list = get_figures(f)
 

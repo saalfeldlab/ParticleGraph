@@ -191,7 +191,7 @@ def initialize_random_values(n, device):
     return torch.ones(n, 1, device=device) + torch.rand(n, 1, device=device)
 
 
-def init_particles(config, device):
+def init_particles(config, scenario, device):
     simulation_config = config.simulation
     n_frames = config.simulation.n_frames
     n_particles = simulation_config.n_particles
@@ -216,8 +216,6 @@ def init_particles(config, device):
     particle_id = torch.arange(n_particles, device=device)
     particle_id = particle_id[:, None]
     age = torch.zeros((n_particles,1), device=device)
-
-    scenario = ''
 
     match scenario:
         case 'pattern':
@@ -246,8 +244,6 @@ def init_cells(config, device):
     dimension = simulation_config.dimension
 
     dpos_init = simulation_config.dpos_init
-
-
 
     if config.simulation.cell_cycle_length != [-1]:
         cycle_length = torch.tensor(config.simulation.cell_cycle_length, device=device)
@@ -280,8 +276,6 @@ def init_cells(config, device):
     particle_id = torch.arange(n_particles, device=device)
     particle_id = particle_id[:, None]
     type = type[:, None]
-
-    scenario = ''
 
     match scenario:
         case 'pattern':
