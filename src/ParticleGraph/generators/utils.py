@@ -217,22 +217,21 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
     particle_id = particle_id[:, None]
     age = torch.zeros((n_particles,1), device=device)
 
-    match scenario:
-        case 'pattern':
-            i0 = imread(f'graphs_data/pattern_0.tif')
-            type = np.round(i0[(to_numpy(pos[:, 0]) * 255).astype(int), (to_numpy(pos[:, 1]) * 255).astype(int)] / 255 * n_particle_types-1).astype(int)
-            type = torch.tensor(type, device=device)
-            type = type[:, None]
-        case 'uniform':
-            type = torch.ones(n_particles, device=device) * 1
-            type =  type[:, None]
-        case 'stripes':
-            l = n_particles//n_particle_types
-            for n in range(n_particle_types):
-                index = np.arange(n*l, (n+1)*l)
-                pos[index, 1:2] = torch.rand(l, 1, device=device) * (1/n_particle_types) + n/n_particle_types
-        case _:
-            pass
+    if 'pattern' in scenario:
+        i0 = imread(f'graphs_data/pattern_0.tif')
+        type = np.round(i0[(to_numpy(pos[:, 0]) * 255).astype(int), (to_numpy(pos[:, 1]) * 255).astype(int)] / 255 * n_particle_types-1).astype(int)
+        type = torch.tensor(type, device=device)
+        type = type[:, None]
+    if 'uniform' in scenario :
+
+        type = torch.ones(n_particles, device=device) * int(scenario.split()[-1])
+        type =  type[:, None]
+    if 'stripes' in scenario:
+        l = n_particles//n_particle_types
+        for n in range(n_particle_types):
+            index = np.arange(n*l, (n+1)*l)
+            pos[index, 1:2] = torch.rand(l, 1, device=device) * (1/n_particle_types) + n/n_particle_types
+
 
     return pos, dpos, type, features, age, particle_id
 
@@ -269,9 +268,9 @@ def init_cells(config, device):
     features = torch.ones(n_particles, 2, device=device)
     features [:,1] = 0
     cycle_length_distrib = cycle_length[to_numpy(type)].squeeze() * (torch.ones(n_particles, device=device) + 0.05 * torch.randn(n_particles, device=device))
-    cycle_duration = torch.rand(n_particles, device=device)
-    cycle_duration = cycle_duration * cycle_length[to_numpy(type)].squeeze()
-    cycle_duration = cycle_duration[:, None]
+    cell_age = torch.rand(n_particles, device=device)
+    cell_age = cell_age * cycle_length[to_numpy(type)].squeeze()
+    cell_age = cell_age[:, None]
     cell_death_rate_distrib = (cell_death_rate[to_numpy(type)].squeeze() * (torch.ones(n_particles, device=device) + 0.05 * torch.randn(n_particles, device=device)))/100
     particle_id = torch.arange(n_particles, device=device)
     particle_id = particle_id[:, None]
@@ -294,7 +293,7 @@ def init_cells(config, device):
         case _:
             pass
 
-    return pos, dpos, type, features, cycle_duration, particle_id, cycle_length, cycle_length_distrib, cell_death_rate, cell_death_rate_distrib
+    return pos, dpos, type, features, cell_age, particle_id, cycle_length, cycle_length_distrib, cell_death_rate, cell_death_rate_distrib
 
 
 def rotate_init_mesh(angle, config, device):

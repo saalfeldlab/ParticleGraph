@@ -4129,6 +4129,29 @@ def get_figures(index):
                       best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
                       sample_embedding=True, ratio = 3, device=device)
 
+        case 'supp4':
+            config_file = 'arbitrary_3_bis'
+            config = ParticleGraphConfig.from_yaml(f'./config/arbitrary_3_bis.yaml')
+            data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True,
+                          scenario='uniform 0', ratio = 3, bSave=True, step=config.simulation.n_frames // 3)
+            data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
+                      best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
+                      sample_embedding=True, device=device)
+            config_file = 'arbitrary_3_ter'
+            config = ParticleGraphConfig.from_yaml(f'./config/arbitrary_3_ter.yaml')
+            data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True,
+                          scenario='uniform 1', ratio = 3, bSave=True, step=config.simulation.n_frames // 3)
+            data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
+                      best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
+                      sample_embedding=True, device=device)
+            config_file = 'arbitrary_3_quad'
+            config = ParticleGraphConfig.from_yaml(f'./config/arbitrary_3_quad.yaml')
+            data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True,
+                          scenario='uniform 2', ratio = 3, bSave=True, step=config.simulation.n_frames // 3)
+            data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
+                      best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
+                      sample_embedding=True, ratio = 3, device=device)
+
 
 
 
@@ -4149,7 +4172,7 @@ if __name__ == '__main__':
 
     # matplotlib.use("Qt5Agg")
 
-    f_list = ['supp3']
+    f_list = ['supp4']
     for f in f_list:
         config_list,epoch_list = get_figures(f)
 
