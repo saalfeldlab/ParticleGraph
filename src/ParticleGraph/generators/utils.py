@@ -230,7 +230,7 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
             l = n_particles//n_particle_types
             for n in range(n_particle_types):
                 index = np.arange(n*l, (n+1)*l)
-                pos[index, 0:1] = torch.rand(l, 1, device=device) * (1/n_particle_types) + n/n_particle_types
+                pos[index, 1:2] = torch.rand(l, 1, device=device) * (1/n_particle_types) + n/n_particle_types
         case _:
             pass
 

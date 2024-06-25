@@ -2714,7 +2714,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         ynorm = torch.load(f'./log/try_{config_file}/ynorm.pt', map_location=device).to(device)
         vnorm = torch.load(f'./log/try_{config_file}/vnorm.pt', map_location=device).to(device)
         x = x_list[0][0].clone().detach()
-        n_particles = x.shape[0]
+        n_particles = int(x.shape[0] / ratio)
         config.simulation.n_particles = n_particles
         index_particles = get_index_particles(x, n_particle_types, dimension)
         if n_particle_types>1000:
@@ -2724,6 +2724,12 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 index_particles.append(index)
                 n_particle_types = 3
 
+    if ratio > 1:
+        new_nparticles = int(n_particles * ratio)
+        model.a = nn.Parameter(
+            torch.tensor(np.ones((n_runs, int(new_nparticles), 2)), device=device, dtype=torch.float32, requires_grad=False))
+        n_particles = new_nparticles
+        index_particles = get_index_particles(x, n_particle_types, dimension)
     if sample_embedding:
         model_a_ = nn.Parameter(
             torch.tensor(np.ones((int(n_particles), model.embedding_dim)),device=device,requires_grad=False, dtype=torch.float32))
@@ -2770,6 +2776,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         adj_t = adjacency > 0
         edge_index = adj_t.nonzero().t().contiguous()
         edge_attr_adjacency = adjacency[adj_t]
+
+    # n_particles larger than initially
+
 
     rmserr_list= []
     time.sleep(1)
