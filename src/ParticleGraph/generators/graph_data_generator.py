@@ -4,6 +4,7 @@ import networkx as nx
 from torch_geometric.utils.convert import to_networkx
 
 from GNN_particles_Ntype import *
+from ParticleGraph.generators.utils import update_cell_cycle_stage
 from scipy import stats
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
@@ -408,22 +409,36 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         # H1 cell status dim=2  H1[:,0] = cell alive flag, alive : 0 , death : 0 , H1[:,1] = cell division flag, dividing : 1
         # A1 cell age dim=1
         # N1 cell index dim=1
+        # S1 cell stage dim=1  0 = G1 , 1 = S, 2 = G2, 3 = M
+        # cell_mass cell mass dim=1 (3 types)
+        # cell_mass_distrib mass dim=1 (per node)
+        # growth_rate cell mass growth rate dim=1
+        # growth_rate_distrib cell mass growth rate dim=1 (per node)
         # cycle_length : cell cycle length (duration) associated with a cell type   dim=cell_types
         # cycle_length_distrib : cell cycle length for each cell, = cycle_length (1+ N(0,0.05)),   dim=number of cell
         # cell_death_rate : cell death rate associated with a cell type   dim=cell_types
         # cell_death_rate : cell death rate for each cell, = cell death rate (1+ N(0,0.05)),   dim=number of cell
 
-        X1, V1, T1, H1, A1, N1, cycle_length, cycle_length_distrib, cell_death_rate, cell_death_rate_distrib = init_cells(config, device=device)
+        X1, V1, T1, H1, A1, N1, S1, cell_mass, cell_mass_distrib, growth_rate, growth_rate_distrib, cycle_length, cycle_length_distrib, cell_death_rate, cell_death_rate_distrib = init_cells(config, device=device)
+
         if run==0:
             cycle_length_first = cycle_length.clone().detach()
             cycle_length_distrib_first = cycle_length_distrib.clone().detach()
             cell_death_rate_first = cell_death_rate.clone().detach()
             cell_death_rate_distrib_first = cell_death_rate_distrib.clone().detach()
+            cell_mass_first = cell_mass.clone().detach()
+            cell_mass_distrib_first = cell_mass_distrib.clone().detach()
+            growth_rate_first = growth_rate.clone().detach()
+            growth_rate_distrib_first = growth_rate_distrib.clone().detach()
         else:
             cycle_length = cycle_length_first.clone().detach()
             cycle_length_distrib = cycle_length_distrib_first.clone().detach()
             cell_death_rate = cell_death_rate_first.clone().detach()
             cell_death_rate_distrib = cell_death_rate_distrib_first.clone().detach()
+            cell_mass = cell_mass_first.clone().detach()
+            cell_mass_distrib = cell_mass_distrib_first.clone().detach()
+            growth_rate = growth_rate_first.clone().detach()
+            growth_rate_distrib = growth_rate_distrib_first.clone().detach()
 
         logger.info('cell cycle length')
         logger.info(to_numpy(cycle_length))
@@ -451,7 +466,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 # cell division
                 n_particles_alive = torch.sum(H1[:,0])
                 n_particles_dead = n_particles - n_particles_alive
-                pos = torch.argwhere((A1.squeeze() > cycle_length_distrib) & (H1[:,0].squeeze() == 1))
+                pos = torch.argwhere((A1.squeeze() > cycle_length_distrib) & (H1[:,0].squeeze() == 1) & (S1[:,0].squeeze() == 3))
                 if (len(pos) > 1):
                     n_add_nodes = len(pos)
                     pos = to_numpy(pos[:, 0].squeeze()).astype(int)
@@ -465,22 +480,55 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     separation = 1E-3 * torch.randn((n_add_nodes, dimension), device=device)
                     X1 = torch.cat((X1, X1[pos, :] + separation), dim=0)
                     X1[pos, :] = X1[pos, :] - separation
-                    V1 = torch.cat((V1, -V1[pos, :]), dim=0)    # the new cell is moving away from it's mother
-                    T1 = torch.cat((T1, T1[pos, :]), dim=0)     # the new cell inherits it's mother's type
+                    V1 = torch.cat((V1, -V1[pos, :]), dim=0)    # the new cell is moving away from its mother
+                    T1 = torch.cat((T1, T1[pos, :]), dim=0)     # the new cell inherits its mother's type
                     A1[pos, :] = 0  # age set to zero
+                    # print(cell_mass_distrib.shape)
+                    # print(pos)
+                    cell_mass_distrib[pos, :] = cell_mass_distrib[pos, :]/2  # halve mass
+                    S1[pos, :] = 0  # first stage of cell cycle
                     A1 = torch.cat((A1, A1[pos, :]), dim=0)
+                    S1 = torch.cat((S1, S1[pos, :]), dim=0)
+
                     nd = torch.ones(len(pos), device=device) + 0.05 * torch.randn(len(pos), device=device)
+
+                    # print("cycle length")
+                    # print(T1[pos, 0])
+                    # print(cycle_length)
+                    # print(cycle_length_distrib)
+                    # print(cycle_length.shape)
+                    # print(cycle_length[to_numpy(T1[pos, 0])])
+
                     cycle_length_distrib = torch.cat((cycle_length_distrib, cycle_length[to_numpy(T1[pos, 0])].squeeze() * nd), dim=0)
                     cell_death_rate_distrib = torch.cat((cell_death_rate_distrib, cell_death_rate[to_numpy(T1[pos, 0])].squeeze() * nd), dim=0)
+
+                    # print("cell mass")
+                    # print(T1[pos, 0])
+                    # print(cell_mass)
+                    # print(cell_mass.shape)
+                    # print(cycle_length_distrib.shape)
+                    # print(cell_mass_distrib)
+                    # print(cell_mass_distrib.shape)
+                    # print(cell_mass[to_numpy(T1[pos, 0])])
+                    # print(cell_mass[to_numpy(T1[pos, 0])]/2)
+
+                    cell_mass_distrib = torch.cat((cell_mass_distrib, cell_mass[to_numpy(T1[pos, 0])]/2 * nd), dim=0)
+
+
+                    growth_rate_distrib = torch.cat((growth_rate_distrib, growth_rate[to_numpy(T1[pos, 0])].squeeze() * nd), dim=0)
+
                     index_particles = []
                     for n in range(n_particles):
                         pos = torch.argwhere(T1 == n)
                         pos = to_numpy(pos[:, 0].squeeze()).astype(int)
                         index_particles.append(pos)
 
-            A1 = A1 + delta_t   # update age
+            A1 += 1   # update age
+            S1 = update_cell_cycle_stage(n_particles, A1, cycle_length, T1, device)
+            cell_mass_distrib += growth_rate_distrib 
 
-            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
+            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach(), S1.clone().detach(), cell_mass_distrib.clone().detach(), growth_rate_distrib.clone().detach()), 1)
+            # x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach(), S1.clone().detach()), 1)
 
             # calculate connectivity
             with torch.no_grad():
