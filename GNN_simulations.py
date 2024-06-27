@@ -1,7 +1,7 @@
 import time
 from shutil import copyfile
 
-import networkx as nx
+# import networkx as nx
 import scipy.io
 import torch
 # import networkx as nx
@@ -49,11 +49,12 @@ if __name__ == '__main__':
 
     # matplotlib.use("Qt5Agg")
 
-    config_list = ['boids_16_256_division', 'arbitrary_3_sequence', 'arbitrary_3_division', 'arbitrary_3_field_video_bison', 'arbitrary_sequence', 'arbitrary_3', 'arbitrary_3_continuous', 'arbitrary_3_3', 'arbitrary_16', 'arbitrary_32', 'arbitrary_64']
-
+    #config_list = ['arbitrary_3', 'arbitrary_3_3', 'arbitrary_16', 'arbitrary_32', 'arbitrary_64', 'gravity_16', 'boids_16_256', 'Coulomb_3', 'arbitrary_3_sequence', 'arbitrary_3_field_video_bison', 'boids_16_256_division', 'wave_slit', 'RD_RPS_1']
+    
+    config_list = ['boids_16_256_divisionBtest']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='frame color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 100)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='frame color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 200)
 

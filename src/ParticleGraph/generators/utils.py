@@ -332,13 +332,7 @@ def init_cells(config, device):
     growth_rate = final_cell_mass/(2 * cycle_length)
     growth_rate_distrib = growth_rate[to_numpy(type)].squeeze()
 
-    final_cell_mass_distrib = (growth_rate[to_numpy(type)]*cell_age) + (final_cell_mass[to_numpy(type)]/2)
-
-    print(growth_rate[to_numpy(type)].shape)
-    print(cell_age.shape)
-
-    print((growth_rate[to_numpy(type)]*cell_age))
-    print((final_cell_mass[to_numpy(type)]/2))
+    final_cell_mass_distrib = (growth_rate_distrib*cell_age.flatten()) + (final_cell_mass[to_numpy(type)]/2)
 
     cell_death_rate_distrib = (cell_death_rate[to_numpy(type)].squeeze() * (torch.ones(n_particles, device=device) + 0.05 * torch.randn(n_particles, device=device)))/100
 
@@ -364,11 +358,6 @@ def init_cells(config, device):
                 pos[index, 0:1] = torch.rand(l, 1, device=device) * (1/n_particle_types) + n/n_particle_types
         case _:
             pass
-
-    print("cell mass utils")
-    print(final_cell_mass)
-    print(final_cell_mass_distrib)
-    print(final_cell_mass.shape)
 
     # cycle_length / cell_date_rate = per type
     # everthing else = per node

@@ -483,39 +483,20 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     V1 = torch.cat((V1, -V1[pos, :]), dim=0)    # the new cell is moving away from its mother
                     T1 = torch.cat((T1, T1[pos, :]), dim=0)     # the new cell inherits its mother's type
                     A1[pos, :] = 0  # age set to zero
-                    # print(cell_mass_distrib.shape)
-                    # print(pos)
-                    cell_mass_distrib[pos, :] = cell_mass_distrib[pos, :]/2  # halve mass
+                    cell_mass_distrib[pos] = cell_mass_distrib[pos]/2  # halve mass
                     S1[pos, :] = 0  # first stage of cell cycle
                     A1 = torch.cat((A1, A1[pos, :]), dim=0)
                     S1 = torch.cat((S1, S1[pos, :]), dim=0)
 
                     nd = torch.ones(len(pos), device=device) + 0.05 * torch.randn(len(pos), device=device)
 
-                    # print("cycle length")
-                    # print(T1[pos, 0])
+                    # print(T1)
                     # print(cycle_length)
-                    # print(cycle_length_distrib)
-                    # print(cycle_length.shape)
-                    # print(cycle_length[to_numpy(T1[pos, 0])])
 
                     cycle_length_distrib = torch.cat((cycle_length_distrib, cycle_length[to_numpy(T1[pos, 0])].squeeze() * nd), dim=0)
                     cell_death_rate_distrib = torch.cat((cell_death_rate_distrib, cell_death_rate[to_numpy(T1[pos, 0])].squeeze() * nd), dim=0)
-
-                    # print("cell mass")
-                    # print(T1[pos, 0])
-                    # print(cell_mass)
-                    # print(cell_mass.shape)
-                    # print(cycle_length_distrib.shape)
-                    # print(cell_mass_distrib)
-                    # print(cell_mass_distrib.shape)
-                    # print(cell_mass[to_numpy(T1[pos, 0])])
-                    # print(cell_mass[to_numpy(T1[pos, 0])]/2)
-
-                    cell_mass_distrib = torch.cat((cell_mass_distrib, cell_mass[to_numpy(T1[pos, 0])]/2 * nd), dim=0)
-
-
-                    growth_rate_distrib = torch.cat((growth_rate_distrib, growth_rate[to_numpy(T1[pos, 0])].squeeze() * nd), dim=0)
+                    cell_mass_distrib = torch.cat((cell_mass_distrib, cell_mass[to_numpy(T1[pos, 0])]/2), dim=0)
+                    growth_rate_distrib = torch.cat((growth_rate_distrib, growth_rate[to_numpy(T1[pos, 0])].squeeze()), dim=0)
 
                     index_particles = []
                     for n in range(n_particles):
@@ -523,12 +504,14 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         pos = to_numpy(pos[:, 0].squeeze()).astype(int)
                         index_particles.append(pos)
 
-            A1 += 1   # update age
+            A1 += delta_t   # update age
             S1 = update_cell_cycle_stage(n_particles, A1, cycle_length, T1, device)
             cell_mass_distrib += growth_rate_distrib 
 
-            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach(), S1.clone().detach(), cell_mass_distrib.clone().detach(), growth_rate_distrib.clone().detach()), 1)
-            # x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach(), S1.clone().detach()), 1)
+            M1 = cell_mass_distrib[:, None]
+            R1 = growth_rate_distrib[:, None]
+
+            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach(), S1.clone().detach(), M1.clone().detach(), R1.clone().detach()), 1)
 
             # calculate connectivity
             with torch.no_grad():
@@ -631,8 +614,13 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         pos = torch.argwhere((T1.squeeze() == n) & (H1[:,0].squeeze()==1))
                         pos = to_numpy(pos[:, 0].squeeze()).astype(int)
                         index_particles.append(pos)
+                        # plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                        #             s=marker_size, color=cmap.color(n))
+
+                        size = 5 * np.power(10, ((to_numpy(x[index_particles[n] , -2]) - 200)/100)) + 5
+
                         plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                                    s=marker_size, color=cmap.color(n))
+                                    s=size, color=cmap.color(n))
                     dead_cell = np.argwhere(to_numpy(H1[:,0]) == 0)
                     if len(dead_cell) > 0:
                         plt.scatter(to_numpy(X1[dead_cell[:,0].squeeze(), 0]), to_numpy(X1[dead_cell[:,0].squeeze(), 1]), s=2, color='k', alpha=0.5)
