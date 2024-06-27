@@ -288,7 +288,7 @@ def init_cells(config, device):
     if config.simulation.cell_cycle_length != [-1]:
         cycle_length = torch.tensor(config.simulation.cell_cycle_length, device=device)
     else:
-        cycle_length = torch.clamp(torch.abs(torch.ones(n_particle_types, 1, device=device) * 250 + torch.randn(n_particle_types, 1, device=device) * 50), min=100, max=700)
+        cycle_length = torch.clamp(torch.abs(torch.ones(n_particle_types, 1, device=device) * 250 + torch.randn(n_particle_types, 1, device=device) * 50), min=100, max=700).squeeze()
     # 400
 
     if config.simulation.final_cell_mass != [-1]:
@@ -321,7 +321,7 @@ def init_cells(config, device):
     features = torch.ones(n_particles, 2, device=device)
     features [:,1] = 0
 
-    cycle_length_distrib = cycle_length[to_numpy(type)].squeeze() * (torch.ones(n_particles, device=device) + 0.05 * torch.randn(n_particles, device=device))
+    cycle_length_distrib = cycle_length[to_numpy(type)] * (torch.ones(n_particles, device=device) + 0.05 * torch.randn(n_particles, device=device))
 
     cell_age = torch.rand(n_particles, device=device)
     cell_age = cell_age * cycle_length[to_numpy(type)].squeeze()

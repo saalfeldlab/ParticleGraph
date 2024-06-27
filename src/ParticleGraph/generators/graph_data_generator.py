@@ -462,11 +462,11 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             if (it >= 0) & (n_particles_alive < simulation_config.n_particles_max):
                 # cell death
                 sample = torch.rand(n_particles, device=device)
-                H1[sample.squeeze() < cell_death_rate_distrib.squeeze()/5E4, 0] = 0     # H1[:,0] = cell alive flag, alive : 0 , death : 0
+                H1[sample.squeeze() < cell_death_rate_distrib.squeeze()/5E4, 0] = 0     # H1[:,0] = cell alive flag, alive : 1 , death : 0
                 # cell division
                 n_particles_alive = torch.sum(H1[:,0])
                 n_particles_dead = n_particles - n_particles_alive
-                pos = torch.argwhere((A1.squeeze() > cycle_length_distrib) & (H1[:,0].squeeze() == 1) & (S1[:,0].squeeze() == 3))
+                pos = torch.argwhere((A1[:, 0].squeeze() > cycle_length_distrib - 15) & (H1[:,0].squeeze() == 1) & (S1[:,0].squeeze() == 3))
                 if (len(pos) > 1):
                     n_add_nodes = len(pos)
                     pos = to_numpy(pos[:, 0].squeeze()).astype(int)
@@ -483,20 +483,27 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     V1 = torch.cat((V1, -V1[pos, :]), dim=0)    # the new cell is moving away from its mother
                     T1 = torch.cat((T1, T1[pos, :]), dim=0)     # the new cell inherits its mother's type
                     A1[pos, :] = 0  # age set to zero
-                    cell_mass_distrib[pos] = cell_mass_distrib[pos]/2  # halve mass
+                    cell_mass_distrib[pos] = cell_mass[to_numpy(T1[pos, :])].squeeze()/2 # cell_mass_distrib[pos]/2  # halve mass
                     S1[pos, :] = 0  # first stage of cell cycle
                     A1 = torch.cat((A1, A1[pos, :]), dim=0)
                     S1 = torch.cat((S1, S1[pos, :]), dim=0)
 
                     nd = torch.ones(len(pos), device=device) + 0.05 * torch.randn(len(pos), device=device)
+                    var = torch.ones(len(pos), device=device) + 0.20 * torch.randn(len(pos), device=device)
 
-                    # print(T1)
+                    test = A1.argmax()
                     # print(cycle_length)
+                    print(test,
+                          f"mass: {int(cell_mass_distrib[test])} / {int(cell_mass[to_numpy(T1[test, :])])}", 
+                          f"age: {int(A1[test, :])} / {int(cycle_length_distrib[test])}", 
+                          f"stage: {int(S1[test, :])} /  3", 
+                          f"alive: {"yes" if H1[test, 0] == 1 else "no"}",
+                          sep="\n")
 
-                    cycle_length_distrib = torch.cat((cycle_length_distrib, cycle_length[to_numpy(T1[pos, 0])].squeeze() * nd), dim=0)
+                    cycle_length_distrib = torch.cat((cycle_length_distrib, cycle_length[to_numpy(T1[pos, 0])].squeeze() * var), dim=0)
                     cell_death_rate_distrib = torch.cat((cell_death_rate_distrib, cell_death_rate[to_numpy(T1[pos, 0])].squeeze() * nd), dim=0)
                     cell_mass_distrib = torch.cat((cell_mass_distrib, cell_mass[to_numpy(T1[pos, 0])]/2), dim=0)
-                    growth_rate_distrib = torch.cat((growth_rate_distrib, growth_rate[to_numpy(T1[pos, 0])].squeeze()), dim=0)
+                    growth_rate_distrib = torch.cat((growth_rate_distrib, cell_mass[to_numpy(T1[pos, 0])]/(2 * cycle_length[to_numpy(T1[pos, 0])].squeeze() * var)), dim=0)
 
                     index_particles = []
                     for n in range(n_particles):
@@ -506,7 +513,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
             A1 += delta_t   # update age
             S1 = update_cell_cycle_stage(n_particles, A1, cycle_length, T1, device)
-            cell_mass_distrib += growth_rate_distrib 
+            cell_mass_distrib += growth_rate_distrib * delta_t
 
             M1 = cell_mass_distrib[:, None]
             R1 = growth_rate_distrib[:, None]
@@ -617,7 +624,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         # plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
                         #             s=marker_size, color=cmap.color(n))
 
-                        size = 5 * np.power(10, ((to_numpy(x[index_particles[n] , -2]) - 200)/100)) + 5
+                        size = 5 * np.power(3, ((to_numpy(x[index_particles[n] , -2]) - 200)/100)) + 10
 
                         plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
                                     s=size, color=cmap.color(n))

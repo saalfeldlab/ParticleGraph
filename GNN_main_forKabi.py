@@ -38,7 +38,7 @@ from GNN_particles_Ntype import *
 if __name__ == '__main__':
 
 
-    config_list = ['arbitrary_3_field_video_bison']
+    config_list = ['boids_16_256_divisionB2']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -48,7 +48,7 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 25)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 50)
         #data_train(config, device=device)
         #data_test(config, visualize=True, verbose=False, best_model=8, run=0, step=config.simulation.n_frames // 25, test_simulation=False, device=device)
 
