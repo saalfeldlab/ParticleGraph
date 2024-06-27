@@ -466,7 +466,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 # cell division
                 n_particles_alive = torch.sum(H1[:,0])
                 n_particles_dead = n_particles - n_particles_alive
-                pos = torch.argwhere((A1[:, 0].squeeze() > cycle_length_distrib - 15) & (H1[:,0].squeeze() == 1) & (S1[:,0].squeeze() == 3))
+                pos = torch.argwhere((A1[:, 0].squeeze() > cycle_length_distrib - 15) & (H1[:,0].squeeze() == 1) & (S1[:,0].squeeze() == 3) & (n_particles_alive < n_particles_max))
                 if (len(pos) > 1):
                     n_add_nodes = len(pos)
                     pos = to_numpy(pos[:, 0].squeeze()).astype(int)
@@ -492,13 +492,13 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     var = torch.ones(len(pos), device=device) + 0.20 * torch.randn(len(pos), device=device)
 
                     test = A1.argmax()
-                    # print(cycle_length)
-                    print(test,
-                          f"mass: {int(cell_mass_distrib[test])} / {int(cell_mass[to_numpy(T1[test, :])])}", 
-                          f"age: {int(A1[test, :])} / {int(cycle_length_distrib[test])}", 
-                          f"stage: {int(S1[test, :])} /  3", 
-                          f"alive: {"yes" if H1[test, 0] == 1 else "no"}",
-                          sep="\n")
+                    # # print(cycle_length)
+                    # print(test,
+                    #       f"mass: {int(cell_mass_distrib[test])} / {int(cell_mass[to_numpy(T1[test, :])])}", 
+                    #       f"age: {int(A1[test, :])} / {int(cycle_length_distrib[test])}", 
+                    #       f"stage: {int(S1[test, :])} /  3", 
+                    #       f"alive: {"yes" if H1[test, 0] == 1 else "no"}",
+                    #       sep="\n")
 
                     cycle_length_distrib = torch.cat((cycle_length_distrib, cycle_length[to_numpy(T1[pos, 0])].squeeze() * var), dim=0)
                     cell_death_rate_distrib = torch.cat((cell_death_rate_distrib, cell_death_rate[to_numpy(T1[pos, 0])].squeeze() * nd), dim=0)
@@ -512,8 +512,10 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         index_particles.append(pos)
 
             A1 += delta_t   # update age
-            S1 = update_cell_cycle_stage(n_particles, A1, cycle_length, T1, device)
-            cell_mass_distrib += growth_rate_distrib * delta_t
+
+            if n_particles_alive < n_particles_max:
+                S1 = update_cell_cycle_stage(n_particles, A1, cycle_length, T1, device)
+                cell_mass_distrib += growth_rate_distrib * delta_t
 
             M1 = cell_mass_distrib[:, None]
             R1 = growth_rate_distrib[:, None]

@@ -50,11 +50,13 @@ if __name__ == '__main__':
     # matplotlib.use("Qt5Agg")
 
     #config_list = ['arbitrary_3', 'arbitrary_3_3', 'arbitrary_16', 'arbitrary_32', 'arbitrary_64', 'gravity_16', 'boids_16_256', 'Coulomb_3', 'arbitrary_3_sequence', 'arbitrary_3_field_video_bison', 'boids_16_256_division', 'wave_slit', 'RD_RPS_1']
-    
-    config_list = ['boids_16_256_divisionI']
+    # config_list = ['boids_16_256_divisionX']
+
+    config_list = ["boids_16_256_divisionN", "boids_16_256_divisionO", "boids_16_256_divisionP", "boids_16_256_divisionQ", "boids_16_256_divisionR", 
+                   "boids_16_256_divisionS", "boids_16_256_divisionT", "boids_16_256_divisionU", "boids_16_256_divisionV", "boids_16_256_divisionW", ]
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='frame color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 200)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='frame color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 400)
 
