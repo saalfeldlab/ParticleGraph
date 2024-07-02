@@ -116,7 +116,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         return pred
 
     def message(self, pos_i, pos_j, d_pos_i, d_pos_j, particle_id_i, particle_id_j, field_j):
-        # squared distance
+        # distance normalized by the max radius
         r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
         delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
         dpos_x_i = d_pos_i[:, 0] / self.vnorm

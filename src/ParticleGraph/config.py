@@ -46,6 +46,7 @@ class SimulationConfig(BaseModel):
     node_proliferation_map: Optional[str] = None
     beta: Optional[float] = None
     start_frame: int = 0
+    final_cell_mass: list[float] = [-1]
 
 
 
