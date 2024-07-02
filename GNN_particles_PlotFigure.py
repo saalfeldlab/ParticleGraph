@@ -559,6 +559,131 @@ def plot_umap(index, func_list, log_dir, n_neighbors, index_particles, n_particl
     return proj_interaction, new_labels, n_clusters
 
 
+def plot_focused_on_cell(config, run, style, step, cell_id, device):
+
+    dataset_name = config.dataset
+    simulation_config = config.simulation
+    model_config = config.graph_model
+    training_config = config.training
+
+    has_adjacency_matrix = (simulation_config.connectivity_file != '')
+    has_mesh = (config.graph_model.mesh_model_name != '')
+    only_mesh = (config.graph_model.particle_model_name == '') & has_mesh
+    has_ghost = config.training.n_ghosts > 0
+    max_radius = simulation_config.max_radius
+    min_radius = simulation_config.min_radius
+    n_particle_types = simulation_config.n_particle_types
+    n_particles = simulation_config.n_particles
+    n_nodes = simulation_config.n_nodes
+    n_runs = training_config.n_runs
+    n_frames = simulation_config.n_frames
+    delta_t = simulation_config.delta_t
+    cmap = CustomColorMap(config=config)  # create colormap for given model_config
+    dimension = simulation_config.dimension
+    has_siren = 'siren' in model_config.field_type
+    has_siren_time = 'siren_with_time' in model_config.field_type
+    has_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
+
+    l_dir = os.path.join('.', 'log')
+    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
+
+    print('Load data ...')
+
+    x_list = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
+
+
+    mass_time_series = get_time_series(x_list, cell_id, feature='mass')
+    vx_time_series = get_time_series(x_list, cell_id, feature='velocity_x')
+    vy_time_series = get_time_series(x_list, cell_id, feature='velocity_y')
+    v_time_series = np.sqrt(vx_time_series ** 2 + vy_time_series ** 2)
+
+
+    for it in trange(0,n_frames,step):
+
+        x = x_list[it].clone().detach()
+
+        T1 = x[:, 5:6].clone().detach()
+        H1 = x[:, 6:8].clone().detach()
+        X1 = x[:, 1:3].clone().detach()
+
+        index_particles = get_index_particles(x, n_particle_types, dimension)
+
+        pos_cell = torch.argwhere(x[:,0] == cell_id)
+
+        if len(pos_cell)>0:
+
+            if 'latex' in style:
+                plt.rcParams['text.usetex'] = True
+                rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+
+            if 'color' in style:
+
+                # matplotlib.use("Qt5Agg")
+                matplotlib.rcParams['savefig.pad_inches'] = 0
+                fig = plt.figure(figsize=(24, 12))
+                ax = fig.add_subplot(1, 2, 1)
+                ax.xaxis.get_major_formatter()._usetex = False
+                ax.yaxis.get_major_formatter()._usetex = False
+                ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+                ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                index_particles = []
+                for n in range(n_particle_types):
+                    pos = torch.argwhere((T1.squeeze() == n) & (H1[:, 0].squeeze() == 1))
+                    pos = to_numpy(pos[:, 0].squeeze()).astype(int)
+                    index_particles.append(pos)
+                    # plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                    #             s=marker_size, color=cmap.color(n))
+
+                    size = 5 * np.power(3, ((to_numpy(x[index_particles[n], -2]) - 200) / 100)) + 10
+
+                    plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                                s=size*20, color=cmap.color(n))
+                dead_cell = np.argwhere(to_numpy(H1[:, 0]) == 0)
+                if len(dead_cell) > 0:
+                    plt.scatter(to_numpy(X1[dead_cell[:, 0].squeeze(), 0]), to_numpy(X1[dead_cell[:, 0].squeeze(), 1]),
+                                s=2, color='k', alpha=0.5)
+                if 'latex' in style:
+                    plt.xlabel(r'$x$', fontsize=78)
+                    plt.ylabel(r'$y$', fontsize=78)
+                    plt.xticks(fontsize=48.0)
+                    plt.yticks(fontsize=48.0)
+                elif 'frame' in style:
+                    plt.xlabel('x', fontsize=13)
+                    plt.ylabel('y', fontsize=16)
+                    plt.xticks(fontsize=16.0)
+                    plt.yticks(fontsize=16.0)
+                    ax.tick_params(axis='both', which='major', pad=15)
+                    plt.text(0, 1.05,
+                             f'frame {it}, {int(n_particles_alive)} alive particles ({int(n_particles_dead)} dead), {edge_index.shape[1]} edges  ',
+                             ha='left', va='top', transform=ax.transAxes, fontsize=16)
+                else:
+                    plt.xticks([])
+                    plt.yticks([])
+
+
+                center_x = to_numpy(x[pos_cell, 1])
+                center_y = to_numpy(x[pos_cell, 2])
+                plt.xlim([center_x - 0.1, center_x + 0.1])
+                plt.ylim([center_y - 0.1, center_y + 0.1])
+
+
+                ax = fig.add_subplot(2, 2, 2)
+                plt.plot(mass_time_series, color='k')
+                plt.plot(mass_time_series[0:it], color = 'b',linewidth=2)
+
+                ax = fig.add_subplot(2, 2, 4)
+                plt.plot(v_time_series, color='k')
+                plt.plot(v_time_series[0:it], color = 'b',linewidth=2)
+
+                num = f"{it:06}"
+
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_recons/cell_{cell_id}_frame_{num}.tif", dpi=80)
+                plt.close()
+
+
 def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoch, it, fig, ax):
     # print(f'plot confusion matrix epoch:{epoch} it: {it}')
     plt.text(-0.25, 1.1, f'{index}', ha='left', va='top', transform=ax.transAxes, fontsize=12)
@@ -4091,10 +4216,16 @@ if __name__ == '__main__':
     print(f'device {device}')
     print(' ')
 
-    # matplotlib.use("Qt5Agg")
+    matplotlib.use("Qt5Agg")
 
-    f_list = ['supp2','supp8','supp14','supp16']
-    for f in f_list:
-        config_list,epoch_list = get_figures(f)
+    config_list =['boids_16_256_divisionR']
+
+    for config_file in config_list:
+        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+        plot_focused_on_cell(config=config, run=1, style='latex frame color', cell_id=128, step = 10, device=device)
+
+    # f_list = ['supp2','supp8','supp14','supp16']
+    # for f in f_list:
+    #     config_list,epoch_list = get_figures(f)
 
 
