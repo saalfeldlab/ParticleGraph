@@ -1,8 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import networkx as nx
-from torch_geometric.utils.convert import to_networkx
-
+import torch
+from ParticleGraph.generators.utils import *
+from ParticleGraph.models.utils import *
 from GNN_particles_Ntype import *
 from ParticleGraph.generators.utils import update_cell_cycle_stage
 from ParticleGraph.utils import set_size
@@ -20,24 +21,23 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
 
     if has_particle_field:
         data_generate_particle_field(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=False, step=step,
-                                     alpha=0.2, ratio=1,
+                                     alpha=0.2, ratio=ratio,
                                      scenario='none', device=None, bSave=True)
     elif has_mesh:
         data_generate_mesh(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
-                                        alpha=0.2, ratio=1,
+                                        alpha=0.2, ratio=ratio,
                                         scenario=scenario, device=device, bSave=bSave)
     elif has_cell_divsion:
          data_generate_cell(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
-                                        alpha=0.2, ratio=1,
+                                        alpha=0.2, ratio=ratio,
                                         scenario=scenario, device=device, bSave=bSave)
     else:
         data_generate_particle(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
-                                        alpha=0.2, ratio=1,
+                                        alpha=0.2, ratio=ratio,
                                         scenario=scenario, device=device, bSave=bSave)
 
 
-def data_generate_particle(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,
-                           ratio=1, scenario='none', device=None, bSave=True):
+def data_generate_particle(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1, scenario='none', device=None, bSave=True):
     simulation_config = config.simulation
     training_config = config.training
     model_config = config.graph_model
@@ -75,6 +75,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
     for f in files:
         os.remove(f)
 
+    # create GNN
     model, bc_pos, bc_dpos = choose_model(config, device=device)
 
     particle_dropout_mask = np.arange(n_particles)
@@ -103,7 +104,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         y_list = []
 
         # initialize particle and graph states
-        X1, V1, T1, H1, A1, N1 = init_particles(config, device=device)
+        X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
         if has_adjacency_matrix:
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1[0,:,None].clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
             adj_t = adjacency > 0
@@ -117,8 +118,14 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         time.sleep(0.5)
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
+            # calculate type change
+            if simulation_config.state_type == 'sequence':
+                sample = torch.rand((len(T1), 1), device=device)
+                sample = (sample < (1 / config.simulation.state_params[0])) * torch.randint(0, n_particle_types,(len(T1), 1), device=device)
+                T1 = (T1 + sample) % n_particle_types
+
             x = torch.concatenate(
-                (N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1[it,:,None].clone().detach(),
+                (N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                  H1.clone().detach(), A1.clone().detach()), 1)
 
             index_particles = get_index_particles(x, n_particle_types, dimension)  # can be different from frame to frame
@@ -180,7 +187,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                 else:
                     V1 = y
                 X1 = bc_pos(X1 + V1 * delta_t)
-            A1 = A1 + delta_t
+            A1 = A1 + 1
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
@@ -261,7 +268,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         ax.yaxis.set_major_locator(plt.MaxNLocator(3))
                         ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                         ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=200, c=to_numpy(H1[:, 0]), cmap='cool',
+                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=200, c=to_numpy(H1[:, 0]), cmap='cool',
                                     vmin=0, vmax=1)
                         plt.xlim([-1.2, 1.2])
                         plt.ylim([-1.2, 1.2])
@@ -292,7 +299,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         fig = plt.figure(figsize=(12, 12))
                         ax = fig.add_subplot(111, projection='3d')
                         for n in range(n_particle_types):
-                            ax.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                            ax.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
                                        to_numpy(x[index_particles[n], 3]), s=50, color=cmap.color(n))
                         ax.set_xlim([0, 1])
                         ax.set_ylim([0, 1])
@@ -306,14 +313,14 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         fig, ax = fig_init(formatx="%.1f", formaty="%.1f")
                         s_p = 100
                         for n in range(n_particle_types):
-                                plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                                plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
                                             s=s_p, color=cmap.color(n))
                         if training_config.particle_dropout > 0:
-                            plt.scatter(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
-                                        x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), s=25, color='k',
+                            plt.scatter(x[inv_particle_dropout_mask, 2].detach().cpu().numpy(),
+                                        x[inv_particle_dropout_mask, 1].detach().cpu().numpy(), s=25, color='k',
                                         alpha=0.75)
-                            plt.plot(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
-                                     x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), '+', color='w')
+                            plt.plot(x[inv_particle_dropout_mask, 2].detach().cpu().numpy(),
+                                     x[inv_particle_dropout_mask, 1].detach().cpu().numpy(), '+', color='w')
                         plt.xlim([0, 1])
                         plt.ylim([0, 1])
                         if 'PDE_G' in model_config.particle_model_name:
@@ -518,7 +525,13 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         pos = to_numpy(pos[:, 0].squeeze()).astype(int)
                         index_particles.append(pos)
 
-            A1 += delta_t   # update age
+            # calculate cell type change
+            if simulation_config.state_type == 'sequence':
+                sample = torch.rand((len(T1), 1), device=device)
+                sample = (sample < (1 / config.simulation.state_params[0])) * torch.randint(0, n_particle_types,(len(T1), 1), device=device)
+                T1 = (T1 + sample) % n_particle_types
+
+            A1 = A1 + 1   # update age
 
             if n_particles_alive < n_particles_max:
                 S1 = update_cell_cycle_stage(n_particles, A1, cycle_length, T1, device)
@@ -947,7 +960,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         edge_f_p_list = []
 
         # initialize particle and mesh states
-        X1, V1, T1, H1, A1, N1 = init_particles(config, device=device)
+        X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
         X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, model_mesh=model_f_f, device=device)
 
         # matplotlib.use("Qt5Agg")
@@ -975,7 +988,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     im = torch.reshape(H1_mesh[:, 0:1], (n_nodes_per_axis, n_nodes_per_axis))
                 # io.imsave(f"graphs_data/graphs_{dataset_name}/generated_data/rotated_image_{it}.tif", to_numpy(im))
 
-            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1[it,:,None].clone().detach(),
+            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                                    H1.clone().detach(), A1.clone().detach()), 1)
 
             index_particles = get_index_particles(x, n_particle_types, dimension)
@@ -1053,7 +1066,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 V1 = y
             X1 = bc_pos(X1 + V1 * delta_t)
 
-            A1 = A1 + delta_t
+            A1 = A1 + 1
 
             # Mesh update
             x_mesh_list.append(x_mesh.clone().detach())

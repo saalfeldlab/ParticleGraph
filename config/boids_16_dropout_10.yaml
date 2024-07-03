@@ -43,7 +43,7 @@ training:
   n_ghosts: 250
   sparsity: 'none'
   data_augmentation: True
-  data_augmentation_loop: 100
+  data_augmentation_loop: 200
   fix_cluster_embedding: False
   device: 'auto'
 

@@ -57,7 +57,6 @@ class PDE_B(pyg.nn.MessagePassing):
         alignment = parameters_i[:,1,None] * self.a2 * self.bc_dpos(d_pos_j - d_pos_i)
         separation = - parameters_i[:,2,None] * self.a3 * self.bc_dpos(pos_j - pos_i) / distance_squared[:, None]
 
-
         return (separation + alignment + cohesion) * field_j
 
 

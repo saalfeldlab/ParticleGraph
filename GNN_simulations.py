@@ -60,7 +60,7 @@ if __name__ == '__main__':
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='frame color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 100)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='frame color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 200)
 
 
     logging.shutdown()

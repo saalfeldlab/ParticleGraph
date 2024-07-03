@@ -50,9 +50,9 @@ class PDE_A(pyg.nn.MessagePassing):
     def message(self, pos_i, pos_j, parameters_i, field_j):
 
         distance_squared = torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, axis=1)  # squared distance
-        psi = (parameters_i[:, 0] * torch.exp(-distance_squared ** parameters_i[:, 1] / (2 * self.sigma ** 2))
+        f = (parameters_i[:, 0] * torch.exp(-distance_squared ** parameters_i[:, 1] / (2 * self.sigma ** 2))
                - parameters_i[:, 2] * torch.exp(-distance_squared ** parameters_i[:, 3] / (2 * self.sigma ** 2)))
-        d_pos = psi[:, None] * self.bc_dpos(pos_j - pos_i) * field_j
+        d_pos = f[:, None] * self.bc_dpos(pos_j - pos_i) * field_j
 
         return d_pos
 

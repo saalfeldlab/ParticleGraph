@@ -72,6 +72,7 @@ def choose_model(config, device):
 
     params = config.simulation.params
 
+    # create GNN depending in type specified in config file
     match particle_model_name:
         case 'PDE_A' | 'PDE_ParticleField_A' :
             p = torch.ones(n_particle_types, 4, device=device) + torch.rand(n_particle_types, 4, device=device)
@@ -217,14 +218,10 @@ def initialize_random_values(n, device):
     return torch.ones(n, 1, device=device) + torch.rand(n, 1, device=device)
 
 
-def init_particles(config, device):
-
-    torch.random.fork_rng(devices=device)
-    torch.random.manual_seed(42)
-
+def init_particles(config=[], scenario='none', ratio=1, device=[]):
     simulation_config = config.simulation
     n_frames = config.simulation.n_frames
-    n_particles = simulation_config.n_particles
+    n_particles = simulation_config.n_particles * ratio
     n_particle_types = simulation_config.n_particle_types
     dimension = simulation_config.dimension
 
@@ -247,38 +244,23 @@ def init_particles(config, device):
     particle_id = particle_id[:, None]
     age = torch.zeros((n_particles,1), device=device)
 
-    scenario = ''
+    if 'pattern' in scenario:
+        i0 = imread(f'graphs_data/pattern_0.tif')
+        type = np.round(i0[(to_numpy(pos[:, 0]) * 255).astype(int), (to_numpy(pos[:, 1]) * 255).astype(int)] / 255 * n_particle_types-1).astype(int)
+        type = torch.tensor(type, device=device)
+        type = type[:, None]
+    if 'uniform' in scenario :
 
-    match scenario:
-        case 'pattern':
-            i0 = imread(f'graphs_data/pattern_0.tif')
-            type = np.round(i0[(to_numpy(pos[:, 0]) * 255).astype(int), (to_numpy(pos[:, 1]) * 255).astype(int)] / 255 * n_particle_types-1).astype(int)
-            type = torch.tensor(type, device=device)
-            type = type[:, None]
-        case 'uniform':
-            type = torch.ones(n_particles, device=device) * 1
-            type =  type[:, None]
-        case 'stripes':
-            l = n_particles//n_particle_types
-            for n in range(n_particle_types):
-                index = np.arange(n*l, (n+1)*l)
-                pos[index, 0:1] = torch.rand(l, 1, device=device) * (1/n_particle_types) + n/n_particle_types
-        case _:
-            pass
+        type = torch.ones(n_particles, device=device) * int(scenario.split()[-1])
+        type =  type[:, None]
+    if 'stripes' in scenario:
+        l = n_particles//n_particle_types
+        for n in range(n_particle_types):
+            index = np.arange(n*l, (n+1)*l)
+            pos[index, 1:2] = torch.rand(l, 1, device=device) * (1/n_particle_types) + n/n_particle_types
 
-    type_full = type.repeat(1,n_frames+1).t()
-    if config.simulation.state_type == 'sequence':
-        sample = torch.rand((n_frames+1,n_particles), device=device)
-        sample = (sample < (1/config.simulation.state_params[0])) * 1.0
-        for k in range(10, n_frames+1):
-            change = torch.argwhere(sample[k] == 1.0)
-            if len(change) > 0:
-                type_sample = torch.randint(0, n_particle_types, (len(change),), device=device).float()
-                if len(change) == 1:
-                    type_full[k:, change[0]] = type_sample.repeat(n_frames - k + 1, 1)
-                else:
-                    type_full[k:, change.squeeze()] = type_sample.repeat(n_frames-k+1, 1)
-    return pos, dpos, type_full, features, age, particle_id
+
+    return pos, dpos, type, features, age, particle_id
 
 
 def init_cells(config, device):
@@ -343,8 +325,6 @@ def init_cells(config, device):
     particle_id = torch.arange(n_particles, device=device)
     particle_id = particle_id[:, None]
     type = type[:, None]
-
-    scenario = ''
 
     match scenario:
         case 'pattern':

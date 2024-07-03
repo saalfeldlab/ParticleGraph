@@ -678,6 +678,7 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
                      color=cmap.color(types[n].astype(int)), linewidth=2, alpha=0.25)
+
     func_list = torch.stack(func_list)
     func_list_ = to_numpy(func_list)
 
