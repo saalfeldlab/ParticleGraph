@@ -686,6 +686,146 @@ def plot_focused_on_cell(config, run, style, step, cell_id, device):
                 plt.close()
 
 
+def plot_generated(config, run, style, step, device):
+
+    dataset_name = config.dataset
+    simulation_config = config.simulation
+    model_config = config.graph_model
+    training_config = config.training
+
+    has_adjacency_matrix = (simulation_config.connectivity_file != '')
+    has_mesh = (config.graph_model.mesh_model_name != '')
+    only_mesh = (config.graph_model.particle_model_name == '') & has_mesh
+    has_ghost = config.training.n_ghosts > 0
+    max_radius = simulation_config.max_radius
+    min_radius = simulation_config.min_radius
+    n_particle_types = simulation_config.n_particle_types
+    n_particles = simulation_config.n_particles
+    n_nodes = simulation_config.n_nodes
+    n_runs = training_config.n_runs
+    n_frames = simulation_config.n_frames
+    delta_t = simulation_config.delta_t
+    cmap = CustomColorMap(config=config)  # create colormap for given model_config
+    dimension = simulation_config.dimension
+    has_siren = 'siren' in model_config.field_type
+    has_siren_time = 'siren_with_time' in model_config.field_type
+    has_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
+
+    l_dir = os.path.join('.', 'log')
+    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
+    files = glob.glob(f"./{log_dir}/tmp_recons/*")
+    for f in files:
+        os.remove(f)
+
+    os.makedirs(os.path.join(log_dir, 'generated_bw'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'generated_color'), exist_ok=True)
+
+
+    print('Load data ...')
+
+    x_list = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
+
+
+    for it in trange(0,n_frames,step):
+
+        x = x_list[it].clone().detach()
+
+        T1 = x[:, 5:6].clone().detach()
+        H1 = x[:, 6:8].clone().detach()
+        X1 = x[:, 1:3].clone().detach()
+
+        if 'latex' in style:
+            plt.rcParams['text.usetex'] = True
+            rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+
+        # matplotlib.use("Qt5Agg")
+        matplotlib.rcParams['savefig.pad_inches'] = 0
+        fig = plt.figure(figsize=(24, 12))
+        ax = fig.add_subplot(1, 2, 1)
+        ax.xaxis.get_major_formatter()._usetex = False
+        ax.yaxis.get_major_formatter()._usetex = False
+        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+        ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        index_particles = []
+        for n in range(n_particle_types):
+            pos = torch.argwhere((T1.squeeze() == n) & (H1[:, 0].squeeze() == 1))
+            pos = to_numpy(pos[:, 0].squeeze()).astype(int)
+            index_particles.append(pos)
+            # plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+            #             s=marker_size, color=cmap.color(n))
+
+            size = 5 * np.power(3, ((to_numpy(x[index_particles[n], -2]) - 200) / 100)) + 10
+
+            plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                        s=size*20, color=cmap.color(n))
+        dead_cell = np.argwhere(to_numpy(H1[:, 0]) == 0)
+        if len(dead_cell) > 0:
+            plt.scatter(to_numpy(X1[dead_cell[:, 0].squeeze(), 0]), to_numpy(X1[dead_cell[:, 0].squeeze(), 1]),
+                        s=2, color='k', alpha=0.5)
+        if 'latex' in style:
+            plt.xlabel(r'$x$', fontsize=78)
+            plt.ylabel(r'$y$', fontsize=78)
+            plt.xticks(fontsize=48.0)
+            plt.yticks(fontsize=48.0)
+        elif 'frame' in style:
+            plt.xlabel('x', fontsize=13)
+            plt.ylabel('y', fontsize=16)
+            plt.xticks(fontsize=16.0)
+            plt.yticks(fontsize=16.0)
+            ax.tick_params(axis='both', which='major', pad=15)
+            plt.text(0, 1.05,
+                     f'frame {it}, {int(n_particles_alive)} alive particles ({int(n_particles_dead)} dead), {edge_index.shape[1]} edges  ',
+                     ha='left', va='top', transform=ax.transAxes, fontsize=16)
+        num = f"{it:06}"
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/generated_color/frame_{num}.tif", dpi=80)
+        plt.close()
+
+        matplotlib.rcParams['savefig.pad_inches'] = 0
+        fig = plt.figure(figsize=(24, 12))
+        ax = fig.add_subplot(1, 2, 1)
+        ax.xaxis.get_major_formatter()._usetex = False
+        ax.yaxis.get_major_formatter()._usetex = False
+        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+        ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        index_particles = []
+        for n in range(n_particle_types):
+            pos = torch.argwhere((T1.squeeze() == n) & (H1[:, 0].squeeze() == 1))
+            pos = to_numpy(pos[:, 0].squeeze()).astype(int)
+            index_particles.append(pos)
+            # plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+            #             s=marker_size, color=cmap.color(n))
+            size = 5 * np.power(3, ((to_numpy(x[index_particles[n], -2]) - 200) / 100)) + 10
+            plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                        s=size*20, color='k')
+        dead_cell = np.argwhere(to_numpy(H1[:, 0]) == 0)
+        if len(dead_cell) > 0:
+            plt.scatter(to_numpy(X1[dead_cell[:, 0].squeeze(), 0]), to_numpy(X1[dead_cell[:, 0].squeeze(), 1]),
+                        s=2, color='k', alpha=0.5)
+        if 'latex' in style:
+            plt.xlabel(r'$x$', fontsize=78)
+            plt.ylabel(r'$y$', fontsize=78)
+            plt.xticks(fontsize=48.0)
+            plt.yticks(fontsize=48.0)
+        elif 'frame' in style:
+            plt.xlabel('x', fontsize=13)
+            plt.ylabel('y', fontsize=16)
+            plt.xticks(fontsize=16.0)
+            plt.yticks(fontsize=16.0)
+            ax.tick_params(axis='both', which='major', pad=15)
+            plt.text(0, 1.05,
+                     f'frame {it}, {int(n_particles_alive)} alive particles ({int(n_particles_dead)} dead), {edge_index.shape[1]} edges  ',
+                     ha='left', va='top', transform=ax.transAxes, fontsize=16)
+        num = f"{it:06}"
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/generated_color/frame_{num}.tif", dpi=80)
+        plt.close()
+
+
 def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoch, it, fig, ax):
     # print(f'plot confusion matrix epoch:{epoch} it: {it}')
     plt.text(-0.25, 1.1, f'{index}', ha='left', va='top', transform=ax.transAxes, fontsize=12)
@@ -813,7 +953,7 @@ def plot_cell_rates(config, device, log_dir, n_particle_types, x_list, new_label
     plt.close()
 
 
-def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
+def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
 
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
@@ -915,7 +1055,7 @@ def data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, dev
         plt.close()
 
 
-def data_plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logger, device):
+def plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logger, device):
 
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
@@ -1042,7 +1182,7 @@ def data_plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logge
         plt.close()
 
 
-def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, logger, device):
+def plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, logger, device):
 
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
@@ -1264,7 +1404,7 @@ def data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, lo
         plt.savefig(f"./{log_dir}/results/tracking_errors_list_{config_file}.tif", dpi=170.7)
 
 
-def data_plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger, device):
+def plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger, device):
 
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
@@ -1369,7 +1509,7 @@ def data_plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger
         logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
 
 
-def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, logger, device):
+def plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, logger, device):
 
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
@@ -1467,7 +1607,7 @@ def data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, 
         logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
 
 
-def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
+def plot_gravity(config_file, epoch_list, log_dir, logger, device):
 
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
@@ -1701,7 +1841,7 @@ def data_plot_gravity(config_file, epoch_list, log_dir, logger, device):
             logger.info(f'pysrr_mass relative error wo outliers: {np.round(np.mean(relative_error[pos[:, 0]]), 2)}+/-{np.round(np.std(relative_error[pos[:, 0]]), 2)}')
 
 
-def data_plot_gravity_continuous(config_file, epoch_list, log_dir, logger, device):
+def plot_gravity_continuous(config_file, epoch_list, log_dir, logger, device):
 
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
@@ -1940,7 +2080,7 @@ def data_plot_gravity_continuous(config_file, epoch_list, log_dir, logger, devic
         logger.info(f'pysrr_mass relative error wo outliers: {np.round(np.mean(relative_error[pos[:, 0]]), 2)}+/-{np.round(np.std(relative_error[pos[:, 0]]), 2)}')
 
 
-def data_plot_gravity_solar_system(config_file, epoch_list, log_dir, logger, device):
+def plot_gravity_solar_system(config_file, epoch_list, log_dir, logger, device):
     config_file = 'gravity_solar_system'
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
 
@@ -2159,7 +2299,7 @@ def data_plot_gravity_solar_system(config_file, epoch_list, log_dir, logger, dev
     plt.close()
 
 
-def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
+def plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
 
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
@@ -2319,7 +2459,7 @@ def data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
             f'cohesion slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
 
 
-def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
+def plot_boids(config_file, epoch_list, log_dir, logger, device):
 
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
@@ -2599,7 +2739,7 @@ def data_plot_boids(config_file, epoch_list, log_dir, logger, device):
         logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
 
 
-def data_plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
+def plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
@@ -2783,7 +2923,7 @@ def data_plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
             print(f'accuracy: {accuracy}  n_clusters: {n_clusters}')
 
 
-def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, device):
+def plot_particle_field(config_file, epoch_list, log_dir, logger, cc, device):
 
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
@@ -3147,7 +3287,7 @@ def data_plot_particle_field(config_file, epoch_list, log_dir, logger, cc, devic
                 plt.savefig(f"./{log_dir}/results/field_scatter_{config_file}_{epoch}.tif", dpi=300)
 
 
-def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
+def plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
@@ -3581,7 +3721,7 @@ def data_plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
         print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}")
 
 
-def data_plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
+def plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
@@ -4055,34 +4195,34 @@ def data_plot(config, config_file, epoch_list, device):
     match config.graph_model.particle_model_name:
         case 'PDE_A':
             if config.simulation.non_discrete_level>0:
-                data_plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, logger, device)
+                plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, logger, device)
             elif (config.simulation.state_type != 'discrete'):
-                data_plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logger, device)
+                plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logger, device)
             elif config.training.has_no_tracking:
-                data_plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, logger, device)
+                plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, logger, device)
             else:
-                data_plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device)
+                plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device)
         case 'PDE_A_bis':
-            data_plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger, device)
+            plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger, device)
         case 'PDE_B':
-            data_plot_boids(config_file, epoch_list, log_dir, logger, device)
+            plot_boids(config_file, epoch_list, log_dir, logger, device)
         case 'PDE_ParticleField_B' | 'PDE_ParticleField_A':
-            data_plot_particle_field(config_file, epoch_list, log_dir, logger, 'grey', device)
+            plot_particle_field(config_file, epoch_list, log_dir, logger, 'grey', device)
         case 'PDE_E':
-            data_plot_Coulomb(config_file, epoch_list, log_dir, logger, device)
+            plot_Coulomb(config_file, epoch_list, log_dir, logger, device)
         case 'PDE_G':
             if config_file == 'gravity_100':
-                data_plot_gravity_continuous(config_file, epoch_list, log_dir, logger, device)
+                plot_gravity_continuous(config_file, epoch_list, log_dir, logger, device)
             else:
-                data_plot_gravity(config_file, epoch_list, log_dir, logger, device)
+                plot_gravity(config_file, epoch_list, log_dir, logger, device)
 
     match config.graph_model.mesh_model_name:
         case 'WaveMesh':
-            data_plot_wave(config_file=config_file, epoch_list=epoch_list, log_dir=log_dir, logger=logger, cc='viridis',
+            plot_wave(config_file=config_file, epoch_list=epoch_list, log_dir=log_dir, logger=logger, cc='viridis',
                            device=device)
 
     if config.graph_model.signal_model_name=='PDE_N':
-        data_plot_signal(config_file, epoch_list, log_dir, logger, 'cool', device)
+        plot_signal(config_file, epoch_list, log_dir, logger, 'cool', device)
 
     for handler in logger.handlers[:]:
         handler.close()
@@ -4226,7 +4366,8 @@ if __name__ == '__main__':
     config_list =['boids_16_256_divisionR']
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['2_0'], device=device)
+        # data_plot(config=config, config_file=config_file, epoch_list=['2_0'], device=device)
+        plot_generated(config=config, run=1, style='latex frame', step = 5, device=device)
         # plot_focused_on_cell(config=config, run=1, style='latex frame color', cell_id=255, step = 5, device=device)
 
     # f_list = ['supp2','supp8','supp14','supp16']
