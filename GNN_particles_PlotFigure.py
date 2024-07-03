@@ -375,6 +375,7 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
                     cmap=cc)
     else:
         for n in range(n_particle_types):
+
             plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n),
                         s=400, alpha=alpha)
     plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
@@ -586,6 +587,9 @@ def plot_focused_on_cell(config, run, style, step, cell_id, device):
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
+    files = glob.glob(f"./{log_dir}/tmp_recons/*")
+    for f in files:
+        os.remove(f)
 
     print('Load data ...')
 
@@ -658,16 +662,14 @@ def plot_focused_on_cell(config, run, style, step, cell_id, device):
                     plt.text(0, 1.05,
                              f'frame {it}, {int(n_particles_alive)} alive particles ({int(n_particles_dead)} dead), {edge_index.shape[1]} edges  ',
                              ha='left', va='top', transform=ax.transAxes, fontsize=16)
-                else:
-                    plt.xticks([])
-                    plt.yticks([])
 
+                plt.xticks([])
+                plt.yticks([])
 
                 center_x = to_numpy(x[pos_cell, 1])
                 center_y = to_numpy(x[pos_cell, 2])
                 plt.xlim([center_x - 0.1, center_x + 0.1])
                 plt.ylim([center_y - 0.1, center_y + 0.1])
-
 
                 ax = fig.add_subplot(2, 2, 2)
                 plt.plot(mass_time_series, color='k')
@@ -708,6 +710,9 @@ def plot_cell_rates(config, device, log_dir, n_particle_types, x_list, new_label
 
     n_frames = config.simulation.n_frames
     cell_cycle_length = np.array(config.simulation.cell_cycle_length)
+    if len(cell_cycle_length) == 1:
+        cell_cycle_length = to_numpy(torch.load(f'graphs_data/graphs_{config.dataset}/cycle_length.pt', map_location=device))
+
 
     print('plot cell rates ...')
     N_cells_alive = np.zeros((n_frames, n_particle_types))
@@ -754,8 +759,8 @@ def plot_cell_rates(config, device, log_dir, n_particle_types, x_list, new_label
     for k in range(n_particle_types):
         plt.plot(np.arange(last_frame_growth), N_cells_alive[:, k], color=cmap.color(k), linewidth=4,
                  label=f'Cell type {k} alive')
-    plt.xlabel(r'Frame', fontsize=78)
-    plt.ylabel(r'Number of alive cells', fontsize=78)
+    plt.xlabel(r'Frame', fontsize=64)
+    plt.ylabel(r'Number of cells', fontsize=64)
     ax.xaxis.set_major_formatter(FormatStrFormatter('%.0f'))
     ax.yaxis.set_major_formatter(FormatStrFormatter('%.0f'))
     plt.tight_layout()
@@ -4219,10 +4224,10 @@ if __name__ == '__main__':
     matplotlib.use("Qt5Agg")
 
     config_list =['boids_16_256_divisionR']
-
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        plot_focused_on_cell(config=config, run=1, style='latex frame color', cell_id=128, step = 10, device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['2_0'], device=device)
+        # plot_focused_on_cell(config=config, run=1, style='latex frame color', cell_id=255, step = 5, device=device)
 
     # f_list = ['supp2','supp8','supp14','supp16']
     # for f in f_list:
