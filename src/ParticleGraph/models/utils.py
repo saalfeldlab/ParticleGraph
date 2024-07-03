@@ -12,13 +12,12 @@ import warnings
 def linear_model(x, a, b):
     return a * x + b
 
-def get_embedding(model_a=None, dataset_number = None):
+def get_embedding(model_a=None, dataset_number = 0):
     embedding = []
     embedding.append(model_a[dataset_number])
     embedding = to_numpy(torch.stack(embedding).squeeze())
 
     return embedding
-
 
 def get_embedding_time_series(model=None, dataset_number=None, cell_id=None, n_particles=None, n_frames=None, has_cell_division=None):
     embedding = []
@@ -26,11 +25,47 @@ def get_embedding_time_series(model=None, dataset_number=None, cell_id=None, n_p
     embedding = to_numpy(torch.stack(embedding).squeeze())
 
     if has_cell_division:
-        indexes = np.arange(n_frames) * n_particles + cell_id
-    else:
         indexes = np.arange(n_frames) * model.n_particles_max + cell_id
+    else:
+        indexes = np.arange(n_frames) * n_particles + cell_id
 
     return embedding[indexes]
+
+
+def get_in_features(rr, embedding_, config_model, max_radius):
+    match config_model:
+        case 'PDE_A':
+            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                     rr[:, None] / max_radius, embedding_), dim=1)
+        case 'PDE_ParticleField_A':
+            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                     rr[:, None] / max_radius, embedding_), dim=1)
+        case 'PDE_A_bis':
+            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                     rr[:, None] / max_radius, embedding_, embedding_), dim=1)
+        case 'PDE_B':
+            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                     rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                     0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+        case 'PDE_ParticleField_B':
+            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                     rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                     0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+        case 'PDE_GS':
+            in_features = torch.cat(
+                (rr[:, None] / max_radius, 0 * rr[:, None], rr[:, None] / max_radius, 10 ** embedding_), dim=1)
+        case 'PDE_G':
+            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                     rr[:, None] / max_radius, 0 * rr[:, None],
+                                     0 * rr[:, None],
+                                     0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+        case 'PDE_E':
+            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                     rr[:, None] / max_radius, embedding_, embedding_), dim=1)
+        case 'PDE_N':
+            in_features = torch.cat((rr[:, None], embedding_), dim=1)
+
+    return in_features
 
 def plot_training_signal(config, dataset, model, adjacency, log_dir, epoch, N, index_particles, n_particles, n_particle_types, device):
 
@@ -554,36 +589,7 @@ def analyze_edge_function_tracking(rr=[], vizualize=False, config=None, model_ML
             config_model = config.graph_model.signal_model_name
         elif config.graph_model.mesh_model_name != '':
             config_model = config.graph_model.mesh_model_name
-        match config_model:
-            case 'PDE_A':
-                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                         rr[:, None] / max_radius, embedding_), dim=1)
-            case 'PDE_ParticleField_A':
-                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                         rr[:, None] / max_radius, embedding_), dim=1)
-            case 'PDE_A_bis':
-                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                         rr[:, None] / max_radius, embedding_, embedding_), dim=1)
-            case 'PDE_B':
-                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                         rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
-                                         0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-            case 'PDE_ParticleField_B':
-                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                         rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
-                                         0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-            case 'PDE_GS':
-                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None], rr[:, None] / max_radius, 10**embedding_), dim=1)
-            case 'PDE_G':
-                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                         rr[:, None] / max_radius, 0 * rr[:, None],
-                                         0 * rr[:, None],
-                                         0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-            case 'PDE_E':
-                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                         rr[:, None] / max_radius, embedding_, embedding_), dim=1)
-            case 'PDE_N':
-                in_features = torch.cat((rr[:, None], embedding_), dim=1)
+        in_features = get_in_features(rr, embedding_, config_model, max_radius)
         with torch.no_grad():
             func = model_MLP(in_features.float())
         func = func[:, 0]
@@ -621,6 +627,86 @@ def analyze_edge_function_tracking(rr=[], vizualize=False, config=None, model_ML
 
     return func_list, proj_interaction
 
+def analyze_edge_function_state(rr=[], vizualize=False, config=None, model_MLP=[], model_a=None, type_list=None, cmap=None, ynorm=None, device=None):
+
+    max_radius = config.simulation.max_radius
+    min_radius = config.simulation.min_radius
+
+    has_no_tracking = config.training.has_no_tracking
+
+    if config.graph_model.particle_model_name != '':
+        config_model = config.graph_model.particle_model_name
+    elif config.graph_model.signal_model_name != '':
+        config_model = config.graph_model.signal_model_name
+    elif config.graph_model.mesh_model_name != '':
+        config_model = config.graph_model.mesh_model_name
+
+    if rr==[]:
+        if config_model == 'PDE_G':
+            rr = torch.tensor(np.linspace(0, max_radius * 1.3, 1000)).to(device)
+        elif config_model == 'PDE_GS':
+            rr = torch.tensor(np.logspace(7, 9, 1000)).to(device)
+        elif config_model == 'PDE_E':
+            rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
+        elif config_model == 'PDE_N':
+            rr = torch.tensor(np.linspace(0, 2, 1000)).to(device)
+        else:
+            rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+
+    func_list = []
+    for n in trange(50000):
+        sample = np.random.randint(0, len(type_list))
+        embedding_ = model_a[sample, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+        in_features = get_in_features(rr, embedding_, config_model, max_radius)
+        with torch.no_grad():
+            func = model_MLP(in_features.float())
+        func = func[:, 0]
+        func_list.append(func)
+        if vizualize:
+            plt.plot(to_numpy(rr),
+                     to_numpy(func) * to_numpy(ynorm),
+                     color=cmap.color(type_list[n].astype(int)), linewidth=2, alpha=0.1)
+
+    func_list = torch.stack(func_list)
+    func_list_ = to_numpy(func_list)
+
+    print('UMAP reduction ...')
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        trans = umap.UMAP(n_neighbors=100, n_components=2, transform_queue_size=0).fit(func_list_)
+
+    func_list = []
+    for n in trange(len(type_list)):
+        embedding_ = model_a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+        in_features = get_in_features(rr, embedding_, config_model, max_radius)
+        with torch.no_grad():
+            func = model_MLP(in_features.float())
+        func = func[:, 0]
+        func_list.append(func)
+    func_list = torch.stack(func_list)
+    func_list_ = to_numpy(func_list)
+    print('interaction function dimension reduction ...')
+    proj_interaction = trans.transform(func_list_)
+    proj_interaction = (proj_interaction - np.min(proj_interaction)) / (np.max(proj_interaction) - np.min(proj_interaction) + 1e-10)
+
+    if vizualize:
+        plt.xlim([0, max_radius])
+        plt.ylim(config.plotting.ylim)
+        if config.graph_model.particle_model_name == 'PDE_GS':
+            plt.xscale('log')
+            plt.yscale('log')
+        if config.graph_model.particle_model_name == 'PDE_G':
+            plt.xscale('log')
+            plt.yscale('log')
+            plt.xlim([1E-3, 0.2])
+        if config.graph_model.particle_model_name == 'PDE_E':
+            plt.xlim([0, 0.05])
+        plt.xlabel('Distance [a.u]')
+        plt.ylabel('MLP [a.u]')
+        plt.tight_layout()
+
+    return func_list, proj_interaction
+
 def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], model_a=None, n_nodes=0, dataset_number = 0, n_particles=None, ynorm=None, types=None, cmap=None, dimension=2, device=None):
 
     max_radius = config.simulation.max_radius
@@ -652,36 +738,7 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
         else:
             embedding_ = model_a[dataset_number, n_nodes+n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
 
-        match config_model:
-            case 'PDE_A':
-                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                         rr[:, None] / max_radius, embedding_), dim=1)
-            case 'PDE_ParticleField_A':
-                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                         rr[:, None] / max_radius, embedding_), dim=1)
-            case 'PDE_A_bis':
-                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                         rr[:, None] / max_radius, embedding_, embedding_), dim=1)
-            case 'PDE_B':
-                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                         rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
-                                         0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-            case 'PDE_ParticleField_B':
-                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                         rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
-                                         0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-            case 'PDE_GS':
-                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None], rr[:, None] / max_radius, 10**embedding_), dim=1)
-            case 'PDE_G':
-                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                         rr[:, None] / max_radius, 0 * rr[:, None],
-                                         0 * rr[:, None],
-                                         0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-            case 'PDE_E':
-                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                         rr[:, None] / max_radius, embedding_, embedding_), dim=1)
-            case 'PDE_N':
-                in_features = torch.cat((rr[:, None], embedding_), dim=1)
+        in_features = get_in_features(rr, embedding_, config_model, max_radius)
         with torch.no_grad():
             func = model_MLP(in_features.float())
 

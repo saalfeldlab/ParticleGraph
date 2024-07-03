@@ -35,7 +35,7 @@ from ParticleGraph.utils import *
 
 if __name__ == '__main__':
 
-    config_list =['boids_16_256_divisionR']
+    config_list =['boids_16_256_divisionR','boids_16_256_divisionS']
 
     seed_list = np.arange(10)
 
