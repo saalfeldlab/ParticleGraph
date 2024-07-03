@@ -218,6 +218,10 @@ def initialize_random_values(n, device):
 
 
 def init_particles(config, device):
+
+    torch.random.fork_rng(devices=device)
+    torch.random.manual_seed(42)
+
     simulation_config = config.simulation
     n_frames = config.simulation.n_frames
     n_particles = simulation_config.n_particles

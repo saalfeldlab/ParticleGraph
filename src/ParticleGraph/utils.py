@@ -44,6 +44,15 @@ def set_device(device=None):
     return device
 
 
+def set_size(x, particles, mass_index):
+    # particles = index_particles[n]
+
+    #size = 5 * np.power(3, ((to_numpy(x[index_particles[n] , -2]) - 200)/100)) + 10
+    size = ((to_numpy(x[particles , mass_index])) - 50)/10 + 10
+
+    return size   
+
+
 def get_gpu_memory_map(device=None):
     print(' ')
     t = np.round(torch.cuda.get_device_properties(device).total_memory/1E9,2)

@@ -5,6 +5,7 @@ from torch_geometric.utils.convert import to_networkx
 
 from GNN_particles_Ntype import *
 from ParticleGraph.generators.utils import update_cell_cycle_stage
+from ParticleGraph.utils import set_size
 from scipy import stats
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
@@ -350,6 +351,10 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
 
 def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,
                            ratio=1, scenario='none', device=None, bSave=True):
+
+    torch.random.fork_rng(devices=device)
+    torch.random.manual_seed(42)
+
     simulation_config = config.simulation
     training_config = config.training
     model_config = config.graph_model
@@ -368,10 +373,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
     marker_size = config.plotting.marker_size
 
     max_radius_list = []
-    edges_len_list = []
-    x_len_list = []
-    # pid = PID(Kp=1E-5, Ki=1E-5, Kd=0, setpoint=simulation_config.max_edges, output_limits=(simulation_config.min_radius, simulation_config.max_radius), starting_output = simulation_config.max_radius)
-
+    edges_len_list = []index_particles[n]
     folder = f'./graphs_data/graphs_{dataset_name}/'
     os.makedirs(folder, exist_ok=True)
     os.makedirs(f'./graphs_data/graphs_{dataset_name}/generated_data/', exist_ok=True)
@@ -444,6 +446,10 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         logger.info(to_numpy(cycle_length))
         logger.info('cell death rate')
         logger.info(to_numpy(cell_death_rate))
+        logger.info("cell final mass")
+        logger.info(to_numpy(cell_mass))
+        logger.info("cell growth rate")
+        logger.info(to_numpy(growth_rate))
         logger.info('interaction parameters')
         logger.info(to_numpy(model.p))
 
@@ -491,7 +497,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     nd = torch.ones(len(pos), device=device) + 0.05 * torch.randn(len(pos), device=device)
                     var = torch.ones(len(pos), device=device) + 0.20 * torch.randn(len(pos), device=device)
 
-                    test = A1.argmax()
+                    # test = A1.argmax()
                     # # print(cycle_length)
                     # print(test,
                     #       f"mass: {int(cell_mass_distrib[test])} / {int(cell_mass[to_numpy(T1[test, :])])}", 
@@ -503,7 +509,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     cycle_length_distrib = torch.cat((cycle_length_distrib, cycle_length[to_numpy(T1[pos, 0])].squeeze() * var), dim=0)
                     cell_death_rate_distrib = torch.cat((cell_death_rate_distrib, cell_death_rate[to_numpy(T1[pos, 0])].squeeze() * nd), dim=0)
                     cell_mass_distrib = torch.cat((cell_mass_distrib, cell_mass[to_numpy(T1[pos, 0])]/2), dim=0)
-                    growth_rate_distrib = torch.cat((growth_rate_distrib, cell_mass[to_numpy(T1[pos, 0])]/(2 * cycle_length[to_numpy(T1[pos, 0])].squeeze() * var)), dim=0)
+                    # growth_rate_distrib = torch.cat((growth_rate_distrib, cell_mass[to_numpy(T1[pos, 0])]/(2 * cycle_length[to_numpy(T1[pos, 0])].squeeze() * var)), dim=0)
+                    growth_rate_distrib = cell_mass_distrib/(2 * cycle_length_distrib)
 
                     index_particles = []
                     for n in range(n_particles):
@@ -538,6 +545,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 max_radius_list.append(max_radius)
                 edges_len_list.append(edge_index.shape[1])
                 x_len_list.append(x.shape[0])
+          
             # model prediction
             with torch.no_grad():
                 y = model(dataset, has_field=True)
@@ -626,7 +634,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         # plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
                         #             s=marker_size, color=cmap.color(n))
 
-                        size = 5 * np.power(3, ((to_numpy(x[index_particles[n] , -2]) - 200)/100)) + 10
+                        size = set_size(x, index_particles[n], 10)
 
                         plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
                                     s=size, color=cmap.color(n))
@@ -651,7 +659,10 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         plt.xticks([])
                         plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.tif",
+
+                    num = f"{it:06}"
+
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{num}.tif",
                                 dpi=85.35)
                     # plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{10000+it}.tif", dpi=42.675)
                     plt.close()
@@ -679,8 +690,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             torch.save(cell_death_rate, f'graphs_data/graphs_{dataset_name}/cell_death_rate.pt')
             torch.save(cell_death_rate_distrib, f'graphs_data/graphs_{dataset_name}/cell_death_rate_distrib.pt')
             torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
-
-    logging.shutdown()
 
 
 def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
