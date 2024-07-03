@@ -720,6 +720,14 @@ def plot_generated(config, run, style, step, device):
     os.makedirs(os.path.join(log_dir, 'generated_bw'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'generated_color'), exist_ok=True)
 
+    files = glob.glob(f"./{log_dir}/generated_bw/*")
+    for f in files:
+        os.remove(f)
+
+    files = glob.glob(f"./{log_dir}/generated_color/*")
+    for f in files:
+        os.remove(f)
+
 
     print('Load data ...')
 
@@ -740,8 +748,8 @@ def plot_generated(config, run, style, step, device):
 
         # matplotlib.use("Qt5Agg")
         matplotlib.rcParams['savefig.pad_inches'] = 0
-        fig = plt.figure(figsize=(24, 12))
-        ax = fig.add_subplot(1, 2, 1)
+        fig = plt.figure(figsize=(12, 12))
+        ax = fig.add_subplot(1, 1, 1)
         ax.xaxis.get_major_formatter()._usetex = False
         ax.yaxis.get_major_formatter()._usetex = False
         ax.xaxis.set_major_locator(plt.MaxNLocator(3))
@@ -778,14 +786,18 @@ def plot_generated(config, run, style, step, device):
             plt.text(0, 1.05,
                      f'frame {it}, {int(n_particles_alive)} alive particles ({int(n_particles_dead)} dead), {edge_index.shape[1]} edges  ',
                      ha='left', va='top', transform=ax.transAxes, fontsize=16)
-        num = f"{it:06}"
+        plt.xticks([])
+        plt.yticks([])
+        plt.xlim([0,1])
+        plt.ylim([0,1])
         plt.tight_layout()
+        num = f"{it:06}"
         plt.savefig(f"./{log_dir}/generated_color/frame_{num}.tif", dpi=80)
         plt.close()
 
         matplotlib.rcParams['savefig.pad_inches'] = 0
-        fig = plt.figure(figsize=(24, 12))
-        ax = fig.add_subplot(1, 2, 1)
+        fig = plt.figure(figsize=(12, 12))
+        ax = fig.add_subplot(1, 1, 1)
         ax.xaxis.get_major_formatter()._usetex = False
         ax.yaxis.get_major_formatter()._usetex = False
         ax.xaxis.set_major_locator(plt.MaxNLocator(3))
@@ -820,9 +832,13 @@ def plot_generated(config, run, style, step, device):
             plt.text(0, 1.05,
                      f'frame {it}, {int(n_particles_alive)} alive particles ({int(n_particles_dead)} dead), {edge_index.shape[1]} edges  ',
                      ha='left', va='top', transform=ax.transAxes, fontsize=16)
-        num = f"{it:06}"
+        plt.xticks([])
+        plt.yticks([])
+        plt.xlim([0,1])
+        plt.ylim([0,1])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/generated_color/frame_{num}.tif", dpi=80)
+        num = f"{it:06}"
+        plt.savefig(f"./{log_dir}/generated_bw/frame_{num}.tif", dpi=80)
         plt.close()
 
 
@@ -4367,7 +4383,7 @@ if __name__ == '__main__':
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         # data_plot(config=config, config_file=config_file, epoch_list=['2_0'], device=device)
-        plot_generated(config=config, run=1, style='latex frame', step = 5, device=device)
+        plot_generated(config=config, run=1, style='latex', step = 5, device=device)
         # plot_focused_on_cell(config=config, run=1, style='latex frame color', cell_id=255, step = 5, device=device)
 
     # f_list = ['supp2','supp8','supp14','supp16']

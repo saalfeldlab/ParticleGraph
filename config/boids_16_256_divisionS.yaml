@@ -1,5 +1,5 @@
 description: 'Boids 16 different types, division'
-dataset: 'boids_16_256_divisionR'
+dataset: 'boids_16_256_divisionS'
 
 simulation:
   params: [[-1]]
