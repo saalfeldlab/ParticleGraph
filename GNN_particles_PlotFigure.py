@@ -1084,6 +1084,7 @@ def plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logger, de
     n_runs = config.training.n_runs
     n_frames = config.simulation.n_frames
     has_no_tracking = config.training.has_no_tracking
+    has_cell_division = config.simulation.has_cell_division
 
     embedding_cluster = EmbeddingCluster(config)
 
@@ -1094,6 +1095,17 @@ def plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logger, de
     type_list = get_type_list(x, dimension)
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
+
+    state_time_series = get_time_series(x_list[1], 100, feature='type')
+
+    reconstructed_time_series = get_embedding_time_series(model, 1, 100, n_particles, has_cell_division, n_frames)
+
+    def get_embedding_time_series (model_a=None, dataset_number=0, cell_id=None):
+        embedding = []
+        embedding.append(model_a[dataset_number])
+        embedding = to_numpy(torch.stack(embedding).squeeze())
+
+
 
     for epoch in epoch_list:
 
@@ -4379,11 +4391,11 @@ if __name__ == '__main__':
 
     matplotlib.use("Qt5Agg")
 
-    config_list =['boids_16_256_divisionR']
+    config_list =['arbitrary_3_sequence_d']
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        # data_plot(config=config, config_file=config_file, epoch_list=['2_0'], device=device)
-        plot_generated(config=config, run=1, style='latex', step = 5, device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['2_0'], device=device)
+        # plot_generated(config=config, run=1, style='latex', step = 5, device=device)
         # plot_focused_on_cell(config=config, run=1, style='latex frame color', cell_id=255, step = 5, device=device)
 
     # f_list = ['supp2','supp8','supp14','supp16']

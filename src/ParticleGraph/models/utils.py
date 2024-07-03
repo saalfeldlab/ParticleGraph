@@ -12,12 +12,25 @@ import warnings
 def linear_model(x, a, b):
     return a * x + b
 
-def get_embedding(model_a=None, dataset_number = 0):
+def get_embedding(model_a=None, dataset_number = None):
     embedding = []
     embedding.append(model_a[dataset_number])
     embedding = to_numpy(torch.stack(embedding).squeeze())
 
     return embedding
+
+
+def get_embedding_time_series(model=None, dataset_number=None, cell_id=None, n_particles=None, n_frames=None, has_cell_division=None):
+    embedding = []
+    embedding.append(model.a[dataset_number])
+    embedding = to_numpy(torch.stack(embedding).squeeze())
+
+    if has_cell_division:
+        indexes = np.arange(n_frames) * n_particles + cell_id
+    else:
+        indexes = np.arange(n_frames) * model.n_particles_max + cell_id
+
+    return embedding[indexes]
 
 def plot_training_signal(config, dataset, model, adjacency, log_dir, epoch, N, index_particles, n_particles, n_particle_types, device):
 

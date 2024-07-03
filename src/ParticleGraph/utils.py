@@ -341,24 +341,3 @@ def fig_init(formatx='%.2f', formaty='%.2f'):
     return fig, ax
 
 
-def get_time_series(x_list, cell_id, feature):
-
-    match feature:
-        case 'mass':
-            feature = 10
-        case 'velocity_x':
-            feature = 3
-        case 'velocity_y':
-            feature = 4
-        case _:  # default
-            feature = 0
-
-    time_series = []
-    for it in range(len(x_list)):
-        x = x_list[it].clone().detach()
-        pos_cell = torch.argwhere(x[:, 0] == cell_id)
-        if len(pos_cell) > 0:
-            time_series.append(x[pos_cell, feature].squeeze())
-        else:
-            time_series.append(torch.tensor([0.0]))
-    return to_numpy(torch.stack(time_series))
