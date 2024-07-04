@@ -344,7 +344,7 @@ def data_train_particles(config, config_file, device):
                                                                 n_nodes = 0,
                                                                 dataset_number=1,
                                                                 n_particles=n_particles, ynorm=ynorm,
-                                                                types=to_numpy(x[:, 1+2*dimension]),
+                                                                type_list=to_numpy(x[:, 1+2*dimension]),
                                                                 cmap=cmap, dimension=dimension, device=device)
 
             labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding, train_config.cluster_distance_threshold, index_particles, n_particle_types, embedding_cluster)
@@ -2188,7 +2188,7 @@ def data_train_particle_field(config, config_file, device):
                                                             n_nodes=0,
                                                             dataset_number=1,
                                                             n_particles=n_particles, ynorm=ynorm,
-                                                            types=to_numpy(x[:, 1 + 2 * dimension]),
+                                                            type_list=to_numpy(x[:, 1 + 2 * dimension]),
                                                             cmap=cmap, dimension=dimension, device=device)
 
         labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding,

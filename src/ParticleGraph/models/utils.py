@@ -707,7 +707,7 @@ def analyze_edge_function_state(rr=[], vizualize=False, config=None, model_MLP=[
 
     return func_list, proj_interaction
 
-def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], model_a=None, n_nodes=0, dataset_number = 0, n_particles=None, ynorm=None, types=None, cmap=None, dimension=2, device=None):
+def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], model_a=None, n_nodes=0, dataset_number = 0, n_particles=None, ynorm=None, type_list=None, cmap=None, dimension=2, device=None):
 
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
@@ -747,7 +747,7 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
         if ((n % 5 == 0) | (config.graph_model.particle_model_name=='PDE_GS') | (config_model=='PDE_N')) & vizualize:
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
-                     color=cmap.color(types[n].astype(int)), linewidth=2, alpha=0.25)
+                     color=cmap.color(type_list[n].astype(int)), linewidth=2, alpha=0.25)
 
     func_list = torch.stack(func_list)
     func_list_ = to_numpy(func_list)
