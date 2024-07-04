@@ -296,20 +296,6 @@ def init_cells(config, device):
     return pos, dpos, type, features, cell_age, particle_id, cycle_length, cycle_length_distrib, cell_death_rate, cell_death_rate_distrib
 
 
-def rotate_init_mesh(angle, config, device):
-    simulation_config = config.simulation
-    n_nodes = simulation_config.n_nodes
-    node_value_map = simulation_config.node_value_map
-
-    n_nodes_per_axis = int(np.sqrt(n_nodes))
-    xs = torch.linspace(1 / (2 * n_nodes_per_axis), 1 - 1 / (2 * n_nodes_per_axis), steps=n_nodes_per_axis)
-    ys = torch.linspace(1 / (2 * n_nodes_per_axis), 1 - 1 / (2 * n_nodes_per_axis), steps=n_nodes_per_axis)
-    x_mesh, y_mesh = torch.meshgrid(xs, ys, indexing='xy')
-    x_mesh = torch.reshape(x_mesh, (n_nodes_per_axis ** 2, 1))
-    y_mesh = torch.reshape(y_mesh, (n_nodes_per_axis ** 2, 1))
-    pos_mesh = torch.zeros((n_nodes, 2), device=device)
-    pos_mesh[0:n_nodes, 0:1] = x_mesh[0:n_nodes]
-    pos_mesh[0:n_nodes, 1:2] = y_mesh[0:n_nodes]
 
 def get_index(n_particles, n_particle_types):
     index_particles = []
@@ -368,7 +354,8 @@ def init_mesh(config, model_mesh, device):
         i0 = imread(f'graphs_data/pattern_Null.tif')
     else:
         i0 = imread(f'graphs_data/{node_value_map}')
-    values = i0[(to_numpy(pos_mesh[:, 1]) * 255).astype(int), (to_numpy(pos_mesh[:, 0]) * 255).astype(int)]
+        i0 = np.flipud(i0)
+    values = i0[(to_numpy(pos_mesh[:, 0]) * 255).astype(int), (to_numpy(pos_mesh[:, 1]) * 255).astype(int)]
 
     mask_mesh = (x_mesh > torch.min(x_mesh) + 0.02) & (x_mesh < torch.max(x_mesh) - 0.02) & (y_mesh > torch.min(y_mesh) + 0.02) & (y_mesh < torch.max(y_mesh) - 0.02)
 

@@ -15,7 +15,7 @@ os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 from GNN_particles_Ntype import *
 from ParticleGraph.embedding_cluster import *
 from ParticleGraph.models.utils import *
-from ParticleGraph.utils import to_numpy, CustomColorMap, choose_boundary_values
+from ParticleGraph.utils import to_numpy, CustomColorMap
 import matplotlib as mpl
 from io import StringIO
 import sys
@@ -1836,6 +1836,13 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
 
             np.save(f"./{log_dir}/results/coeff_pysrr.npy", popt_list)
 
+            # model_pysrr = PySRRegressor(
+            #     niterations=30,  # < Increase me for better results
+            #     random_state=0,
+            #     temp_equation_file=False
+            # )
+            # model_pysrr.fit(to_numpy(rr[:, None]), to_numpy(plot_list[0]))
+
             sys.stdout = sys.__stdout__
 
             popt_list = np.array(popt_list)
@@ -1864,8 +1871,8 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
             csv_.append(popt_list)
             plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
             plt.scatter(p_list, popt_list, color='k', s=50, alpha=0.5)
-            plt.xlabel(r'True mass ', fontsize=78)
-            plt.ylabel(r'Reconstructed mass ', fontsize=78)
+            plt.xlabel(r'True mass ', fontsize=64)
+            plt.ylabel(r'Reconstructed mass ', fontsize=64)
             plt.xlim([0, 5.5])
             plt.ylim([0, 5.5])
             plt.tight_layout()
@@ -2103,8 +2110,8 @@ def plot_gravity_continuous(config_file, epoch_list, log_dir, logger, device):
         csv_.append(popt_list)
         plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
         plt.scatter(p_list, popt_list, color='k', s=50, alpha=0.5)
-        plt.xlabel(r'True mass ', fontsize=78)
-        plt.ylabel(r'Reconstructed mass ', fontsize=78)
+        plt.xlabel(r'True mass ', fontsize=64)
+        plt.ylabel(r'Reconstructed mass ', fontsize=64)
         plt.xlim([0, 5.5])
         plt.ylim([0, 5.5])
         plt.tight_layout()
@@ -2490,6 +2497,9 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
 
         plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
         plt.scatter(qiqj_list, popt_list, color='k', s=200, alpha=0.1)
+
+        np.save(f"./{log_dir}/results/qiqj_{config_file}_{epoch}.npy", np.array([qiqj_list, popt_list]))
+
         plt.xlim([-5, 5])
         plt.ylim([-5, 5])
         plt.xlabel(r'Reconstructed $q_i q_j$', fontsize=32)
@@ -2497,8 +2507,7 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/qiqj_{config_file}_{epoch}.tif", dpi=1.7)
         plt.close()
-        logger.info(
-            f'cohesion slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
+        logger.info(f'slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
 
 
 def plot_boids(config_file, epoch_list, log_dir, logger, device):
@@ -3235,8 +3244,8 @@ def plot_particle_field(config_file, epoch_list, log_dir, logger, cc, device):
 
                 fig, ax = fig_init(formatx='%.2f', formaty='%.2f')
                 plt.scatter(y_list, pred_list, color='k', s=0.1, alpha=0.01)
-                plt.xlabel('True latent coeff.', fontsize=78)
-                plt.ylabel('Recons. latent coeff.', fontsize=78)
+                plt.xlabel(r'True $b_i(t)$', fontsize=78)
+                plt.ylabel(r'Recons. $b_i(t)$', fontsize=78)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/cues_scatter_{epoch}.tif", dpi=170)
                 plt.close()
@@ -4308,7 +4317,7 @@ def get_figures(index):
         case 'supp18':
             config_list = ['boids_16_256_noise_0_3', 'boids_16_256_noise_0_4', 'boids_16_256_dropout_10', 'boids_16_256_dropout_10_no_ghost']
         case 'supp12':
-            config_list = ['arbitrary_3_field_boats'] # , 'arbitrary_3_field_triangles']
+            config_list = ['arbitrary_3_field_boats', 'arbitrary_3_field_triangles']
         case _:
             config_list = ['arbitrary_3']
 
@@ -4409,17 +4418,18 @@ if __name__ == '__main__':
     print(f'device {device}')
     print(' ')
 
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
 
     # config_list =['arbitrary_3_sequence_d']
-    # for config_file in config_list:
-    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-    #     data_plot(config=config, config_file=config_file, epoch_list=['20_0'], device=device)
-    #     # plot_generated(config=config, run=1, style='latex', step = 5, device=device)
-    #     # plot_focused_on_cell(config=config, run=1, style='latex frame color', cell_id=255, step = 5, device=device)
+    config_list = ['gravity_16','gravity_100','Coulomb_3_256']
+    for config_file in config_list:
+        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+        data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
+        # plot_generated(config=config, run=1, style='latex', step = 5, device=device)
+        # plot_focused_on_cell(config=config, run=1, style='latex frame color', cell_id=255, step = 5, device=device)
 
-    f_list = ['supp12']
-    for f in f_list:
-        config_list,epoch_list = get_figures(f)
+    # f_list = ['supp12']
+    # for f in f_list:
+    #     config_list,epoch_list = get_figures(f)
 
 

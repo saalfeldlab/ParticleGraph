@@ -2,9 +2,11 @@ import matplotlib.pyplot as plt
 import torch
 
 from GNN_particles_Ntype import *
+from ParticleGraph.generators.utils import *
 from ParticleGraph.models.utils import *
 from ParticleGraph.models.Siren_Network import *
 from ParticleGraph.models.Ghost_Particles import *
+from geomloss import SamplesLoss
 
 import random
 
@@ -2128,7 +2130,7 @@ def data_train_particle_field(config, config_file, device):
 
             total_loss += loss.item()
 
-            visualize_embedding = True
+            visualize_embedding = False
             if visualize_embedding & (((epoch < 30 ) & (N%(Niter//50) == 0)) | (N==0)):
                 print(N)
                 plot_training_particle_field(config=config, has_siren=has_siren, has_siren_time=has_siren_time, model_f=model_f, dataset_name=dataset_name, n_frames=n_frames, model_name=model_config.particle_model_name, log_dir=log_dir,
@@ -2588,7 +2590,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     delta_t = simulation_config.delta_t
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     dimension = simulation_config.dimension
-    has_siren = 'siren' in model_config.field_type
     has_siren_time = 'siren_with_time' in model_config.field_type
     has_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
 
@@ -2632,8 +2633,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             model.load_state_dict(state_dict['model_state_dict'])
             model.eval()
             mesh_model = None
-        if has_siren:
-
+        if has_field:
             model_f_p = model
             model_f_f = choose_mesh_model(config, device=device)
 
@@ -2642,31 +2642,31 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 model_f = Siren_Network(image_width=image_width, in_features=3, out_features=1, hidden_features=128,
                                         hidden_layers=5, outermost_linear=True, device=device, first_omega_0=80,
                                         hidden_omega_0=80.)
+                net = f'./log/try_{config_file}/models/best_model_f_with_1_graphs_{best_model}.pt'
+                state_dict = torch.load(net, map_location=device)
+                model_f.load_state_dict(state_dict['model_state_dict'])
+                model_f.to(device=device)
+                model_f.eval()
+                table = PrettyTable(["Modules", "Parameters"])
+                total_params = 0
+                for name, parameter in model_f.named_parameters():
+                    if not parameter.requires_grad:
+                        continue
+                    param = parameter.numel()
+                    table.add_row([name, param])
+                    total_params += param
+                if verbose:
+                    print(table)
+                    print(f"Total Trainable Params: {total_params}")
             else:
-                model_f = Siren_Network(image_width=image_width, in_features=2, out_features=1, hidden_features=64,
-                                        hidden_layers=3, outermost_linear=True, device=device, first_omega_0=80,
-                                        hidden_omega_0=80.)
+                t = model.field[run].reshape(image_width, image_width)
+                t = torch.rot90(t)
+                t = torch.flipud(t)
+                t = t.reshape(image_width * image_width,1)
+                with torch.no_grad():
+                    model.field[run] = t.clone().detach()
 
-            net = f'./log/try_{config_file}/models/best_model_f_with_1_graphs_{best_model}.pt'
-            state_dict = torch.load(net, map_location=device)
-            model_f.load_state_dict(state_dict['model_state_dict'])
-
-            model_f.to(device=device)
-            model_f.eval()
-
-            table = PrettyTable(["Modules", "Parameters"])
-            total_params = 0
-            for name, parameter in model_f.named_parameters():
-                if not parameter.requires_grad:
-                    continue
-                param = parameter.numel()
-                table.add_row([name, param])
-                total_params += param
-
-            if verbose:
-                print(table)
-                print(f"Total Trainable Params: {total_params}")
-        first_embedding = model.a[1].data.clone().detach()
+    first_embedding = model.a[1].data.clone().detach()
 
     n_sub_population = n_particles // n_particle_types
 
@@ -2778,25 +2778,31 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         edge_index = adj_t.nonzero().t().contiguous()
         edge_attr_adjacency = adjacency[adj_t]
 
-    # n_particles larger than initially
-
-
     rmserr_list= []
+    gloss = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
+    geomloss_list=[]
     time.sleep(1)
     for it in trange(n_frames+1):
 
         x0 = x_list[0][it].clone().detach()
         y0 = y_list[0][it].clone().detach()
+
+
         if model_config.signal_model_name == 'PDE_N':
             rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 6:7] - x0[:, 6:7]) ** 2, axis=1)))
+            geomloss = gloss(x[mask_mesh.squeeze(), 6:7], x0[mask_mesh.squeeze(), 6:7])
         elif model_config.mesh_model_name == 'WaveMesh':
             rmserr = torch.sqrt(
                 torch.mean(torch.sum((x[mask_mesh.squeeze(), 6:7] - x0[mask_mesh.squeeze(), 6:7]) ** 2, axis=1)))
+            geomloss = gloss(x[mask_mesh.squeeze(), 6:7], x0[mask_mesh.squeeze(), 6:7])
         elif model_config.mesh_model_name == 'RD_RPS_Mesh':
             rmserr = torch.sqrt(torch.mean(torch.sum((x[mask_mesh.squeeze(), 6:9] - x0[mask_mesh.squeeze(), 6:9]) ** 2, axis=1)))
+            geomloss = gloss(x[mask_mesh.squeeze(), 6:9], x0[mask_mesh.squeeze(), 6:9])
         else:
             rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 1:3] - x0[:, 1:3]) ** 2, axis=1)))
+            geomloss = gloss(x[:, 1:3], x0[:, 1:3])
         rmserr_list.append(rmserr.item())
+        geomloss_list.append(geomloss.item())
 
         if has_mesh:
             x[:, 1:5] = x0[:, 1:5].clone().detach()
@@ -3075,6 +3081,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.close()
 
     print('average rollout RMS {:.3e}+/-{:.3e}'.format(np.mean(rmserr_list), np.std(rmserr_list)))
+    print('average rollout geom_loss {:.3e}+/-{:.3e}'.format(np.mean(geomloss_list), np.std(geomloss_list)))
 
     if True:
         rmserr_list = np.array(rmserr_list)
