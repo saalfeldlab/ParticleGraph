@@ -3024,7 +3024,7 @@ def plot_particle_field(config_file, epoch_list, log_dir, logger, cc, device):
         target = i0[(to_numpy(x_mesh[:, 2]) * 100).astype(int), (to_numpy(x_mesh[:, 1]) * 100).astype(int)]
         target = np.reshape(target, (n_nodes_per_axis, n_nodes_per_axis))
     else:
-        target = i0[(to_numpy(x_mesh[:, 1]) * 255).astype(int), (to_numpy(x_mesh[:, 2]) * 255).astype(int)]
+        target = i0[(to_numpy(x_mesh[:, 1]) * 255).astype(int), (to_numpy(x_mesh[:, 2]) * 255).astype(int)] * 5000/255
         target = np.reshape(target, (n_nodes_per_axis, n_nodes_per_axis))
         target = np.flipud(target)
     vm = np.max(target)
@@ -3033,10 +3033,14 @@ def plot_particle_field(config_file, epoch_list, log_dir, logger, cc, device):
 
     fig, ax = fig_init()
     plt.imshow(target, cmap=cc, vmin=0, vmax=vm)
+    fmtx = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
+    fmty = lambda x, pos: '{:.1f}'.format((100 - x) / 100, pos)
+    ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmty))
+    ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmtx))
     plt.xlabel(r'$x$', fontsize=78)
     plt.ylabel(r'$y$', fontsize=78)
-    cbar = plt.colorbar(shrink=0.5)
-    cbar.ax.tick_params(labelsize=32)
+    # cbar = plt.colorbar(shrink=0.5)
+    # cbar.ax.tick_params(labelsize=32)
     # cbar.set_label(r'$Coupling$',fontsize=78)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/target_field.tif", dpi=300)
@@ -3275,7 +3279,11 @@ def plot_particle_field(config_file, epoch_list, log_dir, logger, cc, device):
                 fig, ax = fig_init()
                 pts = to_numpy(torch.reshape(model.field[1], (100, 100)))
                 pts = np.flipud(pts)
-                plt.imshow(pts, cmap=cc, vmin=0, vmax=vm)
+                plt.imshow(pts, cmap=cc)
+                fmtx = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
+                fmty = lambda x, pos: '{:.1f}'.format((100 - x) / 100, pos)
+                ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmty))
+                ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmtx))
                 plt.xlabel(r'$x$', fontsize=78)
                 plt.ylabel(r'$y$', fontsize=78)
                 cbar = plt.colorbar(shrink=0.5)
@@ -4300,7 +4308,7 @@ def get_figures(index):
         case 'supp18':
             config_list = ['boids_16_256_noise_0_3', 'boids_16_256_noise_0_4', 'boids_16_256_dropout_10', 'boids_16_256_dropout_10_no_ghost']
         case 'supp12':
-            config_list = ['arbitrary_3_field_boats', 'arbitrary_3_field_triangles']
+            config_list = ['arbitrary_3_field_boats'] # , 'arbitrary_3_field_triangles']
         case _:
             config_list = ['arbitrary_3']
 

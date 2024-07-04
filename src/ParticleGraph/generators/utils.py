@@ -311,33 +311,6 @@ def rotate_init_mesh(angle, config, device):
     pos_mesh[0:n_nodes, 0:1] = x_mesh[0:n_nodes]
     pos_mesh[0:n_nodes, 1:2] = y_mesh[0:n_nodes]
 
-
-def rotate_init_mesh(angle, config, device):
-    simulation_config = config.simulation
-    n_nodes = simulation_config.n_nodes
-    node_value_map = simulation_config.node_value_map
-
-    n_nodes_per_axis = int(np.sqrt(n_nodes))
-    xs = torch.linspace(1 / (2 * n_nodes_per_axis), 1 - 1 / (2 * n_nodes_per_axis), steps=n_nodes_per_axis)
-    ys = torch.linspace(1 / (2 * n_nodes_per_axis), 1 - 1 / (2 * n_nodes_per_axis), steps=n_nodes_per_axis)
-    x_mesh, y_mesh = torch.meshgrid(xs, ys, indexing='xy')
-    x_mesh = torch.reshape(x_mesh, (n_nodes_per_axis ** 2, 1))
-    y_mesh = torch.reshape(y_mesh, (n_nodes_per_axis ** 2, 1))
-    pos_mesh = torch.zeros((n_nodes, 2), device=device)
-    pos_mesh[0:n_nodes, 0:1] = x_mesh[0:n_nodes]
-    pos_mesh[0:n_nodes, 1:2] = y_mesh[0:n_nodes]
-
-    i0 = imread(f'graphs_data/{node_value_map}')
-    values = i0[(to_numpy(pos_mesh[:, 0]) * 255).astype(int), (to_numpy(pos_mesh[:, 1]) * 255).astype(int)]
-    values = np.reshape(values, (n_nodes_per_axis, n_nodes_per_axis))
-    values = ndimage.rotate(values, angle, reshape=False, cval=np.mean(values)*1.1)
-    values = np.reshape(values, (n_nodes_per_axis*n_nodes_per_axis))
-    features_mesh = torch.zeros((n_nodes, 2), device=device)
-    features_mesh[:, 0] = torch.tensor(values / 255 * 5000, device=device)
-
-    return features_mesh
-
-
 def get_index(n_particles, n_particle_types):
     index_particles = []
     for n in range(n_particle_types):

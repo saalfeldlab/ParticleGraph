@@ -923,17 +923,11 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
             if ('siren' in model_config.field_type) & (it >= 0):
-
-                if 'video' in simulation_config.node_value_map:
-                    im = imread(f"graphs_data/{simulation_config.node_value_map}") # / 255 * 5000
-                    im = im[it].squeeze()
-                    im = np.rot90(im,3)
-                    im = np.reshape(im, (n_nodes_per_axis * n_nodes_per_axis))
-                    H1_mesh[:, 0:1] = torch.tensor(im[:,None], dtype=torch.float32, device=device)
-                else:
-                    H1_mesh = rotate_init_mesh(it, config, device=device)
-                    im = torch.reshape(H1_mesh[:, 0:1], (n_nodes_per_axis, n_nodes_per_axis))
-                # io.imsave(f"graphs_data/graphs_{dataset_name}/generated_data/rotated_image_{it}.tif", to_numpy(im))
+                im = imread(f"graphs_data/{simulation_config.node_value_map}") # / 255 * 5000
+                im = im[it].squeeze()
+                im = np.rot90(im,3)
+                im = np.reshape(im, (n_nodes_per_axis * n_nodes_per_axis))
+                H1_mesh[:, 0:1] = torch.tensor(im[:,None], dtype=torch.float32, device=device)
 
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                                    H1.clone().detach(), A1.clone().detach()), 1)
