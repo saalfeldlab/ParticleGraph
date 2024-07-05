@@ -1679,7 +1679,6 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
     n_particle_types = config.simulation.n_particle_types
-    n_particles = config.simulation.n_particles
     n_runs = config.training.n_runs
     cmap = CustomColorMap(config=config)
     dimension = config.simulation.dimension
@@ -1704,16 +1703,34 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
         model.eval()
 
         model_a_first = model.a.clone().detach()
+
+        fig,ax = fig_init()
+        embedding = get_embedding(model.a, 1)
+        for n in range(n_particle_types):
+            plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n), s=100, alpha=0.1)
+
+        config.training.cluster_method = 'distance_embedding'
         config.training.cluster_distance_threshold = 0.01
-        alpha = 0.75
+        alpha=0.1
         accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
                                                                        cmap, index_particles, type_list,
                                                                        n_particle_types, n_particles, ynorm, epoch,
                                                                        log_dir, alpha, device)
         print(
-            f'final result     accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+            f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
         logger.info(
-            f'final result     accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+            f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+        model.load_state_dict(state_dict['model_state_dict'])
+        model.eval()
+        config.training.cluster_method = 'distance_plot'
+        config.training.cluster_distance_threshold = 0.01
+        alpha = 0.1
+        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
+                                                                       cmap, index_particles, type_list,
+                                                                       n_particle_types, n_particles, ynorm, epoch,
+                                                                       log_dir, alpha, device)
+        print(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+        logger.info(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
         fig, ax = fig_init(formatx='%.3f', formaty='%.0f')
         p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
@@ -1790,61 +1807,66 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
             relative_error = np.abs(y_data - x_data) / x_data
             pos = np.argwhere(relative_error < threshold)
             pos_outliers = np.argwhere(relative_error > threshold)
-            x_data_ = x_data[pos[:, 0]]
-            y_data_ = y_data[pos[:, 0]]
-            lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
-            residuals = y_data_ - linear_model(x_data_, *lin_fit)
-            ss_res = np.sum(residuals ** 2)
-            ss_tot = np.sum((y_data - np.mean(y_data_)) ** 2)
-            r_squared = 1 - (ss_res / ss_tot)
-            print(f'R^2$: {np.round(r_squared, 2)}  Slope: {np.round(lin_fit[0], 2)}  outliers: {np.sum(relative_error > threshold)}  ')
-            logger.info(f'R^2$: {np.round(r_squared, 2)}  Slope: {np.round(lin_fit[0], 2)}  outliers: {np.sum(relative_error > threshold)}  ')
 
-            fig, ax = fig_init()
-            csv_ = []
-            csv_.append(p_list)
-            csv_.append(popt_list[:, 0])
-            plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-            plt.scatter(p_list, popt_list[:, 0], color='k', s=50, alpha=0.5)
-            plt.scatter(p_list[pos_outliers[:, 0]], popt_list[pos_outliers[:, 0], 0], color='r', s=50)
-            plt.xlabel(r'True mass ', fontsize=78)
-            plt.ylabel(r'Reconstructed mass ', fontsize=78)
-            plt.xlim([0, 5.5])
-            plt.ylim([0, 5.5])
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/mass_{config_file}.tif", dpi=170)
-            # csv_ = np.array(csv_)
-            # np.save(f"./{log_dir}/results/mass_{config_file}.npy", csv_)
-            # np.savetxt(f"./{log_dir}/results/mass_{config_file}.txt", csv_)
-            plt.close()
+            if len(pos)>0:
+                x_data_ = x_data[pos[:, 0]]
+                y_data_ = y_data[pos[:, 0]]
+                lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
+                ss_res = np.sum(residuals ** 2)
+                ss_tot = np.sum((y_data - np.mean(y_data_)) ** 2)
+                r_squared = 1 - (ss_res / ss_tot)
+                print(f'R^2$: {np.round(r_squared, 2)}  Slope: {np.round(lin_fit[0], 2)}  outliers: {np.sum(relative_error > threshold)}  ')
+                logger.info(f'R^2$: {np.round(r_squared, 2)}  Slope: {np.round(lin_fit[0], 2)}  outliers: {np.sum(relative_error > threshold)}  ')
 
-            relative_error = np.abs(popt_list[:, 0] - p_list.squeeze()) / p_list.squeeze() * 100
+                fig, ax = fig_init()
+                csv_ = []
+                csv_.append(p_list)
+                csv_.append(popt_list[:, 0])
+                plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+                plt.scatter(p_list, popt_list[:, 0], color='k', s=50, alpha=0.5)
+                plt.scatter(p_list[pos_outliers[:, 0]], popt_list[pos_outliers[:, 0], 0], color='r', s=50)
+                plt.xlabel(r'True mass ', fontsize=78)
+                plt.ylabel(r'Reconstructed mass ', fontsize=78)
+                plt.xlim([0, 5.5])
+                plt.ylim([0, 5.5])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/mass_{config_file}.tif", dpi=170)
+                # csv_ = np.array(csv_)
+                # np.save(f"./{log_dir}/results/mass_{config_file}.npy", csv_)
+                # np.savetxt(f"./{log_dir}/results/mass_{config_file}.txt", csv_)
+                plt.close()
 
-            print(f'mass relative error: {np.round(np.mean(relative_error), 2)}+/-{np.round(np.std(relative_error), 2)}')
-            print(f'mass relative error wo outliers: {np.round(np.mean(relative_error[pos[:, 0]]), 2)}+/-{np.round(np.std(relative_error[pos[:, 0]]), 2)}')
-            logger.info(f'mass relative error: {np.round(np.mean(relative_error), 2)}+/-{np.round(np.std(relative_error), 2)}')
-            logger.info(f'mass relative error wo outliers: {np.round(np.mean(relative_error[pos[:, 0]]), 2)}+/-{np.round(np.std(relative_error[pos[:, 0]]), 2)}')
+                relative_error = np.abs(popt_list[:, 0] - p_list.squeeze()) / p_list.squeeze() * 100
+
+                print(f'mass relative error: {np.round(np.mean(relative_error), 2)}+/-{np.round(np.std(relative_error), 2)}')
+                print(f'mass relative error wo outliers: {np.round(np.mean(relative_error[pos[:, 0]]), 2)}+/-{np.round(np.std(relative_error[pos[:, 0]]), 2)}')
+                logger.info(f'mass relative error: {np.round(np.mean(relative_error), 2)}+/-{np.round(np.std(relative_error), 2)}')
+                logger.info(f'mass relative error wo outliers: {np.round(np.mean(relative_error[pos[:, 0]]), 2)}+/-{np.round(np.std(relative_error[pos[:, 0]]), 2)}')
 
 
-            fig, ax = fig_init()
-            csv_ = []
-            csv_.append(p_list.squeeze())
-            csv_.append(-popt_list[:, 1])
-            csv_ = np.array(csv_)
-            plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-            plt.scatter(p_list, -popt_list[:, 1], color='k', s=50, alpha=0.5)
-            plt.xlim([0, 5.5])
-            plt.ylim([-4, 0])
-            plt.xlabel(r'True mass', fontsize=78)
-            plt.ylabel(r'Reconstructed exponent', fontsize=78)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/exponent_{config_file}.tif", dpi=170)
-            np.save(f"./{log_dir}/results/exponent_{config_file}.npy", csv_)
-            np.savetxt(f"./{log_dir}/results/exponent_{config_file}.txt", csv_)
-            plt.close()
+                fig, ax = fig_init()
+                csv_ = []
+                csv_.append(p_list.squeeze())
+                csv_.append(-popt_list[:, 1])
+                csv_ = np.array(csv_)
+                plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+                plt.scatter(p_list, -popt_list[:, 1], color='k', s=50, alpha=0.5)
+                plt.xlim([0, 5.5])
+                plt.ylim([-4, 0])
+                plt.xlabel(r'True mass', fontsize=78)
+                plt.ylabel(r'Reconstructed exponent', fontsize=78)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/exponent_{config_file}.tif", dpi=170)
+                np.save(f"./{log_dir}/results/exponent_{config_file}.npy", csv_)
+                np.savetxt(f"./{log_dir}/results/exponent_{config_file}.txt", csv_)
+                plt.close()
 
-            print(f'exponent: {np.round(np.mean(-popt_list[:, 1]), 2)}+/-{np.round(np.std(-popt_list[:, 1]), 2)}')
-            logger.info(f'mass relative error: {np.round(np.mean(-popt_list[:, 1]), 2)}+/-{np.round(np.std(-popt_list[:, 1]), 2)}')
+                print(f'exponent: {np.round(np.mean(-popt_list[:, 1]), 2)}+/-{np.round(np.std(-popt_list[:, 1]), 2)}')
+                logger.info(f'mass relative error: {np.round(np.mean(-popt_list[:, 1]), 2)}+/-{np.round(np.std(-popt_list[:, 1]), 2)}')
+
+            else:
+                print('no fit')
+                logger.info('no fit')
 
             if os.path.exists(f"./{log_dir}/results/coeff_pysrr.npy"):
                 popt_list = np.load(f"./{log_dir}/results/coeff_pysrr.npy")
@@ -2410,19 +2432,29 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
         model.load_state_dict(state_dict['model_state_dict'])
         model.eval()
 
-        model_a_first = model.a.clone().detach()
-        config.training.cluster_distance_threshold = 0.01
-        config.training.cluster_method = 'distance_embedding'
-        alpha = 0.1
-        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster, cmap,
-                                                                   index_particles, type_list,
-                                                                   n_particle_types, n_particles, ynorm, epoch, log_dir,
-                                                                   alpha, device)
 
+        config.training.cluster_method = 'distance_plot'
+        config.training.cluster_distance_threshold = 0.01
+        alpha=0.1
+        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
+                                                                       cmap, index_particles, type_list,
+                                                                       n_particle_types, n_particles, ynorm, epoch,
+                                                                       log_dir, alpha, device)
         print(
-            f'final result     accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+            f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
         logger.info(
-            f'final result     accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+            f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+        model.load_state_dict(state_dict['model_state_dict'])
+        model.eval()
+        config.training.cluster_method = 'distance_embedding'
+        config.training.cluster_distance_threshold = 0.01
+        alpha = 0.1
+        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
+                                                                       cmap, index_particles, type_list,
+                                                                       n_particle_types, n_particles, ynorm, epoch,
+                                                                       log_dir, alpha, device)
+        print(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+        logger.info(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
         x = x_list[0][100].clone().detach()
         index_particles = get_index_particles(x, n_particle_types, dimension)
@@ -2505,7 +2537,7 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
             optimizer = torch.optim.Adam(model_qs.parameters(), lr=1E-2)
             qiqj_list=[]
             loss_list=[]
-            for epoch in trange(20000):
+            for it in trange(20000):
 
                 sample = np.random.randint(0, qiqj.shape[0]-10)
                 qiqj_ = qiqj[sample:sample+10]
@@ -2519,32 +2551,23 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
                 loss = torch.mean(min_value) + torch.max(min_value)
                 loss.backward()
                 optimizer.step()
-                if epoch % 100 == 0:
+                if it % 100 == 0:
                     qiqj_list.append(to_numpy(model_qs.qiqj))
                     loss_list.append(to_numpy(loss))
 
             qiqj_list = np.array(qiqj_list).squeeze()
             print(to_numpy(model_qs.qiqj))
 
-            fig, ax = fig_init()
-            plt.scatter(to_numpy(qiqj),to_numpy(min_value),s=0.1,alpha=0.01)
-
             fig,ax=fig_init()
             plt.plot(qiqj_list[:,0])
             plt.plot(qiqj_list[:,1])
             plt.plot(qiqj_list[:,2])
-
-            fig, ax = fig_init()
-            plt.plot(loss_list)
-
 
             qiqj_list = np.load(f"./{log_dir}/results/qiqj.npy")
             qiqj=[]
             for n in range(0,len(qiqj_list),5):
                 qiqj.append(qiqj_list[n])
             qiqj_list = np.array(qiqj)
-
-
 
         else:
             print('curve fitting ...')
@@ -4362,37 +4385,38 @@ def get_figures(index):
             config_list = ['arbitrary_3_continuous', 'arbitrary_3', 'arbitrary_3_3', 'arbitrary_16', 'arbitrary_32','arbitrary_64']
         case '4':
             config_list = ['arbitrary_3_field_video_bison_quad']
-        case '5':
-            config_list = ['signal_N_100_2_a', 'signal_N_100_2_b', 'signal_N_100_2_c', 'signal_N_100_2_d']
         case 'supp1':
             config_list = ['arbitrary_3']
             epoch_list= ['0_0', '0_200', '0_1000', '20']
-        case 'supp8':
+        case 'supp4':
             config_list = ['arbitrary_16', 'arbitrary_16_noise_0_3', 'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5']
-        case 'supp10':
+        case 'supp5':
             config_list = ['arbitrary_3_dropout_30', 'arbitrary_3_dropout_10', 'arbitrary_3_dropout_10_no_ghost']
-        case 'supp2':
+        case 'supp6':
+            config_list = ['arbitrary_3_field_boats']
+        case 'supp7':
             config_list = ['gravity_16']
             epoch_list= ['0_0', '0_5000', '1_0', '20']
         case 'supp8':
-            config_list = ['gravity_16', 'gravity_16_continuous', 'Coulomb_3_256', 'boids_16_256', 'boids_32_256', 'boids_64_256']
-        case 'supp14':
-            config_list = ['gravity_16_noise_0_3', 'Coulomb_3_noise_0_3','gravity_16_noise_0_4', 'Coulomb_3_noise_0_4']
-        case 'supp7':
-            config_list = ['Coulomb_3_dropout_10', 'gravity_16_dropout_10', 'gravity_16_dropout_30', 'Coulomb_3_dropout_10_no_ghost']
-        case 'supp16':
+            config_list = ['gravity_16', 'gravity_16_continuous', 'Coulomb_3_256']
+        case 'supp9':
+            config_list = ['gravity_16_noise_0_4', 'Coulomb_3_noise_0_4'] #'Coulomb_3_noise_0_3', 'gravity_16_noise_0_3'
+        case 'supp10':
+            config_list = [ 'gravity_16_dropout_30', 'Coulomb_3_dropout_10_no_ghost', 'Coulomb_3_dropout_10', 'gravity_16_dropout_10']
+        case 'supp11':
             config_list = ['boids_16_256', 'boids_32_256', 'boids_64_256']
             epoch_list = ['0_0', '0_2000', '0_10000', '20']
-        case 'supp18':
-            config_list = ['boids_16_256_noise_0_3', 'boids_16_256_noise_0_4', 'boids_16_256_dropout_10', 'boids_16_256_dropout_10_no_ghost']
         case 'supp12':
-            config_list = ['arbitrary_3_field_boats']
+            config_list = ['boids_16_256_noise_0_3', 'boids_16_256_noise_0_4', 'boids_16_256_dropout_10', 'boids_16_256_dropout_10_no_ghost']
+
+        case '25':
+            config_list = ['signal_N_100_2_a', 'signal_N_100_2_b', 'signal_N_100_2_c', 'signal_N_100_2_d']
         case _:
             config_list = ['arbitrary_3']
 
 
     match index:
-        case '3' | '4' | '5' | 'supp8' | 'supp10' | 'supp12' | 'supp2' | 'supp7' | 'supp14' | 'supp16':
+        case '3' | '4' | 'supp4' | 'supp5' | 'supp6' | 'supp7' | 'supp8' | 'supp9' | 'supp10' | 'supp11' | 'supp12' | '25':
             for config_file in config_list:
                 config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
                 data_plot(config=config, config_file=config_file, epoch_list=epoch_list, device=device)
@@ -4414,7 +4438,7 @@ def get_figures(index):
                               best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
                               sample_embedding=False, device=device)
 
-        case 'supp3':
+        case 'supp2':
             config_file = 'arbitrary_3_bis'
             config = ParticleGraphConfig.from_yaml(f'./config/arbitrary_3_bis.yaml')
             data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True,
@@ -4437,7 +4461,7 @@ def get_figures(index):
                       best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
                       sample_embedding=True, ratio = 3, device=device)
 
-        case 'supp4':
+        case 'supp3':
             config_file = 'arbitrary_3_bis'
             config = ParticleGraphConfig.from_yaml(f'./config/arbitrary_3_bis.yaml')
             data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True,
@@ -4459,7 +4483,15 @@ def get_figures(index):
             data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
                       best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
                       sample_embedding=True, ratio = 3, device=device)
-        case 'supp2':
+
+        case 'supp6':
+            config_file = 'arbitrary_3_field_boats'
+            config = ParticleGraphConfig.from_yaml(f'./config/arbitrary_3_field_boats.yaml')
+            data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
+                      best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
+                      sample_embedding=False, device=device)
+
+        case 'supp7':
             config = ParticleGraphConfig.from_yaml(f'./config/gravity_16_bis.yaml')
             data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex bw', alpha=1, erase=True,
                           scenario='stripes', ratio=1, bSave=True, step=config.simulation.n_frames // 3)
@@ -4471,12 +4503,6 @@ def get_figures(index):
                       best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
                       sample_embedding=False, device=device)
 
-        case 'supp12':
-            config_file = 'arbitrary_3_field_boats'
-            config = ParticleGraphConfig.from_yaml(f'./config/arbitrary_3_field_boats.yaml')
-            data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
-                      best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
-                      sample_embedding=False, device=device)
 
 
     print(' ')
@@ -4494,19 +4520,19 @@ if __name__ == '__main__':
     print(f'device {device}')
     print(' ')
 
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
 
     # config_list =['arbitrary_3_sequence_d']
 
-    # config_list = ['gravity_100']
-    # for config_file in config_list:
-    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-    #     data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
-        # plot_generated(config=config, run=1, style='latex', step = 5, device=device)
-        # plot_focused_on_cell(config=config, run=1, style='latex frame color', cell_id=255, step = 5, device=device)
+    config_list = ['gravity_16_noise_0_4']
+    for config_file in config_list:
+        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+        data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
+        plot_generated(config=config, run=1, style='latex', step = 5, device=device)
+        plot_focused_on_cell(config=config, run=1, style='latex frame color', cell_id=255, step = 5, device=device)
 
-    f_list = ['supp12']
-    for f in f_list:
-        config_list,epoch_list = get_figures(f)
+    # f_list = ['supp10']
+    # for f in f_list:
+    #     config_list,epoch_list = get_figures(f)
 
 
