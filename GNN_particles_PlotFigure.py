@@ -160,6 +160,28 @@ class Interaction_Particles_extract(MessagePassing):
                 -r ** (2 * p[3]) / (2 * self.sigma ** 2)))
 
 
+class model_qiqj(nn.Module):
+
+    def __init__(self, size=None, device=None):
+
+        super(model_qiqj, self).__init__()
+
+        self.device = device
+        self.size = size
+
+        self.qiqj = nn.Parameter(torch.randn((int(self.size), 1), device=self.device,requires_grad=True, dtype=torch.float32))
+
+
+    def forward(self):
+
+        x = []
+        for l in range(self.size):
+            for m in range(l,self.size,1):
+                x.append(self.qiqj[l] * self.qiqj[m])
+
+        return torch.stack(x)
+
+
 class PDE_B_extract(MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
@@ -1823,29 +1845,33 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
             print(f'exponent: {np.round(np.mean(-popt_list[:, 1]), 2)}+/-{np.round(np.std(-popt_list[:, 1]), 2)}')
             logger.info(f'mass relative error: {np.round(np.mean(-popt_list[:, 1]), 2)}+/-{np.round(np.std(-popt_list[:, 1]), 2)}')
 
-            text_trap = StringIO()
-            sys.stdout = text_trap
-            popt_list = []
-            for n in range(0,int(n_particles * (1 - config.training.particle_dropout))):
-                model_pysrr, max_index, max_value = symbolic_regression(rr, plot_list[n])
-                # print(f'{p_list[n].squeeze()}/x0**2, {model_pysrr.sympy(max_index)}')
-                logger.info(f'{np.round(p_list[n].squeeze(),2)}/x0**2, pysrr found {model_pysrr.sympy(max_index)}')
+            if os.path.exists(f"./{log_dir}/results/coeff_pysrr.npy"):
+                popt_list = np.load(f"./{log_dir}/results/coeff_pysrr.npy")
 
-                expr = model_pysrr.sympy(max_index).as_terms()[0]
-                popt_list.append(expr[0][1][0][0])
+            else:
+                text_trap = StringIO()
+                sys.stdout = text_trap
+                popt_list = []
+                for n in range(0,int(n_particles * (1 - config.training.particle_dropout))):
+                    model_pysrr, max_index, max_value = symbolic_regression(rr, plot_list[n])
+                    # print(f'{p_list[n].squeeze()}/x0**2, {model_pysrr.sympy(max_index)}')
+                    logger.info(f'{np.round(p_list[n].squeeze(),2)}/x0**2, pysrr found {model_pysrr.sympy(max_index)}')
 
-            np.save(f"./{log_dir}/results/coeff_pysrr.npy", popt_list)
+                    expr = model_pysrr.sympy(max_index).as_terms()[0]
+                    popt_list.append(expr[0][1][0][0])
 
-            # model_pysrr = PySRRegressor(
-            #     niterations=30,  # < Increase me for better results
-            #     random_state=0,
-            #     temp_equation_file=False
-            # )
-            # model_pysrr.fit(to_numpy(rr[:, None]), to_numpy(plot_list[0]))
+                np.save(f"./{log_dir}/results/coeff_pysrr.npy", popt_list)
 
-            sys.stdout = sys.__stdout__
+                # model_pysrr = PySRRegressor(
+                #     niterations=30,  # < Increase me for better results
+                #     random_state=0,
+                #     temp_equation_file=False
+                # )
+                # model_pysrr.fit(to_numpy(rr[:, None]), to_numpy(plot_list[0]))
 
-            popt_list = np.array(popt_list)
+                sys.stdout = sys.__stdout__
+
+                popt_list = np.array(popt_list)
 
             x_data = p_list.squeeze()
             y_data = popt_list
@@ -1871,8 +1897,8 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
             csv_.append(popt_list)
             plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
             plt.scatter(p_list, popt_list, color='k', s=50, alpha=0.5)
-            plt.xlabel(r'True mass ', fontsize=64)
-            plt.ylabel(r'Reconstructed mass ', fontsize=64)
+            plt.xlabel(r'True mass ', fontsize=56)
+            plt.ylabel(r'Reconstructed mass ', fontsize=56)
             plt.xlim([0, 5.5])
             plt.ylim([0, 5.5])
             plt.tight_layout()
@@ -2068,23 +2094,27 @@ def plot_gravity_continuous(config_file, epoch_list, log_dir, logger, device):
         print(f'exponent: {np.round(np.mean(-popt_list[:, 1]), 2)}+/-{np.round(np.std(-popt_list[:, 1]), 2)}')
         logger.info(f'mass relative error: {np.round(np.mean(-popt_list[:, 1]), 2)}+/-{np.round(np.std(-popt_list[:, 1]), 2)}')
 
-        text_trap = StringIO()
-        sys.stdout = text_trap
-        popt_list = []
-        for n in range(0,int(n_particles * (1 - config.training.particle_dropout))):
-            print(n)
-            model_pysrr, max_index, max_value = symbolic_regression(rr, plot_list[n])
-            # print(f'{p_list[n].squeeze()}/x0**2, {model_pysrr.sympy(max_index)}')
-            logger.info(f'{np.round(p_list[n].squeeze(),2)}/x0**2, pysrr found {model_pysrr.sympy(max_index)}')
+        if os.path.exists(f"./{log_dir}/results/coeff_pysrr.npy"):
+            popt_list = np.load(f"./{log_dir}/results/coeff_pysrr.npy")
 
-            expr = model_pysrr.sympy(max_index).as_terms()[0]
-            popt_list.append(expr[0][1][0][0])
+        else:
+            text_trap = StringIO()
+            sys.stdout = text_trap
+            popt_list = []
+            for n in range(0,int(n_particles * (1 - config.training.particle_dropout))):
+                print(n)
+                model_pysrr, max_index, max_value = symbolic_regression(rr, plot_list[n])
+                # print(f'{p_list[n].squeeze()}/x0**2, {model_pysrr.sympy(max_index)}')
+                logger.info(f'{np.round(p_list[n].squeeze(),2)}/x0**2, pysrr found {model_pysrr.sympy(max_index)}')
 
-        np.save(f"./{log_dir}/results/coeff_pysrr.npy", popt_list)
+                expr = model_pysrr.sympy(max_index).as_terms()[0]
+                popt_list.append(expr[0][1][0][0])
 
-        sys.stdout = sys.__stdout__
+            np.save(f"./{log_dir}/results/coeff_pysrr.npy", popt_list)
 
-        popt_list = np.array(popt_list)
+            sys.stdout = sys.__stdout__
+
+            popt_list = np.array(popt_list)
 
         x_data = p_list.squeeze()
         y_data = popt_list
@@ -2110,8 +2140,8 @@ def plot_gravity_continuous(config_file, epoch_list, log_dir, logger, device):
         csv_.append(popt_list)
         plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
         plt.scatter(p_list, popt_list, color='k', s=50, alpha=0.5)
-        plt.xlabel(r'True mass ', fontsize=64)
-        plt.ylabel(r'Reconstructed mass ', fontsize=64)
+        plt.xlabel(r'True mass ', fontsize=56)
+        plt.ylabel(r'Reconstructed mass ', fontsize=56)
         plt.xlim([0, 5.5])
         plt.ylim([0, 5.5])
         plt.tight_layout()
@@ -2464,11 +2494,55 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
 
         if os.path.exists(f"./{log_dir}/results/coeff_pysrr.npy"):
             popt_list = np.load(f"./{log_dir}/results/coeff_pysrr.npy")
+
+            qiqj = torch.tensor(popt_list,device=device)[:,None]
+            pos = torch.argwhere(torch.abs(qiqj)<10)
+            qiqj = qiqj[pos[:,0]]
+
+            model_qs = model_qiqj(3,device)
+            optimizer = torch.optim.Adam(model_qs.parameters(), lr=1E-2)
+            qiqj_list=[]
+            loss_list=[]
+            for epoch in trange(20000):
+
+                sample = np.random.randint(0, qiqj.shape[0]-10)
+                qiqj_ = qiqj[sample:sample+10]
+
+                optimizer.zero_grad()
+                qs = model_qs()
+                distance = torch.sum((qiqj_[:, None] - qs[None, :]) ** 2, dim=2)
+                result = distance.min(dim=1)
+                min_value = result.values
+                min_index = result.indices
+                loss = torch.mean(min_value) + torch.max(min_value)
+                loss.backward()
+                optimizer.step()
+                if epoch % 100 == 0:
+                    qiqj_list.append(to_numpy(model_qs.qiqj))
+                    loss_list.append(to_numpy(loss))
+
+            qiqj_list = np.array(qiqj_list).squeeze()
+            print(to_numpy(model_qs.qiqj))
+
+            fig, ax = fig_init()
+            plt.scatter(to_numpy(qiqj),to_numpy(min_value),s=0.1,alpha=0.01)
+
+            fig,ax=fig_init()
+            plt.plot(qiqj_list[:,0])
+            plt.plot(qiqj_list[:,1])
+            plt.plot(qiqj_list[:,2])
+
+            fig, ax = fig_init()
+            plt.plot(loss_list)
+
+
             qiqj_list = np.load(f"./{log_dir}/results/qiqj.npy")
             qiqj=[]
             for n in range(0,len(qiqj_list),5):
                 qiqj.append(qiqj_list[n])
             qiqj_list = np.array(qiqj)
+
+
 
         else:
             print('curve fitting ...')
@@ -2492,21 +2566,18 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
         fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
         x_data = qiqj_list.squeeze()
         y_data = popt_list.squeeze()
-
         lin_fit, r_squared, relative_error, outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
-
         plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
         plt.scatter(qiqj_list, popt_list, color='k', s=200, alpha=0.1)
-
-        np.save(f"./{log_dir}/results/qiqj_{config_file}_{epoch}.npy", np.array([qiqj_list, popt_list]))
-
-        plt.xlim([-5, 5])
-        plt.ylim([-5, 5])
-        plt.xlabel(r'Reconstructed $q_i q_j$', fontsize=32)
-        plt.ylabel(r'True $q_i q_j$', fontsize=32)
+        plt.xlim([-2.5, 5])
+        plt.ylim([-2.5, 5])
+        plt.ylabel(r'Reconstructed $q_i q_j$', fontsize=56)
+        plt.xlabel(r'True $q_i q_j$', fontsize=56)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/qiqj_{config_file}_{epoch}.tif", dpi=1.7)
+        plt.savefig(f"./{log_dir}/results/qiqj_{config_file}_{epoch}.tif", dpi=170)
         plt.close()
+
+        print(f'slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
         logger.info(f'slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
 
 
@@ -4309,7 +4380,7 @@ def get_figures(index):
             epoch_list= ['0_0', '0_5000', '1_0', '20']
         case 'supp8':
             config_list = ['gravity_16', 'gravity_16_continuous', 'Coulomb_3_256', 'boids_16_256', 'boids_32_256', 'boids_64_256']
-        case 'supp14':
+        case 'supp10':
             config_list = ['gravity_16_noise_0_3', 'Coulomb_3_256_noise_0_3','gravity_16_noise_0_4', 'Coulomb_3_256_noise_0_4']
         case 'supp16':
             config_list = ['boids_16_256', 'boids_32_256', 'boids_64_256']
@@ -4323,7 +4394,7 @@ def get_figures(index):
 
 
     match index:
-        case '3' | '4' | '5'| 'supp8' | 'supp10' | 'supp12' | 'supp2' | 'supp8' | 'supp14' | 'supp16':
+        case '3' | '4' | '5'| 'supp8' | 'supp10' | 'supp12' | 'supp2' | 'supp8' | 'supp10' | 'supp16':
             for config_file in config_list:
                 config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
                 data_plot(config=config, config_file=config_file, epoch_list=epoch_list, device=device)
@@ -4421,15 +4492,16 @@ if __name__ == '__main__':
     # matplotlib.use("Qt5Agg")
 
     # config_list =['arbitrary_3_sequence_d']
-    config_list = ['gravity_16','gravity_100','Coulomb_3_256']
-    for config_file in config_list:
-        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
+
+    # config_list = ['gravity_100']
+    # for config_file in config_list:
+    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+    #     data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
         # plot_generated(config=config, run=1, style='latex', step = 5, device=device)
         # plot_focused_on_cell(config=config, run=1, style='latex frame color', cell_id=255, step = 5, device=device)
 
-    # f_list = ['supp12']
-    # for f in f_list:
-    #     config_list,epoch_list = get_figures(f)
+    f_list = ['supp10']
+    for f in f_list:
+        config_list,epoch_list = get_figures(f)
 
 
