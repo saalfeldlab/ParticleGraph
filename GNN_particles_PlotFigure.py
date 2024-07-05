@@ -1688,9 +1688,10 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
 
     x_list, y_list, vnorm, ynorm = load_training_data(dataset_name, n_runs, log_dir, device)
     logger.info("vnorm:{:.2e},  ynorm:{:.2e}".format(to_numpy(vnorm), to_numpy(ynorm)))
-    x = x_list[0][0].clone().detach()
+    x = x_list[1][0].clone().detach()
     index_particles = get_index_particles(x, n_particle_types, dimension)
     type_list = get_type_list(x, dimension)
+    n_particles = x.shape[0]
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
@@ -1762,7 +1763,7 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
 
         rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
         plot_list = []
-        for n in range(int(n_particles * (1 - config.training.particle_dropout))):
+        for n in range(int(n_particles)):
             embedding_ = model_a_first[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                      rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
@@ -1774,7 +1775,7 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
         p = np.linspace(0.5, 5, n_particle_types)
         p_list = p[to_numpy(type_list).astype(int)]
         popt_list = []
-        for n in range(int(n_particles * (1 - config.training.particle_dropout))):
+        for n in range(int(n_particles)):
             popt, pcov = curve_fit(power_model, to_numpy(rr), to_numpy(plot_list[n]))
             popt_list.append(popt)
         popt_list=np.array(popt_list)
@@ -4380,21 +4381,23 @@ def get_figures(index):
             epoch_list= ['0_0', '0_5000', '1_0', '20']
         case 'supp8':
             config_list = ['gravity_16', 'gravity_16_continuous', 'Coulomb_3_256', 'boids_16_256', 'boids_32_256', 'boids_64_256']
-        case 'supp10':
-            config_list = ['gravity_16_noise_0_3', 'Coulomb_3_256_noise_0_3','gravity_16_noise_0_4', 'Coulomb_3_256_noise_0_4']
+        case 'supp14':
+            config_list = ['gravity_16_noise_0_3', 'Coulomb_3_noise_0_3','gravity_16_noise_0_4', 'Coulomb_3_noise_0_4']
+        case 'supp7':
+            config_list = ['gravity_16_dropout_10', 'gravity_16_dropout_30','Coulomb_3_dropout_10', 'Coulomb_3_dropout_10_no_ghost']
         case 'supp16':
             config_list = ['boids_16_256', 'boids_32_256', 'boids_64_256']
             epoch_list = ['0_0', '0_2000', '0_10000', '20']
         case 'supp18':
             config_list = ['boids_16_256_noise_0_3', 'boids_16_256_noise_0_4', 'boids_16_256_dropout_10', 'boids_16_256_dropout_10_no_ghost']
         case 'supp12':
-            config_list = ['arbitrary_3_field_boats', 'arbitrary_3_field_triangles']
+            config_list = ['arbitrary_3_field_boats']
         case _:
             config_list = ['arbitrary_3']
 
 
     match index:
-        case '3' | '4' | '5'| 'supp8' | 'supp10' | 'supp12' | 'supp2' | 'supp8' | 'supp10' | 'supp16':
+        case '3' | '4' | '5' | 'supp8' | 'supp10' | 'supp12' | 'supp2' | 'supp7' | 'supp14' | 'supp16':
             for config_file in config_list:
                 config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
                 data_plot(config=config, config_file=config_file, epoch_list=epoch_list, device=device)
@@ -4473,6 +4476,13 @@ def get_figures(index):
                       best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
                       sample_embedding=False, device=device)
 
+        case 'supp12':
+            config_file = 'arbitrary_3_field_boats'
+            config = ParticleGraphConfig.from_yaml(f'./config/arbitrary_3_field_boats.yaml')
+            data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
+                      best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
+                      sample_embedding=False, device=device)
+
 
     print(' ')
     print(' ')
@@ -4500,7 +4510,7 @@ if __name__ == '__main__':
         # plot_generated(config=config, run=1, style='latex', step = 5, device=device)
         # plot_focused_on_cell(config=config, run=1, style='latex frame color', cell_id=255, step = 5, device=device)
 
-    f_list = ['supp10']
+    f_list = ['supp7']
     for f in f_list:
         config_list,epoch_list = get_figures(f)
 

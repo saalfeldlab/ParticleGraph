@@ -354,6 +354,10 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
             torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
 
+    for handler in logger.handlers[:]:
+        handler.close()
+        logger.removeHandler(handler)
+
 
 def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,
                            ratio=1, scenario='none', device=None, bSave=True):
@@ -649,7 +653,9 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             torch.save(cell_death_rate_distrib, f'graphs_data/graphs_{dataset_name}/cell_death_rate_distrib.pt')
             torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
 
-    logging.shutdown()
+    for handler in logger.handlers[:]:
+        handler.close()
+        logger.removeHandler(handler)
 
 
 def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
