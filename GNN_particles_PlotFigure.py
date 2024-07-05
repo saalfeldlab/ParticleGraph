@@ -2399,6 +2399,7 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
     x = x_list[0][0].clone().detach()
     index_particles = get_index_particles(x, n_particle_types, dimension)
     type_list = get_type_list(x, dimension)
+    n_particles = x.shape[0]
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
@@ -3105,9 +3106,9 @@ def plot_particle_field(config_file, epoch_list, log_dir, logger, cc, device):
         target = i0[(to_numpy(x_mesh[:, 2]) * 100).astype(int), (to_numpy(x_mesh[:, 1]) * 100).astype(int)]
         target = np.reshape(target, (n_nodes_per_axis, n_nodes_per_axis))
     else:
-        target = i0[(to_numpy(x_mesh[:, 1]) * 255).astype(int), (to_numpy(x_mesh[:, 2]) * 255).astype(int)] * 5000/255
+        target = i0[(to_numpy(x_mesh[:, 2]) * 255).astype(int), (to_numpy(x_mesh[:, 1]) * 255).astype(int)] * 5000/255
         target = np.reshape(target, (n_nodes_per_axis, n_nodes_per_axis))
-        target = np.flipud(target)
+        # target = np.flipud(target)
     vm = np.max(target)
     if vm == 0:
         vm = 0.01
@@ -3324,6 +3325,7 @@ def plot_particle_field(config_file, epoch_list, log_dir, logger, cc, device):
 
                 r, p_value = pearsonr(y_list.flatten(), pred_list.flatten())
                 print(f"Pearson's r: {r:.4f}, p-value: {p_value:.6f}")
+                logger.info(f"Pearson's r: {r:.4f}, p-value: {p_value:.6f}")
 
 
                 fig, ax = fig_init()
@@ -3367,11 +3369,10 @@ def plot_particle_field(config_file, epoch_list, log_dir, logger, cc, device):
                 ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmtx))
                 plt.xlabel(r'$x$', fontsize=78)
                 plt.ylabel(r'$y$', fontsize=78)
-                cbar = plt.colorbar(shrink=0.5)
-                cbar.ax.tick_params(labelsize=32)
+                # cbar = plt.colorbar(shrink=0.5)
+                # cbar.ax.tick_params(labelsize=32)
                 # cbar.set_label(r'$Coupling$',fontsize=78)
                 plt.tight_layout()
-                imsave(f"./{log_dir}/results/field_pic_{config_file}_{epoch}.tif", pts)
                 plt.savefig(f"./{log_dir}/results/field_{config_file}_{epoch}.tif", dpi=300)
                 # np.save(f"./{log_dir}/results/embedding_{config_file}.npy", csv_)
                 # csv_= np.reshape(csv_,(csv_.shape[0]*csv_.shape[1],2))
@@ -3379,15 +3380,12 @@ def plot_particle_field(config_file, epoch_list, log_dir, logger, cc, device):
                 plt.close()
                 rmse = np.sqrt(np.mean((target - pts) ** 2))
                 print(f'RMSE: {rmse}')
+                logger.info(f'RMSE: {rmse}')
 
                 fig, ax = fig_init()
-                plt.scatter(target, pts, c='k', s=100, alpha=0.1)
-                plt.ylabel(r'Reconstructed coupling', fontsize=32)
-                plt.xlabel(r'True coupling', fontsize=32)
-                plt.xlim([-vm * 0.1, vm * 1.5])
-                plt.ylim([-vm * 0.1, vm * 1.5])
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/field_scatter_{config_file}_{epoch}.tif", dpi=300)
+                plt.scatter(target, pts, c='k', s=10, alpha=0.1)
+                plt.xlabel(r'True $b_i$', fontsize=78)
+                plt.ylabel(r'Recons. $b_i$', fontsize=78)
 
                 x_data = np.reshape(pts, (n_nodes))
                 y_data = np.reshape(target, (n_nodes))
@@ -3395,12 +3393,9 @@ def plot_particle_field(config_file, epoch_list, log_dir, logger, cc, device):
                 relative_error = np.abs(y_data - x_data)
                 print(f'outliers: {np.sum(relative_error > threshold)} / {n_particles}')
                 pos = np.argwhere(relative_error < threshold)
-                pos_outliers = np.argwhere(relative_error > threshold)
 
                 x_data_ = x_data[pos].squeeze()
                 y_data_ = y_data[pos].squeeze()
-                # x_data_ = x_data.squeeze()
-                # y_data_ = y_data.squeeze()
 
                 lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
                 residuals = y_data_ - linear_model(x_data_, *lin_fit)
@@ -3408,14 +3403,14 @@ def plot_particle_field(config_file, epoch_list, log_dir, logger, cc, device):
                 ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
                 r_squared = 1 - (ss_res / ss_tot)
 
-                print(f'R^2$: {np.round(r_squared, 3)} ')
-                print(f"Slope: {np.round(lin_fit[0], 2)}")
-
                 plt.plot(x_data_, linear_model(x_data_, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-                plt.xlim([-vm * 0.1, vm * 1.1])
-                plt.ylim([-vm * 0.1, vm * 1.1])
+                plt.xlim([0, 2])
+                plt.ylim([-0, 2])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/field_scatter_{config_file}_{epoch}.tif", dpi=300)
+
+                print(f'R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}')
+                logger.info(f'R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}')
 
 
 def plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
@@ -4384,7 +4379,7 @@ def get_figures(index):
         case 'supp14':
             config_list = ['gravity_16_noise_0_3', 'Coulomb_3_noise_0_3','gravity_16_noise_0_4', 'Coulomb_3_noise_0_4']
         case 'supp7':
-            config_list = ['gravity_16_dropout_10', 'gravity_16_dropout_30','Coulomb_3_dropout_10', 'Coulomb_3_dropout_10_no_ghost']
+            config_list = ['Coulomb_3_dropout_10', 'gravity_16_dropout_10', 'gravity_16_dropout_30', 'Coulomb_3_dropout_10_no_ghost']
         case 'supp16':
             config_list = ['boids_16_256', 'boids_32_256', 'boids_64_256']
             epoch_list = ['0_0', '0_2000', '0_10000', '20']
@@ -4499,7 +4494,7 @@ if __name__ == '__main__':
     print(f'device {device}')
     print(' ')
 
-    # matplotlib.use("Qt5Agg")
+    matplotlib.use("Qt5Agg")
 
     # config_list =['arbitrary_3_sequence_d']
 
@@ -4510,7 +4505,7 @@ if __name__ == '__main__':
         # plot_generated(config=config, run=1, style='latex', step = 5, device=device)
         # plot_focused_on_cell(config=config, run=1, style='latex frame color', cell_id=255, step = 5, device=device)
 
-    f_list = ['supp7']
+    f_list = ['supp12']
     for f in f_list:
         config_list,epoch_list = get_figures(f)
 

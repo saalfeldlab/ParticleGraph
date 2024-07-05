@@ -3099,9 +3099,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     if True:
 
         x0_next = x_list[0][it].clone().detach()
-        if has_field:
-            x0_next[:,2] = torch.ones_like(x0_next[:,2]) - x0_next[:,2]
-            x[:, 2] = torch.ones_like(x[:,2]) - x[:, 2]
 
         fig = plt.figure(figsize=(12, 12))
         ax=fig.add_subplot(1,1,1)
