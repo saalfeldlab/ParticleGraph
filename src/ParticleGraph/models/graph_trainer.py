@@ -7,6 +7,7 @@ from ParticleGraph.models.utils import *
 from ParticleGraph.models.Siren_Network import *
 from ParticleGraph.models.Ghost_Particles import *
 from geomloss import SamplesLoss
+from ParticleGraph.embedding_cluster import EmbeddingCluster
 
 import random
 

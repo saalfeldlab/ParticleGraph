@@ -354,9 +354,9 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
             torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
 
-    for handler in logger.handlers[:]:
-        handler.close()
-        logger.removeHandler(handler)
+    # for handler in logger.handlers[:]:
+    #     handler.close()
+    #     logger.removeHandler(handler)
 
 
 def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,
@@ -947,9 +947,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             x_particle_field = torch.concatenate((x_mesh, x), dim=0)
 
             # compute connectivity rules
-            dataset_mesh = data.Data(x=x_mesh, edge_index=mesh_data['edge_index'],
-                                     edge_attr=mesh_data['edge_weight'], device=device)
-
             distance = torch.sum(bc_dpos(x[:, None, 1:dimension+1] - x[None, :, 1:dimension+1]) ** 2, dim=2)
             adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
             edge_index = adj_t.nonzero().t().contiguous()

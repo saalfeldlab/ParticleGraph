@@ -2,12 +2,14 @@
 import umap
 from matplotlib.ticker import FormatStrFormatter
 from ParticleGraph.models import Interaction_Particles, Interaction_Particle_Field, Signal_Propagation, Mesh_Laplacian, Mesh_RPS, Interaction_Particle_Tracking
+from ParticleGraph.utils import *
 
 from GNN_particles_Ntype import *
 import matplotlib as mpl
 import networkx as nx
 from torch_geometric.utils.convert import to_networkx
 import warnings
+import numpy as np
 
 def linear_model(x, a, b):
     return a * x + b
@@ -731,6 +733,7 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
         else:
             rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
 
+    print('interaction functions ...')
     func_list = []
     for n in range(n_particles):
         if config.training.has_no_tracking:
@@ -752,6 +755,7 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
     func_list = torch.stack(func_list)
     func_list_ = to_numpy(func_list)
 
+    print('UMAP reduction ...')
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
         if func_list_.shape[0] > 1000:
@@ -762,6 +766,7 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
         else:
             trans = umap.UMAP(n_neighbors=100, n_components=2, transform_queue_size=0).fit(func_list_)
             proj_interaction = trans.transform(func_list_)
+    print('done ...')
 
     if vizualize:
         if config.graph_model.particle_model_name == 'PDE_GS':

@@ -468,7 +468,7 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
     else:
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n),
-                        s=400, alpha=alpha)
+                        s=200, alpha=alpha)
     plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
     plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
     plt.tight_layout()
@@ -1724,7 +1724,7 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
         model.eval()
         config.training.cluster_method = 'distance_plot'
         config.training.cluster_distance_threshold = 0.01
-        alpha = 0.1
+        alpha = 0.5
         accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
                                                                        cmap, index_particles, type_list,
                                                                        n_particle_types, n_particles, ynorm, epoch,
@@ -1876,7 +1876,7 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
                 text_trap = StringIO()
                 sys.stdout = text_trap
                 popt_list = []
-                for n in range(0,int(n_particles * (1 - config.training.particle_dropout))):
+                for n in range(0,int(n_particles)):
                     model_pysrr, max_index, max_value = symbolic_regression(rr, plot_list[n])
                     # print(f'{p_list[n].squeeze()}/x0**2, {model_pysrr.sympy(max_index)}')
                     logger.info(f'{np.round(p_list[n].squeeze(),2)}/x0**2, pysrr found {model_pysrr.sympy(max_index)}')
@@ -1904,7 +1904,6 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
             threshold = 0.4
             relative_error = np.abs(y_data - x_data) / x_data
             pos = np.argwhere(relative_error < threshold)
-            pos_outliers = np.argwhere(relative_error > threshold)
             x_data_ = x_data[pos[:, 0]]
             y_data_ = y_data[pos[:, 0]]
             lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
@@ -1912,13 +1911,10 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
             ss_res = np.sum(residuals ** 2)
             ss_tot = np.sum((y_data - np.mean(y_data_)) ** 2)
             r_squared = 1 - (ss_res / ss_tot)
-            print(f'R^2$: {np.round(r_squared, 2)}  Slope: {np.round(lin_fit[0], 2)}  outliers: {np.sum(relative_error > threshold)}  ')
-            logger.info(f'R^2$: {np.round(r_squared, 2)}  Slope: {np.round(lin_fit[0], 2)}  outliers: {np.sum(relative_error > threshold)}  ')
+            print(f'R^2$: {np.round(r_squared, 2)}  Slope: {np.round(lin_fit[0], 2)}  outliers: {np.sum(relative_error > threshold)}  threshold: {threshold} ')
+            logger.info(f'R^2$: {np.round(r_squared, 2)}  Slope: {np.round(lin_fit[0], 2)}  outliers: {np.sum(relative_error > threshold)}  threshold: {threshold} ')
 
-            fig, ax = fig_init()
-            csv_ = []
-            csv_.append(p_list)
-            csv_.append(popt_list)
+            fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
             plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
             plt.scatter(p_list, popt_list, color='k', s=50, alpha=0.5)
             plt.xlabel(r'True mass ', fontsize=56)
@@ -1927,9 +1923,6 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
             plt.ylim([0, 5.5])
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/pysrr_mass_{config_file}.tif", dpi=300)
-            # csv_ = np.array(csv_)
-            # np.save(f"./{log_dir}/results/mass_{config_file}.npy", csv_)
-            # np.savetxt(f"./{log_dir}/results/mass_{config_file}.txt", csv_)
             plt.close()
 
             relative_error = np.abs(popt_list - p_list.squeeze()) / p_list.squeeze() * 100
@@ -1977,7 +1970,7 @@ def plot_gravity_continuous(config_file, epoch_list, log_dir, logger, device):
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n % 256),
                         s=400,
-                        alpha=0.1)
+                        alpha=0.5)
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
         plt.tight_layout()
@@ -2075,8 +2068,8 @@ def plot_gravity_continuous(config_file, epoch_list, log_dir, logger, device):
         ss_res = np.sum(residuals ** 2)
         ss_tot = np.sum((y_data - np.mean(y_data_)) ** 2)
         r_squared = 1 - (ss_res / ss_tot)
-        print(f'R^2$: {np.round(r_squared, 2)}  Slope: {np.round(lin_fit[0], 2)}  outliers: {np.sum(relative_error > threshold)}  ')
-        logger.info(f'R^2$: {np.round(r_squared, 2)}  Slope: {np.round(lin_fit[0], 2)}  outliers: {np.sum(relative_error > threshold)}  ')
+        print(f'R^2$: {np.round(r_squared, 2)}  Slope: {np.round(lin_fit[0], 2)}  outliers: {np.sum(relative_error > threshold)}  threshold: {threshold} ')
+        logger.info(f'R^2$: {np.round(r_squared, 2)}  Slope: {np.round(lin_fit[0], 2)}  outliers: {np.sum(relative_error > threshold)}  threshold: {threshold} ')
 
         fig, ax = fig_init()
         plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
@@ -2158,7 +2151,7 @@ def plot_gravity_continuous(config_file, epoch_list, log_dir, logger, device):
         print(f'R^2$: {np.round(r_squared, 2)}  Slope: {np.round(lin_fit[0], 2)}  outliers: {np.sum(relative_error > threshold)}  ')
         logger.info(f'R^2$: {np.round(r_squared, 2)}  Slope: {np.round(lin_fit[0], 2)}  outliers: {np.sum(relative_error > threshold)}  ')
 
-        fig, ax = fig_init()
+        fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
         csv_ = []
         csv_.append(p_list)
         csv_.append(popt_list)
@@ -2436,7 +2429,7 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
 
         config.training.cluster_method = 'distance_plot'
         config.training.cluster_distance_threshold = 0.1
-        alpha=0.1
+        alpha=0.5
         accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
                                                                        cmap, index_particles, type_list,
                                                                        n_particle_types, n_particles, ynorm, epoch,
@@ -2449,7 +2442,7 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
         model.eval()
         config.training.cluster_method = 'distance_embedding'
         config.training.cluster_distance_threshold = 0.01
-        alpha = 0.1
+        alpha = 0.5
         accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
                                                                        cmap, index_particles, type_list,
                                                                        n_particle_types, n_particles, ynorm, epoch,
@@ -2553,12 +2546,12 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
             qiqj.append(qiqj_list[n])
         qiqj_list = np.array(qiqj)
 
-        threshold = 0.5
+        threshold = 1
 
         fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
         x_data = qiqj_list.squeeze()
         y_data = popt_list.squeeze()
-        pysrr_qiqjlin_fit, r_squared, relative_error, not_outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
+        lin_fit, r_squared, relative_error, not_outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
         plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
         plt.scatter(qiqj_list, popt_list, color='k', s=200, alpha=0.1)
         plt.xlim([-2.5, 5])
@@ -2569,19 +2562,19 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
         plt.savefig(f"./{log_dir}/results/qiqj_{config_file}_{epoch}.tif", dpi=170)
         plt.close()
 
-        print(f'slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
-        logger.info(f'slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
+        print(f'slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)}   threshold: {threshold} ')
+        logger.info(f'slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)}   threshold: {threshold} ')
 
         print(f'pysrr_qiqj relative error: {100*np.round(np.mean(relative_error), 2)}+/-{100*np.round(np.std(relative_error), 2)}')
-        print(f'pysrr_qiqj relative error wo outliers: {100*np.round(np.mean(relative_error[pos[:, 0]]), 2)}+/-{100*np.round(np.std(relative_error[pos[:, 0]]), 2)}')
+        print(f'pysrr_qiqj relative error wo outliers: {100*np.round(np.mean(relative_error[not_outliers[:, 0]]), 2)}+/-{100*np.round(np.std(relative_error[not_outliers[:, 0]]), 2)}')
         logger.info(f'pysrr_qiqj relative error: {100*np.round(np.mean(relative_error), 2)}+/-{100*np.round(np.std(relative_error), 2)}')
-        logger.info(f'pysrr_qiqj relative error wo outliers: {100*np.round(np.mean(relative_error[pos[:, 0]]), 2)}+/-{100*np.round(np.std(relative_error[pos[:, 0]]), 2)}')
+        logger.info(f'pysrr_qiqj relative error wo outliers: {100*np.round(np.mean(relative_error[not_outliers[:, 0]]), 2)}+/-{100*np.round(np.std(relative_error[not_outliers[:, 0]]), 2)}')
 
         # qi retrieval
 
 
         qiqj = torch.tensor(popt_list, device=device)[:, None]
-        qiqj = qiqj[outliers[:, 0]]
+        qiqj = qiqj[not_outliers[:, 0]]
 
         model_qs = model_qiqj(3, device)
         optimizer = torch.optim.Adam(model_qs.parameters(), lr=1E-2)
@@ -2610,7 +2603,7 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
         print('qi')
         print(np.round(to_numpy(model_qs.qiqj[2].squeeze()),3), np.round(to_numpy(model_qs.qiqj[1].squeeze()),3),np.round(to_numpy(model_qs.qiqj[0].squeeze()),3) )
         logger.info('qi')
-        logger.info(np.round(to_numpy(model_qs.qiqj[2].squeeze()),3), np.round(to_numpy(model_qs.qiqj[1].squeeze()),3),np.round(to_numpy(model_qs.qiqj[0].squeeze()),3) )
+        logger.info(f'{np.round(to_numpy(model_qs.qiqj[2].squeeze()),3)}, {np.round(to_numpy(model_qs.qiqj[1].squeeze()),3)}, {np.round(to_numpy(model_qs.qiqj[0].squeeze()),3)}' )
 
         fig, ax = fig_init()
         plt.plot(qiqj_list[:, 0], linewidth=4)
@@ -2647,6 +2640,8 @@ def plot_boids(config_file, epoch_list, log_dir, logger, device):
     ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'), map_location=device)
     x = x_list[0][-1].clone().detach()
 
+    print('done ...')
+
     index_particles = get_index_particles(x, n_particle_types, dimension)
     type_list = get_type_list(x, dimension)
     n_particles = x.shape[0]
@@ -2664,7 +2659,8 @@ def plot_boids(config_file, epoch_list, log_dir, logger, device):
         model.load_state_dict(state_dict['model_state_dict'])
         model.eval()
 
-        alpha = 0.1
+        alpha = 0.5
+        print('clustering ...')
         accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
                                                                        cmap, index_particles, type_list,
                                                                        n_particle_types, n_particles, ynorm, epoch,
@@ -2677,170 +2673,11 @@ def plot_boids(config_file, epoch_list, log_dir, logger, device):
         if has_cell_division:
             plot_cell_rates(config, device, log_dir, n_particle_types, x_list, new_labels, cmap, logger)
 
-        lin_edge_out_list = []
-        type_list = []
-        diffx_list = []
-        diffv_list = []
-        cohesion_list=[]
-        alignment_list=[]
-        separation_list=[]
-        r_list = []
-        for it in range(0,n_frames//2,n_frames//40):
-            print(it)
-            x = x_list[0][it].clone().detach()
-            particle_index = to_numpy(x[:, 0:1]).astype(int)
-            x[:, 5:6] = torch.tensor(new_labels[particle_index],
-                                     device=device)  # set label found by clustering and mapperd to ground truth
-            pos = torch.argwhere(x[:, 5:6] < n_particle_types).squeeze()
-            pos = to_numpy(pos[:, 0]).astype(int)  # filter out cluster not associated with ground truth
-            x = x[pos, :]
-            distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)  # threshold
-            adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
-            edge_index = adj_t.nonzero().t().contiguous()
-            dataset = data.Data(x=x, edge_index=edge_index)
-            with torch.no_grad():
-                y, in_features, lin_edge_out = model(dataset, data_id=1, training=False, vnorm=vnorm,
-                                                     phi=torch.zeros(1, device=device))  # acceleration estimation
-            y = y * ynorm
-            lin_edge_out = lin_edge_out * ynorm
-
-            # compute ground truth output
-            p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
-            model_B = PDE_B_extract(aggr_type=config.graph_model.aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
-            rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
-            psi_output = []
-            for n in range(n_particle_types):
-                with torch.no_grad():
-                    psi_output.append(model.psi(rr, torch.squeeze(p[n])))
-                    y_B, sum, cohesion, alignment, separation, diffx, diffv, r, type = model_B(dataset)  # acceleration estimation
-
-            if it==0:
-                lin_edge_out_list=lin_edge_out
-                diffx_list=diffx
-                diffv_list=diffv
-                r_list=r
-                type_list=type
-                cohesion_list = cohesion
-                alignment_list = alignment
-                separation_list = separation
-            else:
-                lin_edge_out_list=torch.cat((lin_edge_out_list,lin_edge_out),dim=0)
-                diffx_list=torch.cat((diffx_list,diffx),dim=0)
-                diffv_list=torch.cat((diffv_list,diffv),dim=0)
-                r_list=torch.cat((r_list,r),dim=0)
-                type_list=torch.cat((type_list,type),dim=0)
-                cohesion_list=torch.cat((cohesion_list,cohesion),dim=0)
-                alignment_list=torch.cat((alignment_list,alignment),dim=0)
-                separation_list=torch.cat((separation_list,separation),dim=0)
-
-        type_list = to_numpy(type_list)
-
-        print(f'fitting with known functions {len(type_list)} points ...')
-        cohesion_fit = np.zeros(n_particle_types)
-        alignment_fit = np.zeros(n_particle_types)
-        separation_fit = np.zeros(n_particle_types)
-        indexes = np.unique(type_list)
-        indexes = indexes.astype(int)
-
-        if False:
-            for n in indexes:
-                pos = np.argwhere(type_list == n)
-                pos = pos[:, 0].astype(int)
-                xdiff = diffx_list[pos, 0:1]
-                vdiff = diffv_list[pos, 0:1]
-                rdiff = r_list[pos]
-                x_data = torch.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
-                y_data = lin_edge_out_list[pos, 0:1]
-                xdiff = diffx_list[pos, 1:2]
-                vdiff = diffv_list[pos, 1:2]
-                rdiff = r_list[pos]
-                tmp = torch.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
-                x_data = torch.cat((x_data, tmp), dim=0)
-                tmp = lin_edge_out_list[pos, 1:2]
-                y_data = torch.cat((y_data, tmp), dim=0)
-                model_pysrr, max_index, max_value = symbolic_regression_multi(x_data, y_data)
-
-        for loop in range(2):
-            for n in indexes:
-                pos = np.argwhere(type_list == n)
-                pos = pos[:, 0].astype(int)
-                xdiff = to_numpy(diffx_list[pos, :])
-                vdiff = to_numpy(diffv_list[pos, :])
-                rdiff = to_numpy(r_list[pos])
-                x_data = np.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
-                y_data = to_numpy(torch.norm(lin_edge_out_list[pos, :], dim=1))
-                if loop == 0:
-                    lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox')
-                else:
-                    lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox', p0=p00)
-                cohesion_fit[int(n)] = lin_fit[0]
-                alignment_fit[int(n)] = lin_fit[1]
-                separation_fit[int(n)] = lin_fit[2]
-            p00 = [np.mean(cohesion_fit[indexes]), np.mean(alignment_fit[indexes]), np.mean(separation_fit[indexes])]
-
-        threshold = 0.25
-
-        x_data = np.abs(to_numpy(p[:, 0]) * 0.5E-5)
-        y_data = np.abs(cohesion_fit)
-        x_data = x_data[indexes]
-        y_data = y_data[indexes]
-        lin_fit, r_squared, relative_error, not_outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
-
-        fig, ax = fig_init()
-        fmt = lambda x, pos: '{:.1f}e-4'.format((x) * 1e4, pos)
-        ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-        for id, n in enumerate(indexes):
-            plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=400)
-        plt.xlabel(r'True cohesion coeff. ', fontsize=56)
-        plt.ylabel(r'Reconstructed cohesion coeff. ', fontsize=56)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/cohesion_{config_file}_{epoch}.tif", dpi=300)
-        plt.close()
-        logger.info(f'cohesion slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
-
-        x_data = np.abs(to_numpy(p[:, 1]) * 5E-4)
-        y_data = alignment_fit
-        x_data = x_data[indexes]
-        y_data = y_data[indexes]
-        pysrr_qiqjlin_fit, r_squared, relative_error, not_outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
-
-        fig, ax = fig_init()
-        fmt = lambda x, pos: '{:.1f}e-2'.format((x) * 1e2, pos)
-        ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-        for id, n in enumerate(indexes):
-            plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=400)
-        plt.xlabel(r'True alignement coeff. ', fontsize=56)
-        plt.ylabel(r'Reconstructed alignement coeff. ', fontsize=56)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/alignment_{config_file}_{epoch}.tif", dpi=300)
-        plt.close()
-        logger.info(f'alignment   slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
-
-        x_data = np.abs(to_numpy(p[:, 2]) * 1E-8)
-        y_data = separation_fit
-        x_data = x_data[indexes]
-        y_data = y_data[indexes]
-        pysrr_qiqjlin_fit, r_squared, relative_error, not_outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
-
-        fig, ax = fig_init()
-        fmt = lambda x, pos: '{:.1f}e-7'.format((x) * 1e7, pos)
-        ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-        for id, n in enumerate(indexes):
-            plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=400)
-        plt.xlabel(r'True separation coeff. ', fontsize=56)
-        plt.ylabel(r'Reconstructed separation coeff. ', fontsize=56)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/separation_{config_file}_{epoch}.tif", dpi=300)
-        plt.close()
-        logger.info(f'separation   slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
-
         print('compare reconstructed interaction with ground truth...')
+
+        p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
+        model_B = PDE_B_extract(aggr_type=config.graph_model.aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
+
         fig, ax = fig_init()
         rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
         func_list = []
@@ -2901,6 +2738,171 @@ def plot_boids(config_file, epoch_list, log_dir, logger, device):
         print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
         logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
 
+        if epoch=='20':
+
+            lin_edge_out_list = []
+            type_list = []
+            diffx_list = []
+            diffv_list = []
+            cohesion_list=[]
+            alignment_list=[]
+            separation_list=[]
+            r_list = []
+            for it in range(0,n_frames//2,n_frames//40):
+                x = x_list[0][it].clone().detach()
+                particle_index = to_numpy(x[:, 0:1]).astype(int)
+                x[:, 5:6] = torch.tensor(new_labels[particle_index],
+                                         device=device)  # set label found by clustering and mapperd to ground truth
+                pos = torch.argwhere(x[:, 5:6] < n_particle_types).squeeze()
+                pos = to_numpy(pos[:, 0]).astype(int)  # filter out cluster not associated with ground truth
+                x = x[pos, :]
+                distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)  # threshold
+                adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
+                edge_index = adj_t.nonzero().t().contiguous()
+                dataset = data.Data(x=x, edge_index=edge_index)
+                with torch.no_grad():
+                    y, in_features, lin_edge_out = model(dataset, data_id=1, training=False, vnorm=vnorm,
+                                                         phi=torch.zeros(1, device=device))  # acceleration estimation
+                y = y * ynorm
+                lin_edge_out = lin_edge_out * ynorm
+
+                # compute ground truth output
+                rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+                psi_output = []
+                for n in range(n_particle_types):
+                    with torch.no_grad():
+                        psi_output.append(model.psi(rr, torch.squeeze(p[n])))
+                        y_B, sum, cohesion, alignment, separation, diffx, diffv, r, type = model_B(dataset)  # acceleration estimation
+
+                if it==0:
+                    lin_edge_out_list=lin_edge_out
+                    diffx_list=diffx
+                    diffv_list=diffv
+                    r_list=r
+                    type_list=type
+                    cohesion_list = cohesion
+                    alignment_list = alignment
+                    separation_list = separation
+                else:
+                    lin_edge_out_list=torch.cat((lin_edge_out_list,lin_edge_out),dim=0)
+                    diffx_list=torch.cat((diffx_list,diffx),dim=0)
+                    diffv_list=torch.cat((diffv_list,diffv),dim=0)
+                    r_list=torch.cat((r_list,r),dim=0)
+                    type_list=torch.cat((type_list,type),dim=0)
+                    cohesion_list=torch.cat((cohesion_list,cohesion),dim=0)
+                    alignment_list=torch.cat((alignment_list,alignment),dim=0)
+                    separation_list=torch.cat((separation_list,separation),dim=0)
+
+            type_list = to_numpy(type_list)
+
+            print(f'fitting with known functions {len(type_list)} points ...')
+            cohesion_fit = np.zeros(n_particle_types)
+            alignment_fit = np.zeros(n_particle_types)
+            separation_fit = np.zeros(n_particle_types)
+            indexes = np.unique(type_list)
+            indexes = indexes.astype(int)
+
+            if False:
+                for n in indexes:
+                    pos = np.argwhere(type_list == n)
+                    pos = pos[:, 0].astype(int)
+                    xdiff = diffx_list[pos, 0:1]
+                    vdiff = diffv_list[pos, 0:1]
+                    rdiff = r_list[pos]
+                    x_data = torch.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
+                    y_data = lin_edge_out_list[pos, 0:1]
+                    xdiff = diffx_list[pos, 1:2]
+                    vdiff = diffv_list[pos, 1:2]
+                    rdiff = r_list[pos]
+                    tmp = torch.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
+                    x_data = torch.cat((x_data, tmp), dim=0)
+                    tmp = lin_edge_out_list[pos, 1:2]
+                    y_data = torch.cat((y_data, tmp), dim=0)
+                    model_pysrr, max_index, max_value = symbolic_regression_multi(x_data, y_data)
+
+            for loop in range(2):
+                for n in indexes:
+                    pos = np.argwhere(type_list == n)
+                    pos = pos[:, 0].astype(int)
+                    xdiff = to_numpy(diffx_list[pos, :])
+                    vdiff = to_numpy(diffv_list[pos, :])
+                    rdiff = to_numpy(r_list[pos])
+                    x_data = np.concatenate((xdiff, vdiff, rdiff[:, None]), axis=1)
+                    y_data = to_numpy(torch.norm(lin_edge_out_list[pos, :], dim=1))
+                    if loop == 0:
+                        lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox')
+                    else:
+                        lin_fit, lin_fitv = curve_fit(boids_model, x_data, y_data, method='dogbox', p0=p00)
+                    cohesion_fit[int(n)] = lin_fit[0]
+                    alignment_fit[int(n)] = lin_fit[1]
+                    separation_fit[int(n)] = lin_fit[2]
+                p00 = [np.mean(cohesion_fit[indexes]), np.mean(alignment_fit[indexes]), np.mean(separation_fit[indexes])]
+
+            threshold = 0.25
+
+            x_data = np.abs(to_numpy(p[:, 0]) * 0.5E-5)
+            y_data = np.abs(cohesion_fit)
+            x_data = x_data[indexes]
+            y_data = y_data[indexes]
+            lin_fit, r_squared, relative_error, not_outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
+
+            fig, ax = fig_init()
+            fmt = lambda x, pos: '{:.1f}e-4'.format((x) * 1e4, pos)
+            ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+            ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+            plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+            for id, n in enumerate(indexes):
+                plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=400)
+            plt.xlabel(r'True cohesion coeff. ', fontsize=56)
+            plt.ylabel(r'Fitted cohesion coeff. ', fontsize=56)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/cohesion_{config_file}_{epoch}.tif", dpi=300)
+            plt.close()
+            print()
+            print(f'cohesion slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)}   threshold {threshold} ')
+            logger.info(f'cohesion slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)}   threshold {threshold} ')
+
+            x_data = np.abs(to_numpy(p[:, 1]) * 5E-4)
+            y_data = alignment_fit
+            x_data = x_data[indexes]
+            y_data = y_data[indexes]
+            lin_fit, r_squared, relative_error, not_outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
+
+            fig, ax = fig_init()
+            fmt = lambda x, pos: '{:.1f}e-2'.format((x) * 1e2, pos)
+            ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+            ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+            plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+            for id, n in enumerate(indexes):
+                plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=400)
+            plt.xlabel(r'True alignement coeff. ', fontsize=56)
+            plt.ylabel(r'Fitted alignement coeff. ', fontsize=56)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/alignment_{config_file}_{epoch}.tif", dpi=300)
+            plt.close()
+            print(f'alignment   slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)}  threshold {threshold} ')
+            logger.info(f'alignment   slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)}  threshold {threshold} ')
+
+            x_data = np.abs(to_numpy(p[:, 2]) * 1E-8)
+            y_data = separation_fit
+            x_data = x_data[indexes]
+            y_data = y_data[indexes]
+            lin_fit, r_squared, relative_error, not_outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
+
+            fig, ax = fig_init()
+            fmt = lambda x, pos: '{:.1f}e-7'.format((x) * 1e7, pos)
+            ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+            ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+            plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+            for id, n in enumerate(indexes):
+                plt.scatter(x_data[id], y_data[id], color=cmap.color(n), s=400)
+            plt.xlabel(r'True separation coeff. ', fontsize=56)
+            plt.ylabel(r'Fitted separation coeff. ', fontsize=56)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/separation_{config_file}_{epoch}.tif", dpi=300)
+            plt.close()
+            print(f'separation   slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)}  threshold {threshold} ')
+            logger.info(f'separation   slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)}  threshold {threshold} ')
 
 def plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
     # Load parameters from config file
@@ -4416,13 +4418,15 @@ def get_figures(index):
         case 'supp8':
             config_list = ['gravity_16', 'gravity_16_continuous', 'Coulomb_3_256']
         case 'supp9':
-            config_list = ['gravity_16_noise_0_4', 'Coulomb_3_noise_0_4'] #'Coulomb_3_noise_0_3', 'gravity_16_noise_0_3'
+            config_list = ['gravity_16_noise_0_4', 'Coulomb_3_noise_0_4', 'Coulomb_3_noise_0_3', 'gravity_16_noise_0_3']
         case 'supp10':
             config_list = [ 'gravity_16_dropout_30', 'Coulomb_3_dropout_10_no_ghost', 'Coulomb_3_dropout_10', 'gravity_16_dropout_10']
         case 'supp11':
-            config_list = ['boids_16_256', 'boids_32_256', 'boids_64_256']
+            config_list = ['boids_16_256']
             epoch_list = ['0_0', '0_2000', '0_10000', '20']
         case 'supp12':
+            config_list = ['boids_16_256', 'boids_32_256', 'boids_64_256']
+        case 'supp13':
             config_list = ['boids_16_256_noise_0_3', 'boids_16_256_noise_0_4', 'boids_16_256_dropout_10', 'boids_16_256_dropout_10_no_ghost']
 
         case '25':
@@ -4519,12 +4523,20 @@ def get_figures(index):
                       best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
                       sample_embedding=False, device=device)
 
-
+        case 'supp11':
+            config = ParticleGraphConfig.from_yaml(f'./config/boids_16_256_bis.yaml')
+            data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex bw', alpha=1, erase=True,
+                          scenario='', ratio=1, bSave=True, step=config.simulation.n_frames // 3)
+            config_file = 'boids_16_256'
+            config = ParticleGraphConfig.from_yaml(f'./config/boids_16_256.yaml')
+            data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True,
+                          scenario='', ratio=1, bSave=True, step=config.simulation.n_frames // 3)
+            data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
+                      best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
+                      sample_embedding=False, device=device)
 
     print(' ')
     print(' ')
-
-
 
     return config_list,epoch_list
 
@@ -4536,18 +4548,18 @@ if __name__ == '__main__':
     print(f'device {device}')
     print(' ')
 
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
 
-    # config_list =['arbitrary_3_sequence_d']
+    config_list =['arbitrary_3_sequence_d']
 
-    config_list = ['Coulomb_3_noise_0_3']
+    config_list = ['gravity_16_dropout_10']
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
         # plot_generated(config=config, run=1, style='latex', step = 5, device=device)
         # plot_focused_on_cell(config=config, run=1, style='latex frame color', cell_id=255, step = 5, device=device)
 
-    # f_list = ['supp10']
+    # f_list = ['supp12']
     # for f in f_list:
     #     config_list,epoch_list = get_figures(f)
 
