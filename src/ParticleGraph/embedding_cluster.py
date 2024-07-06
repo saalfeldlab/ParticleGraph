@@ -3,7 +3,8 @@ import numpy as np
 import scipy.cluster.hierarchy as hcluster
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
-
+from matplotlib import pyplot as plt
+from GNN_particles_PlotFigure import fig_init
 
 class EmbeddingCluster:
     def __init__(self, config):
@@ -79,7 +80,20 @@ def sparsify_cluster(cluster_method, proj_interaction, embedding, cluster_distan
     new_labels = np.ones_like(labels) * n_particle_types
     for n in range(n_particle_types):
         new_labels[labels == label_list[n]] = n
+
+
+    fig,ax = fig_init()
+    ax.scatter(embedding[:, 0], embedding[:, 1], c=labels, s=5, cmap='tab20')
+    plt.close()
+
+    fig,ax = fig_init()
+    ax.scatter(proj_interaction[:, 0], proj_interaction[:, 1], c=labels, s=5, cmap='tab20')
+    plt.close()
+
     return labels, n_clusters, new_labels
+
+
+
 
 
 if __name__ == '__main__':

@@ -1812,6 +1812,7 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
                 x_data_ = x_data[pos[:, 0]]
                 y_data_ = y_data[pos[:, 0]]
                 lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
+                residuals = y_data_ - linear_model(x_data_, *lin_fit)
                 ss_res = np.sum(residuals ** 2)
                 ss_tot = np.sum((y_data - np.mean(y_data_)) ** 2)
                 r_squared = 1 - (ss_res / ss_tot)
@@ -2434,7 +2435,7 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
 
 
         config.training.cluster_method = 'distance_plot'
-        config.training.cluster_distance_threshold = 0.01
+        config.training.cluster_distance_threshold = 0.1
         alpha=0.1
         accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
                                                                        cmap, index_particles, type_list,
@@ -2529,46 +2530,6 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
         if os.path.exists(f"./{log_dir}/results/coeff_pysrr.npy"):
             popt_list = np.load(f"./{log_dir}/results/coeff_pysrr.npy")
 
-            qiqj = torch.tensor(popt_list,device=device)[:,None]
-            pos = torch.argwhere(torch.abs(qiqj)<10)
-            qiqj = qiqj[pos[:,0]]
-
-            model_qs = model_qiqj(3,device)
-            optimizer = torch.optim.Adam(model_qs.parameters(), lr=1E-2)
-            qiqj_list=[]
-            loss_list=[]
-            for it in trange(20000):
-
-                sample = np.random.randint(0, qiqj.shape[0]-10)
-                qiqj_ = qiqj[sample:sample+10]
-
-                optimizer.zero_grad()
-                qs = model_qs()
-                distance = torch.sum((qiqj_[:, None] - qs[None, :]) ** 2, dim=2)
-                result = distance.min(dim=1)
-                min_value = result.values
-                min_index = result.indices
-                loss = torch.mean(min_value) + torch.max(min_value)
-                loss.backward()
-                optimizer.step()
-                if it % 100 == 0:
-                    qiqj_list.append(to_numpy(model_qs.qiqj))
-                    loss_list.append(to_numpy(loss))
-
-            qiqj_list = np.array(qiqj_list).squeeze()
-            print(to_numpy(model_qs.qiqj))
-
-            fig,ax=fig_init()
-            plt.plot(qiqj_list[:,0])
-            plt.plot(qiqj_list[:,1])
-            plt.plot(qiqj_list[:,2])
-
-            qiqj_list = np.load(f"./{log_dir}/results/qiqj.npy")
-            qiqj=[]
-            for n in range(0,len(qiqj_list),5):
-                qiqj.append(qiqj_list[n])
-            qiqj_list = np.array(qiqj)
-
         else:
             print('curve fitting ...')
             text_trap = StringIO()
@@ -2586,12 +2547,18 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
             np.save(f"./{log_dir}/results/coeff_pysrr.npy", popt_list)
             np.save(f"./{log_dir}/results/qiqj.npy", qiqj_list)
 
-        threshold = 0.25
+        qiqj_list = np.load(f"./{log_dir}/results/qiqj.npy")
+        qiqj = []
+        for n in range(0, len(qiqj_list), 5):
+            qiqj.append(qiqj_list[n])
+        qiqj_list = np.array(qiqj)
+
+        threshold = 0.5
 
         fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
         x_data = qiqj_list.squeeze()
         y_data = popt_list.squeeze()
-        lin_fit, r_squared, relative_error, outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
+        pysrr_qiqjlin_fit, r_squared, relative_error, not_outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
         plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
         plt.scatter(qiqj_list, popt_list, color='k', s=200, alpha=0.1)
         plt.xlim([-2.5, 5])
@@ -2604,6 +2571,55 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
 
         print(f'slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
         logger.info(f'slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)} ')
+
+        print(f'pysrr_qiqj relative error: {100*np.round(np.mean(relative_error), 2)}+/-{100*np.round(np.std(relative_error), 2)}')
+        print(f'pysrr_qiqj relative error wo outliers: {100*np.round(np.mean(relative_error[pos[:, 0]]), 2)}+/-{100*np.round(np.std(relative_error[pos[:, 0]]), 2)}')
+        logger.info(f'pysrr_qiqj relative error: {100*np.round(np.mean(relative_error), 2)}+/-{100*np.round(np.std(relative_error), 2)}')
+        logger.info(f'pysrr_qiqj relative error wo outliers: {100*np.round(np.mean(relative_error[pos[:, 0]]), 2)}+/-{100*np.round(np.std(relative_error[pos[:, 0]]), 2)}')
+
+        # qi retrieval
+
+
+        qiqj = torch.tensor(popt_list, device=device)[:, None]
+        qiqj = qiqj[outliers[:, 0]]
+
+        model_qs = model_qiqj(3, device)
+        optimizer = torch.optim.Adam(model_qs.parameters(), lr=1E-2)
+        qiqj_list = []
+        loss_list = []
+        for it in trange(20000):
+
+            sample = np.random.randint(0, qiqj.shape[0] - 10)
+            qiqj_ = qiqj[sample:sample + 10]
+
+            optimizer.zero_grad()
+            qs = model_qs()
+            distance = torch.sum((qiqj_[:, None] - qs[None, :]) ** 2, dim=2)
+            result = distance.min(dim=1)
+            min_value = result.values
+            min_index = result.indices
+            loss = torch.mean(min_value) + torch.max(min_value)
+            loss.backward()
+            optimizer.step()
+            if it % 100 == 0:
+                qiqj_list.append(to_numpy(model_qs.qiqj))
+                loss_list.append(to_numpy(loss))
+        qiqj_list = np.array(qiqj_list).squeeze()
+
+
+        print('qi')
+        print(np.round(to_numpy(model_qs.qiqj[2].squeeze()),3), np.round(to_numpy(model_qs.qiqj[1].squeeze()),3),np.round(to_numpy(model_qs.qiqj[0].squeeze()),3) )
+        logger.info('qi')
+        logger.info(np.round(to_numpy(model_qs.qiqj[2].squeeze()),3), np.round(to_numpy(model_qs.qiqj[1].squeeze()),3),np.round(to_numpy(model_qs.qiqj[0].squeeze()),3) )
+
+        fig, ax = fig_init()
+        plt.plot(qiqj_list[:, 0], linewidth=4)
+        plt.plot(qiqj_list[:, 1], linewidth=4)
+        plt.plot(qiqj_list[:, 2], linewidth=4)
+        plt.xlabel('iteration',fontsize=78)
+        plt.ylabel(r'$q_i$',fontsize=78)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/qi_{config_file}_{epoch}.tif", dpi=170)
 
 
 def plot_boids(config_file, epoch_list, log_dir, logger, device):
@@ -2768,7 +2784,7 @@ def plot_boids(config_file, epoch_list, log_dir, logger, device):
         y_data = np.abs(cohesion_fit)
         x_data = x_data[indexes]
         y_data = y_data[indexes]
-        lin_fit, r_squared, relative_error, outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
+        lin_fit, r_squared, relative_error, not_outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
 
         fig, ax = fig_init()
         fmt = lambda x, pos: '{:.1f}e-4'.format((x) * 1e4, pos)
@@ -2788,7 +2804,7 @@ def plot_boids(config_file, epoch_list, log_dir, logger, device):
         y_data = alignment_fit
         x_data = x_data[indexes]
         y_data = y_data[indexes]
-        lin_fit, r_squared, relative_error, outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
+        pysrr_qiqjlin_fit, r_squared, relative_error, not_outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
 
         fig, ax = fig_init()
         fmt = lambda x, pos: '{:.1f}e-2'.format((x) * 1e2, pos)
@@ -2808,7 +2824,7 @@ def plot_boids(config_file, epoch_list, log_dir, logger, device):
         y_data = separation_fit
         x_data = x_data[indexes]
         y_data = y_data[indexes]
-        lin_fit, r_squared, relative_error, outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
+        pysrr_qiqjlin_fit, r_squared, relative_error, not_outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
 
         fig, ax = fig_init()
         fmt = lambda x, pos: '{:.1f}e-7'.format((x) * 1e7, pos)
@@ -4359,7 +4375,7 @@ def data_plot(config, config_file, epoch_list, device):
         case 'PDE_E':
             plot_Coulomb(config_file, epoch_list, log_dir, logger, device)
         case 'PDE_G':
-            if config_file == 'gravity_100':
+            if config_file == 'gravity_continuous':
                 plot_gravity_continuous(config_file, epoch_list, log_dir, logger, device)
             else:
                 plot_gravity(config_file, epoch_list, log_dir, logger, device)
@@ -4520,16 +4536,16 @@ if __name__ == '__main__':
     print(f'device {device}')
     print(' ')
 
-    # matplotlib.use("Qt5Agg")
+    matplotlib.use("Qt5Agg")
 
     # config_list =['arbitrary_3_sequence_d']
 
-    config_list = ['gravity_16_noise_0_4']
+    config_list = ['Coulomb_3_noise_0_3']
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
-        plot_generated(config=config, run=1, style='latex', step = 5, device=device)
-        plot_focused_on_cell(config=config, run=1, style='latex frame color', cell_id=255, step = 5, device=device)
+        # plot_generated(config=config, run=1, style='latex', step = 5, device=device)
+        # plot_focused_on_cell(config=config, run=1, style='latex frame color', cell_id=255, step = 5, device=device)
 
     # f_list = ['supp10']
     # for f in f_list:

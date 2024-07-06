@@ -1,5 +1,5 @@
 description: 'Gravity model with 16 different particle types'
-dataset: 'gravity_100'
+dataset: 'gravity_continuous'
 
 simulation:
     params: [[-1]]
