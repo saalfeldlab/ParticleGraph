@@ -2904,6 +2904,7 @@ def plot_boids(config_file, epoch_list, log_dir, logger, device):
             print(f'separation   slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)}  threshold {threshold} ')
             logger.info(f'separation   slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  outliers: {np.sum(relative_error > threshold)}  threshold {threshold} ')
 
+
 def plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
@@ -2954,9 +2955,6 @@ def plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
         index = np.argwhere(x_mesh[:, 5].detach().cpu().numpy() == n)
         index_nodes.append(index.squeeze())
 
-    # plt.rcParams['text.usetex'] = True
-    # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-    # matplotlib.use("Qt5Agg")
 
     if has_pic:
         i0 = imread(f'graphs_data/{config.simulation.node_type_map}')
@@ -2979,8 +2977,8 @@ def plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
 
     fig, ax = fig_init()
     fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
-    axf.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-    axf.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+    ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+    ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
     plt.imshow(coeff, cmap=cc, vmin=0, vmax=vm)
     plt.xlabel(r'$x$', fontsize=78)
     plt.ylabel(r'$y$', fontsize=78)
@@ -3043,8 +3041,8 @@ def plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
 
         fig, ax = fig_init()
         fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
-        axf.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        axf.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+        ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+        ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
         plt.imshow(t, cmap=cc, vmin=0, vmax=vm)
         # plt.xlabel(r'$x$', fontsize=78)
         # plt.ylabel(r'$y$', fontsize=78)
@@ -3743,12 +3741,12 @@ def plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
             t_ = np.flipud(t_)
             t_ = np.fliplr(t_)
             fig_ = plt.figure(figsize=(12, 12))
-            axf = fig_.add_subplot(1, 1, 1)
-            axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-            axf.yaxis.set_major_locator(plt.MaxNLocator(3))
+            ax = fig_.add_subplot(1, 1, 1)
+            ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+            ax.yaxis.set_major_locator(plt.MaxNLocator(3))
             fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
-            axf.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-            axf.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+            ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+            ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
             plt.imshow(t_, cmap=cc, vmin=0, vmax=vm)
             plt.xlabel(r'$x$', fontsize=78)
             plt.ylabel(r'$y$', fontsize=78)
@@ -3813,8 +3811,8 @@ def plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
 
                     fig, ax = fig_init()
                     fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
-                    axf.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-                    axf.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                    ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                    ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
                     plt.imshow(t_ * to_numpy(hnorm), cmap=cc, vmin=0, vmax=1)
                     plt.xlabel(r'$x$', fontsize=78)
                     plt.ylabel(r'$y$', fontsize=78)
@@ -3843,8 +3841,8 @@ def plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
 
                 fig, ax = fig_init()
                 fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
-                axf.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-                axf.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
                 plt.imshow(t_ * to_numpy(hnorm), cmap=cc, vmin=0, vmax=vm)
                 plt.xlabel(r'$x$', fontsize=78)
                 plt.ylabel(r'$y$', fontsize=78)
@@ -3854,7 +3852,7 @@ def plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
                 plt.close()
 
         fig_ = plt.figure(figsize=(12, 12))
-        axf = fig_.add_subplot(1, 1, 1)
+        ax = fig_.add_subplot(1, 1, 1)
 
         pos = torch.argwhere(mask_mesh == 1)
         pos = to_numpy(pos[:, 0]).astype(int)
@@ -3865,10 +3863,10 @@ def plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
         x_data = x_data[pos]
         y_data = y_data[pos]
 
-        axf.xaxis.set_major_locator(plt.MaxNLocator(3))
-        axf.yaxis.set_major_locator(plt.MaxNLocator(3))
-        axf.xaxis.set_major_formatter(FormatStrFormatter('%.3f'))
-        axf.yaxis.set_major_formatter(FormatStrFormatter('%.3f'))
+        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+        ax.xaxis.set_major_formatter(FormatStrFormatter('%.3f'))
+        ax.yaxis.set_major_formatter(FormatStrFormatter('%.3f'))
         plt.scatter(x_data, y_data, c='k', s=100, alpha=0.01)
         plt.ylabel(r'Reconstructed diffusion coeff.', fontsize=48)
         plt.xlabel(r'True diffusion coeff.', fontsize=48)
@@ -4427,7 +4425,13 @@ def get_figures(index):
         case 'supp12':
             config_list = ['boids_16_256', 'boids_32_256', 'boids_64_256']
         case 'supp13':
-            config_list = ['boids_16_256_noise_0_3', 'boids_16_256_noise_0_4', 'boids_16_256_dropout_10', 'boids_16_256_dropout_10_no_ghost']
+            config_list = ['boids_16_noise_0_3', 'boids_16_noise_0_4', 'boids_16_dropout_10', 'boids_16_dropout_10_no_ghost']
+        case 'supp15':
+            config_list = ['wave_slit']
+            epoch_list = ['0_1000', '0_2000', '0_5000', '20']
+        case 'supp16':
+            config_list = ['wave_boat']
+            epoch_list = ['0_1000', '0_2000', '0_5000', '20']
 
         case '25':
             config_list = ['signal_N_100_2_a', 'signal_N_100_2_b', 'signal_N_100_2_c', 'signal_N_100_2_d']
@@ -4436,7 +4440,7 @@ def get_figures(index):
 
 
     match index:
-        case '3' | '4' | 'supp4' | 'supp5' | 'supp6' | 'supp7' | 'supp8' | 'supp9' | 'supp10' | 'supp11' | 'supp12' | '25':
+        case '3' | '4' | 'supp4' | 'supp5' | 'supp6' | 'supp7' | 'supp8' | 'supp9' | 'supp10' | 'supp11' | 'supp12' | 'supp13' | 'supp15' | 'supp16' | '25':
             for config_file in config_list:
                 config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
                 data_plot(config=config, config_file=config_file, epoch_list=epoch_list, device=device)
@@ -4535,6 +4539,58 @@ def get_figures(index):
                       best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
                       sample_embedding=False, device=device)
 
+        case 'supp14':
+            config = ParticleGraphConfig.from_yaml(f'./config/boids_16_256_bis.yaml')
+            data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1,
+                          erase=True,
+                          scenario='stripes', ratio=4, bSave=True, step=config.simulation.n_frames // 7)
+            config_file = f'boids_16_256_bis'
+            config = ParticleGraphConfig.from_yaml(f'./config/boids_16_256_bis.yaml')
+            data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
+                      best_model=20, run=1, step=config.simulation.n_frames // 7, test_simulation=False,
+                      sample_embedding=True, device=device)
+
+            for n in range(16):
+                # copyfile(f'./config/boids_16_256.yaml', f'./config/boids_16_256_{n}.yaml')
+                config_file = f'boids_16_256_{n}'
+                config = ParticleGraphConfig.from_yaml(f'./config/boids_16_256_{n}.yaml')
+                data_generate(config, device=device, visualize=True, run_vizualized=1, style='no_ticks color', alpha=1, erase=True,
+                              scenario=f'uniform {n}', ratio=4, bSave=True, step=config.simulation.n_frames // 3)
+                data_test(config=config, config_file=config_file, visualize=True, style='no_ticks color', verbose=False,
+                          best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
+                          sample_embedding=True, device=device)
+
+        case 'supp15':
+            config = ParticleGraphConfig.from_yaml(f'./config/wave_slit.yaml')
+            data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True,
+                          scenario='', ratio=1, bSave=True, step=config.simulation.n_frames // 3)
+            config_file = 'wave_slit_bis'
+            config = ParticleGraphConfig.from_yaml(f'./config/wave_slit_bis.yaml')
+            data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1,
+                          erase=True,
+                          scenario='', ratio=1, bSave=True, step=config.simulation.n_frames // 3)
+            config_file = 'wave_slit_bis'
+            config = ParticleGraphConfig.from_yaml(f'./config/wave_slit_bis.yaml')
+            data_test(config=config, config_file=config_file, visualize=True, style='latex color', verbose=False,
+                      best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
+                      sample_embedding=True, device=device)
+
+        case 'supp16':
+            config = ParticleGraphConfig.from_yaml(f'./config/wave_boat.yaml')
+            data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True,
+                          scenario='', ratio=1, bSave=True, step=config.simulation.n_frames // 3)
+            config_file = 'wave_boat_bis'
+            config = ParticleGraphConfig.from_yaml(f'./config/wave_slit_bis.yaml')
+            data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1,
+                          erase=True,
+                          scenario='', ratio=1, bSave=True, step=config.simulation.n_frames // 3)
+            config_file = 'wave_boat_bis'
+            config = ParticleGraphConfig.from_yaml(f'./config/wave_slit_bis.yaml')
+            data_test(config=config, config_file=config_file, visualize=True, style='latex color', verbose=False,
+                      best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
+                      sample_embedding=True, device=device)
+
+
     print(' ')
     print(' ')
 
@@ -4550,16 +4606,16 @@ if __name__ == '__main__':
 
     # matplotlib.use("Qt5Agg")
 
-    config_list =['arbitrary_3_sequence_d']
+    # config_list =['arbitrary_3_sequence_d']
 
-    config_list = ['gravity_16_dropout_10']
+    config_list = ['gravity_16_dropout_30']
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
         # plot_generated(config=config, run=1, style='latex', step = 5, device=device)
         # plot_focused_on_cell(config=config, run=1, style='latex frame color', cell_id=255, step = 5, device=device)
 
-    # f_list = ['supp12']
+    # f_list = ['supp16']
     # for f in f_list:
     #     config_list,epoch_list = get_figures(f)
 

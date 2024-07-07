@@ -144,7 +144,7 @@ def choose_model(config, device):
     return model, bc_pos, bc_dpos
 
 
-def choose_mesh_model(config, device):
+def choose_mesh_model(config, X1_mesh, device):
     mesh_model_name = config.graph_model.mesh_model_name
     n_node_types = config.simulation.n_node_types
     aggr_type = config.graph_model.mesh_aggr_type
@@ -153,10 +153,11 @@ def choose_mesh_model(config, device):
     if mesh_model_name =='':
         mesh_model = []
     else:
-        c = initialize_random_values(n_node_types, device)
-        if not('pics' in config.simulation.node_type_map):
-            for n in range(n_node_types):
-                c[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
+        # c = initialize_random_values(n_node_types, device)
+        # if not('pics' in config.simulation.node_coeff_map):
+        #     for n in range(n_node_types):
+        #         c[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
+
         beta = config.simulation.beta
 
         match mesh_model_name:
@@ -169,7 +170,7 @@ def choose_mesh_model(config, device):
             case 'RD_RPS_Mesh_bis':
                 mesh_model = RD_RPS(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
             case 'DiffMesh' | 'WaveMesh':
-                mesh_model = PDE_Laplacian(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
+                mesh_model = PDE_Laplacian(aggr_type=aggr_type, beta=beta, bc_dpos=bc_dpos)
             case 'Chemotaxism_Mesh':
                 c = initialize_random_values(n_node_types, device)
                 for n in range(n_node_types):
@@ -182,6 +183,13 @@ def choose_mesh_model(config, device):
                 mesh_model = PDE_Laplacian(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
             case _:
                 mesh_model = PDE_Z(device=device)
+
+
+        i0 = imread(f'graphs_data/{config.simulation.node_coeff_map}')
+        i0 = np.flipud(i0)
+        values = i0[(to_numpy(X1_mesh[:, 1]) * 255).astype(int), (to_numpy(X1_mesh[:, 0]) * 255).astype(int)]
+        values = np.reshape(values,len(X1_mesh))
+        mesh_model.coeff = torch.tensor(values, device=device, dtype=torch.float32)[:, None]
 
     return mesh_model
 
@@ -331,12 +339,12 @@ def get_time_series(x_list, cell_id, feature):
     return to_numpy(torch.stack(time_series))
 
 
-def init_mesh(config, model_mesh, device):
+def init_mesh(config, device):
     simulation_config = config.simulation
     n_nodes = simulation_config.n_nodes
     n_particles = simulation_config.n_particles
     node_value_map = simulation_config.node_value_map
-    node_type_map = simulation_config.node_type_map
+    node_coeff_map = simulation_config.node_coeff_map
 
     n_nodes_per_axis = int(np.sqrt(n_nodes))
     xs = torch.linspace(1 / (2 * n_nodes_per_axis), 1 - 1 / (2 * n_nodes_per_axis), steps=n_nodes_per_axis)
@@ -355,7 +363,8 @@ def init_mesh(config, model_mesh, device):
     else:
         i0 = imread(f'graphs_data/{node_value_map}')
         i0 = np.flipud(i0)
-    values = i0[(to_numpy(pos_mesh[:, 0]) * 255).astype(int), (to_numpy(pos_mesh[:, 1]) * 255).astype(int)]
+    values = i0[(to_numpy(pos_mesh[:, 1]) * 255).astype(int), (to_numpy(pos_mesh[:, 0]) * 255).astype(int)]
+
 
     mask_mesh = (x_mesh > torch.min(x_mesh) + 0.02) & (x_mesh < torch.max(x_mesh) - 0.02) & (y_mesh > torch.min(y_mesh) + 0.02) & (y_mesh < torch.max(y_mesh) - 0.02)
 
@@ -386,12 +395,12 @@ def init_mesh(config, model_mesh, device):
             pos_mesh[:, 0] = features_mesh[:, 0] + (3 / 8) * mesh_size * torch.cos(features_mesh[:, 2])
             pos_mesh[:, 1] = features_mesh[:, 1] + (3 / 8) * mesh_size * torch.sin(features_mesh[:, 2])
 
-    # i0 = imread(f'graphs_data/{node_type_map}')
+    # i0 = imread(f'graphs_data/{node_coeff_map}')
     # values = i0[(to_numpy(x_mesh[:, 0]) * 255).astype(int), (to_numpy(y_mesh[:, 0]) * 255).astype(int)]
     # type_mesh = torch.tensor(values, device=device)
     # type_mesh = type_mesh[:, None]
 
-    i0 = imread(f'graphs_data/{node_type_map}')
+    i0 = imread(f'graphs_data/{node_coeff_map}')
     values = i0[(to_numpy(x_mesh[:, 0]) * 255).astype(int), (to_numpy(y_mesh[:, 0]) * 255).astype(int)]
     if np.max(values) > 0:
         values = np.round(values / np.max(values) * (simulation_config.n_node_types-1))

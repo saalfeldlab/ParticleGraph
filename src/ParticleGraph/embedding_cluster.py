@@ -82,13 +82,13 @@ def sparsify_cluster(cluster_method, proj_interaction, embedding, cluster_distan
         new_labels[labels == label_list[n]] = n
 
 
-    fig,ax = fig_init()
-    ax.scatter(embedding[:, 0], embedding[:, 1], c=labels, s=5, cmap='tab20')
-    plt.close()
-
-    fig,ax = fig_init()
-    ax.scatter(proj_interaction[:, 0], proj_interaction[:, 1], c=labels, s=5, cmap='tab20')
-    plt.close()
+    # fig,ax = fig_init()
+    # ax.scatter(embedding[:, 0], embedding[:, 1], c=labels, s=5, cmap='tab20')
+    # plt.close()
+    #
+    # fig,ax = fig_init()
+    # ax.scatter(proj_interaction[:, 0], proj_interaction[:, 1], c=labels, s=5, cmap='tab20')
+    # plt.close()
 
     return labels, n_clusters, new_labels
 

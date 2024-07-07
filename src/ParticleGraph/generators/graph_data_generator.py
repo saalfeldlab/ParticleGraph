@@ -330,14 +330,14 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                             plt.ylabel(r'$y$', fontsize=78)
                             plt.xticks(fontsize=48.0)
                             plt.yticks(fontsize=48.0)
-                        elif 'frame' in style:
+                        if 'frame' in style:
                             plt.xlabel('x', fontsize=48)
                             plt.ylabel('y', fontsize=48)
                             plt.xticks(fontsize=48.0)
                             plt.yticks(fontsize=48.0)
                             ax.tick_params(axis='both', which='major', pad=15)
                             plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=48)
-                        else:
+                        if 'no_ticks' in style:
                             plt.xticks([])
                             plt.yticks([])
                         plt.tight_layout()
@@ -683,18 +683,15 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
     files = glob.glob(f'./graphs_data/graphs_{dataset_name}/generated_data/*')
     for f in files:
         os.remove(f)
-    mesh_model = choose_mesh_model(config, device=device)
 
     for run in range(config.training.n_runs):
 
-        X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, model_mesh=mesh_model, device=device)
+        X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
+
+        mesh_model = choose_mesh_model(config=config, X1_mesh=X1_mesh, device=device)
+
         torch.save(mesh_data, f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt')
         mask_mesh = mesh_data['mask'].squeeze()
-        if 'pics' in simulation_config.node_type_map:
-            i0 = imread(f'graphs_data/{simulation_config.node_type_map}')
-            values = i0[(to_numpy(X1_mesh[:, 0]) * 255).astype(int), (to_numpy(X1_mesh[:, 1]) * 255).astype(int)]
-            values = np.reshape(values,len(X1_mesh))
-            mesh_model.coeff = torch.tensor(values, device=device, dtype=torch.float32)[:, None]
 
         time.sleep(0.5)
         x_mesh_list=[]
