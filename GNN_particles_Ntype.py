@@ -35,7 +35,7 @@ from ParticleGraph.utils import *
 
 if __name__ == '__main__':
 
-    config_list =['wave_logo'] #['wave_slit'] #['wave_boat', 'wave_logo']
+    config_list =['boids_16_dropout_10'] #['wave_slit'] #['wave_boat', 'wave_logo']
 
     seed_list = np.arange(10)
 

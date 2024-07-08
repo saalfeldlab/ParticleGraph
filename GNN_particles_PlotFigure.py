@@ -4540,6 +4540,17 @@ def get_figures(index):
                       sample_embedding=False, device=device)
 
         case 'supp14':
+
+            r=[]
+            for n in range(16):
+                result = np.load(f'./log/try_boids_16_256_{n}/rmserr_geomloss_boids_16_256_{n}.npy')
+                print (n,result)
+                r.append(result)
+
+            print('mean',np.mean(r,axis=0))
+
+
+
             config = ParticleGraphConfig.from_yaml(f'./config/boids_16_256_bis.yaml')
             data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1,
                           erase=True,
@@ -4615,7 +4626,7 @@ if __name__ == '__main__':
         # plot_generated(config=config, run=1, style='latex', step = 5, device=device)
         # plot_focused_on_cell(config=config, run=1, style='latex frame color', cell_id=255, step = 5, device=device)
 
-    # f_list = ['supp16']
+    # f_list = ['supp14']
     # for f in f_list:
     #     config_list,epoch_list = get_figures(f)
 

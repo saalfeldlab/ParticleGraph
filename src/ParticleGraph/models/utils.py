@@ -254,7 +254,8 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
 
         fig = plt.figure(figsize=(8, 8))
         t = np.reshape(t, (100, 100))
-        plt.imshow(t, cmap='viridis')
+        t = np.flipud(t)
+        plt.imshow(t, cmap='gray')
         plt.xticks([])
         plt.yticks([])
         plt.tight_layout()
