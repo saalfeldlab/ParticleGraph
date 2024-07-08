@@ -2920,8 +2920,7 @@ def plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
     n_runs = config.training.n_runs
     embedding_cluster = EmbeddingCluster(config)
     cmap = CustomColorMap(config=config)
-    node_type_map = config.simulation.node_type_map
-    has_pic = 'pics' in config.simulation.node_type_map
+    node_coeff_map = config.simulation.node_coeff_map
 
     vnorm = torch.tensor(1.0, device=device)
     ynorm = torch.tensor(1.0, device=device)
@@ -2955,24 +2954,12 @@ def plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
         index = np.argwhere(x_mesh[:, 5].detach().cpu().numpy() == n)
         index_nodes.append(index.squeeze())
 
+    i0 = imread(f'graphs_data/{config.simulation.node_coeff_map}')
+    coeff = i0[(to_numpy(x_mesh[:, 1]) * 255).astype(int), (to_numpy(x_mesh[:, 2]) * 255).astype(int)] / 255
+    coeff_ = coeff
+    coeff = np.reshape(coeff, (n_nodes_per_axis, n_nodes_per_axis))
+    coeff = np.flipud(coeff) * config.simulation.beta
 
-    if has_pic:
-        i0 = imread(f'graphs_data/{config.simulation.node_type_map}')
-        coeff = i0[(to_numpy(x_mesh[:, 1]) * 255).astype(int), (to_numpy(x_mesh[:, 2]) * 255).astype(int)] / 255
-        coeff_ = coeff
-        coeff = np.reshape(coeff, (n_nodes_per_axis, n_nodes_per_axis))
-        coeff = np.flipud(coeff) * config.simulation.beta
-    else:
-        c = initialize_random_values(n_node_types, device)
-        for n in range(n_node_types):
-            c[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
-        c = to_numpy(c)
-        i0 = imread(f'graphs_data/{node_type_map}')
-        values = i0[(to_numpy(x_mesh[:, 1]) * 255).astype(int), (to_numpy(x_mesh[:, 2]) * 255).astype(int)]
-        features_mesh = values
-        coeff = c[features_mesh]
-        coeff = np.reshape(coeff, (n_nodes_per_axis, n_nodes_per_axis)) * config.simulation.beta
-        coeff = np.flipud(coeff)
     vm = np.max(coeff)
 
     fig, ax = fig_init()
@@ -2986,10 +2973,6 @@ def plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
     # cbar.ax.tick_params(labelsize=32)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/true_wave_coeff_{config_file}.tif", dpi=300)
-
-    epochlist = ['0_1000', '0_2000', '0_5000', '1', '5', '20']
-
-    epochlist = glob.glob(f"./log/try_{config_file}/models/*.pt")
 
     for net in epochlist:
 
@@ -3097,7 +3080,6 @@ def plot_particle_field(config_file, epoch_list, log_dir, logger, cc, device):
     n_particles = config.simulation.n_particles
     n_nodes = config.simulation.n_nodes
     n_node_types = config.simulation.n_node_types
-    node_type_map = config.simulation.node_type_map
     node_value_map = config.simulation.node_value_map
     has_video = 'video' in node_value_map
     n_nodes_per_axis = int(np.sqrt(n_nodes))
@@ -3468,8 +3450,7 @@ def plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
     aggr_type = config.graph_model.aggr_type
     delta_t = config.simulation.delta_t
     cmap = CustomColorMap(config=config)
-    node_type_map = config.simulation.node_type_map
-    has_pic = 'pics' in config.simulation.node_type_map
+    node_coeff_map = config.simulation.node_coeff_map
 
     embedding_cluster = EmbeddingCluster(config)
 
@@ -3509,24 +3490,13 @@ def plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     matplotlib.use("Qt5Agg")
 
-    if has_pic:
-        i0 = imread(f'graphs_data/{config.simulation.node_type_map}')
-        coeff = i0[(to_numpy(x_mesh[:, 1]) * 255).astype(int), (to_numpy(x_mesh[:, 2]) * 255).astype(int)]
-        coeff_ = coeff
-        coeff = np.reshape(coeff, (n_nodes_per_axis, n_nodes_per_axis))
-        coeff = np.flipud(coeff) * config.simulation.beta
-    else:
-        c = initialize_random_values(n_node_types, device)
-        for n in range(n_node_types):
-            c[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
-        c = to_numpy(c)
-        i0 = imread(f'graphs_data/{node_type_map}')
-        values = i0[(to_numpy(x_mesh[:, 1]) * 255).astype(int), (to_numpy(x_mesh[:, 2]) * 255).astype(int)]
-        features_mesh = values
-        coeff = c[features_mesh]
-        coeff = np.reshape(coeff, (n_nodes_per_axis, n_nodes_per_axis)) * config.simulation.beta
-        coeff = np.flipud(coeff)
-        coeff = np.fliplr(coeff)
+
+    i0 = imread(f'graphs_data/{config.simulation.node_coeff_map}')
+    coeff = i0[(to_numpy(x_mesh[:, 1]) * 255).astype(int), (to_numpy(x_mesh[:, 2]) * 255).astype(int)]
+    coeff_ = coeff
+    coeff = np.reshape(coeff, (n_nodes_per_axis, n_nodes_per_axis))
+    coeff = np.flipud(coeff) * config.simulation.beta
+
     vm = np.max(coeff)
     print(f'vm: {vm}')
 
@@ -4615,19 +4585,20 @@ if __name__ == '__main__':
     print(f'device {device}')
     print(' ')
 
-    # matplotlib.use("Qt5Agg")
+    matplotlib.use("Qt5Agg")
 
     # config_list =['arbitrary_3_sequence_d']
+    # config_list = ['boids_16_dropout_10']
 
-    config_list = ['gravity_16_dropout_30']
-    for config_file in config_list:
-        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
-        # plot_generated(config=config, run=1, style='latex', step = 5, device=device)
-        # plot_focused_on_cell(config=config, run=1, style='latex frame color', cell_id=255, step = 5, device=device)
+    # config_list = ['wave_slit']
+    # for config_file in config_list:
+    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+    #     data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
+    #     # plot_generated(config=config, run=1, style='latex', step = 5, device=device)
+    #     # plot_focused_on_cell(config=config, run=1, style='latex frame color', cell_id=255, step = 5, device=device)
 
-    # f_list = ['supp14']
-    # for f in f_list:
-    #     config_list,epoch_list = get_figures(f)
+    f_list = ['supp15']
+    for f in f_list:
+        config_list,epoch_list = get_figures(f)
 
 
