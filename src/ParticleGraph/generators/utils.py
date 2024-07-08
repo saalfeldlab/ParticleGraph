@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 # matplotlib.use("Qt5Agg")
 from tifffile import imread
-from ParticleGraph.generators import PDE_A, PDE_B, PDE_B_bis, PDE_E, PDE_G, PDE_GS, PDE_N, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, \
+from ParticleGraph.generators import PDE_A, PDE_B, PDE_B_bis, PDE_B_mass, PDE_E, PDE_G, PDE_GS, PDE_N, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, \
     PDE_Laplacian, PDE_O
 from ParticleGraph.utils import choose_boundary_values
 from ParticleGraph.data_loaders import load_solar_system
@@ -109,6 +109,14 @@ def choose_model(config, device):
             else:
                 print(p)
             model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
+        case 'PDE_B_mass':
+            p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
+            if params[0] != [-1]:
+                for n in range(n_particle_types):
+                    p[n] = torch.tensor(params[n])
+            else:
+                print(p)
+            model = PDE_B_mass(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
         case 'PDE_B_bis':
             p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
             if params[0] != [-1]:
@@ -263,7 +271,7 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
     return pos, dpos, type, features, age, particle_id
 
 
-def init_cells(config, device):
+def init_cells(config, device, scenario="None"):
     simulation_config = config.simulation
     n_particles = simulation_config.n_particles
     n_particle_types = simulation_config.n_particle_types

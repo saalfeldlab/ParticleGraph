@@ -2,6 +2,7 @@ from .PDE_Laplacian import PDE_Laplacian
 from .PDE_A import PDE_A
 from .PDE_B import PDE_B
 from .PDE_B_bis import PDE_B_bis
+from .PDE_B_mass import PDE_B_mass
 from .PDE_E import PDE_E
 from .PDE_G import PDE_G
 from .PDE_GS import PDE_GS
@@ -14,4 +15,4 @@ from .RD_RPS import RD_RPS
 from .graph_data_generator import *
 from .utils import choose_model, choose_mesh_model, init_particles, init_mesh
 
-__all__ = [utils, graph_data_generator, PDE_Laplacian, PDE_A,PDE_B, PDE_B_bis, PDE_E, PDE_G, PDE_GS, PDE_N, PDE_O, PDE_Z, RD_FitzHugh_Nagumo, RD_Gray_Scott, RD_RPS, choose_model, choose_mesh_model, init_particles, init_mesh]
+__all__ = [utils, graph_data_generator, PDE_Laplacian, PDE_A,PDE_B, PDE_B_bis, PDE_B_mass, PDE_E, PDE_G, PDE_GS, PDE_N, PDE_O, PDE_Z, RD_FitzHugh_Nagumo, RD_Gray_Scott, RD_RPS, choose_model, choose_mesh_model, init_particles, init_mesh]

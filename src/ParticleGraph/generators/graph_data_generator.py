@@ -380,7 +380,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
     marker_size = config.plotting.marker_size
 
     max_radius_list = []
-    edges_len_list = []index_particles[n]
+    edges_len_list = []
     folder = f'./graphs_data/graphs_{dataset_name}/'
     os.makedirs(folder, exist_ok=True)
     os.makedirs(f'./graphs_data/graphs_{dataset_name}/generated_data/', exist_ok=True)
@@ -409,6 +409,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
         x_list = []
         y_list = []
+        x_len_list = []
         edge_p_p_list = []
 
         # initialize cell states
@@ -647,7 +648,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         # plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
                         #             s=marker_size, color=cmap.color(n))
 
-                        size = set_size(x, index_particles[n], 10)
+                        size = set_size(x, index_particles[n], 10)/10
 
                         plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
                                     s=size, color=cmap.color(n))

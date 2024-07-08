@@ -48,7 +48,7 @@ def set_size(x, particles, mass_index):
     # particles = index_particles[n]
 
     #size = 5 * np.power(3, ((to_numpy(x[index_particles[n] , -2]) - 200)/100)) + 10
-    size = ((to_numpy(x[particles , mass_index])) - 50)/10 + 10
+    size = np.power((to_numpy(x[particles , mass_index])), 1.2)/1.5
 
     return size   
 
@@ -359,6 +359,8 @@ def get_time_series(x_list, cell_id, feature):
             feature = 3
         case 'velocity_y':
             feature = 4
+        case "stage":
+            feature = 9
         case _:  # default
             feature = 0
 
