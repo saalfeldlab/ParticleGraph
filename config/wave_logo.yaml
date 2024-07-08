@@ -16,7 +16,7 @@ simulation:
   dpos_init: 0
   boundary: 'periodic'
   node_value_map: 'pattern_10.tif'
-  node_type_map: 'pattern_15.tif'
+  node_coeff_map: 'pics_logo.tif'
   beta: 1.E-2
   start_frame: 0
 
@@ -43,7 +43,7 @@ training:
   batch_size: 8
   small_init_batch_size: True
   n_runs: 2
-  sparsity: 'replace_embedding'
+  sparsity: 'none'
   data_augmentation: True
   cluster_method: 'kmeans_auto_plot'
   fix_cluster_embedding: True

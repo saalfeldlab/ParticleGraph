@@ -2,9 +2,12 @@ import matplotlib.pyplot as plt
 import torch
 
 from GNN_particles_Ntype import *
+from ParticleGraph.generators.utils import *
 from ParticleGraph.models.utils import *
 from ParticleGraph.models.Siren_Network import *
 from ParticleGraph.models.Ghost_Particles import *
+from geomloss import SamplesLoss
+from ParticleGraph.embedding_cluster import EmbeddingCluster, sparsify_cluster
 
 import random
 
@@ -113,7 +116,7 @@ def data_train_particles(config, config_file, device):
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
     # print('Loading existing model ...')
-    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_5.pt"
+    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
 
@@ -140,6 +143,7 @@ def data_train_particles(config, config_file, device):
     type_list = get_type_list(x, dimension)
     print(f'N particles: {n_particles} {len(torch.unique(type_list))} types')
     logger.info(f'N particles:  {n_particles} {len(torch.unique(type_list))} types')
+
     if has_state:
         index_l = []
         index = 0
@@ -148,7 +152,6 @@ def data_train_particles(config, config_file, device):
             index_l.append(new_index)
             x_list[1][k][:, 0] = new_index
             index += n_particles
-
     if has_ghost:
         ghosts_particles = Ghost_Particles(config, n_particles, vnorm, device)
         optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.ghost_pos], lr=1E-4)
@@ -172,7 +175,6 @@ def data_train_particles(config, config_file, device):
             mask_ghost = np.tile(mask_ghost, batch_size)
             mask_ghost = np.argwhere(mask_ghost == 1)
             mask_ghost = mask_ghost[:, 0].astype(int)
-
         total_loss = 0
         Niter = n_frames * data_augmentation_loop // batch_size
 
@@ -344,7 +346,7 @@ def data_train_particles(config, config_file, device):
                                                                 n_nodes = 0,
                                                                 dataset_number=1,
                                                                 n_particles=n_particles, ynorm=ynorm,
-                                                                types=to_numpy(x[:, 1+2*dimension]),
+                                                                type_list=to_numpy(x[:, 1+2*dimension]),
                                                                 cmap=cmap, dimension=dimension, device=device)
 
             labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding, train_config.cluster_distance_threshold, index_particles, n_particle_types, embedding_cluster)
@@ -1623,7 +1625,7 @@ def data_train_mesh(config, config_file, device):
             total_loss += loss.item()
 
             visualize_embedding = True
-            if visualize_embedding & (((epoch == 0) & (N < 10000) & (N % 200 == 0)) | (N==0)):
+            if visualize_embedding & (((epoch < 30 ) & (N%(Niter//50) == 0)) | (N==0)):
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()},
                            os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
@@ -1633,6 +1635,10 @@ def data_train_mesh(config, config_file, device):
                               epoch=epoch, N=N, x=x_mesh, model=model, n_nodes=n_nodes, n_node_types=n_node_types, index_nodes=index_nodes, dataset_num=1,
                               index_particles=[], n_particles=[],
                               n_particle_types=[], ynorm=ynorm, cmap=cmap, axis=True, device=device)
+
+                torch.save({'model_state_dict': model.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict()},
+                           os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_nodes / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_nodes / batch_size))
@@ -2128,7 +2134,7 @@ def data_train_particle_field(config, config_file, device):
 
             total_loss += loss.item()
 
-            visualize_embedding = True
+            visualize_embedding = False
             if visualize_embedding & (((epoch < 30 ) & (N%(Niter//50) == 0)) | (N==0)):
                 print(N)
                 plot_training_particle_field(config=config, has_siren=has_siren, has_siren_time=has_siren_time, model_f=model_f, dataset_name=dataset_name, n_frames=n_frames, model_name=model_config.particle_model_name, log_dir=log_dir,
@@ -2188,7 +2194,7 @@ def data_train_particle_field(config, config_file, device):
                                                             n_nodes=0,
                                                             dataset_number=1,
                                                             n_particles=n_particles, ynorm=ynorm,
-                                                            types=to_numpy(x[:, 1 + 2 * dimension]),
+                                                            type_list=to_numpy(x[:, 1 + 2 * dimension]),
                                                             cmap=cmap, dimension=dimension, device=device)
 
         labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding,
@@ -2588,7 +2594,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     delta_t = simulation_config.delta_t
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     dimension = simulation_config.dimension
-    has_siren = 'siren' in model_config.field_type
     has_siren_time = 'siren_with_time' in model_config.field_type
     has_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
 
@@ -2632,8 +2637,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             model.load_state_dict(state_dict['model_state_dict'])
             model.eval()
             mesh_model = None
-        if has_siren:
-
+        if has_field:
             model_f_p = model
             model_f_f = choose_mesh_model(config, device=device)
 
@@ -2642,31 +2646,31 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 model_f = Siren_Network(image_width=image_width, in_features=3, out_features=1, hidden_features=128,
                                         hidden_layers=5, outermost_linear=True, device=device, first_omega_0=80,
                                         hidden_omega_0=80.)
+                net = f'./log/try_{config_file}/models/best_model_f_with_1_graphs_{best_model}.pt'
+                state_dict = torch.load(net, map_location=device)
+                model_f.load_state_dict(state_dict['model_state_dict'])
+                model_f.to(device=device)
+                model_f.eval()
+                table = PrettyTable(["Modules", "Parameters"])
+                total_params = 0
+                for name, parameter in model_f.named_parameters():
+                    if not parameter.requires_grad:
+                        continue
+                    param = parameter.numel()
+                    table.add_row([name, param])
+                    total_params += param
+                if verbose:
+                    print(table)
+                    print(f"Total Trainable Params: {total_params}")
             else:
-                model_f = Siren_Network(image_width=image_width, in_features=2, out_features=1, hidden_features=64,
-                                        hidden_layers=3, outermost_linear=True, device=device, first_omega_0=80,
-                                        hidden_omega_0=80.)
+                t = model.field[run].reshape(image_width, image_width)
+                t = torch.rot90(t)
+                t = torch.flipud(t)
+                t = t.reshape(image_width * image_width,1)
+                with torch.no_grad():
+                    model.field[run] = t.clone().detach()
 
-            net = f'./log/try_{config_file}/models/best_model_f_with_1_graphs_{best_model}.pt'
-            state_dict = torch.load(net, map_location=device)
-            model_f.load_state_dict(state_dict['model_state_dict'])
-
-            model_f.to(device=device)
-            model_f.eval()
-
-            table = PrettyTable(["Modules", "Parameters"])
-            total_params = 0
-            for name, parameter in model_f.named_parameters():
-                if not parameter.requires_grad:
-                    continue
-                param = parameter.numel()
-                table.add_row([name, param])
-                total_params += param
-
-            if verbose:
-                print(table)
-                print(f"Total Trainable Params: {total_params}")
-        first_embedding = model.a[1].data.clone().detach()
+    first_embedding = model.a[1].data.clone().detach()
 
     n_sub_population = n_particles // n_particle_types
 
@@ -2778,25 +2782,35 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         edge_index = adj_t.nonzero().t().contiguous()
         edge_attr_adjacency = adjacency[adj_t]
 
-    # n_particles larger than initially
-
-
     rmserr_list= []
+    gloss = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
+    geomloss_list=[]
     time.sleep(1)
     for it in trange(n_frames+1):
 
         x0 = x_list[0][it].clone().detach()
         y0 = y_list[0][it].clone().detach()
+
+
         if model_config.signal_model_name == 'PDE_N':
             rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 6:7] - x0[:, 6:7]) ** 2, axis=1)))
+            geomloss = gloss(x[mask_mesh.squeeze(), 6:7], x0[mask_mesh.squeeze(), 6:7])
         elif model_config.mesh_model_name == 'WaveMesh':
             rmserr = torch.sqrt(
                 torch.mean(torch.sum((x[mask_mesh.squeeze(), 6:7] - x0[mask_mesh.squeeze(), 6:7]) ** 2, axis=1)))
+            geomloss = gloss(x[mask_mesh.squeeze(), 6:7], x0[mask_mesh.squeeze(), 6:7])
         elif model_config.mesh_model_name == 'RD_RPS_Mesh':
             rmserr = torch.sqrt(torch.mean(torch.sum((x[mask_mesh.squeeze(), 6:9] - x0[mask_mesh.squeeze(), 6:9]) ** 2, axis=1)))
+            geomloss = gloss(x[mask_mesh.squeeze(), 6:9], x0[mask_mesh.squeeze(), 6:9])
         else:
             rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 1:3] - x0[:, 1:3]) ** 2, axis=1)))
+            if x.shape[0]>5000:
+                geomloss = gloss(x[0:5000, 1:3], x0[0:5000, 1:3])
+            else:
+                geomloss = gloss(x[:, 1:3], x0[:, 1:3])
+
         rmserr_list.append(rmserr.item())
+        geomloss_list.append(geomloss.item())
 
         if has_mesh:
             x[:, 1:5] = x0[:, 1:5].clone().detach()
@@ -2974,7 +2988,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.ylabel(r'$y$', fontsize=78)
                 plt.xticks(fontsize=48.0)
                 plt.yticks(fontsize=48.0)
-            elif 'frame' in style:
+            if 'frame' in style:
                 plt.xlabel('x', fontsize=48)
                 plt.ylabel('y', fontsize=48)
                 plt.xticks(fontsize=48.0)
@@ -2983,7 +2997,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 ax.tick_params(axis='both', which='major', pad=15)
                 # cbar = plt.colorbar(shrink=0.5)
                 # cbar.ax.tick_params(labelsize=32)
-            else:
+            if 'no_ticks' in style:
                 plt.xticks([])
                 plt.yticks([])
             if not(('RD_RPS_Mesh' in model_config.mesh_model_name)|(model_config.signal_model_name == 'PDE_N')):
@@ -3075,8 +3089,12 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.close()
 
     print('average rollout RMS {:.3e}+/-{:.3e}'.format(np.mean(rmserr_list), np.std(rmserr_list)))
+    print('average rollout Sinkhorn div. {:.3e}+/-{:.3e}'.format(np.mean(geomloss_list), np.std(geomloss_list)))
 
-    if True:
+    r = [np.mean(rmserr_list), np.std(rmserr_list), np.mean(geomloss_list), np.std(geomloss_list)]
+    np.save(f"./{log_dir}/rmserr_geomloss_{config_file}.npy", r)
+
+    if False:
         rmserr_list = np.array(rmserr_list)
         fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
         x_ = np.arange(len(rmserr_list))
@@ -3089,12 +3107,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/rmserr_{config_file}_plot.tif", dpi=170.7)
 
-    if True:
+    if False:
 
         x0_next = x_list[0][it].clone().detach()
-        if has_field:
-            x0_next[:,2] = torch.ones_like(x0_next[:,2]) - x0_next[:,2]
-            x[:, 2] = torch.ones_like(x[:,2]) - x[:, 2]
 
         fig = plt.figure(figsize=(12, 12))
         ax=fig.add_subplot(1,1,1)

@@ -22,10 +22,9 @@ class PDE_Laplacian(pyg.nn.MessagePassing):
         the Laplacian
     """
 
-    def __init__(self, aggr_type=[], c=[], beta=[], bc_dpos=[]):
+    def __init__(self, aggr_type=[], beta=[], bc_dpos=[]):
         super(PDE_Laplacian, self).__init__(aggr='add')  # "mean" aggregation.
 
-        self.c = c
         self.beta = beta
         self.bc_dpos = bc_dpos
         self.coeff = []
@@ -33,13 +32,13 @@ class PDE_Laplacian(pyg.nn.MessagePassing):
     def forward(self, data):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
 
-        if self.coeff == []:
-            particle_type = to_numpy(x[:, 5])
-            c = self.c[particle_type]
-            c = c[:, None]
-        else:
-            c = self.coeff
+        # if self.coeff == []:
+        #     particle_type = to_numpy(x[:, 5])
+        #     c = self.c[particle_type]
+        #     c = c[:, None]
+        # else:
 
+        c = self.coeff
         u = x[:, 6:7]
 
         laplacian_u = self.propagate(edge_index, u=u, edge_attr=edge_attr)

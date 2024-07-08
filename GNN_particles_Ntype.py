@@ -21,8 +21,8 @@ from matplotlib.ticker import FuncFormatter
 from prettytable import PrettyTable
 
 from ParticleGraph.config import ParticleGraphConfig
-from ParticleGraph.data_loaders import *
-from ParticleGraph.embedding_cluster import *
+
+
 
 from ParticleGraph.generators.utils import *
 from ParticleGraph.generators.graph_data_generator import *

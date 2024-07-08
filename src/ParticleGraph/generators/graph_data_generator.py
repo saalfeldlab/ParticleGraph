@@ -7,6 +7,7 @@ from ParticleGraph.models.utils import *
 from GNN_particles_Ntype import *
 from ParticleGraph.generators.utils import update_cell_cycle_stage
 from ParticleGraph.utils import set_size
+from ParticleGraph.utils import set_mass_coeff
 from scipy import stats
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
@@ -331,14 +332,14 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                             plt.ylabel(r'$y$', fontsize=78)
                             plt.xticks(fontsize=48.0)
                             plt.yticks(fontsize=48.0)
-                        elif 'frame' in style:
+                        if 'frame' in style:
                             plt.xlabel('x', fontsize=48)
                             plt.ylabel('y', fontsize=48)
                             plt.xticks(fontsize=48.0)
                             plt.yticks(fontsize=48.0)
                             ax.tick_params(axis='both', which='major', pad=15)
                             plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=48)
-                        else:
+                        if 'no_ticks' in style:
                             plt.xticks([])
                             plt.yticks([])
                         plt.tight_layout()
@@ -354,6 +355,10 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                 np.save(f'graphs_data/graphs_{dataset_name}/inv_particle_dropout_mask.npy', inv_particle_dropout_mask)
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
             torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
+
+    # for handler in logger.handlers[:]:
+    #     handler.close()
+    #     logger.removeHandler(handler)
 
 
 def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,
@@ -429,7 +434,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         # cell_death_rate : cell death rate associated with a cell type   dim=cell_types
         # cell_death_rate : cell death rate for each cell, = cell death rate (1+ N(0,0.05)),   dim=number of cell
 
-        X1, V1, T1, H1, A1, N1, S1, cell_mass, cell_mass_distrib, growth_rate, growth_rate_distrib, cycle_length, cycle_length_distrib, cell_death_rate, cell_death_rate_distrib = init_cells(config, device=device)
+        X1, V1, T1, H1, A1, N1, S1, cell_mass, cell_mass_distrib, growth_rate, growth_rate_distrib, cycle_length, cycle_length_distrib, cell_death_rate, cell_death_rate_distrib, mass_coeff_range, mass_coeff_range_distrib = init_cells(config, device=device)
 
         if run==0:
             cycle_length_first = cycle_length.clone().detach()
@@ -460,6 +465,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         logger.info(to_numpy(growth_rate))
         logger.info('interaction parameters')
         logger.info(to_numpy(model.p))
+        logger.info('mass coefficient ranges')
+        logger.info(mass_coeff_range)
 
         index_particles = []
         for n in range(n_particle_types):
@@ -517,6 +524,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     cycle_length_distrib = torch.cat((cycle_length_distrib, cycle_length[to_numpy(T1[pos, 0])].squeeze() * var), dim=0)
                     cell_death_rate_distrib = torch.cat((cell_death_rate_distrib, cell_death_rate[to_numpy(T1[pos, 0])].squeeze() * nd), dim=0)
                     cell_mass_distrib = torch.cat((cell_mass_distrib, cell_mass[to_numpy(T1[pos, 0])]/2), dim=0)
+                    mass_coeff_range_distrib = torch.cat((mass_coeff_range_distrib, mass_coeff_range[to_numpy(T1[pos, 0])]), dim=0)
                     # growth_rate_distrib = torch.cat((growth_rate_distrib, cell_mass[to_numpy(T1[pos, 0])]/(2 * cycle_length[to_numpy(T1[pos, 0])].squeeze() * var)), dim=0)
                     growth_rate_distrib = cell_mass_distrib/(2 * cycle_length_distrib)
 
@@ -576,13 +584,19 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 x_list.append(x)
                 y_list.append(y)
 
+            # get mass_coeff
+            mass_coeff = set_mass_coeff(mass_coeff_range_distrib, cell_mass[to_numpy(T1[:, 0])], cell_mass_distrib, device)
+
             # cell update
             if model_config.prediction == '2nd_derivative':
                 V1 += y * delta_t
             else:
                 V1 = y
 
-            V1 = V1 * alive[:,None].repeat(1,2)
+            #print(V1)
+            #print(torch.FloatTensor(mass_coeff))
+
+            V1 = V1 * alive[:,None].repeat(1,2) * torch.Tensor(mass_coeff, device=device).repeat(1,2)
             X1 = bc_pos(X1 + V1 * delta_t)
 
 
@@ -705,6 +719,10 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             torch.save(cell_death_rate_distrib, f'graphs_data/graphs_{dataset_name}/cell_death_rate_distrib.pt')
             torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
 
+    for handler in logger.handlers[:]:
+        handler.close()
+        logger.removeHandler(handler)
+
 
 def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
@@ -731,18 +749,15 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
     files = glob.glob(f'./graphs_data/graphs_{dataset_name}/generated_data/*')
     for f in files:
         os.remove(f)
-    mesh_model = choose_mesh_model(config, device=device)
 
     for run in range(config.training.n_runs):
 
-        X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, model_mesh=mesh_model, device=device)
+        X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
+
+        mesh_model = choose_mesh_model(config=config, X1_mesh=X1_mesh, device=device)
+
         torch.save(mesh_data, f'graphs_data/graphs_{dataset_name}/mesh_data_{run}.pt')
         mask_mesh = mesh_data['mask'].squeeze()
-        if 'pics' in simulation_config.node_type_map:
-            i0 = imread(f'graphs_data/{simulation_config.node_type_map}')
-            values = i0[(to_numpy(X1_mesh[:, 0]) * 255).astype(int), (to_numpy(X1_mesh[:, 1]) * 255).astype(int)]
-            values = np.reshape(values,len(X1_mesh))
-            mesh_model.coeff = torch.tensor(values, device=device, dtype=torch.float32)[:, None]
 
         time.sleep(0.5)
         x_mesh_list=[]
@@ -977,17 +992,11 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
             if ('siren' in model_config.field_type) & (it >= 0):
-
-                if 'video' in simulation_config.node_value_map:
-                    im = imread(f"graphs_data/{simulation_config.node_value_map}") # / 255 * 5000
-                    im = im[it].squeeze()
-                    im = np.rot90(im,3)
-                    im = np.reshape(im, (n_nodes_per_axis * n_nodes_per_axis))
-                    H1_mesh[:, 0:1] = torch.tensor(im[:,None], dtype=torch.float32, device=device)
-                else:
-                    H1_mesh = rotate_init_mesh(it, config, device=device)
-                    im = torch.reshape(H1_mesh[:, 0:1], (n_nodes_per_axis, n_nodes_per_axis))
-                # io.imsave(f"graphs_data/graphs_{dataset_name}/generated_data/rotated_image_{it}.tif", to_numpy(im))
+                im = imread(f"graphs_data/{simulation_config.node_value_map}") # / 255 * 5000
+                im = im[it].squeeze()
+                im = np.rot90(im,3)
+                im = np.reshape(im, (n_nodes_per_axis * n_nodes_per_axis))
+                H1_mesh[:, 0:1] = torch.tensor(im[:,None], dtype=torch.float32, device=device)
 
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                                    H1.clone().detach(), A1.clone().detach()), 1)
@@ -1001,9 +1010,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             x_particle_field = torch.concatenate((x_mesh, x), dim=0)
 
             # compute connectivity rules
-            dataset_mesh = data.Data(x=x_mesh, edge_index=mesh_data['edge_index'],
-                                     edge_attr=mesh_data['edge_weight'], device=device)
-
             distance = torch.sum(bc_dpos(x[:, None, 1:dimension+1] - x[None, :, 1:dimension+1]) ** 2, dim=2)
             adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
             edge_index = adj_t.nonzero().t().contiguous()

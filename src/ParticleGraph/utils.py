@@ -44,14 +44,21 @@ def set_device(device=None):
     return device
 
 
-def set_size(x, particles, mass_index):
+def set_size(x, particles, mass_distrib_index):
     # particles = index_particles[n]
 
     #size = 5 * np.power(3, ((to_numpy(x[index_particles[n] , -2]) - 200)/100)) + 10
-    size = np.power((to_numpy(x[particles , mass_index])), 1.2)/1.5
+    size = np.power((to_numpy(x[particles , mass_distrib_index])), 1.2)/1.5
 
-    return size   
+    return size
 
+def set_mass_coeff(mass_coeff_range, final_mass, current_mass, device):
+    power = -1 * (current_mass - (3/4) * final_mass) / mass_coeff_range
+
+    mass_coeff = 0.3 / (1 + np.exp(to_numpy(power))) + 0.75
+
+    # return torch.Tensor(mass_coeff, device=device)[:, None]
+    return mass_coeff[:, None]
 
 def get_gpu_memory_map(device=None):
     print(' ')

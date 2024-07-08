@@ -1,5 +1,5 @@
 description: 'Wave propagation'
-dataset: 'wave_triangles'
+dataset: 'wave_slit_bis'
 
 simulation:
   params: [[0.2],[1.4],[2.6],[3.8],[5.0]]
@@ -15,8 +15,8 @@ simulation:
   delta_t: 0.125
   dpos_init: 0
   boundary: 'periodic'
-  node_value_map: 'pattern_0.tif'
-  node_coeff_map: 'pattern_19.tif'
+  node_value_map: 'pattern_10.tif'
+  node_coeff_map: 'pics_slits.tif'
   beta: 1.E-2
   start_frame: 0
 
@@ -34,17 +34,18 @@ graph_model:
   update_type: 'none'
 
 plotting:
-  colormap: 'tab10'
+  colormap: 'viridis'
   arrow_length: 10
 
 training:
   n_epochs: 20
   batch_size: 8
   small_init_batch_size: True
-  n_runs: 2
+  n_runs: 1
   sparsity: 'replace_embedding'
   data_augmentation: True
-  cluster_method: 'kmeans_auto_plot'
+  cluster_method: 'distance_embedding'
+  cluster_distance_threshold: 0.1
   fix_cluster_embedding: True
 
   device: 'auto'
