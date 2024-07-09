@@ -47,7 +47,7 @@ class SimulationConfig(BaseModel):
     beta: Optional[float] = None
     start_frame: int = 0
     final_cell_mass: list[float] = [-1]
-    mass_coeff_range: list[float] = [-1]
+    mc_slope: list[float] = [-1]
 
 
 class GraphModelConfig(BaseModel):

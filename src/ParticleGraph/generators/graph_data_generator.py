@@ -7,7 +7,6 @@ from ParticleGraph.models.utils import *
 from GNN_particles_Ntype import *
 from ParticleGraph.generators.utils import update_cell_cycle_stage
 from ParticleGraph.utils import set_size
-from ParticleGraph.utils import set_mass_coeff
 from scipy import stats
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
@@ -417,56 +416,45 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         x_len_list = []
         edge_p_p_list = []
 
-        # initialize cell states
-        # X1 positions dim=2
-        # V1 velocities dim=2
-        # T1 cell type dim=1
-        # H1 cell status dim=2  H1[:,0] = cell alive flag, alive : 0 , death : 0 , H1[:,1] = cell division flag, dividing : 1
-        # A1 cell age dim=1
-        # N1 cell index dim=1
-        # S1 cell stage dim=1  0 = G1 , 1 = S, 2 = G2, 3 = M
-        # cell_mass cell mass dim=1 (3 types)
-        # cell_mass_distrib mass dim=1 (per node)
-        # growth_rate cell mass growth rate dim=1
-        # growth_rate_distrib cell mass growth rate dim=1 (per node)
-        # cycle_length : cell cycle length (duration) associated with a cell type   dim=cell_types
-        # cycle_length_distrib : cell cycle length for each cell, = cycle_length (1+ N(0,0.05)),   dim=number of cell
-        # cell_death_rate : cell death rate associated with a cell type   dim=cell_types
-        # cell_death_rate : cell death rate for each cell, = cell death rate (1+ N(0,0.05)),   dim=number of cell
 
-        X1, V1, T1, H1, A1, N1, S1, cell_mass, cell_mass_distrib, growth_rate, growth_rate_distrib, cycle_length, cycle_length_distrib, cell_death_rate, cell_death_rate_distrib, mass_coeff_range, mass_coeff_range_distrib = init_cells(config, device=device)
+        '''
+        INITIALIZE PER CELL TYPE VALUES
+        cycle_length
+        final_cell_mass
+        cell_death_rate
+        mc_slope: scalar used in the function set_mass_coeff
 
-        if run==0:
-            cycle_length_first = cycle_length.clone().detach()
-            cycle_length_distrib_first = cycle_length_distrib.clone().detach()
-            cell_death_rate_first = cell_death_rate.clone().detach()
-            cell_death_rate_distrib_first = cell_death_rate_distrib.clone().detach()
-            cell_mass_first = cell_mass.clone().detach()
-            cell_mass_distrib_first = cell_mass_distrib.clone().detach()
-            growth_rate_first = growth_rate.clone().detach()
-            growth_rate_distrib_first = growth_rate_distrib.clone().detach()
-        else:
-            cycle_length = cycle_length_first.clone().detach()
-            cycle_length_distrib = cycle_length_distrib_first.clone().detach()
-            cell_death_rate = cell_death_rate_first.clone().detach()
-            cell_death_rate_distrib = cell_death_rate_distrib_first.clone().detach()
-            cell_mass = cell_mass_first.clone().detach()
-            cell_mass_distrib = cell_mass_distrib_first.clone().detach()
-            growth_rate = growth_rate_first.clone().detach()
-            growth_rate_distrib = growth_rate_distrib_first.clone().detach()
+        INITIALIZE PER CELL VALUES
+        Cell ID
+        X1 positions dim=2
+        V1 velocities dim=2
+        T1 cell type dim=1
+        H1 cell status dim=2  H1[:,0] = cell alive flag, alive : 0 , death : 0 , H1[:,1] = cell division flag, dividing : 1
+        A1 cell age dim=1
+        N1 cell index dim=1
+        S1 cell stage dim=1  0 = G1 , 1 = S, 2 = G2, 3 = M
+        M1 cell_mass_distrib mass dim=1 (per node)
+        R1 cell growth rate dim=1
+        DR1 cell death rate dim=1
+        MC1 mass coefficient of the cell (relation between velocity and mass)
+        AR1 area of the cell
+        '''
+
+        if run == 0:
+            cycle_length, final_cell_mass, cell_death_rate, mc_slope = init_cell_range(config, device=device)
+        
+        N1, X1, V1, T1, H1, A1, S1, M1, R1, CL1, DR1, MC1 = init_cells(config, cycle_length, final_cell_mass, cell_death_rate, mc_slope, device=device)
 
         logger.info('cell cycle length')
         logger.info(to_numpy(cycle_length))
         logger.info('cell death rate')
         logger.info(to_numpy(cell_death_rate))
         logger.info("cell final mass")
-        logger.info(to_numpy(cell_mass))
-        logger.info("cell growth rate")
-        logger.info(to_numpy(growth_rate))
+        logger.info(to_numpy(final_cell_mass))
+        logger.info('mass coefficient ranges')
+        logger.info(mc_slope)
         logger.info('interaction parameters')
         logger.info(to_numpy(model.p))
-        logger.info('mass coefficient ranges')
-        logger.info(mass_coeff_range)
 
         index_particles = []
         for n in range(n_particle_types):
@@ -483,50 +471,41 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             if (it >= 0) & (n_particles_alive < simulation_config.n_particles_max):
                 # cell death
                 sample = torch.rand(n_particles, device=device)
-                H1[sample.squeeze() < cell_death_rate_distrib.squeeze()/5E4, 0] = 0     # H1[:,0] = cell alive flag, alive : 1 , death : 0
-                # cell division
+                H1[sample.squeeze() < DR1.squeeze()/5E4, 0] = 0     # H1[:,0] = cell alive flag, alive : 1 , death : 0
                 n_particles_alive = torch.sum(H1[:,0])
                 n_particles_dead = n_particles - n_particles_alive
-                pos = torch.argwhere((A1[:, 0].squeeze() > cycle_length_distrib - 15) & (H1[:,0].squeeze() == 1) & (S1[:,0].squeeze() == 3) & (n_particles_alive < n_particles_max))
-                if (len(pos) > 1):
+                # cell division
+                pos = torch.argwhere((A1.squeeze() >= CL1.squeeze()) & (H1[:,0].squeeze() == 1) & (S1[:,0].squeeze() == 3) & (n_particles_alive < n_particles_max)).flatten()
+                if (len(pos) > 0):
                     n_add_nodes = len(pos)
-                    pos = to_numpy(pos[:, 0].squeeze()).astype(int)
-                    H1[:,1] = 0
-                    H1[pos,1]= A1[pos, 0].clone().detach()    # cell division, copy cell age
-                    H1 = torch.concatenate((H1, torch.ones((n_add_nodes,2), device=device)), 0)
-                    H1[-n_add_nodes:,1] = 0
+                    pos = to_numpy(pos).astype(int)
+
                     n_particles = n_particles + n_add_nodes
                     N1 = torch.arange(n_particles, device=device)
                     N1 = N1[:, None]
+
                     separation = 1E-3 * torch.randn((n_add_nodes, dimension), device=device)
                     X1 = torch.cat((X1, X1[pos, :] + separation), dim=0)
                     X1[pos, :] = X1[pos, :] - separation
-                    V1 = torch.cat((V1, -V1[pos, :]), dim=0)    # the new cell is moving away from its mother
-                    T1 = torch.cat((T1, T1[pos, :]), dim=0)     # the new cell inherits its mother's type
+                    H1[:,1] = 0
+                    H1[pos,1]= 1    # cell division flag
                     A1[pos, :] = 0  # age set to zero
-                    cell_mass_distrib[pos] = cell_mass[to_numpy(T1[pos, :])].squeeze()/2 # cell_mass_distrib[pos]/2  # halve mass
+                    M1[pos, :] = final_cell_mass[to_numpy(T1[pos, :])]/2
                     S1[pos, :] = 0  # first stage of cell cycle
-                    A1 = torch.cat((A1, A1[pos, :]), dim=0)
-                    S1 = torch.cat((S1, S1[pos, :]), dim=0)
 
                     nd = torch.ones(len(pos), device=device) + 0.05 * torch.randn(len(pos), device=device)
                     var = torch.ones(len(pos), device=device) + 0.20 * torch.randn(len(pos), device=device)
 
-                    # test = A1.argmax()
-                    # # print(cycle_length)
-                    # print(test,
-                    #       f"mass: {int(cell_mass_distrib[test])} / {int(cell_mass[to_numpy(T1[test, :])])}", 
-                    #       f"age: {int(A1[test, :])} / {int(cycle_length_distrib[test])}", 
-                    #       f"stage: {int(S1[test, :])} /  3", 
-                    #       f"alive: {"yes" if H1[test, 0] == 1 else "no"}",
-                    #       sep="\n")
-
-                    cycle_length_distrib = torch.cat((cycle_length_distrib, cycle_length[to_numpy(T1[pos, 0])].squeeze() * var), dim=0)
-                    cell_death_rate_distrib = torch.cat((cell_death_rate_distrib, cell_death_rate[to_numpy(T1[pos, 0])].squeeze() * nd), dim=0)
-                    cell_mass_distrib = torch.cat((cell_mass_distrib, cell_mass[to_numpy(T1[pos, 0])]/2), dim=0)
-                    mass_coeff_range_distrib = torch.cat((mass_coeff_range_distrib, mass_coeff_range[to_numpy(T1[pos, 0])]), dim=0)
-                    # growth_rate_distrib = torch.cat((growth_rate_distrib, cell_mass[to_numpy(T1[pos, 0])]/(2 * cycle_length[to_numpy(T1[pos, 0])].squeeze() * var)), dim=0)
-                    growth_rate_distrib = cell_mass_distrib/(2 * cycle_length_distrib)
+                    V1 = torch.cat((V1, -V1[pos, :]), dim=0)    # the new cell is moving away from its mother
+                    T1 = torch.cat((T1, T1[pos, :]), dim=0)
+                    H1 = torch.concatenate((H1, torch.ones((n_add_nodes,2), device=device)), 0)
+                    A1 = torch.cat((A1, A1[pos, :]), dim=0)
+                    S1 = torch.cat((S1, S1[pos, :]), dim=0)
+                    M1 = torch.cat((M1, final_cell_mass[to_numpy(T1[pos, 0]),None]/2), dim=0)
+                    CL1 = torch.cat((CL1, cycle_length[to_numpy(T1[pos, 0]),None] * var[:,None]), dim=0)
+                    DR1 = torch.cat((DR1, cell_death_rate[to_numpy(T1[pos, 0]),None] * nd[:,None]), dim=0)
+                    MC1 = torch.cat((MC1, mc_slope[to_numpy(T1[pos, 0]),None]), dim=0)
+                    R1 = M1/(2 * CL1)
 
                     index_particles = []
                     for n in range(n_particles):
@@ -544,10 +523,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
             if n_particles_alive < n_particles_max:
                 S1 = update_cell_cycle_stage(n_particles, A1, cycle_length, T1, device)
-                cell_mass_distrib += growth_rate_distrib * delta_t
-
-            M1 = cell_mass_distrib[:, None]
-            R1 = growth_rate_distrib[:, None]
+                M1 += R1 * delta_t
 
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach(), S1.clone().detach(), M1.clone().detach(), R1.clone().detach()), 1)
 
@@ -585,7 +561,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 y_list.append(y)
 
             # get mass_coeff
-            mass_coeff = set_mass_coeff(mass_coeff_range_distrib, cell_mass[to_numpy(T1[:, 0])], cell_mass_distrib, device)
+            # mass_coeff = set_mass_coeff(mc_slope_distrib, cell_mass[to_numpy(T1[:, 0])], M1, device)
 
             # cell update
             if model_config.prediction == '2nd_derivative':
@@ -593,12 +569,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             else:
                 V1 = y
 
-            #print(V1)
-            #print(torch.FloatTensor(mass_coeff))
-
-            V1 = V1 * alive[:,None].repeat(1,2) * torch.Tensor(mass_coeff, device=device).repeat(1,2)
+            V1 = V1 * alive[:,None].repeat(1,2)
             X1 = bc_pos(X1 + V1 * delta_t)
-
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
@@ -714,9 +686,9 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
             np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}',*edge_p_p_list)
             torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
-            torch.save(cycle_length_distrib, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
+            torch.save(CL1, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
             torch.save(cell_death_rate, f'graphs_data/graphs_{dataset_name}/cell_death_rate.pt')
-            torch.save(cell_death_rate_distrib, f'graphs_data/graphs_{dataset_name}/cell_death_rate_distrib.pt')
+            torch.save(DR1, f'graphs_data/graphs_{dataset_name}/cell_death_rate_distrib.pt')
             torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
 
     for handler in logger.handlers[:]:

@@ -27,6 +27,7 @@ class PDE_B_mass(pyg.nn.MessagePassing):
 
         self.p = p
         self.bc_dpos = bc_dpos
+        self.mass_coeff_range
 
         self.a1 = 0.5E-5
         self.a2 = 5E-4
@@ -46,20 +47,29 @@ class PDE_B_mass(pyg.nn.MessagePassing):
         particle_type = to_numpy(x[:, 5])
         parameters = self.p[particle_type, :]
         d_pos = x[:, 3:5].clone().detach()
-        dd_pos = self.propagate(edge_index, pos=x[:,1:3], mass=x[:, 10:11], parameters=parameters, d_pos=d_pos, field=field)
+        mass = x[:, 10:11].clone_detach()
+        mass_coeff = self.set_mass_coeff(0.1, 1, mass, x.device)
+
+        dd_pos = self.propagate(edge_index, pos=x[:,1:3], parameters=parameters, d_pos=d_pos, field=field)
 
         return dd_pos
 
-    def message(self, pos_i, pos_j, mass_i, mass_j, parameters_i, d_pos_i, d_pos_j, field_j):
+    def message(self, pos_i, pos_j, parameters_i, d_pos_i, d_pos_j, field_j):
         distance_squared = torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, axis=1)  # distance squared
-        mass_diff = (mass_j - mass_i + 1E-10)/1000
 
-        cohesion = parameters_i[:,0,None] * self.a1 * self.bc_dpos(pos_j - pos_i) # / mass_diff
-        alignment = parameters_i[:,1,None] * self.a2 * self.bc_dpos(d_pos_j - d_pos_i) # * mass_diff
-        separation = - parameters_i[:,2,None] * self.a3 * self.bc_dpos(pos_j - pos_i) / (distance_squared[:, None] + mass_diff)
+        cohesion = parameters_i[:,0,None] * self.a1 * self.bc_dpos(pos_j - pos_i)
+        alignment = parameters_i[:,1,None] * self.a2 * self.bc_dpos(d_pos_j - d_pos_i)
+        separation = - parameters_i[:,2,None] * self.a3 * self.bc_dpos(pos_j - pos_i) / distance_squared[:, None]
 
         return (separation + alignment + cohesion) * field_j
 
+    def set_mass_coeff(mass_coeff_range, final_mass, current_mass, device):
+        power = -1 * (current_mass - (3 / 4) * final_mass) / mass_coeff_range
+
+        mass_coeff = 0.3 / (1 + np.exp(to_numpy(power))) + 0.75
+
+        # return torch.Tensor(mass_coeff, device=device)[:, None]
+        return mass_coeff[:, None]
 
     def psi(self, r, p):
         cohesion = p[0] * self.a4 * r
