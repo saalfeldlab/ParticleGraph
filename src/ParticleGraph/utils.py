@@ -44,6 +44,22 @@ def set_device(device=None):
     return device
 
 
+def set_size(x, particles, mass_distrib_index):
+    # particles = index_particles[n]
+
+    #size = 5 * np.power(3, ((to_numpy(x[index_particles[n] , -2]) - 200)/100)) + 10
+    size = np.power((to_numpy(x[particles , mass_distrib_index])), 1.2)/1.5
+
+    return size
+
+def set_mass_coeff(mass_coeff_range, final_mass, current_mass, device):
+    power = -1 * (current_mass - (3/4) * final_mass) / mass_coeff_range
+
+    mass_coeff = 0.3 / (1 + np.exp(to_numpy(power))) + 0.75
+
+    # return torch.Tensor(mass_coeff, device=device)[:, None]
+    return mass_coeff[:, None]
+
 def get_gpu_memory_map(device=None):
     print(' ')
     t = np.round(torch.cuda.get_device_properties(device).total_memory/1E9,2)
@@ -341,3 +357,26 @@ def fig_init(formatx='%.2f', formaty='%.2f'):
     return fig, ax
 
 
+def get_time_series(x_list, cell_id, feature):
+
+    match feature:
+        case 'mass':
+            feature = 10
+        case 'velocity_x':
+            feature = 3
+        case 'velocity_y':
+            feature = 4
+        case "stage":
+            feature = 9
+        case _:  # default
+            feature = 0
+
+    time_series = []
+    for it in range(len(x_list)):
+        x = x_list[it].clone().detach()
+        pos_cell = torch.argwhere(x[:, 0] == cell_id)
+        if len(pos_cell) > 0:
+            time_series.append(x[pos_cell, feature].squeeze())
+        else:
+            time_series.append(torch.tensor([0.0]))
+    return to_numpy(torch.stack(time_series))

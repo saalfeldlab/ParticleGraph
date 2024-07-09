@@ -4,6 +4,7 @@ import scipy.cluster.hierarchy as hcluster
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from matplotlib import pyplot as plt
+# from GNN_particles_PlotFigure import fig_init
 
 class EmbeddingCluster:
     def __init__(self, config):

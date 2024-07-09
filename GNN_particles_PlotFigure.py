@@ -7,6 +7,7 @@ from ParticleGraph.MLP import MLP
 import imageio
 from matplotlib import rc
 from ParticleGraph.fitting_models import *
+from ParticleGraph.utils import set_size
 
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
@@ -686,6 +687,8 @@ def plot_focused_on_cell(config, run, style, step, cell_id, device):
     vx_time_series = get_time_series(x_list, cell_id, feature='velocity_x')
     vy_time_series = get_time_series(x_list, cell_id, feature='velocity_y')
     v_time_series = np.sqrt(vx_time_series ** 2 + vy_time_series ** 2)
+    stage_time_series = get_time_series(x_list, cell_id, feature="stage")
+    stage_time_series_color = ["blue" if i == 0 else "orange" if i == 1 else "green" if i == 2 else "pink" for i in stage_time_series]
 
 
     for it in trange(0,n_frames,step):
@@ -726,10 +729,11 @@ def plot_focused_on_cell(config, run, style, step, cell_id, device):
                     # plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
                     #             s=marker_size, color=cmap.color(n))
 
-                    size = 5 * np.power(3, ((to_numpy(x[index_particles[n], -2]) - 200) / 100)) + 10
+                    size = set_size(x, index_particles[n], 10)
 
                     plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                                s=size*20, color=cmap.color(n))
+                                s=size, color=cmap.color(n))
+                    
                 dead_cell = np.argwhere(to_numpy(H1[:, 0]) == 0)
                 if len(dead_cell) > 0:
                     plt.scatter(to_numpy(X1[dead_cell[:, 0].squeeze(), 0]), to_numpy(X1[dead_cell[:, 0].squeeze(), 1]),
@@ -739,6 +743,7 @@ def plot_focused_on_cell(config, run, style, step, cell_id, device):
                     plt.ylabel(r'$y$', fontsize=78)
                     plt.xticks(fontsize=48.0)
                     plt.yticks(fontsize=48.0)
+
                 elif 'frame' in style:
                     plt.xlabel('x', fontsize=13)
                     plt.ylabel('y', fontsize=16)
@@ -758,12 +763,15 @@ def plot_focused_on_cell(config, run, style, step, cell_id, device):
                 plt.ylim([center_y - 0.1, center_y + 0.1])
 
                 ax = fig.add_subplot(2, 2, 2)
-                plt.plot(mass_time_series, color='k')
-                plt.plot(mass_time_series[0:it], color = 'b',linewidth=2)
+                plt.plot(mass_time_series, color='k', ls="--")
+
+                plt.scatter([i for i in range(it)], mass_time_series[0:it], color=stage_time_series_color[0:it], s=15)
+                # plt.plot(mass_time_series[0:it], color = color,linewidth=3)
+                plt.ylim(0, max(mass_time_series) + 50)
 
                 ax = fig.add_subplot(2, 2, 4)
-                plt.plot(v_time_series, color='k')
-                plt.plot(v_time_series[0:it], color = 'b',linewidth=2)
+                plt.plot(v_time_series, color='k', ls="--")
+                plt.plot(v_time_series[0:it], color = 'red',linewidth=4)
 
                 num = f"{it:06}"
 
@@ -850,10 +858,10 @@ def plot_generated(config, run, style, step, device):
             # plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
             #             s=marker_size, color=cmap.color(n))
 
-            size = 5 * np.power(3, ((to_numpy(x[index_particles[n], -2]) - 200) / 100)) + 10
+            size = set_size(x, index_particles[n], 10)
 
             plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                        s=size*20, color=cmap.color(n))
+                        s=size/10, color=cmap.color(n))
         dead_cell = np.argwhere(to_numpy(H1[:, 0]) == 0)
         if len(dead_cell) > 0:
             plt.scatter(to_numpy(X1[dead_cell[:, 0].squeeze(), 0]), to_numpy(X1[dead_cell[:, 0].squeeze(), 1]),
@@ -897,9 +905,9 @@ def plot_generated(config, run, style, step, device):
             index_particles.append(pos)
             # plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
             #             s=marker_size, color=cmap.color(n))
-            size = 5 * np.power(3, ((to_numpy(x[index_particles[n], -2]) - 200) / 100)) + 10
+            size = set_size(x, index_particles[n], 10)
             plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                        s=size*20, color='k')
+                        s=size/10, color='k')
         dead_cell = np.argwhere(to_numpy(H1[:, 0]) == 0)
         if len(dead_cell) > 0:
             plt.scatter(to_numpy(X1[dead_cell[:, 0].squeeze(), 0]), to_numpy(X1[dead_cell[:, 0].squeeze(), 1]),
@@ -4607,12 +4615,12 @@ if __name__ == '__main__':
     # config_list =['arbitrary_3_sequence_d']
     # config_list = ['boids_16_dropout_10']
 
-    # config_list = ['wave_slit']
-    # for config_file in config_list:
-    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-    #     data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
-    #     # plot_generated(config=config, run=1, style='latex', step = 5, device=device)
-    #     # plot_focused_on_cell(config=config, run=1, style='latex frame color', cell_id=255, step = 5, device=device)
+    config_list = ['boids_16_256_divisionR']
+    for config_file in config_list:
+        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+        # data_plot(config=config, config_file=config_file, epoch_list=['2_0'], device=device)
+        # plot_generated(config=config, run=0, style='color', step = 5, device=device)
+        plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 
     f_list = ['supp15','supp16']
     for f in f_list:

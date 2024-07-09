@@ -21,29 +21,24 @@ from matplotlib import rc
 import matplotlib
 import networkx as nx
 
-# TEST
-
 from ParticleGraph.config import ParticleGraphConfig
-from ParticleGraph.generators.particle_initialization import init_particles, init_mesh
-from ParticleGraph.generators.utils import choose_model, choose_mesh_model, generate_from_data
+from ParticleGraph.generators.graph_data_generator import *
+
 from ParticleGraph.models.utils import *
 from ParticleGraph.models.Ghost_Particles import Ghost_Particles
-
-# os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
 from ParticleGraph.data_loaders import *
 from ParticleGraph.utils import *
 from ParticleGraph.fitting_models import linear_model
 from ParticleGraph.embedding_cluster import *
 from ParticleGraph.models import Division_Predictor
-# from ParticleGraph.Plot3D import *
 from GNN_particles_Ntype import *
 
 
 if __name__ == '__main__':
 
 
-    config_list = ['arbitrary_3']
+    config_list = ['boids_16_256_divisionB2']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -53,9 +48,9 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 25)
-        data_train(config, device=device)
-        data_test(config, visualize=True, verbose=False, best_model=8, run=0, step=config.simulation.n_frames // 25, test_simulation=False, device=device)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 50)
+        #data_train(config, device=device)
+        #data_test(config, visualize=True, verbose=False, best_model=8, run=0, step=config.simulation.n_frames // 25, test_simulation=False, device=device)
 
 
 
