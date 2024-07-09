@@ -2,6 +2,7 @@ import torch
 import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
 from ParticleGraph.utils import to_numpy
+import numpy as np
 
 
 class PDE_B_mass(pyg.nn.MessagePassing):

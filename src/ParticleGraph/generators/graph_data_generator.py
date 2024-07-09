@@ -7,7 +7,6 @@ from ParticleGraph.models.utils import *
 from GNN_particles_Ntype import *
 from ParticleGraph.generators.utils import update_cell_cycle_stage
 from ParticleGraph.utils import set_size
-from ParticleGraph.utils import set_mass_coeff
 from scipy import stats
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
@@ -456,8 +455,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         logger.info(mc_slope)
         logger.info('interaction parameters')
         logger.info(to_numpy(model.p))
-        logger.info('mass coefficient ranges')
-        logger.info(mass_coeff_range)
 
         index_particles = []
         for n in range(n_particle_types):
@@ -572,10 +569,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             else:
                 V1 = y
 
-            #print(V1)
-            #print(torch.FloatTensor(mass_coeff))
-
-            V1 = V1 * alive[:,None].repeat(1,2) * torch.Tensor(mass_coeff, device=device).repeat(1,2)
+            V1 = V1 * alive[:,None].repeat(1,2)
             X1 = bc_pos(X1 + V1 * delta_t)
 
             # output plots
