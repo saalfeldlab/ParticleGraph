@@ -2806,9 +2806,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 geomloss = gloss(x[0:5000, 1:3], x0[0:5000, 1:3])
             else:
                 geomloss = gloss(x[:, 1:3], x0[:, 1:3])
+            geomloss_list.append(geomloss)
 
         rmserr_list.append(rmserr.item())
-        # geomloss_list.append(geomloss)
 
         if has_mesh:
             x[:, 1:5] = x0[:, 1:5].clone().detach()

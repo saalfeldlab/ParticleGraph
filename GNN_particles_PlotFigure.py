@@ -3036,16 +3036,21 @@ def plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
         threshold=-1
         x_data = np.reshape(to_numpy(mesh_model_gene.coeff)/100, (n_nodes_per_axis*n_nodes_per_axis))
         y_data = popt_list[:, 0]
+        # discard borders
+        pos = np.argwhere(to_numpy(mask_mesh) == 1)
+        x_data = x_data[pos[:, 0]]
+        y_data = y_data[pos[:, 0]]
+
         lin_fit, r_squared, relative_error, not_outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
         print(
-            f'slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  ')
+            f'slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  N points {len(x_data)} ')
         logger.info(
-            f'slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  ')
+            f'slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}   N points {len(x_data)} ')
 
         fig, ax = fig_init(formatx='%.5f', formaty='%.5f')
         plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
         plt.scatter(to_numpy(mesh_model_gene.coeff)/100, popt_list[:, 0], s=10, c='k', alpha=0.1)
-        plt.xlabel('Wave coefficient', fontsize=78)
+        plt.xlabel('True wave coeff.', fontsize=78)
         plt.ylabel('Learned wave coeff.', fontsize=78)
         fmt = lambda x, pos: '{:.1f}e-3'.format((x) * 1e3, pos)
         ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
@@ -4409,10 +4414,10 @@ def get_figures(index):
         case 'supp13':
             config_list = ['boids_16_noise_0_3', 'boids_16_noise_0_4', 'boids_16_dropout_10', 'boids_16_dropout_10_no_ghost']
         case 'supp15':
-            config_list = ['wave_slit']
+            config_list = ['wave_slit_ter']
             epoch_list = ['20', '0_1600', '1', '5']
         case 'supp16':
-            config_list = ['wave_boat']
+            config_list = ['wave_boat_ter']
             epoch_list = ['20', '0_1600', '1', '5']
 
         case '25':
@@ -4554,7 +4559,7 @@ def get_figures(index):
                           sample_embedding=True, device=device)
 
         case 'supp15':
-            config = ParticleGraphConfig.from_yaml(f'./config/wave_slit.yaml')
+            config = ParticleGraphConfig.from_yaml(f'./config/wave_slit_ter.yaml')
             data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True,
                           scenario='', ratio=1, bSave=True, step=config.simulation.n_frames // 3)
             config_file = 'wave_slit_bis'
@@ -4569,7 +4574,7 @@ def get_figures(index):
                       sample_embedding=False, device=device)
 
         case 'supp16':
-            config = ParticleGraphConfig.from_yaml(f'./config/wave_boat.yaml')
+            config = ParticleGraphConfig.from_yaml(f'./config/wave_boat_ter.yaml')
             data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True,
                           scenario='', ratio=1, bSave=True, step=config.simulation.n_frames // 3)
             config_file = 'wave_boat_bis'
@@ -4609,7 +4614,7 @@ if __name__ == '__main__':
     #     # plot_generated(config=config, run=1, style='latex', step = 5, device=device)
     #     # plot_focused_on_cell(config=config, run=1, style='latex frame color', cell_id=255, step = 5, device=device)
 
-    f_list = ['supp16','supp15']
+    f_list = ['supp15','supp16']
     for f in f_list:
         config_list,epoch_list = get_figures(f)
 
