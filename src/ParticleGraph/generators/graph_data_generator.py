@@ -838,6 +838,7 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
                     matplotlib.rcParams['savefig.pad_inches'] = 0
                     fig = plt.figure(figsize=(12, 12))
                     ax = fig.add_subplot(1, 1, 1)
+                    ax.tick_params(axis='both', which='major', pad=15)
                     ax.xaxis.get_major_formatter()._usetex = False
                     ax.yaxis.get_major_formatter()._usetex = False
                     ax.xaxis.set_major_locator(plt.MaxNLocator(3))

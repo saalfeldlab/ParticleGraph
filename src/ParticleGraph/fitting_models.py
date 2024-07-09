@@ -94,10 +94,19 @@ def reaction_diffusion_model_L(variable_name):
 
 
 def linear_fit(x_data=[], y_data=[], threshold=10):
-    relative_error = np.abs(y_data - x_data) / np.abs(x_data)
-    not_outliers = np.argwhere(relative_error < threshold)
-    x_data_ = x_data[not_outliers[:, 0]]
-    y_data_ = y_data[not_outliers[:, 0]]
+
+    if threshold ==-1:
+        x_data_ = x_data
+        y_data_ = y_data
+        relative_error = -1
+        not_outliers = -1
+
+    else:
+        relative_error = np.abs(y_data - x_data) / np.abs(x_data)
+        not_outliers = np.argwhere(relative_error < threshold)
+        x_data_ = x_data[not_outliers[:, 0]]
+        y_data_ = y_data[not_outliers[:, 0]]
+
     lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
     residuals = y_data_ - linear_model(x_data_, *lin_fit)
     ss_res = np.sum(residuals ** 2)
