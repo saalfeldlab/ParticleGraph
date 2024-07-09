@@ -44,6 +44,8 @@ class PDE_Laplacian(pyg.nn.MessagePassing):
         laplacian_u = self.propagate(edge_index, u=u, edge_attr=edge_attr)
         dd_u = self.beta * c * laplacian_u
 
+        self.laplacian_u = laplacian_u
+
         return dd_u
 
         pos = to_numpy(data.x)

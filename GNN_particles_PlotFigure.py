@@ -2955,118 +2955,131 @@ def plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
         index_nodes.append(index.squeeze())
 
     i0 = imread(f'graphs_data/{config.simulation.node_coeff_map}')
-    coeff = i0[(to_numpy(x_mesh[:, 1]) * 255).astype(int), (to_numpy(x_mesh[:, 2]) * 255).astype(int)] / 255
-    coeff_ = coeff
+    coeff = i0[(to_numpy(x_mesh[:, 2]) * 255).astype(int), (to_numpy(x_mesh[:, 1]) * 255).astype(int)] / 255
     coeff = np.reshape(coeff, (n_nodes_per_axis, n_nodes_per_axis))
-    coeff = np.flipud(coeff) * config.simulation.beta
-
     vm = np.max(coeff)
-
     fig, ax = fig_init()
     fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
     ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
     ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-    plt.imshow(coeff, cmap=cc, vmin=0, vmax=vm)
+    plt.imshow(coeff, cmap='grey', vmin=0, vmax=vm)
     plt.xlabel(r'$x$', fontsize=78)
     plt.ylabel(r'$y$', fontsize=78)
-    # cbar = plt.colorbar(shrink=0.5)
-    # cbar.ax.tick_params(labelsize=32)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/true_wave_coeff_{config_file}.tif", dpi=300)
+    plt.close
+    fig, ax = fig_init()
+    fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
+    ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+    ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+    plt.imshow(coeff, cmap='grey', vmin=0, vmax=vm)
+    plt.xlabel(r'$x$', fontsize=78)
+    plt.ylabel(r'$y$', fontsize=78)
+    cbar = plt.colorbar(shrink=0.5)
+    cbar.ax.tick_params(labelsize=32)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/results/true_wave_coeff_{config_file}_cbar.tif", dpi=300)
+    plt.close
 
-    for net in epochlist:
+    for epoch in epoch_list:
 
-        # net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt"
-        epoch = net.split('graphs')[1]
+        net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
+        print(f'network: {net}')
+
+        mesh_model_gene = choose_mesh_model(config=config, X1_mesh=x_mesh[:,1:3], device=device)
 
         mesh_model, bc_pos, bc_dpos = choose_training_model(config, device)
         state_dict = torch.load(net, map_location=device)
         mesh_model.load_state_dict(state_dict['model_state_dict'])
         mesh_model.eval()
 
-        embedding = get_embedding(mesh_model.a, 1)
+        x_mesh = x_mesh_list[1][7000].clone().detach()
+        mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_1.pt', map_location=device)
+        dataset_mesh = data.Data(x=x_mesh, edge_index=mesh_data['edge_index'],
+                                 edge_attr=mesh_data['edge_weight'], device=device)
+        with torch.no_grad():
+            pred_gene = mesh_model_gene(dataset_mesh)
+            pred = mesh_model(dataset_mesh, data_id=1)
 
+        fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
+        plt.scatter(to_numpy(pred_gene),to_numpy(pred)*to_numpy(hnorm),s=1,c='k',alpha=0.1)
+        plt.close()
+        fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
+        plt.scatter(to_numpy(mesh_model_gene.laplacian_u),to_numpy(mesh_model.laplacian_u),s=1,alpha=0.1)
+        plt.close()
+
+        fig, ax = fig_init(formatx='%.0f', formaty='%.1f')
+        rr = torch.tensor(np.linspace(-1800, 1800, 200)).to(device)
+        coeff = np.reshape(to_numpy(mesh_model_gene.coeff)/vm/255, (n_nodes_per_axis * n_nodes_per_axis))
+        coeff = np.clip(coeff, a_min=0, a_max=1)
+        popt_list = []
+        func_list = []
+        for n in trange(n_nodes):
+            embedding_ = mesh_model.a[1, n, :] * torch.ones((200, 2), device=device)
+            in_features = torch.cat((rr[:, None], embedding_), dim=1)
+            with torch.no_grad():
+                h = mesh_model.lin_phi(in_features.float()) * hnorm
+            h = h[:, 0]
+            popt, pcov = curve_fit(linear_model, to_numpy(rr.squeeze()), to_numpy(h.squeeze()))
+            popt_list.append(popt)
+            func_list.append(h)
+            plt.scatter(to_numpy(rr), to_numpy(h), c=f'{coeff[n]}', edgecolors='none',alpha=0.1)
+        plt.xlabel(r'$\nabla^2 u_i$', fontsize=78)
+        plt.ylabel(r'$\Phi(\ensuremath{\mathbf{a}}_{i},\nabla^2 u_i)$', fontsize=78)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/functions_{config_file}_{epoch}.tif", dpi=300)
+        plt.close()
+
+        func_list = torch.stack(func_list)
+        popt_list = np.array(popt_list)
+
+        threshold=-1
+        x_data = np.reshape(to_numpy(mesh_model_gene.coeff)/100, (n_nodes_per_axis*n_nodes_per_axis))
+        y_data = popt_list[:, 0]
+        lin_fit, r_squared, relative_error, not_outliers, x_data, y_data = linear_fit(x_data, y_data, threshold)
+        print(
+            f'slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  ')
+        logger.info(
+            f'slope: {np.round(lin_fit[0], 2)}  R^2$: {np.round(r_squared, 3)}  ')
+
+        fig, ax = fig_init(formatx='%.5f', formaty='%.5f')
+        plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+        plt.scatter(to_numpy(mesh_model_gene.coeff)/100, popt_list[:, 0], s=10, c='k', alpha=0.1)
+        plt.xlabel('Wave coefficient', fontsize=78)
+        plt.ylabel('Learned wave coeff.', fontsize=78)
+        fmt = lambda x, pos: '{:.1f}e-3'.format((x) * 1e3, pos)
+        ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+        ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/scatter_coeff_{config_file}_{epoch}.tif", dpi=300)
+        plt.close()
+
+        t = np.array(popt_list)
+        t = t[:, 0]
+        t = np.reshape(t, (n_nodes_per_axis, n_nodes_per_axis))
+        t = np.flipud(t)
         fig, ax = fig_init()
-        if has_pic:
-            plt.scatter(embedding[:, 0], embedding[:, 1],
-                        color=cmap.color(np.round(coeff_ * 256).astype(int)), s=100, alpha=1)
-        else:
-            for n in range(n_node_types):
-                c_ = np.round(n / (n_node_types - 1) * 256).astype(int)
-                plt.scatter(embedding[index_nodes[n], 0], embedding[index_nodes[n], 1], c=cmap.color(c_), s=200,
-                            alpha=1)
-        plt.xlabel(r'$a_{i0}$', fontsize=32)
-        plt.ylabel(r'$a_{i1}$', fontsize=32)
+        fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
+        ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+        ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+        plt.imshow(t, cmap='grey')
+        plt.xlabel(r'$x$', fontsize=78)
+        plt.ylabel(r'$y$', fontsize=78)
+        fmt = lambda x, pos: '{:.3%}'.format(x)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/wave_coeff_{config_file}_{epoch}.tif", dpi=300)
+        plt.close()
+
+        embedding = get_embedding(mesh_model.a, 1)
+        fig, ax = fig_init()
+        plt.scatter(embedding[:, 0], embedding[:, 1], c=x_data, s=100, alpha=1, cmap='grey')
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
         # plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
         # plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{epoch}.tif", dpi=300)
         plt.close()
-
-        rr = torch.tensor(np.linspace(-150, 150, 200)).to(device)
-        popt_list = []
-        func_list = []
-        for n in range(n_nodes):
-            embedding_ = mesh_model.a[1, n, :] * torch.ones((200, 2), device=device)
-            in_features = torch.cat((rr[:, None], embedding_), dim=1)
-            h = mesh_model.lin_phi(in_features.float())
-            h = h[:, 0]
-            popt, pcov = curve_fit(linear_model, to_numpy(rr.squeeze()), to_numpy(h.squeeze()))
-            popt_list.append(popt)
-            func_list.append(h)
-        func_list = torch.stack(func_list)
-        popt_list = np.array(popt_list)
-
-        t = np.array(popt_list) * to_numpy(hnorm)
-        t = t[:, 0]
-        t = np.reshape(t, (n_nodes_per_axis, n_nodes_per_axis))
-        t = np.flipud(t)
-
-        fig, ax = fig_init()
-        fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
-        ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        plt.imshow(t, cmap=cc, vmin=0, vmax=vm)
-        # plt.xlabel(r'$x$', fontsize=78)
-        # plt.ylabel(r'$y$', fontsize=78)
-        plt.xlabel('x', fontsize=32)
-        plt.ylabel('y', fontsize=32)
-        fmt = lambda x, pos: '{:.3%}'.format(x)
-        # cbar = plt.colorbar(format=FuncFormatter(fmt),shrink=0.5)
-        # cbar.ax.tick_params(labelsize=32)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/wave_coeff_{config_file}_{epoch}.tif", dpi=300)
-        plt.close()
-
-        if not (has_pic):
-            proj_interaction = popt_list
-            proj_interaction[:, 1] = proj_interaction[:, 0]
-            match config.training.cluster_method:
-                case 'kmeans_auto_plot':
-                    labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
-                case 'kmeans_auto_embedding':
-                    labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
-                    proj_interaction = embedding
-                case 'distance_plot':
-                    labels, n_clusters = embedding_cluster.get(proj_interaction, 'distance')
-                case 'distance_embedding':
-                    labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=1.5)
-                    proj_interaction = embedding
-                case 'distance_both':
-                    new_projection = np.concatenate((proj_interaction, embedding), axis=-1)
-                    labels, n_clusters = embedding_cluster.get(new_projection, 'distance')
-
-            label_list = []
-            for n in range(n_node_types):
-                tmp = labels[index_nodes[n]]
-                label_list.append(np.round(np.median(tmp)))
-            label_list = np.array(label_list)
-            new_labels = labels.copy()
-            for n in range(n_node_types):
-                new_labels[labels == label_list[n]] = n
-            accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-
-            print(f'accuracy: {accuracy}  n_clusters: {n_clusters}')
 
 
 def plot_particle_field(config_file, epoch_list, log_dir, logger, cc, device):
@@ -3489,7 +3502,6 @@ def plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
     plt.rcParams['text.usetex'] = True
     rc('font', **{'family': 'serif', 'serif': ['Palatino']})
     matplotlib.use("Qt5Agg")
-
 
     i0 = imread(f'graphs_data/{config.simulation.node_coeff_map}')
     coeff = i0[(to_numpy(x_mesh[:, 1]) * 255).astype(int), (to_numpy(x_mesh[:, 2]) * 255).astype(int)]
@@ -4398,10 +4410,10 @@ def get_figures(index):
             config_list = ['boids_16_noise_0_3', 'boids_16_noise_0_4', 'boids_16_dropout_10', 'boids_16_dropout_10_no_ghost']
         case 'supp15':
             config_list = ['wave_slit']
-            epoch_list = ['0_1000', '0_2000', '0_5000', '20']
+            epoch_list = ['20', '0_1600', '1', '5']
         case 'supp16':
             config_list = ['wave_boat']
-            epoch_list = ['0_1000', '0_2000', '0_5000', '20']
+            epoch_list = ['20', '0_1600', '1', '5']
 
         case '25':
             config_list = ['signal_N_100_2_a', 'signal_N_100_2_b', 'signal_N_100_2_c', 'signal_N_100_2_d']
@@ -4554,22 +4566,22 @@ def get_figures(index):
             config = ParticleGraphConfig.from_yaml(f'./config/wave_slit_bis.yaml')
             data_test(config=config, config_file=config_file, visualize=True, style='latex color', verbose=False,
                       best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
-                      sample_embedding=True, device=device)
+                      sample_embedding=False, device=device)
 
         case 'supp16':
             config = ParticleGraphConfig.from_yaml(f'./config/wave_boat.yaml')
             data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True,
                           scenario='', ratio=1, bSave=True, step=config.simulation.n_frames // 3)
             config_file = 'wave_boat_bis'
-            config = ParticleGraphConfig.from_yaml(f'./config/wave_slit_bis.yaml')
+            config = ParticleGraphConfig.from_yaml(f'./config/wave_boat_bis.yaml')
             data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1,
                           erase=True,
                           scenario='', ratio=1, bSave=True, step=config.simulation.n_frames // 3)
             config_file = 'wave_boat_bis'
-            config = ParticleGraphConfig.from_yaml(f'./config/wave_slit_bis.yaml')
+            config = ParticleGraphConfig.from_yaml(f'./config/wave_boat_bis.yaml')
             data_test(config=config, config_file=config_file, visualize=True, style='latex color', verbose=False,
                       best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
-                      sample_embedding=True, device=device)
+                      sample_embedding=False, device=device)
 
 
     print(' ')
@@ -4597,7 +4609,7 @@ if __name__ == '__main__':
     #     # plot_generated(config=config, run=1, style='latex', step = 5, device=device)
     #     # plot_focused_on_cell(config=config, run=1, style='latex frame color', cell_id=255, step = 5, device=device)
 
-    f_list = ['supp15']
+    f_list = ['supp16','supp15']
     for f in f_list:
         config_list,epoch_list = get_figures(f)
 
