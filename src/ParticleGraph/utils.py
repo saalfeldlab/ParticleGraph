@@ -52,14 +52,6 @@ def set_size(x, particles, mass_distrib_index):
 
     return size
 
-def set_mass_coeff(mass_coeff_range, final_mass, current_mass, device):
-    power = -1 * (current_mass - (3/4) * final_mass) / mass_coeff_range
-
-    mass_coeff = 0.3 / (1 + np.exp(to_numpy(power))) + 0.75
-
-    # return torch.Tensor(mass_coeff, device=device)[:, None]
-    return mass_coeff[:, None]
-
 def get_gpu_memory_map(device=None):
     print(' ')
     t = np.round(torch.cuda.get_device_properties(device).total_memory/1E9,2)
@@ -265,9 +257,19 @@ def create_log_dir(config, config_file):
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
     os.makedirs(log_dir, exist_ok=True)
-    os.makedirs(os.path.join(log_dir, 'models'), exist_ok=True)
-    os.makedirs(os.path.join(log_dir, 'results'), exist_ok=True)
-    os.makedirs(os.path.join(log_dir, 'tmp_training/particle'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'mod    def set_mass_coeff(mass_coeff_range, final_mass, current_mass, device):
+        power = -1 * (current_mass - (3 / 4) * final_mass) / mass_coeff_range
+
+        mass_coeff = 0.3 / (1 + np.exp(to_numpy(power))) + 0.75
+
+        # return torch.Tensor(mass_coeff, device=device)[:, None]
+        return mass_coeff[:, None]
+
+    def psi(self, r, p):
+        cohesion = p[0] * self.a4 * r
+        separation = -p[2] * self.a5 / r
+        return (cohesion + separation)  # 5E-4 alignement
+training/particle'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'tmp_training/field'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'tmp_training/function'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'tmp_training/embedding'), exist_ok=True)

@@ -5,12 +5,12 @@ simulation:
   params: [[-1]]
   cell_cycle_length: [-1]
   cell_death_rate: [1,2,3,4]
-  final_cell_mass: [500, 500, 500, 500]
+  final_cell_mass: [200, 300, 400, 500]
   min_radius: 0.001
   max_radius: 0.04
-  n_particles: 4
+  n_particles: 8
   has_cell_division: True
-  n_particles_max: 16000
+  n_particles_max: 5000
   n_particle_types: 4
   n_interactions: 4
   n_frames: 4000
@@ -19,7 +19,7 @@ simulation:
   dpos_init: 5.0E-4
   boundary: 'periodic'
   start_frame: 0
-  mass_coeff_range: [-30, -15, 15, 30]
+  mc_slope: [-30, -15, 15, 30]
 
 graph_model:
   particle_model_name: 'PDE_B'
