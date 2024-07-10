@@ -519,13 +519,13 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 sample = (sample < (1 / config.simulation.state_params[0])) * torch.randint(0, n_particle_types,(len(T1), 1), device=device)
                 T1 = (T1 + sample) % n_particle_types
 
-            A1 = A1 + 1   # update age
+            A1 = A1 + delta_t   # update age
 
             if n_particles_alive < n_particles_max:
                 S1 = update_cell_cycle_stage(n_particles, A1, cycle_length, T1, device)
                 M1 += R1 * delta_t
 
-            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach(), S1.clone().detach(), M1.clone().detach(), R1.clone().detach()), 1)
+            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach(), S1.clone().detach(), M1.clone().detach(), R1.clone().detach(), DR1.clone().detach(), MC1.clone().detach()), 1)
 
             # calculate connectivity
             with torch.no_grad():

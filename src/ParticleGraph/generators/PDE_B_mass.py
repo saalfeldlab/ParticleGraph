@@ -22,12 +22,12 @@ class PDE_B_mass(pyg.nn.MessagePassing):
         the acceleration of the Boids (dimension 2)
     """
 
-    def __init__(self, aggr_type=[], p=[], bc_dpos=[]):
+    def __init__(self, aggr_type=[], p=[], final_mass=[], bc_dpos=[]):
         super(PDE_B_mass, self).__init__(aggr=aggr_type)  # "mean" aggregation.
 
         self.p = p
         self.bc_dpos = bc_dpos
-        self.mass_coeff_range
+        self.final_mass = final_mass
 
         self.a1 = 0.5E-5
         self.a2 = 5E-4
@@ -47,10 +47,13 @@ class PDE_B_mass(pyg.nn.MessagePassing):
         particle_type = to_numpy(x[:, 5])
         parameters = self.p[particle_type, :]
         d_pos = x[:, 3:5].clone().detach()
-        mass = x[:, 10:11].clone_detach()
-        mass_coeff = self.set_mass_coeff(0.1, 1, mass, x.device)
+        final_mass = self.final_mass[particle_type][:,None]
+        mass = x[:, 10:11].clone().detach()
+        mc_slope = x[:, 13:14].clone().detach()
+        mass_coeff = self.set_mass_coeff(mc_slope, final_mass, mass)
+        mass_coeff = mass_coeff.squeeze().repeat(2,1).t()
 
-        dd_pos = self.propagate(edge_index, pos=x[:,1:3], parameters=parameters, d_pos=d_pos, field=field)
+        dd_pos = mass_coeff * self.propagate(edge_index, pos=x[:,1:3], parameters=parameters, d_pos=d_pos, field=field)
 
         return dd_pos
 
@@ -63,12 +66,11 @@ class PDE_B_mass(pyg.nn.MessagePassing):
 
         return (separation + alignment + cohesion) * field_j
 
-    def set_mass_coeff(mass_coeff_range, final_mass, current_mass, device):
-        power = -1 * (current_mass - (3 / 4) * final_mass) / mass_coeff_range
+    def set_mass_coeff(self, mc_slope, final_mass, current_mass):
+        power = -1 * (current_mass - (3 / 4) * final_mass) / mc_slope
 
-        mass_coeff = 0.3 / (1 + np.exp(to_numpy(power))) + 0.75
+        mass_coeff = 0.3 / (1 + torch.exp(power)) + 0.75
 
-        # return torch.Tensor(mass_coeff, device=device)[:, None]
         return mass_coeff[:, None]
 
     def psi(self, r, p):

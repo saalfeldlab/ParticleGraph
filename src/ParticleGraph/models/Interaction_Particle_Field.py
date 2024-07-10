@@ -69,6 +69,18 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
             self.a = nn.Parameter(
                 torch.tensor(np.ones((self.n_dataset, 20500, 2)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
+            if self.update_type == 'embedding_Siren':
+                self.b = nn.Parameter(
+                    torch.tensor(np.ones((self.n_dataset, 20500, 2)), device=self.device,
+                                 requires_grad=True, dtype=torch.float32))
+                self.update = []
+                for n in range(self.n_dataset):
+                    image_width = self.n_nodes_per_axis
+                    self.update.append(
+                        Siren_Network(image_width=image_width, in_features=2, out_features=1, hidden_features=256,
+                                      hidden_layers=8, outermost_linear=True, device=device, first_omega_0=80,
+                                      hidden_omega_0=80.))
+
         else:
             self.a = nn.Parameter(
                 torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,

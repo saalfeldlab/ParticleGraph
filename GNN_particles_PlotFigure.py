@@ -4435,7 +4435,7 @@ def get_figures(index):
 
 
     match index:
-        case '3' | '4' | 'supp4' | 'supp5' | 'supp6' | 'supp7' | 'supp8' | 'supp9' | 'supp10' | 'supp11' | 'supp12' | 'supp13' | 'supp15' | '25':
+        case '3' | '4' | 'supp4' | 'supp5' | 'supp6' | 'supp7' | 'supp8' | 'supp9' | 'supp10' | 'supp11' | 'supp12' | 'supp13' | 'supp015' | '25':
             for config_file in config_list:
                 config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
                 data_plot(config=config, config_file=config_file, epoch_list=epoch_list, device=device)
@@ -4621,8 +4621,8 @@ if __name__ == '__main__':
         # plot_generated(config=config, run=0, style='color', step = 5, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 
-    # f_list = ['supp15']
-    # for f in f_list:
-    #     config_list,epoch_list = get_figures(f)
+    f_list = ['supp15']
+    for f in f_list:
+        config_list,epoch_list = get_figures(f)
 
 
