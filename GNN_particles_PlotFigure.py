@@ -3057,7 +3057,7 @@ def plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
 
         fig, ax = fig_init(formatx='%.5f', formaty='%.5f')
         plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-        plt.scatter(to_numpy(mesh_model_gene.coeff)/100, popt_list[:, 0], s=10, c='k', alpha=0.1)
+        plt.scatter(x_data, y_data, s=200, c='k', alpha=0.1)
         plt.xlabel('True wave coeff.', fontsize=78)
         plt.ylabel('Learned wave coeff.', fontsize=78)
         fmt = lambda x, pos: '{:.1f}e-3'.format((x) * 1e3, pos)
@@ -3085,7 +3085,7 @@ def plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
 
         embedding = get_embedding(mesh_model.a, 1)
         fig, ax = fig_init()
-        plt.scatter(embedding[:, 0], embedding[:, 1], c=x_data, s=100, alpha=1, cmap='grey')
+        plt.scatter(embedding[pos[:,0], 0], embedding[pos[:,0], 1], c=x_data, s=100, alpha=1, cmap='grey')
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
         # plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
@@ -4419,7 +4419,7 @@ def get_figures(index):
             epoch_list = ['0_0', '0_2000', '0_10000', '20']
         case 'supp12':
             config_list = ['boids_16_256', 'boids_32_256', 'boids_64_256']
-        case 'supp13':
+        case 'supp14':
             config_list = ['boids_16_noise_0_3', 'boids_16_noise_0_4', 'boids_16_dropout_10', 'boids_16_dropout_10_no_ghost']
         case 'supp15':
             config_list = ['wave_slit_ter']
@@ -4435,7 +4435,7 @@ def get_figures(index):
 
 
     match index:
-        case '3' | '4' | 'supp4' | 'supp5' | 'supp6' | 'supp7' | 'supp8' | 'supp9' | 'supp10' | 'supp11' | 'supp12' | 'supp13' | 'supp15' | 'supp16' | '25':
+        case '3' | '4' | 'supp4' | 'supp5' | 'supp6' | 'supp7' | 'supp8' | 'supp9' | 'supp10' | 'supp11' | 'supp12' | 'supp13' | 'supp15' | '25':
             for config_file in config_list:
                 config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
                 data_plot(config=config, config_file=config_file, epoch_list=epoch_list, device=device)
@@ -4534,7 +4534,7 @@ def get_figures(index):
                       best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
                       sample_embedding=False, device=device)
 
-        case 'supp14':
+        case 'supp13':
 
             r=[]
             for n in range(16):
@@ -4610,20 +4610,19 @@ if __name__ == '__main__':
     print(f'device {device}')
     print(' ')
 
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
 
     # config_list =['arbitrary_3_sequence_d']
-    # config_list = ['boids_16_dropout_10']
+    config_list = ['boids_16_dropout_10']
 
-    config_list = ['boids_16_256_divisionR']
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        # data_plot(config=config, config_file=config_file, epoch_list=['2_0'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['2_0'], device=device)
         # plot_generated(config=config, run=0, style='color', step = 5, device=device)
-        plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
+        # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 
-    f_list = ['supp15','supp16']
-    for f in f_list:
-        config_list,epoch_list = get_figures(f)
+    # f_list = ['supp15']
+    # for f in f_list:
+    #     config_list,epoch_list = get_figures(f)
 
 

@@ -2791,13 +2791,23 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         x0 = x_list[0][it].clone().detach()
         y0 = y_list[0][it].clone().detach()
 
-
         if model_config.signal_model_name == 'PDE_N':
             rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 6:7] - x0[:, 6:7]) ** 2, axis=1)))
             geomloss = gloss(x[mask_mesh.squeeze(), 6:7], x0[mask_mesh.squeeze(), 6:7])
         elif model_config.mesh_model_name == 'WaveMesh':
-            rmserr = torch.sqrt(
-                torch.mean(torch.sum((x[mask_mesh.squeeze(), 6:7] - x0[mask_mesh.squeeze(), 6:7]) ** 2, axis=1)))
+            rmserr = torch.sqrt(torch.mean((x[mask_mesh.squeeze(), 6:7] - x0[mask_mesh.squeeze(), 6:7]) ** 2))
+
+            # errors = (x[mask_mesh.squeeze(), 6:7] - x0[mask_mesh.squeeze(), 6:7]) ** 2
+            # percentile_90th = torch.quantile(errors, 0.9)
+            # errors = errors[errors < percentile_95th]
+            # rmserr_95 = torch.sqrt(torch.mean(errors))
+            #
+            fig, ax = plt.subplots()
+            plt.scatter(to_numpy(x0[mask_mesh.squeeze(), 6:7]), to_numpy(x[mask_mesh.squeeze(), 6:7]), s=2, c='r')
+            # fig, ax = plt.subplots()
+            # errors = (x[mask_mesh.squeeze(), 6:7] - x0[mask_mesh.squeeze(), 6:7]) ** 2
+            # plt.plot(to_numpy(torch.sqrt(errors)), c='k')
+
         elif model_config.mesh_model_name == 'RD_RPS_Mesh':
             rmserr = torch.sqrt(torch.mean(torch.sum((x[mask_mesh.squeeze(), 6:9] - x0[mask_mesh.squeeze(), 6:9]) ** 2, axis=1)))
         else:
