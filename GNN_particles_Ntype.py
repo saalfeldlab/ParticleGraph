@@ -33,7 +33,8 @@ from ParticleGraph.utils import *
 
 if __name__ == '__main__':
 
-    config_list =['boids_division_mass_coeff']
+    # config_list =['boids_division_mass_coeff']
+    config_list = ['wave_boat_ter']
 
     seed_list = np.arange(10)
 
@@ -45,7 +46,7 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='frame color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 200)   #config.simulation.n_frames // 4
+        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='frame color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 200)   #config.simulation.n_frames // 4
         # data_train(config, config_file, device)
-        # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 20, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
+        data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 100, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
