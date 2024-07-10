@@ -39,7 +39,42 @@ class SineLayer(nn.Module):
         
     def forward(self, input):
         return torch.sin(self.omega_0 * self.linear(input))
-    
+
+class Siren_Network_scalar(nn.Module):
+    def __init__(self, in_features, hidden_features, hidden_layers, out_features, outermost_linear=False,
+                 first_omega_0=30, hidden_omega_0=30., device=[]):
+        super().__init__()
+
+        self.device = device
+        self.net = []
+        self.net.append(SineLayer(in_features, hidden_features,
+                                  is_first=True, omega_0=first_omega_0))
+
+        for i in range(hidden_layers):
+            self.net.append(SineLayer(hidden_features, hidden_features,
+                                      is_first=False, omega_0=hidden_omega_0))
+
+        if outermost_linear:
+            final_linear = nn.Linear(hidden_features, out_features)
+
+            with torch.no_grad():
+                final_linear.weight.uniform_(-np.sqrt(6 / hidden_features) / hidden_omega_0,
+                                             np.sqrt(6 / hidden_features) / hidden_omega_0)
+
+            self.net.append(final_linear)
+        else:
+            self.net.append(SineLayer(hidden_features, out_features,
+                                      is_first=False, omega_0=hidden_omega_0))
+
+        self.net = nn.Sequential(*self.net)
+
+        self.net = self.net.to(device)
+
+    def forward(self, latent_vector=None):
+
+        output = self.net(latent_vector)
+
+        return output
     
 class Siren_Network(nn.Module):
     def __init__(self, image_width, in_features, hidden_features, hidden_layers, out_features, outermost_linear=False, 

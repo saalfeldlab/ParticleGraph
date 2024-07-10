@@ -69,6 +69,11 @@ class Interaction_Particles(pyg.nn.MessagePassing):
             self.a = nn.Parameter(
                 torch.tensor(np.ones((self.n_dataset, self.n_particles_max, 2)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
+            if self.update_type == 'embedding_Siren':
+                self.b = nn.Parameter(
+                    torch.tensor(np.ones((self.n_dataset, 20500, 2)), device=self.device,
+                                 requires_grad=True, dtype=torch.float32))
+                self.update = Siren_Network_scalar(in_features=3, hidden_features=16, hidden_layers=3, out_features=1, outermost_linear=False, first_omega_0=30, hidden_omega_0=30., device=self.device)
         else:
 
             if self.has_state:
@@ -112,6 +117,11 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         if self.update_type == 'linear':
             embedding = self.a[self.data_id, particle_id, :]
             pred = self.lin_update(torch.cat((pred, x[:, 3:5], embedding), dim=-1))
+
+        if self.update_type == 'embedding_Siren':
+            embedding = self.b[self.data_id, particle_id, :]
+            self.coeff =  self.update(torch.cat((x[:, 8:9], embedding), dim=-1))
+            pred = pred * self.coeff.repeat(2,1)
 
         return pred
 
