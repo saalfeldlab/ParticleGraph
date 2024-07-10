@@ -5,6 +5,7 @@ import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
 from ParticleGraph.MLP import MLP
 from ParticleGraph.utils import to_numpy
+from ParticleGraph.models.Siren_Network import *
 
 
 class Interaction_Particles(pyg.nn.MessagePassing):
@@ -73,7 +74,11 @@ class Interaction_Particles(pyg.nn.MessagePassing):
                 self.b = nn.Parameter(
                     torch.tensor(np.ones((self.n_dataset, 20500, 2)), device=self.device,
                                  requires_grad=True, dtype=torch.float32))
-                self.update = Siren_Network_scalar(in_features=3, hidden_features=16, hidden_layers=3, out_features=1, outermost_linear=False, first_omega_0=30, hidden_omega_0=30., device=self.device)
+                self.phi = MLP(input_size=3, output_size=1, nlayers=5, hidden_size=32, device=self.device)
+                # self.phi = Siren_Network_scalar(in_features=3, hidden_features=16, hidden_layers=3, out_features=1, outermost_linear=False, first_omega_0=80., hidden_omega_0=80., device=self.device)
+                t = torch.ones((10,3), device=self.device)
+                phi = self.phi(t)
+                print(self.phi)
         else:
 
             if self.has_state:
@@ -86,10 +91,6 @@ class Interaction_Particles(pyg.nn.MessagePassing):
                     torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
                                  requires_grad=True, dtype=torch.float32))
 
-
-        if self.update_type != 'none':
-            self.lin_update = MLP(input_size=self.output_size + self.embedding_dim + 2, output_size=self.output_size,
-                                  nlayers=self.n_layers_update, hidden_size=self.hidden_dim_update, device=self.device)
 
     def forward(self, data=[], data_id=[], training=[], vnorm=[], phi=[], has_field=False):
 
@@ -115,13 +116,14 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id, field=field)
 
         if self.update_type == 'linear':
-            embedding = self.a[self.data_id, particle_id, :]
+            embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
             pred = self.lin_update(torch.cat((pred, x[:, 3:5], embedding), dim=-1))
 
         if self.update_type == 'embedding_Siren':
-            embedding = self.b[self.data_id, particle_id, :]
-            self.coeff =  self.update(torch.cat((x[:, 8:9], embedding), dim=-1))
-            pred = pred * self.coeff.repeat(2,1)
+            embedding = self.b[self.data_id, to_numpy(particle_id), :].squeeze()
+            in_features = torch.cat((x[:, 8:9]/250, embedding), dim=-1)
+            self.phi_ =  self.phi(in_features).repeat(1,2)
+            pred = pred * self.phi_
 
         return pred
 
@@ -159,7 +161,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
                 in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
             case 'PDE_A_bis':
                 in_features = torch.cat((delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
-            case 'PDE_B' | 'PDE_B_bis':
+            case 'PDE_B' | 'PDE_B_bis' | 'PDE_B_mass':
                 in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
                                          dpos_y_j[:, None], embedding_i), dim=-1)
             case 'PDE_G':

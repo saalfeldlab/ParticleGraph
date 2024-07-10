@@ -22,10 +22,9 @@ class RD_RPS(pyg.nn.MessagePassing):
         
     """
 
-    def __init__(self, aggr_type=[], c=[], beta=[], bc_dpos=[]):
+    def __init__(self, aggr_type=[], bc_dpos=[]):
         super(RD_RPS, self).__init__(aggr='add')  # "mean" aggregation.
 
-        self.c = c
         self.bc_dpos = bc_dpos
         self.coeff = []
 
@@ -34,12 +33,13 @@ class RD_RPS(pyg.nn.MessagePassing):
     def forward(self, data):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
 
-        if self.coeff == []:
-            particle_type = to_numpy(x[:, 5])
-            c = self.c[particle_type]
-            c = c[:, None]
-        else:
-            c = self.coeff
+        # if self.coeff == []:
+        #     particle_type = to_numpy(x[:, 5])
+        #     c = self.c[particle_type]
+        #     c = c[:, None]
+        # else:
+
+        c = self.coeff
 
         uvw = data.x[:, 6:9]
         laplace_uvw = c * self.propagate(data.edge_index, uvw=uvw, discrete_laplacian=data.edge_attr)

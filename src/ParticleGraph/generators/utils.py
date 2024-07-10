@@ -202,9 +202,9 @@ def choose_mesh_model(config, X1_mesh, device):
             case 'RD_FitzHugh_Nagumo_Mesh':
                 mesh_model = RD_FitzHugh_Nagumo(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
             case 'RD_RPS_Mesh':
-                mesh_model = RD_RPS(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
+                mesh_model = RD_RPS(aggr_type=aggr_type, bc_dpos=bc_dpos)
             case 'RD_RPS_Mesh_bis':
-                mesh_model = RD_RPS(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
+                mesh_model = RD_RPS(aggr_type=aggr_type, bc_dpos=bc_dpos)
             case 'DiffMesh' | 'WaveMesh':
                 mesh_model = PDE_Laplacian(aggr_type=aggr_type, beta=beta, bc_dpos=bc_dpos)
             case 'Chemotaxism_Mesh':
@@ -378,14 +378,17 @@ def get_index(n_particles, n_particle_types):
 def get_time_series(x_list, cell_id, feature):
 
     match feature:
-        case 'type' | 'state':
-            feature = 5
-        case 'mass':
-            feature = 10
         case 'velocity_x':
             feature = 3
         case 'velocity_y':
             feature = 4
+        case 'type' | 'state':
+            feature = 5
+        case 'age':
+            feature = 8
+        case 'mass':
+            feature = 10
+
         case _:  # default
             feature = 0
 

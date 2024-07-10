@@ -3031,7 +3031,8 @@ def plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
             popt, pcov = curve_fit(linear_model, to_numpy(rr.squeeze()), to_numpy(h.squeeze()))
             popt_list.append(popt)
             func_list.append(h)
-            plt.scatter(to_numpy(rr), to_numpy(h), c=f'{coeff[n]}', edgecolors='none',alpha=0.1)
+            # plt.scatter(to_numpy(rr), to_numpy(h), c=f'{coeff[n]}', edgecolors='none',alpha=0.1)
+            plt.scatter(to_numpy(rr), to_numpy(h), c='k',alpha=0.1)
         plt.xlabel(r'$\nabla^2 u_i$', fontsize=78)
         plt.ylabel(r'$\Phi(\ensuremath{\mathbf{a}}_{i},\nabla^2 u_i)$', fontsize=78)
         plt.tight_layout()
@@ -3085,7 +3086,8 @@ def plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
 
         embedding = get_embedding(mesh_model.a, 1)
         fig, ax = fig_init()
-        plt.scatter(embedding[pos[:,0], 0], embedding[pos[:,0], 1], c=x_data, s=100, alpha=1, cmap='grey')
+        # plt.scatter(embedding[pos[:,0], 0], embedding[pos[:,0], 1], c=x_data, s=100, alpha=1, cmap='grey')
+        plt.scatter(embedding[pos[:,0], 0], embedding[pos[:,0], 1], c='k', s=100, alpha=0.1)
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
         # plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
@@ -4435,7 +4437,7 @@ def get_figures(index):
 
 
     match index:
-        case '3' | '4' | 'supp4' | 'supp5' | 'supp6' | 'supp7' | 'supp8' | 'supp9' | 'supp10' | 'supp11' | 'supp12' | 'supp13' | 'supp015' | '25':
+        case '3' | '4' | 'supp4' | 'supp5' | 'supp6' | 'supp7' | 'supp8' | 'supp9' | 'supp10' | 'supp11' | 'supp12' | 'supp13' | 'supp15' | '25':
             for config_file in config_list:
                 config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
                 data_plot(config=config, config_file=config_file, epoch_list=epoch_list, device=device)
@@ -4566,7 +4568,7 @@ def get_figures(index):
                           best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
                           sample_embedding=True, device=device)
 
-        case 'supp15':
+        case 'supp105':
             config = ParticleGraphConfig.from_yaml(f'./config/wave_slit_ter.yaml')
             data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True,
                           scenario='', ratio=1, bSave=True, step=config.simulation.n_frames // 3)
@@ -4605,7 +4607,7 @@ def get_figures(index):
 
 if __name__ == '__main__':
 
-    device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
     print(' ')
     print(f'device {device}')
     print(' ')
@@ -4613,13 +4615,12 @@ if __name__ == '__main__':
     # matplotlib.use("Qt5Agg")
 
     # config_list =['arbitrary_3_sequence_d']
-    config_list = ['boids_16_dropout_10']
-
-    for config_file in config_list:
-        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['2_0'], device=device)
-        # plot_generated(config=config, run=0, style='color', step = 5, device=device)
-        # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
+    # config_list = ['boids_16_dropout_10']
+    # for config_file in config_list:
+    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+    #     data_plot(config=config, config_file=config_file, epoch_list=['2_0'], device=device)
+    #     # plot_generated(config=config, run=0, style='color', step = 5, device=device)
+    #     # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 
     f_list = ['supp15']
     for f in f_list:
