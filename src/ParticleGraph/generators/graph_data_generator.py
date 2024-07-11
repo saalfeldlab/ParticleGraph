@@ -106,7 +106,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         # initialize particle and graph states
         X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
         if has_adjacency_matrix:
-            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1[0,:,None].clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
+            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
             adj_t = adjacency > 0
             edge_index = adj_t.nonzero().t().contiguous()
             dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
@@ -268,8 +268,8 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         ax.yaxis.set_major_locator(plt.MaxNLocator(3))
                         ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                         ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=200, c=to_numpy(H1[:, 0]), cmap='cool',
-                                    vmin=0, vmax=1)
+                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=200, c=to_numpy(H1[:, 0]), cmap='viridis',
+                                    vmin=0, vmax=3)
                         plt.xlim([-1.2, 1.2])
                         plt.ylim([-1.2, 1.2])
                         # plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=24)
@@ -519,13 +519,13 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 sample = (sample < (1 / config.simulation.state_params[0])) * torch.randint(0, n_particle_types,(len(T1), 1), device=device)
                 T1 = (T1 + sample) % n_particle_types
 
-            A1 = A1 + 1   # update age
+            A1 = A1 + delta_t   # update age
 
             if n_particles_alive < n_particles_max:
                 S1 = update_cell_cycle_stage(n_particles, A1, cycle_length, T1, device)
                 M1 += R1 * delta_t
 
-            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach(), S1.clone().detach(), M1.clone().detach(), R1.clone().detach()), 1)
+            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach(), S1.clone().detach(), M1.clone().detach(), R1.clone().detach(), DR1.clone().detach(), MC1.clone().detach()), 1)
 
             # calculate connectivity
             with torch.no_grad():

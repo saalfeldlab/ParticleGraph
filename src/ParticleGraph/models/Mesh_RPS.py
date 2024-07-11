@@ -63,6 +63,8 @@ class Mesh_RPS(pyg.nn.MessagePassing):
 
         pred = self.lin_phi(input_phi)
 
+        self.laplacian_uvw = laplacian_uvw
+
         if return_all:
             return pred, laplacian_uvw, uvw, embedding, input_phi
         else:

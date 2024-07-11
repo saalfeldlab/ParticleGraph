@@ -1,8 +1,8 @@
 description: 'Boids 16 different types, division'
-dataset: 'boids_division_mass_coeff'
+dataset: 'boids_division_wo_mass_coeff'
 
 simulation:
-  params: [[-1]]
+  params: [[27.6, 92.5, 48.2], [32.0, 51.8, 29.8], [23.6, 35.0, 13.5], [3.3, 76.4, 13.0], [94.0, 78.7, 30.8,], [81.4, 34.6, 2.2], [3.1, 40.5, 17.0], [88.8, 7.2, 29.8], [32.7, 76.8, 26.1], [14.5, 56.8, 27.6], [63.3, 99.9, 13.9], [32.5, 25.2, 24.4], [97.6, 56.5, 12.1], [62.2, 9.1, 28.3], [76.4, 52.9, 32.0], [48.1, 54.4, 30.7]]
   cell_cycle_length: [-1]
   cell_death_rate: [1,2,3,4]
   final_cell_mass: [200, 300, 400, 500]
@@ -11,7 +11,7 @@ simulation:
   n_particles: 8
   has_cell_division: True
   n_particles_max: 5000
-  n_particle_types: 4
+  n_particle_types: 16
   n_interactions: 4
   n_frames: 4000
   sigma: 0.005
@@ -22,7 +22,7 @@ simulation:
   mc_slope: [-30, -15, 15, 30]
 
 graph_model:
-  particle_model_name: 'PDE_B_mass'
+  particle_model_name: 'PDE_B'
   mesh_model_name: ''
   prediction: '2nd_derivative'
   input_size: 9

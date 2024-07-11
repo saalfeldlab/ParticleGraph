@@ -33,7 +33,6 @@ def get_embedding_time_series(model=None, dataset_number=None, cell_id=None, n_p
 
     return embedding[indexes]
 
-
 def get_in_features(rr, embedding_, config_model, max_radius):
     match config_model:
         case 'PDE_A':
@@ -262,7 +261,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
         plt.savefig(f"./{log_dir}/tmp_training/field/mesh_map_{dataset_name}_{epoch}_{N}.tif",
                     dpi=87)
         plt.close()
-    elif model_config.mesh_model_name == 'RD_RPD_Mesh':
+    elif model_config.mesh_model_name == 'RD_RPS_Mesh':
         fig = plt.figure(figsize=(8, 8))
         plt.savefig(f"./{log_dir}/tmp_training/field/mesh_map_{dataset_name}_{epoch}_{N}.tif",
                     dpi=87)
@@ -450,6 +449,22 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, index_par
     matplotlib.rcParams['savefig.pad_inches'] = 0
     has_no_tracking = train_config.has_no_tracking
 
+    if model_config.update_type == 'embedding_Siren':
+        if has_no_tracking:
+            embedding = to_numpy(model.b)
+        else:
+            embedding = get_embedding(model.b, 1)
+        n_particles = len(type_list)
+
+        fig = plt.figure(figsize=(8, 8))
+        for n in range(n_particle_types):
+            plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=5)
+        plt.xticks([])
+        plt.yticks([])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/embedding/b_{dataset_name}_{epoch}_{N}.tif", dpi=87)
+        plt.close()
+
 
     if has_no_tracking:
         embedding = to_numpy(model.a)
@@ -465,6 +480,8 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, index_par
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=87)
     plt.close()
+
+
 
     match model_config.particle_model_name:
 
@@ -802,7 +819,7 @@ def choose_training_model(model_config, device):
             model = Interaction_Particle_Field(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos,
                                           dimension=dimension)
             model.edges = []
-        case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G':
+        case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_mass' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G':
             if has_no_tracking:
                 model=Interaction_Particle_Tracking(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             else:
