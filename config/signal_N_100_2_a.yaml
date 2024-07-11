@@ -1,5 +1,5 @@
 description: 'Gravity model with 16 different particle types'
-dataset: 'signal_N_100'
+dataset: 'signal_N_100_2_a'
 
 simulation:
     connectivity_file: 'graphs_data/Brain.mat'
