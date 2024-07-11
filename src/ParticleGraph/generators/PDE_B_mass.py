@@ -63,8 +63,8 @@ class PDE_B_mass(pyg.nn.MessagePassing):
 
         return (separation + alignment + cohesion) * field_j
 
-    def set_mass_coeff(mc_scale, final_mass, current_mass, device):
-        power = -1 * (current_mass - (3 / 4) * final_mass) / mc_scale
+    def set_mass_coeff(mc_slope, final_mass, current_mass, device):
+        power = -1 * (current_mass - (3 / 4) * final_mass) / mc_slope
 
         mass_coeff = 0.3 / (1 + np.exp(to_numpy(power))) + 0.75
 
