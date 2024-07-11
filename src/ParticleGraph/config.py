@@ -64,7 +64,7 @@ class GraphModelConfig(BaseModel):
     mesh_aggr_type: str = 'add'
     embedding_dim: int = 2
 
-    update_type: Literal['linear', 'none', 'embedding_Siren'] = 'none'
+    update_type: Literal['linear', 'none', 'embedding_MLP'] = 'none'
     input_size_update: int = 3
     n_layers_update: int = 3
     hidden_dim_update: int = 64

@@ -46,9 +46,7 @@ if __name__ == '__main__':
     device = 'cuda:0'
     matplotlib.use("Qt5Agg")
 
-    model = MLP(input_size=1, output_size=1, nlayers=5, hidden_size=32, device=device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=1E-2)
-    model.train()
+
 
     current_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -62,15 +60,23 @@ if __name__ == '__main__':
     fig = plt.figure(figsize=(8, 8))
     plt.scatter(age_list.detach().cpu().numpy(), mass_list.detach().cpu().numpy())
 
+    fig = plt.figure(figsize=(8, 8))
+    plt.plot(mass_list.detach().cpu().numpy())
+
+
+    model = MLP(input_size=1, output_size=1, nlayers=5, hidden_size=64, device=device)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1E-2)
+    model.train()
+
     for epoch in range(10000):
         optimizer.zero_grad()
 
         sample = np.random.randint(0, len(mass_list), 10)
 
-        x = model(age_list[sample,None])
+        MLP_pred = model(age_list[sample,None])
         y = mass_list[sample,None]
 
-        loss = (x - y).norm(2)
+        loss = (MLP_pred - y).norm(2)
 
         loss.backward()
         optimizer.step()
@@ -80,8 +86,8 @@ if __name__ == '__main__':
 
     pred = model(age_list[:,None])
     fig = plt.figure(figsize=(8, 8))
-    plt.scatter(age_list.detach().cpu().numpy(), pred.detach().cpu().numpy())
-    plt.scatter(age_list.detach().cpu().numpy(), mass_list.detach().cpu().numpy())
+    plt.scatter(age_list.detach().cpu().numpy(), pred.detach().cpu().numpy(),alpha=0.1)
+    plt.scatter(age_list.detach().cpu().numpy(), mass_list.detach().cpu().numpy(),alpha=0.1)
 
 
 

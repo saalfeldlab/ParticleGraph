@@ -70,7 +70,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
             self.a = nn.Parameter(
                 torch.tensor(np.ones((self.n_dataset, self.n_particles_max, 2)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
-            if self.update_type == 'embedding_Siren':
+            if self.update_type == 'embedding_MLP':
                 self.b = nn.Parameter(
                     torch.tensor(np.ones((self.n_dataset, 20500, 2)), device=self.device,
                                  requires_grad=True, dtype=torch.float32))

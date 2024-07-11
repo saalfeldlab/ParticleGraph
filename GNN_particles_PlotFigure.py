@@ -3461,6 +3461,427 @@ def plot_particle_field(config_file, epoch_list, log_dir, logger, cc, device):
                 logger.info(f'R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}')
 
 
+def plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
+    # Load parameters from config file
+    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+    dataset_name = config.dataset
+
+    max_radius = config.simulation.max_radius
+    min_radius = config.simulation.min_radius
+    n_nodes = config.simulation.n_nodes
+    n_nodes_per_axis = int(np.sqrt(n_nodes))
+    n_node_types = config.simulation.n_node_types
+    n_frames = config.simulation.n_frames
+    n_runs = config.training.n_runs
+    node_value_map = config.simulation.node_value_map
+    aggr_type = config.graph_model.aggr_type
+    delta_t = config.simulation.delta_t
+    cmap = CustomColorMap(config=config)
+    node_coeff_map = config.simulation.node_coeff_map
+
+    embedding_cluster = EmbeddingCluster(config)
+
+    vnorm = torch.tensor(1.0, device=device)
+    ynorm = torch.tensor(1.0, device=device)
+    hnorm = torch.load(f'./log/try_{config_file}/hnorm.pt', map_location=device).to(device)
+
+    x_mesh_list = []
+    y_mesh_list = []
+    time.sleep(0.5)
+    for run in trange(n_runs):
+        x_mesh = torch.load(f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt', map_location=device)
+        x_mesh_list.append(x_mesh)
+        h = torch.load(f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt', map_location=device)
+        y_mesh_list.append(h)
+    h = y_mesh_list[0][0].clone().detach()
+
+    print(f'hnorm: {to_numpy(hnorm)}')
+    time.sleep(0.5)
+    mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_1.pt', map_location=device)
+    mask_mesh = mesh_data['mask']
+    edge_index_mesh = mesh_data['edge_index']
+    edge_weight_mesh = mesh_data['edge_weight']
+
+    x_mesh = x_mesh_list[0][n_frames - 1].clone().detach()
+    type_list = x_mesh[:, 5:6].clone().detach()
+    n_nodes = x_mesh.shape[0]
+    print(f'N nodes: {n_nodes}')
+
+    index_nodes = []
+    x_mesh = x_mesh_list[1][0].clone().detach()
+    for n in range(n_node_types):
+        index = np.argwhere(x_mesh[:, 5].detach().cpu().numpy() == n)
+        index_nodes.append(index.squeeze())
+
+    plt.rcParams['text.usetex'] = True
+    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+    matplotlib.use("Qt5Agg")
+
+    i0 = imread(f'graphs_data/{config.simulation.node_coeff_map}')
+    coeff = i0[(to_numpy(x_mesh[:, 1]) * 255).astype(int), (to_numpy(x_mesh[:, 2]) * 255).astype(int)]
+    coeff_ = coeff
+    coeff = np.reshape(coeff, (n_nodes_per_axis, n_nodes_per_axis))
+    coeff = np.flipud(coeff) * config.simulation.beta
+
+    vm = np.max(coeff)
+    print(f'vm: {vm}')
+
+    fig, ax = fig_init()
+    fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
+    ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+    ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+    plt.imshow(coeff, cmap=cc, vmin=0, vmax=vm)
+    plt.xlabel(r'$x$', fontsize=78)
+    plt.ylabel(r'$y$', fontsize=78)
+
+    cbar = plt.colorbar(shrink=0.5)
+    cbar.ax.tick_params(labelsize=32)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/results/true_coeff_{config_file}.tif", dpi=300)
+    plt.close()
+
+    epochlist = ['20', '0_1000', '0_2000', '0_5000', '1', '5']
+
+    for epoch in epochlist:
+
+        net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt"
+        model, bc_pos, bc_dpos = choose_training_model(config, device)
+        state_dict = torch.load(net, map_location=device)
+        model.load_state_dict(state_dict['model_state_dict'])
+        print(f'net: {net}')
+        embedding = get_embedding(model.a, 1)
+        first_embedding = embedding
+
+        fig, ax = fig_init()
+        if has_pic:
+            plt.scatter(embedding[:, 0], embedding[:, 1],
+                        color=cmap.color(np.round(coeff_ * 256).astype(int)), s=100, alpha=1)
+        else:
+            for n in range(n_node_types):
+                c_ = np.round(n / (n_node_types - 1) * 256).astype(int)
+                plt.scatter(embedding[index_nodes[n], 0], embedding[index_nodes[n], 1], s=200)  # , color=cmap.color(c_)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{epoch}.tif", dpi=300)
+        plt.close()
+
+        if not (has_pic):
+
+            print('domain clustering...')
+            labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
+            label_list = []
+            for n in range(n_node_types):
+                tmp = labels[index_nodes[n]]
+                label_list.append(np.round(np.median(tmp)))
+            label_list = np.array(label_list)
+            new_labels = labels.copy()
+            for n in range(n_node_types):
+                new_labels[labels == label_list[n]] = n
+            accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
+            print(f'accuracy: {accuracy}  n_clusters: {n_clusters}')
+
+            model_a_ = model.a[1].clone().detach()
+            for n in range(n_clusters):
+                pos = np.argwhere(labels == n).squeeze().astype(int)
+                pos = np.array(pos)
+                if pos.size > 0:
+                    median_center = model_a_[pos, :]
+                    median_center = torch.median(median_center, dim=0).values
+                    # plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='r', alpha=0.25)
+                    model_a_[pos, :] = median_center
+                    # plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='k')
+            with torch.no_grad():
+                model.a[1] = model_a_.clone().detach()
+
+        print('fitting diffusion coeff with domain clustering...')
+
+        if True:
+
+            k = 2400
+
+            # collect data from sing
+            x_mesh = x_mesh_list[1][k].clone().detach()
+            dataset = data.Data(x=x_mesh, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
+            with torch.no_grad():
+                pred, laplacian_uvw, uvw, embedding, input_phi = model(dataset, data_id=1, return_all=True)
+            pred = pred * hnorm
+            y = y_mesh_list[1][k].clone().detach()
+
+            # RD_RPS_model :
+            c_ = torch.ones(n_node_types, 1, device=device) + torch.rand(n_node_types, 1, device=device)
+            for n in range(n_node_types):
+                c_[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
+            c = c_[to_numpy(dataset.x[:, 5])].squeeze()
+            u = uvw[:, 0]
+            v = uvw[:, 1]
+            w = uvw[:, 2]
+            # laplacian = mesh_model.beta * c * self.propagate(edge_index, x=(x, x), edge_attr=edge_attr)
+            laplacian_u = c * laplacian_uvw[:, 0]
+            laplacian_v = c * laplacian_uvw[:, 1]
+            laplacian_w = c * laplacian_uvw[:, 2]
+            a = 0.6
+            p = u + v + w
+            du = laplacian_u + u * (1 - p - a * v)
+            dv = laplacian_v + v * (1 - p - a * w)
+            dw = laplacian_w + w * (1 - p - a * u)
+            increment = torch.cat((du[:, None], dv[:, None], dw[:, None]), dim=1)
+            increment = increment.squeeze()
+
+            lin_fit_true = np.zeros((np.max(new_labels) + 1, 3, 10))
+            lin_fit_reconstructed = np.zeros((np.max(new_labels) + 1, 3, 10))
+            eq_list = ['u', 'v', 'w']
+            if has_pic:
+                n_node_types_list = [0]
+            else:
+                n_node_types_list = np.arange(n_node_types)
+            for n in np.unique(new_labels):
+                if has_pic:
+                    pos = np.argwhere(to_numpy(mask_mesh.squeeze()) == 1)
+                else:
+                    pos = np.argwhere((new_labels == n) & (to_numpy(mask_mesh.squeeze()) == 1))
+                    pos = pos[:, 0].astype(int)
+
+                for it, eq in enumerate(eq_list):
+                    fitting_model = reaction_diffusion_model(eq)
+                    laplacian_u = to_numpy(laplacian_uvw[pos, 0])
+                    laplacian_v = to_numpy(laplacian_uvw[pos, 1])
+                    laplacian_w = to_numpy(laplacian_uvw[pos, 2])
+                    u = to_numpy(uvw[pos, 0])
+                    v = to_numpy(uvw[pos, 1])
+                    w = to_numpy(uvw[pos, 2])
+                    x_data = np.concatenate((laplacian_u[:, None], laplacian_v[:, None], laplacian_w[:, None],
+                                             u[:, None], v[:, None], w[:, None]), axis=1)
+                    y_data = to_numpy(increment[pos, 0 + it:1 + it])
+                    p0 = np.ones((10, 1))
+                    lin_fit, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data),
+                                                  p0=np.squeeze(p0), method='trf')
+                    lin_fit_true[n, it] = lin_fit
+                    y_data = to_numpy(pred[pos, it:it + 1])
+                    lin_fit, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), np.squeeze(y_data),
+                                                  p0=np.squeeze(p0), method='trf')
+                    lin_fit_reconstructed[n, it] = lin_fit
+
+            coeff_reconstructed = np.round(np.median(lin_fit_reconstructed, axis=0), 2)
+            diffusion_coeff_reconstructed = np.round(np.median(lin_fit_reconstructed, axis=1), 2)[:, 9]
+            coeff_true = np.round(np.median(lin_fit_true, axis=0), 2)
+            diffusion_coeff_true = np.round(np.median(lin_fit_true, axis=1), 2)[:, 9]
+
+            print(f'frame {k}')
+            print(f'coeff_reconstructed: {coeff_reconstructed}')
+            print(f'diffusion_coeff_reconstructed: {diffusion_coeff_reconstructed}')
+            print(f'coeff_true: {coeff_true}')
+            print(f'diffusion_coeff_true: {diffusion_coeff_true}')
+
+            cp = ['uu', 'uv', 'uw', 'vv', 'vw', 'ww', 'u', 'v', 'w']
+            results = {
+                'True': coeff_true[0, 0:9],
+                'Reconstructed': coeff_reconstructed[0, 0:9],
+            }
+            x = np.arange(len(cp))  # the label locations
+            width = 0.25  # the width of the bars
+            multiplier = 0
+            fig, ax = fig_init()
+            for attribute, measurement in results.items():
+                offset = width * multiplier
+                rects = ax.bar(x + offset, measurement, width, label=attribute)
+                multiplier += 1
+            ax.set_ylabel('Polynomial coefficient', fontsize=48)
+            ax.set_xticks(x + width, cp, fontsize=48)
+            plt.title('First equation', fontsize=48)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/first_equation_{config_file}_{epoch}.tif", dpi=300)
+            plt.close()
+            cp = ['uu', 'uv', 'uw', 'vv', 'vw', 'ww', 'u', 'v', 'w']
+            results = {
+                'True': coeff_true[1, 0:9],
+                'Reconstructed': coeff_reconstructed[1, 0:9],
+            }
+            x = np.arange(len(cp))  # the label locations
+            width = 0.25  # the width of the bars
+            multiplier = 0
+            fig, ax = fig_init()
+            for attribute, measurement in results.items():
+                offset = width * multiplier
+                rects = ax.bar(x + offset, measurement, width, label=attribute)
+                multiplier += 1
+            ax.set_ylabel('Polynomial coefficient', fontsize=48)
+            ax.set_xticks(x + width, cp, fontsize=48)
+            plt.title('Second equation', fontsize=48)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/second_equation_{config_file}_{epoch}.tif", dpi=300)
+            plt.close()
+            cp = ['uu', 'uv', 'uw', 'vv', 'vw', 'ww', 'u', 'v', 'w']
+            results = {
+                'True': coeff_true[2, 0:9],
+                'Reconstructed': coeff_reconstructed[2, 0:9],
+            }
+            x = np.arange(len(cp))  # the label locations
+            width = 0.25  # the width of the bars
+            multiplier = 0
+            fig, ax = fig_init()
+            for attribute, measurement in results.items():
+                offset = width * multiplier
+                rects = ax.bar(x + offset, measurement, width, label=attribute)
+                multiplier += 1
+            ax.set_ylabel('Polynomial coefficient', fontsize=48)
+            ax.set_xticks(x + width, cp, fontsize=48)
+            plt.title('Third equation', fontsize=48)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/third_equation_{config_file}_{epoch}.tif", dpi=300)
+            plt.close()
+
+            fig, ax = fig_init()
+            t = diffusion_coeff_reconstructed[new_labels]
+            t_ = np.reshape(t, (n_nodes_per_axis, n_nodes_per_axis))
+            t_ = np.flipud(t_)
+            t_ = np.fliplr(t_)
+            fig_ = plt.figure(figsize=(12, 12))
+            ax = fig_.add_subplot(1, 1, 1)
+            ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+            ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+            fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
+            ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+            ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+            plt.imshow(t_, cmap=cc, vmin=0, vmax=vm)
+            plt.xlabel(r'$x$', fontsize=78)
+            plt.ylabel(r'$y$', fontsize=78)
+            fmt = lambda x, pos: '{:.3%}'.format(x)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/diff_coeff_map_{config_file}_{epoch}.tif", dpi=300)
+            plt.close()
+
+            t_ = np.reshape(t, (n_nodes_per_axis * n_nodes_per_axis))
+
+            fig, ax = fig_init()
+            plt.scatter(first_embedding[:, 0], first_embedding[:, 1],
+                        s=200, c=t_, cmap='viridis', alpha=0.5, vmin=0, vmax=vm)
+            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
+            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{epoch}.tif", dpi=300)
+            plt.close()
+
+    bContinuous = False
+    if bContinuous:
+        laplacian_uvw_list = []
+        uvw_list = []
+        pred_list = []
+        input_phi_list = []
+        for k in trange(n_frames - 1):
+            x_mesh = x_mesh_list[1][k].clone().detach()
+            dataset = data.Data(x=x_mesh, edge_index=edge_index_mesh, edge_attr=edge_weight_mesh, device=device)
+            with torch.no_grad():
+                pred, laplacian_uvw, uvw, embedding, input_phi = model(dataset, data_id=1, return_all=True)
+            pred = pred * hnorm
+            pred_list.append(pred)
+            laplacian_uvw_list.append(laplacian_uvw)
+            uvw_list.append(uvw)
+            input_phi_list.append(input_phi)
+
+        laplacian_uvw_list = torch.stack(laplacian_uvw_list)
+        uvw_list = torch.stack(uvw_list)
+        pred_list = torch.stack(pred_list)
+
+        print('Fit node level ...')
+        t = np.zeros((n_nodes, 1))
+        for n in trange(n_nodes):
+            for it, eq in enumerate(eq_list[0]):
+                fitting_model = reaction_diffusion_model(eq)
+                laplacian_u = to_numpy(laplacian_uvw_list[:, n, 0].squeeze())
+                laplacian_v = to_numpy(laplacian_uvw_list[:, n, 1].squeeze())
+                laplacian_w = to_numpy(laplacian_uvw_list[:, n, 2].squeeze())
+                u = to_numpy(uvw_list[:, n, 0].squeeze())
+                v = to_numpy(uvw_list[:, n, 1].squeeze())
+                w = to_numpy(uvw_list[:, n, 2].squeeze())
+                x_data = np.concatenate((laplacian_u[:, None], laplacian_v[:, None], laplacian_w[:, None], u[:, None],
+                                         v[:, None], w[:, None]), axis=1)
+                y_data = to_numpy(pred_list[:, n, it:it + 1].squeeze())
+                lin_fit, lin_fitv = curve_fit(fitting_model, np.squeeze(x_data), y_data, method='trf')
+                t[n] = lin_fit[-1:]
+
+                if ((n % 1000 == 0) | (n == n_nodes - 1)):
+                    t_ = np.reshape(t, (n_nodes_per_axis, n_nodes_per_axis))
+                    t_ = np.flipud(t_)
+                    t_ = np.fliplr(t_)
+
+                    fig, ax = fig_init()
+                    fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
+                    ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                    ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                    plt.imshow(t_ * to_numpy(hnorm), cmap=cc, vmin=0, vmax=1)
+                    plt.xlabel(r'$x$', fontsize=78)
+                    plt.ylabel(r'$y$', fontsize=78)
+
+                    fmt = lambda x, pos: '{:.3%}'.format(x)
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/diff_node_coeff_{config_file}_{epoch}.tif", dpi=300)
+                    plt.close()
+
+        input_phi_list = torch.stack(input_phi_list)
+        t = np.zeros((n_nodes, 1))
+        for node in trange(n_nodes):
+            gg = []
+            for sample in range(100):
+                k = 1 + np.random.randint(n_frames - 2)
+                input = input_phi_list[k, node, :].clone().detach().squeeze()
+                input.requires_grad = True
+                L = model.lin_phi(input)[sample % 3]
+                [g] = torch.autograd.grad(L, [input])
+                gg.append(g[sample % 3])
+            t[node] = to_numpy(torch.median(torch.stack(gg)))
+            if ((node % 1000 == 0) | (node == n_nodes - 1)):
+                t_ = np.reshape(t, (n_nodes_per_axis, n_nodes_per_axis))
+                t_ = np.flipud(t_)
+                t_ = np.fliplr(t_)
+
+                fig, ax = fig_init()
+                fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
+                ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+                plt.imshow(t_ * to_numpy(hnorm), cmap=cc, vmin=0, vmax=vm)
+                plt.xlabel(r'$x$', fontsize=78)
+                plt.ylabel(r'$y$', fontsize=78)
+                fmt = lambda x, pos: '{:.3%}'.format(x)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/diff_coeff_{config_file}_{epoch}.tif", dpi=300)
+                plt.close()
+
+        fig_ = plt.figure(figsize=(12, 12))
+        ax = fig_.add_subplot(1, 1, 1)
+
+        pos = torch.argwhere(mask_mesh == 1)
+        pos = to_numpy(pos[:, 0]).astype(int)
+        x_data = np.reshape(coeff, (n_nodes))
+        y_data = np.reshape(t_, (n_nodes))
+        x_data = x_data.squeeze()
+        y_data = y_data.squeeze()
+        x_data = x_data[pos]
+        y_data = y_data[pos]
+
+        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+        ax.xaxis.set_major_formatter(FormatStrFormatter('%.3f'))
+        ax.yaxis.set_major_formatter(FormatStrFormatter('%.3f'))
+        plt.scatter(x_data, y_data, c='k', s=100, alpha=0.01)
+        plt.ylabel(r'Reconstructed diffusion coeff.', fontsize=48)
+        plt.xlabel(r'True diffusion coeff.', fontsize=48)
+        plt.xlim([0, vm * 1.1])
+        plt.ylim([0, vm * 1.1])
+
+        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+        residuals = y_data - linear_model(x_data, *lin_fit)
+        ss_res = np.sum(residuals ** 2)
+        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot)
+        plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/scatter_{config_file}_{epoch}.tif", dpi=300)
+        plt.close()
+
+        print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}")
+
+
 def plot_RD_RPS(config_file, epoch_list, log_dir, logger, cc, device):
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
@@ -3530,17 +3951,31 @@ def plot_RD_RPS(config_file, epoch_list, log_dir, logger, cc, device):
 
         net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt"
 
-        mesh_model_gene = choose_mesh_model(config=config, X1_mesh=x_mesh[:, 1:3], device=device)
-
         model, bc_pos, bc_dpos = choose_training_model(config, device)
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
         print(f'net: {net}')
         embedding = get_embedding(model.a, 1)
-        first_embedding = embedding
+
+        cluster_method = 'distance_embedding'
+        cluster_distance_threshold = 0.01
+        labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=cluster_distance_threshold)
+        labels_map = np.reshape(labels, (n_nodes_per_axis, n_nodes_per_axis))
+        fig, ax = fig_init()
+        plt.imshow(labels_map, cmap='tab20', vmin=0, vmax=19)
+        fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
+        ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+        ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+        plt.xlabel(r'$x$', fontsize=78)
+        plt.ylabel(r'$y$', fontsize=78)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/labels_map_{config_file}_cbar.tif", dpi=300)
+        plt.close
 
         fig, ax = fig_init()
-        plt.scatter(embedding[:, 0], embedding[:, 1], color='k', s=100, alpha=1)
+        for nodes_type in np.unique(labels):
+            pos = np.argwhere(labels == nodes_type)
+            plt.scatter(embedding[pos, 0], embedding[pos, 1], s=200, cmap='tab20')
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
         plt.tight_layout()
@@ -4393,7 +4828,7 @@ def get_figures(index):
 
 
     match index:
-        case '3' | '4' | 'supp4' | 'supp5' | 'supp6' | 'supp7' | 'supp8' | 'supp9' | 'supp10' | 'supp11' | 'supp12' | 'supp13' | 'supp15' |'supp16' |'supp17':
+        case '3' | '4' | 'supp4' | 'supp5' | 'supp6' | 'supp7' | 'supp8' | 'supp9' | 'supp10' | 'supp11' | 'supp12' | 'supp13' | 'supp15' |'supp16' :
             for config_file in config_list:
                 config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
                 data_plot(config=config, config_file=config_file, epoch_list=epoch_list, device=device)
@@ -4582,10 +5017,10 @@ if __name__ == '__main__':
     matplotlib.use("Qt5Agg")
 
     # config_list =['arbitrary_3_sequence_d']
-    # config_list = ['boids_16_dropout_10']
+    # config_list = ['RD_RPS']
     # for config_file in config_list:
     #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-    #     data_plot(config=config, config_file=config_file, epoch_list=['2_0'], device=device)
+    #     data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
     #     # plot_generated(config=config, run=0, style='color', step = 5, device=device)
     #     # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 
