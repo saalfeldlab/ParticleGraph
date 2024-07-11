@@ -3,7 +3,6 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 from torch_geometric.nn import MessagePassing
 import torch_geometric.utils as pyg_utils
-from ParticleGraph.MLP import MLP
 import imageio
 from matplotlib import rc
 from ParticleGraph.fitting_models import *
@@ -3462,28 +3461,21 @@ def plot_particle_field(config_file, epoch_list, log_dir, logger, cc, device):
                 logger.info(f'R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}')
 
 
-def plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
+def plot_RD_RPS(config_file, epoch_list, log_dir, logger, cc, device):
     # Load parameters from config file
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
 
-    max_radius = config.simulation.max_radius
-    min_radius = config.simulation.min_radius
     n_nodes = config.simulation.n_nodes
     n_nodes_per_axis = int(np.sqrt(n_nodes))
     n_node_types = config.simulation.n_node_types
     n_frames = config.simulation.n_frames
     n_runs = config.training.n_runs
-    node_value_map = config.simulation.node_value_map
-    aggr_type = config.graph_model.aggr_type
     delta_t = config.simulation.delta_t
     cmap = CustomColorMap(config=config)
-    node_coeff_map = config.simulation.node_coeff_map
 
     embedding_cluster = EmbeddingCluster(config)
 
-    vnorm = torch.tensor(1.0, device=device)
-    ynorm = torch.tensor(1.0, device=device)
     hnorm = torch.load(f'./log/try_{config_file}/hnorm.pt', map_location=device).to(device)
 
     x_mesh_list = []
@@ -3503,27 +3495,11 @@ def plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
     edge_index_mesh = mesh_data['edge_index']
     edge_weight_mesh = mesh_data['edge_weight']
 
-    x_mesh = x_mesh_list[0][n_frames - 1].clone().detach()
-    type_list = x_mesh[:, 5:6].clone().detach()
-    n_nodes = x_mesh.shape[0]
-    print(f'N nodes: {n_nodes}')
-
-    index_nodes = []
     x_mesh = x_mesh_list[1][0].clone().detach()
-    for n in range(n_node_types):
-        index = np.argwhere(x_mesh[:, 5].detach().cpu().numpy() == n)
-        index_nodes.append(index.squeeze())
-
-    plt.rcParams['text.usetex'] = True
-    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-    matplotlib.use("Qt5Agg")
 
     i0 = imread(f'graphs_data/{config.simulation.node_coeff_map}')
-    coeff = i0[(to_numpy(x_mesh[:, 1]) * 255).astype(int), (to_numpy(x_mesh[:, 2]) * 255).astype(int)]
-    coeff_ = coeff
+    coeff = i0[(to_numpy(x_mesh[:, 2]) * 255).astype(int), (to_numpy(x_mesh[:, 1]) * 255).astype(int)] / 255
     coeff = np.reshape(coeff, (n_nodes_per_axis, n_nodes_per_axis))
-    coeff = np.flipud(coeff) * config.simulation.beta
-
     vm = np.max(coeff)
     print(f'vm: {vm}')
 
@@ -3531,21 +3507,31 @@ def plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
     fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
     ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
     ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-    plt.imshow(coeff, cmap=cc, vmin=0, vmax=vm)
+    plt.imshow(coeff, vmin=0, vmax=vm, cmap='grey')
     plt.xlabel(r'$x$', fontsize=78)
     plt.ylabel(r'$y$', fontsize=78)
-
-    cbar = plt.colorbar(shrink=0.5)
-    cbar.ax.tick_params(labelsize=32)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/true_coeff_{config_file}.tif", dpi=300)
     plt.close()
+    fig, ax = fig_init()
+    fmt = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
+    ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+    ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+    plt.imshow(coeff, vmin=0, vmax=vm, cmap='grey')
+    plt.xlabel(r'$x$', fontsize=78)
+    plt.ylabel(r'$y$', fontsize=78)
+    cbar = plt.colorbar(shrink=0.5)
+    cbar.ax.tick_params(labelsize=32)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/results/true_coeff_{config_file}_cbar.tif", dpi=300)
+    plt.close()
 
-    epochlist = ['20', '0_1000', '0_2000', '0_5000', '1', '5']
-
-    for epoch in epochlist:
+    for epoch in epoch_list:
 
         net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt"
+
+        mesh_model_gene = choose_mesh_model(config=config, X1_mesh=x_mesh[:, 1:3], device=device)
+
         model, bc_pos, bc_dpos = choose_training_model(config, device)
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
@@ -3554,48 +3540,12 @@ def plot_RD(config_file, epoch_list, log_dir, logger, cc, device):
         first_embedding = embedding
 
         fig, ax = fig_init()
-        if has_pic:
-            plt.scatter(embedding[:, 0], embedding[:, 1],
-                        color=cmap.color(np.round(coeff_ * 256).astype(int)), s=100, alpha=1)
-        else:
-            for n in range(n_node_types):
-                c_ = np.round(n / (n_node_types - 1) * 256).astype(int)
-                plt.scatter(embedding[index_nodes[n], 0], embedding[index_nodes[n], 1], s=200)  # , color=cmap.color(c_)
+        plt.scatter(embedding[:, 0], embedding[:, 1], color='k', s=100, alpha=1)
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{epoch}.tif", dpi=300)
         plt.close()
-
-        if not (has_pic):
-
-            print('domain clustering...')
-            labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
-            label_list = []
-            for n in range(n_node_types):
-                tmp = labels[index_nodes[n]]
-                label_list.append(np.round(np.median(tmp)))
-            label_list = np.array(label_list)
-            new_labels = labels.copy()
-            for n in range(n_node_types):
-                new_labels[labels == label_list[n]] = n
-            accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-            print(f'accuracy: {accuracy}  n_clusters: {n_clusters}')
-
-            model_a_ = model.a[1].clone().detach()
-            for n in range(n_clusters):
-                pos = np.argwhere(labels == n).squeeze().astype(int)
-                pos = np.array(pos)
-                if pos.size > 0:
-                    median_center = model_a_[pos, :]
-                    median_center = torch.median(median_center, dim=0).values
-                    # plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='r', alpha=0.25)
-                    model_a_[pos, :] = median_center
-                    # plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='k')
-            with torch.no_grad():
-                model.a[1] = model_a_.clone().detach()
-
-        print('fitting diffusion coeff with domain clustering...')
 
         if True:
 
@@ -4381,6 +4331,9 @@ def data_plot(config, config_file, epoch_list, device):
         case 'WaveMesh':
             plot_wave(config_file=config_file, epoch_list=epoch_list, log_dir=log_dir, logger=logger, cc='viridis',
                            device=device)
+        case 'RD_RPS_Mesh':
+            plot_RD_RPS(config_file=config_file, epoch_list=epoch_list, log_dir=log_dir, logger=logger, cc='viridis',
+                           device=device)
 
     if config.graph_model.signal_model_name=='PDE_N':
         plot_signal(config_file, epoch_list, log_dir, logger, 'cool', device)
@@ -4429,6 +4382,9 @@ def get_figures(index):
         case 'supp16':
             config_list = ['wave_boat_ter']
             epoch_list = ['20', '0_1600', '1', '5']
+        case 'supp17':
+            config_list = ['RD_RPS']
+            epoch_list = ['20', '10', '5', '1']
 
         case '25':
             config_list = ['signal_N_100_2_a', 'signal_N_100_2_b', 'signal_N_100_2_c', 'signal_N_100_2_d']
@@ -4437,7 +4393,7 @@ def get_figures(index):
 
 
     match index:
-        case '3' | '4' | 'supp4' | 'supp5' | 'supp6' | 'supp7' | 'supp8' | 'supp9' | 'supp10' | 'supp11' | 'supp12' | 'supp13' | 'supp15' | '25':
+        case '3' | '4' | 'supp4' | 'supp5' | 'supp6' | 'supp7' | 'supp8' | 'supp9' | 'supp10' | 'supp11' | 'supp12' | 'supp13' | 'supp15' |'supp16' |'supp17':
             for config_file in config_list:
                 config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
                 data_plot(config=config, config_file=config_file, epoch_list=epoch_list, device=device)
@@ -4598,6 +4554,17 @@ def get_figures(index):
                       best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
                       sample_embedding=False, device=device)
 
+        case 'supp17':
+            config = ParticleGraphConfig.from_yaml(f'./config/RD_RPS.yaml')
+            data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 3)
+            config = ParticleGraphConfig.from_yaml(f'./config/RD_RPS_bis.yaml')
+            data_generate(config, device=device, visualize=True, run_vizualized=0, style='latex color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 3)
+            for config_file in config_list:
+                config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+                data_plot(config=config, config_file=config_file, epoch_list=epoch_list, device=device)
+            data_test(config=config, config_file=config_file, visualize=True, style='latex color', verbose=False,
+                              best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
+                              sample_embedding=False, device=device)
 
     print(' ')
     print(' ')
@@ -4612,7 +4579,7 @@ if __name__ == '__main__':
     print(f'device {device}')
     print(' ')
 
-    # matplotlib.use("Qt5Agg")
+    matplotlib.use("Qt5Agg")
 
     # config_list =['arbitrary_3_sequence_d']
     # config_list = ['boids_16_dropout_10']
@@ -4622,7 +4589,7 @@ if __name__ == '__main__':
     #     # plot_generated(config=config, run=0, style='color', step = 5, device=device)
     #     # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 
-    f_list = ['supp15']
+    f_list = ['supp17']
     for f in f_list:
         config_list,epoch_list = get_figures(f)
 
