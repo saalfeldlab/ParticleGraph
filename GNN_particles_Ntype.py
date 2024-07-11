@@ -33,7 +33,7 @@ from ParticleGraph.utils import *
 
 if __name__ == '__main__':
 
-    config_list =['boids_16_256_division_model_2_mass_coeff']
+    config_list =['boids_16_256_division_model_2_mass_coeff_PDE_B']
     # config_list =  ['RD_RPS_boat'] #'RD_RPS'] #,'RD_RPS_boat']
     # config_list = ['signal_N_100_2_test']
 
