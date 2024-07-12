@@ -2917,20 +2917,11 @@ def plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
 
-    max_radius = config.simulation.max_radius
-    min_radius = config.simulation.min_radius
     n_nodes = config.simulation.n_nodes
     n_nodes_per_axis = int(np.sqrt(n_nodes))
-    n_node_types = config.simulation.n_node_types
     n_frames = config.simulation.n_frames
-    node_value_map = config.simulation.node_value_map
     n_runs = config.training.n_runs
-    embedding_cluster = EmbeddingCluster(config)
-    cmap = CustomColorMap(config=config)
-    node_coeff_map = config.simulation.node_coeff_map
 
-    vnorm = torch.tensor(1.0, device=device)
-    ynorm = torch.tensor(1.0, device=device)
     hnorm = torch.load(f'./log/try_{config_file}/hnorm.pt', map_location=device).to(device)
 
     x_mesh_list = []
@@ -2947,19 +2938,11 @@ def plot_wave(config_file, epoch_list, log_dir, logger, cc, device):
     time.sleep(0.5)
     mesh_data = torch.load(f'graphs_data/graphs_{dataset_name}/mesh_data_1.pt', map_location=device)
     mask_mesh = mesh_data['mask']
-    edge_index_mesh = mesh_data['edge_index']
-    edge_weight_mesh = mesh_data['edge_weight']
 
     x_mesh = x_mesh_list[0][n_frames - 1].clone().detach()
-    type_list = x_mesh[:, 5:6].clone().detach()
     n_nodes = x_mesh.shape[0]
     print(f'N nodes: {n_nodes}')
-
-    index_nodes = []
     x_mesh = x_mesh_list[1][0].clone().detach()
-    for n in range(n_node_types):
-        index = np.argwhere(x_mesh[:, 5].detach().cpu().numpy() == n)
-        index_nodes.append(index.squeeze())
 
     i0 = imread(f'graphs_data/{config.simulation.node_coeff_map}')
     coeff = i0[(to_numpy(x_mesh[:, 2]) * 255).astype(int), (to_numpy(x_mesh[:, 1]) * 255).astype(int)] / 255
@@ -4234,7 +4217,7 @@ def data_plot(config, config_file, epoch_list, device):
                            device=device)
 
     if config.graph_model.signal_model_name=='PDE_N':
-        plot_signal(config_file, epoch_list, log_dir, logger, 'cool', device)
+        plot_signal(config_file, epoch_list, log_dir, logger, 'viridis', device)
 
     for handler in logger.handlers[:]:
         handler.close()
@@ -4283,7 +4266,7 @@ def get_figures(index):
         case 'supp17':
             config_list = ['RD_RPS']
         case 'supp18':
-            config_list = ['Signal_N_100_2_a']
+            config_list = ['signal_N_100_2_a']
 
         case '25':
             config_list = ['signal_N_100_2_a', 'signal_N_100_2_b', 'signal_N_100_2_c', 'signal_N_100_2_d']
@@ -4292,7 +4275,7 @@ def get_figures(index):
 
 
     match index:
-        case '3' | '4' | 'supp4' | 'supp5' | 'supp6' | 'supp7' | 'supp8' | 'supp9' | 'supp10' | 'supp11' | 'supp12' | 'supp13' | 'supp15' |'supp16' :
+        case '3' | '4' | 'supp4' | 'supp5' | 'supp6' | 'supp7' | 'supp8' | 'supp9' | 'supp10' | 'supp11' | 'supp12' | 'supp13' | 'supp15' |'supp16' |'supp18':
             for config_file in config_list:
                 config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
                 data_plot(config=config, config_file=config_file, epoch_list=epoch_list, device=device)
@@ -4420,7 +4403,7 @@ def get_figures(index):
                           best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
                           sample_embedding=True, device=device)
 
-        case 'supp105':
+        case 'supp15':
             config = ParticleGraphConfig.from_yaml(f'./config/wave_slit_ter.yaml')
             data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1, erase=True,
                           scenario='', ratio=1, bSave=True, step=config.simulation.n_frames // 3)
@@ -4487,7 +4470,7 @@ if __name__ == '__main__':
     print(f'device {device}')
     print(' ')
 
-    # matplotlib.use("Qt5Agg")
+    matplotlib.use("Qt5Agg")
 
     # config_list =['arbitrary_3_sequence_d']
     # config_list = ['RD_RPS']

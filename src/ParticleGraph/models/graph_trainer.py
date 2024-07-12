@@ -2793,10 +2793,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
         if model_config.signal_model_name == 'PDE_N':
             rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 6:7] - x0[:, 6:7]) ** 2, axis=1)))
-            geomloss = gloss(x[mask_mesh.squeeze(), 6:7], x0[mask_mesh.squeeze(), 6:7])
         elif model_config.mesh_model_name == 'WaveMesh':
             rmserr = torch.sqrt(torch.mean((x[mask_mesh.squeeze(), 6:7] - x0[mask_mesh.squeeze(), 6:7]) ** 2))
-
             # errors = (x[mask_mesh.squeeze(), 6:7] - x0[mask_mesh.squeeze(), 6:7]) ** 2
             # percentile_90th = torch.quantile(errors, 0.9)
             # errors = errors[errors < percentile_95th]
@@ -2917,8 +2915,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t)  # position update
 
-        # A1 = A1 + delta_t
-
         if (it % step == 0) & (it >= 0) & visualize:
 
             if 'latex' in style:
@@ -2974,10 +2970,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 ax.yaxis.set_major_locator(plt.MaxNLocator(3))
                 ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                 ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=200, c=to_numpy(x[:, 6]), cmap='cool', vmin=0,
+                plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=200, c=to_numpy(x[:, 6]), cmap='viridis', vmin=0,
                             vmax=3)
-                plt.xlim([-1.5, 1.5])
-                plt.ylim([-1.5, 1.5])
+                plt.xlim([-1.2, 1.2])
+                plt.ylim([-1.2, 1.2])
                 # plt.xlabel('x', fontsize=48)
                 # plt.ylabel('y', fontsize=48)
                 plt.xticks(fontsize=48.0)
@@ -3106,7 +3102,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         print(h.shape)
         print('average u {:.3e}+/-{:.3e}'.format(np.mean(h), np.std(h)))
 
-    else:
+    elif model_config.signal_model_name != 'PDE_N':
+
         r = [np.mean(rmserr_list), np.std(rmserr_list), np.mean(geomloss_list), np.std(geomloss_list)]
         print('average rollout Sinkhorn div. {:.3e}+/-{:.3e}'.format(np.mean(geomloss_list), np.std(geomloss_list)))
         np.save(f"./{log_dir}/rmserr_geomloss_{config_file}.npy", r)

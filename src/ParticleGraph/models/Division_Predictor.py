@@ -1,8 +1,7 @@
 import numpy as np
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-from ParticleGraph.MLP import MLP
+from ParticleGraph.models.MLP import MLP
 from ParticleGraph.utils import to_numpy
 
 class Division_Predictor(nn.Module):
