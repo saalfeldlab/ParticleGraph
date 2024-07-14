@@ -2410,7 +2410,23 @@ def data_train_signal(config, config_file, device):
     adjacency = torch.tensor(mat['A'], device=device)
     adj_t = adjacency > 0
     edge_index = adj_t.nonzero().t().contiguous()
+
+    if config_file == 'signal_N_100_2_b':
+        for n in trange(20000):
+            i = np.random.randint(n_particles)
+            j = np.random.randint(n_particles)
+            if adjacency[i,j]==0:
+                edge_index = torch.cat((edge_index, torch.tensor([[i], [j]], device=device)), 1)
+                edge_index = torch.cat((edge_index, torch.tensor([[j], [i]], device=device)), 1)
+    if config_file == 'signal_N_100_2_c':
+        for n in trange(40000):
+            i = np.random.randint(n_particles)
+            j = np.random.randint(n_particles)
+            if adjacency[i,j]==0:
+                edge_index = torch.cat((edge_index, torch.tensor([[i], [j]], device=device)), 1)
+                edge_index = torch.cat((edge_index, torch.tensor([[j], [i]], device=device)), 1)
     model.edges = edge_index
+    logger.info(f'edge_index.shape {edge_index.shape} ')
 
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
@@ -2814,7 +2830,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 geomloss = gloss(x[0:5000, 1:3], x0[0:5000, 1:3])
             else:
                 geomloss = gloss(x[:, 1:3], x0[:, 1:3])
-            geomloss_list.append(geomloss)
+            geomloss_list.append(geomloss.item())
 
         rmserr_list.append(rmserr.item())
 
