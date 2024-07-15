@@ -3871,6 +3871,9 @@ def plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         uu = uu.to(dtype=torch.float32)
         func = func.to(dtype=torch.float32)
 
+        text_trap = StringIO()
+        sys.stdout = text_trap
+
         model_pysrr = PySRRegressor(
             niterations=30,  # < Increase me for better results
             binary_operators=["+", "*"],
@@ -3885,7 +3888,8 @@ def plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         )
 
         model_pysrr.fit(to_numpy(uu[:, None]), to_numpy(func[:, None]))
-        # model_pysrr, m, v = symbolic_regression(uu,func)
+
+        sys.stdout = sys.__stdout__
 
         expr = model_pysrr.sympy(4).as_terms()[0]
         coeff = expr[0][1][0][0]
@@ -3958,6 +3962,9 @@ def plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
             plt.savefig(f"./{log_dir}/results/comparison_phi_{type}_{config_file}_{epoch}.tif", dpi=300)
             plt.close()
 
+            text_trap = StringIO()
+            sys.stdout = text_trap
+
             model_pysrr = PySRRegressor(
                 niterations=100,  # < Increase me for better results
                 unary_operators=[
@@ -3967,11 +3974,13 @@ def plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
                     "tanh": {"tanh": 0},
                 },
                 random_state=0,
-                temp_equation_file=False,
                 maxsize=20,
-                maxdepth=6
+                maxdepth=6,
+                temp_equation_file=False
             )
             model_pysrr.fit(to_numpy(uu[:, None]), to_numpy(learned_func[:, None]))
+
+            sys.stdout = sys.__stdout__
 
 
 
