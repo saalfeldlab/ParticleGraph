@@ -32,7 +32,7 @@ from ParticleGraph.utils import *
 
 if __name__ == '__main__':
 
-    config_list = ['boids_division_mass_coeff']
+    config_list = ['boids_16_division_model_2_Voronoi']
 
 
     for config_file in config_list:

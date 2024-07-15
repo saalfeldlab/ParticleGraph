@@ -2,6 +2,7 @@ import numpy as np
 from scipy.spatial import Voronoi, voronoi_plot_2d
 import torch
 from ParticleGraph.utils import to_numpy
+import math
 
 def init_cell_range(config, device, scenario="None"):
     simulation_config = config.simulation
@@ -168,7 +169,14 @@ def get_voronoi_perimeter(vertices_pos, vertices_per_cell, device):
     return perimeter
 
 def get_voronoi_lengths(vertices_pos, vertices_per_cell, device):
+
     lengths = []
+    for v_list in vertices_per_cell:
+
+        per_cell = []
+        for v in range(-1, len(v_list)):
+            vertices_pos[vertices_per_cell[v]]
+
     return lengths
 
 
