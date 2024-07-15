@@ -30,7 +30,7 @@ simulation:
   n_particles_max: 20000
   n_particle_types: 16
   n_interactions: 16
-  n_frames: 4000
+  n_frames: 1000
   sigma: 0.005
   delta_t: 0.5
   dpos_init: 5.0E-4
