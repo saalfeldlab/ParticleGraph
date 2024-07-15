@@ -4487,12 +4487,12 @@ if __name__ == '__main__':
 
     matplotlib.use("Qt5Agg")
 
-    config_list =['boids_16_256_division_model_2_mass_coeff']
-    # config_list = ['signal_N_100_2_b']
+    # config_list =['boids_16_256_division_model_2_mass_coeff']
+    config_list = ['signal_N_100_2_d']
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        # data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
-        plot_generated(config=config, run=0, style='color Voronoi', step = 5, device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
+        # plot_generated(config=config, run=0, style='color Voronoi', step = 5, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 
     # f_list = ['supp10']

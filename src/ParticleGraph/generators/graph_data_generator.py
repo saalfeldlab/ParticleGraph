@@ -703,12 +703,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     matplotlib.rcParams['savefig.pad_inches'] = 0
                     fig = plt.figure(figsize=(12, 12))
                     ax = fig.add_subplot(1, 1, 1)
-                    ax.xaxis.get_major_formatter()._usetex = False
-                    ax.yaxis.get_major_formatter()._usetex = False
-                    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-                    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-                    ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                    plt.xticks([])
+                    plt.yticks([])
                     index_particles = []
                     voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='black', line_width=1, line_alpha=0.5, point_size=0)
                     for n in range(n_particle_types):
@@ -725,8 +721,10 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     plt.scatter(to_numpy(vertices_pos[:, 0]), to_numpy(vertices_pos[:, 1]), s=10, color='k')
                     plt.xlim([-0.05, 1.05])
                     plt.ylim([-0.05, 1.05])
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Vor_{run}_{num}.tif",
-                                dpi=85.35)
+                    plt.tight_layout()
+                    num = f"{it:06}"
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Vor_{run}_{num}.tif", dpi=85.35)
+                    plt.close()
 
         if bSave:
             torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
