@@ -32,7 +32,7 @@ from ParticleGraph.utils import *
 
 if __name__ == '__main__':
 
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
 
     config_list =['boids_16_division_model_2_Voronoi']
     # config_list =  ['RD_RPS_bis']
