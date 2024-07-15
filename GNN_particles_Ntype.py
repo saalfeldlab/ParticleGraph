@@ -47,7 +47,7 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='voronoi color', alpha=1, erase=True, bSave=True, step=1)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='voronoi frame', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 400)
         # data_train(config, config_file, device)
         # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 3, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
