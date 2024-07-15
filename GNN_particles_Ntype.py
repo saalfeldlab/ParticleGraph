@@ -11,7 +11,6 @@ from sklearn import metrics
 from tifffile import imread
 from torch_geometric.loader import DataLoader
 from torch_geometric.utils.convert import to_networkx
-# matplotlib.use("Qt5Agg")
 from scipy.optimize import curve_fit
 from scipy.spatial import Delaunay
 from torchvision.transforms import GaussianBlur
@@ -33,9 +32,11 @@ from ParticleGraph.utils import *
 
 if __name__ == '__main__':
 
-    # config_list =['boids_16_256_division_model_2_small']
+    matplotlib.use("Qt5Agg")
+
+    config_list =['boids_16_division_model_2_Voronoi']
     # config_list =  ['RD_RPS_bis']
-    config_list = ['signal_N_100_2_c']
+    # config_list = ['signal_N_100_2_d']
 
 
     for config_file in config_list:
@@ -46,7 +47,7 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='frame color', alpha=1, erase=True, bSave=True, step=1)
-        data_train(config, config_file, device)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='voronoi color', alpha=1, erase=True, bSave=True, step=1)
+        # data_train(config, config_file, device)
         # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 3, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 

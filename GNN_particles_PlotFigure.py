@@ -20,6 +20,7 @@ import matplotlib as mpl
 from io import StringIO
 import sys
 from scipy.stats import pearsonr
+from scipy.spatial import Voronoi, voronoi_plot_2d
 
 # matplotlib.use("Qt5Agg")
 
@@ -821,7 +822,6 @@ def plot_generated(config, run, style, step, device):
     for f in files:
         os.remove(f)
 
-
     print('Load data ...')
 
     x_list = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
@@ -839,7 +839,6 @@ def plot_generated(config, run, style, step, device):
             plt.rcParams['text.usetex'] = True
             rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
-        # matplotlib.use("Qt5Agg")
         matplotlib.rcParams['savefig.pad_inches'] = 0
         fig = plt.figure(figsize=(12, 12))
         ax = fig.add_subplot(1, 1, 1)
@@ -3954,6 +3953,7 @@ def plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
             plt.ylabel(r'$\Phi_0(u)$', fontsize=78)
             plt.legend(fontsize=32.0)
             plt.ylim([-0.25, 0.25])
+            plt.xlim([0, 3])
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/comparison_phi_{type}_{config_file}_{epoch}.tif", dpi=300)
             plt.close()
@@ -4485,18 +4485,18 @@ if __name__ == '__main__':
     print(f'device {device}')
     print(' ')
 
-    # matplotlib.use("Qt5Agg")
+    matplotlib.use("Qt5Agg")
 
-    # config_list =['arbitrary_3_sequence_d']
-    # config_list = ['RD_RPS']
-    # for config_file in config_list:
-    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-    #     data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
-    #     # plot_generated(config=config, run=0, style='color', step = 5, device=device)
-    #     # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
+    config_list =['boids_16_256_division_model_2_mass_coeff']
+    # config_list = ['signal_N_100_2_b']
+    for config_file in config_list:
+        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+        # data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
+        plot_generated(config=config, run=0, style='color Voronoi', step = 5, device=device)
+        # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 
-    f_list = ['supp10']
-    for f in f_list:
-        config_list,epoch_list = get_figures(f)
+    # f_list = ['supp10']
+    # for f in f_list:
+    #     config_list,epoch_list = get_figures(f)
 
 

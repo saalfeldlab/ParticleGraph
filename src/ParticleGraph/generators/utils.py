@@ -31,33 +31,6 @@ def generate_from_data(config, device, visualize=True, folder=None, step=None):
         case _:
             raise ValueError(f'Unknown data folder name {data_folder_name}')
 
-def update_cell_cycle_stage(n_particles, cell_age, cycle_length, type_list, device):
-    g1 = 0.46
-    s = 0.33
-    g2 = 0.17
-    m = 0.04
-
-    G1 = (g1 * cycle_length).squeeze()
-    S = ((g1 + s) * cycle_length).squeeze()
-    G2 = ((g1 + s + g2) * cycle_length).squeeze()
-    M = ((g1 + s + g2 + m) * cycle_length).squeeze()
-
-    cell_age = cell_age.squeeze()
-
-    cell_stage = torch.zeros(n_particles, device=device)
-    for i in range(n_particles):
-        curr = cell_age[i]
-        
-        if curr <= G1[int(type_list[i])]:
-            cell_stage[i] = 0
-        elif curr <= S[int(type_list[i])]:
-            cell_stage[i] = 1
-        elif curr <= G2[int(type_list[i])]:
-            cell_stage[i] = 2
-        else: 
-            cell_stage[i] = 3
-
-    return cell_stage[:, None]
 
 def choose_model(config, device):
     particle_model_name = config.graph_model.particle_model_name
@@ -278,93 +251,6 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
 
 
     return pos, dpos, type, features, age, particle_id
-
-
-def init_cell_range(config, device, scenario="None"):
-    simulation_config = config.simulation
-    n_particles = simulation_config.n_particles
-    n_particle_types = simulation_config.n_particle_types
-
-    ##### defines all variables for the cell model, per type of cell: dimension = n_particle_types
-
-    if config.simulation.cell_cycle_length != [-1]:
-        cycle_length = torch.tensor(config.simulation.cell_cycle_length, device=device)
-    else:
-        cycle_length = torch.clamp(torch.abs(torch.ones(n_particle_types, 1, device=device) * 250 + torch.randn(n_particle_types, 1, device=device) * 50), min=100, max=700).squeeze()
-
-    if config.simulation.final_cell_mass != [-1]:
-        final_cell_mass = torch.tensor(config.simulation.final_cell_mass, device=device)
-    else:
-        final_cell_mass = torch.clamp(torch.abs(torch.ones(n_particle_types, 1, device=device) * 250 + torch.randn(n_particle_types, 1, device=device) * 25), min=200, max=500).flatten()
-
-    if config.simulation.cell_death_rate != [-1]:
-        cell_death_rate = torch.tensor(config.simulation.cell_death_rate, device=device)
-    else:
-        cell_death_rate = torch.zeros((n_particles, 1), device=device)
-
-    if config.simulation.mc_slope != [-1]:
-        mc_slope = torch.tensor(config.simulation.mc_slope, device=device)
-    else:
-        mc_slope = torch.clamp(torch.randn(n_particle_types, 1, device=device) * 30, min=-30, max=30).flatten()
-        
-        
-    return cycle_length, final_cell_mass, cell_death_rate, mc_slope     
-
-
-def init_cells(config, cycle_length, final_cell_mass, cell_death_rate, mc_slope, device):
-    simulation_config = config.simulation
-    n_particles = simulation_config.n_particles
-    n_particle_types = simulation_config.n_particle_types
-    dimension = simulation_config.dimension
-
-    dpos_init = simulation_config.dpos_init
-
-    if (simulation_config.boundary == 'periodic'): # | (simulation_config.dimension == 3):
-        pos = torch.rand(n_particles, dimension, device=device)
-    else:
-        pos = torch.randn(n_particles, dimension, device=device) * 0.5
-
-
-    ###### specify all variables per cell, dimension = n_particles
-
-    # specify position
-    dpos = dpos_init * torch.randn((n_particles, dimension), device=device)
-    dpos = torch.clamp(dpos, min=-torch.std(dpos), max=+torch.std(dpos))
-    # specify type
-    type = torch.zeros(int(n_particles / n_particle_types), device=device)
-    for n in range(1, n_particle_types):
-        type = torch.cat((type, n * torch.ones(int(n_particles / n_particle_types), device=device)), 0)
-    if (simulation_config.params == 'continuous') | (config.simulation.non_discrete_level > 0):  # TODO: params is a list[list[float]]; this can never happen?
-        type = torch.tensor(np.arange(n_particles), device=device)
-    # specify cell status dim=2  H1[:,0] = cell alive flag, alive : 0 , death : 0 , H1[:,1] = cell division flag, dividing : 1
-    status = torch.ones(n_particles, 2, device=device)
-    status [:,1] = 0
-
-    cycle_length_distrib = cycle_length[to_numpy(type)] * (torch.ones(n_particles, device=device) + 0.05 * torch.randn(n_particles, device=device))
-    cycle_length_distrib = cycle_length_distrib[:, None]
-
-    mc_slope_distrib = mc_slope[to_numpy(type),None] # * (torch.ones(n_particles, device=device) + 0.05 * torch.randn(n_particles, device=device))
-
-    cell_age = torch.rand(n_particles, device=device)
-    cell_age = cell_age * cycle_length[to_numpy(type)].squeeze()
-    cell_age = cell_age[:, None]
-
-    cell_stage = update_cell_cycle_stage(n_particles, cell_age, cycle_length, type, device)
-
-    growth_rate = final_cell_mass/(2 * cycle_length)
-    growth_rate_distrib = growth_rate[to_numpy(type)].squeeze()[:,None]
-
-    cell_mass_distrib = (growth_rate_distrib * cell_age) + (final_cell_mass[to_numpy(type),None]/2)
-
-    cell_death_rate_distrib = (cell_death_rate[to_numpy(type)].squeeze() * (torch.ones(n_particles, device=device) + 0.05 * torch.randn(n_particles, device=device)))/100
-    cell_death_rate_distrib = cell_death_rate_distrib[:, None]
-
-    particle_id = torch.arange(n_particles, device=device)
-    particle_id = particle_id[:, None]
-    type = type[:, None]
-
-    return particle_id, pos, dpos, type, status, cell_age , cell_stage, cell_mass_distrib, growth_rate_distrib, cycle_length_distrib, cell_death_rate_distrib, mc_slope_distrib
-
 
 
 def get_index(n_particles, n_particle_types):

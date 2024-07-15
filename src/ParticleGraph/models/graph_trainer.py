@@ -2425,6 +2425,17 @@ def data_train_signal(config, config_file, device):
             if adjacency[i,j]==0:
                 edge_index = torch.cat((edge_index, torch.tensor([[i], [j]], device=device)), 1)
                 edge_index = torch.cat((edge_index, torch.tensor([[j], [i]], device=device)), 1)
+    if config_file == 'signal_N_100_2_d':
+        print('Fully connection ...')
+        for i in trange(n_particles):
+                i_s = torch.ones(n_particles, device=device) * i
+                j_s = torch.arange(n_particles, device=device)
+                ij_s = torch.cat((i_s[:,None], j_s[:,None]), dim=1).t()
+                if i==0:
+                    edge_index = ij_s
+                else:
+                    edge_index = torch.cat((edge_index, ij_s), dim=1)
+                edge_index = edge_index.to(dtype=torch.int64)
     model.edges = edge_index
     logger.info(f'edge_index.shape {edge_index.shape} ')
 
@@ -2455,8 +2466,10 @@ def data_train_signal(config, config_file, device):
         Niter = n_frames * data_augmentation_loop // batch_size
         if (has_mesh) & (batch_size == 1):
             Niter = Niter // 4
+        print(f'Niter = {Niter}')
+        logger.info(f'Niter = {Niter}')
 
-        for N in range(Niter):
+        for N in trange(Niter):
 
             run = 1 + np.random.randint(n_runs - 1)
             k = np.random.randint(n_frames - 6)
