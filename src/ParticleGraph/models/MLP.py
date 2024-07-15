@@ -50,7 +50,7 @@ if __name__ == '__main__':
 
     current_path = os.path.dirname(os.path.realpath(__file__))
 
-    time_series = torch.load('./../../graphs_data/graphs_boids_16_256_division_model_2_mass_coeff/x_list_0.pt', map_location=device)
+    time_series = torch.load('../../../graphs_data/graphs_boids_16_256_division_model_2_mass_coeff/x_list_0.pt', map_location=device)
 
     mass_list = get_time_series(time_series,500,'mass')
     mass_list = torch.tensor(mass_list[0:2000], device=device) / 500

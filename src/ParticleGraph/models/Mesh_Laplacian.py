@@ -1,10 +1,8 @@
 import numpy as np
 import torch
 import torch.nn as nn
-import torch_geometric.utils as pyg_utils
-from ParticleGraph.MLP import MLP
+from ParticleGraph.models.MLP import MLP
 from ParticleGraph.utils import to_numpy
-import matplotlib.pyplot as plt
 import torch_geometric as pyg
 
 

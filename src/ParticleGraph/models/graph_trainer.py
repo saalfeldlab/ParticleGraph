@@ -2410,7 +2410,34 @@ def data_train_signal(config, config_file, device):
     adjacency = torch.tensor(mat['A'], device=device)
     adj_t = adjacency > 0
     edge_index = adj_t.nonzero().t().contiguous()
+
+    if config_file == 'signal_N_100_2_b':
+        for n in trange(20000):
+            i = np.random.randint(n_particles)
+            j = np.random.randint(n_particles)
+            if adjacency[i,j]==0:
+                edge_index = torch.cat((edge_index, torch.tensor([[i], [j]], device=device)), 1)
+                edge_index = torch.cat((edge_index, torch.tensor([[j], [i]], device=device)), 1)
+    if config_file == 'signal_N_100_2_c':
+        for n in trange(40000):
+            i = np.random.randint(n_particles)
+            j = np.random.randint(n_particles)
+            if adjacency[i,j]==0:
+                edge_index = torch.cat((edge_index, torch.tensor([[i], [j]], device=device)), 1)
+                edge_index = torch.cat((edge_index, torch.tensor([[j], [i]], device=device)), 1)
+    if config_file == 'signal_N_100_2_d':
+        print('Fully connection ...')
+        for i in trange(n_particles):
+                i_s = torch.ones(n_particles, device=device) * i
+                j_s = torch.arange(n_particles, device=device)
+                ij_s = torch.cat((i_s[:,None], j_s[:,None]), dim=1).t()
+                if i==0:
+                    edge_index = ij_s
+                else:
+                    edge_index = torch.cat((edge_index, ij_s), dim=1)
+                edge_index = edge_index.to(dtype=torch.int64)
     model.edges = edge_index
+    logger.info(f'edge_index.shape {edge_index.shape} ')
 
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
@@ -2439,8 +2466,10 @@ def data_train_signal(config, config_file, device):
         Niter = n_frames * data_augmentation_loop // batch_size
         if (has_mesh) & (batch_size == 1):
             Niter = Niter // 4
+        print(f'Niter = {Niter}')
+        logger.info(f'Niter = {Niter}')
 
-        for N in range(Niter):
+        for N in trange(Niter):
 
             run = 1 + np.random.randint(n_runs - 1)
             k = np.random.randint(n_frames - 6)
@@ -2793,10 +2822,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
         if model_config.signal_model_name == 'PDE_N':
             rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 6:7] - x0[:, 6:7]) ** 2, axis=1)))
-            geomloss = gloss(x[mask_mesh.squeeze(), 6:7], x0[mask_mesh.squeeze(), 6:7])
         elif model_config.mesh_model_name == 'WaveMesh':
             rmserr = torch.sqrt(torch.mean((x[mask_mesh.squeeze(), 6:7] - x0[mask_mesh.squeeze(), 6:7]) ** 2))
-
             # errors = (x[mask_mesh.squeeze(), 6:7] - x0[mask_mesh.squeeze(), 6:7]) ** 2
             # percentile_90th = torch.quantile(errors, 0.9)
             # errors = errors[errors < percentile_95th]
@@ -2816,7 +2843,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 geomloss = gloss(x[0:5000, 1:3], x0[0:5000, 1:3])
             else:
                 geomloss = gloss(x[:, 1:3], x0[:, 1:3])
-            geomloss_list.append(geomloss)
+            geomloss_list.append(geomloss.item())
 
         rmserr_list.append(rmserr.item())
 
@@ -2917,8 +2944,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t)  # position update
 
-        # A1 = A1 + delta_t
-
         if (it % step == 0) & (it >= 0) & visualize:
 
             if 'latex' in style:
@@ -2974,10 +2999,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 ax.yaxis.set_major_locator(plt.MaxNLocator(3))
                 ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                 ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=200, c=to_numpy(x[:, 6]), cmap='cool', vmin=0,
+                plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=200, c=to_numpy(x[:, 6]), cmap='viridis', vmin=0,
                             vmax=3)
-                plt.xlim([-1.5, 1.5])
-                plt.ylim([-1.5, 1.5])
+                plt.xlim([-1.2, 1.2])
+                plt.ylim([-1.2, 1.2])
                 # plt.xlabel('x', fontsize=48)
                 # plt.ylabel('y', fontsize=48)
                 plt.xticks(fontsize=48.0)
@@ -3106,7 +3131,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         print(h.shape)
         print('average u {:.3e}+/-{:.3e}'.format(np.mean(h), np.std(h)))
 
-    else:
+    elif model_config.signal_model_name != 'PDE_N':
+
         r = [np.mean(rmserr_list), np.std(rmserr_list), np.mean(geomloss_list), np.std(geomloss_list)]
         print('average rollout Sinkhorn div. {:.3e}+/-{:.3e}'.format(np.mean(geomloss_list), np.std(geomloss_list)))
         np.save(f"./{log_dir}/rmserr_geomloss_{config_file}.npy", r)

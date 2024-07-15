@@ -14,5 +14,6 @@ from .RD_Gray_Scott import RD_Gray_Scott
 from .RD_RPS import RD_RPS
 from .graph_data_generator import *
 from .utils import choose_model, choose_mesh_model, init_particles, init_mesh
+from .cell_utils import *
 
-__all__ = [utils, graph_data_generator, PDE_Laplacian, PDE_A,PDE_B, PDE_B_bis, PDE_B_mass, PDE_E, PDE_G, PDE_GS, PDE_N, PDE_O, PDE_Z, RD_FitzHugh_Nagumo, RD_Gray_Scott, RD_RPS, choose_model, choose_mesh_model, init_particles, init_mesh]
+__all__ = [utils, cell_utils, graph_data_generator, PDE_Laplacian, PDE_A,PDE_B, PDE_B_bis, PDE_B_mass, PDE_E, PDE_G, PDE_GS, PDE_N, PDE_O, PDE_Z, RD_FitzHugh_Nagumo, RD_Gray_Scott, RD_RPS, choose_model, choose_mesh_model, init_particles, init_mesh]

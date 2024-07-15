@@ -5,9 +5,10 @@ import torch
 from ParticleGraph.generators.utils import *
 from ParticleGraph.models.utils import *
 from GNN_particles_Ntype import *
-from ParticleGraph.generators.utils import update_cell_cycle_stage
 from ParticleGraph.utils import set_size
+from ParticleGraph.generators.cell_utils import *
 from scipy import stats
+from scipy.spatial import Voronoi, voronoi_plot_2d
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
@@ -415,6 +416,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         y_list = []
         x_len_list = []
         edge_p_p_list = []
+        vertices_pos_list = []
+        vertices_per_cell_list =[]
 
 
         '''
@@ -543,7 +546,21 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 max_radius_list.append(max_radius)
                 edges_len_list.append(edge_index.shape[1])
                 x_len_list.append(x.shape[0])
-          
+
+            # calculate passive model
+
+            vor, vertices_pos, vertices_per_cell = get_vertices(points=to_numpy(X1), device=device)
+
+            vertices_pos_list.append(vertices_pos)
+            vertices_per_cell_list.append(vertices_per_cell)
+
+            voronoi_area =  get_voronoi_area(X1, vertices_pos, vertices_per_cell, device)
+            voronoi_perimeter = get_voronoi_perimeter(vertices_pos, vertices_per_cell, device)
+            voronoi_lengths = get_voronoi_lengths(vertices_pos, vertices_per_cell, device)
+
+            U = cell_energy(voronoi_area, voronoi_perimeter, voronoi_lengths, device)
+
+
             # model prediction
             with torch.no_grad():
                 y = model(dataset, has_field=True)
@@ -681,10 +698,43 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 plt.savefig(f"graphs_data/graphs_{dataset_name}/max_radius_{run}.jpg", dpi=170.7)
                 plt.close()
 
+                if 'voronoi' in style:
+
+                    matplotlib.rcParams['savefig.pad_inches'] = 0
+                    fig = plt.figure(figsize=(12, 12))
+                    ax = fig.add_subplot(1, 1, 1)
+                    ax.xaxis.get_major_formatter()._usetex = False
+                    ax.yaxis.get_major_formatter()._usetex = False
+                    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+                    ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                    index_particles = []
+                    voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='black', line_width=1, line_alpha=0.5, point_size=0)
+                    for n in range(n_particle_types):
+                        pos = torch.argwhere((T1.squeeze() == n) & (H1[:,0].squeeze()==1))
+                        pos = to_numpy(pos[:, 0].squeeze()).astype(int)
+                        index_particles.append(pos)
+                        # plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                        #             s=marker_size, color=cmap.color(n))
+
+                        size = set_size(x, index_particles[n], 10)/10
+
+                        plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                                    s=size, color=cmap.color(n))
+                    plt.scatter(to_numpy(vertices_pos[:, 0]), to_numpy(vertices_pos[:, 1]), s=10, color='k')
+                    plt.xlim([-0.05, 1.05])
+                    plt.ylim([-0.05, 1.05])
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Vor_{run}_{num}.tif",
+                                dpi=85.35)
+
         if bSave:
             torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
             np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}',*edge_p_p_list)
+            np.save(f'graphs_data/graphs_{dataset_name}/vertices_pos_list_{run}',vertices_pos_list)
+            np.savez(f'graphs_data/graphs_{dataset_name}/vertices_per_cell_list_{run}',*vertices_per_cell_list)
+
             torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
             torch.save(CL1, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
             torch.save(cell_death_rate, f'graphs_data/graphs_{dataset_name}/cell_death_rate.pt')

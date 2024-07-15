@@ -11,7 +11,6 @@ from sklearn import metrics
 from tifffile import imread
 from torch_geometric.loader import DataLoader
 from torch_geometric.utils.convert import to_networkx
-# matplotlib.use("Qt5Agg")
 from scipy.optimize import curve_fit
 from scipy.spatial import Delaunay
 from torchvision.transforms import GaussianBlur
@@ -44,7 +43,7 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex frame color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 3 -1)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='voronoi color', alpha=1, erase=True, bSave=True, step=1)
         # data_train(config, config_file, device)
         # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 
