@@ -160,13 +160,31 @@ def get_vertices(points=[], device=[]):
 
     return vor, vertices_pos, vertices_per_cell
 
-def get_voronoi_area(x_pos, vertices_pos, vertices_per_cell, device):
-    area = []
-    return area
+def get_voronoi_areas(vertices_pos, vertices_per_cell, device):
 
-def get_voronoi_perimeter(vertices_pos, vertices_per_cell, device):
-    perimeter = []
-    return perimeter
+    centroids = get_voronoi_centroids(vertices_pos, vertices_per_cell, device)
+
+    areas = []
+    for i in range(len(vertices_per_cell)):
+
+        v_list = vertices_per_cell[i]
+        per_cell = 0
+        for v in range(-1, len(v_list)-1):
+            vert1 = vertices_pos[v_list[v]]
+            vert2 = vertices_pos[v_list[v+1]]
+
+            per_cell += np.abs(((np.cross([to_numpy(centroids[i]), to_numpy(vert1)], [to_numpy(centroids[i]), to_numpy(vert2)]))/2)[1])
+
+        areas.append(per_cell, device=device)
+
+    return torch.Tensor(areas)
+
+def get_voronoi_perimeters(vertices_pos, vertices_per_cell, device):
+    lengths = get_voronoi_lengths(vertices_pos, vertices_per_cell, device)
+
+    perimeter = [sum(i) for i in lengths]
+
+    return torch.Tensor(perimeter, device=device)
 
 def get_voronoi_lengths(vertices_pos, vertices_per_cell, device):
 
@@ -174,11 +192,29 @@ def get_voronoi_lengths(vertices_pos, vertices_per_cell, device):
     for v_list in vertices_per_cell:
 
         per_cell = []
-        for v in range(-1, len(v_list)):
-            vertices_pos[vertices_per_cell[v]]
+        for v in range(-1, len(v_list)-1):
+            v1 = vertices_pos[v_list[v]]
+            v2 = vertices_pos[v_list[v+1]]
+            per_cell.append(math.dist(v1, v2))
 
-    return lengths
+        lengths.append(per_cell)
 
+    return torch.Tensor(lengths, device=device)
+
+def get_voronoi_centroids(vertices_pos, vertices_per_cell, device):
+
+    centroids = []
+    for v_list in vertices_per_cell:
+
+        xs = vertices_pos[v_list, 0]
+        ys = vertices_pos[v_list, 1]
+
+        x_pos = sum(xs)/len(xs)
+        y_pos = sum(ys)/len(ys)
+
+        centroids.append([x_pos, y_pos])
+
+    return centroids
 
 def cell_energy(voronoi_area, voronoi_perimeter, voronoi_lengths, device):
 

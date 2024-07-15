@@ -554,8 +554,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             vertices_pos_list.append(vertices_pos)
             vertices_per_cell_list.append(vertices_per_cell)
 
-            voronoi_area =  get_voronoi_area(X1, vertices_pos, vertices_per_cell, device)
-            voronoi_perimeter = get_voronoi_perimeter(vertices_pos, vertices_per_cell, device)
+            voronoi_area =  get_voronoi_areas(vertices_pos, vertices_per_cell, device)
+            voronoi_perimeter = get_voronoi_perimeters(vertices_pos, vertices_per_cell, device)
             voronoi_lengths = get_voronoi_lengths(vertices_pos, vertices_per_cell, device)
 
             U = cell_energy(voronoi_area, voronoi_perimeter, voronoi_lengths, device)
