@@ -163,17 +163,14 @@ def load_shrofflab_celegans(
     """
     Load the Shrofflab C. elegans data from a CSV file and convert it to a PyTorch tensor.
 
-    Args:
-        file_path (str): The path to the CSV file.
-        replace_missing_cpm (float): If not None, replace missing cpm values with this value.
-        device (str): The PyTorch device to use for the tensor.
-
-    Returns:
-        tensor_list (List[torch.Tensor]): A list of PyTorch tensors containing the loaded data for each time point.
-        time (np.ndarray): The time points corresponding to the data.
-        cell_names (np.ndarray): The names of the cells in the data.
-
-    Raises: ValueError: If the time series are not part of the same timeframe or if too many cells have abnormal time
+    :param file_path: The path to the CSV file.
+    :param replace_missing_cpm: If not None, replace missing cpm values with this value.
+    :param device: The PyTorch device to allocate the tensors on.
+    :return: A tuple consisting of:
+     * A list of PyTorch tensors containing the loaded data for each time point.
+     * The time points corresponding to the data.
+     * The names of the cells in the data.
+    :raises ValueError: If the time series are not part of the same timeframe or if too many cells have abnormal time
     series lengths.
     """
 
@@ -246,11 +243,8 @@ def ensure_local_path_exists(path):
     """
     Ensure that the local path exists. If it doesn't, create the directory structure.
 
-    Args:
-        path (str): The path to be checked and created if necessary.
-
-    Returns:
-        str: The absolute path of the created directory.
+    :param path: The path to be checked and created if necessary.
+    :return: The absolute path of the created directory.
     """
 
     os.makedirs(path, exist_ok=True)
@@ -259,7 +253,7 @@ def ensure_local_path_exists(path):
 
 @dataclass
 class CsvDescriptor:
-    """A class to describe the origin of a field in a dataset as a column of a CSV file."""
+    """A class to describe the location of data in a dataset as a column of a CSV file."""
     filename: str
     column_name: str
     type: np.dtype
@@ -272,6 +266,14 @@ def load_csv_from_descriptors(
         device: str = 'cuda:0',
         **kwargs
 ) -> Dict[str, torch.Tensor]:
+    """
+    Load data from a CSV file based on a set of column descriptors.
+
+    :param column_descriptors: A dictionary mapping field names to CsvDescriptors.
+    :param device: The PyTorch device to allocate the tensors on.
+    :param kwargs: Additional keyword arguments to pass to pd.read_csv.
+    :return: A dictionary mapping field names to PyTorch tensors.
+    """
     different_files = set(descriptor.filename for descriptor in column_descriptors.values())
     columns = []
 
@@ -300,12 +302,9 @@ def load_wanglab_salivary_gland(
     """
     Load the Wanglab salivary gland data from a CSV file and convert it to a pytorch_geometric Data object.
 
-    Args:
-        file_path (str): The path to the CSV file.
-        device (str): The PyTorch device to use for the tensor.
-
-    Returns:
-        time_series: (TimeSeries): A dataset containing the loaded data for each time point.
+    :param file_path: The path to the CSV file.
+    :param device: The PyTorch device to allocate the tensors on.
+    :return: A :py:class:`TimeSeries` object containing the loaded data for each time point.
     """
 
     # Load the data of interest from the CSV file
