@@ -3871,6 +3871,9 @@ def plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         uu = uu.to(dtype=torch.float32)
         func = func.to(dtype=torch.float32)
 
+        text_trap = StringIO()
+        sys.stdout = text_trap
+
         model_pysrr = PySRRegressor(
             niterations=30,  # < Increase me for better results
             binary_operators=["+", "*"],
@@ -3885,7 +3888,8 @@ def plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         )
 
         model_pysrr.fit(to_numpy(uu[:, None]), to_numpy(func[:, None]))
-        # model_pysrr, m, v = symbolic_regression(uu,func)
+
+        sys.stdout = sys.__stdout__
 
         expr = model_pysrr.sympy(4).as_terms()[0]
         coeff = expr[0][1][0][0]
@@ -3900,7 +3904,7 @@ def plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         fig, ax = fig_init()
         gt_weight = to_numpy(adjacency[adj_t])
         pred_weight = to_numpy(model.weight_ij[adj_t]) * coeff
-        plt.scatter(gt_weight, pred_weight, s=200, c='k')
+        plt.scatter(gt_weight, pred_weight, s=100, c='k',alpha=0.05,edgecolors='none')
         x_data = gt_weight
         y_data = pred_weight.squeeze()
         lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
@@ -3916,6 +3920,17 @@ def plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/Aij_{config_file}_{epoch}.tif", dpi=300)
         plt.close()
+
+        fig, ax = fig_init()
+        gt_weight = to_numpy(adjacency)
+        pred_weight = to_numpy(model.weight_ij) * coeff
+        plt.scatter(gt_weight, pred_weight, s=100, c='k',alpha=0.01,edgecolors='none')
+        plt.ylabel('Learned $A_{ij}$ values', fontsize=64)
+        plt.xlabel('True network $A_{ij}$ values', fontsize=64)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/all_Aij_{config_file}_{epoch}.tif", dpi=300)
+        plt.close()
+
 
         true_func = torch.tanh(uu)
         fig, ax = fig_init()
@@ -3958,6 +3973,9 @@ def plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
             plt.savefig(f"./{log_dir}/results/comparison_phi_{type}_{config_file}_{epoch}.tif", dpi=300)
             plt.close()
 
+            text_trap = StringIO()
+            sys.stdout = text_trap
+
             model_pysrr = PySRRegressor(
                 niterations=100,  # < Increase me for better results
                 unary_operators=[
@@ -3967,11 +3985,13 @@ def plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
                     "tanh": {"tanh": 0},
                 },
                 random_state=0,
-                temp_equation_file=False,
                 maxsize=20,
-                maxdepth=6
+                maxdepth=6,
+                temp_equation_file=False
             )
             model_pysrr.fit(to_numpy(uu[:, None]), to_numpy(learned_func[:, None]))
+
+            sys.stdout = sys.__stdout__
 
 
 
@@ -4485,13 +4505,13 @@ if __name__ == '__main__':
     print(f'device {device}')
     print(' ')
 
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
 
     # config_list =['boids_16_256_division_model_2_mass_coeff']
-    config_list = ['signal_N_100_2_d']
+    config_list = ['signal_N_100_2_e']
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['4','5','6','7','10','15','20'], device=device)
         # plot_generated(config=config, run=0, style='color Voronoi', step = 5, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 

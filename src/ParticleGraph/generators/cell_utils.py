@@ -137,7 +137,7 @@ def get_vertices(points=[], device=[]):
 
     # vertices_index collect all vertices index of regions of interest
     vertices_per_cell = []
-    for n in range(1000):
+    for n in range(len(points)):
         if n == 0:
             vertices_index = vor.regions[vor.point_region[0]]
         else:
@@ -157,27 +157,26 @@ def get_vertices(points=[], device=[]):
                 count += 1
     vertices_pos = np.array(vertices)
     vertices_pos = torch.tensor(vertices_pos, device=device)
+    vertices_pos = vertices_pos.to(dtype=torch.float32)
 
     return vor, vertices_pos, vertices_per_cell
 
 def get_voronoi_areas(vertices_pos, vertices_per_cell, device):
 
     centroids = get_voronoi_centroids(vertices_pos, vertices_per_cell, device)
-
     areas = []
     for i in range(len(vertices_per_cell)):
-
         v_list = vertices_per_cell[i]
         per_cell = 0
         for v in range(-1, len(v_list)-1):
-            vert1 = vertices_pos[v_list[v]]
-            vert2 = vertices_pos[v_list[v+1]]
+            vert1 = vertices_pos[v_list[v]]-centroids[i]
+            vert2 = vertices_pos[v_list[v+1]]-centroids[i]
+            cross_product = vert1[0] * vert2[1] - vert1[1] * vert2[0]
+            per_cell += torch.abs(cross_product)/2
+        areas.append(per_cell)
+    areas = torch.stack(areas)
 
-            per_cell += np.abs(((np.cross([to_numpy(centroids[i]), to_numpy(vert1)], [to_numpy(centroids[i]), to_numpy(vert2)]))/2)[1])
-
-        areas.append(per_cell, device=device)
-
-    return torch.Tensor(areas)
+    return centroids, areas
 
 def get_voronoi_perimeters(vertices_pos, vertices_per_cell, device):
     lengths = get_voronoi_lengths(vertices_pos, vertices_per_cell, device)
@@ -205,14 +204,8 @@ def get_voronoi_centroids(vertices_pos, vertices_per_cell, device):
 
     centroids = []
     for v_list in vertices_per_cell:
-
-        xs = vertices_pos[v_list, 0]
-        ys = vertices_pos[v_list, 1]
-
-        x_pos = sum(xs)/len(xs)
-        y_pos = sum(ys)/len(ys)
-
-        centroids.append([x_pos, y_pos])
+        centroids.append(torch.mean(vertices_pos[v_list],dim=0))
+    centroids = torch.stack(centroids)
 
     return centroids
 
