@@ -549,40 +549,40 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
             # calculate passive model
 
-            vor, vertices_pos, vertices_per_cell = get_vertices(points=to_numpy(X1), device=device)
-            vertices_pos_list.append(vertices_pos)
-            vertices_per_cell_list.append(vertices_per_cell)
-            vertices_pos.requires_grad = True
-            optimizer = torch.optim.Adam([vertices_pos], lr=1E-3)
-            first_centroids, voronoi_area = get_voronoi_areas(vertices_pos, vertices_per_cell, device)
-            for i in range(2):
-                optimizer.zero_grad()
-                centroids, voronoi_area = get_voronoi_areas(vertices_pos, vertices_per_cell, device)
-                loss = torch.var(voronoi_area)
-                loss.backward()
-                optimizer.step()
-                # fig = plt.figure(figsize=(12, 12))
-                # ax = fig.add_subplot(1, 1, 1)
-                # plt.xticks([])
-                # plt.yticks([])
-                # index_particles = []
-                # voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='black', line_width=1, line_alpha=0.5, point_size=0)
-                # for n in range(n_particle_types):
-                #     pos = torch.argwhere((T1.squeeze() == n) & (H1[:, 0].squeeze() == 1))
-                #     pos = to_numpy(pos[:, 0].squeeze()).astype(int)
-                #     index_particles.append(pos)
-                #     size = set_size(x, index_particles[n], 10) / 10
-                #     plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                #                 s=size, color=cmap.color(n))
-                # plt.scatter(to_numpy(vertices_pos[:, 0]), to_numpy(vertices_pos[:, 1]), s=5, color='k')
-                # plt.xlim([-0.05, 1.05])
-                # plt.ylim([-0.05, 1.05])
-                # plt.tight_layout()
-                # num = f"{it:06}"
-                # num2 = f"{i:04}"
-                # plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Vor_{run}_{num}_{num2}.tif", dpi=85.35)
-                # plt.close()
-            delta_centroids = centroids - first_centroids
+            if simulation_config.cell_inert_model_coeff > 0:
+                vor, vertices_pos, vertices_per_cell = get_vertices(points=to_numpy(X1), device=device)
+                vertices_pos_list.append(vertices_pos)
+                vertices_per_cell_list.append(vertices_per_cell)
+                vertices_pos.requires_grad = True
+                optimizer = torch.optim.Adam([vertices_pos], lr=1E-3)
+                first_centroids, voronoi_area = get_voronoi_areas(vertices_pos, vertices_per_cell, device)
+                for i in range(2):
+                    optimizer.zero_grad()
+                    centroids, voronoi_area = get_voronoi_areas(vertices_pos, vertices_per_cell, device)
+                    loss = torch.var(voronoi_area)
+                    loss.backward()
+                    optimizer.step()
+                    # fig, ax = fig_init()
+                    # plt.xticks([])
+                    # plt.yticks([])
+                    # index_particles = []
+                    # voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='black', line_width=1, line_alpha=0.5, point_size=0)
+                    # for n in range(n_particle_types):
+                    #     pos = torch.argwhere((T1.squeeze() == n) & (H1[:, 0].squeeze() == 1))
+                    #     pos = to_numpy(pos[:, 0].squeeze()).astype(int)
+                    #     index_particles.append(pos)
+                    #     size = set_size(x, index_particles[n], 10) / 10
+                    #     plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                    #                 s=size, color=cmap.color(n))
+                    # plt.scatter(to_numpy(vertices_pos[:, 0]), to_numpy(vertices_pos[:, 1]), s=5, color='k')
+                    # plt.xlim([-0.05, 1.05])
+                    # plt.ylim([-0.05, 1.05])
+                    # plt.tight_layout()
+                    # num = f"{it:06}"
+                    # num2 = f"{i:04}"
+                    # plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Vor_{run}_{num}_{num2}.tif", dpi=85.35)
+                    # plt.close()
+                delta_centroids = centroids - first_centroids
 
             # voronoi_perimeter = get_voronoi_perimeters(vertices_pos, vertices_per_cell, device)
             # voronoi_lengths = get_voronoi_lengths(vertices_pos, vertices_per_cell, device)
@@ -615,7 +615,10 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 V1 = y
 
             V1 = V1 * alive[:,None].repeat(1,2)
-            X1 = bc_pos(X1 + V1 * delta_t + delta_centroids * simulation_config.cell_inert_model_coeff)
+            if simulation_config.cell_inert_model_coeff == 0:
+                X1 = bc_pos(X1 + V1 * delta_t)
+            else:
+                X1 = bc_pos(X1 + V1 * delta_t + delta_centroids * simulation_config.cell_inert_model_coeff)
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
@@ -758,8 +761,9 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
             np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}',*edge_p_p_list)
-            torch.save(f'graphs_data/graphs_{dataset_name}/vertices_pos_list_{run}',vertices_pos_list)
-            np.savez(f'graphs_data/graphs_{dataset_name}/vertices_per_cell_list_{run}',*vertices_per_cell_list)
+            if simulation_config.cell_inert_model_coeff > 0:
+                torch.save(f'graphs_data/graphs_{dataset_name}/vertices_pos_list_{run}',vertices_pos_list)
+                np.savez(f'graphs_data/graphs_{dataset_name}/vertices_per_cell_list_{run}',*vertices_per_cell_list)
 
             torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
             torch.save(CL1, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
