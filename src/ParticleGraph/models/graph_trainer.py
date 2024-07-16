@@ -1415,7 +1415,7 @@ def data_train_cell(config, config_file, device):
             visualize_embedding = True
             if visualize_embedding & (((epoch < 3 ) & (N%(Niter//100) == 0)) | (N==0)):
                 plot_training_cell(config=config, dataset_name=dataset_name, log_dir=log_dir,
-                              epoch=epoch, N=N, model=model, index_particles=index_particles, n_particle_types=n_particle_types, type_list=T1_list[1], ynorm=ynorm, cmap=cmap, device=device)
+                              epoch=epoch, N=N, model=model, n_particle_types=n_particle_types, type_list=T1_list[1], ynorm=ynorm, cmap=cmap, device=device)
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
                 t, r, a = get_gpu_memory_map(device)

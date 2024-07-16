@@ -441,7 +441,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
-def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, index_particles, n_particle_types, type_list, ynorm, cmap, device):
+def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, n_particle_types, type_list, ynorm, cmap, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -492,7 +492,8 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, index_par
             ax = fig.add_subplot(1,1,1)
             rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
             func_list = []
-            for n in range(len(embedding)):
+
+            for n in range(len(type_list)):
                 if has_no_tracking:
                     embedding_ = model.a[n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
                 else:
