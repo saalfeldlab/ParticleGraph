@@ -390,7 +390,7 @@ def data_train_particles(config, config_file, device):
                     logger.info(f'regul_embedding: replaced')
 
                     # Constrain function domain
-                    if train_config.sparsity == 'replace_embedding':
+                    if train_config.sparsity == 'replace_embedding_function':
 
                         logger.info(f'replace_embedding_function')
                         y_func_list = func_list * 0
@@ -857,12 +857,10 @@ def data_train_cell_tracking(config, config_file, device):
     y_list = []
     edge_p_p_list = []
     n_particles_max = 0
-    n_particles_max_list= []
     for run in trange(n_runs):
         x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
         if x[len(x)-1].shape[0] > n_particles_max:
             n_particles_max = x[len(x)-1].shape[0]
-        n_particles_max_list.append(x[len(x)-1].shape[0])
         if run>0:
             y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
             edge_p_p = np.load(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}.npz')
@@ -1250,12 +1248,10 @@ def data_train_cell(config, config_file, device):
     y_list = []
     edge_p_p_list = []
     n_particles_max = 0
-    n_particles_max_list= []
     for run in trange(n_runs):
         x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
-        if x[len(x)-1].shape[0] > n_particles_max:
-            n_particles_max = x[len(x)-1].shape[0]
-        n_particles_max_list.append(x[len(x)-1].shape[0])
+        if x[-1][-1,0] > n_particles_max:
+            n_particles_max = x[-1][-1,0]+1
         if run>0:
             y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
             edge_p_p = np.load(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}.npz')
@@ -1283,7 +1279,6 @@ def data_train_cell(config, config_file, device):
     ynorm = norm_acceleration(y, device)
     torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
     torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
-    np.save(os.path.join(log_dir, 'n_particles_max.npy'), n_particles_max)
     time.sleep(0.5)
     print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
     logger.info(f'vnorm ynorm: {to_numpy(vnorm)} {to_numpy(ynorm)}')
@@ -1409,9 +1404,10 @@ def data_train_cell(config, config_file, device):
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
             else:
-                mask_cell_alive = np.argwhere(to_numpy(x[:,6:7]) == 1)
-                mask_cell_alive = mask_cell_alive[:, 0].astype(int)
-                loss = ((pred[mask_cell_alive] - y_batch[mask_cell_alive])).norm(2)
+                # mask_cell_alive = np.argwhere(to_numpy(x[:,6:7]) == 1)
+                # mask_cell_alive = mask_cell_alive[:, 0].astype(int)
+                # loss = ((pred[mask_cell_alive] - y_batch[mask_cell_alive])).norm(2)
+                loss = ((pred - y_batch)).norm(2)
 
             visualize_embedding = True
             if visualize_embedding & (((epoch < 3 ) & (N%(Niter//100) == 0)) | (N==0)):
@@ -2436,6 +2432,17 @@ def data_train_signal(config, config_file, device):
                 else:
                     edge_index = torch.cat((edge_index, ij_s), dim=1)
                 edge_index = edge_index.to(dtype=torch.int64)
+    if config_file == 'signal_N_100_2_e':
+        print('Fully connection ...')
+        for i in trange(n_particles):
+                i_s = torch.ones(n_particles, device=device) * i
+                j_s = torch.arange(n_particles, device=device)
+                ij_s = torch.cat((i_s[:,None], j_s[:,None]), dim=1).t()
+                if i==0:
+                    edge_index = ij_s
+                else:
+                    edge_index = torch.cat((edge_index, ij_s), dim=1)
+                edge_index = edge_index.to(dtype=torch.int64)
     model.edges = edge_index
     logger.info(f'edge_index.shape {edge_index.shape} ')
 
@@ -2573,6 +2580,19 @@ def data_train_signal(config, config_file, device):
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
         # matplotlib.use("Qt5Agg")
+
+        if (replace_with_cluster) & (epoch % sparsity_freq == sparsity_freq - 1) & (epoch < n_epochs - sparsity_freq):
+            # Constrain embedding domain
+            embedding = get_embedding(model.a, 1)
+            proj_interaction = embedding
+            labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding,
+                                                              train_config.cluster_distance_threshold, index_particles,
+                                                              n_particle_types, embedding_cluster)
+            with torch.no_grad():
+                model.a[1] = model_a_.clone().detach()
+            print(f'regul_embedding: replaced')
+            logger.info(f'regul_embedding: replaced')
+
         fig = plt.figure(figsize=(22, 4))
         # white background
         # plt.style.use('classic')

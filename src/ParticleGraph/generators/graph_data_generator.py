@@ -473,45 +473,56 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             # calculate cell death and cell division
             if (it >= 0) & (n_particles_alive < simulation_config.n_particles_max):
                 # cell death
-                sample = torch.rand(n_particles, device=device)
+                sample = torch.rand(len(X1), device=device)
                 H1[sample.squeeze() < DR1.squeeze()/5E4, 0] = 0     # H1[:,0] = cell alive flag, alive : 1 , death : 0
                 n_particles_alive = torch.sum(H1[:,0])
                 n_particles_dead = n_particles - n_particles_alive
                 # cell division
                 pos = torch.argwhere((A1.squeeze() >= CL1.squeeze()) & (H1[:,0].squeeze() == 1) & (S1[:,0].squeeze() == 3) & (n_particles_alive < n_particles_max)).flatten()
                 if (len(pos) > 0):
-                    n_add_nodes = len(pos)
+                    n_add_nodes = len(pos) * 2
                     pos = to_numpy(pos).astype(int)
 
-                    n_particles = n_particles + n_add_nodes
-                    N1 = torch.arange(n_particles, device=device)
-                    N1 = N1[:, None]
+                    N1_ = n_particles + torch.arange(n_add_nodes, device=device)
+                    N1 = torch.cat((N1,N1_[:,None]),dim = 0)
 
-                    separation = 1E-3 * torch.randn((n_add_nodes, dimension), device=device)
-                    X1 = torch.cat((X1, X1[pos, :] + separation), dim=0)
-                    X1[pos, :] = X1[pos, :] - separation
-                    H1[:,1] = 0
-                    H1[pos,1]= 1    # cell division flag
-                    A1[pos, :] = 0  # age set to zero
-                    M1[pos, :] = final_cell_mass[to_numpy(T1[pos, :])]/2
-                    S1[pos, :] = 0  # first stage of cell cycle
+                    n_particles = n_particles + n_add_nodes
+
+                    X1 = torch.cat((X1, X1[pos, :] + 4*V1[pos, :], X1[pos, :] - 4*V1[pos, :]), dim=0)
 
                     nd = torch.ones(len(pos), device=device) + 0.05 * torch.randn(len(pos), device=device)
                     var = torch.ones(len(pos), device=device) + 0.20 * torch.randn(len(pos), device=device)
 
-                    V1 = torch.cat((V1, -V1[pos, :]), dim=0)    # the new cell is moving away from its mother
-                    T1 = torch.cat((T1, T1[pos, :]), dim=0)
+                    V1 = torch.cat((V1, V1[pos, :], -V1[pos, :]), dim=0)    # the new cell is moving away from its mother
+                    T1 = torch.cat((T1, T1[pos, :], T1[pos, :]), dim=0)
+                    H1[pos,0] = 0   # mother cell is removed, considered dead
+                    H1[pos,1] = 1    # cell division flag
                     H1 = torch.concatenate((H1, torch.ones((n_add_nodes,2), device=device)), 0)
-                    A1 = torch.cat((A1, A1[pos, :]), dim=0)
-                    S1 = torch.cat((S1, S1[pos, :]), dim=0)
-                    M1 = torch.cat((M1, final_cell_mass[to_numpy(T1[pos, 0]),None]/2), dim=0)
-                    CL1 = torch.cat((CL1, cycle_length[to_numpy(T1[pos, 0]),None] * var[:,None]), dim=0)
-                    DR1 = torch.cat((DR1, cell_death_rate[to_numpy(T1[pos, 0]),None] * nd[:,None]), dim=0)
-                    MC1 = torch.cat((MC1, mc_slope[to_numpy(T1[pos, 0]),None]), dim=0)
+                    A1 = torch.cat((A1, torch.ones((n_add_nodes,1), device=device)), 0)
+                    S1 = torch.cat((S1, torch.ones((n_add_nodes,1), device=device)), 0)
+                    M1 = torch.cat((M1, final_cell_mass[to_numpy(T1[pos, 0]),None]/2, final_cell_mass[to_numpy(T1[pos, 0]),None]/2), dim=0)
+                    CL1 = torch.cat((CL1, cycle_length[to_numpy(T1[pos, 0]),None] * var[:,None], cycle_length[to_numpy(T1[pos, 0]),None] * var[:,None]), dim=0)
+                    DR1 = torch.cat((DR1, cell_death_rate[to_numpy(T1[pos, 0]),None] * nd[:,None], cell_death_rate[to_numpy(T1[pos, 0]),None] * nd[:,None]), dim=0)
+                    MC1 = torch.cat((MC1, mc_slope[to_numpy(T1[pos, 0]),None], mc_slope[to_numpy(T1[pos, 0]),None]), dim=0)
                     R1 = M1/(2 * CL1)
 
+                    alive = torch.argwhere(H1[:, 0] == 1).squeeze()
+
+                    N1 = N1[alive]
+                    X1 = X1[alive]
+                    V1 = V1[alive]
+                    T1 = T1[alive]
+                    H1 = H1[alive]
+                    A1 = A1[alive]
+                    S1 = S1[alive]
+                    M1 = M1[alive]
+                    CL1 = CL1[alive]
+                    R1 = R1[alive]
+                    DR1 = DR1[alive]
+                    MC1 = MC1[alive]
+
                     index_particles = []
-                    for n in range(n_particles):
+                    for n in range(n_particle_types):
                         pos = torch.argwhere(T1 == n)
                         pos = to_numpy(pos[:, 0].squeeze()).astype(int)
                         index_particles.append(pos)
@@ -525,7 +536,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             A1 = A1 + delta_t   # update age
 
             if n_particles_alive < n_particles_max:
-                S1 = update_cell_cycle_stage(n_particles, A1, cycle_length, T1, device)
+                S1 = update_cell_cycle_stage(A1, cycle_length, T1, device)
                 M1 += R1 * delta_t
 
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach(), S1.clone().detach(), M1.clone().detach(), R1.clone().detach(), DR1.clone().detach(), MC1.clone().detach()), 1)
@@ -548,6 +559,16 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 x_len_list.append(x.shape[0])
 
             # calculate passive model
+
+            # voronoi_perimeter = get_voronoi_perimeters(vertices_pos, vertices_per_cell, device)
+            # voronoi_lengths = get_voronoi_lengths(vertices_pos, vertices_per_cell, device)
+            # U = cell_energy(voronoi_area, voronoi_perimeter, voronoi_lengths, device)
+
+
+            # model prediction
+            with torch.no_grad():
+                y = model(dataset, has_field=True)
+                y = y * alive[:,None].repeat(1,2)
 
             if simulation_config.cell_inert_model_coeff > 0:
                 vor, vertices_pos, vertices_per_cell = get_vertices(points=to_numpy(X1), device=device)
@@ -584,15 +605,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     # plt.close()
                 delta_centroids = centroids - first_centroids
 
-            # voronoi_perimeter = get_voronoi_perimeters(vertices_pos, vertices_per_cell, device)
-            # voronoi_lengths = get_voronoi_lengths(vertices_pos, vertices_per_cell, device)
-            # U = cell_energy(voronoi_area, voronoi_perimeter, voronoi_lengths, device)
-
-
-            # model prediction
-            with torch.no_grad():
-                y = model(dataset, has_field=True)
-                y = y * alive[:,None].repeat(1,2)
+                y += delta_centroids * simulation_config.cell_inert_model_coeff / 100
 
             if (it) % 25 == 0:
                 t, r, a = get_gpu_memory_map(device)
@@ -615,10 +628,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 V1 = y
 
             V1 = V1 * alive[:,None].repeat(1,2)
-            if simulation_config.cell_inert_model_coeff == 0:
-                X1 = bc_pos(X1 + V1 * delta_t)
-            else:
-                X1 = bc_pos(X1 + V1 * delta_t + delta_centroids * simulation_config.cell_inert_model_coeff)
+            X1 = bc_pos(X1 + V1 * delta_t)
+
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):

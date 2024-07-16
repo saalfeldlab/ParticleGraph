@@ -32,11 +32,12 @@ from ParticleGraph.utils import *
 
 if __name__ == '__main__':
 
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
 
-    # config_list =['boids_16_division_model_2_Voronoi_a']
-    config_list =  ['boids_16_256_division_model_2_small']
-    # config_list = ['signal_N_100_2_d']
+    # config_list =['boids_16_division_model_2_Voronoi_color']
+    # config_list =  ['boids_16_256_division_model_2_small']
+    config_list =  ['boids_16_256_division_model_2_new']
+    # config_list = ['signal_N_100_2_e']
 
 
     for config_file in config_list:
@@ -47,7 +48,7 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color frame', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 25)
-        # data_train(config, config_file, device)
+        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color frame', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 100)
+        data_train(config, config_file, device)
         # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 3, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 

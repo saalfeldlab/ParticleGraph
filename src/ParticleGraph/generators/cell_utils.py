@@ -80,7 +80,7 @@ def init_cells(config, cycle_length, final_cell_mass, cell_death_rate, mc_slope,
     cell_age = cell_age * cycle_length[to_numpy(type)].squeeze()
     cell_age = cell_age[:, None]
 
-    cell_stage = update_cell_cycle_stage(n_particles, cell_age, cycle_length, type, device)
+    cell_stage = update_cell_cycle_stage(cell_age, cycle_length, type, device)
 
     growth_rate = final_cell_mass / (2 * cycle_length)
     growth_rate_distrib = growth_rate[to_numpy(type)].squeeze()[:, None]
@@ -98,7 +98,7 @@ def init_cells(config, cycle_length, final_cell_mass, cell_death_rate, mc_slope,
     return particle_id, pos, dpos, type, status, cell_age, cell_stage, cell_mass_distrib, growth_rate_distrib, cycle_length_distrib, cell_death_rate_distrib, mc_slope_distrib
 
 
-def update_cell_cycle_stage(n_particles, cell_age, cycle_length, type_list, device):
+def update_cell_cycle_stage(cell_age, cycle_length, type_list, device):
     g1 = 0.46
     s = 0.33
     g2 = 0.17
@@ -111,8 +111,8 @@ def update_cell_cycle_stage(n_particles, cell_age, cycle_length, type_list, devi
 
     cell_age = cell_age.squeeze()
 
-    cell_stage = torch.zeros(n_particles, device=device)
-    for i in range(n_particles):
+    cell_stage = torch.zeros(len(cell_age), device=device)
+    for i in range(len(cell_age)):
         curr = cell_age[i]
 
         if curr <= G1[int(type_list[i])]:
