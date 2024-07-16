@@ -165,6 +165,7 @@ def get_voronoi_areas(vertices_pos, vertices_per_cell, device):
 
     centroids = get_voronoi_centroids(vertices_pos, vertices_per_cell, device)
     areas = []
+    
     for i in range(len(vertices_per_cell)):
         v_list = vertices_per_cell[i]
         per_cell = 0
@@ -173,7 +174,9 @@ def get_voronoi_areas(vertices_pos, vertices_per_cell, device):
             vert2 = vertices_pos[v_list[v+1]]-centroids[i]
             cross_product = vert1[0] * vert2[1] - vert1[1] * vert2[0]
             per_cell += torch.abs(cross_product)/2
+
         areas.append(per_cell)
+
     areas = torch.stack(areas)
 
     return centroids, areas
@@ -181,9 +184,9 @@ def get_voronoi_areas(vertices_pos, vertices_per_cell, device):
 def get_voronoi_perimeters(vertices_pos, vertices_per_cell, device):
     lengths = get_voronoi_lengths(vertices_pos, vertices_per_cell, device)
 
-    perimeter = [sum(i) for i in lengths]
+    perimeter = [torch.sum(torch.tensor(i, device=device)) for i in lengths]
 
-    return torch.Tensor(perimeter, device=device)
+    return torch.tensor(perimeter, device=device)
 
 def get_voronoi_lengths(vertices_pos, vertices_per_cell, device):
 
@@ -198,13 +201,14 @@ def get_voronoi_lengths(vertices_pos, vertices_per_cell, device):
 
         lengths.append(per_cell)
 
-    return torch.Tensor(lengths, device=device)
+    return lengths
 
 def get_voronoi_centroids(vertices_pos, vertices_per_cell, device):
 
     centroids = []
     for v_list in vertices_per_cell:
         centroids.append(torch.mean(vertices_pos[v_list],dim=0))
+
     centroids = torch.stack(centroids)
 
     return centroids

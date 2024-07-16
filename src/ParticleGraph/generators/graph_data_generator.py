@@ -9,6 +9,8 @@ from ParticleGraph.utils import set_size
 from ParticleGraph.generators.cell_utils import *
 from scipy import stats
 from scipy.spatial import Voronoi, voronoi_plot_2d
+from matplotlib.patches import Polygon
+from matplotlib.collections import PatchCollection
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
@@ -555,6 +557,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             vertices_pos.requires_grad = True
             optimizer = torch.optim.Adam([vertices_pos], lr=1E-3)
             first_centroids, voronoi_area = get_voronoi_areas(vertices_pos, vertices_per_cell, device)
+            
             for i in range(2):
                 optimizer.zero_grad()
                 centroids, voronoi_area = get_voronoi_areas(vertices_pos, vertices_per_cell, device)
@@ -582,9 +585,10 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 # num2 = f"{i:04}"
                 # plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Vor_{run}_{num}_{num2}.tif", dpi=85.35)
                 # plt.close()
+
             delta_centroids = centroids - first_centroids
 
-            # voronoi_areas = get_voronoi_areas(vertices_pos, vertices_per_cell, device)
+            # voronoi_centroids, voronoi_areas = get_voronoi_areas(vertices_pos, vertices_per_cell, device)
             # voronoi_perimeter = get_voronoi_perimeters(vertices_pos, vertices_per_cell, device)
             # voronoi_lengths = get_voronoi_lengths(vertices_pos, vertices_per_cell, device)
             # U = cell_energy(voronoi_area, voronoi_perimeter, voronoi_lengths, device)
@@ -617,6 +621,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
             V1 = V1 * alive[:,None].repeat(1,2)
             X1 = bc_pos(X1 + V1 * delta_t + delta_centroids * simulation_config.cell_inert_model_coeff)
+
+            vor, vertices_pos, vertices_per_cell = get_vertices(points=to_numpy(X1), device=device)
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
@@ -735,7 +741,16 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     plt.xticks([])
                     plt.yticks([])
                     index_particles = []
+
                     voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='black', line_width=1, line_alpha=0.5, point_size=0)
+                    # patches = []
+                    # for cell in vertices_per_cell:
+                    #     vertices = to_numpy(vertices_pos[cell, :])
+                    #     patches.append(Polygon(vertices, closed=True))
+
+                    # pc = PatchCollection(patches, alpha=0.4, facecolors="darkgreen")
+                    # ax.add_collection(pc)
+
                     for n in range(n_particle_types):
                         pos = torch.argwhere((T1.squeeze() == n) & (H1[:,0].squeeze()==1))
                         pos = to_numpy(pos[:, 0].squeeze()).astype(int)
@@ -745,8 +760,18 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
                         size = set_size(x, index_particles[n], 10)/10
 
+                        patches = []
+                        for i in index_particles[n]:
+                            cell = vertices_per_cell[i]
+                            vertices = to_numpy(vertices_pos[cell, :])
+                            patches.append(Polygon(vertices, closed=True))
+
+                        pc = PatchCollection(patches, alpha=0.4, facecolors=cmap.color(n))
+                        ax.add_collection(pc)
+
                         plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
                                     s=size, color=cmap.color(n))
+                        
                     plt.scatter(to_numpy(vertices_pos[:, 0]), to_numpy(vertices_pos[:, 1]), s=5, color='k')
                     plt.xlim([-0.05, 1.05])
                     plt.ylim([-0.05, 1.05])
