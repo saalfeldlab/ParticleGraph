@@ -448,6 +448,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         
         N1, X1, V1, T1, H1, A1, S1, M1, R1, CL1, DR1, MC1 = init_cells(config, cycle_length, final_cell_mass, cell_death_rate, mc_slope, device=device)
 
+        T1_list = T1.clone().detach()
+
         logger.info('cell cycle length')
         logger.info(to_numpy(cycle_length))
         logger.info('cell death rate')
@@ -495,6 +497,9 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
                     V1 = torch.cat((V1, V1[pos, :], -V1[pos, :]), dim=0)    # the new cell is moving away from its mother
                     T1 = torch.cat((T1, T1[pos, :], T1[pos, :]), dim=0)
+
+                    T1_list = torch.cat((T1_list, T1[pos, :], T1[pos, :]), dim=0)
+
                     H1[pos,0] = 0   # mother cell is removed, considered dead
                     H1[pos,1] = 1    # cell division flag
                     H1 = torch.concatenate((H1, torch.ones((n_add_nodes,2), device=device)), 0)
@@ -771,6 +776,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         if bSave:
             torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
+            torch.save(T1_list, f'graphs_data/graphs_{dataset_name}/T1_list.pt')
             np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}',*edge_p_p_list)
             if simulation_config.cell_inert_model_coeff > 0:
                 torch.save(f'graphs_data/graphs_{dataset_name}/vertices_pos_list_{run}',vertices_pos_list)

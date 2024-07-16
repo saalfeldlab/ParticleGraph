@@ -1246,6 +1246,7 @@ def data_train_cell(config, config_file, device):
 
     x_list = []
     y_list = []
+    T1_list = []
     edge_p_p_list = []
     n_particles_max = 0
     for run in trange(n_runs):
@@ -1255,15 +1256,18 @@ def data_train_cell(config, config_file, device):
         if run>0:
             y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
             edge_p_p = np.load(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}.npz')
+            T1 = torch.load(f'graphs_data/graphs_{dataset_name}/T1_list_{run}.pt', map_location=device)
             x_list.append(x)
             y_list.append(y)
             edge_p_p_list.append(edge_p_p)
+            T1_list.append(T1)
         else:
             # first dataset is not loaded to spare memory
             # first dataset is not used for training but for validation
             small_tensor = torch.zeros((1, 1), dtype=torch.float32, device=device)
             x_list.append(small_tensor)
             y_list.append(small_tensor)
+            T1_list.append(small_tensor)
             edge_p_p_list.append(to_numpy(small_tensor))
     n_particles_max= int(to_numpy(n_particles_max))
     x = x_list[1][0].clone().detach()
@@ -1313,8 +1317,6 @@ def data_train_cell(config, config_file, device):
     x = x_list[1][n_frames - 1].clone().detach()
     n_particles = x.shape[0]
     config.simulation.n_particles = n_particles
-    index_particles = get_index_particles(x, n_particle_types, dimension)
-    type_list = get_type_list(x, dimension)
     print(f'N particles: {n_particles} {len(torch.unique(type_list))} types')
     logger.info(f'N particles:  {n_particles} {len(torch.unique(type_list))} types')
 
@@ -1412,10 +1414,8 @@ def data_train_cell(config, config_file, device):
 
             visualize_embedding = True
             if visualize_embedding & (((epoch < 3 ) & (N%(Niter//100) == 0)) | (N==0)):
-                x_ = x_list[1][n_frames - 1].clone().detach()
-                index_particles = get_index_particles(x_, n_particle_types, dimension)
                 plot_training_cell(config=config, dataset_name=dataset_name, log_dir=log_dir,
-                              epoch=epoch, N=N, model=model, index_particles=index_particles, n_particle_types=n_particle_types, type_list=type_list, ynorm=ynorm, cmap=cmap, device=device)
+                              epoch=epoch, N=N, model=model, index_particles=index_particles, n_particle_types=n_particle_types, type_list=T1_list[1], ynorm=ynorm, cmap=cmap, device=device)
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
                 t, r, a = get_gpu_memory_map(device)
@@ -1445,31 +1445,6 @@ def data_train_cell(config, config_file, device):
         if has_ghost:
             torch.save({'model_state_dict': ghosts_particles.state_dict(),
                         'optimizer_state_dict': optimizer_ghost_particles.state_dict()}, os.path.join(log_dir, 'models', f'best_ghost_particles_with_{n_runs - 1}_graphs_{epoch}.pt'))
-
-        # matplotlib.use("Qt5Agg")
-        fig = plt.figure(figsize=(22, 4))
-        # white background
-        # plt.style.use('classic')
-
-        ax = fig.add_subplot(1, 5, 1)
-        plt.plot(list_loss, color='k')
-        plt.xlim([0, n_epochs])
-        plt.ylabel('Loss', fontsize=12)
-        plt.xlabel('Epochs', fontsize=12)
-
-        ax = fig.add_subplot(1, 5, 2)
-        embedding = get_embedding(model.a, 1)
-        for n in range(n_particle_types):
-            pos = np.argwhere(to_numpy(x[:,5:6]) == n).squeeze().astype(int)
-            pos=pos[:,0]
-            plt.scatter(embedding[pos, 0],
-                        embedding[pos, 1], color=cmap.color(n), s=0.1)
-        plt.xlabel('ai0', fontsize=12)
-        plt.ylabel('ai1', fontsize=12)
-
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
-        plt.close()
 
 
 def data_train_mesh(config, config_file, device):
