@@ -72,21 +72,15 @@ class Interaction_Particles(pyg.nn.MessagePassing):
                     torch.tensor(np.ones((self.n_dataset, 20500, 2)), device=self.device,
                                  requires_grad=True, dtype=torch.float32))
                 self.phi = MLP(input_size=3, output_size=1, nlayers=5, hidden_size=32, device=self.device)
-                # self.phi = Siren_Network_scalar(in_features=3, hidden_features=16, hidden_layers=3, out_features=1, outermost_linear=False, first_omega_0=80., hidden_omega_0=80., device=self.device)
-                t = torch.ones((10,3), device=self.device)
-                phi = self.phi(t)
-                print(self.phi)
+        elif self.has_state:
+            self.a = nn.Parameter(
+                torch.tensor(np.ones((self.n_dataset, int(self.n_frames * (self.n_particles + self.n_ghosts)), self.embedding_dim)),
+                             device=self.device,
+                             requires_grad=True, dtype=torch.float32))
         else:
-
-            if self.has_state:
-                self.a = nn.Parameter(
-                    torch.tensor(np.ones((self.n_dataset, int(self.n_frames * (self.n_particles + self.n_ghosts)), self.embedding_dim)),
-                                 device=self.device,
-                                 requires_grad=True, dtype=torch.float32))
-            else :
-                self.a = nn.Parameter(
-                    torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
-                                 requires_grad=True, dtype=torch.float32))
+            self.a = nn.Parameter(
+                torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
+                             requires_grad=True, dtype=torch.float32))
 
 
     def forward(self, data=[], data_id=[], training=[], vnorm=[], phi=[], has_field=False):

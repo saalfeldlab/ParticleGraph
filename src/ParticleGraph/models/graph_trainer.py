@@ -1265,6 +1265,7 @@ def data_train_cell(config, config_file, device):
             x_list.append(small_tensor)
             y_list.append(small_tensor)
             edge_p_p_list.append(to_numpy(small_tensor))
+    n_particles_max= int(to_numpy(n_particles_max))
     x = x_list[1][0].clone().detach()
     y = y_list[1][0].clone().detach()
     config.simulation.n_particles_max = n_particles_max
