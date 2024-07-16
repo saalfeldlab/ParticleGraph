@@ -1,14 +1,19 @@
 import glob
 import logging
 import os
+from typing import List
 
 import GPUtil
 import imageio
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from torch_geometric.data import Data
 from torchvision.transforms import CenterCrop
-
+import numpy as np
+import matplotlib.pyplot as plt
+from skimage.metrics import structural_similarity as ssim
+from matplotlib.ticker import FormatStrFormatter
 
 def to_numpy(tensor: torch.Tensor) -> np.ndarray:
     """
@@ -39,6 +44,22 @@ def set_device(device=None):
     return device
 
 
+def set_size(x, particles, mass_distrib_index):
+    # particles = index_particles[n]
+
+    #size = 5 * np.power(3, ((to_numpy(x[index_particles[n] , -2]) - 200)/100)) + 10
+    size = np.power((to_numpy(x[particles , mass_distrib_index])), 1.2)/1.5
+
+    return size
+
+def get_gpu_memory_map(device=None):
+    print(' ')
+    t = np.round(torch.cuda.get_device_properties(device).total_memory/1E9,2)
+    r = np.round(torch.cuda.memory_reserved(device)/1E9,2)
+    a = np.round(torch.cuda.memory_allocated(device)/1E9,2)
+    return t, r, a
+
+
 def symmetric_cutoff(x, percent=1):
     """
     Minimum and maximum values if a certain percentage of the data is cut off from both ends.
@@ -67,10 +88,13 @@ def norm_velocity(xx, dimension, device):
         nvz = np.array(xx[:, 6].detach().cpu())
         vz01, vz99 = symmetric_cutoff(nvz)
 
-    return torch.tensor([vx01, vx99, vy01, vy99, vx, vy], device=device)
+    # return torch.tensor([vx01, vx99, vy01, vy99, vx, vy], device=device)
+
+    return torch.tensor([vx], device=device)
 
 
 def norm_acceleration(yy, device):
+
     ax = torch.std(yy[:, 0])
     ay = torch.std(yy[:, 1])
     nax = np.array(yy[:, 0].detach().cpu())
@@ -78,7 +102,9 @@ def norm_acceleration(yy, device):
     nay = np.array(yy[:, 1].detach().cpu())
     ay01, ay99 = symmetric_cutoff(nay)
 
-    return torch.tensor([ax01, ax99, ay01, ay99, ax, ay], device=device)
+    # return torch.tensor([ax01, ax99, ay01, ay99, ax, ay], device=device)
+
+    return torch.tensor([ax], device=device)
 
 
 def choose_boundary_values(bc_name):
@@ -88,16 +114,22 @@ def choose_boundary_values(bc_name):
     def periodic(x):
         return torch.remainder(x, 1.0)  # in [0, 1)
 
+    def periodic_special(x):
+        return torch.remainder(x, 1.0) + (x>10)*10    # to discard dead cells set at x=10
+
     def shifted_periodic(x):
-        try:
-            return torch.remainder(x - 0.5, 1.0) - 0.5  # in [-0.5, 0.5)
-        except:
-            print('pb')
+        return torch.remainder(x - 0.5, 1.0) - 0.5  # in [-0.5, 0.5)
+
+    def shifted_periodic_special(x):
+        return torch.remainder(x - 0.5, 1.0) - 0.5 + (x>10)*10    # to discard dead cells set at x=10
+
 
     match bc_name:
         case 'no':
             return identity, identity
         case 'periodic':
+            return periodic, shifted_periodic
+        case 'periodic_special':
             return periodic, shifted_periodic
         case _:
             raise ValueError(f'Unknown boundary condition {bc_name}')
@@ -119,10 +151,12 @@ def grads2D(params):
 def tv2D(params):
     nb_voxel = (params.shape[0]) * (params.shape[1])
     sx, sy = grads2D(params)
-
     tvloss = torch.sqrt(sx.cuda() ** 2 + sy.cuda() ** 2 + 1e-8).sum()
-    # tvloss += torch.nn.functional.relu(-params).norm(1) / 15
     return tvloss / (nb_voxel)
+
+
+def get_r2_numpy_corrcoef(x, y):
+    return np.corrcoef(x, y)[0, 1]**2
 
 
 class CustomColorMap:
@@ -205,20 +239,48 @@ def laplace(y, x):
     return divergence(grad, x)
 
 
-def create_log_dir(config, dataset_name):
+def calculate_psnr(img1, img2, max_value=255):
+    """"Calculating peak signal-to-noise ratio (PSNR) between two images."""
+    mse = np.mean((np.array(img1, dtype=np.float32) - np.array(img2, dtype=np.float32)) ** 2)
+    if mse == 0:
+        return 100
+    return 20 * np.log10(max_value / (np.sqrt(mse)))
+
+
+def calculate_ssim(img1, img2):
+    ssim_score = ssim(img1, img2, data_range=img2.max() - img2.min())
+    return ssim_score
+
+
+def create_log_dir(config, config_file):
     l_dir = os.path.join('.', 'log')
-    log_dir = os.path.join(l_dir, 'try_{}'.format(dataset_name))
+    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
     os.makedirs(log_dir, exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'models'), exist_ok=True)
-    os.makedirs(os.path.join(log_dir, 'tmp_training'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'results'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'tmp_training/particle'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'tmp_training/field'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'tmp_training/function'), exist_ok=True)
     os.makedirs(os.path.join(log_dir, 'tmp_training/embedding'), exist_ok=True)
     if config.training.n_ghosts > 0:
         os.makedirs(os.path.join(log_dir, 'tmp_training/ghost'), exist_ok=True)
+    files = glob.glob(f"{log_dir}/results/*")
+    for f in files:
+        os.remove(f)
+    files = glob.glob(f"{log_dir}/tmp_training/particle/*")
+    for f in files:
+        os.remove(f)
+    files = glob.glob(f"{log_dir}/tmp_training/field/*")
+    for f in files:
+        os.remove(f)
+    files = glob.glob(f"{log_dir}/tmp_training/function/*")
+    for f in files:
+        os.remove(f)
     files = glob.glob(f"{log_dir}/tmp_training/embedding/*")
     for f in files:
         os.remove(f)
-    files = glob.glob(f"{log_dir}/tmp_training/siren/*")
+    files = glob.glob(f"{log_dir}/tmp_training/ghost/*")
     for f in files:
         os.remove(f)
     os.makedirs(os.path.join(log_dir, 'tmp_recons'), exist_ok=True)
@@ -231,3 +293,82 @@ def create_log_dir(config, dataset_name):
     logger.info(config)
 
     return l_dir, log_dir, logger
+
+
+def bundle_fields(data: Data, *names: str) -> torch.Tensor:
+    tensors = []
+    for name in names:
+        tensor = data[name]
+        if tensor.dim() == 1:
+            tensor = tensor.unsqueeze(-1)
+        tensors.append(tensor)
+    return torch.concatenate(tensors, dim=-1)
+
+
+def fig_init(formatx='%.2f', formaty='%.2f'):
+    # from matplotlib import rc, font_manager
+    # from numpy import arange, cos, pi
+    # from matplotlib.pyplot import figure, axes, plot, xlabel, ylabel, title, \
+    #     grid, savefig, show
+    # sizeOfFont = 12
+    # fontProperties = {'family': 'sans-serif', 'sans-serif': ['Helvetica'],
+    #                   'weight': 'normal', 'size': sizeOfFont}
+    # ticks_font = font_manager.FontProperties(family='sans-serif', style='normal',
+    #                                          size=sizeOfFont, weight='normal', stretch='normal')
+    # rc('text', usetex=True)
+    # rc('font', **fontProperties)
+    # figure(1, figsize=(6, 4))
+    # ax = axes([0.1, 0.1, 0.8, 0.7])
+    # t = arange(0.0, 1.0 + 0.01, 0.01)
+    # s = cos(2 * 2 * pi * t) + 2
+    # plot(t, s)
+    # for label in ax.get_xticklabels():
+    #     label.set_fontproperties(ticks_font)
+    # for label in ax.get_yticklabels():
+    #     label.set_fontproperties(ticks_font)
+    # xlabel(r'\textbf{time (s)}')
+    # ylabel(r'\textit{voltage (mV)}', fontsize=16, family='Helvetica')
+    # title(r"\TeX\ is Number $\displaystyle\sum_{n=1}^\infty\frac{-e^{i\pi}}{2^n}$!",
+    #       fontsize=16, color='r')
+
+    fig = plt.figure(figsize=(12, 12))
+    ax = fig.add_subplot(1, 1, 1)
+    plt.xticks([])
+    plt.yticks([])
+    # ax.xaxis.get_major_formatter()._usetex = False
+    # ax.yaxis.get_major_formatter()._usetex = False
+    ax.tick_params(axis='both', which='major', pad=15)
+    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+    ax.xaxis.set_major_formatter(FormatStrFormatter(formatx))
+    ax.yaxis.set_major_formatter(FormatStrFormatter(formaty))
+    plt.xticks(fontsize=48.0)
+    plt.yticks(fontsize=48.0)
+
+
+    return fig, ax
+
+
+def get_time_series(x_list, cell_id, feature):
+
+    match feature:
+        case 'mass':
+            feature = 10
+        case 'velocity_x':
+            feature = 3
+        case 'velocity_y':
+            feature = 4
+        case "stage":
+            feature = 9
+        case _:  # default
+            feature = 0
+
+    time_series = []
+    for it in range(len(x_list)):
+        x = x_list[it].clone().detach()
+        pos_cell = torch.argwhere(x[:, 0] == cell_id)
+        if len(pos_cell) > 0:
+            time_series.append(x[pos_cell, feature].squeeze())
+        else:
+            time_series.append(torch.tensor([0.0]))
+    return to_numpy(torch.stack(time_series))

@@ -23,7 +23,9 @@ archive/*/*
 *.avi
 *.ijm
 *.svg
-
+*.npz
+*.csv
+*.bkup
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

@@ -1,10 +1,8 @@
 import numpy as np
 import torch
 import torch.nn as nn
-import torch_geometric.utils as pyg_utils
-from ParticleGraph.MLP import MLP
+from ParticleGraph.models.MLP import MLP
 from ParticleGraph.utils import to_numpy
-import matplotlib.pyplot as plt
 import torch_geometric as pyg
 
 
@@ -58,12 +56,13 @@ class Mesh_Laplacian(pyg.nn.MessagePassing):
 
         u = x[:, 6:7]
 
-        laplacian = self.propagate(edge_index, u=u, discrete_laplacian=edge_attr)
+        laplacian_u = self.propagate(edge_index, u=u, discrete_laplacian=edge_attr)
 
         particle_id = to_numpy(x[:, 0])
         embedding = self.a[self.data_id, particle_id, :]
+        pred = self.lin_phi(torch.cat((laplacian_u, embedding), dim=-1))
 
-        pred = self.lin_phi(torch.cat((laplacian, embedding), dim=-1))
+        self.laplacian_u = laplacian_u
 
         # pos = to_numpy(data.x)
         # deg = pyg_utils.degree(edge_index[0], data.num_nodes)

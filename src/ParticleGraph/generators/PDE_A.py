@@ -32,19 +32,28 @@ class PDE_A(pyg.nn.MessagePassing):
         self.bc_dpos = bc_dpos
         self.dimension = dimension
 
-    def forward(self, data):
+    def forward(self, data=[], has_field=False):
         x, edge_index = data.x, data.edge_index
+
+        if has_field:
+            field = x[:,6:7]
+        else:
+            field = torch.ones_like(x[:,0:1])
+
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         particle_type = to_numpy(x[:, 1 + 2*self.dimension])
         parameters = self.p[particle_type,:]
-        d_pos = self.propagate(edge_index, pos=x[:, 1:self.dimension+1], parameters=parameters, sigma=self.sigma)
+        d_pos = self.propagate(edge_index, pos=x[:, 1:self.dimension+1], parameters=parameters, field=field)
         return d_pos
 
-    def message(self, pos_i, pos_j, parameters_i):
+
+    def message(self, pos_i, pos_j, parameters_i, field_j):
+
         distance_squared = torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, axis=1)  # squared distance
-        psi = (parameters_i[:, 0] * torch.exp(-distance_squared ** parameters_i[:, 1] / (2 * self.sigma ** 2))
+        f = (parameters_i[:, 0] * torch.exp(-distance_squared ** parameters_i[:, 1] / (2 * self.sigma ** 2))
                - parameters_i[:, 2] * torch.exp(-distance_squared ** parameters_i[:, 3] / (2 * self.sigma ** 2)))
-        d_pos = psi[:, None] * self.bc_dpos(pos_j - pos_i)
+        d_pos = f[:, None] * self.bc_dpos(pos_j - pos_i) * field_j
+
         return d_pos
 
     def psi(self, r, p):

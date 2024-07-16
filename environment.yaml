@@ -19,6 +19,9 @@ dependencies:
   - pip
   - imageio
   - astropy
+  - vispy
+  - scikit-image
+  - pysr
   - pip:
     - geomloss
     - torch_geometric

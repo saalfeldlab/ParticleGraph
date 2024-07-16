@@ -3,7 +3,7 @@ dataset: 'signal_N'
 
 simulation:
     connectivity_file: 'graphs_data/Brain.mat'
-    params: [[0.1,0.2],[0.2,0.4]]
+    params: [[0.4,0.2],[0.8,0.3]]
     min_radius: 1.0
     max_radius: 1.0E6
     n_particles: 998
@@ -24,7 +24,7 @@ graph_model:
     output_size: 1
     hidden_dim: 64
     n_mp_layers: 3
-    input_size_update: 4
+    input_size_update: 3
     n_layers_update: 5
     hidden_dim_update: 128
     aggr_type: 'add'
@@ -39,7 +39,7 @@ training:
     n_epochs: 20
     batch_size: 1
     small_init_batch_size: False
-    n_runs: 2
+    n_runs: 1
     large_range: False
     learning_rate_start: 0.000001
     learning_rate_end: 0.0000005

@@ -16,7 +16,7 @@ simulation:
   dpos_init: 0
   boundary: 'periodic'
   node_value_map: 'pattern_10.tif'
-  node_type_map: 'pattern_21.tif'
+  node_coeff_map: 'pattern_21.tif'
   beta: 1.E-2
   start_frame: 0
 

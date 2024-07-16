@@ -1,6 +1,6 @@
 import os
 from collections.abc import Sequence
-from typing import Dict, List
+from typing import Dict, List, Tuple, Self
 
 import torch
 from torch_geometric.data import Data
@@ -9,6 +9,12 @@ from ParticleGraph.field_descriptors import FieldDescriptor
 
 
 class TimeSeries(Sequence):
+    """
+    Class to represent a time series of :py:class:`torch_geometric.data.Data` objects.
+    The time series can be indexed like a list to access individual time steps or slices of time steps. It also holds
+    an array of time points at which the data was recorded in the attribute `time`. The fields of the data objects are
+    described by a dictionary of :py:class:`FieldDescriptor` objects in the attribute `fields`.
+    """
     def __init__(
             self,
             time: torch.Tensor,
@@ -20,14 +26,37 @@ class TimeSeries(Sequence):
         self.fields = field_descriptors
 
     def __len__(self) -> int:
+        """
+        Get the number of time steps in the time series.
+        :return: The number of time steps.
+        """
         return len(self.time)
 
-    def __getitem__(self, idx: int) -> Data:
-        data = self._data[idx]
-        return data
+    def __getitem__(self, idx: int | slice) -> Data | Self:
+        """
+        Get a single time step or a slice of time steps from the time series.
+        :param idx: A single index or a slice of the desired time steps.
+        :return: A :py:class:`torch_geometric.data.Data` object if a single index is given, or a new
+            :py:class:`TimeSeries` object if a slice is given.
+        """
+        if isinstance(idx, slice):
+            # torch does not support slicing of tensors with negative step size, so make indices explicit
+            torch_idx = torch.arange(*idx.indices(len(self)))
+            return TimeSeries(self.time[torch_idx], self._data[idx], self.fields)
+        elif isinstance(idx, int):
+            return self._data[idx]
+        else:
+            raise TypeError("Index must be an integer or a slice.")
 
     @staticmethod
     def load(path: str) -> 'TimeSeries':
+        """
+        Load a time series from a directory. The time series is expected to be stored in the format written by
+        :py:meth:`TimeSeries.save`.
+        :param path: The directory to load the time series from.
+        :return: A :py:class:`TimeSeries` object containing the loaded data.
+        :raises ValueError: If the data could not be loaded from the given path.
+        """
         try:
             fields = torch.load(os.path.join(path, 'fields.pt'))
             time = torch.load(os.path.join(path, 'time.pt'))
@@ -45,6 +74,13 @@ class TimeSeries(Sequence):
 
     @staticmethod
     def save(time_series: 'TimeSeries', path: str):
+        """
+        Save a time series to a directory. The time series is stored as 'fields.pt', 'time.pt', and 'data_*.pt' files,
+        where * is a zero-padded index of the time step.
+        :param time_series: The time series to save.
+        :param path: The directory to save the time series to.
+        :raises ValueError: If the data could not be saved to the given path.
+        """
         try:
             os.makedirs(path, exist_ok=False)
             torch.save(time_series.fields, os.path.join(path, 'fields.pt'))
@@ -62,15 +98,16 @@ class TimeSeries(Sequence):
             self,
             field_name: str,
             *,
-            id_name: str = None
-    ) -> List[torch.Tensor]:
+            id_name: str = None,
+    ) -> List[torch.Tensor] | Tuple[List[torch.Tensor], List[torch.Tensor]]:
         """
         Compute the backward difference quotient of a field in a time series.
-        :param time_series: The time series over which to compute the difference quotient.
         :param field_name: The field for which to compute the difference quotient.
-        :param id_name: If given, this field is used to match data points between time steps. Ids are assumed to be unique.
-        :return: A list of tensors containing the difference quotient at each time step. Where the difference quotient could
-            not be computed, the corresponding entry is Nan.
+        :param id_name: If given, this field is used to match data points between time steps. Ids are assumed to be
+            unique.
+        :return: A list of tensors containing the difference quotient at each time step. Where the difference quotient
+            could not be computed, the corresponding entry is Nan. If id_name is given, a list of masks is also
+            returned, indicating which entries could not be computed.
         """
         difference_quotients = [torch.full_like(getattr(self[0], field_name), torch.nan)]
         for i in range(1, len(self)):
@@ -101,4 +138,9 @@ class TimeSeries(Sequence):
                 difference_quotient = all_differences[indices_current] / delta_t
                 difference_quotients.append(difference_quotient)
 
-        return difference_quotients
+        if id_name is None:
+            return difference_quotients
+        else:
+            # Compute a mask which entries could not be computed
+            mask = [torch.any(torch.isnan(dq), dim=1) for dq in difference_quotients]
+            return difference_quotients, mask
