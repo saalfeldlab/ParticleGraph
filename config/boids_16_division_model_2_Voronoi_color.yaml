@@ -1,5 +1,5 @@
 description: 'Boids 16 different types, division'
-dataset: 'boids_16_division_model_2_Voronoi_a'
+dataset: 'boids_16_division_model_2_Voronoi_color'
 
 simulation:
   params: [[42.031494,  19.948257,  89.53507  ],
@@ -27,11 +27,10 @@ simulation:
   max_edges: 500000
   n_particles: 1024
   has_cell_division: True
-  cell_inert_model_coeff: 1
-  n_particles_max: 4000
+  n_particles_max: 2000
   n_particle_types: 16
   n_interactions: 16
-  n_frames: 4000
+  n_frames: 1000
   sigma: 0.005
   delta_t: 0.5
   dpos_init: 5.0E-4
