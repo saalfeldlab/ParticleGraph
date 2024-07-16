@@ -34,9 +34,9 @@ if __name__ == '__main__':
 
     # matplotlib.use("Qt5Agg")
 
-    config_list =['boids_16_division_model_2_Voronoi']
+    # config_list =['boids_16_division_model_2_Voronoi_c']
     # config_list =  ['RD_RPS_bis']
-    # config_list = ['signal_N_100_2_d']
+    config_list = ['signal_N_100_2_e']
 
 
     for config_file in config_list:

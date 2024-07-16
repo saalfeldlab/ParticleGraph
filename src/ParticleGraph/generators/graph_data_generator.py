@@ -615,7 +615,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 V1 = y
 
             V1 = V1 * alive[:,None].repeat(1,2)
-            X1 = bc_pos(X1 + V1 * delta_t + delta_centroids)
+            X1 = bc_pos(X1 + V1 * delta_t + delta_centroids * simulation_config.cell_inert_model_coeff)
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):

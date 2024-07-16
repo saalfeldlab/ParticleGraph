@@ -137,7 +137,7 @@ def get_vertices(points=[], device=[]):
 
     # vertices_index collect all vertices index of regions of interest
     vertices_per_cell = []
-    for n in range(1000):
+    for n in range(len(points)):
         if n == 0:
             vertices_index = vor.regions[vor.point_region[0]]
         else:
