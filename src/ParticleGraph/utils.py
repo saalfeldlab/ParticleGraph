@@ -1,19 +1,17 @@
 import glob
 import logging
 import os
-from typing import List
 
 import GPUtil
 import imageio
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from matplotlib.ticker import FormatStrFormatter
+from skimage.metrics import structural_similarity as ssim
 from torch_geometric.data import Data
 from torchvision.transforms import CenterCrop
-import numpy as np
-import matplotlib.pyplot as plt
-from skimage.metrics import structural_similarity as ssim
-from matplotlib.ticker import FormatStrFormatter
+
 
 def to_numpy(tensor: torch.Tensor) -> np.ndarray:
     """
@@ -48,15 +46,16 @@ def set_size(x, particles, mass_distrib_index):
     # particles = index_particles[n]
 
     #size = 5 * np.power(3, ((to_numpy(x[index_particles[n] , -2]) - 200)/100)) + 10
-    size = np.power((to_numpy(x[particles , mass_distrib_index])), 1.2)/1.5
+    size = np.power((to_numpy(x[particles, mass_distrib_index])), 1.2) / 1.5
 
     return size
 
+
 def get_gpu_memory_map(device=None):
     print(' ')
-    t = np.round(torch.cuda.get_device_properties(device).total_memory/1E9,2)
-    r = np.round(torch.cuda.memory_reserved(device)/1E9,2)
-    a = np.round(torch.cuda.memory_allocated(device)/1E9,2)
+    t = np.round(torch.cuda.get_device_properties(device).total_memory / 1E9, 2)
+    r = np.round(torch.cuda.memory_reserved(device) / 1E9, 2)
+    a = np.round(torch.cuda.memory_allocated(device) / 1E9, 2)
     return t, r, a
 
 
@@ -94,7 +93,6 @@ def norm_velocity(xx, dimension, device):
 
 
 def norm_acceleration(yy, device):
-
     ax = torch.std(yy[:, 0])
     ay = torch.std(yy[:, 1])
     nax = np.array(yy[:, 0].detach().cpu())
@@ -115,14 +113,13 @@ def choose_boundary_values(bc_name):
         return torch.remainder(x, 1.0)  # in [0, 1)
 
     def periodic_special(x):
-        return torch.remainder(x, 1.0) + (x>10)*10    # to discard dead cells set at x=10
+        return torch.remainder(x, 1.0) + (x > 10) * 10  # to discard dead cells set at x=10
 
     def shifted_periodic(x):
         return torch.remainder(x - 0.5, 1.0) - 0.5  # in [-0.5, 0.5)
 
     def shifted_periodic_special(x):
-        return torch.remainder(x - 0.5, 1.0) - 0.5 + (x>10)*10    # to discard dead cells set at x=10
-
+        return torch.remainder(x - 0.5, 1.0) - 0.5 + (x > 10) * 10  # to discard dead cells set at x=10
 
     match bc_name:
         case 'no':
@@ -152,11 +149,11 @@ def tv2D(params):
     nb_voxel = (params.shape[0]) * (params.shape[1])
     sx, sy = grads2D(params)
     tvloss = torch.sqrt(sx.cuda() ** 2 + sy.cuda() ** 2 + 1e-8).sum()
-    return tvloss / (nb_voxel)
+    return tvloss / nb_voxel
 
 
 def get_r2_numpy_corrcoef(x, y):
-    return np.corrcoef(x, y)[0, 1]**2
+    return np.corrcoef(x, y)[0, 1] ** 2
 
 
 class CustomColorMap:
@@ -202,7 +199,7 @@ class CustomColorMap:
 
 
 def load_image(path, crop_width=None, device='cpu'):
-    target = imageio.imread(path).astype(np.float32)
+    target = imageio.v2.imread(path).astype(np.float32)
     target = target / np.max(target)
     target = torch.tensor(target).unsqueeze(0).to(device)
     if crop_width is not None:
@@ -211,9 +208,10 @@ def load_image(path, crop_width=None, device='cpu'):
 
 
 def get_mgrid(sidelen, dim=2):
-    '''Generates a flattened grid of (x,y,...) coordinates in a range of -1 to 1.
+    """Generates a flattened grid of (x,y,...) coordinates in a range of -1 to 1.
     sidelen: int
-    dim: int'''
+    dim: int
+    """
     tensors = tuple(dim * [torch.linspace(-1, 1, steps=sidelen)])
     mgrid = torch.stack(torch.meshgrid(*tensors), dim=-1)
     mgrid = mgrid.reshape(-1, dim)
@@ -240,7 +238,7 @@ def laplace(y, x):
 
 
 def calculate_psnr(img1, img2, max_value=255):
-    """"Calculating peak signal-to-noise ratio (PSNR) between two images."""
+    """Calculating peak signal-to-noise ratio (PSNR) between two images."""
     mse = np.mean((np.array(img1, dtype=np.float32) - np.array(img2, dtype=np.float32)) ** 2)
     if mse == 0:
         return 100
@@ -345,12 +343,10 @@ def fig_init(formatx='%.2f', formaty='%.2f'):
     plt.xticks(fontsize=48.0)
     plt.yticks(fontsize=48.0)
 
-
     return fig, ax
 
 
 def get_time_series(x_list, cell_id, feature):
-
     match feature:
         case 'mass':
             feature = 10
