@@ -7,7 +7,6 @@ from typing import Dict, Tuple
 import astropy.units as u
 import pandas as pd
 from astropy.units import Unit
-from torch_geometric.data import Data
 from tqdm import trange
 
 from ParticleGraph.TimeSeries import TimeSeries

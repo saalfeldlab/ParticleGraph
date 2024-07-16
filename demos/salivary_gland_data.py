@@ -3,9 +3,8 @@ import torch
 from ParticleGraph.data_loaders import load_wanglab_salivary_gland
 from ParticleGraph.utils import bundle_fields
 
-
-path = '/groups/wang/wanglab/GNN/240104-SMG-HisG-PNA-Cy3-001-SIL/1 - Denoised_Statistics/1 - Denoised_Position.csv'
-time_series, global_ids = load_wanglab_salivary_gland(path, device='cpu')
+path = "/groups/wang/wanglab/GNN/240104-SMG-HisG-PNA-Cy3-001-SIL/1 - Denoised_Statistics/1 - Denoised_Position.csv"
+time_series, global_ids = load_wanglab_salivary_gland(path, device="cpu")
 
 frame = 100
 frame_data = time_series[frame]
@@ -20,7 +19,7 @@ print(f"global ids: {global_ids[frame_data.track_id]}")
 X = bundle_fields(frame_data, "track_id", "pos", "velocity")
 
 # compute the acceleration and a mask to filter out NaN values
-acceleration, mask = time_series.compute_derivative('velocity', id_name='track_id')
+acceleration, mask = time_series.compute_derivative("velocity", id_name="track_id")
 Y = acceleration[frame]
 Y = Y[mask[frame], :]
 
