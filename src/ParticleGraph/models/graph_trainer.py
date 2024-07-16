@@ -2356,7 +2356,7 @@ def data_train_signal(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_99_graphs_20.pt"
+    # net = f"./log/try_{config_file}/models/best_model_with_99_graphs_5.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
 
@@ -2436,6 +2436,17 @@ def data_train_signal(config, config_file, device):
                 else:
                     edge_index = torch.cat((edge_index, ij_s), dim=1)
                 edge_index = edge_index.to(dtype=torch.int64)
+    if config_file == 'signal_N_100_2_e':
+        print('Fully connection ...')
+        for i in trange(n_particles):
+                i_s = torch.ones(n_particles, device=device) * i
+                j_s = torch.arange(n_particles, device=device)
+                ij_s = torch.cat((i_s[:,None], j_s[:,None]), dim=1).t()
+                if i==0:
+                    edge_index = ij_s
+                else:
+                    edge_index = torch.cat((edge_index, ij_s), dim=1)
+                edge_index = edge_index.to(dtype=torch.int64)
     model.edges = edge_index
     logger.info(f'edge_index.shape {edge_index.shape} ')
 
@@ -2486,7 +2497,7 @@ def data_train_signal(config, config_file, device):
                     y = y_list[run][k].clone().detach()
                     y = y / ynorm
                     y = y[:, 0:2]
-                    loss = (pred - y).norm(2) + model.vals.norm(1)
+                    loss = (pred - y).norm(2) # + model.vals.norm(1)
 
                 case 2:
 
@@ -2501,7 +2512,7 @@ def data_train_signal(config, config_file, device):
                     y = y / ynorm
                     y = y[:, 0:2]
 
-                    loss = (pred1 + pred2 - y).norm(2) / 2 + model.vals.norm(1)
+                    loss = (pred1 + pred2 - y).norm(2) / 2 # + model.vals.norm(1)
 
                 case 3:
 
@@ -2522,7 +2533,7 @@ def data_train_signal(config, config_file, device):
                     y2 = y2[:, 0:2]
                     y3 = y3[:, 0:2]
 
-                    loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2) + model.vals.norm(1)
+                    loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2) # + model.vals.norm(1)
 
                 case 5:
 
@@ -2553,7 +2564,7 @@ def data_train_signal(config, config_file, device):
                     y4 = y4[:, 0:2]
                     y5 = y5[:, 0:2]
 
-                    loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2) + model.vals.norm(1)
+                    loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2) # + model.vals.norm(1)
 
             loss.backward()
             optimizer.step()

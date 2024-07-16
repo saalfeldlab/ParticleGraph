@@ -33,7 +33,7 @@ simulation:
   n_interactions: 16
   n_frames: 6000
   sigma: 0.005
-  delta_t: 0.5
+  delta_t: 0.3
   dpos_init: 5.0E-4
   boundary: 'periodic'
   start_frame: 0

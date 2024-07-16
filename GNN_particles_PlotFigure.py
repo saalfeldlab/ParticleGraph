@@ -3904,7 +3904,7 @@ def plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         fig, ax = fig_init()
         gt_weight = to_numpy(adjacency[adj_t])
         pred_weight = to_numpy(model.weight_ij[adj_t]) * coeff
-        plt.scatter(gt_weight, pred_weight, s=100, c='k',alpha=0.1)
+        plt.scatter(gt_weight, pred_weight, s=100, c='k',alpha=0.05,edgecolors='none')
         x_data = gt_weight
         y_data = pred_weight.squeeze()
         lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
@@ -3924,7 +3924,7 @@ def plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         fig, ax = fig_init()
         gt_weight = to_numpy(adjacency)
         pred_weight = to_numpy(model.weight_ij) * coeff
-        plt.scatter(gt_weight, pred_weight, s=100, c='k',alpha=0.05)
+        plt.scatter(gt_weight, pred_weight, s=100, c='k',alpha=0.01,edgecolors='none')
         plt.ylabel('Learned $A_{ij}$ values', fontsize=64)
         plt.xlabel('True network $A_{ij}$ values', fontsize=64)
         plt.tight_layout()
@@ -4508,10 +4508,10 @@ if __name__ == '__main__':
     # matplotlib.use("Qt5Agg")
 
     # config_list =['boids_16_256_division_model_2_mass_coeff']
-    config_list = ['signal_N_100_2_d']
+    config_list = ['signal_N_100_2_e']
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['5','4','3','2','1','0'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['4','5','6','7','10','15','20'], device=device)
         # plot_generated(config=config, run=0, style='color Voronoi', step = 5, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 
