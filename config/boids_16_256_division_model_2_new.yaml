@@ -1,5 +1,5 @@
 description: 'Boids 16 different types, division'
-dataset: 'boids_16_division_model_2_Voronoi_color'
+dataset: 'boids_16_256_division_model_2_new'
 
 simulation:
   params: [[42.031494,  19.948257,  89.53507  ],
@@ -19,18 +19,16 @@ simulation:
  [ 5.5842586, 37.232105,  61.94832  ],
  [17.403606,  28.465649,  88.44606  ]]
   cell_cycle_length:  [129.60669,250.58319,248.17961,245.92522,225.17038,300.4388 ,180.9825 ,281.869  ,237.0785 ,214.83209,253.48967,222.98715,285.5585 ,212.19756,301.14725,276.9949 ]
-  cell_death_rate: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-  mc_slope: [-30, -15, 15, 30, -30, -15, 15, 30,-30, -15, 15, 30,-30, -15, 15, 30]
-  final_cell_mass: [200, 300, 400, 500, 200, 300, 400, 500, 200, 300, 400, 500, 200, 300, 400, 500]
+  cell_death_rate: [1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4]
   min_radius: 0.001
   max_radius: 0.04
   max_edges: 500000
-  n_particles: 1024
+  n_particles: 512
   has_cell_division: True
-  n_particles_max: 2000
+  n_particles_max: 20000
   n_particle_types: 16
   n_interactions: 16
-  n_frames: 1000
+  n_frames: 12000
   sigma: 0.005
   delta_t: 0.5
   dpos_init: 5.0E-4
@@ -38,7 +36,7 @@ simulation:
   start_frame: 0
 
 graph_model:
-  particle_model_name: 'PDE_B_mass'
+  particle_model_name: 'PDE_B'
   mesh_model_name: ''
   prediction: '2nd_derivative'
   input_size: 9
@@ -47,7 +45,7 @@ graph_model:
   n_mp_layers: 5
   aggr_type: 'mean'
   embedding_dim: 2
-  update_type: 'embedding_MLP'
+  update_type: 'none'
 
 plotting:
   colormap: 'tab20'
@@ -56,7 +54,7 @@ plotting:
   ylim: [-1.0E-4,1.0E-4]
 
 training:
-  n_epochs: 1
+  n_epochs: 20
   batch_size: 1
   small_init_batch_size: False
   sub_batches: 4
