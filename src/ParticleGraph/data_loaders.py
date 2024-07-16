@@ -261,17 +261,14 @@ class CsvDescriptor:
 
 def load_csv_from_descriptors(
         column_descriptors: Dict[str, CsvDescriptor],
-        *,
-        device: str = 'cuda:0',
         **kwargs
-) -> Dict[str, torch.Tensor]:
+) -> pd.DataFrame:
     """
     Load data from a CSV file based on a set of column descriptors.
 
     :param column_descriptors: A dictionary mapping field names to CsvDescriptors.
-    :param device: The PyTorch device to allocate the tensors on.
     :param kwargs: Additional keyword arguments to pass to pd.read_csv.
-    :return: A dictionary mapping field names to PyTorch tensors.
+    :return: A pandas DataFrame containing the loaded data.
     """
     different_files = set(descriptor.filename for descriptor in column_descriptors.values())
     columns = []
@@ -279,18 +276,16 @@ def load_csv_from_descriptors(
     for file in different_files:
         dtypes = {descriptor.column_name: descriptor.type for descriptor in column_descriptors.values()
                   if descriptor.filename == file}
+        names = [name for name, descriptor in column_descriptors.items() if descriptor.filename == file]
         print(f"Loading data from '{file}':")
         for column_name, type in dtypes.items():
             print(f"  - column {column_name} as {type}")
         columns.append(pd.read_csv(file, dtype=dtypes, usecols=list(dtypes.keys()), **kwargs))
 
-    entire_data = pd.concat(columns, axis='columns')
+    data = pd.concat(columns, axis='columns')
+    data.rename(columns={descriptor.column_name: name for name, descriptor in column_descriptors.items()}, inplace=True)
 
-    tensors = {}
-    for name, descriptor in column_descriptors.items():
-        tensors[name] = torch.tensor(entire_data[descriptor.column_name].values, device=device)
-
-    return tensors
+    return data
 
 
 def load_wanglab_salivary_gland(
@@ -315,16 +310,17 @@ def load_wanglab_salivary_gland(
         'track_id': CsvDescriptor(filename=file_path, column_name="TrackID", type=np.int64,
                                   unit=u.dimensionless_unscaled),
     }
-    raw_data = load_csv_from_descriptors(column_descriptors, device=device, skiprows=3)
+    raw_data = load_csv_from_descriptors(column_descriptors, skiprows=3)
+    raw_tensors = {name: torch.tensor(raw_data[name].values, device=device) for name in column_descriptors.keys()}
 
     # Split into individual data objects for each time point
-    t = raw_data['t']
+    t = raw_tensors['t']
     time_jumps = torch.where(torch.diff(t).ne(0))[0] + 1
     time = torch.unique_consecutive(t)
-    x = torch.tensor_split(raw_data['x'], time_jumps.tolist())
-    y = torch.tensor_split(raw_data['y'], time_jumps.tolist())
-    z = torch.tensor_split(raw_data['z'], time_jumps.tolist())
-    global_ids, id_indices = torch.unique(raw_data['track_id'], return_inverse=True)
+    x = torch.tensor_split(raw_tensors['x'], time_jumps.tolist())
+    y = torch.tensor_split(raw_tensors['y'], time_jumps.tolist())
+    z = torch.tensor_split(raw_tensors['z'], time_jumps.tolist())
+    global_ids, id_indices = torch.unique(raw_tensors['track_id'], return_inverse=True)
     id = torch.tensor_split(id_indices, time_jumps.tolist())
 
     # Combine the data into a TimeSeries object
