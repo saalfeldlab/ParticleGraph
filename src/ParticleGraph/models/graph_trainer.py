@@ -1315,10 +1315,10 @@ def data_train_cell(config, config_file, device):
     print('Update variables ...')
     # update variable if particle_dropout, cell_division, etc ...
     x = x_list[1][n_frames - 1].clone().detach()
-    n_particles = x.shape[0]
+    n_particles = len(T1_list[1])
     config.simulation.n_particles = n_particles
-    print(f'N particles: {n_particles} {len(torch.unique(type_list))} types')
-    logger.info(f'N particles:  {n_particles} {len(torch.unique(type_list))} types')
+    print(f'N particles: {config.simulation.n_particles} to {len(T1_list[1])} ')
+    logger.info(f'N particles: {config.simulation.n_particles} to {len(T1_list[1])} ')
 
     if has_ghost:
 
@@ -2287,7 +2287,6 @@ def data_train_signal(config, config_file, device):
     dimension = simulation_config.dimension
     n_epochs = train_config.n_epochs
     n_particle_types = simulation_config.n_particle_types
-    n_particles = simulation_config.n_particles
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
     data_augmentation_loop = train_config.data_augmentation_loop
@@ -2296,7 +2295,7 @@ def data_train_signal(config, config_file, device):
     has_mesh = (config.graph_model.mesh_model_name != '')
     replace_with_cluster = 'replace' in train_config.sparsity
     has_ghost = train_config.n_ghosts > 0
-    has_large_range = train_config.large_range
+    sparsity_freq = train_config.sparsity_freq
     delta_t = simulation_config.delta_t
     if train_config.small_init_batch_size:
         get_batch_size = increasing_batch_size(target_batch_size)
@@ -2362,10 +2361,6 @@ def data_train_signal(config, config_file, device):
     print('Update variables ...')
     # update variable if particle_dropout, cell_division, etc ...
     x = x_list[1][n_frames - 1].clone().detach()
-    if dimension == 2:
-        type_list = x[:, 5:6].clone().detach()
-    else:
-        type_list = x[:, 7:8].clone().detach()
     n_particles = x.shape[0]
     print(f'N particles: {n_particles}')
     logger.info(f'N particles: {n_particles}')
@@ -2444,7 +2439,6 @@ def data_train_signal(config, config_file, device):
                 mask_ghost = mask_ghost[:, 0].astype(int)
 
         total_loss = 0
-        total_loss_division = 0
 
         Niter = n_frames * data_augmentation_loop // batch_size
         if (has_mesh) & (batch_size == 1):
@@ -2555,8 +2549,6 @@ def data_train_signal(config, config_file, device):
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
-        # matplotlib.use("Qt5Agg")
-
         if (replace_with_cluster) & (epoch % sparsity_freq == sparsity_freq - 1) & (epoch < n_epochs - sparsity_freq):
             # Constrain embedding domain
             embedding = get_embedding(model.a, 1)
@@ -2570,8 +2562,6 @@ def data_train_signal(config, config_file, device):
             logger.info(f'regul_embedding: replaced')
 
         fig = plt.figure(figsize=(22, 4))
-        # white background
-        # plt.style.use('classic')
 
         ax = fig.add_subplot(1, 6, 1)
         plt.plot(list_loss, color='k')

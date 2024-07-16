@@ -776,7 +776,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         if bSave:
             torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
-            torch.save(T1_list, f'graphs_data/graphs_{dataset_name}/T1_list.pt')
+            torch.save(T1_list, f'graphs_data/graphs_{dataset_name}/T1_list_{run}.pt')
             np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}',*edge_p_p_list)
             if simulation_config.cell_inert_model_coeff > 0:
                 torch.save(f'graphs_data/graphs_{dataset_name}/vertices_pos_list_{run}',vertices_pos_list)
