@@ -1,15 +1,16 @@
 """
 A collection of functions for loading data from various sources.
 """
+from dataclasses import dataclass
 from typing import Dict, Tuple
 
 import astropy.units as u
 import pandas as pd
+from astropy.units import Unit
 from torch_geometric.data import Data
 from tqdm import trange
 
 from ParticleGraph.TimeSeries import TimeSeries
-from ParticleGraph.field_descriptors import CsvDescriptor, DerivedFieldDescriptor
 from ParticleGraph.utils import *
 
 
@@ -252,9 +253,17 @@ def ensure_local_path_exists(path):
         str: The absolute path of the created directory.
     """
 
-    if not os.path.exists(path):
-        os.makedirs(path)
+    os.makedirs(path, exist_ok=True)
     return os.path.join(os.getcwd(), path)
+
+
+@dataclass
+class CsvDescriptor:
+    """A class to describe the origin of a field in a dataset as a column of a CSV file."""
+    filename: str
+    column_name: str
+    type: np.dtype
+    unit: Unit
 
 
 def load_csv_from_descriptors(
@@ -305,7 +314,8 @@ def load_wanglab_salivary_gland(
         'y': CsvDescriptor(filename=file_path, column_name="Position Y", type=np.float32, unit=u.micrometer),
         'z': CsvDescriptor(filename=file_path, column_name="Position Z", type=np.float32, unit=u.micrometer),
         't': CsvDescriptor(filename=file_path, column_name="Time", type=np.float32, unit=u.day),
-        'track_id': CsvDescriptor(filename=file_path, column_name="TrackID", type=np.int64, unit=u.dimensionless_unscaled),
+        'track_id': CsvDescriptor(filename=file_path, column_name="TrackID", type=np.int64,
+                                  unit=u.dimensionless_unscaled),
     }
     raw_data = load_csv_from_descriptors(column_descriptors, device=device, skiprows=3)
 
@@ -329,17 +339,11 @@ def load_wanglab_salivary_gland(
             track_id=id[i],
         ))
 
-    field_descriptors = {
-        'time': column_descriptors['t'],
-        'pos': DerivedFieldDescriptor(description="concatenating", constituent_fields=[column_descriptors[key] for key in ['x', 'y', 'z']]),
-        'track_id': DerivedFieldDescriptor(description="finding indices of globally unique ids", constituent_fields=[column_descriptors['track_id']])
-    }
-    time_series = TimeSeries(time, data, field_descriptors)
+    time_series = TimeSeries(time, data)
 
     # Compute the velocity as the derivative of the position and add it to the time series
     velocity, _ = time_series.compute_derivative('pos', id_name='track_id')
     for i in range(n_time_steps):
         data[i].velocity = velocity[i]
-    time_series.fields['velocity'] = DerivedFieldDescriptor(description="differentiating", constituent_fields=[time_series.fields['pos']])
 
     return time_series, global_ids
