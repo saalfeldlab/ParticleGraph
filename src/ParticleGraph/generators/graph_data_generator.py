@@ -610,7 +610,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     # plt.close()
                 delta_centroids = centroids - first_centroids
 
-                y += delta_centroids * simulation_config.cell_inert_model_coeff / 100
+                y += delta_centroids * simulation_config.cell_inert_model_coeff / 10
 
             if (it) % 25 == 0:
                 t, r, a = get_gpu_memory_map(device)
