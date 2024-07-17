@@ -90,23 +90,22 @@ def track(points_file_name):
             if t==trajectory_id:
                 flag = False
         if t == trajectory_id:
-            trajectory[trajectory_id] = [edges_[0]]
+            trajectory[trajectory_id] = [edges_[0], edges_[1]]
             trajectory_id+=1
 
 
-
-    for t in trange(len(pts)):
+    for t in range(len(pts)):
         point_list = []
         for k in range(len(trajectory)):
             pos = np.argwhere(points_numpy[trajectory[k],0]==t)
             if len(pos)>0:
                 pos=pos[0][0]
-                p_ = points_numpy[trajectory[k][pos]]
+                p_ = points_numpy[trajectory[k][pos]].copy()
                 p_[0] = k
                 point_list.append(p_.squeeze())
         point_list=np.array(point_list)
         fig = plt.figure(figsize=(12, 12))
-        # plt.ion()
+        plt.ion()
         plt.scatter (point_list[:,1], point_list[:,2], s=10, c='b')
         for k in range(len(point_list)):
             plt.text(point_list[k][1], point_list[k][2], str(int(point_list[k][0])), fontsize=8)
@@ -118,6 +117,8 @@ def track(points_file_name):
         num = f"{t:06}"
         plt.savefig(f"tmp/trajectory_{num}.png")
         plt.close()
+
+        
 
 
 if __name__=="__main__":

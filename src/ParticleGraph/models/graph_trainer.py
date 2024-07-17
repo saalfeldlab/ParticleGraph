@@ -2358,6 +2358,7 @@ def data_train_signal(config, config_file, device):
     logger.info(f'N epochs: {n_epochs}')
     logger.info(f'initial batch_size: {batch_size}')
 
+
     print('Update variables ...')
     # update variable if particle_dropout, cell_division, etc ...
     x = x_list[1][n_frames - 1].clone().detach()
@@ -2530,7 +2531,7 @@ def data_train_signal(config, config_file, device):
 
             total_loss += loss.item()
 
-            visualize_embedding = True
+            visualize_embedding = False
             if visualize_embedding & (((epoch == 0) & (N < 10000) & (N % 1000 == 0)) | (N==0)):
                 plot_training_signal(config, dataset, model, adjacency, log_dir, epoch, N, index_particles, n_particles, n_particle_types, device)
 
@@ -2542,17 +2543,20 @@ def data_train_signal(config, config_file, device):
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
-        if (replace_with_cluster) & (epoch % sparsity_freq == sparsity_freq - 1) & (epoch < n_epochs - sparsity_freq):
-            # Constrain embedding domain
-            embedding = get_embedding(model.a, 1)
-            proj_interaction = embedding
-            labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding,
-                                                              train_config.cluster_distance_threshold, index_particles,
-                                                              n_particle_types, embedding_cluster)
+        if train_config.regul_matrix:
+            logger.info('regul_matrix')
+            percentile = 0.95
+            A = model.A.clone().detach()
+            A = torch.reshape(A, (n_particles*n_particles,1))
+            A = torch.abs(A)
+            A = A * (A > torch.quantile(A, percentile))
+            A = torch.reshape(A, (n_particles,n_particles))
+            i, j = torch.triu_indices(n_particles,n_particles, requires_grad=False, device=device)
+            Aij = to_numpy(A[i,j].clone().detach())
             with torch.no_grad():
-                model.a[1] = model_a_.clone().detach()
-            print(f'regul_embedding: replaced')
-            logger.info(f'regul_embedding: replaced')
+                model.vals = nn.Parameter(torch.tensor(Aij, requires_grad=True, dtype=torch.float32, device=device))
+            optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+
 
         fig = plt.figure(figsize=(22, 4))
 
@@ -2676,6 +2680,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 t = torch.flipud(t)
                 t = t.reshape(image_width * image_width,1)
                 with torch.no_grad():
+                    model.a = a_.clone().detach()
                     model.field[run] = t.clone().detach()
 
     first_embedding = model.a[1].data.clone().detach()

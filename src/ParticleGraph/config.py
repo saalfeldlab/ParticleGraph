@@ -128,7 +128,7 @@ class TrainingConfig(BaseModel):
     learning_rate_embedding_start: float = 0.001
     learning_rate_embedding_end: float = 0.001
 
-    coeff_L1: float = 1
+    coeff_L1: float = 0
     coeff_loss1: float = 1
     coeff_loss2: float = 1
     coeff_loss3: float = 1
@@ -137,6 +137,7 @@ class TrainingConfig(BaseModel):
     data_augmentation: bool = True
     data_augmentation_loop: int = 40
     recursive_loop: int = 0
+    regul_matrix: bool = False
     sub_batches: int = 1
 
     sequence: list[str] = ['to track','to cell']
