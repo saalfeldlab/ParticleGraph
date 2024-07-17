@@ -115,10 +115,10 @@ def data_train_particles(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # print('Loading existing model ...')
-    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0.pt"
-    # state_dict = torch.load(net,map_location=device)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    print('Loading existing model ...')
+    net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0.pt"
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start

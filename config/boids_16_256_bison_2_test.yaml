@@ -17,7 +17,7 @@ simulation:
   n_nodes: 10000
   n_node_types: 1
   start_frame: 0
-  node_value_map: 'video_bisons_2048_2.tif'
+  node_coeff_map: 'video_bisons_2048_2.tif'
   node_type_map: 'pattern_Null.tif'
   node_diffusion_map: 'pattern_Null.tif'
   node_proliferation_map: 'pattern_Null.tif'
