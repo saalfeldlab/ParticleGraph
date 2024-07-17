@@ -43,7 +43,6 @@ class SimulationConfig(BaseModel):
     boundary: Literal['periodic', 'no', 'periodic_special'] = 'periodic'
     node_coeff_map: Optional[str] = None
     node_value_map: Optional[str] = None
-    node_diffusion_map: Optional[str] = None
     node_proliferation_map: Optional[str] = None
     beta: Optional[float] = None
     start_frame: int = 0

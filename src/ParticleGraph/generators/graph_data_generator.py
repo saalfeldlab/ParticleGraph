@@ -1018,7 +1018,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
     model_p_p, bc_pos, bc_dpos = choose_model(config, device=device)
     model_f_p = model_p_p
 
-    model_f_f = choose_mesh_model(config, device=device)
+    # model_f_f = choose_mesh_model(config, device=device)
 
     index_particles = []
     for n in range(n_particle_types):
@@ -1052,7 +1052,8 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
 
         # initialize particle and mesh states
         X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
-        X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, model_mesh=model_f_f, device=device)
+        # X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, model_mesh=model_f_f, device=device)
+        X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
 
         # matplotlib.use("Qt5Agg")
         # fig = plt.figure(figsize=(12, 12))

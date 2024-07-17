@@ -316,7 +316,6 @@ def init_mesh(config, device):
         i0 = np.flipud(i0)
     values = i0[(to_numpy(pos_mesh[:, 1]) * 255).astype(int), (to_numpy(pos_mesh[:, 0]) * 255).astype(int)]
 
-
     mask_mesh = (x_mesh > torch.min(x_mesh) + 0.02) & (x_mesh < torch.max(x_mesh) - 0.02) & (y_mesh > torch.min(y_mesh) + 0.02) & (y_mesh < torch.max(y_mesh) - 0.02)
 
     pos_mesh = pos_mesh + torch.randn(n_nodes, 2, device=device) * mesh_size / 8
@@ -351,12 +350,14 @@ def init_mesh(config, device):
     # type_mesh = torch.tensor(values, device=device)
     # type_mesh = type_mesh[:, None]
 
-    i0 = imread(f'graphs_data/{node_coeff_map}')
-    values = i0[(to_numpy(x_mesh[:, 0]) * 255).astype(int), (to_numpy(y_mesh[:, 0]) * 255).astype(int)]
-    if np.max(values) > 0:
-        values = np.round(values / np.max(values) * (simulation_config.n_node_types-1))
-    type_mesh = torch.tensor(values, device=device)
-    type_mesh = type_mesh[:, None]
+    # i0 = imread(f'graphs_data/{node_coeff_map}')
+    # values = i0[(to_numpy(x_mesh[:, 0]) * 255).astype(int), (to_numpy(y_mesh[:, 0]) * 255).astype(int)]
+    # if np.max(values) > 0:
+    #     values = np.round(values / np.max(values) * (simulation_config.n_node_types-1))
+    # type_mesh = torch.tensor(values, device=device)
+    # type_mesh = type_mesh[:, None]
+
+    type_mesh = torch.zeros((n_nodes, 1), device=device)
 
     node_id_mesh = torch.arange(n_nodes, device=device)
     node_id_mesh = node_id_mesh[:, None]
@@ -398,7 +399,6 @@ def init_mesh(config, device):
                  'mask': mask_mesh, 'size': mesh_size}
 
     if (config.graph_model.particle_model_name == 'PDE_ParticleField_A')  | (config.graph_model.particle_model_name == 'PDE_ParticleField_B'):
-
         type_mesh = 0 * type_mesh
 
     # if config.graph_model.particle_model_name == 'PDE_ParticleField_B':
