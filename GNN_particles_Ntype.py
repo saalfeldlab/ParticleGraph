@@ -36,8 +36,8 @@ if __name__ == '__main__':
 
     # config_list =['boids_16_division_model_2_Voronoi_color']
     # config_list =  ['boids_16_256_division_model_2_small']
-    config_list =  ['boids_16_256_division_model_2_new']
-    # config_list = ['signal_N_100_2_e']
+    # config_list =  ['boids_16_256_division_model_2_new']
+    config_list = ['signal_N_100_2_e']
 
 
     for config_file in config_list:

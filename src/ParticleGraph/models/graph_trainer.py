@@ -2478,7 +2478,7 @@ def data_train_signal(config, config_file, device):
                     y = y / ynorm
                     y = y[:, 0:2]
 
-                    loss = (pred1 + pred2 - y).norm(2) / 2
+                    loss = (pred1 + pred2 - y).norm(2) / 2 + model.A.norm(1)
 
                 case 3:
 
