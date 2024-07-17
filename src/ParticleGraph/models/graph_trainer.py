@@ -2327,9 +2327,9 @@ def data_train_signal(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_99_graphs_20.pt"
-    # state_dict = torch.load(net,map_location=device)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    net = f"./log/try_{config_file}/models/best_model_with_99_graphs_9.pt"
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -2392,7 +2392,7 @@ def data_train_signal(config, config_file, device):
             if adjacency[i,j]==0:
                 edge_index = torch.cat((edge_index, torch.tensor([[i], [j]], device=device)), 1)
                 edge_index = torch.cat((edge_index, torch.tensor([[j], [i]], device=device)), 1)
-    if config_file == 'signal_N_100_2_d':
+    if (config_file == 'signal_N_100_2_d') | (config_file == 'signal_N_100_2_e') | (config_file == 'signal_N_100_2_f'):
         print('Fully connection ...')
         for i in trange(n_particles):
                 i_s = torch.ones(n_particles, device=device) * i
@@ -2403,17 +2403,7 @@ def data_train_signal(config, config_file, device):
                 else:
                     edge_index = torch.cat((edge_index, ij_s), dim=1)
                 edge_index = edge_index.to(dtype=torch.int64)
-    if config_file == 'signal_N_100_2_e':
-        print('Fully connection ...')
-        for i in trange(n_particles):
-                i_s = torch.ones(n_particles, device=device) * i
-                j_s = torch.arange(n_particles, device=device)
-                ij_s = torch.cat((i_s[:,None], j_s[:,None]), dim=1).t()
-                if i==0:
-                    edge_index = ij_s
-                else:
-                    edge_index = torch.cat((edge_index, ij_s), dim=1)
-                edge_index = edge_index.to(dtype=torch.int64)
+
     model.edges = edge_index
     logger.info(f'edge_index.shape {edge_index.shape} ')
 
@@ -2423,7 +2413,7 @@ def data_train_signal(config, config_file, device):
 
     list_loss = []
     time.sleep(1)
-    for epoch in range(n_epochs + 1):
+    for epoch in range(10,n_epochs + 1):
 
         old_batch_size = batch_size
         batch_size = get_batch_size(epoch)
@@ -2478,8 +2468,11 @@ def data_train_signal(config, config_file, device):
                     y = y / ynorm
                     y = y[:, 0:2]
 
-                    loss = (pred1 + pred2 - y).norm(2) / 2 + model.A.norm(1)
-
+                    if epoch > 10:
+                        loss = (pred1 + pred2 - y).norm(2) / 2 + model.A.norm(1) * config.training.coeff_L1
+                    else:
+                        loss = (pred1 + pred2 - y).norm(2) / 2
+                        
                 case 3:
 
                     x = x_list[run][k].clone().detach()

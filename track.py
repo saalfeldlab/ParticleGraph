@@ -1,8 +1,7 @@
 import argparse
 import torch
 import numpy as np
-from motile_toolbox.candidate_graph import get_candidate_graph_from_points_list
-from motile_toolbox.candidate_graph.graph_attributes import NodeAttr, EdgeAttr 
+from motile_toolbox.candidate_graph.graph_attributes import NodeAttr, EdgeAttr
 from motile.track_graph import TrackGraph
 from motile.solver import Solver
 from motile.constraints import MaxChildren, MaxParents 
@@ -12,7 +11,7 @@ from motile.plot import draw_track_graph, draw_solution
 import matplotlib
 from matplotlib import pyplot as plt
 
-from motile_toolbox.candidate_graph import get_candidate_graph_from_points_list
+from motile_toolbox.candidate_graph.compute_graph import get_candidate_graph_from_points_list
 
 def track(points_file_name):
     
@@ -94,11 +93,31 @@ def track(points_file_name):
             trajectory[trajectory_id] = [edges_[0]]
             trajectory_id+=1
 
-    fig = plt.figure(figsize=(12, 12))
-    for k in range(len(trajectory)):
-        plt.scatter(points_numpy[trajectory[k],1],points_numpy[trajectory[k],2],s=0.1)
-    plt.savefig("trajectory.png")
-    plt.close()
+
+
+    for t in trange(len(pts)):
+        point_list = []
+        for k in range(len(trajectory)):
+            pos = np.argwhere(points_numpy[trajectory[k],0]==t)
+            if len(pos)>0:
+                pos=pos[0][0]
+                p_ = points_numpy[trajectory[k][pos]]
+                p_[0] = k
+                point_list.append(p_.squeeze())
+        point_list=np.array(point_list)
+        fig = plt.figure(figsize=(12, 12))
+        # plt.ion()
+        plt.scatter (point_list[:,1], point_list[:,2], s=10, c='b')
+        for k in range(len(point_list)):
+            plt.text(point_list[k][1], point_list[k][2], str(int(point_list[k][0])), fontsize=8)
+        plt.xlim([0, 1])
+        plt.ylim([0, 1])
+        plt.xticks([])
+        plt.yticks([])
+        plt.tight_layout()
+        num = f"{t:06}"
+        plt.savefig(f"tmp/trajectory_{num}.png")
+        plt.close()
 
 
 if __name__=="__main__":

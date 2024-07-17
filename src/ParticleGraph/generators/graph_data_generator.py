@@ -722,6 +722,11 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     else:
                         plt.xticks([])
                         plt.yticks([])
+
+                    if 'cell_id' in style:
+                        for i, txt in enumerate(to_numpy(N1.squeeze())):
+                            plt.text(to_numpy(X1[i, 0]), to_numpy(X1[i, 1]), int(to_numpy(N1[i])), fontsize=8)    #(txt, (to_numpy(X1[i, 0]), to_numpy(X1[i, 1]), 0), fontsize=8)
+
                     plt.tight_layout()
 
                     num = f"{it:06}"
