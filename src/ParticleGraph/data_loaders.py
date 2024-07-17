@@ -278,8 +278,8 @@ def load_csv_from_descriptors(
                   if descriptor.filename == file}
         names = [name for name, descriptor in column_descriptors.items() if descriptor.filename == file]
         print(f"Loading data from '{file}':")
-        for column_name, type in dtypes.items():
-            print(f"  - column {column_name} as {type}")
+        for column_name, dtype in dtypes.items():
+            print(f"  - column {column_name} as {dtype}")
         columns.append(pd.read_csv(file, dtype=dtypes, usecols=list(dtypes.keys()), **kwargs))
 
     data = pd.concat(columns, axis='columns')

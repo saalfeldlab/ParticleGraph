@@ -10,10 +10,10 @@ frame = 100
 frame_data = time_series[frame]
 
 # IDs are in the range 0, ..., N-1; global ids are stored separately
-print(f"fields of frames: {frame_data.node_attrs()}")
-print(f"number of particles in frame {frame}: {frame_data.num_nodes}")
-print(f"local ids: {frame_data.track_id}")
-print(f"global ids: {global_ids[frame_data.track_id]}")
+print(f"Data fields: {frame_data.node_attrs()}")
+print(f"Number of particles in frame {frame}: {frame_data.num_nodes}")
+print(f"Local ids in frame {frame}: {frame_data.track_id}")
+print(f"Global ids in frame {frame}: {global_ids[frame_data.track_id]}")
 
 # summarize some of the fields in a particular dataset
 X = bundle_fields(frame_data, "track_id", "pos", "velocity")
