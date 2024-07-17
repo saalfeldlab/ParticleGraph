@@ -213,35 +213,37 @@ def load_shrofflab_celegans(
         abnormal_cells = cell_names[abnormal_data]
         print(f"Warning: incomplete time series data for {abnormal_cells}")
 
-    # Put values into a 3D tensor
-    relevant_fields = ["x", "y", "z", "cpm"]
-    shape = (n_cells, n_normal_timepoints, len(relevant_fields))
-    tensor = np.nan * np.ones((shape[0] * shape[1], shape[2]))
+    # Put values into a TimeSeries object
+    relevant_fields = ["x", "y", "z", "cpm", "cell_id"]
+    tensors_np = {name: np.nan * np.ones((n_cells * n_normal_timepoints)) for name in relevant_fields}
     time_idx = (raw_data["t"].values - start_time).astype(int)
-    cell_idx = np.repeat(np.arange(n_cells), n_timepoints)
-    idx = np.ravel_multi_index((cell_idx, time_idx), (n_cells, n_normal_timepoints))
-    for i, name in enumerate(relevant_fields):
-        tensor[idx, i] = raw_data[name].values
-    tensor = np.transpose(tensor.reshape(shape), (1, 0, 2))
+    cell_id = np.repeat(np.arange(n_cells), n_timepoints)
+    raw_data.insert(0, "cell_id", cell_id)
+    idx = np.ravel_multi_index((cell_id, time_idx), (n_cells, n_normal_timepoints))
+    tensors = {}
+    for name in relevant_fields:
+        tensors_np[name][idx] = raw_data[name].values
+        split_tensors = np.squeeze(
+            np.hsplit(tensors_np[name].reshape((n_cells, n_normal_timepoints)), n_normal_timepoints))
+        tensors[name] = [torch.tensor(t, device=device) for t in split_tensors]
 
-    # Compute the time derivatives and concatenate such that columns correspond to:
-    # x, y, z, d/dt x, d/dt y, d/dt z, cpm, d/dt cpm
-    tensor_gradient = tensor - np.roll(tensor, 1, 0)
-    tensor_gradient[0, :, :] = np.nan
-    tensor = np.concatenate([tensor[:, :, 0:3], tensor_gradient[:, :, 0:3],
-                             tensor[:, :, 3:4], tensor_gradient[:, :, 3:4]], axis=2)
+    time = torch.arange(start_time, end_time)
+    data = [Data(
+        time=time[i],
+        cell_id=tensors["cell_id"][i],
+        pos=torch.stack([tensors["x"][i], tensors["y"][i], tensors["z"][i]], dim=1),
+        cpm=tensors["cpm"][i],
+    ) for i in range(n_normal_timepoints)]
+    time_series = TimeSeries(time, data)
 
-    # Put all the time points into a separate tensor
-    tensor_list = []
-    for i in range(n_normal_timepoints):
-        cell_tensor = tensor[i]
-        cell_ids = np.where(~np.isnan(cell_tensor[:, 0]))[0]
-        cell_tensor = np.column_stack((cell_ids, cell_tensor[cell_ids, :]))
-        tensor_list.append(torch.tensor(cell_tensor, device=device))
+    # Compute the velocity and the derivative of the gene expressions and add them to the time series
+    velocity = time_series.compute_derivative('pos')
+    d_cpm = time_series.compute_derivative('cpm')
+    for i in range(len(time_series)):
+        data[i].velocity = velocity[i]
+        data[i].d_cpm = d_cpm[i]
 
-    time = np.arange(start_time, end_time)
-
-    return tensor_list, time, cell_names
+    return time_series, cell_names
 
 
 def ensure_local_path_exists(path):
