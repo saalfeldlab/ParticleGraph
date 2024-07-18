@@ -136,7 +136,7 @@ def track(points_file_name):
             mask = x * x + y * y <= radius * radius
             image[mask] = point_list[i,0].astype(int)
         image = np.flipud(image)
-        image = np.int16(image)
+        image = np.uint16(image)
         tifffile.imwrite(f"tmp/mask/trajectory_{num}.tif", image, photometric='minisblack')
 
 

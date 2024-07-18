@@ -9,6 +9,7 @@ from ParticleGraph.utils import set_size
 from ParticleGraph.generators.cell_utils import *
 from scipy import stats
 from scipy.spatial import Voronoi, voronoi_plot_2d
+import tifffile
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
@@ -388,14 +389,18 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
     edges_len_list = []
     folder = f'./graphs_data/graphs_{dataset_name}/'
     os.makedirs(folder, exist_ok=True)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/generated_data/', exist_ok=True)
+    os.makedirs(f'./graphs_data/graphs_{dataset_name}/generated_data/Fig/', exist_ok=True)
+    os.makedirs(f'./graphs_data/graphs_{dataset_name}/generated_data/GT/', exist_ok=True)
     if erase:
         files = glob.glob(f"{folder}/*")
         for f in files:
             if (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (
                     f != 'generation_code.py'):
                 os.remove(f)
-        files = glob.glob(f'./graphs_data/graphs_{dataset_name}/generated_data/*')
+        files = glob.glob(f'./graphs_data/graphs_{dataset_name}/generated_data/Fig/*')
+        for f in files:
+            os.remove(f)
+        files = glob.glob(f'./graphs_data/graphs_{dataset_name}/generated_data/GT/*')
         for f in files:
             os.remove(f)
 
@@ -493,6 +498,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
                     man_track_ = torch.cat((N1_[:,None] + 1, torch.zeros((n_add_nodes,3), device=device)), 1) # cell ID
                     man_track_[:,1] = it    # start time
+                    man_track_[:, 2] = -1   # end time
                     man_track_[0:n_add_nodes//2, 3:4] = N1[pos] + 1  # parent cell
                     man_track_[n_add_nodes//2:n_add_nodes, 3:4] = N1[pos] + 1 # parent cell
                     man_track = torch.cat((man_track,man_track_),0)
@@ -645,6 +651,23 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             V1 = V1 * alive[:,None].repeat(1,2)
             X1 = bc_pos(X1 + V1 * delta_t)
 
+            # save masks
+            if run==0:
+                mask_width = 1024
+                radius = 4
+                point_list = to_numpy(X1)
+                cell_id = to_numpy(N1) + 1
+                image = np.zeros((mask_width, mask_width))
+                for i in range(len(point_list)):
+                    point_i = (point_list[i, 1] * 1024).astype(int)
+                    point_j = (point_list[i, 0] * 1024).astype(int)
+                    yy, xx = np.ogrid[-point_i: mask_width - point_i, -point_j: mask_width - point_j]
+                    mask = xx * xx + yy * yy <= radius * radius
+                    image[mask] = cell_id[i].astype(int)
+                image = np.flipud(image)
+                image = np.uint16(image)
+                num = f"{it:03}"
+                tifffile.imwrite(f"graphs_data/graphs_{dataset_name}/generated_data/GT/man_track{num}.tif", image, photometric='minisblack')
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
@@ -741,7 +764,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
                     num = f"{it:06}"
 
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{num}.tif",
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig/Fig_{run}_{num}.tif",
                                 dpi=85.35)
                     # plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{10000+it}.tif", dpi=42.675)
                     plt.close()
@@ -785,7 +808,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     plt.ylim([-0.05, 1.05])
                     plt.tight_layout()
                     num = f"{it:06}"
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Vor_{run}_{num}.tif", dpi=85.35)
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig/Vor_{run}_{num}.tif", dpi=85.35)
                     plt.close()
 
         if bSave:
@@ -809,7 +832,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             if len(pos)>0:
                 man_track[pos,2] = n_frames
             man_track = np.int16(man_track)
-            np.savetxt(f'graphs_data/graphs_{dataset_name}/man_track_{run}.txt', man_track, fmt="%4d", delimiter=" ", newline="\n")
+            np.savetxt(f'graphs_data/graphs_{dataset_name}/man_track_{run}.txt', man_track, fmt="%d", delimiter=" ", newline="\n")
 
 
     for handler in logger.handlers[:]:
