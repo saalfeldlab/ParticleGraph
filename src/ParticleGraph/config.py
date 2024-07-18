@@ -14,6 +14,7 @@ class SimulationConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     dimension: int = 2
     connectivity_file: str = ''
+    adjacency_matrix: str = ''
     params: list[list[float]]
     cell_cycle_length: list[float] =[-1]
     cell_death_rate: list[float] = [-1]

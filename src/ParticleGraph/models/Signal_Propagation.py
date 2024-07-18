@@ -42,6 +42,7 @@ class Signal_Propagation(pyg.nn.MessagePassing):
         self.hidden_dim_update = model_config.hidden_dim_update
         self.input_size_update = model_config.input_size_update
         self.bc_dpos = bc_dpos
+        self.adjacency_matrix = simulation_config.adjacency_matrix
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                             hidden_size=self.hidden_dim, device=self.device)
@@ -51,7 +52,10 @@ class Signal_Propagation(pyg.nn.MessagePassing):
 
         self.a = nn.Parameter(torch.zeros((self.n_dataset,int(self.n_particles), self.embedding_dim), device=self.device, requires_grad=True, dtype=torch.float32))
 
-        self.vals = nn.Parameter(torch.zeros((int(self.n_particles*(self.n_particles+1)/2)), device=self.device, requires_grad=True, dtype=torch.float32))
+        if 'asymmetric' in self.adjacency_matrix:
+            self.vals = nn.Parameter(torch.zeros((int(self.n_particles),int(self.n_particles)), device=self.device, requires_grad=True, dtype=torch.float32))
+        else:
+            self.vals = nn.Parameter(torch.zeros((int(self.n_particles*(self.n_particles+1)/2)), device=self.device, requires_grad=True, dtype=torch.float32))
 
     def forward(self, data=[], data_id=[], return_all=False, training_mode='all'):
         self.data_id = data_id
@@ -82,10 +86,13 @@ class Signal_Propagation(pyg.nn.MessagePassing):
     def message(self, edge_index_i, edge_index_j, u_j):
 
         A = torch.zeros(self.n_particles, self.n_particles, device=self.device, requires_grad=False, dtype=torch.float32)
-        i, j = torch.triu_indices(self.n_particles, self.n_particles, requires_grad=False, device=self.device)
 
-        A[i,j] = self.vals
-        A.T[i,j] = self.vals
+        if 'asymmetric' in self.adjacency_matrix:
+            A = self.vals
+        else:
+            i, j = torch.triu_indices(self.n_particles, self.n_particles, requires_grad=False, device=self.device)
+            A[i,j] = self.vals
+            A.T[i,j] = self.vals
 
         self.A = A
 

@@ -88,8 +88,17 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         inv_particle_dropout_mask = draw[cut:]
         x_removed_list = []
     if has_adjacency_matrix:
-        mat = scipy.io.loadmat(simulation_config.connectivity_file)
-        adjacency = torch.tensor(mat['A'], device=device)
+        if 'mat' in simulation_config.connectivity_file:
+            mat = scipy.io.loadmat(simulation_config.connectivity_file)
+            adjacency = torch.tensor(mat['A'], device=device)
+        else:
+            adjacency = torch.load(simulation_config.connectivity_file, map_location=device)
+
+            # i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+            # bl = adjacency[j,i]
+            # adjacency[j,i] = torch.rand_like(bl) * torch.max(bl) * (bl>0)
+            # torch.save(adjacency, f'./graphs_data/adjacency_asym.pt')
+
         adj_t = adjacency > 0
         edge_index = adj_t.nonzero().t().contiguous()
         edge_attr_adjacency = adjacency[adj_t]
