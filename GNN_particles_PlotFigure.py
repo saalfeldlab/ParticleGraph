@@ -4515,10 +4515,10 @@ if __name__ == '__main__':
     print(f'device {device}')
     print(' ')
 
-    matplotlib.use("Qt5Agg")
+    #matplotlib.use("Qt5Agg")
 
     # config_list =['boids_16_256_division_model_2_mass_coeff']
-    config_list = ['signal_N_100_2_d']
+    config_list = ['signal_N_100_2_d','signal_N_100_2_e','signal_N_100_2_g']
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
@@ -4528,5 +4528,8 @@ if __name__ == '__main__':
     # f_list = ['supp10']
     # for f in f_list:
     #     config_list,epoch_list = get_figures(f)
+
+
+
 
 

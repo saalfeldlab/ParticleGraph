@@ -2393,7 +2393,7 @@ def data_train_signal(config, config_file, device):
             if adjacency[i,j]==0:
                 edge_index = torch.cat((edge_index, torch.tensor([[i], [j]], device=device)), 1)
                 edge_index = torch.cat((edge_index, torch.tensor([[j], [i]], device=device)), 1)
-    if (config_file == 'signal_N_100_2_d') | (config_file == 'signal_N_100_2_e') | (config_file == 'signal_N_100_2_f'):
+    if (config_file == 'signal_N_100_2_d') | (config_file == 'signal_N_100_2_e') | (config_file == 'signal_N_100_2_f') | (config_file == 'signal_N_100_2_g'):
         print('Fully connection ...')
         for i in trange(n_particles):
                 i_s = torch.ones(n_particles, device=device) * i
@@ -2651,7 +2651,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             mesh_model = None
         if has_field:
             model_f_p = model
-            model_f_f = choose_mesh_model(config, device=device)
 
             image_width = int(np.sqrt(n_nodes))
             if has_siren_time:
