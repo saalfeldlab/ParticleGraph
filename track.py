@@ -10,8 +10,9 @@ from motile.variables import EdgeSelected, NodeSelected
 from motile.plot import draw_track_graph, draw_solution
 import matplotlib
 from matplotlib import pyplot as plt
-
+import tifffile
 from motile_toolbox.candidate_graph.compute_graph import get_candidate_graph_from_points_list
+from scipy import ndimage
 
 def track(points_file_name):
     
@@ -93,10 +94,16 @@ def track(points_file_name):
             trajectory[trajectory_id] = [edges_[0], edges_[1]]
             trajectory_id+=1
 
+    for k in range(trajectory_id-1,-1,-1):
+        trajectory[k+1]=trajectory[k]
+    trajectory[0]=[0]
+
+
 
     for t in range(len(pts)):
         point_list = []
-        for k in range(len(trajectory)):
+
+        for k in range(1, len(trajectory)):
             pos = np.argwhere(points_numpy[trajectory[k],0]==t)
             if len(pos)>0:
                 pos=pos[0][0]
@@ -115,8 +122,27 @@ def track(points_file_name):
         plt.yticks([])
         plt.tight_layout()
         num = f"{t:06}"
-        plt.savefig(f"tmp/trajectory_{num}.png")
+        plt.savefig(f"tmp/fig/trajectory_{num}.png")
         plt.close()
+
+        size = 1024
+        radius = 4
+
+        image = np.zeros((size, size))
+        for i in range(len(point_list)):
+            point_i = (point_list[i,2]*1024).astype(int)
+            point_j = (point_list[i,1]*1024).astype(int)
+            y, x = np.ogrid[-point_i: size - point_i, -point_j: size - point_j]
+            mask = x * x + y * y <= radius * radius
+            image[mask] = point_list[i,0].astype(int)
+        image = np.flipud(image)
+        image = np.int16(image)
+        tifffile.imwrite(f"tmp/mask/trajectory_{num}.tif", image, photometric='minisblack')
+
+
+
+
+
 
         
 

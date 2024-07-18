@@ -450,6 +450,9 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
         T1_list = T1.clone().detach()
 
+        man_track = torch.cat((N1+1, torch.zeros((len(N1),3),device=device)), 1)
+        man_track[:,2]=-1
+
         logger.info('cell cycle length')
         logger.info(to_numpy(cycle_length))
         logger.info('cell death rate')
@@ -473,7 +476,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
             # calculate cell death and cell division
-            if (it >= 0) & (n_particles_alive < simulation_config.n_particles_max):
+            if (it > 0) & (n_particles_alive < simulation_config.n_particles_max):
                 # cell death
                 sample = torch.rand(len(X1), device=device)
                 H1[sample.squeeze() < DR1.squeeze()/5E4, 0] = 0     # H1[:,0] = cell alive flag, alive : 1 , death : 0
@@ -487,6 +490,13 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
                     N1_ = n_particles + torch.arange(n_add_nodes, device=device)
                     N1 = torch.cat((N1,N1_[:,None]),dim = 0)
+
+                    man_track_ = torch.cat((N1_[:,None] + 1, torch.zeros((n_add_nodes,3), device=device)), 1) # cell ID
+                    man_track_[:,1] = it    # start time
+                    man_track_[0:n_add_nodes//2, 3:4] = N1[pos] + 1  # parent cell
+                    man_track_[n_add_nodes//2:n_add_nodes, 3:4] = N1[pos] + 1 # parent cell
+                    man_track = torch.cat((man_track,man_track_),0)
+                    man_track[to_numpy(N1[pos]).astype(int), 2] = it-1   # end time
 
                     n_particles = n_particles + n_add_nodes
 
@@ -725,7 +735,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
                     if 'cell_id' in style:
                         for i, txt in enumerate(to_numpy(N1.squeeze())):
-                            plt.text(to_numpy(X1[i, 0]), to_numpy(X1[i, 1]), int(to_numpy(N1[i])), fontsize=8)    #(txt, (to_numpy(X1[i, 0]), to_numpy(X1[i, 1]), 0), fontsize=8)
+                            plt.text(to_numpy(X1[i, 0]), to_numpy(X1[i, 1]), 1 + int(to_numpy(N1[i])), fontsize=8)    #(txt, (to_numpy(X1[i, 0]), to_numpy(X1[i, 1]), 0), fontsize=8)
 
                     plt.tight_layout()
 
@@ -792,6 +802,15 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             torch.save(cell_death_rate, f'graphs_data/graphs_{dataset_name}/cell_death_rate.pt')
             torch.save(DR1, f'graphs_data/graphs_{dataset_name}/cell_death_rate_distrib.pt')
             torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
+
+
+            man_track = to_numpy(man_track)
+            pos = np.argwhere(man_track[:,2]==-1)
+            if len(pos)>0:
+                man_track[pos,2] = n_frames
+            man_track = np.int16(man_track)
+            np.savetxt(f'graphs_data/graphs_{dataset_name}/man_track_{run}.txt', man_track, fmt="%4d", delimiter=" ", newline="\n")
+
 
     for handler in logger.handlers[:]:
         handler.close()
