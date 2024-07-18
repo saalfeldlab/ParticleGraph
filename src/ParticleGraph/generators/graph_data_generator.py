@@ -826,13 +826,13 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             torch.save(DR1, f'graphs_data/graphs_{dataset_name}/cell_death_rate_distrib.pt')
             torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
 
-
-            man_track = to_numpy(man_track)
-            pos = np.argwhere(man_track[:,2]==-1)
-            if len(pos)>0:
-                man_track[pos,2] = n_frames
-            man_track = np.int16(man_track)
-            np.savetxt(f'graphs_data/graphs_{dataset_name}/man_track_{run}.txt', man_track, fmt="%d", delimiter=" ", newline="\n")
+            if run ==0:
+                man_track = to_numpy(man_track)
+                pos = np.argwhere(man_track[:,2]==-1)
+                if len(pos)>0:
+                    man_track[pos,2] = n_frames
+                man_track = np.int16(man_track)
+                np.savetxt(f'graphs_data/graphs_{dataset_name}/man_track.txt', man_track, fmt="%d", delimiter=" ", newline="\n")
 
 
     for handler in logger.handlers[:]:
