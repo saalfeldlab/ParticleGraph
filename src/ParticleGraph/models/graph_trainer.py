@@ -115,10 +115,10 @@ def data_train_particles(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    print('Loading existing model ...')
-    net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0.pt"
-    state_dict = torch.load(net,map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
+    # print('Loading existing model ...')
+    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0.pt"
+    # state_dict = torch.load(net,map_location=device)
+    # model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -284,7 +284,6 @@ def data_train_particles(config, config_file, device):
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif", dpi=80)
                     plt.close()
-
                 else:
                     plot_training(config=config, dataset_name=dataset_name, log_dir=log_dir,
                                   epoch=epoch, N=N, x=x, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
