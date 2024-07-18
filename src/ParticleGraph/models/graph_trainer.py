@@ -2327,9 +2327,9 @@ def data_train_signal(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    net = f"./log/try_{config_file}/models/best_model_with_99_graphs_9.pt"
-    state_dict = torch.load(net,map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
+    # net = f"./log/try_{config_file}/models/best_model_with_99_graphs_9.pt"
+    # state_dict = torch.load(net,map_location=device)
+    # model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -2414,7 +2414,7 @@ def data_train_signal(config, config_file, device):
 
     list_loss = []
     time.sleep(1)
-    for epoch in range(10,n_epochs + 1):
+    for epoch in range(n_epochs + 1):
 
         old_batch_size = batch_size
         batch_size = get_batch_size(epoch)
@@ -2469,7 +2469,7 @@ def data_train_signal(config, config_file, device):
                     y = y / ynorm
                     y = y[:, 0:2]
 
-                    if epoch > 10:
+                    if epoch > -1:
                         loss = (pred1 + pred2 - y).norm(2) / 2 + model.A.norm(1) * config.training.coeff_L1
                     else:
                         loss = (pred1 + pred2 - y).norm(2) / 2

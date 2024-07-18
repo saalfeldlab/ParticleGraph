@@ -3891,7 +3891,7 @@ def plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
 
         sys.stdout = sys.__stdout__
 
-        expr = model_pysrr.sympy(3).as_terms()[0]
+        expr = model_pysrr.sympy(4).as_terms()[0]
         coeff = expr[0][1][0][0]
         print(expr)
         logger.info(expr)
@@ -3904,7 +3904,6 @@ def plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         fig, ax = fig_init()
         gt_weight = to_numpy(adjacency[adj_t])
         pred_weight = to_numpy(model.weight_ij[adj_t]) * coeff
-        plt.scatter(gt_weight, pred_weight, s=1, c='k')
         x_data = gt_weight
         y_data = pred_weight.squeeze()
         lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
@@ -3913,6 +3912,7 @@ def plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
         r_squared = 1 - (ss_res / ss_tot)
         plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+        plt.scatter(gt_weight, pred_weight, s=200, c='k', edgecolors='none')
         plt.ylabel('Learned $A_{ij}$ values', fontsize=64)
         plt.xlabel('True network $A_{ij}$ values', fontsize=64)
         print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   offset: {np.round(lin_fit[1], 2)}  ")
@@ -3921,10 +3921,25 @@ def plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         plt.savefig(f"./{log_dir}/results/Aij_{config_file}_{epoch}.tif", dpi=300)
         plt.close()
 
+        fig = plt.figure(figsize=(20, 10))
+        ax = fig.add_subplot(1,2,1)
+        plt.imshow(to_numpy(adjacency), cmap='viridis', vmin=0, vmax=0.01)
+        plt.title('True $A_{ij}$', fontsize=64)
+        plt.xticks(fontsize=24.0)
+        plt.yticks(fontsize=24.0)
+        ax = fig.add_subplot(1,2,2)
+        plt.imshow(to_numpy(model.A)*coeff, cmap='viridis', vmin=0, vmax=0.01)
+        plt.title('Learned $A_{ij}$', fontsize=64)
+        plt.xticks(fontsize=24.0)
+        plt.yticks(fontsize=24.0)
+        plt.tight_layout()
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/Aij_comparison_{config_file}_{epoch}.tif", dpi=300)
+        plt.close()
+
         fig, ax = fig_init()
         gt_weight = to_numpy(adjacency)
         pred_weight = to_numpy(model.A) * coeff
-        plt.scatter(gt_weight, pred_weight, s=1, c='k')
         x_data = np.reshape(gt_weight, (n_particles * n_particles))
         y_data =  np.reshape(pred_weight,  (n_particles * n_particles))
         lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
@@ -3933,6 +3948,7 @@ def plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
         r_squared = 1 - (ss_res / ss_tot)
         plt.plot(x_data, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+        plt.scatter(gt_weight, pred_weight, s=200, c='k', edgecolors='none')
         plt.ylabel('Learned $A_{ij}$ values', fontsize=64)
         plt.xlabel('True network $A_{ij}$ values', fontsize=64)
         print(f"R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}   offset: {np.round(lin_fit[1], 2)}  ")
@@ -3940,6 +3956,8 @@ def plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/all_Aij_{config_file}_{epoch}.tif", dpi=300)
         plt.close()
+
+
 
 
         true_func = torch.tanh(uu)
@@ -4515,10 +4533,10 @@ if __name__ == '__main__':
     print(f'device {device}')
     print(' ')
 
-    #matplotlib.use("Qt5Agg")
+    matplotlib.use("Qt5Agg")
 
     # config_list =['boids_16_256_division_model_2_mass_coeff']
-    config_list = ['signal_N_100_2_d','signal_N_100_2_e','signal_N_100_2_g']
+    config_list = ['signal_N_100_2_g']
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
