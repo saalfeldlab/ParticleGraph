@@ -19,7 +19,6 @@ simulation:
   pos_rate: [[0]]
   neg_rate: [[0]]
   node_value_map: 'video_bisons.tif'
-  node_diffusion_map: 'pattern_Null.tif'
   node_proliferation_map: 'pattern_Null.tif'
 
 graph_model:
