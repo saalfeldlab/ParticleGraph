@@ -284,7 +284,6 @@ def data_train_particles(config, config_file, device):
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif", dpi=80)
                     plt.close()
-
                 else:
                     plot_training(config=config, dataset_name=dataset_name, log_dir=log_dir,
                                   epoch=epoch, N=N, x=x, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
@@ -1246,6 +1245,7 @@ def data_train_cell(config, config_file, device):
 
     x_list = []
     y_list = []
+    T1_list = []
     edge_p_p_list = []
     n_particles_max = 0
     for run in trange(n_runs):
@@ -1255,15 +1255,18 @@ def data_train_cell(config, config_file, device):
         if run>0:
             y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
             edge_p_p = np.load(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}.npz')
+            T1 = torch.load(f'graphs_data/graphs_{dataset_name}/T1_list_{run}.pt', map_location=device)
             x_list.append(x)
             y_list.append(y)
             edge_p_p_list.append(edge_p_p)
+            T1_list.append(T1)
         else:
             # first dataset is not loaded to spare memory
             # first dataset is not used for training but for validation
             small_tensor = torch.zeros((1, 1), dtype=torch.float32, device=device)
             x_list.append(small_tensor)
             y_list.append(small_tensor)
+            T1_list.append(small_tensor)
             edge_p_p_list.append(to_numpy(small_tensor))
     n_particles_max= int(to_numpy(n_particles_max))
     x = x_list[1][0].clone().detach()
@@ -1311,12 +1314,10 @@ def data_train_cell(config, config_file, device):
     print('Update variables ...')
     # update variable if particle_dropout, cell_division, etc ...
     x = x_list[1][n_frames - 1].clone().detach()
-    n_particles = x.shape[0]
+    n_particles = len(T1_list[1])
     config.simulation.n_particles = n_particles
-    index_particles = get_index_particles(x, n_particle_types, dimension)
-    type_list = get_type_list(x, dimension)
-    print(f'N particles: {n_particles} {len(torch.unique(type_list))} types')
-    logger.info(f'N particles:  {n_particles} {len(torch.unique(type_list))} types')
+    print(f'N particles: {config.simulation.n_particles} to {len(T1_list[1])} ')
+    logger.info(f'N particles: {config.simulation.n_particles} to {len(T1_list[1])} ')
 
     if has_ghost:
 
@@ -1412,10 +1413,8 @@ def data_train_cell(config, config_file, device):
 
             visualize_embedding = True
             if visualize_embedding & (((epoch < 3 ) & (N%(Niter//100) == 0)) | (N==0)):
-                x_ = x_list[1][n_frames - 1].clone().detach()
-                index_particles = get_index_particles(x_, n_particle_types, dimension)
                 plot_training_cell(config=config, dataset_name=dataset_name, log_dir=log_dir,
-                              epoch=epoch, N=N, model=model, index_particles=index_particles, n_particle_types=n_particle_types, type_list=type_list, ynorm=ynorm, cmap=cmap, device=device)
+                              epoch=epoch, N=N, model=model, n_particle_types=n_particle_types, type_list=T1_list[1], ynorm=ynorm, cmap=cmap, device=device)
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
                 t, r, a = get_gpu_memory_map(device)
@@ -1445,31 +1444,6 @@ def data_train_cell(config, config_file, device):
         if has_ghost:
             torch.save({'model_state_dict': ghosts_particles.state_dict(),
                         'optimizer_state_dict': optimizer_ghost_particles.state_dict()}, os.path.join(log_dir, 'models', f'best_ghost_particles_with_{n_runs - 1}_graphs_{epoch}.pt'))
-
-        # matplotlib.use("Qt5Agg")
-        fig = plt.figure(figsize=(22, 4))
-        # white background
-        # plt.style.use('classic')
-
-        ax = fig.add_subplot(1, 5, 1)
-        plt.plot(list_loss, color='k')
-        plt.xlim([0, n_epochs])
-        plt.ylabel('Loss', fontsize=12)
-        plt.xlabel('Epochs', fontsize=12)
-
-        ax = fig.add_subplot(1, 5, 2)
-        embedding = get_embedding(model.a, 1)
-        for n in range(n_particle_types):
-            pos = np.argwhere(to_numpy(x[:,5:6]) == n).squeeze().astype(int)
-            pos=pos[:,0]
-            plt.scatter(embedding[pos, 0],
-                        embedding[pos, 1], color=cmap.color(n), s=0.1)
-        plt.xlabel('ai0', fontsize=12)
-        plt.ylabel('ai1', fontsize=12)
-
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
-        plt.close()
 
 
 def data_train_mesh(config, config_file, device):
@@ -2131,9 +2105,8 @@ def data_train_particle_field(config, config_file, device):
 
             total_loss += loss.item()
 
-            visualize_embedding = False
+            visualize_embedding = True
             if visualize_embedding & (((epoch < 30 ) & (N%(Niter//50) == 0)) | (N==0)):
-                print(N)
                 plot_training_particle_field(config=config, has_siren=has_siren, has_siren_time=has_siren_time, model_f=model_f, dataset_name=dataset_name, n_frames=n_frames, model_name=model_config.particle_model_name, log_dir=log_dir,
                               epoch=epoch, N=N, x=x, x_mesh=x_mesh, model_field=model.field, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
                               index_particles=index_particles, n_particles=n_particles,
@@ -2312,7 +2285,6 @@ def data_train_signal(config, config_file, device):
     dimension = simulation_config.dimension
     n_epochs = train_config.n_epochs
     n_particle_types = simulation_config.n_particle_types
-    n_particles = simulation_config.n_particles
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
     data_augmentation_loop = train_config.data_augmentation_loop
@@ -2321,7 +2293,7 @@ def data_train_signal(config, config_file, device):
     has_mesh = (config.graph_model.mesh_model_name != '')
     replace_with_cluster = 'replace' in train_config.sparsity
     has_ghost = train_config.n_ghosts > 0
-    has_large_range = train_config.large_range
+    sparsity_freq = train_config.sparsity_freq
     delta_t = simulation_config.delta_t
     if train_config.small_init_batch_size:
         get_batch_size = increasing_batch_size(target_batch_size)
@@ -2353,7 +2325,7 @@ def data_train_signal(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_99_graphs_20.pt"
+    # net = f"./log/try_{config_file}/models/best_model_with_99_graphs_9.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
 
@@ -2384,13 +2356,10 @@ def data_train_signal(config, config_file, device):
     logger.info(f'N epochs: {n_epochs}')
     logger.info(f'initial batch_size: {batch_size}')
 
+
     print('Update variables ...')
     # update variable if particle_dropout, cell_division, etc ...
     x = x_list[1][n_frames - 1].clone().detach()
-    if dimension == 2:
-        type_list = x[:, 5:6].clone().detach()
-    else:
-        type_list = x[:, 7:8].clone().detach()
     n_particles = x.shape[0]
     print(f'N particles: {n_particles}')
     logger.info(f'N particles: {n_particles}')
@@ -2403,8 +2372,11 @@ def data_train_signal(config, config_file, device):
             index = np.argwhere(x[:, 7].detach().cpu().numpy() == n)
         index_particles.append(index.squeeze())
 
-    mat = scipy.io.loadmat(simulation_config.connectivity_file)
-    adjacency = torch.tensor(mat['A'], device=device)
+    if 'mat' in simulation_config.connectivity_file:
+        mat = scipy.io.loadmat(simulation_config.connectivity_file)
+        adjacency = torch.tensor(mat['A'], device=device)
+    else:
+        adjacency = torch.load(simulation_config.connectivity_file, map_location=device)
     adj_t = adjacency > 0
     edge_index = adj_t.nonzero().t().contiguous()
 
@@ -2422,7 +2394,7 @@ def data_train_signal(config, config_file, device):
             if adjacency[i,j]==0:
                 edge_index = torch.cat((edge_index, torch.tensor([[i], [j]], device=device)), 1)
                 edge_index = torch.cat((edge_index, torch.tensor([[j], [i]], device=device)), 1)
-    if config_file == 'signal_N_100_2_d':
+    if (config_file == 'signal_N_100_2_d') | (config_file == 'signal_N_100_2_asym'):
         print('Fully connection ...')
         for i in trange(n_particles):
                 i_s = torch.ones(n_particles, device=device) * i
@@ -2433,17 +2405,7 @@ def data_train_signal(config, config_file, device):
                 else:
                     edge_index = torch.cat((edge_index, ij_s), dim=1)
                 edge_index = edge_index.to(dtype=torch.int64)
-    if config_file == 'signal_N_100_2_e':
-        print('Fully connection ...')
-        for i in trange(n_particles):
-                i_s = torch.ones(n_particles, device=device) * i
-                j_s = torch.arange(n_particles, device=device)
-                ij_s = torch.cat((i_s[:,None], j_s[:,None]), dim=1).t()
-                if i==0:
-                    edge_index = ij_s
-                else:
-                    edge_index = torch.cat((edge_index, ij_s), dim=1)
-                edge_index = edge_index.to(dtype=torch.int64)
+
     model.edges = edge_index
     logger.info(f'edge_index.shape {edge_index.shape} ')
 
@@ -2469,7 +2431,6 @@ def data_train_signal(config, config_file, device):
                 mask_ghost = mask_ghost[:, 0].astype(int)
 
         total_loss = 0
-        total_loss_division = 0
 
         Niter = n_frames * data_augmentation_loop // batch_size
         if (has_mesh) & (batch_size == 1):
@@ -2509,8 +2470,11 @@ def data_train_signal(config, config_file, device):
                     y = y / ynorm
                     y = y[:, 0:2]
 
-                    loss = (pred1 + pred2 - y).norm(2) / 2
-
+                    if epoch > -1:
+                        loss = (pred1 + pred2 - y).norm(2) / 2 + model.A.norm(1) * config.training.coeff_L1
+                    else:
+                        loss = (pred1 + pred2 - y).norm(2) / 2
+                        
                 case 3:
 
                     x = x_list[run][k].clone().detach()
@@ -2568,7 +2532,7 @@ def data_train_signal(config, config_file, device):
 
             total_loss += loss.item()
 
-            visualize_embedding = True
+            visualize_embedding = False
             if visualize_embedding & (((epoch == 0) & (N < 10000) & (N % 1000 == 0)) | (N==0)):
                 plot_training_signal(config, dataset, model, adjacency, log_dir, epoch, N, index_particles, n_particles, n_particle_types, device)
 
@@ -2580,23 +2544,22 @@ def data_train_signal(config, config_file, device):
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
-        # matplotlib.use("Qt5Agg")
-
-        if (replace_with_cluster) & (epoch % sparsity_freq == sparsity_freq - 1) & (epoch < n_epochs - sparsity_freq):
-            # Constrain embedding domain
-            embedding = get_embedding(model.a, 1)
-            proj_interaction = embedding
-            labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding,
-                                                              train_config.cluster_distance_threshold, index_particles,
-                                                              n_particle_types, embedding_cluster)
+        if train_config.regul_matrix:
+            logger.info('regul_matrix')
+            percentile = 0.95
+            A = model.A.clone().detach()
+            A = torch.reshape(A, (n_particles*n_particles,1))
+            A = torch.abs(A)
+            A = A * (A > torch.quantile(A, percentile))
+            A = torch.reshape(A, (n_particles,n_particles))
+            i, j = torch.triu_indices(n_particles,n_particles, requires_grad=False, device=device)
+            Aij = to_numpy(A[i,j].clone().detach())
             with torch.no_grad():
-                model.a[1] = model_a_.clone().detach()
-            print(f'regul_embedding: replaced')
-            logger.info(f'regul_embedding: replaced')
+                model.vals = nn.Parameter(torch.tensor(Aij, requires_grad=True, dtype=torch.float32, device=device))
+            optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+
 
         fig = plt.figure(figsize=(22, 4))
-        # white background
-        # plt.style.use('classic')
 
         ax = fig.add_subplot(1, 6, 1)
         plt.plot(list_loss, color='k')
@@ -2689,7 +2652,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             mesh_model = None
         if has_field:
             model_f_p = model
-            model_f_f = choose_mesh_model(config, device=device)
 
             image_width = int(np.sqrt(n_nodes))
             if has_siren_time:
@@ -2718,6 +2680,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 t = torch.flipud(t)
                 t = t.reshape(image_width * image_width,1)
                 with torch.no_grad():
+                    model.a = a_.clone().detach()
                     model.field[run] = t.clone().detach()
 
     first_embedding = model.a[1].data.clone().detach()

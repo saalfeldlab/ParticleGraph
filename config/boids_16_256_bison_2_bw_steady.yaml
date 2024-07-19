@@ -19,7 +19,6 @@ simulation:
   start_frame: 0
   node_value_map: 'video_bisons_2048_2_bw.tif'
   node_type_map: 'pattern_Null.tif'
-  node_diffusion_map: 'pattern_Null.tif'
   node_proliferation_map: 'pattern_Null.tif'
   start_frame: -1500
 

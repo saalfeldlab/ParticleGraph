@@ -14,6 +14,7 @@ class SimulationConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     dimension: int = 2
     connectivity_file: str = ''
+    adjacency_matrix: str = ''
     params: list[list[float]]
     cell_cycle_length: list[float] =[-1]
     cell_death_rate: list[float] = [-1]
@@ -44,7 +45,6 @@ class SimulationConfig(BaseModel):
     boundary: Literal['periodic', 'no', 'periodic_special'] = 'periodic'
     node_coeff_map: Optional[str] = None
     node_value_map: Optional[str] = None
-    node_diffusion_map: Optional[str] = None
     node_proliferation_map: Optional[str] = None
     beta: Optional[float] = None
     start_frame: int = 0
@@ -129,6 +129,7 @@ class TrainingConfig(BaseModel):
     learning_rate_embedding_start: float = 0.001
     learning_rate_embedding_end: float = 0.001
 
+    coeff_L1: float = 0
     coeff_loss1: float = 1
     coeff_loss2: float = 1
     coeff_loss3: float = 1
@@ -137,6 +138,7 @@ class TrainingConfig(BaseModel):
     data_augmentation: bool = True
     data_augmentation_loop: int = 40
     recursive_loop: int = 0
+    regul_matrix: bool = False
     sub_batches: int = 1
 
     sequence: list[str] = ['to track','to cell']

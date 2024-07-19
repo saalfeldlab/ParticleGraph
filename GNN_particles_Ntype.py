@@ -37,10 +37,7 @@ if __name__ == '__main__':
 
 
     for config_file in config_list:
-        # for seed in seed_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        # config.dataset = f'{config.dataset}_{seed}'
-
         device = set_device(config.training.device)
         print(f'device {device}')
 

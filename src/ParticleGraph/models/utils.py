@@ -441,7 +441,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
-def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, index_particles, n_particle_types, type_list, ynorm, cmap, device):
+def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, n_particle_types, type_list, ynorm, cmap, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -465,23 +465,22 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, index_par
         plt.savefig(f"./{log_dir}/tmp_training/embedding/b_{dataset_name}_{epoch}_{N}.tif", dpi=87)
         plt.close()
 
-
     if has_no_tracking:
         embedding = to_numpy(model.a)
     else:
         embedding = get_embedding(model.a, 1)
-    n_particles = len(type_list)
 
+    type_list = to_numpy(type_list.squeeze())
     fig = plt.figure(figsize=(8, 8))
     for n in range(n_particle_types):
-        plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=5)
+        pos = np.argwhere(type_list == n)
+        pos = pos[:,]
+        plt.scatter(embedding[pos, 0], embedding[pos, 1], s=5)
     plt.xticks([])
     plt.yticks([])
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=87)
     plt.close()
-
-
 
     match model_config.particle_model_name:
 
@@ -493,7 +492,8 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, index_par
             ax = fig.add_subplot(1,1,1)
             rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
             func_list = []
-            for n in range(n_particles):
+
+            for n in range(len(type_list)):
                 if has_no_tracking:
                     embedding_ = model.a[n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
                 else:
@@ -507,7 +507,7 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, index_par
                 func_list.append(func)
                 if n % 5 == 0:
                     plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
-                             color=cmap.color( int(to_numpy(type_list[n]))   ), linewidth=2)
+                             color=cmap.color( int(type_list[n])   ), linewidth=2)
             if not (has_no_tracking):
                 plt.ylim(config.plotting.ylim)
             plt.xlim([-max_radius, max_radius])
@@ -541,7 +541,7 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, index_par
             # plt.ylim([-0.1, 0.1])
             plt.tight_layout()
             rr = torch.tensor(np.linspace(0, simulation_config.max_radius, 200)).to(device)
-            for n in range(n_particles):
+            for n in range(len(embedding)):
                 if has_no_tracking:
                     embedding_ = model.a[n, :] * torch.ones((200, model_config.embedding_dim), device=device)
                 else:
@@ -572,7 +572,7 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, index_par
                     plt.plot(to_numpy(rr),
                              to_numpy(func*ynorm),
                              linewidth=2,
-                             color=cmap.color( int(to_numpy(type_list[n])) ), alpha=0.25)
+                             color=cmap.color( int(type_list[n]) ), alpha=0.25)
             if not (has_no_tracking):
                 plt.ylim(config.plotting.ylim)
             plt.tight_layout()

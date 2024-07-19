@@ -46,7 +46,8 @@ training:
     learning_rate_end: 0.0000005
     learning_rate_embedding_start: 0.0001
     learning_rate_embedding_end: 0.0001
-    coeff_L1: 0.001
+    coeff_L1: 0.0
+    regul_matrix: True
     sparsity: 'none'
     data_augmentation: False
     data_augmentation_loop: 100
