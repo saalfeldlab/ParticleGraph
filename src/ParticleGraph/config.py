@@ -18,7 +18,7 @@ class SimulationConfig(BaseModel):
     params: list[list[float]]
     cell_cycle_length: list[float] =[-1]
     cell_death_rate: list[float] = [-1]
-    area: list[float] = [-1]
+    cell_area: list[float] = [-1]
     min_radius: Annotated[float, Field(ge=0)] = 0
     max_radius: Annotated[float, Field(gt=0)]
     angular_sigma: float = 0
@@ -38,6 +38,7 @@ class SimulationConfig(BaseModel):
     neg_rate: list[list[float]] = None
     has_cell_division: bool = False
     cell_inert_model_coeff: float = 0
+    cell_active_model_coeff: float = 1
     n_frames: int = 1000
     sigma: float = 0.005
     delta_t: float = 1

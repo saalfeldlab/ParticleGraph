@@ -464,9 +464,9 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         '''
 
         if run == 0:
-            cycle_length, final_cell_mass, cell_death_rate, mc_slope, area = init_cell_range(config, device=device)
+            cycle_length, final_cell_mass, cell_death_rate, mc_slope, cell_area = init_cell_range(config, device=device)
         
-        N1, X1, V1, T1, H1, A1, S1, M1, R1, CL1, DR1, MC1, AR1 = init_cells(config, cycle_length, final_cell_mass, cell_death_rate, mc_slope, area, device=device)
+        N1, X1, V1, T1, H1, A1, S1, M1, R1, CL1, DR1, MC1, AR1 = init_cells(config, cycle_length, final_cell_mass, cell_death_rate, mc_slope, cell_area, device=device)
 
         T1_list = T1.clone().detach()
 
@@ -495,20 +495,20 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
             # calculate average area per cell type
 
-            avg_areas = []
+            target_cell_areas = []
             num_cells = []
 
             for i in range(n_particle_types):
                 pos = to_numpy(torch.argwhere(T1.squeeze() == i)).squeeze()
                 num_cells.append(len(pos))
-                avg_areas.append(torch.mean(areas[pos]))
+                target_cell_areas.append(torch.mean(areas[pos]))
 
-            avg_areas = torch.tensor(avg_areas, device=device)
+            target_cell_areas = torch.tensor(target_cell_areas, device=device)
 
             # add 50% noise to the average area
 
-            avg_areas += torch.ones((n_particle_types), device=device) * torch.randn((n_particle_types), device=device) * 0.00025
-            avg_areas[-1] = 0.0020
+            target_cell_areas += torch.ones((n_particle_types), device=device) * torch.randn((n_particle_types), device=device) * 0.00025
+            target_cell_areas[-1] = 0.0020
 
             # normalize new average areas so that the sum of the areas is = to 1
                     # how many cells per type (N_i)
@@ -518,9 +518,9 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
             coeff = 0
             for i in range(n_particle_types):
-                coeff += num_cells[i] * avg_areas[i]
+                coeff += num_cells[i] * target_cell_areas[i]
 
-            avg_areas /= coeff
+            target_cell_areas /= coeff
 
         index_particles = []
         for n in range(n_particle_types):
@@ -578,7 +578,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     CL1 = torch.cat((CL1, cycle_length[to_numpy(T1[pos, 0]),None] * var[:,None], cycle_length[to_numpy(T1[pos, 0]),None] * var[:,None]), dim=0)
                     DR1 = torch.cat((DR1, cell_death_rate[to_numpy(T1[pos, 0]),None] * nd[:,None], cell_death_rate[to_numpy(T1[pos, 0]),None] * nd[:,None]), dim=0)
                     MC1 = torch.cat((MC1, mc_slope[to_numpy(T1[pos, 0]),None], mc_slope[to_numpy(T1[pos, 0]),None]), dim=0)
-                    AR1 = torch.cat((AR1, area[to_numpy(T1[pos, 0]),None], area[to_numpy(T1[pos, 0]),None]), dim=0)
+                    AR1 = torch.cat((AR1,  AR1[pos, :], AR1[pos, :]), dim=0)
                     R1 = M1/(2 * CL1)
 
                     alive = torch.argwhere(H1[:, 0] == 1).squeeze()
@@ -658,26 +658,22 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     optimizer.zero_grad()
                     centroids, voronoi_area = get_voronoi_areas(vertices_pos, vertices_per_cell, device)
 
-                    # loss = (voronoi_area - avg_areas).norm(2)   
+                    # type_means = np.ones((len(voronoi_area)))
+                    # for i in range(n_particle_types):
+                    #         pos = to_numpy(torch.argwhere(T1.squeeze() == i)).squeeze()
+                    #         type_means[pos] = to_numpy(target_cell_areas[i])
+                    # type_means = torch.tensor(type_means, device=device)
+                    # loss = (voronoi_area - type_means).norm(2)
 
-                    type_means = np.ones((len(voronoi_area)))
-                    for i in range(n_particle_types):
-                            pos = to_numpy(torch.argwhere(T1.squeeze() == i)).squeeze()
-                            #temp = to_numpy(torch.mean(voronoi_area[pos]) + torch.randn((len(voronoi_area)), device=device) * 0.0005
+                    # target_areas = torch.zeros_like(AR1)
+                    # for i in range(n_particle_types):
+                    #     pos = torch.argwhere(T1.squeeze() == i).squeeze()
+                    #     target_areas[pos] = target_cell_areas[i]
 
-                            type_means[pos] = to_numpy(avg_areas[i])
-                            # type_means[pos] = to_numpy(torch.mean(voronoi_area[pos]) + torch.ones((len(pos)), device=device) * area_var[i])
-                            # type_means[pos] = to_numpy(torch.mean(voronoi_area[pos]))
-                    
-                    type_means = torch.tensor(type_means, device=device)
-                    loss = (voronoi_area - type_means).norm(2)
+                    target_areas = target_cell_areas[to_numpy(T1).astype(int)].squeeze().clone().detach()
 
-                    # if it < 50:
-                    #     loss = torch.var(voronoi_area)
-                    # else:
-                    #     loss = (voronoi_area - AR1.flatten()).norm(2)   
-                     
-         
+                    loss = (voronoi_area - target_areas).norm(2)
+
                     loss.backward()
                     optimizer.step()
                     # fig, ax = fig_init()
@@ -704,8 +700,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 optimized_vertices = vertices_pos
                 delta_centroids = centroids - first_centroids
 
-                # y += delta_centroids * simulation_config.cell_inert_model_coeff / 5
-
             if (it) % 25 == 0:
                 t, r, a = get_gpu_memory_map(device)
                 logger.info(f"GPU memory: total {t} reserved {r} allocated {a}")
@@ -722,7 +716,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
             # cell update
             if model_config.prediction == '2nd_derivative':
-                V1 += y * delta_t
+                V1 += y * delta_t * simulation_config.cell_active_model_coeff
             else:
                 V1 = y
 
