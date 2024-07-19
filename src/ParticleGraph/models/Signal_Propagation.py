@@ -94,15 +94,10 @@ class Signal_Propagation(pyg.nn.MessagePassing):
             A[i,j] = self.vals
             A.T[i,j] = self.vals
 
-        self.A = A
-
-        weight_ij = A[to_numpy(edge_index_i),to_numpy(edge_index_j),None]
-        self.weight_ij_ = weight_ij
-        self.weight_ij = A.clone().detach()
-
         self.activation = self.lin_edge(u_j)
         self.u_j = u_j
 
+        weight_ij = A[to_numpy(edge_index_i),to_numpy(edge_index_j),None]
         return weight_ij * self.lin_edge(u_j)
 
     def update(self, aggr_out):

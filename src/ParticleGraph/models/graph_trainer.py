@@ -2372,8 +2372,11 @@ def data_train_signal(config, config_file, device):
             index = np.argwhere(x[:, 7].detach().cpu().numpy() == n)
         index_particles.append(index.squeeze())
 
-    mat = scipy.io.loadmat(simulation_config.connectivity_file)
-    adjacency = torch.tensor(mat['A'], device=device)
+    if 'mat' in simulation_config.connectivity_file:
+        mat = scipy.io.loadmat(simulation_config.connectivity_file)
+        adjacency = torch.tensor(mat['A'], device=device)
+    else:
+        adjacency = torch.load(simulation_config.connectivity_file, map_location=device)
     adj_t = adjacency > 0
     edge_index = adj_t.nonzero().t().contiguous()
 
@@ -2391,7 +2394,7 @@ def data_train_signal(config, config_file, device):
             if adjacency[i,j]==0:
                 edge_index = torch.cat((edge_index, torch.tensor([[i], [j]], device=device)), 1)
                 edge_index = torch.cat((edge_index, torch.tensor([[j], [i]], device=device)), 1)
-    if (config_file == 'signal_N_100_2_d') | (config_file == 'signal_N_100_2_e') | (config_file == 'signal_N_100_2_f') | (config_file == 'signal_N_100_2_g'):
+    if (config_file == 'signal_N_100_2_d') | (config_file == 'signal_N_100_2_asym'):
         print('Fully connection ...')
         for i in trange(n_particles):
                 i_s = torch.ones(n_particles, device=device) * i

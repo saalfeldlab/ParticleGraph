@@ -94,10 +94,14 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         else:
             adjacency = torch.load(simulation_config.connectivity_file, map_location=device)
 
-            # i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-            # bl = adjacency[j,i]
-            # adjacency[j,i] = torch.rand_like(bl) * torch.max(bl) * (bl>0)
-            # torch.save(adjacency, f'./graphs_data/adjacency_asym.pt')
+            i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+            bl = adjacency[j,i]
+            pos = torch.argwhere(bl>0)
+            val = bl[pos]
+            indexes = torch.randperm(val.shape[0])
+            bl[pos] = val[indexes]
+            adjacency[j,i] = torch.rand_like(bl) * torch.max(bl) * (bl>0)
+            torch.save(adjacency, f'./graphs_data/adjacency_asym.pt')
 
         adj_t = adjacency > 0
         edge_index = adj_t.nonzero().t().contiguous()
