@@ -17,6 +17,7 @@ class SimulationConfig(BaseModel):
     params: list[list[float]]
     cell_cycle_length: list[float] =[-1]
     cell_death_rate: list[float] = [-1]
+    area: list[float] = [-1]
     min_radius: Annotated[float, Field(ge=0)] = 0
     max_radius: Annotated[float, Field(gt=0)]
     angular_sigma: float = 0

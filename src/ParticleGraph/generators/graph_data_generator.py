@@ -423,7 +423,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
 
         '''
-        INITIALIZE PER CELL TYPE VALUES
+        INITIALIZE PER CELL TYPE VALUES1000
         cycle_length
         final_cell_mass
         cell_death_rate
@@ -446,9 +446,9 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         '''
 
         if run == 0:
-            cycle_length, final_cell_mass, cell_death_rate, mc_slope = init_cell_range(config, device=device)
+            cycle_length, final_cell_mass, cell_death_rate, mc_slope, area = init_cell_range(config, device=device)
         
-        N1, X1, V1, T1, H1, A1, S1, M1, R1, CL1, DR1, MC1 = init_cells(config, cycle_length, final_cell_mass, cell_death_rate, mc_slope, device=device)
+        N1, X1, V1, T1, H1, A1, S1, M1, R1, CL1, DR1, MC1, AR1 = init_cells(config, cycle_length, final_cell_mass, cell_death_rate, mc_slope, area, device=device)
 
         logger.info('cell cycle length')
         logger.info(to_numpy(cycle_length))
@@ -460,6 +460,44 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         logger.info(mc_slope)
         logger.info('interaction parameters')
         logger.info(to_numpy(model.p))
+
+
+        if simulation_config.cell_inert_model_coeff > 0:
+
+            vor, vertices_pos, vertices_per_cell = get_vertices(points=to_numpy(X1), device=device)
+
+            # calculate area of each voronoi cell
+
+            centroids, areas = get_voronoi_areas(vertices_pos, vertices_per_cell, device)
+
+            # calculate average area per cell type
+
+            avg_areas = []
+            num_cells = []
+
+            for i in range(n_particle_types):
+                pos = to_numpy(torch.argwhere(T1.squeeze() == i)).squeeze()
+                num_cells.append(len(pos))
+                avg_areas.append(torch.mean(areas[pos]))
+
+            avg_areas = torch.tensor(avg_areas, device=device)
+
+            # add 50% noise to the average area
+
+            avg_areas += torch.ones((n_particle_types), device=device) * torch.randn((n_particle_types), device=device) * 0.00025
+            avg_areas[-1] = 0.0020
+
+            # normalize new average areas so that the sum of the areas is = to 1
+                    # how many cells per type (N_i)
+                    # average areas per cell type (Avg_i)
+                    # sum of all N_i * Avg_i = coeff
+                    # divide all Avg_i by coeff = target per type
+
+            coeff = 0
+            for i in range(n_particle_types):
+                coeff += num_cells[i] * avg_areas[i]
+
+            avg_areas /= coeff
 
         index_particles = []
         for n in range(n_particle_types):
@@ -506,6 +544,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     CL1 = torch.cat((CL1, cycle_length[to_numpy(T1[pos, 0]),None] * var[:,None], cycle_length[to_numpy(T1[pos, 0]),None] * var[:,None]), dim=0)
                     DR1 = torch.cat((DR1, cell_death_rate[to_numpy(T1[pos, 0]),None] * nd[:,None], cell_death_rate[to_numpy(T1[pos, 0]),None] * nd[:,None]), dim=0)
                     MC1 = torch.cat((MC1, mc_slope[to_numpy(T1[pos, 0]),None], mc_slope[to_numpy(T1[pos, 0]),None]), dim=0)
+                    AR1 = torch.cat((AR1, area[to_numpy(T1[pos, 0]),None], area[to_numpy(T1[pos, 0]),None]), dim=0)
                     R1 = M1/(2 * CL1)
 
                     alive = torch.argwhere(H1[:, 0] == 1).squeeze()
@@ -522,6 +561,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     R1 = R1[alive]
                     DR1 = DR1[alive]
                     MC1 = MC1[alive]
+                    AR1 = AR1[alive]
 
                     index_particles = []
                     for n in range(n_particle_types):
@@ -541,7 +581,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 S1 = update_cell_cycle_stage(A1, cycle_length, T1, device)
                 M1 += R1 * delta_t
 
-            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach(), S1.clone().detach(), M1.clone().detach(), R1.clone().detach(), DR1.clone().detach(), MC1.clone().detach()), 1)
+            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach(), S1.clone().detach(), M1.clone().detach(), R1.clone().detach(), DR1.clone().detach(), MC1.clone().detach(), AR1.clone().detach()), 1)
 
             # calculate connectivity
             with torch.no_grad():
@@ -566,23 +606,44 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             # voronoi_lengths = get_voronoi_lengths(vertices_pos, vertices_per_cell, device)
             # U = cell_energy(voronoi_area, voronoi_perimeter, voronoi_lengths, device)
 
-
             # model prediction
             with torch.no_grad():
                 y = model(dataset, has_field=True)
                 y = y * alive[:,None].repeat(1,2)
 
             if simulation_config.cell_inert_model_coeff > 0:
+
                 vor, vertices_pos, vertices_per_cell = get_vertices(points=to_numpy(X1), device=device)
                 vertices_pos_list.append(vertices_pos)
                 vertices_per_cell_list.append(vertices_per_cell)
                 vertices_pos.requires_grad = True
                 optimizer = torch.optim.Adam([vertices_pos], lr=1E-3)
                 first_centroids, voronoi_area = get_voronoi_areas(vertices_pos, vertices_per_cell, device)
+
                 for i in range(2):
                     optimizer.zero_grad()
                     centroids, voronoi_area = get_voronoi_areas(vertices_pos, vertices_per_cell, device)
-                    loss = torch.var(voronoi_area)
+
+                    # loss = (voronoi_area - avg_areas).norm(2)   
+
+                    type_means = np.ones((len(voronoi_area)))
+                    for i in range(n_particle_types):
+                            pos = to_numpy(torch.argwhere(T1.squeeze() == i)).squeeze()
+                            #temp = to_numpy(torch.mean(voronoi_area[pos]) + torch.randn((len(voronoi_area)), device=device) * 0.0005
+
+                            type_means[pos] = to_numpy(avg_areas[i])
+                            # type_means[pos] = to_numpy(torch.mean(voronoi_area[pos]) + torch.ones((len(pos)), device=device) * area_var[i])
+                            # type_means[pos] = to_numpy(torch.mean(voronoi_area[pos]))
+                    
+                    type_means = torch.tensor(type_means, device=device)
+                    loss = (voronoi_area - type_means).norm(2)
+
+                    # if it < 50:
+                    #     loss = torch.var(voronoi_area)
+                    # else:
+                    #     loss = (voronoi_area - AR1.flatten()).norm(2)   
+                     
+         
                     loss.backward()
                     optimizer.step()
                     # fig, ax = fig_init()
@@ -605,9 +666,11 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     # num2 = f"{i:04}"
                     # plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Vor_{run}_{num}_{num2}.tif", dpi=85.35)
                     # plt.close()
+
+                optimized_vertices = vertices_pos
                 delta_centroids = centroids - first_centroids
 
-                y += delta_centroids * simulation_config.cell_inert_model_coeff / 100
+                # y += delta_centroids * simulation_config.cell_inert_model_coeff / 5
 
             if (it) % 25 == 0:
                 t, r, a = get_gpu_memory_map(device)
@@ -630,7 +693,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 V1 = y
 
             V1 = V1 * alive[:,None].repeat(1,2)
-            X1 = bc_pos(X1 + V1 * delta_t)
+            X1 = bc_pos(X1 + V1 * delta_t + delta_centroids * simulation_config.cell_inert_model_coeff)
 
 
             vor, vertices_pos, vertices_per_cell = get_vertices(points=to_numpy(X1), device=device)
@@ -784,6 +847,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                                     s=size, color=cmap.color(n))
                         
                     plt.scatter(to_numpy(vertices_pos[:, 0]), to_numpy(vertices_pos[:, 1]), s=5, color='k')
+                    # plt.scatter(to_numpy(optimized_vertices[:, 0]), to_numpy(optimized_vertices[:, 1]), s=5, color='r')
                     plt.xlim([-0.05, 1.05])
                     plt.ylim([-0.05, 1.05])
                     plt.tight_layout()
@@ -796,8 +860,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
             np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}',*edge_p_p_list)
             if simulation_config.cell_inert_model_coeff > 0:
-                torch.save(f'graphs_data/graphs_{dataset_name}/vertices_pos_list_{run}',vertices_pos_list)
-                np.savez(f'graphs_data/graphs_{dataset_name}/vertices_per_cell_list_{run}',*vertices_per_cell_list)
+                torch.save(vertices_pos_list, f'graphs_data/graphs_{dataset_name}/vertices_pos_list_{run}.pt')
+                # np.savez(f'graphs_data/graphs_{dataset_name}/vertices_per_cell_list_{run}.pt',*vertices_per_cell_list)
 
             torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
             torch.save(CL1, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
