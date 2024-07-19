@@ -14,10 +14,7 @@ def init_cell_range(config, device, scenario="None"):
     if config.simulation.cell_cycle_length != [-1]:
         cycle_length = torch.tensor(config.simulation.cell_cycle_length, device=device)
     else:
-        cycle_length = torch.clamp(torch.abs(
-            torch.ones(n_particle_types, 1, device=device) * 250 + torch.randn(n_particle_types, 1,
-                                                                               device=device) * 50), min=100,
-                                   max=700).squeeze()
+        cycle_length = torch.clamp(torch.abs(torch.ones(n_particle_types, 1, device=device) * 250 + torch.randn(n_particle_types, 1, device=device) * 50), min=100, max=700).squeeze()
 
     if config.simulation.final_cell_mass != [-1]:
         final_cell_mass = torch.tensor(config.simulation.final_cell_mass, device=device)
@@ -37,10 +34,15 @@ def init_cell_range(config, device, scenario="None"):
     else:
         mc_slope = torch.clamp(torch.randn(n_particle_types, 1, device=device) * 30, min=-30, max=30).flatten()
 
-    return cycle_length, final_cell_mass, cell_death_rate, mc_slope
+    if config.simulation.area != [-1]:
+        area = torch.tensor(config.simulation.area, device=device)
+    else:
+        area = torch.clamp(torch.abs(torch.ones(n_particle_types, 1, device=device) * 0.0015 + torch.randn(n_particle_types, 1, device=device) * 0.0010), min=0.0005, max=0.0025).squeeze()
+
+    return cycle_length, final_cell_mass, cell_death_rate, mc_slope, area
 
 
-def init_cells(config, cycle_length, final_cell_mass, cell_death_rate, mc_slope, device):
+def init_cells(config, cycle_length, final_cell_mass, cell_death_rate, mc_slope, area, device):
     simulation_config = config.simulation
     n_particles = simulation_config.n_particles
     n_particle_types = simulation_config.n_particle_types
@@ -91,11 +93,13 @@ def init_cells(config, cycle_length, final_cell_mass, cell_death_rate, mc_slope,
                 torch.ones(n_particles, device=device) + 0.05 * torch.randn(n_particles, device=device))) / 100
     cell_death_rate_distrib = cell_death_rate_distrib[:, None]
 
+    area_distrib = area[to_numpy(type)].squeeze()[:, None]
+
     particle_id = torch.arange(n_particles, device=device)
     particle_id = particle_id[:, None]
     type = type[:, None]
 
-    return particle_id, pos, dpos, type, status, cell_age, cell_stage, cell_mass_distrib, growth_rate_distrib, cycle_length_distrib, cell_death_rate_distrib, mc_slope_distrib
+    return particle_id, pos, dpos, type, status, cell_age, cell_stage, cell_mass_distrib, growth_rate_distrib, cycle_length_distrib, cell_death_rate_distrib, mc_slope_distrib, area_distrib
 
 
 def update_cell_cycle_stage(cell_age, cycle_length, type_list, device):
@@ -165,6 +169,7 @@ def get_voronoi_areas(vertices_pos, vertices_per_cell, device):
 
     centroids = get_voronoi_centroids(vertices_pos, vertices_per_cell, device)
     areas = []
+    
     for i in range(len(vertices_per_cell)):
         v_list = vertices_per_cell[i]
         per_cell = 0
@@ -173,7 +178,9 @@ def get_voronoi_areas(vertices_pos, vertices_per_cell, device):
             vert2 = vertices_pos[v_list[v+1]]-centroids[i]
             cross_product = vert1[0] * vert2[1] - vert1[1] * vert2[0]
             per_cell += torch.abs(cross_product)/2
+
         areas.append(per_cell)
+
     areas = torch.stack(areas)
 
     return centroids, areas
@@ -181,9 +188,9 @@ def get_voronoi_areas(vertices_pos, vertices_per_cell, device):
 def get_voronoi_perimeters(vertices_pos, vertices_per_cell, device):
     lengths = get_voronoi_lengths(vertices_pos, vertices_per_cell, device)
 
-    perimeter = [sum(i) for i in lengths]
+    perimeter = [torch.sum(torch.tensor(i, device=device)) for i in lengths]
 
-    return torch.Tensor(perimeter, device=device)
+    return torch.tensor(perimeter, device=device)
 
 def get_voronoi_lengths(vertices_pos, vertices_per_cell, device):
 
@@ -198,13 +205,14 @@ def get_voronoi_lengths(vertices_pos, vertices_per_cell, device):
 
         lengths.append(per_cell)
 
-    return torch.Tensor(lengths, device=device)
+    return lengths
 
 def get_voronoi_centroids(vertices_pos, vertices_per_cell, device):
 
     centroids = []
     for v_list in vertices_per_cell:
         centroids.append(torch.mean(vertices_pos[v_list],dim=0))
+
     centroids = torch.stack(centroids)
 
     return centroids

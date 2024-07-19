@@ -32,19 +32,16 @@ from ParticleGraph.utils import *
 
 if __name__ == '__main__':
 
-    # matplotlib.use("Qt5Agg")
-    # config_list =['boids_16_division_model_2_Voronoi_color']
-    # config_list =  ['boids_16_256_division_model_2_small']
-    # config_list =  ['boids_16_256_division_model_2_new']
-    # config_list = ['signal_N_100_2_d']
-    config_list = ['signal_N_100_2_asym']
+    #config_list = ['boids_16_division_model_2_Voronoi_a', 'boids_16_division_model_2_Voronoi_b', 'boids_16_division_model_2_Voronoi_c']
+    config_list = ["boids_16_division_model_2_Voronoi_nrmlzd2"]
 
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         device = set_device(config.training.device)
         print(f'device {device}')
-        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color frame cell_id', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 100)
-        data_train(config, config_file, device)
-        # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False, best_model=20, run=0, step=config.simulation.n_frames // 3, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
+
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='voronoi', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // config.simulation.n_frames)
+        # data_train(config, config_file, device)
+        # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 

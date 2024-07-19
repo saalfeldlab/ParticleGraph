@@ -1,5 +1,5 @@
 description: 'Boids 16 different types, division'
-dataset: 'boids_16_division_model_2_Voronoi_color'
+dataset: 'boids_16_division_model_2_Voronoi_color2'
 
 simulation:
   params: [[42.031494,  19.948257,  89.53507  ],
@@ -38,7 +38,7 @@ simulation:
   start_frame: 0
 
 graph_model:
-  particle_model_name: 'PDE_B_mass'
+  particle_model_name: 'PDE_B'
   mesh_model_name: ''
   prediction: '2nd_derivative'
   input_size: 9
