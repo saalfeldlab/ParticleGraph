@@ -3,6 +3,10 @@ from scipy.spatial import Voronoi, voronoi_plot_2d
 import torch
 from ParticleGraph.utils import to_numpy
 import math
+import matplotlib.pyplot as plt
+from matplotlib.patches import Polygon
+from matplotlib.collections import PatchCollection
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 def init_cell_range(config, device, scenario="None"):
     simulation_config = config.simulation
@@ -134,19 +138,30 @@ def update_cell_cycle_stage(cell_age, cycle_length, type_list, device):
 def get_vertices(points=[], device=[]):
 
     extra_points = points
-    v_list = [[-1, -1], [-1, 0], [-1, 1], [0, 1], [1, 1], [1, 0], [1, -1], [0, -1]]
+    if points.shape[1] == 3:   # has 3D
+        v_list = [[-1, -1, 1], [-1, 0, 1], [-1, 1, 1], [0, 1, 1], [1, 1, 1], [1, 0, 1], [1, -1, 1], [0, -1, 1], [0, 0, 1],
+                  [-1, -1, 0], [-1, 0, 0], [-1, 1, 0], [0, 1, 0], [1, 1, 0], [1, 0, 0], [1, -1, 0], [0, -1, 0],
+                  [-1, -1, -1], [-1, 0, -1], [-1, 1, -1], [0, 1, -1], [1, 1, -1], [1, 0, -1], [1, -1, -1], [0, -1, -1], [0, 0, -1]]
+    else:
+        v_list = [[-1, -1], [-1, 0], [-1, 1], [0, 1], [1, 1], [1, 0], [1, -1], [0, -1]]
     for n in range(len(v_list)):
         extra_points = np.concatenate((extra_points, points + v_list[n]), axis=0)
-    vor = Voronoi(extra_points)
 
+    vor = Voronoi(extra_points)
     # vertices_index collect all vertices index of regions of interest
     vertices_per_cell = []
     for n in range(len(points)):
         if n == 0:
-            vertices_index = vor.regions[vor.point_region[0]]
+            vertices_index = vor.regions[vor.point_region[0].copy()]
         else:
             vertices_index = np.concatenate((vertices_index, vor.regions[vor.point_region[n]]), axis=0)
-        vertices_per_cell.append(vor.regions[vor.point_region[n]])
+        vertices_per_cell.append((vor.regions[vor.point_region[n]].copy()))
+
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+    # ax.scatter(points[:, 0], points[:, 1], points[:, 2], s=5, color='blue')
+    # ax.scatter(vor.vertices[vertices_index, 0], vor.vertices[vertices_index, 1], vor.vertices[vertices_index, 2], s=5, color='k', alpha=0.1)
+
     vertices = []
     map = {}
     count = 0
@@ -162,6 +177,40 @@ def get_vertices(points=[], device=[]):
     vertices_pos = np.array(vertices)
     vertices_pos = torch.tensor(vertices_pos, device=device)
     vertices_pos = vertices_pos.to(dtype=torch.float32)
+
+
+
+    rng = np.random.default_rng(11)
+    polygons = []
+    for ri, point_region in enumerate(vor.point_region[0:len(points)]):
+        print(ri)
+        region = vor.regions[point_region]
+        # only plot those polygons for which all vertices are defined
+
+        poly = []
+        for rv in vor.ridge_vertices:
+            if np.isin(rv, region).all():
+                print(rv)
+                poly.append(vor.vertices[rv])
+        polygons.append(poly)
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    for poly in polygons:
+        polygon = Poly3DCollection(poly, alpha=0.5,
+                                   facecolors=rng.uniform(0, 1, 3),
+                                   linewidths=0.5, edgecolors='black')
+        ax.add_collection3d(polygon)
+
+    count=0
+    for rv in vor.ridge_vertices:
+        if not(-1 in rv):
+            count +=1
+
+    print(count)
+
+
+
 
     return vor, vertices_pos, vertices_per_cell
 

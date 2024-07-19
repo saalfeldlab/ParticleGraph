@@ -2575,12 +2575,30 @@ def data_train_signal(config, config_file, device):
         plt.xlabel('Embedding 0', fontsize=12)
         plt.ylabel('Embedding 1', fontsize=12)
 
+        A = torch.zeros(n_particles, n_particles, device=device, requires_grad=False, dtype=torch.float32)
+        if 'asymmetric' in config.simulation.adjacency_matrix:
+            A = model.vals
+        else:
+            i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+            A[i,j] = model.vals
+            A.T[i,j] = model.vals
+
         ax = fig.add_subplot(1, 6, 3)
         gt_weight = to_numpy(adjacency[adj_t])
-        pred_weight = to_numpy(model.weight_ij[adj_t])
+        pred_weight = to_numpy(A[adj_t])
         plt.scatter(gt_weight, pred_weight, s=0.1,c='k')
         plt.xlabel('gt weight', fontsize=12)
         plt.ylabel('predicted weight', fontsize=12)
+        ax = fig.add_subplot(1, 6, 4)
+        gt_weight = to_numpy(adjacency[adj_t])
+        pred_weight = to_numpy(A[adj_t])
+        plt.scatter(gt_weight, pred_weight, s=0.1,c='k')
+        plt.xlabel('all gt weight', fontsize=12)
+        plt.ylabel('all predicted weight', fontsize=12)
+        ax = fig.add_subplot(1, 6, 5)
+        plt.imshow(to_numpy(adjacency), cmap='viridis', vmin=0, vmax=0.01)
+        ax = fig.add_subplot(1, 6, 6)
+        plt.imshow(to_numpy(model.A)*coeff, cmap='viridis', vmin=0, vmax=0.01)
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
