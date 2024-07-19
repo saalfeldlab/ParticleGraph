@@ -142,5 +142,5 @@ class TimeSeries(Sequence):
             return difference_quotients
         else:
             # Compute a mask which entries could not be computed
-            mask = [torch.any(torch.isnan(dq), dim=1) for dq in difference_quotients]
+            mask = [torch.logical_not(torch.any(torch.isnan(dq), dim=1)) for dq in difference_quotients]
             return difference_quotients, mask

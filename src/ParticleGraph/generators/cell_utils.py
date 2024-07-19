@@ -181,33 +181,22 @@ def get_vertices(points=[], device=[]):
 
 
     rng = np.random.default_rng(11)
-    polygons = []
-    for ri, point_region in enumerate(vor.point_region[0:len(points)]):
-        print(ri)
-        region = vor.regions[point_region]
-        # only plot those polygons for which all vertices are defined
+    cells = [[] for i in range(len(points))]
+    for (l, r), vertices in vor.ridge_dict.items():
+        if l < len(points):
+            cells[l].append(vor.vertices[vertices])
+        elif r < len(points):
+            cells[r].append(vor.vertices[vertices])
 
-        poly = []
-        for rv in vor.ridge_vertices:
-            if np.isin(rv, region).all():
-                print(rv)
-                poly.append(vor.vertices[rv])
-        polygons.append(poly)
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    for poly in polygons:
+    for poly in cells:
         polygon = Poly3DCollection(poly, alpha=0.5,
                                    facecolors=rng.uniform(0, 1, 3),
                                    linewidths=0.5, edgecolors='black')
         ax.add_collection3d(polygon)
 
-    count=0
-    for rv in vor.ridge_vertices:
-        if not(-1 in rv):
-            count +=1
-
-    print(count)
 
 
 

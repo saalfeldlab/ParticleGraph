@@ -7,6 +7,7 @@ import umap
 from ParticleGraph.embedding_cluster import *
 # from ParticleGraph.Plot3D import *
 from GNN_particles_Ntype import *
+from ParticleGraph.data_loaders import *
 
 if __name__ == '__main__':
 
@@ -14,6 +15,12 @@ if __name__ == '__main__':
 
     frame = 100
     frame_data = time_series[frame]
+    print(frame_data.node_attrs())
+
+    points = to_numpy(frame_data.pos)
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(points[:, 0], points[:, 1], points[:, 2], s=5, color='blue')
 
     # IDs are in the range 0, ..., N-1; global ids are stored separately
     print(f"fields of frames: {frame_data.node_attrs()}")
@@ -21,10 +28,18 @@ if __name__ == '__main__':
     print(f"local ids: {frame_data.track_id}")
     print(f"global ids: {global_ids[frame_data.track_id]}")
 
-    # summarize some of the fields in a particular dataset
+    # summarize some of the fields in a particular dataset, i.e. input of GNN
     X = bundle_fields(frame_data, "track_id", "pos", "velocity")
 
-    # compute the acceleration and a mask to filter out NaN values
+    # compute the acceleration and a mask to filter out NaN values for all frames
+    velocity, mask = time_series.compute_derivative('pos', id_name='track_id')
+    print(velocity[frame])
+    print(torch.count_nonzero(torch.isnan(velocity[100])))
+    Y = velocity[frame]
+    Y = Y[mask[frame], :]
+
+    print(time_series.time)
+
     acceleration, mask = time_series.compute_derivative('velocity', id_name='track_id')
     Y = acceleration[frame]
     Y = Y[mask[frame], :]
