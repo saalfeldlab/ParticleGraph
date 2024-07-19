@@ -2471,7 +2471,7 @@ def data_train_signal(config, config_file, device):
                     y = y[:, 0:2]
 
                     if epoch > -1:
-                        loss = (pred1 + pred2 - y).norm(2) / 2 + model.A.norm(1) * config.training.coeff_L1
+                        loss = (pred1 + pred2 - y).norm(2) / 2 + model.vals.norm(1) * config.training.coeff_L1
                     else:
                         loss = (pred1 + pred2 - y).norm(2) / 2
                         
