@@ -3753,27 +3753,6 @@ def plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         adjacency = torch.load(config.simulation.connectivity_file, map_location=device)
     adj_t = adjacency > 0
     edge_index = adj_t.nonzero().t().contiguous()
-    gt_weight = to_numpy(adjacency[adj_t])
-
-    # fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
-    # plt.imshow(to_numpy(adjacency) / norm_gt_weight, cmap='viridis', vmin=0, vmax=0.1)
-    # plt.tight_layout()
-    # plt.savefig(f"./{log_dir}/results/True_Aij_{config_file}.tif", dpi=300)
-    # plt.close()
-
-    # fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
-    # plt.imshow(to_numpy(adjacency) / norm_gt_weight,  cmap='viridis', vmin=0, vmax=0.1)
-    # cbar = plt.colorbar(shrink=0.5)
-    # cbar.ax.tick_params(labelsize=32)
-    # plt.tight_layout()
-    # plt.savefig(f"./{log_dir}/results/True_Aij_bar_{config_file}.tif", dpi=300)
-    # plt.close()
-
-    # plt.rcParams['text.usetex'] = True
-    # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
-    # matplotlib.use("Qt5Agg")
-
-    GT_model, bc_pos, bc_dpos = choose_model(config, device=device)
 
     for epoch in epoch_list:
 
@@ -4538,7 +4517,8 @@ if __name__ == '__main__':
     matplotlib.use("Qt5Agg")
 
     # config_list =['boids_16_256_division_model_2_mass_coeff']
-    config_list = ['signal_N_100_2_d']
+    # config_list = ['signal_N_100_2_d']
+    config_list = ['signal_N_100_2_asym']
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
