@@ -3763,6 +3763,19 @@ def plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         model.edges = edge_index
         print(f'net: {net}')
 
+        fig, ax = fig_init()
+        a=-to_numpy(model.vals)
+        a=np.transpose(a)
+        plt.imshow(a, cmap='viridis')
+        plt.colorbar()
+        fig, ax = fig_init()
+        b=to_numpy(adjacency)
+        plt.imshow(b, cmap='viridis')
+        plt.colorbar()
+        fig, ax = fig_init()
+        plt.scatter(b,a, s=1,c='k')
+
+
         config.training.cluster_method = 'distance_plot'
         config.training.cluster_distance_threshold = 0.01
         alpha = 0.1
@@ -4521,7 +4534,7 @@ if __name__ == '__main__':
     config_list = ['signal_N_100_2_asym']
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['12'], device=device)
         # plot_generated(config=config, run=0, style='color Voronoi', step = 5, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 
