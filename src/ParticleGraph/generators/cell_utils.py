@@ -157,11 +157,6 @@ def get_vertices(points=[], device=[]):
             vertices_index = np.concatenate((vertices_index, vor.regions[vor.point_region[n]]), axis=0)
         vertices_per_cell.append((vor.regions[vor.point_region[n]].copy()))
 
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-    # ax.scatter(points[:, 0], points[:, 1], points[:, 2], s=5, color='blue')
-    # ax.scatter(vor.vertices[vertices_index, 0], vor.vertices[vertices_index, 1], vor.vertices[vertices_index, 2], s=5, color='k', alpha=0.1)
-
     vertices = []
     map = {}
     count = 0
@@ -177,29 +172,6 @@ def get_vertices(points=[], device=[]):
     vertices_pos = np.array(vertices)
     vertices_pos = torch.tensor(vertices_pos, device=device)
     vertices_pos = vertices_pos.to(dtype=torch.float32)
-
-
-
-    rng = np.random.default_rng(11)
-    cells = [[] for i in range(len(points))]
-    for (l, r), vertices in vor.ridge_dict.items():
-        if l < len(points):
-            cells[l].append(vor.vertices[vertices])
-        elif r < len(points):
-            cells[r].append(vor.vertices[vertices])
-
-
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    for poly in cells:
-        polygon = Poly3DCollection(poly, alpha=0.5,
-                                   facecolors=rng.uniform(0, 1, 3),
-                                   linewidths=0.5, edgecolors='black')
-        ax.add_collection3d(polygon)
-
-
-
-
 
     return vor, vertices_pos, vertices_per_cell
 

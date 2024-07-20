@@ -2394,8 +2394,8 @@ def data_train_signal(config, config_file, device):
             if adjacency[i,j]==0:
                 edge_index = torch.cat((edge_index, torch.tensor([[i], [j]], device=device)), 1)
                 edge_index = torch.cat((edge_index, torch.tensor([[j], [i]], device=device)), 1)
-    if (config_file == 'signal_N_100_2_d') | (config_file == 'signal_N_100_2_asym'):
-        print('Fully connection ...')
+    if (config_file == 'signal_N_100_2_d') | ('signal_N_100_2_asym' in config_file):
+        print('Fully connected ...')
         for i in trange(n_particles):
                 i_s = torch.ones(n_particles, device=device) * i
                 j_s = torch.arange(n_particles, device=device)
@@ -2598,7 +2598,7 @@ def data_train_signal(config, config_file, device):
         ax = fig.add_subplot(1, 6, 5)
         plt.imshow(to_numpy(adjacency), cmap='viridis', vmin=0, vmax=0.01)
         ax = fig.add_subplot(1, 6, 6)
-        plt.imshow(to_numpy(A), cmap='viridis', vmin=0, vmax=0.01)
+        plt.imshow(np.abs(to_numpy(A)), cmap='viridis', vmin=0, vmax=0.001)
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")

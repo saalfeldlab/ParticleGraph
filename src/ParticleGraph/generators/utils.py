@@ -81,7 +81,7 @@ def choose_model(config, device):
                     p[n] = torch.tensor(params[n])
             else:
                 print(p)
-            model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
+            model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos, dimension=dimension)
         case 'PDE_B_mass':
             p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
             if params[0] != [-1]:

@@ -88,7 +88,7 @@ class Signal_Propagation(pyg.nn.MessagePassing):
         A = torch.zeros(self.n_particles, self.n_particles, device=self.device, requires_grad=False, dtype=torch.float32)
 
         if 'asymmetric' in self.adjacency_matrix:
-            A = self.vals
+            A = self.vals.t()
         else:
             i, j = torch.triu_indices(self.n_particles, self.n_particles, requires_grad=False, device=self.device)
             A[i,j] = self.vals

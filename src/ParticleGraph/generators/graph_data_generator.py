@@ -1033,6 +1033,7 @@ def data_generate_cell_3D(config, visualize=True, run_vizualized=0, style='color
                                                                             device=device)
 
         T1_list = T1.clone().detach()
+        n_particles_alive = len(T1)
 
         man_track = torch.cat((N1 + 1, torch.zeros((len(N1), 3), device=device)), 1)
         man_track[:, 2] = -1
@@ -1048,81 +1049,8 @@ def data_generate_cell_3D(config, visualize=True, run_vizualized=0, style='color
         logger.info('interaction parameters')
         logger.info(to_numpy(model.p))
 
-        if simulation_config.cell_inert_model_coeff > 0:
-
-            vor, vertices_pos, vertices_per_cell = get_vertices(points=to_numpy(X1), device=device)
-
-            rng = np.random.default_rng(11)
-            polygons = []
-            for ri, point_region in enumerate(vor.point_region[0:n_particles]):
-                print(ri)
-                region = vor.regions[point_region]
-                # only plot those polygons for which all vertices are defined
-                if np.all(np.asarray(region) >= 0) and len(region) > 0:
-                    poly = []
-                    for rv in vor.ridge_vertices:
-                        if np.isin(rv, region).all():
-                            poly.append(vor.vertices[rv])
-                    polygons.append(poly)
-
-            fig = plt.figure()
-            ax = fig.add_subplot(111, projection='3d')
-            for poly in polygons:
-                polygon = Poly3DCollection(poly, alpha=0.5,
-                                           facecolors=rng.uniform(0, 1, 3),
-                                           linewidths=0.5, edgecolors='black')
-                ax.add_collection3d(polygon)
-
-
-
-            # calculate area of each voronoi cell
-
-            centroids, areas = get_voronoi_areas(vertices_pos, vertices_per_cell, device)
-
-            # calculate average area per cell type
-
-            target_cell_areas = []
-            num_cells = []
-
-            for i in range(n_particle_types):
-                pos = to_numpy(torch.argwhere(T1.squeeze() == i)).squeeze()
-                num_cells.append(len(pos))
-                target_cell_areas.append(torch.mean(areas[pos]))
-
-            target_cell_areas = torch.tensor(target_cell_areas, device=device)
-
-            # add 50% noise to the average area
-
-            target_cell_areas += torch.ones((n_particle_types), device=device) * torch.randn((n_particle_types),
-                                                                                             device=device) * 0.00025
-            target_cell_areas[-1] = 0.0020
-
-            # normalize new average areas so that the sum of the areas is = to 1
-            # how many cells per type (N_i)
-            # average areas per cell type (Avg_i)
-            # sum of all N_i * Avg_i = coeff
-            # divide all Avg_i by coeff = target per type
-
-            coeff = 0
-            for i in range(n_particle_types):
-                coeff += num_cells[i] * target_cell_areas[i]
-
-            target_cell_areas /= coeff
-
-        index_particles = []
-        for n in range(n_particle_types):
-            pos = torch.argwhere(T1 == n)
-            pos = to_numpy(pos[:, 0].squeeze()).astype(int)
-            index_particles.append(pos)
-        n_particles_alive = len(X1)
-        n_particles_dead = 0
-
-
-
-
-
         time.sleep(0.5)
-        for it in trange(simulation_config.start_frame, n_frames + 1):
+        for it in range(simulation_config.start_frame, n_frames + 1):
 
             # calculate cell death and cell division
             if (it > 0) & (n_particles_alive < simulation_config.n_particles_max):
@@ -1204,8 +1132,7 @@ def data_generate_cell_3D(config, visualize=True, run_vizualized=0, style='color
             # calculate cell type change
             if simulation_config.state_type == 'sequence':
                 sample = torch.rand((len(T1), 1), device=device)
-                sample = (sample < (1 / config.simulation.state_params[0])) * torch.randint(0, n_particle_types,
-                                                                                            (len(T1), 1), device=device)
+                sample = (sample < (1 / config.simulation.state_params[0])) * torch.randint(0, n_particle_types,(len(T1), 1), device=device)
                 T1 = (T1 + sample) % n_particle_types
 
             A1 = A1 + delta_t  # update age
@@ -1245,7 +1172,7 @@ def data_generate_cell_3D(config, visualize=True, run_vizualized=0, style='color
             # model prediction
             with torch.no_grad():
                 y = model(dataset, has_field=True)
-                y = y * alive[:, None].repeat(1, 2)
+                y = y * alive[:, None].repeat(1, dimension)
 
             if simulation_config.cell_inert_model_coeff > 0:
 
@@ -1256,50 +1183,15 @@ def data_generate_cell_3D(config, visualize=True, run_vizualized=0, style='color
                 optimizer = torch.optim.Adam([vertices_pos], lr=1E-3)
                 first_centroids, voronoi_area = get_voronoi_areas(vertices_pos, vertices_per_cell, device)
 
-                for i in range(2):
-                    optimizer.zero_grad()
-                    centroids, voronoi_area = get_voronoi_areas(vertices_pos, vertices_per_cell, device)
+                # for i in range(2):
+                #     optimizer.zero_grad()
+                #     centroids, voronoi_area = get_voronoi_areas(vertices_pos, vertices_per_cell, device)
+                #     target_areas = target_cell_areas[to_numpy(T1).astype(int)].squeeze().clone().detach()
+                #     loss = (voronoi_area - target_areas).norm(2)
+                #     loss.backward()
+                #     optimizer.step()
+                centroids = first_centroids
 
-                    # type_means = np.ones((len(voronoi_area)))
-                    # for i in range(n_particle_types):
-                    #         pos = to_numpy(torch.argwhere(T1.squeeze() == i)).squeeze()
-                    #         type_means[pos] = to_numpy(target_cell_areas[i])
-                    # type_means = torch.tensor(type_means, device=device)
-                    # loss = (voronoi_area - type_means).norm(2)
-
-                    # target_areas = torch.zeros_like(AR1)
-                    # for i in range(n_particle_types):
-                    #     pos = torch.argwhere(T1.squeeze() == i).squeeze()
-                    #     target_areas[pos] = target_cell_areas[i]
-
-                    target_areas = target_cell_areas[to_numpy(T1).astype(int)].squeeze().clone().detach()
-
-                    loss = (voronoi_area - target_areas).norm(2)
-
-                    loss.backward()
-                    optimizer.step()
-                    # fig, ax = fig_init()
-                    # plt.xticks([])
-                    # plt.yticks([])
-                    # index_particles = []
-                    # voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='black', line_width=1, line_alpha=0.5, point_size=0)
-                    # for n in range(n_particle_types):
-                    #     pos = torch.argwhere((T1.squeeze() == n) & (H1[:, 0].squeeze() == 1))
-                    #     pos = to_numpy(pos[:, 0].squeeze()).astype(int)
-                    #     index_particles.append(pos)
-                    #     size = set_size(x, index_particles[n], 10) / 10
-                    #     plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                    #                 s=size, color=cmap.color(n))
-                    # plt.scatter(to_numpy(vertices_pos[:, 0]), to_numpy(vertices_pos[:, 1]), s=5, color='k')
-                    # plt.xlim([-0.05, 1.05])
-                    # plt.ylim([-0.05, 1.05])
-                    # plt.tight_layout()
-                    # num = f"{it:06}"
-                    # num2 = f"{i:04}"
-                    # plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Vor_{run}_{num}_{num2}.tif", dpi=85.35)
-                    # plt.close()
-
-                optimized_vertices = vertices_pos
                 delta_centroids = centroids - first_centroids
 
             if (it) % 25 == 0:
@@ -1314,205 +1206,43 @@ def data_generate_cell_3D(config, visualize=True, run_vizualized=0, style='color
                 x_list.append(x)
                 y_list.append(y)
 
-            # get mass_coeff
-            # mass_coeff = set_mass_coeff(mc_slope_distrib, cell_mass[to_numpy(T1[:, 0])], M1, device)
-
             # cell update
             if model_config.prediction == '2nd_derivative':
                 V1 += y * delta_t * simulation_config.cell_active_model_coeff
             else:
                 V1 = y
 
-            V1 = V1 * alive[:, None].repeat(1, 2)
+            V1 = V1 * alive[:, None].repeat(1, dimension)
             X1 = bc_pos(X1 + V1 * delta_t + delta_centroids * simulation_config.cell_inert_model_coeff)
 
-            # save masks
-            if run == 0:
-                mask_width = 1024
-                radius = 4
-                point_list = to_numpy(X1)
-                cell_id = to_numpy(N1) + 1
-                image = np.zeros((mask_width, mask_width))
-                for i in range(len(point_list)):
-                    point_i = (point_list[i, 1] * 1024).astype(int)
-                    point_j = (point_list[i, 0] * 1024).astype(int)
-                    yy, xx = np.ogrid[-point_i: mask_width - point_i, -point_j: mask_width - point_j]
-                    mask = xx * xx + yy * yy <= radius * radius
-                    image[mask] = cell_id[i].astype(int)
-                image = np.flipud(image)
-                image = np.uint16(image)
-                num = f"{it:03}"
-                tifffile.imwrite(f"graphs_data/graphs_{dataset_name}/generated_data/GT/man_track{num}.tif", image,
-                                 photometric='minisblack')
-
-            vor, vertices_pos, vertices_per_cell = get_vertices(points=to_numpy(X1), device=device)
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
 
-                # plt.style.use('dark_background')
-                # matplotlib.use("Qt5Agg")
+                n_particles = len(X1)
+                print(f'frame {it}, {n_particles} particles, {edge_index.shape[1]} edges')
+                vor, vertices_pos, vertices_per_cell = get_vertices(points=to_numpy(X1), device=device)
 
-                if 'latex' in style:
-                    plt.rcParams['text.usetex'] = True
-                    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+                cells = [[] for i in range(n_particles)]
+                for (l, r), vertices in vor.ridge_dict.items():
+                    if l < n_particles:
+                        cells[l].append(vor.vertices[vertices])
+                    elif r < n_particles:
+                        cells[r].append(vor.vertices[vertices])
 
-                if 'bw' in style:
-
-                    matplotlib.rcParams['savefig.pad_inches'] = 0
-                    fig = plt.figure(figsize=(12, 12))
-                    ax = fig.add_subplot(1, 1, 1)
-                    for n in range(n_particle_types):
-                        plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                                    s=marker_size, color='k')
-                    if training_config.particle_dropout > 0:
-                        plt.scatter(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
-                                    x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), s=25, color='k',
-                                    alpha=0.75)
-                        plt.plot(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
-                                 x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), '+', color='w')
-                    plt.xlim([0, 1])
-                    plt.ylim([0, 1])
-                    if 'latex' in style:
-                        plt.xlabel(r'$x$', fontsize=78)
-                        plt.ylabel(r'$y$', fontsize=78)
-                        plt.xticks(fontsize=48.0)
-                    elif 'frame' in style:
-                        plt.xlabel(r'$x$', fontsize=78)
-                        plt.ylabel(r'$y$', fontsize=78)
-                        plt.xticks(fontsize=48.0)
-                        plt.yticks(fontsize=48.0)
-                    else:
-                        plt.xticks([])
-                        plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
-                    plt.close()
-
-                if 'color' in style:
-
-                    # matplotlib.use("Qt5Agg")
-                    matplotlib.rcParams['savefig.pad_inches'] = 0
-                    fig = plt.figure(figsize=(12, 12))
-                    ax = fig.add_subplot(1, 1, 1)
-                    ax.xaxis.get_major_formatter()._usetex = False
-                    ax.yaxis.get_major_formatter()._usetex = False
-                    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-                    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-                    ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                    index_particles = []
-                    for n in range(n_particle_types):
-                        pos = torch.argwhere((T1.squeeze() == n) & (H1[:, 0].squeeze() == 1))
-                        pos = to_numpy(pos[:, 0].squeeze()).astype(int)
-                        index_particles.append(pos)
-                        # plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                        #             s=marker_size, color=cmap.color(n))
-
-                        size = set_size(x, index_particles[n], 10) / 10
-
-                        plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                                    s=size, color=cmap.color(n))
-                    dead_cell = np.argwhere(to_numpy(H1[:, 0]) == 0)
-                    if len(dead_cell) > 0:
-                        plt.scatter(to_numpy(X1[dead_cell[:, 0].squeeze(), 0]),
-                                    to_numpy(X1[dead_cell[:, 0].squeeze(), 1]), s=2, color='k', alpha=0.5)
-                    plt.xlim([0, 1])
-                    plt.ylim([0, 1])
-                    if 'latex' in style:
-                        plt.xlabel(r'$x$', fontsize=78)
-                        plt.ylabel(r'$y$', fontsize=78)
-                        plt.xticks(fontsize=48.0)
-                        plt.yticks(fontsize=48.0)
-                    elif 'frame' in style:
-                        plt.xlabel('x', fontsize=13)
-                        plt.ylabel('y', fontsize=16)
-                        plt.xticks(fontsize=16.0)
-                        plt.yticks(fontsize=16.0)
-                        ax.tick_params(axis='both', which='major', pad=15)
-                        plt.text(0, 1.05,
-                                 f'frame {it}, {int(n_particles_alive)} alive particles ({int(n_particles_dead)} dead), {edge_index.shape[1]} edges  ',
-                                 ha='left', va='top', transform=ax.transAxes, fontsize=16)
-                    else:
-                        plt.xticks([])
-                        plt.yticks([])
-
-                    if 'cell_id' in style:
-                        for i, txt in enumerate(to_numpy(N1.squeeze())):
-                            plt.text(to_numpy(X1[i, 0]), to_numpy(X1[i, 1]), 1 + int(to_numpy(N1[i])),
-                                     fontsize=8)  # (txt, (to_numpy(X1[i, 0]), to_numpy(X1[i, 1]), 0), fontsize=8)
-
-                    plt.tight_layout()
-
-                    num = f"{it:06}"
-
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig/Fig_{run}_{num}.tif",
-                                dpi=85.35)
-                    # plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{10000+it}.tif", dpi=42.675)
-                    plt.close()
-
-                fig = plt.figure(figsize=(12, 6))
-                ax = fig.add_subplot(1, 2, 1)
-                plt.plot(max_radius_list)
-                plt.xlabel('Frame')
-                plt.ylabel('Max radius')
-                plt.ylim([0, simulation_config.max_radius * 1.1])
-                ax = fig.add_subplot(1, 2, 2)
-                plt.plot(x_len_list, edges_len_list)
-                plt.xlabel('Number of particles')
-                plt.ylabel('Number of edges')
+                fig = plt.figure()
+                ax = fig.add_subplot(111, projection='3d')
+                for n, poly in enumerate(cells):
+                    polygon = Poly3DCollection(poly, alpha=0.5,
+                                               facecolors=cmap.color(to_numpy(T1[n]).astype(int)),
+                                               linewidths=0.1, edgecolors='black')
+                    ax.add_collection3d(polygon)
                 plt.tight_layout()
-                plt.savefig(f"graphs_data/graphs_{dataset_name}/max_radius_{run}.jpg", dpi=170.7)
+
+                num = f"{it:06}"
+                plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig/Fig_{run}_{num}.tif", dpi=85.35)
                 plt.close()
 
-                if 'voronoi' in style:
-
-                    matplotlib.rcParams['savefig.pad_inches'] = 0
-                    fig = plt.figure(figsize=(12, 12))
-                    ax = fig.add_subplot(1, 1, 1)
-                    plt.xticks([])
-                    plt.yticks([])
-                    index_particles = []
-
-                    voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='black', line_width=1, line_alpha=0.5,
-                                    point_size=0)
-                    # patches = []
-                    # for cell in vertices_per_cell:
-                    #     vertices = to_numpy(vertices_pos[cell, :])
-                    #     patches.append(Polygon(vertices, closed=True))
-
-                    # pc = PatchCollection(patches, alpha=0.4, facecolors="darkgreen")
-                    # ax.add_collection(pc)
-
-                    for n in range(n_particle_types):
-                        pos = torch.argwhere((T1.squeeze() == n) & (H1[:, 0].squeeze() == 1))
-                        pos = to_numpy(pos[:, 0].squeeze()).astype(int)
-                        index_particles.append(pos)
-                        # plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                        #             s=marker_size, color=cmap.color(n))
-
-                        size = set_size(x, index_particles[n], 10) / 10
-
-                        patches = []
-                        for i in index_particles[n]:
-                            cell = vertices_per_cell[i]
-                            vertices = to_numpy(vertices_pos[cell, :])
-                            patches.append(Polygon(vertices, closed=True))
-
-                        pc = PatchCollection(patches, alpha=0.4, facecolors=cmap.color(n))
-                        ax.add_collection(pc)
-
-                        plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                                    s=size, color=cmap.color(n))
-
-                    plt.scatter(to_numpy(vertices_pos[:, 0]), to_numpy(vertices_pos[:, 1]), s=5, color='k')
-                    # plt.scatter(to_numpy(optimized_vertices[:, 0]), to_numpy(optimized_vertices[:, 1]), s=5, color='r')
-                    plt.xlim([-0.05, 1.05])
-                    plt.ylim([-0.05, 1.05])
-                    plt.tight_layout()
-                    num = f"{it:06}"
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig/Vor_{run}_{num}.tif", dpi=85.35)
-                    plt.close()
 
         if bSave:
             torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
