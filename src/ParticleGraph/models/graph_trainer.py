@@ -2395,7 +2395,7 @@ def data_train_signal(config, config_file, device):
                 edge_index = torch.cat((edge_index, torch.tensor([[i], [j]], device=device)), 1)
                 edge_index = torch.cat((edge_index, torch.tensor([[j], [i]], device=device)), 1)
     if (config_file == 'signal_N_100_2_d') | ('signal_N_100_2_asym' in config_file):
-        print('Fully connected ...')
+        print('Fully connected...')
         for i in trange(n_particles):
                 i_s = torch.ones(n_particles, device=device) * i
                 j_s = torch.arange(n_particles, device=device)
@@ -2470,10 +2470,14 @@ def data_train_signal(config, config_file, device):
                     y = y / ynorm
                     y = y[:, 0:2]
 
-                    if epoch > -1:
-                        loss = (pred1 + pred2 - y).norm(2) / 2 + model.vals.norm(1) * config.training.coeff_L1
-                    else:
-                        loss = (pred1 + pred2 - y).norm(2) / 2
+
+                    func_f = model.lin_edge(torch.zeros(1,device=device))
+                    in_features = torch.cat((torch.zeros((n_particles,1),device=device),  model.a[1, :]), dim=1)
+                    func_phi = model.lin_phi(in_features.float())
+
+
+                    loss = (pred1 + pred2 - y).norm(2) / 2 + model.vals.norm(1) * config.training.coeff_L1 + func_f.norm(2) + func_phi.norm(2)
+
                         
                 case 3:
 
