@@ -8,13 +8,13 @@ simulation:
   n_particles: 4800
   n_particle_types: 3
   n_interactions: 3
-  n_frames: 250
+  n_frames: 750
   sigma: 0.005
   delta_t: 0.1
   dpos_init: 0
   boundary: 'periodic'
   state_type: 'sequence'
-  state_params: [100]
+  state_params: [250]
 
 graph_model:
   particle_model_name: 'PDE_A'
@@ -38,8 +38,8 @@ training:
   batch_size: 8
   small_init_batch_size: True
   n_runs: 2
-  sparsity: 'none'
-  cluster_method: 'distance_plot'
+  sparsity: 'replace_embedding_function'
+  cluster_method: 'kmeans_auto_plot'
   data_augmentation: True
   data_augmentation_loop: 200
   fix_cluster_embedding: True

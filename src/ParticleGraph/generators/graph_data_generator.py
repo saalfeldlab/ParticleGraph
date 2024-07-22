@@ -282,7 +282,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                                     dpi=170.7)
                         plt.close()
 
-                    elif model_config.signal_model_name == 'PDE_N':
+                    elif 'PDE_N' in model_config.signal_model_name:
 
                         matplotlib.rcParams['savefig.pad_inches'] = 0
                         fig = plt.figure(figsize=(12, 12))

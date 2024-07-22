@@ -1265,6 +1265,7 @@ def plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logger, de
 
         GT_time_series_list=[]
         learned_time_series_list=[]
+        accuracy_list=[]
         for cell_id in trange(n_particles):
             GT_time_series = get_time_series(x_list=x_list[1], cell_id=cell_id, feature='type')
             learned_time_series = get_type_time_series(new_labels=new_labels, dataset_number=1, cell_id=cell_id,
@@ -1272,8 +1273,13 @@ def plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logger, de
                                                                   has_cell_division=has_cell_division)
             GT_time_series_list.append(GT_time_series)
             learned_time_series_list.append(learned_time_series)
+            accuracy = metrics.accuracy_score(GT_time_series[0:250], learned_time_series[0:250])
+            accuracy_list.append(accuracy)
         GT_time_series = np.stack(GT_time_series_list)
         learned_time_series = np.stack(learned_time_series_list)
+        accuracy = np.array(accuracy_list)
+
+        print(f'accuracy: {np.mean(accuracy)} +/- {np.std(accuracy)}')
 
         fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
         plt.imshow(GT_time_series, aspect='auto', cmap='tab10',vmin=0, vmax=2)
@@ -1310,6 +1316,8 @@ def plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logger, de
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/comparison_sequence_{config_file}.tif", dpi=170.7)
         plt.close()
+
+        print(f'accuracy {metrics.accuracy_score(GT_time_series[0:250], learned_time_series[0:250])}')
 
 
 
