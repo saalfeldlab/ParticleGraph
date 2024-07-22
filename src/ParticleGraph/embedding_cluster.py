@@ -5,6 +5,7 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from matplotlib import pyplot as plt
 # from GNN_particles_PlotFigure import fig_init
+import time
 
 class EmbeddingCluster:
     def __init__(self, config):
@@ -53,6 +54,7 @@ def sparsify_cluster(cluster_method, proj_interaction, embedding, cluster_distan
     proj_interaction = (proj_interaction - np.min(proj_interaction)) / (np.max(proj_interaction) - np.min(proj_interaction)+1e-10)
     embedding = (embedding - np.min(embedding)) / (np.max(embedding) - np.min(embedding)+1e-10)
 
+    start_time = time.time()
     match cluster_method:
         case 'kmeans_auto_plot':
             labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
@@ -81,6 +83,8 @@ def sparsify_cluster(cluster_method, proj_interaction, embedding, cluster_distan
     for n in range(n_particle_types):
         new_labels[labels == label_list[n]] = n
 
+    computation_time = time.time() - start_time
+    print(f"Clustering computation time is {computation_time} seconds.")
 
     # fig,ax = fig_init()
     # ax.scatter(embedding[:, 0], embedding[:, 1], c=labels, s=5, cmap='tab20')
@@ -92,7 +96,60 @@ def sparsify_cluster(cluster_method, proj_interaction, embedding, cluster_distan
 
     return labels, n_clusters, new_labels
 
+def sparsify_cluster_state(cluster_method, proj_interaction, embedding, cluster_distance_threshold, index, type_list_short, n_particle_types, embedding_cluster):
 
+    # normalization of projection because UMAP output is not normalized
+    proj_interaction = (proj_interaction - np.min(proj_interaction)) / (np.max(proj_interaction) - np.min(proj_interaction)+1e-10)
+    embedding = (embedding - np.min(embedding)) / (np.max(embedding) - np.min(embedding)+1e-10)
+
+    start_time = time.time()
+    match cluster_method:
+        case 'kmeans_auto_plot':
+            labels, n_clusters = embedding_cluster.get(proj_interaction, 'kmeans_auto')
+        case 'kmeans_auto_embedding':
+            labels, n_clusters = embedding_cluster.get(embedding, 'kmeans_auto')
+            proj_interaction = embedding
+        case 'distance_plot':
+            labels, n_clusters = embedding_cluster.get(proj_interaction, 'distance', thresh=cluster_distance_threshold)
+        case 'distance_embedding':
+            labels, n_clusters = embedding_cluster.get(embedding, 'distance', thresh=cluster_distance_threshold)
+            proj_interaction = embedding
+        case 'inconsistent_plot':
+            labels, n_clusters = embedding_cluster.get(proj_interaction, 'inconsistent', thresh=cluster_distance_threshold)
+        case 'inconsistent_embedding':
+            labels, n_clusters = embedding_cluster.get(embedding, 'inconsistent', thresh=cluster_distance_threshold)
+            proj_interaction = embedding
+        case 'distance_both':
+            new_projection = np.concatenate((proj_interaction, embedding), axis=-1)
+            labels, n_clusters = embedding_cluster.get(new_projection, 'distance', thresh=cluster_distance_threshold)
+
+    computation_time = time.time() - start_time
+    print(f"Clustering computation time is {computation_time} seconds.")
+
+    label_list = []
+    for n in range(n_particle_types):
+        pos = np.argwhere(type_list_short == n).squeeze().astype(int)
+        if len(pos)>0:
+            tmp = labels[pos]
+            label_list.append(np.round(np.median(tmp)))
+        else:
+            label_list.append(0)
+    label_list = np.array(label_list)
+    new_labels = np.ones_like(labels) * n_particle_types
+    for n in range(n_particle_types):
+        new_labels[labels == label_list[n]] = n
+
+
+
+    # fig,ax = fig_init()
+    # ax.scatter(embedding[:, 0], embedding[:, 1], c=labels, s=5, cmap='tab20')
+    # plt.close()
+    #
+    # fig,ax = fig_init()
+    # ax.scatter(proj_interaction[:, 0], proj_interaction[:, 1], c=labels, s=5, cmap='tab20')
+    # plt.close()
+
+    return labels, n_clusters, new_labels
 
 
 

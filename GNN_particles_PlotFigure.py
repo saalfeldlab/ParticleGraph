@@ -410,17 +410,19 @@ def plot_embedding_func_cluster_state(model, config, config_file, embedding_clus
     else:
         model_MLP_ = model.lin_edge
 
-    func_list, proj_interaction = analyze_edge_function_state(rr=[], vizualize=False, config=config,
+    func_list, proj_interaction, index = analyze_edge_function_state(rr=[], vizualize=False, config=config,
                                                         model_MLP=model_MLP_, model_a=model_a,
-                                                        type_list=type_list, n_particles = n_particles, ynorm=ynorm,
+                                                        type_list=type_list, ynorm=ynorm,
                                                         cmap=cmap, device=device)
 
     plt.close()
 
     fig, ax = fig_init()
+    type_list_short = type_list[index]
     for n in range(n_particle_types):
-        plt.scatter(proj_interaction[index_particles[n], 0],
-                    proj_interaction[index_particles[n], 1], color=cmap.color(n), s=1, alpha=0.025)
+        pos = np.argwhere(type_list_short == n).squeeze().astype(int)
+        if len(pos)>0:
+            plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=10, alpha=0.25)
     plt.xlabel(r'UMAP 0', fontsize=78)
     plt.ylabel(r'UMAP 1', fontsize=78)
     plt.xlim([-0.2, 1.2])
@@ -432,8 +434,8 @@ def plot_embedding_func_cluster_state(model, config, config_file, embedding_clus
     np.save(f"./{log_dir}/results/UMAP_{config_file}_{epoch}.npy", proj_interaction)
     np.save(f"./{log_dir}/results/embedding_{config_file}_{epoch}.npy", embedding)
 
-    labels, n_clusters, new_labels = sparsify_cluster(config.training.cluster_method, proj_interaction, embedding,
-                                                      config.training.cluster_distance_threshold, index_particles,
+    labels, n_clusters, new_labels = sparsify_cluster_state(config.training.cluster_method, proj_interaction, embedding,
+                                                      config.training.cluster_distance_threshold, index, type_list_short,
                                                       n_particle_types, embedding_cluster)
 
     accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)

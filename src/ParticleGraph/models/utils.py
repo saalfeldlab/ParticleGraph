@@ -10,6 +10,7 @@ import networkx as nx
 from torch_geometric.utils.convert import to_networkx
 import warnings
 import numpy as np
+import time
 
 def linear_model(x, a, b):
     return a * x + b
@@ -652,7 +653,9 @@ def analyze_edge_function_state(rr=[], vizualize=False, config=None, model_MLP=[
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
 
-    has_no_tracking = config.training.has_no_tracking
+    n_states = min(int(10E3),int(len(model_a)))
+    index = np.random.permutation(len(model_a))
+    index = index[0:n_states]
 
     if config.graph_model.particle_model_name != '':
         config_model = config.graph_model.particle_model_name
@@ -674,9 +677,8 @@ def analyze_edge_function_state(rr=[], vizualize=False, config=None, model_MLP=[
             rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
 
     func_list = []
-    for n in trange(50000):
-        sample = np.random.randint(0, len(type_list))
-        embedding_ = model_a[sample, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+    for n in range(n_states):
+        embedding_ = model_a[index[n], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
         in_features = get_in_features(rr, embedding_, config_model, max_radius)
         with torch.no_grad():
             func = model_MLP(in_features.float())
@@ -685,19 +687,23 @@ def analyze_edge_function_state(rr=[], vizualize=False, config=None, model_MLP=[
         if vizualize:
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
-                     color=cmap.color(type_list[n].astype(int)), linewidth=2, alpha=0.1)
-
+                     color=cmap.color(type_list[index[n]].astype(int)), linewidth=2, alpha=0.1)
     func_list = torch.stack(func_list)
     func_list_ = to_numpy(func_list)
 
     print('UMAP reduction ...')
+    start_time = time.time()
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
         trans = umap.UMAP(n_neighbors=100, n_components=2, transform_queue_size=0).fit(func_list_)
+    computation_time = time.time() - start_time
+    print(f"UMAP computation time is {computation_time} seconds.")
 
+    print('interaction function dimension reduction ...')
+    start_time = time.time()
     func_list = []
-    for n in trange(len(type_list)):
-        embedding_ = model_a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+    for n in range(n_states):  # len(type_list)):
+        embedding_ = model_a[index[n], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
         in_features = get_in_features(rr, embedding_, config_model, max_radius)
         with torch.no_grad():
             func = model_MLP(in_features.float())
@@ -705,9 +711,12 @@ def analyze_edge_function_state(rr=[], vizualize=False, config=None, model_MLP=[
         func_list.append(func)
     func_list = torch.stack(func_list)
     func_list_ = to_numpy(func_list)
-    print('interaction function dimension reduction ...')
+
     proj_interaction = trans.transform(func_list_)
     proj_interaction = (proj_interaction - np.min(proj_interaction)) / (np.max(proj_interaction) - np.min(proj_interaction) + 1e-10)
+
+    computation_time = time.time() - start_time
+    print(f"dimension reduction computation time is {computation_time} seconds.")
 
     if vizualize:
         plt.xlim([0, max_radius])
@@ -725,7 +734,7 @@ def analyze_edge_function_state(rr=[], vizualize=False, config=None, model_MLP=[
         plt.ylabel('MLP [a.u]')
         plt.tight_layout()
 
-    return func_list, proj_interaction
+    return func_list, proj_interaction, index
 
 def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], model_a=None, n_nodes=0, dataset_number = 0, n_particles=None, ynorm=None, type_list=None, cmap=None, dimension=2, device=None):
 
