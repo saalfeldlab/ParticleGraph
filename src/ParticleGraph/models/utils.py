@@ -654,8 +654,9 @@ def analyze_edge_function_state(rr=[], vizualize=False, config=None, model_MLP=[
     min_radius = config.simulation.min_radius
 
     n_states = min(int(10E3),int(len(model_a)))
-    index = np.random.permutation(len(model_a))
-    index = index[0:n_states]
+    index_ = np.random.permutation(len(model_a))
+    index = index_[0:n_states]
+    index_next = index_[n_states:]
 
     if config.graph_model.particle_model_name != '':
         config_model = config.graph_model.particle_model_name
@@ -734,7 +735,7 @@ def analyze_edge_function_state(rr=[], vizualize=False, config=None, model_MLP=[
         plt.ylabel('MLP [a.u]')
         plt.tight_layout()
 
-    return func_list, proj_interaction, index
+    return func_list, proj_interaction, index, index_next
 
 def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], model_a=None, n_nodes=0, dataset_number = 0, n_particles=None, ynorm=None, type_list=None, cmap=None, dimension=2, device=None):
 

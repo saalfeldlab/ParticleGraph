@@ -1,11 +1,13 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
 import scipy.cluster.hierarchy as hcluster
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from matplotlib import pyplot as plt
 # from GNN_particles_PlotFigure import fig_init
 import time
+
 
 class EmbeddingCluster:
     def __init__(self, config):
@@ -96,7 +98,7 @@ def sparsify_cluster(cluster_method, proj_interaction, embedding, cluster_distan
 
     return labels, n_clusters, new_labels
 
-def sparsify_cluster_state(cluster_method, proj_interaction, embedding, cluster_distance_threshold, index, type_list_short, n_particle_types, embedding_cluster):
+def sparsify_cluster_state(cluster_method, proj_interaction, embedding, cluster_distance_threshold, index, index_next, type_list_short, n_particle_types, embedding_cluster):
 
     # normalization of projection because UMAP output is not normalized
     proj_interaction = (proj_interaction - np.min(proj_interaction)) / (np.max(proj_interaction) - np.min(proj_interaction)+1e-10)
@@ -138,16 +140,6 @@ def sparsify_cluster_state(cluster_method, proj_interaction, embedding, cluster_
     new_labels = np.ones_like(labels) * n_particle_types
     for n in range(n_particle_types):
         new_labels[labels == label_list[n]] = n
-
-
-
-    # fig,ax = fig_init()
-    # ax.scatter(embedding[:, 0], embedding[:, 1], c=labels, s=5, cmap='tab20')
-    # plt.close()
-    #
-    # fig,ax = fig_init()
-    # ax.scatter(proj_interaction[:, 0], proj_interaction[:, 1], c=labels, s=5, cmap='tab20')
-    # plt.close()
 
     return labels, n_clusters, new_labels
 
