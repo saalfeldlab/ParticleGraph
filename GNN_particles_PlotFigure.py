@@ -454,7 +454,6 @@ def plot_embedding_func_cluster_state(model, config, config_file, embedding_clus
 
     distance = torch.sum((model_a[:, None, :] - median_center_list[None, :, :]) ** 2, dim=2)
     result = distance.min(dim=1)
-    min_value = result.values
     min_index = result.indices
 
     new_labels = to_numpy(min_index).astype(int)
@@ -1227,8 +1226,6 @@ def plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logger, de
                                                               n_particles=n_particles, n_frames=n_frames,
                                                               has_cell_division=has_cell_division)
 
-        config.training.cluster_method = 'kmeans_auto_plot'
-        config.training.cluster_distance_threshold = 0.01
         alpha=0.1
         accuracy, n_clusters, new_labels = plot_embedding_func_cluster_state(model, config, config_file, embedding_cluster,
                                                                        cmap, index_particles, type_list,

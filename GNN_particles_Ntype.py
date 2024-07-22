@@ -32,11 +32,11 @@ from ParticleGraph.utils import *
 
 if __name__ == '__main__':
 
-    # matplotlib.use("Qt5Agg")
+    matplotlib.use("Qt5Agg")
 
     # config_list = ["boids_16_division_model_2_Voronoi_3D"]
     # config_list = ["signal_N_100_2_d"]
-    config_list = ["signal_N_100_2_asym_a"]
+    config_list = ["arbitrary_3_sequence_d"]
 
 
     for config_file in config_list:
