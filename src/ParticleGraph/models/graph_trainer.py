@@ -115,10 +115,10 @@ def data_train_particles(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    print('Loading existing model ...')
-    net = f"./log/try_{config_file}/models/best_model_with_1_graphs_20.pt"
-    state_dict = torch.load(net,map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
+    # print('Loading existing model ...')
+    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_20.pt"
+    # state_dict = torch.load(net,map_location=device)
+    # model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -450,6 +450,22 @@ def data_train_particles(config, config_file, device):
                             print(loss.item())
                             loss.backward()
                             optimizer.step()
+
+                    if train_config.fix_cluster_embedding:
+                        lr_embedding = 1E-12
+                        optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                        logger.info(f'Learning rates: {lr}, {lr_embedding}')
+                    else:
+                        if epoch > n_epochs - sparsity_freq:
+                            lr_embedding = train_config.learning_rate_embedding_end
+                            lr = train_config.learning_rate_end
+                            optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                            logger.info(f'Learning rates: {lr}, {lr_embedding}')
+                        else:
+                            lr_embedding = train_config.learning_rate_embedding_start
+                            lr = train_config.learning_rate_start
+                            optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                            logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
 
 
