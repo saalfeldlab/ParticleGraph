@@ -467,13 +467,6 @@ def data_train_particles(config, config_file, device):
                             optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
                             logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
-
-
-
-
-
-
-
             else:
 
 

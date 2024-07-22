@@ -358,6 +358,8 @@ def get_time_series(x_list, cell_id, feature):
             feature = 3
         case 'velocity_y':
             feature = 4
+        case "type":
+            feature = 5
         case "stage":
             feature = 9
         case _:  # default

@@ -27,12 +27,15 @@ def get_embedding_time_series(model=None, dataset_number=None, cell_id=None, n_p
     embedding.append(model.a[dataset_number])
     embedding = to_numpy(torch.stack(embedding).squeeze())
 
-    if has_cell_division:
-        indexes = np.arange(n_frames) * model.n_particles_max + cell_id
-    else:
-        indexes = np.arange(n_frames) * n_particles + cell_id
+    indexes = np.arange(n_frames) * n_particles + cell_id
 
     return embedding[indexes]
+
+def get_type_time_series(new_labels=None, dataset_number=None, cell_id=None, n_particles=None, n_frames=None, has_cell_division=None):
+
+    indexes = np.arange(n_frames) * n_particles + cell_id
+
+    return new_labels[indexes]
 
 def get_in_features(rr, embedding_, config_model, max_radius):
     match config_model:

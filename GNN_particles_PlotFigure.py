@@ -439,7 +439,6 @@ def plot_embedding_func_cluster_state(model, config, config_file, embedding_clus
                                                       n_particle_types, embedding_cluster)
 
     type_list_short = type_list[index]
-    accuracy = metrics.accuracy_score(type_list_short, new_labels)
 
     model_a_list_short = model.a[1,index, :].clone().detach()
     median_center_list = []
@@ -460,6 +459,8 @@ def plot_embedding_func_cluster_state(model, config, config_file, embedding_clus
 
     with torch.no_grad():
         model.a[1] = median_center_list[new_labels].clone().detach()
+
+    accuracy = metrics.accuracy_score(type_list, new_labels)
 
     return accuracy, n_clusters, new_labels
 
@@ -1221,10 +1222,6 @@ def plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logger, de
             model_a = model.a.clone().detach()
 
         cell_id = 400
-        state_time_series = get_time_series(x_list=x_list[1], cell_id=cell_id, feature='type')
-        reconstructed_time_series = get_embedding_time_series(model=model, dataset_number=1, cell_id=cell_id,
-                                                              n_particles=n_particles, n_frames=n_frames,
-                                                              has_cell_division=has_cell_division)
 
         alpha=0.1
         accuracy, n_clusters, new_labels = plot_embedding_func_cluster_state(model, config, config_file, embedding_cluster,
@@ -1265,6 +1262,62 @@ def plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logger, de
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=170.7)
         plt.close()
+
+        GT_time_series_list=[]
+        learned_time_series_list=[]
+        for cell_id in trange(n_particles):
+            GT_time_series = get_time_series(x_list=x_list[1], cell_id=cell_id, feature='type')
+            learned_time_series = get_type_time_series(new_labels=new_labels, dataset_number=1, cell_id=cell_id,
+                                                                  n_particles=n_particles, n_frames=n_frames,
+                                                                  has_cell_division=has_cell_division)
+            GT_time_series_list.append(GT_time_series)
+            learned_time_series_list.append(learned_time_series)
+        GT_time_series = np.stack(GT_time_series_list)
+        learned_time_series = np.stack(learned_time_series_list)
+
+        fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
+        plt.imshow(GT_time_series, aspect='auto', cmap='tab10',vmin=0, vmax=2)
+        plt.xlabel('frame', fontsize=78)
+        plt.ylabel('cell_id', fontsize=78)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/true_kinograph_{config_file}.tif", dpi=170.7)
+        plt.close()
+
+
+        fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
+        plt.imshow(learned_time_series, aspect='auto', cmap='tab10',vmin=0, vmax=2)
+        plt.xlabel('frame', fontsize=78)
+        plt.ylabel('cell_id', fontsize=78)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/learned_kinograph_{config_file}.tif", dpi=170.7)
+        plt.close()
+
+        cell_id = 800
+        GT_time_series = get_time_series(x_list=x_list[1], cell_id=cell_id, feature='type')
+        learned_time_series = get_type_time_series(new_labels=new_labels, dataset_number=1, cell_id=cell_id,
+                                                   n_particles=n_particles, n_frames=n_frames,
+                                                   has_cell_division=has_cell_division)
+        fig = plt.figure(figsize=(6, 12))
+        ax = fig.add_subplot(2, 1, 1)
+        plt.plot(GT_time_series, color='k', ls="--")
+        plt.ylim([0,2])
+        plt.ylabel('cell type', fontsize=32)
+        ax = fig.add_subplot(2, 1, 2)
+        plt.plot(learned_time_series, color='k', ls="--")
+        plt.ylim([0,2])
+        plt.ylabel('cell type', fontsize=32)
+        plt.xlabel('frame', fontsize=32)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/comparison_sequence_{config_file}.tif", dpi=170.7)
+        plt.close()
+
+
+
+
+
+
+
+
 
 
 def plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, logger, device):
