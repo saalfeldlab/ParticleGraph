@@ -69,12 +69,7 @@ def choose_model(config, device):
             sigma = config.simulation.sigma
             p = p if n_particle_types == 1 else torch.squeeze(p)
             model = PDE_A(aggr_type=aggr_type, p=torch.squeeze(p), sigma=sigma, bc_dpos=bc_dpos, dimension=dimension)
-            # matplotlib.use("Qt5Agg")
-            # rr = torch.tensor(np.linspace(0, 0.075, 1000)).to(device)
-            # for n in range(n_particles):
-            #     func= model.psi(rr,p[n])
-            #     plt.plot(rr.detach().cpu().numpy(),func.detach().cpu().numpy(),c='k',alpha=0.01)
-        case 'PDE_B' | 'PDE_ParticleField_B':
+        case 'PDE_B' | 'PDE_ParticleField_B' | 'PDE_Cell_B':
             p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
             if params[0] != [-1]:
                 for n in range(n_particle_types):
@@ -140,7 +135,6 @@ def choose_model(config, device):
             model = PDE_Z(device=device)
 
     match model_signal_name:
-
         case 'PDE_N':
             p = torch.rand(n_particle_types, 2, device=device) * 100  # comprised between 10 and 50
             if params[0] != [-1]:

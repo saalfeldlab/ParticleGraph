@@ -144,25 +144,13 @@ class Interaction_Cell(pyg.nn.MessagePassing):
         embedding_i = self.a[self.data_id, to_numpy(particle_id_i), :].squeeze()
         embedding_j = self.a[self.data_id, to_numpy(particle_id_j), :].squeeze()
 
+        # in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
+        #                          dpos_y_j[:, None], area_i, area_j, embedding_i, embedding_j), dim=-1)
+
         in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
-                                 dpos_y_j[:, None], area_i, area_j, embedding_i, embedding_j), dim=-1)
+                                 dpos_y_j[:, None], embedding_i), dim=-1)
 
         out = self.lin_edge(in_features) * field_j
-
-        if self.model == 'PDE_B':
-            self.diffx = delta_pos * self.max_radius
-            self.lin_edge_out = out
-            self.particle_id = particle_id_i
-        if self.model == 'PDE_A_bis':
-            self.diffx = delta_pos * self.max_radius
-            self.lin_edge_out = out
-            self.particle_id_i = particle_id_i
-            self.particle_id_j = particle_id_j
-        if self.model == 'PDE_GS':
-            self.in_features = in_features
-            self.r = r
-            self.lin_edge_out = out
-
 
         return out
 

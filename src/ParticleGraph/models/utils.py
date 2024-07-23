@@ -1,7 +1,7 @@
 
 import umap
 from matplotlib.ticker import FormatStrFormatter
-from ParticleGraph.models import Interaction_Particles, Interaction_Particle_Field, Signal_Propagation, Mesh_Laplacian, Mesh_RPS, Interaction_Particle_Tracking
+from ParticleGraph.models import Interaction_Particle, Interaction_Particle_Field, Signal_Propagation, Mesh_Laplacian, Mesh_RPS, Interaction_Particle_Tracking
 from ParticleGraph.utils import *
 
 from GNN_particles_Ntype import *
@@ -453,33 +453,13 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, n_particl
     matplotlib.rcParams['savefig.pad_inches'] = 0
     has_no_tracking = train_config.has_no_tracking
 
-    if model_config.update_type == 'embedding_Siren':
-        if has_no_tracking:
-            embedding = to_numpy(model.b)
-        else:
-            embedding = get_embedding(model.b, 1)
-        n_particles = len(type_list)
-
-        fig = plt.figure(figsize=(8, 8))
-        for n in range(n_particle_types):
-            plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=5)
-        plt.xticks([])
-        plt.yticks([])
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/embedding/b_{dataset_name}_{epoch}_{N}.tif", dpi=87)
-        plt.close()
-
     if has_no_tracking:
         embedding = to_numpy(model.a)
     else:
         embedding = get_embedding(model.a, 1)
 
-    type_list = to_numpy(type_list.squeeze())
     fig = plt.figure(figsize=(8, 8))
-    for n in range(n_particle_types):
-        pos = np.argwhere(type_list == n)
-        pos = pos[:,]
-        plt.scatter(embedding[pos, 0], embedding[pos, 1], s=5)
+    plt.scatter(embedding[:, 0], embedding[:, 1], s=1)
     plt.xticks([])
     plt.yticks([])
     plt.tight_layout()
@@ -488,11 +468,9 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, n_particl
 
     match model_config.particle_model_name:
 
-        case 'PDE_B' | 'PDE_ParticleField_B':
+        case 'PDE_cell_B':
             max_radius = 0.04
             fig = plt.figure(figsize=(12, 12))
-            # plt.rcParams['text.usetex'] = True
-            # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
             ax = fig.add_subplot(1,1,1)
             rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
             func_list = []
@@ -512,11 +490,7 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, n_particl
                 if n % 5 == 0:
                     plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
                              color=cmap.color( int(type_list[n])   ), linewidth=2)
-            if not (has_no_tracking):
-                plt.ylim(config.plotting.ylim)
             plt.xlim([-max_radius, max_radius])
-            # plt.xlabel(r'$x_j-x_i$', fontsize=64)
-            # plt.ylabel(r'$f_{ij}$', fontsize=64)
             ax.xaxis.set_major_locator(plt.MaxNLocator(3))
             ax.yaxis.set_major_locator(plt.MaxNLocator(5))
             ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
@@ -528,60 +502,7 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, n_particl
             plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif",dpi=170.7)
             plt.close()
 
-        case 'PDE_A'| 'PDE_A_bis' | 'PDE_ParticleField_A' | 'PDE_E':
-            fig = plt.figure(figsize=(12, 12))
-            ax = fig.add_subplot(1, 1, 1)
-            # ax.xaxis.get_major_formatter()._usetex = False
-            # ax.yaxis.get_major_formatter()._usetex = False
-            ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-            ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-            # plt.xlabel(r'$d_{ij}$', fontsize=64)
-            # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=64)
-            plt.xticks(fontsize=32)
-            plt.yticks(fontsize=32)
-            plt.xlim([0, simulation_config.max_radius])
-            # plt.ylim([-0.15, 0.15])
-            # plt.ylim([-0.04, 0.03])
-            # plt.ylim([-0.1, 0.1])
-            plt.tight_layout()
-            rr = torch.tensor(np.linspace(0, simulation_config.max_radius, 200)).to(device)
-            for n in range(len(embedding)):
-                if has_no_tracking:
-                    embedding_ = model.a[n, :] * torch.ones((200, model_config.embedding_dim), device=device)
-                else:
-                    embedding_ = model.a[1, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
-                if (model_config.particle_model_name == 'PDE_A'):
-                    in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                             rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
-                elif (model_config.particle_model_name == 'PDE_A_bis'):
-                    in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                             rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
-                elif (model_config.particle_model_name == 'PDE_B'):
-                    in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                             rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                             0 * rr[:, None],
-                                             0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-                elif model_config.particle_model_name == 'PDE_E':
-                    in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                             rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
-                else:
-                    in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                             rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                             0 * rr[:, None],
-                                             0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-                with torch.no_grad():
-                    func = model.lin_edge(in_features.float())
-                func = func[:, 0]
-                if n % 5 == 0:
-                    plt.plot(to_numpy(rr),
-                             to_numpy(func*ynorm),
-                             linewidth=2,
-                             color=cmap.color( int(type_list[n]) ), alpha=0.25)
-            if not (has_no_tracking):
-                plt.ylim(config.plotting.ylim)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif", dpi=87)
-            plt.close()
+
 
 def analyze_edge_function_tracking(rr=[], vizualize=False, config=None, model_MLP=[], model_a=None, n_particles=None, ynorm=None, indexes=None, type_list=None, cmap=None, dimension=2, embedding_type=0, device=None):
 
@@ -828,6 +749,9 @@ def choose_training_model(model_config, device):
     model=[]
     model_name = model_config.graph_model.particle_model_name
     match model_name:
+        case 'PDE_Cell_B':
+            model = Interaction_Cell(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
+            model.edges = []
         case 'PDE_ParticleField_A' | 'PDE_ParticleField_B':
             model = Interaction_Particle_Field(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos,
                                           dimension=dimension)
@@ -864,6 +788,9 @@ def choose_training_model(model_config, device):
         case 'PDE_N' | 'PDE_N_bis':
             model = Signal_Propagation(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
+    model_name = model_config.graph_model.cell_model_name
+    match model_name:
+        case 'PDE_Cell_A':
   
     if model==[]:
         raise ValueError(f'Unknown model {model_name}')

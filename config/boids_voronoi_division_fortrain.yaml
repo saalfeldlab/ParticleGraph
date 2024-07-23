@@ -28,10 +28,10 @@ simulation:
   start_frame: 0
 
 graph_model:
-  particle_model_name: 'PDE_B'
+  particle_model_name: 'PDE_Cell_B'
   mesh_model_name: ''
   prediction: 'first_derivative'
-  input_size: 9
+  input_size: 12
   output_size: 2
   hidden_dim: 256
   n_mp_layers: 5

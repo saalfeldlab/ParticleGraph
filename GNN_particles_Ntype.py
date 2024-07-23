@@ -37,7 +37,7 @@ if __name__ == '__main__':
     # config_list = ["boids_16_256_division_model_2_small"]
     # config_list = ["signal_N_100_2_asym_a"]
     # config_list = ["arbitrary_3_sequence_e"]
-    config_list = ["boids_voronoi_division_fortrain"]
+    config_list = ["boids_voronoi_division_fortrain_d"]
 
 
     for config_file in config_list:

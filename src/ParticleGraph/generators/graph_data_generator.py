@@ -80,8 +80,8 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                     f != 'generation_code.py'):
                 os.remove(f)
     os.makedirs(folder, exist_ok=True)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/generated_data/', exist_ok=True)
-    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/generated_data/*')
+    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Fig/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Fig/*')
     for f in files:
         os.remove(f)
 
@@ -251,7 +251,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         plt.xticks([])
                         plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=170.7)
                     plt.close()
 
                 if 'color' in style:
@@ -265,7 +265,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Lut_Fig_{run}_{it}.jpg",
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Lut_Fig_{run}_{it}.jpg",
                                     dpi=170.7)
                         plt.close()
 
@@ -278,7 +278,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Rot_{run}_Fig{it}.jpg",
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Rot_{run}_Fig{it}.jpg",
                                     dpi=170.7)
                         plt.close()
 
@@ -314,7 +314,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                             plt.xticks([])
                             plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{10000 + it}.tif", dpi=70)
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{10000 + it}.tif", dpi=70)
                         plt.close()
 
                     elif (model_config.particle_model_name == 'PDE_A') & (dimension == 3):
@@ -327,7 +327,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         ax.set_xlim([0, 1])
                         ax.set_ylim([0, 1])
                         ax.set_zlim([0, 1])
-                        pl.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
+                        pl.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=170.7)
                         plt.close()
 
                     else:
@@ -365,8 +365,8 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                             plt.xticks([])
                             plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.tif", dpi=80) # 170.7)
-                        # plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{10000+it}.tif", dpi=42.675)
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{it}.tif", dpi=80) # 170.7)
+                        # plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{10000+it}.tif", dpi=42.675)
                         plt.close()
 
         if bSave:
@@ -409,18 +409,18 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
     edges_len_list = []
     folder = f'./graphs_data/graphs_{dataset_name}/'
     os.makedirs(folder, exist_ok=True)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/generated_data/Fig/', exist_ok=True)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/generated_data/GT/', exist_ok=True)
+    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Fig/', exist_ok=True)
+    os.makedirs(f'./graphs_data/graphs_{dataset_name}/GT/', exist_ok=True)
     if erase:
         files = glob.glob(f"{folder}/*")
         for f in files:
             if (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (
                     f != 'generation_code.py'):
                 os.remove(f)
-        files = glob.glob(f'./graphs_data/graphs_{dataset_name}/generated_data/Fig/*')
+        files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Fig/*')
         for f in files:
             os.remove(f)
-        files = glob.glob(f'./graphs_data/graphs_{dataset_name}/generated_data/GT/*')
+        files = glob.glob(f'./graphs_data/graphs_{dataset_name}/GT/*')
         for f in files:
             os.remove(f)
 
@@ -725,7 +725,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 image = np.flipud(image)
                 image = np.uint16(image)
                 num = f"{it:03}"
-                tifffile.imwrite(f"graphs_data/graphs_{dataset_name}/generated_data/GT/man_track{num}.tif", image,
+                tifffile.imwrite(f"graphs_data/graphs_{dataset_name}/GT/man_track{num}.tif", image,
                                  photometric='minisblack')
 
             vor, vertices_pos, vertices_per_cell = get_vertices(points=to_numpy(X1), device=device)
@@ -769,7 +769,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         plt.xticks([])
                         plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=170.7)
                     plt.close()
 
                 if 'color' in style:
@@ -829,9 +829,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
                     num = f"{it:06}"
 
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig/Fig_{run}_{num}.tif",
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif",
                                 dpi=85.35)
-                    # plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{10000+it}.tif", dpi=42.675)
                     plt.close()
 
                 fig = plt.figure(figsize=(12, 6))
@@ -876,7 +875,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         pc = PatchCollection(patches, alpha=0.4, facecolors=cmap.color(n))
                         ax.add_collection(pc)
 
-                        plt.scatter(to_numpy(X1[index_particles[n], 1]), to_numpy(X1[index_particles[n], 2]),
+                        plt.scatter(to_numpy(X1[index_particles[n], 0]), to_numpy(X1[index_particles[n], 1]),
                                     s=size, color=cmap.color(n))
 
                     plt.scatter(to_numpy(vertices_pos[:, 0]), to_numpy(vertices_pos[:, 1]), s=5, color='k')
@@ -885,7 +884,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     plt.ylim([-0.05, 1.05])
                     plt.tight_layout()
                     num = f"{it:06}"
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig/Vor_{run}_{num}.tif", dpi=85.35)
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Vor_{run}_{num}.tif", dpi=85.35)
                     plt.close()
 
         if bSave:
@@ -943,18 +942,18 @@ def data_generate_cell_3D(config, visualize=True, run_vizualized=0, style='color
     edges_len_list = []
     folder = f'./graphs_data/graphs_{dataset_name}/'
     os.makedirs(folder, exist_ok=True)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/generated_data/Fig/', exist_ok=True)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/generated_data/GT/', exist_ok=True)
+    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Fig/', exist_ok=True)
+    os.makedirs(f'./graphs_data/graphs_{dataset_name}/GT/', exist_ok=True)
     if erase:
         files = glob.glob(f"{folder}/*")
         for f in files:
             if (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (
                     f != 'generation_code.py'):
                 os.remove(f)
-        files = glob.glob(f'./graphs_data/graphs_{dataset_name}/generated_data/Fig/*')
+        files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Fig/*')
         for f in files:
             os.remove(f)
-        files = glob.glob(f'./graphs_data/graphs_{dataset_name}/generated_data/GT/*')
+        files = glob.glob(f'./graphs_data/graphs_{dataset_name}/GT/*')
         for f in files:
             os.remove(f)
 
@@ -1217,7 +1216,7 @@ def data_generate_cell_3D(config, visualize=True, run_vizualized=0, style='color
                 plt.tight_layout()
 
                 num = f"{it:06}"
-                plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig/Fig_{run}_{num}.tif", dpi=85.35)
+                plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=85.35)
                 plt.close()
 
 
@@ -1271,8 +1270,8 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
                     f != 'generation_code.py'):
                 os.remove(f)
     os.makedirs(folder, exist_ok=True)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/generated_data/', exist_ok=True)
-    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/generated_data/*')
+    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Fig/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Fig/*')
     for f in files:
         os.remove(f)
 
@@ -1354,7 +1353,7 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_g_color_{it}.tif", dpi=300)
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_g_color_{it}.tif", dpi=300)
                     plt.close()
 
                 if 'color' in style:
@@ -1422,8 +1421,8 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
                         plt.yticks([])
 
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.tif", dpi=170.7)
-                    # plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{10000+it}.tif", dpi=42.675)
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{it}.tif", dpi=170.7)
+                    # plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{10000+it}.tif", dpi=42.675)
                     plt.close()
 
         if bSave:
@@ -1461,8 +1460,8 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     f != 'generation_code.py'):
                 os.remove(f)
     os.makedirs(folder, exist_ok=True)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/generated_data/', exist_ok=True)
-    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/generated_data/*')
+    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Fig/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Fig/*')
     for f in files:
         os.remove(f)
     copyfile(os.path.realpath(__file__), os.path.join(folder, 'generation_code.py'))
@@ -1659,7 +1658,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_g_color_{it}.tif", dpi=300)
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_g_color_{it}.tif", dpi=300)
                     plt.close()
 
                 if 'bw' in style:
@@ -1687,7 +1686,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=170.7)
                     plt.close()
 
                 if 'color' in style:
@@ -1732,7 +1731,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                         plt.xticks([])
                         plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{run}_{it}.jpg", dpi=170.7)
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=170.7)
                     plt.close()
 
                     matplotlib.rcParams['savefig.pad_inches'] = 0
@@ -1772,7 +1771,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                         plt.xticks([])
                         plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Arrow_{run}_{it}.jpg", dpi=170.7)
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Arrow_{run}_{it}.jpg", dpi=170.7)
                     plt.close()
 
         if bSave:

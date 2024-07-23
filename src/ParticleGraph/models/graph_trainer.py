@@ -1350,8 +1350,6 @@ def data_train_cell(config, config_file, device):
 
     dimension = simulation_config.dimension
     n_epochs = train_config.n_epochs
-    max_radius = simulation_config.max_radius
-    min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
     delta_t = simulation_config.delta_t
     noise_level = train_config.noise_level
@@ -1364,7 +1362,6 @@ def data_train_cell(config, config_file, device):
     sparsity_freq = train_config.sparsity_freq
     has_ghost = train_config.n_ghosts > 0
     n_ghosts = train_config.n_ghosts
-    has_large_range = train_config.large_range
     if train_config.small_init_batch_size:
         get_batch_size = increasing_batch_size(target_batch_size)
     else:
@@ -1457,15 +1454,6 @@ def data_train_cell(config, config_file, device):
     print(f'N particles: {config.simulation.n_particles} to {len(T1_list[1])} ')
     logger.info(f'N particles: {config.simulation.n_particles} to {len(T1_list[1])} ')
 
-    if has_ghost:
-
-        ghosts_particles = Ghost_Particles(config, n_particles, vnorm, device)
-        optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.ghost_pos], lr=1E-4)
-        mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
-        mask_ghost = np.tile(mask_ghost, batch_size)
-        mask_ghost = np.argwhere(mask_ghost == 1)
-        mask_ghost = mask_ghost[:, 0].astype(int)
-
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
@@ -1476,11 +1464,6 @@ def data_train_cell(config, config_file, device):
 
         batch_size = get_batch_size(epoch)
         logger.info(f'batch_size: {batch_size}')
-        if (epoch == 1) & (has_ghost):
-            mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
-            mask_ghost = np.tile(mask_ghost, batch_size)
-            mask_ghost = np.argwhere(mask_ghost == 1)
-            mask_ghost = mask_ghost[:, 0].astype(int)
 
         total_loss = 0
         Niter = n_frames * data_augmentation_loop // batch_size
@@ -1500,17 +1483,6 @@ def data_train_cell(config, config_file, device):
                 k = np.random.randint(n_frames - 2)
 
                 x = x_list[run][k].clone().detach()
-
-                if has_ghost:
-                    x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k, bc_pos=bc_pos)
-                    if ghosts_particles.boids:
-                        distance = torch.sum(bc_dpos(x_ghost[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                        dist_np = to_numpy(distance)
-                        ind_np = torch.min(distance,axis=1)[1]
-                        x_ghost[:,3:5] = x[ind_np, 3:5].clone().detach()
-                    x = torch.cat((x, x_ghost), 0)
-                    with torch.no_grad():
-                        model.a[run,n_particles:n_particles+n_ghosts] = model.a[run,ghosts_particles.embedding_index].clone().detach()   # sample ghost embedding
 
                 edges = edge_p_p_list[run][f'arr_{k}']
                 edges = torch.tensor(edges, dtype=torch.int64, device=device)
@@ -1535,19 +1507,11 @@ def data_train_cell(config, config_file, device):
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
-            if has_ghost:
-                optimizer_ghost_particles.zero_grad()
 
             for batch in batch_loader:
                 pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=True)
 
-            if has_ghost:
-                loss = ((pred[mask_ghost] - y_batch)).norm(2)
-            else:
-                # mask_cell_alive = np.argwhere(to_numpy(x[:,6:7]) == 1)
-                # mask_cell_alive = mask_cell_alive[:, 0].astype(int)
-                # loss = ((pred[mask_cell_alive] - y_batch[mask_cell_alive])).norm(2)
-                loss = ((pred - y_batch)).norm(2)
+            loss = ((pred - y_batch)).norm(2)
 
             visualize_embedding = True
             if visualize_embedding & (((epoch < 3 ) & (N%(Niter//100) == 0)) | (N==0)):
@@ -1561,14 +1525,6 @@ def data_train_cell(config, config_file, device):
             loss.backward()
             optimizer.step()
 
-            if has_ghost:
-                optimizer_ghost_particles.step()
-                # if (N > 0) & (N % 1000 == 0) & (train_config.ghost_method == 'MLP'):
-                #     fig = plt.figure(figsize=(8, 8))
-                #     plt.imshow(to_numpy(ghosts_particles.data[run, :, 120, :].squeeze()))
-                #     fig.savefig(f"{log_dir}/tmp_training/embedding/ghosts_{N}.jpg", dpi=300)
-                #     plt.close()
-
             total_loss += loss.item()
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
@@ -1578,10 +1534,6 @@ def data_train_cell(config, config_file, device):
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
-
-        if has_ghost:
-            torch.save({'model_state_dict': ghosts_particles.state_dict(),
-                        'optimizer_state_dict': optimizer_ghost_particles.state_dict()}, os.path.join(log_dir, 'models', f'best_ghost_particles_with_{n_runs - 1}_graphs_{epoch}.pt'))
 
 
 def data_train_mesh(config, config_file, device):
