@@ -727,7 +727,12 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 V1 = y
 
             V1 = V1 * alive[:,None].repeat(1,2)
+            X1_prev = X1.clone().detach()
             X1 = bc_pos(X1 + V1 * delta_t + delta_centroids * simulation_config.cell_inert_model_coeff)
+
+            V1_ = (X1 - X1_prev) / delta_t
+
+            y_list[-1] = V1_.clone().detach()
 
             # save masks
             if run==0:

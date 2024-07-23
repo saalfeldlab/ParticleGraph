@@ -1320,14 +1320,6 @@ def plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logger, de
         print(f'accuracy {metrics.accuracy_score(GT_time_series[0:250], learned_time_series[0:250])}')
 
 
-
-
-
-
-
-
-
-
 def plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, logger, device):
 
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
@@ -3998,6 +3990,9 @@ def plot_signal(config_file, epoch_list, log_dir, logger, cc, device):
         plt.close()
 
         fig, ax = fig_init()
+        plt.scatter(to_numpy(adjacency),to_numpy(model.vals)*coeff)
+
+        fig, ax = fig_init()
         gt_weight = to_numpy(adjacency)
         pred_weight = to_numpy(model.vals) * coeff
         x_data = np.reshape(gt_weight, (n_particles * n_particles))
@@ -4592,9 +4587,9 @@ if __name__ == '__main__':
 
     matplotlib.use("Qt5Agg")
 
-    config_list =['arbitrary_3_sequence_d']
+    # config_list =['arbitrary_3_sequence_d']
     # config_list = ['signal_N_100_2_d']
-    # config_list = ['signal_N_100_2_asym_a']
+    config_list = ['signal_N_100_2_asym_a']
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)

@@ -115,8 +115,8 @@ def data_train_particles(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # print('Loading existing model ...')
-    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_4.pt"
+    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_3.pt"
+    # print(f'Loading existing model {net}...')
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
 
@@ -253,7 +253,7 @@ def data_train_particles(config, config_file, device):
                 if has_state:
                     model_a = model.a[1].clone().detach()
                     fig, ax = fig_init()
-                    for k in trange(config.simulation.n_frames - 2):
+                    for k in range(config.simulation.n_frames - 2):
                         embedding = to_numpy(model_a[k * n_particles:(k + 1) * n_particles, :].clone().detach())
                         index_particles = get_index_particles(x_list[1][k].clone().detach(), n_particle_types,
                                                               dimension)
@@ -263,15 +263,13 @@ def data_train_particles(config, config_file, device):
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=80)
                     plt.close()
-
                     type_list = torch.stack(x_list[1]).clone().detach()
                     t = to_numpy(type_list[:, :, 5])
                     type_list = to_numpy(type_list[:, :, 5].flatten())
                     type_list = type_list[0:len(type_list) - n_particles]
-
                     fig, ax = fig_init()
                     rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
-                    for n in trange(5000):
+                    for n in range(5000):
                         sample = np.random.randint(0, len(type_list))
                         type = type_list[sample].astype(int)
                         embedding_ = model_a[sample, :] * torch.ones((1000, config.graph_model.embedding_dim),
@@ -1417,8 +1415,15 @@ def data_train_cell(config, config_file, device):
                 y = torch.cat((y, y_list[run][k].clone().detach()), 0)
         print(x_list[run][k].shape)
         time.sleep(0.5)
-    vnorm = norm_velocity(x, dimension, device)
-    ynorm = norm_acceleration(y, device)
+
+
+    # vnorm = norm_velocity(x, dimension, device)
+    # ynorm = norm_acceleration(y, device)
+
+    vnorm = torch.tensor([1.0], dtype=torch.float32, device=device)
+    ynorm = torch.tensor([1.0], dtype=torch.float32, device=device)
+
+
     torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
     torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
     time.sleep(0.5)
@@ -2463,7 +2468,7 @@ def data_train_signal(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_99_graphs_9.pt"
+    # net = f"./log/try_{config_file}/models/best_model_with_99_graphs_20.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
 
@@ -2685,21 +2690,6 @@ def data_train_signal(config, config_file, device):
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
-
-        if train_config.regul_matrix:
-            logger.info('regul_matrix')
-            percentile = 0.95
-            A = model.A.clone().detach()
-            A = torch.reshape(A, (n_particles*n_particles,1))
-            A = torch.abs(A)
-            A = A * (A > torch.quantile(A, percentile))
-            A = torch.reshape(A, (n_particles,n_particles))
-            i, j = torch.triu_indices(n_particles,n_particles, requires_grad=False, device=device)
-            Aij = to_numpy(A[i,j].clone().detach())
-            with torch.no_grad():
-                model.vals = nn.Parameter(torch.tensor(Aij, requires_grad=True, dtype=torch.float32, device=device))
-            optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-
 
         fig = plt.figure(figsize=(22, 4))
 
