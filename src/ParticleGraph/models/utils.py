@@ -459,7 +459,11 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, n_particl
         embedding = get_embedding(model.a, 1)
 
     fig = plt.figure(figsize=(8, 8))
-    plt.scatter(embedding[:, 0], embedding[:, 1], s=1)
+    for n in range(n_particle_types):
+        pos =torch.argwhere(type_list == n)
+        pos = to_numpy(pos)
+        if len(pos) > 0:
+            plt.scatter(embedding[pos, 0], embedding[pos, 1], s=1)
     plt.xticks([])
     plt.yticks([])
     plt.tight_layout()
