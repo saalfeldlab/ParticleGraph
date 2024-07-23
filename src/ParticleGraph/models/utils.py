@@ -67,7 +67,7 @@ def get_in_features(rr, embedding_, config_model, max_radius):
         case 'PDE_E':
             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                      rr[:, None] / max_radius, embedding_, embedding_), dim=1)
-        case 'PDE_N':
+        case 'PDE_N' | 'PDE_N_bis':
             in_features = torch.cat((rr[:, None], embedding_), dim=1)
 
     return in_features
@@ -675,7 +675,7 @@ def analyze_edge_function_state(rr=[], vizualize=False, config=None, model_MLP=[
             rr = torch.tensor(np.logspace(7, 9, 1000)).to(device)
         elif config_model == 'PDE_E':
             rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-        elif config_model == 'PDE_N':
+        elif 'PDE_N' in config_model:
             rr = torch.tensor(np.linspace(0, 2, 1000)).to(device)
         else:
             rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
@@ -759,7 +759,7 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
             rr = torch.tensor(np.logspace(7, 9, 1000)).to(device)
         elif config_model == 'PDE_E':
             rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-        elif config_model == 'PDE_N':
+        elif 'PDE_N' in config_model:
             rr = torch.tensor(np.linspace(0, 2, 1000)).to(device)
         else:
             rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
@@ -778,7 +778,7 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
 
         func = func[:, 0]
         func_list.append(func)
-        if ((n % 5 == 0) | (config.graph_model.particle_model_name=='PDE_GS') | (config_model=='PDE_N')) & vizualize:
+        if ((n % 5 == 0) | (config.graph_model.particle_model_name=='PDE_GS') | ('PDE_N' in config_model)) & vizualize:
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
                      color=cmap.color(type_list[n].astype(int)), linewidth=2, alpha=0.25)
@@ -861,7 +861,7 @@ def choose_training_model(model_config, device):
             model.edges = []
     model_name = model_config.graph_model.signal_model_name
     match model_name:
-        case 'PDE_N':
+        case 'PDE_N' | 'PDE_N_bis':
             model = Signal_Propagation(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
   

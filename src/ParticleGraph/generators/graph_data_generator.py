@@ -291,8 +291,8 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         ax.yaxis.set_major_locator(plt.MaxNLocator(3))
                         ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
                         ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=200, c=to_numpy(H1[:, 0]), cmap='viridis',
-                                    vmin=0, vmax=3)
+                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=200, c=to_numpy(H1[:, 0])*3, cmap='viridis')     # vmin=0, vmax=3)
+                        plt.colorbar()
                         plt.xlim([-1.2, 1.2])
                         plt.ylim([-1.2, 1.2])
                         # plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=24)

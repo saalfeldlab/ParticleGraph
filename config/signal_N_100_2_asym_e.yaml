@@ -4,7 +4,7 @@ dataset: 'signal_N_100_2_asym_bis'
 simulation:
     connectivity_file: 'graphs_data/adjacency_asym.pt'
     adjacency_matrix: 'asymmetric'
-    params: [[0.1,0.2],[0.2,0.4]]
+    params: [[1.0,1.5],[1.0,2.0]]
     min_radius: 1.0
     max_radius: 1.0E6
     n_particles: 998
@@ -41,7 +41,7 @@ training:
     recursive_loop: 2
     batch_size: 1
     small_init_batch_size: False
-    n_runs: 2
+    n_runs: 1
     large_range: False
     learning_rate_start: 0.000001
     learning_rate_end: 0.0000005

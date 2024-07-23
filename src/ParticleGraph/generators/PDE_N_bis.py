@@ -38,9 +38,11 @@ class PDE_N_bis(pyg.nn.MessagePassing):
 
         # indices = torch.arange(0, x.size(0),device=x.device)
 
+        particle_type = torch.tensor(particle_type[:,None], device=x.device)
+
         msg = self.propagate(edge_index, u=u, particle_type=particle_type, edge_attr=edge_attr)
 
-        du = -b*u + c*torch.tanh(u) + msg
+        du = -b*u + c*torch.tanh(u) + 2.5 * msg
 
         if return_all:
             return du, msg, -b*u + c*torch.tanh(u)
@@ -49,10 +51,8 @@ class PDE_N_bis(pyg.nn.MessagePassing):
 
     def message(self, u_j, particle_type_i, edge_attr):
 
-        if particle_type_i==0:
-            self.activation = torch.tanh(u_j)
-        else:
-            self.activation = 1-torch.tanh(u_j)
+        self.activation = torch.tanh(u_j)
+
 
         self.u_j = u_j
 

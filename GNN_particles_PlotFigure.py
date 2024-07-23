@@ -405,7 +405,7 @@ def plot_embedding_func_cluster_state(model, config, config_file, embedding_clus
     plt.close()
 
     fig, ax = fig_init()
-    if config.graph_model.signal_model_name == 'PDE_N':
+    if 'PDE_N' in config.graph_model.signal_model_name:
         model_MLP_ = model.lin_phi
     else:
         model_MLP_ = model.lin_edge
@@ -490,7 +490,7 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
     plt.close()
 
     fig, ax = fig_init()
-    if config.graph_model.signal_model_name == 'PDE_N':
+    if 'PDE_N' in config.graph_model.signal_model_name:
         model_MLP_ = model.lin_phi
     else:
         model_MLP_ = model.lin_edge
@@ -4336,7 +4336,7 @@ def data_plot(config, config_file, epoch_list, device):
             plot_RD_RPS(config_file=config_file, epoch_list=epoch_list, log_dir=log_dir, logger=logger, cc='viridis',
                            device=device)
 
-    if config.graph_model.signal_model_name=='PDE_N':
+    if 'PDE_N' in config.graph_model.signal_model_name:
         plot_signal(config_file, epoch_list, log_dir, logger, 'viridis', device)
 
     for handler in logger.handlers[:]:
