@@ -561,7 +561,12 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
                     n_particles = n_particles + n_add_nodes
 
-                    X1 = torch.cat((X1, X1[pos, :] + 4 * V1[pos, :], X1[pos, :] - 4 * V1[pos, :]), dim=0)
+                    angle = torch.atan(V1[pos, 1] / (V1[pos, 0] + 1E-10))
+                    separation = [torch.cos(angle) * 0.005,torch.sin(angle) * 0.005]
+                    separation = torch.stack(separation)
+                    separation = separation.t()
+
+                    X1 = torch.cat((X1, X1[pos, :] + separation, X1[pos, :] - separation), dim=0)
 
                     nd = torch.ones(len(pos), device=device) + 0.05 * torch.randn(len(pos), device=device)
                     var = torch.ones(len(pos), device=device) + 0.20 * torch.randn(len(pos), device=device)
@@ -697,10 +702,13 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 V1 = y
 
             V1 = V1 * alive[:, None].repeat(1, 2)
-            dpos = V1 * delta_t + delta_centroids * simulation_config.cell_inert_model_coeff
-            X1 = bc_pos(X1 + dpos)
 
-            y_list[-1] = dpos.clone().detach() / delta_t
+            if simulation_config.cell_inert_model_coeff > 0:
+                dpos = V1 * delta_t + delta_centroids * simulation_config.cell_inert_model_coeff
+                X1 = bc_pos(X1 + dpos)
+                y_list[-1] = dpos.clone().detach() / delta_t
+            else:
+                X1 = bc_pos(X1 + V1 * delta_t)
 
             # save masks
             if run == 0:
