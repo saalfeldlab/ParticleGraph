@@ -836,10 +836,10 @@ def choose_training_model(model_config, device):
             if has_no_tracking:
                 model=Interaction_Particle_Tracking(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             else:
-                model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
+                model = Interaction_Particle(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
         case 'PDE_GS':
-            model = Interaction_Particles(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
+            model = Interaction_Particle(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             t = np.arange(model_config.simulation.n_particles)
             t1 = np.repeat(t, model_config.simulation.n_particles)
             t2 = np.tile(t, model_config.simulation.n_particles)

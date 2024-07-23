@@ -24,13 +24,13 @@ from scipy.spatial import Voronoi, voronoi_plot_2d
 
 # matplotlib.use("Qt5Agg")
 
-class Interaction_Particles_extract(MessagePassing):
+class Interaction_Particle_extract(MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
     def __init__(self, config, device, aggr_type=None, bc_dpos=None):
 
-        super(Interaction_Particles_extract, self).__init__(aggr=aggr_type)  # "Add" aggregation.
+        super(Interaction_Particle_extract, self).__init__(aggr=aggr_type)  # "Add" aggregation.
 
         config.simulation = config.simulation
         config.graph_model = config.graph_model
@@ -2726,7 +2726,7 @@ def plot_boids(config_file, epoch_list, log_dir, logger, device):
     for epoch in epoch_list:
 
         model, bc_pos, bc_dpos = choose_training_model(config, device)
-        model = Interaction_Particles_extract(config, device, aggr_type=config.graph_model.aggr_type, bc_dpos=bc_dpos)
+        model = Interaction_Particle_extract(config, device, aggr_type=config.graph_model.aggr_type, bc_dpos=bc_dpos)
 
         net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt"
         state_dict = torch.load(net, map_location=device)

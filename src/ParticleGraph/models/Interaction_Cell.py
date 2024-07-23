@@ -5,7 +5,7 @@ from ParticleGraph.utils import to_numpy
 from ParticleGraph.models.Siren_Network import *
 
 
-class Interaction_Particles(pyg.nn.MessagePassing):
+class Interaction_Cell(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
@@ -26,7 +26,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
 
     def __init__(self, config, device, aggr_type=None, bc_dpos=None, dimension=2):
 
-        super(Interaction_Particles, self).__init__(aggr=aggr_type)  # "Add" aggregation.
+        super(Interaction_Cell, self).__init__(aggr=aggr_type)  # "Add" aggregation.
 
         simulation_config = config.simulation
         model_config = config.graph_model
@@ -99,8 +99,9 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         pos = x[:, 1:self.dimension+1]
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
         particle_id = x[:, 0:1]
+        area = x[:, 14:15]
 
-        pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id, field=field)
+        pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id, field=field, area=area)
 
         if self.update_type == 'linear':
             embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
@@ -114,7 +115,7 @@ class Interaction_Particles(pyg.nn.MessagePassing):
 
         return pred
 
-    def message(self, pos_i, pos_j, d_pos_i, d_pos_j, particle_id_i, particle_id_j, field_j):
+    def message(self, pos_i, pos_j, d_pos_i, d_pos_j, particle_id_i, particle_id_j, field_j, area_i, area_j):
         # distance normalized by the max radius
         r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
         delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
@@ -143,24 +144,8 @@ class Interaction_Particles(pyg.nn.MessagePassing):
         embedding_i = self.a[self.data_id, to_numpy(particle_id_i), :].squeeze()
         embedding_j = self.a[self.data_id, to_numpy(particle_id_j), :].squeeze()
 
-        match self.model:
-            case 'PDE_A'|'PDE_ParticleField_A':
-                in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
-            case 'PDE_A_bis':
-                in_features = torch.cat((delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
-            case 'PDE_B' | 'PDE_B_bis' | 'PDE_B_mass':
-                in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
-                                         dpos_y_j[:, None], embedding_i), dim=-1)
-            case 'PDE_G':
-                in_features = torch.cat(
-                    (delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None], dpos_y_j[:, None],
-                     embedding_j),
-                    dim=-1)
-            case 'PDE_GS':
-                in_features = torch.cat((delta_pos, r[:, None], 10**embedding_j),dim=-1)
-            case 'PDE_E':
-                in_features = torch.cat(
-                    (delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
+        in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
+                                 dpos_y_j[:, None], area_i, area_j, embedding_i, embedding_j), dim=-1)
 
         out = self.lin_edge(in_features) * field_j
 

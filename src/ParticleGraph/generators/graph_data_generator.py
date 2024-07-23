@@ -453,19 +453,18 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         mc_slope: scalar used in the function set_mass_coeff
 
         INITIALIZE PER CELL VALUES
-        Cell ID
-        X1 positions dim=2
-        V1 velocities dim=2
-        T1 cell type dim=1
-        H1 cell status dim=2  H1[:,0] = cell alive flag, alive : 0 , death : 0 , H1[:,1] = cell division flag, dividing : 1
-        A1 cell age dim=1
-        N1 cell index dim=1
-        S1 cell stage dim=1  0 = G1 , 1 = S, 2 = G2, 3 = M
-        M1 cell_mass_distrib mass dim=1 (per node)
-        R1 cell growth rate dim=1
-        DR1 cell death rate dim=1
-        MC1 mass coefficient of the cell (relation between velocity and mass)
-        AR1 area of the cell
+        0 N1 cell index dim=1
+        1,2 X1 positions dim=2
+        3,4 V1 velocities dim=2
+        5 T1 cell type dim=1
+        6,7 H1 cell status dim=2  H1[:,0] = cell alive flag, alive : 0 , death : 0 , H1[:,1] = cell division flag, dividing : 1
+        8 A1 cell age dim=1
+        9 S1 cell stage dim=1  0 = G1 , 1 = S, 2 = G2, 3 = M
+        10 M1 cell_mass_distrib mass dim=1 (per node)
+        11 R1 cell growth rate dim=1
+        12 DR1 cell death rate dim=1
+        13 MC1 mass coefficient of the cell (relation between velocity and mass)
+        14 AR1 area of the cell
         '''
 
         if run == 0:
@@ -877,7 +876,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         pc = PatchCollection(patches, alpha=0.4, facecolors=cmap.color(n))
                         ax.add_collection(pc)
 
-                        plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                        plt.scatter(to_numpy(X1[index_particles[n], 1]), to_numpy(X1[index_particles[n], 2]),
                                     s=size, color=cmap.color(n))
 
                     plt.scatter(to_numpy(vertices_pos[:, 0]), to_numpy(vertices_pos[:, 1]), s=5, color='k')
