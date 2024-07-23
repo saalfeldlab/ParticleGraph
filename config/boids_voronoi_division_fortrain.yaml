@@ -43,7 +43,7 @@ plotting:
   colormap: 'tab20'
   arrow_length: 5
   marker_size: 10
-  ylim: [-1.0E-4,1.0E-4]
+  ylim: [-2,2]
 
 training:
   n_epochs: 1

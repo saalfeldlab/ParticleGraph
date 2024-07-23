@@ -728,9 +728,9 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
             V1 = V1 * alive[:,None].repeat(1,2)
             X1_prev = X1.clone().detach()
-            X1 = bc_pos(X1 + V1 * delta_t + delta_centroids * simulation_config.cell_inert_model_coeff)
-
+            X1 = X1 + V1 * delta_t + delta_centroids * simulation_config.cell_inert_model_coeff
             V1_ = (X1 - X1_prev) / delta_t
+            X1 = bc_pos(X1)
 
             y_list[-1] = V1_.clone().detach()
 

@@ -453,17 +453,17 @@ def data_train_particles(config, config_file, device):
                             lr_embedding = 1E-12
                             optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
                             logger.info(f'Learning rates: {lr}, {lr_embedding}')
+                else:
+                    if epoch > n_epochs - sparsity_freq:
+                        lr_embedding = train_config.learning_rate_embedding_end
+                        lr = train_config.learning_rate_end
+                        optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                        logger.info(f'Learning rates: {lr}, {lr_embedding}')
                     else:
-                        if epoch > n_epochs - sparsity_freq:
-                            lr_embedding = train_config.learning_rate_embedding_end
-                            lr = train_config.learning_rate_end
-                            optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-                            logger.info(f'Learning rates: {lr}, {lr_embedding}')
-                        else:
-                            lr_embedding = train_config.learning_rate_embedding_start
-                            lr = train_config.learning_rate_start
-                            optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-                            logger.info(f'Learning rates: {lr}, {lr_embedding}')
+                        lr_embedding = train_config.learning_rate_embedding_start
+                        lr = train_config.learning_rate_start
+                        optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                        logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
             else:
 
