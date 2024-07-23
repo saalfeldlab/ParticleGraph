@@ -40,7 +40,7 @@ graph_model:
   update_type: 'embedding_MLP'
 
 plotting:
-  colormap: 'tab20'
+  colormap: 'tab10'
   arrow_length: 5
   marker_size: 10
   ylim: [-2,2]
