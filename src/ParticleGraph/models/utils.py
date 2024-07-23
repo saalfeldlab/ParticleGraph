@@ -466,41 +466,47 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, n_particl
     plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=87)
     plt.close()
 
-    match model_config.particle_model_name:
 
-        case 'PDE_cell_B':
-            max_radius = 0.04
-            fig = plt.figure(figsize=(12, 12))
-            ax = fig.add_subplot(1,1,1)
-            rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
-            func_list = []
+    max_radius = 0.04
+    fig = plt.figure(figsize=(12, 12))
+    ax = fig.add_subplot(1,1,1)
+    rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
+    func_list = []
 
-            for n in range(len(type_list)):
-                if has_no_tracking:
-                    embedding_ = model.a[n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
-                else:
-                    embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
+    for n in range(len(type_list)):
+        if has_no_tracking:
+            embedding_ = model.a[n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
+        else:
+            embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
+        match model_config.particle_model_name:
+            case 'PDE_Cell_B':
                 in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                          torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
                                          0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-                with torch.no_grad():
-                    func = model.lin_edge(in_features.float())
-                func = func[:, 0]
-                func_list.append(func)
-                if n % 5 == 0:
-                    plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
-                             color=cmap.color( int(type_list[n])   ), linewidth=2)
-            plt.xlim([-max_radius, max_radius])
-            ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-            ax.yaxis.set_major_locator(plt.MaxNLocator(5))
-            ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-            fmt = lambda x, pos: '{:.1f}e-5'.format((x) * 1e5, pos)
-            ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-            plt.xticks(fontsize=32.0)
-            plt.yticks(fontsize=32.0)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif",dpi=170.7)
-            plt.close()
+
+            case 'PDE_Cell_B_area':
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                         torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                         0 * rr[:, None], 0 * rr[:, None], torch.ones_like(rr[:, None])*0.001, torch.ones_like(rr[:, None])*0.001, embedding_, embedding_), dim=1)
+
+        with torch.no_grad():
+            func = model.lin_edge(in_features.float())
+        func = func[:, 0]
+        func_list.append(func)
+        if n % 5 == 0:
+            plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
+                     color=cmap.color( int(type_list[n])   ), linewidth=2)
+    plt.xlim([-max_radius, max_radius])
+    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+    ax.yaxis.set_major_locator(plt.MaxNLocator(5))
+    ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    fmt = lambda x, pos: '{:.1f}e-5'.format((x) * 1e5, pos)
+    ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+    plt.xticks(fontsize=32.0)
+    plt.yticks(fontsize=32.0)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif",dpi=170.7)
+    plt.close()
 
 
 
@@ -749,7 +755,7 @@ def choose_training_model(model_config, device):
     model=[]
     model_name = model_config.graph_model.particle_model_name
     match model_name:
-        case 'PDE_Cell_B':
+        case 'PDE_Cell_B' | 'PDE_Cell_B_area':
             model = Interaction_Cell(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
         case 'PDE_ParticleField_A' | 'PDE_ParticleField_B':

@@ -1,0 +1,61 @@
+description: 'Boids 16 different types, division'
+dataset: 'boids_voronoi_division_fortrain_c'
+
+simulation:
+  params: [[42.031494,  19.948257,  89.53507  ],
+ [35.10319,   44.282894,  17.424503 ],
+ [94.129265, 20.24777,    4.7820106]]
+  cell_cycle_length:  [300, 900, 1500]
+  cell_death_rate: [0,0,0]
+  mc_slope: [-30, -15, 15]
+  final_cell_mass: [100, 300, 500]
+  cell_area: [-1]
+  min_radius: 0.001
+  max_radius: 0.04
+  max_edges: 500000
+  n_particles: 480
+  has_cell_division: True
+  cell_inert_model_coeff: 0.05
+  cell_active_model_coeff: 1.0
+  n_particles_max: 1000
+  n_particle_types: 3
+  n_interactions: 3
+  n_frames: 2000
+  sigma: 0.005
+  delta_t: 0.5
+  dpos_init: 5.0E-4
+  boundary: 'periodic'
+  start_frame: 0
+
+graph_model:
+  particle_model_name: 'PDE_Cell_B_area'
+  mesh_model_name: ''
+  prediction: 'first_derivative'
+  input_size: 12
+  output_size: 2
+  hidden_dim: 256
+  n_mp_layers: 5
+  aggr_type: 'mean'
+  embedding_dim: 2
+  update_type: 'embedding_MLP'
+
+plotting:
+  colormap: 'tab10'
+  arrow_length: 5
+  marker_size: 10
+  ylim: [-2,2]
+
+training:
+  n_epochs: 1
+  batch_size: 1
+  small_init_batch_size: False
+  sub_batches: 4
+  n_runs: 1
+  noise_level: 0
+  sparsity: 'replace_embedding'
+  cluster_method: 'distance_plot'
+  data_augmentation: True
+  data_augmentation_loop: 50
+  fix_cluster_embedding: True
+  device: 'auto'
+

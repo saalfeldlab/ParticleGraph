@@ -144,11 +144,15 @@ class Interaction_Cell(pyg.nn.MessagePassing):
         embedding_i = self.a[self.data_id, to_numpy(particle_id_i), :].squeeze()
         embedding_j = self.a[self.data_id, to_numpy(particle_id_j), :].squeeze()
 
-        # in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
-        #                          dpos_y_j[:, None], area_i, area_j, embedding_i, embedding_j), dim=-1)
+        match self.model:
 
-        in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
-                                 dpos_y_j[:, None], embedding_i), dim=-1)
+            case 'PDE_Cell_B':
+                in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
+                                         dpos_y_j[:, None], embedding_i), dim=-1)
+
+            case 'PDE_Cell_B_area':
+                in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
+                                         dpos_y_j[:, None], area_i, area_j, embedding_i, embedding_j), dim=-1)
 
         out = self.lin_edge(in_features) * field_j
 
