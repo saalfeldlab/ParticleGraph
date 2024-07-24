@@ -509,7 +509,7 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, n_particl
     plt.xticks(fontsize=32.0)
     plt.yticks(fontsize=32.0)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif",dpi=170.7)
+    plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif",dpi=87)
     plt.close()
 
 

@@ -852,99 +852,154 @@ def plot_generated(config, run, style, step, device):
             plt.rcParams['text.usetex'] = True
             rc('font', **{'family': 'serif', 'serif': ['Palatino']})
 
-        matplotlib.rcParams['savefig.pad_inches'] = 0
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(1, 1, 1)
-        ax.xaxis.get_major_formatter()._usetex = False
-        ax.yaxis.get_major_formatter()._usetex = False
-        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-        ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        index_particles = []
-        for n in range(n_particle_types):
-            pos = torch.argwhere((T1.squeeze() == n) & (H1[:, 0].squeeze() == 1))
-            pos = to_numpy(pos[:, 0].squeeze()).astype(int)
-            index_particles.append(pos)
-            # plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-            #             s=marker_size, color=cmap.color(n))
 
-            size = set_size(x, index_particles[n], 10)
+        if 'voronoi' in style:
+            matplotlib.use("Qt5Agg")
+            matplotlib.rcParams['savefig.pad_inches'] = 0
 
-            plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                        s=size/10, color=cmap.color(n))
-        dead_cell = np.argwhere(to_numpy(H1[:, 0]) == 0)
-        if len(dead_cell) > 0:
-            plt.scatter(to_numpy(X1[dead_cell[:, 0].squeeze(), 0]), to_numpy(X1[dead_cell[:, 0].squeeze(), 1]),
-                        s=2, color='k', alpha=0.5)
-        if 'latex' in style:
-            plt.xlabel(r'$x$', fontsize=78)
-            plt.ylabel(r'$y$', fontsize=78)
-            plt.xticks(fontsize=48.0)
-            plt.yticks(fontsize=48.0)
-        elif 'frame' in style:
-            plt.xlabel('x', fontsize=13)
-            plt.ylabel('y', fontsize=16)
-            plt.xticks(fontsize=16.0)
-            plt.yticks(fontsize=16.0)
-            ax.tick_params(axis='both', which='major', pad=15)
-            plt.text(0, 1.05,
-                     f'frame {it}, {int(n_particles_alive)} alive particles ({int(n_particles_dead)} dead), {edge_index.shape[1]} edges  ',
-                     ha='left', va='top', transform=ax.transAxes, fontsize=16)
-        plt.xticks([])
-        plt.yticks([])
-        plt.xlim([0,1])
-        plt.ylim([0,1])
-        plt.tight_layout()
-        num = f"{it:06}"
-        plt.savefig(f"./{log_dir}/generated_color/frame_{num}.tif", dpi=80)
-        plt.close()
 
-        matplotlib.rcParams['savefig.pad_inches'] = 0
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(1, 1, 1)
-        ax.xaxis.get_major_formatter()._usetex = False
-        ax.yaxis.get_major_formatter()._usetex = False
-        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-        ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-        index_particles = []
-        for n in range(n_particle_types):
-            pos = torch.argwhere((T1.squeeze() == n) & (H1[:, 0].squeeze() == 1))
-            pos = to_numpy(pos[:, 0].squeeze()).astype(int)
-            index_particles.append(pos)
-            # plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-            #             s=marker_size, color=cmap.color(n))
-            size = set_size(x, index_particles[n], 10)
-            plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                        s=size/10, color='k')
-        dead_cell = np.argwhere(to_numpy(H1[:, 0]) == 0)
-        if len(dead_cell) > 0:
-            plt.scatter(to_numpy(X1[dead_cell[:, 0].squeeze(), 0]), to_numpy(X1[dead_cell[:, 0].squeeze(), 1]),
-                        s=2, color='k', alpha=0.5)
-        if 'latex' in style:
-            plt.xlabel(r'$x$', fontsize=78)
-            plt.ylabel(r'$y$', fontsize=78)
-            plt.xticks(fontsize=48.0)
-            plt.yticks(fontsize=48.0)
-        elif 'frame' in style:
-            plt.xlabel('x', fontsize=13)
-            plt.ylabel('y', fontsize=16)
-            plt.xticks(fontsize=16.0)
-            plt.yticks(fontsize=16.0)
-            ax.tick_params(axis='both', which='major', pad=15)
-            plt.text(0, 1.05,
-                     f'frame {it}, {int(n_particles_alive)} alive particles ({int(n_particles_dead)} dead), {edge_index.shape[1]} edges  ',
-                     ha='left', va='top', transform=ax.transAxes, fontsize=16)
-        plt.xticks([])
-        plt.yticks([])
-        plt.xlim([0,1])
-        plt.ylim([0,1])
-        plt.tight_layout()
-        num = f"{it:06}"
-        plt.savefig(f"./{log_dir}/generated_bw/frame_{num}.tif", dpi=80)
-        plt.close()
+            vor, vertices_pos, vertices_per_cell = get_vertices(points=to_numpy(X1), device=device)
+            centroids, areas = get_voronoi_areas(vertices_pos, vertices_per_cell, device)
+
+            fig = plt.figure(figsize=(12, 12))
+            ax = fig.add_subplot(1, 1, 1)
+            plt.xticks([])
+            plt.yticks([])
+            index_particles = []
+
+            voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='black', line_width=1, line_alpha=0.5,
+                            point_size=0)
+
+            if 'color' in style:
+                for n in range(n_particle_types):
+                    pos = torch.argwhere((T1.squeeze() == n) & (H1[:, 0].squeeze() == 1))
+                    pos = to_numpy(pos[:, 0].squeeze()).astype(int)
+                    index_particles.append(pos)
+
+                    size = set_size(x, index_particles[n], 10) / 10
+
+                    patches = []
+                    for i in index_particles[n]:
+                        cell = vertices_per_cell[i]
+                        vertices = to_numpy(vertices_pos[cell, :])
+                        patches.append(Polygon(vertices, closed=True))
+
+                    pc = PatchCollection(patches, alpha=0.4, facecolors=cmap.color(n))
+                    ax.add_collection(pc)
+                    if 'center' in style:
+                        plt.scatter(to_numpy(X1[index_particles[n], 0]), to_numpy(X1[index_particles[n], 1]), s=size,
+                                    color=cmap.color(n))
+
+            if 'vertices' in style:
+                plt.scatter(to_numpy(vertices_pos[:, 0]), to_numpy(vertices_pos[:, 1]), s=5, color='k')
+
+            plt.xlim([-0.05, 1.05])
+            plt.ylim([-0.05, 1.05])
+            plt.tight_layout()
+
+            num = f"{it:06}"
+            if 'color' in style:
+                plt.savefig(f"./{log_dir}/generated_color/frame_{num}.tif", dpi=85.35)
+            else:
+                plt.savefig(f"./{log_dir}/generated_bw/frame_{num}.tif", dpi=85.35)
+            plt.close()
+
+
+        else:
+
+            matplotlib.rcParams['savefig.pad_inches'] = 0
+            fig = plt.figure(figsize=(12, 12))
+            ax = fig.add_subplot(1, 1, 1)
+            ax.xaxis.get_major_formatter()._usetex = False
+            ax.yaxis.get_major_formatter()._usetex = False
+            ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+            ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+            ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+            ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+            index_particles = []
+            for n in range(n_particle_types):
+                pos = torch.argwhere((T1.squeeze() == n) & (H1[:, 0].squeeze() == 1))
+                pos = to_numpy(pos[:, 0].squeeze()).astype(int)
+                index_particles.append(pos)
+                # plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                #             s=marker_size, color=cmap.color(n))
+
+                size = set_size(x, index_particles[n], 10)
+
+                plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                            s=size/10, color=cmap.color(n))
+            dead_cell = np.argwhere(to_numpy(H1[:, 0]) == 0)
+            if len(dead_cell) > 0:
+                plt.scatter(to_numpy(X1[dead_cell[:, 0].squeeze(), 0]), to_numpy(X1[dead_cell[:, 0].squeeze(), 1]),
+                            s=2, color='k', alpha=0.5)
+            if 'latex' in style:
+                plt.xlabel(r'$x$', fontsize=78)
+                plt.ylabel(r'$y$', fontsize=78)
+                plt.xticks(fontsize=48.0)
+                plt.yticks(fontsize=48.0)
+            elif 'frame' in style:
+                plt.xlabel('x', fontsize=13)
+                plt.ylabel('y', fontsize=16)
+                plt.xticks(fontsize=16.0)
+                plt.yticks(fontsize=16.0)
+                ax.tick_params(axis='both', which='major', pad=15)
+                plt.text(0, 1.05,
+                         f'frame {it}, {int(n_particles_alive)} alive particles ({int(n_particles_dead)} dead), {edge_index.shape[1]} edges  ',
+                         ha='left', va='top', transform=ax.transAxes, fontsize=16)
+            plt.xticks([])
+            plt.yticks([])
+            plt.xlim([0,1])
+            plt.ylim([0,1])
+            plt.tight_layout()
+            num = f"{it:06}"
+            plt.savefig(f"./{log_dir}/generated_color/frame_{num}.tif", dpi=80)
+            plt.close()
+
+            matplotlib.rcParams['savefig.pad_inches'] = 0
+            fig = plt.figure(figsize=(12, 12))
+            ax = fig.add_subplot(1, 1, 1)
+            ax.xaxis.get_major_formatter()._usetex = False
+            ax.yaxis.get_major_formatter()._usetex = False
+            ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+            ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+            ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+            ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+            index_particles = []
+            for n in range(n_particle_types):
+                pos = torch.argwhere((T1.squeeze() == n) & (H1[:, 0].squeeze() == 1))
+                pos = to_numpy(pos[:, 0].squeeze()).astype(int)
+                index_particles.append(pos)
+                # plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                #             s=marker_size, color=cmap.color(n))
+                size = set_size(x, index_particles[n], 10)
+                plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                            s=size/10, color='k')
+            dead_cell = np.argwhere(to_numpy(H1[:, 0]) == 0)
+            if len(dead_cell) > 0:
+                plt.scatter(to_numpy(X1[dead_cell[:, 0].squeeze(), 0]), to_numpy(X1[dead_cell[:, 0].squeeze(), 1]),
+                            s=2, color='k', alpha=0.5)
+            if 'latex' in style:
+                plt.xlabel(r'$x$', fontsize=78)
+                plt.ylabel(r'$y$', fontsize=78)
+                plt.xticks(fontsize=48.0)
+                plt.yticks(fontsize=48.0)
+            elif 'frame' in style:
+                plt.xlabel('x', fontsize=13)
+                plt.ylabel('y', fontsize=16)
+                plt.xticks(fontsize=16.0)
+                plt.yticks(fontsize=16.0)
+                ax.tick_params(axis='both', which='major', pad=15)
+                plt.text(0, 1.05,
+                         f'frame {it}, {int(n_particles_alive)} alive particles ({int(n_particles_dead)} dead), {edge_index.shape[1]} edges  ',
+                         ha='left', va='top', transform=ax.transAxes, fontsize=16)
+            plt.xticks([])
+            plt.yticks([])
+            plt.xlim([0,1])
+            plt.ylim([0,1])
+            plt.tight_layout()
+            num = f"{it:06}"
+            plt.savefig(f"./{log_dir}/generated_bw/frame_{num}.tif", dpi=80)
+            plt.close()
 
 
 def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoch, it, fig, ax):
@@ -4589,11 +4644,12 @@ if __name__ == '__main__':
 
     # config_list =['arbitrary_3_sequence_d']
     # config_list = ['signal_N_100_2_d']
-    config_list = ['signal_N_100_2_asym_a']
+    # config_list = ['signal_N_100_2_asym_a']
+    config_list = ['boids_16_256_division_model_2_new']
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
-        # plot_generated(config=config, run=0, style='color Voronoi', step = 5, device=device)
+        # data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
+        plot_generated(config=config, run=0, style='white voronoi', step = 120, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 
     # f_list = ['supp10']
