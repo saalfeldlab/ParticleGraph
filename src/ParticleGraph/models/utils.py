@@ -1,7 +1,7 @@
 
 import umap
 from matplotlib.ticker import FormatStrFormatter
-from ParticleGraph.models import Interaction_Particle, Interaction_Particle_Field, Signal_Propagation, Mesh_Laplacian, Mesh_RPS, Interaction_Particle_Tracking
+from ParticleGraph.models import Interaction_Particle, Interaction_Cell, Interaction_Particle_Field, Signal_Propagation, Mesh_Laplacian, Mesh_RPS, Interaction_Particle_Tracking
 from ParticleGraph.utils import *
 
 from GNN_particles_Ntype import *
@@ -798,9 +798,6 @@ def choose_training_model(model_config, device):
         case 'PDE_N' | 'PDE_N_bis':
             model = Signal_Propagation(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
-    model_name = model_config.graph_model.cell_model_name
-    match model_name:
-        case 'PDE_Cell_A':
   
     if model==[]:
         raise ValueError(f'Unknown model {model_name}')

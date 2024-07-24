@@ -414,8 +414,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
     if erase:
         files = glob.glob(f"{folder}/*")
         for f in files:
-            if (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (
-                    f != 'generation_code.py'):
+            if (f[-3:] != 'Fig') & (f[-2:] != 'GT') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (f != 'generation_code.py'):
                 os.remove(f)
         files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Fig/*')
         for f in files:
@@ -710,7 +709,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 X1 = bc_pos(X1 + V1 * delta_t)
 
             # save masks
-            if run == 0:
+            if False: # run == 0:
                 mask_width = 1024
                 radius = 4
                 point_list = to_numpy(X1)
@@ -874,12 +873,12 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
                         pc = PatchCollection(patches, alpha=0.4, facecolors=cmap.color(n))
                         ax.add_collection(pc)
+                        if 'center' in style:
+                            plt.scatter(to_numpy(X1[index_particles[n], 0]), to_numpy(X1[index_particles[n], 1]), s=size, color=cmap.color(n))
 
-                        plt.scatter(to_numpy(X1[index_particles[n], 0]), to_numpy(X1[index_particles[n], 1]),
-                                    s=size, color=cmap.color(n))
-
-                    plt.scatter(to_numpy(vertices_pos[:, 0]), to_numpy(vertices_pos[:, 1]), s=5, color='k')
-                    # plt.scatter(to_numpy(optimized_vertices[:, 0]), to_numpy(optimized_vertices[:, 1]), s=5, color='r')
+                    if 'vertices' in style: 
+                    	plt.scatter(to_numpy(vertices_pos[:, 0]), to_numpy(vertices_pos[:, 1]), s=5, color='k')
+                    	
                     plt.xlim([-0.05, 1.05])
                     plt.ylim([-0.05, 1.05])
                     plt.tight_layout()

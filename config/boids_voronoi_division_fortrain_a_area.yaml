@@ -1,5 +1,5 @@
 description: 'Boids 16 different types, division'
-dataset: 'boids_voronoi_division_fortrain'
+dataset: 'boids_voronoi_division_fortrain_a'
 
 simulation:
   params: [[42.031494,  19.948257,  89.53507  ],
@@ -31,7 +31,7 @@ graph_model:
   particle_model_name: 'PDE_Cell_B_area'
   mesh_model_name: ''
   prediction: 'first_derivative'
-  input_size: 12
+  input_size: 13
   output_size: 2
   hidden_dim: 256
   n_mp_layers: 5
@@ -46,16 +46,16 @@ plotting:
   ylim: [-2,2]
 
 training:
-  n_epochs: 1
-  batch_size: 1
-  small_init_batch_size: False
+  n_epochs: 20
+  batch_size: 8
+  small_init_batch_size: True
   sub_batches: 4
   n_runs: 2
   noise_level: 0
   sparsity: 'replace_embedding'
   cluster_method: 'distance_plot'
   data_augmentation: True
-  data_augmentation_loop: 50
+  data_augmentation_loop: 200
   fix_cluster_embedding: True
   device: 'auto'
 

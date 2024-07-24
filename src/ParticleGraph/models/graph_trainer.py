@@ -1413,9 +1413,8 @@ def data_train_cell(config, config_file, device):
         print(x_list[run][k].shape)
         time.sleep(0.5)
 
+    vnorm = norm_velocity(x, dimension, device)
     ynorm = norm_acceleration(y, device)
-    vnorm = ynorm
-
     torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
     torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
     time.sleep(0.5)
