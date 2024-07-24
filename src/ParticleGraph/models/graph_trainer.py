@@ -8,6 +8,7 @@ from ParticleGraph.models.Siren_Network import *
 from ParticleGraph.models.Ghost_Particles import *
 from geomloss import SamplesLoss
 from ParticleGraph.embedding_cluster import EmbeddingCluster, sparsify_cluster, sparsify_cluster_state
+from ParticleGraph.models import Cell_Area
 
 import random
 
@@ -1503,6 +1504,198 @@ def data_train_cell(config, config_file, device):
                     y_batch = y[:, 0:2]
                 else:
                     y_batch = torch.cat((y_batch, y[:, 0:2]), dim=0)
+
+            batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
+            optimizer.zero_grad()
+
+            for batch in batch_loader:
+                pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=True)
+
+            loss = ((pred - y_batch)).norm(2)
+
+            visualize_embedding = True
+            if visualize_embedding & (((epoch < 3 ) & (N%(Niter//100) == 0)) | (N==0)):
+                plot_training_cell(config=config, dataset_name=dataset_name, log_dir=log_dir,
+                              epoch=epoch, N=N, model=model, n_particle_types=n_particle_types, type_list=T1_list[1], ynorm=ynorm, cmap=cmap, device=device)
+                torch.save({'model_state_dict': model.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+                t, r, a = get_gpu_memory_map(device)
+                logger.info(f"GPU memory: total {t} reserved {r} allocated {a}")
+
+            loss.backward()
+            optimizer.step()
+
+            total_loss += loss.item()
+
+        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
+        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
+        torch.save({'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict()},
+                   os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
+        list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
+        torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
+
+def data_train_cell_area(config, config_file, device):
+
+    simulation_config = config.simulation
+    train_config = config.training
+    model_config = config.graph_model
+
+    print(f'Training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+
+    dimension = simulation_config.dimension
+    n_epochs = train_config.n_epochs
+    n_particle_types = simulation_config.n_particle_types
+    delta_t = simulation_config.delta_t
+    noise_level = train_config.noise_level
+    dataset_name = config.dataset
+    n_frames = simulation_config.n_frames
+    data_augmentation = train_config.data_augmentation
+    data_augmentation_loop = train_config.data_augmentation_loop
+    target_batch_size = train_config.batch_size
+    if train_config.small_init_batch_size:
+        get_batch_size = increasing_batch_size(target_batch_size)
+    else:
+        get_batch_size = constant_batch_size(target_batch_size)
+    batch_size = get_batch_size(0)
+    cmap = CustomColorMap(config=config)  # create colormap for given model_config
+    n_runs = train_config.n_runs
+
+    l_dir, log_dir, logger = create_log_dir(config, config_file)
+    print(f'Graph files N: {n_runs}')
+    logger.info(f'Graph files N: {n_runs}')
+    time.sleep(0.5)
+
+    x_list = []
+    y_list = []
+    T1_list = []
+    edge_p_p_list = []
+    n_particles_max = 0
+    for run in trange(n_runs):
+        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
+        if x[-1][-1,0] > n_particles_max:
+            n_particles_max = x[-1][-1,0]+1
+        if run>0:
+            y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
+            edge_p_p = np.load(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}.npz')
+            T1 = torch.load(f'graphs_data/graphs_{dataset_name}/T1_list_{run}.pt', map_location=device)
+            x_list.append(x)
+            y_list.append(y)
+            edge_p_p_list.append(edge_p_p)
+            T1_list.append(T1)
+        else:
+            # first dataset is not loaded to spare memory
+            # first dataset is not used for training but for validation
+            small_tensor = torch.zeros((1, 1), dtype=torch.float32, device=device)
+            x_list.append(small_tensor)
+            y_list.append(small_tensor)
+            T1_list.append(small_tensor)
+            edge_p_p_list.append(to_numpy(small_tensor))
+    n_particles_max= int(to_numpy(n_particles_max))
+    x = x_list[1][0].clone().detach()
+    y = y_list[1][0].clone().detach()
+    config.simulation.n_particles_max = n_particles_max
+    for run in range(1,n_runs):
+        for k in trange(n_frames):
+            if (k % 10 == 0) | (n_frames < 1000):
+                x = torch.cat((x, x_list[run][k].clone().detach()), 0)
+                y = torch.cat((y, y_list[run][k].clone().detach()), 0)
+        print(x_list[run][k].shape)
+        time.sleep(0.5)
+
+    area_norm = norm_area(x, device)
+    vnorm = norm_velocity(x, dimension, device)
+    ynorm = norm_acceleration(y, device)
+    torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
+    torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
+    time.sleep(0.5)
+    print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
+    logger.info(f'vnorm ynorm: {to_numpy(vnorm)} {to_numpy(ynorm)}')
+
+    x = []
+    y = []
+
+    print('Create models ...')
+    bc_pos, bc_dpos = choose_boundary_values(config.simulation.boundary)
+    model = Cell_Area(config, bc_dpos, device)
+    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_20.pt"
+    # state_dict = torch.load(net,map_location=device)
+    # model.load_state_dict(state_dict['model_state_dict'])
+
+    lr = train_config.learning_rate_start
+    lr_embedding = train_config.learning_rate_embedding_start
+    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+    logger.info(f"Total Trainable Params: {n_total_params}")
+    logger.info(f'Learning rates: {lr}, {lr_embedding}')
+    model.train()
+
+    net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs.pt"
+    print(f'network: {net}')
+    print(f'initial batch_size: {batch_size}')
+    print('')
+    logger.info(f'network: {net}')
+    logger.info(f'N epochs: {n_epochs}')
+    logger.info(f'initial batch_size: {batch_size}')
+
+    print('Update variables ...')
+    # update variable if particle_dropout, cell_division, etc ...
+    x = x_list[1][n_frames - 1].clone().detach()
+    n_particles = len(T1_list[1])
+    config.simulation.n_particles = n_particles
+    print(f'N particles: {config.simulation.n_particles} to {len(T1_list[1])} ')
+    logger.info(f'N particles: {config.simulation.n_particles} to {len(T1_list[1])} ')
+
+    print("Start training ...")
+    print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
+    logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
+
+    list_loss = []
+    time.sleep(1)
+
+    index_frames = np.arange(1, n_frames - 1, 1)
+    index_frames = np.random.permutation(index_frames)
+    training_frames = index_frames[:n_frames//8]
+    training_frames_length = len(training_frames)
+    validation_frames = index_frames[n_frames//8:-2]
+    validation_frames_length = len(validation_frames)
+
+    for epoch in range(n_epochs + 1):
+
+        batch_size = get_batch_size(epoch)
+        logger.info(f'batch_size: {batch_size}')
+
+        total_loss = 0
+        Niter = n_frames * data_augmentation_loop // batch_size
+
+        for N in range(Niter):
+
+            phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
+            cos_phi = torch.cos(phi)
+            sin_phi = torch.sin(phi)
+
+            run = 1 + np.random.randint(n_runs - 1)
+
+            dataset_batch = []
+
+            for batch in range(batch_size):
+
+                k = training_frames[np.random.randint(training_frames_length)]
+
+                x = x_list[run][k].clone().detach()
+
+                edges = edge_p_p_list[run][f'arr_{k}']
+                edges = torch.tensor(edges, dtype=torch.int64, device=device)
+                dataset = data.Data(x=x[:, :], edge_index=edges)
+                dataset_batch.append(dataset)
+
+                y = x_list[run][k][-1].clone().detach() / area_norm
+                y = y[:,None]
+                if noise_level > 0:
+                    y = y * (1 + torch.randn_like(y) * noise_level)
+                if batch == 0:
+                    y_batch = y
+                else:
+                    y_batch = torch.cat((y_batch, y), dim=0)
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()

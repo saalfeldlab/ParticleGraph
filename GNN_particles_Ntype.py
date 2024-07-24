@@ -45,7 +45,8 @@ if __name__ == '__main__':
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         device = set_device(config.training.device)
         print(f'device {device}')
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color inv cell_id', alpha=1, erase=True, bSave=True, step=1) # config.simulation.n_frames // config.simulation.n_frames)
+        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='voronoi', alpha=1, erase=True, bSave=True, step=1) # config.simulation.n_frames // config.simulation.n_frames)
         # data_train(config, config_file, device)
+        data_train_cell_area(config, config_file, device)
         # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 

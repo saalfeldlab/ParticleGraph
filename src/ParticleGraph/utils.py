@@ -68,6 +68,12 @@ def symmetric_cutoff(x, percent=1):
     x_upper = np.percentile(x, 100 - percent)
     return x_lower, x_upper
 
+def norm_area(xx, device):
+
+    pos = torch.argwhere(xx[:, -1]<1.0)
+    ax = torch.std(xx[pos, -1])
+
+    return torch.tensor([ax], device=device)
 
 def norm_velocity(xx, dimension, device):
     if dimension == 2:

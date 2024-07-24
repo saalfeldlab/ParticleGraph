@@ -440,7 +440,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         d_pos = []
         x_len_list = []
         edge_p_p_list = []
-        vertices_pos_list = []
+        x_vertices_list = []
+        y_vertices_list = []
         vertices_per_cell_list = []
 
         '''
@@ -640,7 +641,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 target_areas = target_areas_per_type[to_numpy(T1).astype(int)].squeeze().clone().detach()
 
                 vor, vertices_pos, vertices_per_cell = get_vertices(points=to_numpy(X1), device=device)
-                vertices_pos_list.append(vertices_pos)
+
+                x_vertices_list.append(vertices_pos.clone().detach())
                 vertices_per_cell_list.append(vertices_per_cell)
                 vertices_pos.requires_grad = True
                 optimizer = torch.optim.Adam([vertices_pos], lr=1E-3)
@@ -654,6 +656,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     optimizer.step()
 
                 delta_centroids = centroids - first_centroids
+                y_vertices_list.append(vertices_pos.clone().detach() - x_vertices_list[-1].clone().detach())
 
             if (it) % 25 == 0:
                 t, r, a = get_gpu_memory_map(device)
@@ -666,6 +669,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             if (it >= 0):
                 x_list.append(x)
                 y_list.append(y)
+
 
             # get mass_coeff
             # mass_coeff = set_mass_coeff(mc_slope_distrib, cell_mass[to_numpy(T1[:, 0])], M1, device)
@@ -680,6 +684,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
             if simulation_config.cell_inert_model_coeff > 0:
                 dpos = V1 * delta_t + delta_centroids * simulation_config.cell_inert_model_coeff
+                if simulation_config.cell_active_model_coeff == 0:
+                    V1 = dpos / delta_t
             else:
                 dpos = V1 * delta_t
             X1 = bc_pos(X1 + dpos)
@@ -867,7 +873,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             torch.save(d_pos, f'graphs_data/graphs_{dataset_name}/d_pos_{run}.pt')
             np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}', *edge_p_p_list)
             if simulation_config.cell_inert_model_coeff > 0:
-                torch.save(vertices_pos_list, f'graphs_data/graphs_{dataset_name}/vertices_pos_list_{run}.pt')
+                torch.save(x_vertices_list, f'graphs_data/graphs_{dataset_name}/x_vertices_list_{run}.pt')
+                torch.save(y_vertices_list, f'graphs_data/graphs_{dataset_name}/y_vertices_list_{run}.pt')
                 # np.savez(f'graphs_data/graphs_{dataset_name}/vertices_per_cell_list_{run}.pt',*vertices_per_cell_list)
 
             torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
@@ -949,7 +956,7 @@ def data_generate_cell_3D(config, visualize=True, run_vizualized=0, style='color
         y_list = []
         x_len_list = []
         edge_p_p_list = []
-        vertices_pos_list = []
+        x_vertices_list = []
         vertices_per_cell_list = []
 
         '''
@@ -1127,7 +1134,7 @@ def data_generate_cell_3D(config, visualize=True, run_vizualized=0, style='color
             if simulation_config.cell_inert_model_coeff > 0:
 
                 vor, vertices_pos, vertices_per_cell = get_vertices(points=to_numpy(X1), device=device)
-                vertices_pos_list.append(vertices_pos)
+                x_vertices_list.append(vertices_pos)
                 vertices_per_cell_list.append(vertices_per_cell)
                 vertices_pos.requires_grad = True
                 optimizer = torch.optim.Adam([vertices_pos], lr=1E-3)
@@ -1200,7 +1207,7 @@ def data_generate_cell_3D(config, visualize=True, run_vizualized=0, style='color
             torch.save(T1_list, f'graphs_data/graphs_{dataset_name}/T1_list_{run}.pt')
             np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}', *edge_p_p_list)
             if simulation_config.cell_inert_model_coeff > 0:
-                torch.save(vertices_pos_list, f'graphs_data/graphs_{dataset_name}/vertices_pos_list_{run}.pt')
+                torch.save(x_vertices_list, f'graphs_data/graphs_{dataset_name}/x_vertices_list_{run}.pt')
                 # np.savez(f'graphs_data/graphs_{dataset_name}/vertices_per_cell_list_{run}.pt',*vertices_per_cell_list)
 
             torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
