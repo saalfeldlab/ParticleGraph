@@ -22,6 +22,8 @@ simulation:
   cell_death_rate: [1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4]
   mc_slope: [-30, -15, 15, 30, -30, -15, 15, 30,-30, -15, 15, 30,-30, -15, 15, 30]
   final_cell_mass: [200, 300, 400, 500, 200, 300, 400, 500, 200, 300, 400, 500, 200, 300, 400, 500]
+  cell_inert_model_coeff: 0.0
+  cell_active_model_coeff: 1.0
   min_radius: 0.001
   max_radius: 0.04
   max_edges: 500000
@@ -32,7 +34,7 @@ simulation:
   n_interactions: 16
   n_frames: 100
   sigma: 0.005
-  delta_t: 0.5
+  delta_t: 1
   dpos_init: 5.0E-4
   boundary: 'periodic'
   start_frame: 0

@@ -410,7 +410,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
     folder = f'./graphs_data/graphs_{dataset_name}/'
     os.makedirs(folder, exist_ok=True)
     os.makedirs(f'./graphs_data/graphs_{dataset_name}/Fig/', exist_ok=True)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/GT/', exist_ok=True)
     if erase:
         files = glob.glob(f"{folder}/*")
         for f in files:
@@ -419,9 +418,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Fig/*')
         for f in files:
             os.remove(f)
-        files = glob.glob(f'./graphs_data/graphs_{dataset_name}/GT/*')
-        for f in files:
-            os.remove(f)
+
 
     logging.basicConfig(filename=f'./graphs_data/graphs_{dataset_name}/generator.log', format='%(asctime)s %(message)s',
                         filemode='w')
@@ -491,35 +488,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         logger.info('interaction parameters')
         logger.info(to_numpy(model.p))
 
-        if simulation_config.cell_inert_model_coeff > 0:
-
-            vor, vertices_pos, vertices_per_cell = get_vertices(points=to_numpy(X1), device=device)
-
-            # calculate area of each voronoi cell
-
-            centroids, areas = get_voronoi_areas(vertices_pos, vertices_per_cell, device)
-
-            # calculate average area per cell type
-
-            target_cell_areas = []
-            num_cells = []
-
-            for i in range(n_particle_types):
-                pos = to_numpy(torch.argwhere(T1.squeeze() == i)).squeeze()
-                num_cells.append(len(pos))
-                target_cell_areas.append(torch.mean(areas[pos]))
-
-            target_cell_areas = torch.tensor(target_cell_areas, device=device)
-
-            # add 50% noise to the average area
-
-            target_cell_areas += torch.ones((n_particle_types), device=device) * torch.randn((n_particle_types), device=device) * 0.00025
-            target_cell_areas[-1] = 0.0020
-            coeff = 0
-            for i in range(n_particle_types):
-                coeff += num_cells[i] * target_cell_areas[i]
-
-            target_cell_areas /= coeff
 
         index_particles = []
         for n in range(n_particle_types):
@@ -662,6 +630,15 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
             if simulation_config.cell_inert_model_coeff > 0:
 
+                coeff = 0
+                num_cells = []
+                for i in range(n_particle_types):
+                    pos = to_numpy(torch.argwhere(T1.squeeze() == i)).squeeze()
+                    num_cells.append(len(pos))
+                    coeff += num_cells[i] * cell_area[i]
+                target_areas_per_type = torch.tensor([cell_area[i] / coeff for i in range(n_particle_types)], device=device)
+                target_areas = target_areas_per_type[to_numpy(T1).astype(int)].squeeze().clone().detach()
+
                 vor, vertices_pos, vertices_per_cell = get_vertices(points=to_numpy(X1), device=device)
                 vertices_pos_list.append(vertices_pos)
                 vertices_per_cell_list.append(vertices_per_cell)
@@ -672,7 +649,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 for i in range(2):
                     optimizer.zero_grad()
                     centroids, voronoi_area = get_voronoi_areas(vertices_pos, vertices_per_cell, device)
-                    target_areas = target_cell_areas[to_numpy(T1).astype(int)].squeeze().clone().detach()
                     loss = (voronoi_area - target_areas).norm(2)
                     loss.backward()
                     optimizer.step()
@@ -702,30 +678,15 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
             V1 = V1 * alive[:, None].repeat(1, 2)
 
-            dpos = V1 * delta_t + delta_centroids * simulation_config.cell_inert_model_coeff
+            if simulation_config.cell_inert_model_coeff > 0:
+                dpos = V1 * delta_t + delta_centroids * simulation_config.cell_inert_model_coeff
+            else:
+                dpos = V1 * delta_t
             X1 = bc_pos(X1 + dpos)
 
-            # save masks
-            if False: # run == 0:
-                mask_width = 1024
-                radius = 4
-                point_list = to_numpy(X1)
-                cell_id = to_numpy(N1) + 1
-                image = np.zeros((mask_width, mask_width))
-                for i in range(len(point_list)):
-                    point_i = (point_list[i, 1] * 1024).astype(int)
-                    point_j = (point_list[i, 0] * 1024).astype(int)
-                    yy, xx = np.ogrid[-point_i: mask_width - point_i, -point_j: mask_width - point_j]
-                    mask = xx * xx + yy * yy <= radius * radius
-                    image[mask] = cell_id[i].astype(int)
-                image = np.flipud(image)
-                image = np.uint16(image)
-                num = f"{it:03}"
-                tifffile.imwrite(f"graphs_data/graphs_{dataset_name}/GT/man_track{num}.tif", image,
-                                 photometric='minisblack')
 
             vor, vertices_pos, vertices_per_cell = get_vertices(points=to_numpy(X1), device=device)
-            centroids, areas = get_voronoi_areas(vertices_pos, vertices_per_cell, device)
+            centroids, voronoi_area = get_voronoi_areas(vertices_pos, vertices_per_cell, device)
             AR1 = voronoi_area[:, None]
 
             # append list
@@ -792,17 +753,21 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         pos = torch.argwhere((T1.squeeze() == n) & (H1[:, 0].squeeze() == 1))
                         pos = to_numpy(pos[:, 0].squeeze()).astype(int)
                         index_particles.append(pos)
-                        # plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                        #             s=marker_size, color=cmap.color(n))
-
                         size = set_size(x, index_particles[n], 10) / 10
-
-                        plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                                    s=size, color=cmap.color(n))
+                        if 'inv' in style:
+                            plt.scatter(to_numpy(X1[index_particles[n], 0]), 1-to_numpy(X1[index_particles[n], 1]),
+                                        s=size, color=cmap.color(n))
+                        else:
+                            plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
+                                        s=size, color=cmap.color(n))
                     dead_cell = np.argwhere(to_numpy(H1[:, 0]) == 0)
                     if len(dead_cell) > 0:
-                        plt.scatter(to_numpy(X1[dead_cell[:, 0].squeeze(), 0]),
-                                    to_numpy(X1[dead_cell[:, 0].squeeze(), 1]), s=2, color='k', alpha=0.5)
+                        if 'inv' in style:
+                            plt.scatter(to_numpy(X1[dead_cell[:, 0].squeeze(), 0]),
+                                        1-to_numpy(X1[dead_cell[:, 0].squeeze(), 1]), s=2, color='k', alpha=0.5)
+                        else:
+                            plt.scatter(to_numpy(X1[dead_cell[:, 0].squeeze(), 0]),
+                                        to_numpy(X1[dead_cell[:, 0].squeeze(), 1]), s=2, color='k', alpha=0.5)
                     plt.xlim([0, 1])
                     plt.ylim([0, 1])
                     if 'latex' in style:
@@ -825,7 +790,11 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
                     if 'cell_id' in style:
                         for i, txt in enumerate(to_numpy(N1.squeeze())):
-                            plt.text(to_numpy(X1[i, 0]), to_numpy(X1[i, 1]), 1 + int(to_numpy(N1[i])),
+                            if 'inv' in style:
+                                plt.text(to_numpy(X1[i, 0]), 1 - to_numpy(X1[i, 1]), 1 + int(to_numpy(N1[i])),
+                                         fontsize=8)
+                            else:
+                                plt.text(to_numpy(X1[i, 0]), to_numpy(X1[i, 1]), 1 + int(to_numpy(N1[i])),
                                      fontsize=8)  # (txt, (to_numpy(X1[i, 0]), to_numpy(X1[i, 1]), 0), fontsize=8)
 
                     plt.tight_layout()
