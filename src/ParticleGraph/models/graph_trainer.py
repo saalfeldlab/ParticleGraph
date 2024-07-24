@@ -1535,6 +1535,7 @@ def data_train_cell(config, config_file, device):
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
+
 def data_train_cell_area(config, config_file, device):
 
     simulation_config = config.simulation
@@ -1649,7 +1650,6 @@ def data_train_cell_area(config, config_file, device):
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
 
-    list_loss = []
     time.sleep(1)
 
     index_frames = np.arange(1, n_frames - 1, 1)
@@ -1658,6 +1658,9 @@ def data_train_cell_area(config, config_file, device):
     training_frames_length = len(training_frames)
     validation_frames = index_frames[n_frames//8:-2]
     validation_frames_length = len(validation_frames)
+
+    list_loss_training = []
+    list_loss_validation = []
 
     for epoch in range(n_epochs + 1):
 
@@ -1670,8 +1673,6 @@ def data_train_cell_area(config, config_file, device):
         for N in range(Niter):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
-            cos_phi = torch.cos(phi)
-            sin_phi = torch.sin(phi)
 
             run = 1 + np.random.randint(n_runs - 1)
 
@@ -1688,8 +1689,8 @@ def data_train_cell_area(config, config_file, device):
                 dataset = data.Data(x=x[:, :], edge_index=edges)
                 dataset_batch.append(dataset)
 
-                y = x_list[run][k][-1].clone().detach() / area_norm
-                y = y[:,None]
+                y = x_list[run][k].clone().detach() / area_norm
+                y = y[:,12+dimension:13+dimension]
                 if noise_level > 0:
                     y = y * (1 + torch.randn_like(y) * noise_level)
                 if batch == 0:
@@ -1707,8 +1708,22 @@ def data_train_cell_area(config, config_file, device):
 
             visualize_embedding = True
             if visualize_embedding & (((epoch < 3 ) & (N%(Niter//100) == 0)) | (N==0)):
-                plot_training_cell(config=config, dataset_name=dataset_name, log_dir=log_dir,
-                              epoch=epoch, N=N, model=model, n_particle_types=n_particle_types, type_list=T1_list[1], ynorm=ynorm, cmap=cmap, device=device)
+
+                embedding = get_embedding(model.a, 1)
+                type_list = T1_list[1]
+
+                fig = plt.figure(figsize=(8, 8))
+                for n in range(n_particle_types):
+                    pos = torch.argwhere(type_list == n)
+                    pos = to_numpy(pos)
+                    if len(pos) > 0:
+                        plt.scatter(embedding[pos, 0], embedding[pos, 1], s=100)
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=87)
+                plt.close()
+
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
                 t, r, a = get_gpu_memory_map(device)
@@ -1717,15 +1732,76 @@ def data_train_cell_area(config, config_file, device):
             loss.backward()
             optimizer.step()
 
-            total_loss += loss.item()
+        total_loss_training = 0
+        for k in training_frames:
+            x = x_list[run][k].clone().detach()
+            edges = edge_p_p_list[run][f'arr_{k}']
+            edges = torch.tensor(edges, dtype=torch.int64, device=device)
+            dataset = data.Data(x=x[:, :], edge_index=edges)
+
+            y = x_list[run][k].clone().detach() / area_norm
+            y = y[:, 12 + dimension:13 + dimension]
+            if noise_level > 0:
+                y = y * (1 + torch.randn_like(y) * noise_level)
+            with torch.no_grad():
+                pred = model(dataset, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=True)
+            loss = ((pred - y)).norm(2)
+            total_loss_training += loss.item() / n_particles / training_frames_length
+
+        pred_list=[]
+        y_list=[]
+        total_loss_validation = 0
+        for k in validation_frames:
+            x = x_list[run][k].clone().detach()
+            edges = edge_p_p_list[run][f'arr_{k}']
+            edges = torch.tensor(edges, dtype=torch.int64, device=device)
+            dataset = data.Data(x=x[:, :], edge_index=edges)
+
+            y = x_list[run][k].clone().detach() / area_norm
+            y = y[:, 12 + dimension:13 + dimension]
+            if noise_level > 0:
+                y = y * (1 + torch.randn_like(y) * noise_level)
+            with torch.no_grad():
+                pred = model(dataset, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=True)
+            loss = ((pred - y)).norm(2)
+            total_loss_validation += loss.item() / n_particles / validation_frames_length
+
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()},
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
-        list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
+        list_loss_training.append(total_loss_training)
+        list_loss_validation.append(total_loss_validation)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
+
+
+
+        fig = plt.figure(figsize=(16, 4))
+        ax = fig.add_subplot(1, 4, 1)
+        plt.plot(list_loss_training, color='b',label='training')
+        plt.plot(list_loss_validation, color='r',label='validation')
+        plt.legend()
+        plt.xlim([0, n_epochs])
+        plt.ylim([0, 0.1])
+        plt.ylabel('Loss', fontsize=12)
+        plt.xlabel('Epochs', fontsize=12)
+
+        ax = fig.add_subplot(1, 4, 2)
+        embedding = get_embedding(model.a, 1)
+        type_list = T1_list[1]
+        for n in range(n_particle_types):
+            pos = torch.argwhere(type_list == n)
+            pos = to_numpy(pos)
+            if len(pos) > 0:
+                plt.scatter(embedding[pos, 0], embedding[pos, 1], s=10)
+
+        ax = fig.add_subplot(1, 4, 3)
+        plt.scatter(to_numpy(y),to_numpy(pred),c='k',s=1)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
+        plt.close()
 
 
 def data_train_mesh(config, config_file, device):

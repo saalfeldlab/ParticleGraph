@@ -512,8 +512,6 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, n_particl
     plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif",dpi=87)
     plt.close()
 
-
-
 def analyze_edge_function_tracking(rr=[], vizualize=False, config=None, model_MLP=[], model_a=None, n_particles=None, ynorm=None, indexes=None, type_list=None, cmap=None, dimension=2, embedding_type=0, device=None):
 
     model_config = config.graph_model

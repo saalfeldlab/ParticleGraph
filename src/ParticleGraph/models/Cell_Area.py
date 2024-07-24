@@ -26,7 +26,7 @@ class Cell_Area(pyg.nn.MessagePassing):
 
     def __init__(self, config, bc_dpos, device):
 
-        super(Cell_Area, self).__init__(aggr=aggr_type)  # "Add" aggregation.
+        super(Cell_Area, self).__init__(aggr='mean')  # "Add" aggregation.
 
         simulation_config = config.simulation
         train_config = config.training
@@ -36,6 +36,9 @@ class Cell_Area(pyg.nn.MessagePassing):
         self.bc_dpos = bc_dpos
         self.n_dataset = train_config.n_runs
         self.n_frames = simulation_config.n_frames
+        self.dimension = simulation_config.dimension
+        self.max_radius = simulation_config.max_radius
+        self.data_augmentation = train_config.data_augmentation
 
         self.lin_edge = MLP(input_size=7, output_size=1, nlayers=5, hidden_size=128, device=self.device)
 
@@ -72,7 +75,7 @@ class Cell_Area(pyg.nn.MessagePassing):
         particle_id = x[:, 0:1]
         # area = x[:, 14:15]
 
-        pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id, field=field)
+        pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id, field=field) ** 2
 
         return pred
 

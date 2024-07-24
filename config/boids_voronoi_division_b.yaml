@@ -1,5 +1,5 @@
 description: 'Boids 16 different types, division'
-dataset: 'boids_voronoi_division_a'
+dataset: 'boids_voronoi_division_b'
 
 simulation:
   params: [[42.031494,  19.948257,  89.53507  ],
