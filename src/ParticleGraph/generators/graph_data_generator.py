@@ -439,6 +439,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
         x_list = []
         y_list = []
+        area_list = []
+        d_pos = []
         x_len_list = []
         edge_p_p_list = []
         vertices_pos_list = []
@@ -676,7 +678,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     optimizer.step()
 
                 delta_centroids = centroids - first_centroids
-                AR1 = voronoi_area[:,None]
 
             if (it) % 25 == 0:
                 t, r, a = get_gpu_memory_map(device)
@@ -701,12 +702,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
             V1 = V1 * alive[:, None].repeat(1, 2)
 
-            if simulation_config.cell_inert_model_coeff > 0:
-                dpos = V1 * delta_t + delta_centroids * simulation_config.cell_inert_model_coeff
-                X1 = bc_pos(X1 + dpos)
-                y_list[-1] = dpos.clone().detach() / delta_t
-            else:
-                X1 = bc_pos(X1 + V1 * delta_t)
+            dpos = V1 * delta_t + delta_centroids * simulation_config.cell_inert_model_coeff
+            X1 = bc_pos(X1 + dpos)
 
             # save masks
             if False: # run == 0:
@@ -728,6 +725,13 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                                  photometric='minisblack')
 
             vor, vertices_pos, vertices_per_cell = get_vertices(points=to_numpy(X1), device=device)
+            centroids, areas = get_voronoi_areas(vertices_pos, vertices_per_cell, device)
+            AR1 = voronoi_area[:, None]
+
+            # append list
+            if (it >= 0):
+                area_list.append(AR1.clone().detach())
+                d_pos.append(dpos.clone().detach() / delta_t)
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
@@ -890,6 +894,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
             torch.save(T1_list, f'graphs_data/graphs_{dataset_name}/T1_list_{run}.pt')
+            torch.save(area_list, f'graphs_data/graphs_{dataset_name}/area_list_{run}.pt')
+            torch.save(d_pos, f'graphs_data/graphs_{dataset_name}/d_pos_{run}.pt')
             np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}', *edge_p_p_list)
             if simulation_config.cell_inert_model_coeff > 0:
                 torch.save(vertices_pos_list, f'graphs_data/graphs_{dataset_name}/vertices_pos_list_{run}.pt')
