@@ -1691,6 +1691,12 @@ def data_train_cell_area(config, config_file, device):
 
                 y = x_list[run][k].clone().detach() / area_norm
                 y = y[:,12+dimension:13+dimension]
+
+                # fig = plt.figure(figsize=(8, 8))
+                # for n in range(3):
+                #     pos = torch.argwhere(x[:,5]==n)
+                #     plt.hist(to_numpy(y[pos].squeeze()),bins=40)
+
                 if noise_level > 0:
                     y = y * (1 + torch.randn_like(y) * noise_level)
                 if batch == 0:
@@ -1774,9 +1780,7 @@ def data_train_cell_area(config, config_file, device):
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
         list_loss_training.append(total_loss_training)
         list_loss_validation.append(total_loss_validation)
-        torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
-
-
+        torch.save(list_loss_validation, os.path.join(log_dir, 'loss.pt'))
 
         fig = plt.figure(figsize=(16, 4))
         ax = fig.add_subplot(1, 4, 1)

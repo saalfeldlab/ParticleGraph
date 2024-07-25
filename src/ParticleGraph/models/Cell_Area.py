@@ -40,7 +40,7 @@ class Cell_Area(pyg.nn.MessagePassing):
         self.max_radius = simulation_config.max_radius
         self.data_augmentation = train_config.data_augmentation
 
-        self.lin_edge = MLP(input_size=7, output_size=1, nlayers=5, hidden_size=128, device=self.device)
+        self.lin_edge = MLP(input_size=11, output_size=1, nlayers=5, hidden_size=128, device=self.device)
 
         if simulation_config.has_cell_division :
             self.a = nn.Parameter(
@@ -109,10 +109,10 @@ class Cell_Area(pyg.nn.MessagePassing):
         embedding_j = self.a[self.data_id, to_numpy(particle_id_j), :].squeeze()
 
 
-        # in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
-        #                                  dpos_y_j[:, None], embedding_i, embedding_j), dim=-1)
+        in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
+                                         dpos_y_j[:, None], embedding_i, embedding_j), dim=-1)
 
-        in_features = torch.cat((delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
+        # in_features = torch.cat((delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
 
         out = self.lin_edge(in_features) * field_j
 
