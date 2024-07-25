@@ -668,6 +668,9 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 X1_ = X1_.clone().detach()
                 X1 = bc_pos(X1_.clone().detach())
 
+                ax, fig = fig_init()
+
+
             y_voronoi = (bc_dpos(X1 - first_X1) / delta_t - V1) / delta_t
 
             if (it) % 500 == 0:
@@ -824,7 +827,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
                 if 'voronoi' in style:
 
-                    vor, vertices_pos, vertices_per_cell, all_points = get_vertices(points=X1_, device=device)
+                    vor, vertices_pos, vertices_per_cell, all_points = get_vertices(points=X1, device=device)
 
                     fig = plt.figure(figsize=(12, 12))
                     ax = fig.add_subplot(1, 1, 1)
@@ -851,13 +854,23 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         pc = PatchCollection(patches, alpha=0.4, facecolors=cmap.color(n))
                         ax.add_collection(pc)
                         if 'center' in style:
-                            plt.scatter(to_numpy(X1[index_particles[n], 0]), to_numpy(X1[index_particles[n], 1]), s=size, color=cmap.color(n))
+                            plt.scatter(to_numpy(X1[index_particles[n], 0]), to_numpy(X1[index_particles[n], 1]), s=1, color=cmap.color(n))
 
                     if 'vertices' in style: 
                     	plt.scatter(to_numpy(vertices_pos[:, 0]), to_numpy(vertices_pos[:, 1]), s=5, color='k')
                     	
                     plt.xlim([-0.05, 1.05])
                     plt.ylim([-0.05, 1.05])
+
+                    if 'cell_id' in style:
+                        for i, txt in enumerate(to_numpy(N1.squeeze())):
+                            if 'inv' in style:
+                                plt.text(to_numpy(X1[i, 0]), 1 - to_numpy(X1[i, 1]), 1 + int(to_numpy(N1[i])),
+                                         fontsize=8)
+                            else:
+                                plt.text(to_numpy(X1[i, 0]), to_numpy(X1[i, 1]), 1 + int(to_numpy(N1[i])),
+                                     fontsize=8)  # (txt, (to_numpy(X1[i, 0]), to_numpy(X1[i, 1]), 0), fontsize=8)
+
                     plt.tight_layout()
                     num = f"{it:06}"
                     plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Vor_{run}_{num}.tif", dpi=85.35)
