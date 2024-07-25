@@ -3,7 +3,9 @@ from scipy.spatial import Voronoi, voronoi_plot_2d,  Delaunay
 import torch
 from ParticleGraph.utils import to_numpy
 import math
+import torch_geometric.data as data
 import matplotlib.pyplot as plt
+
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
@@ -46,7 +48,7 @@ def init_cell_range(config, device, scenario="None"):
     return cycle_length, final_cell_mass, cell_death_rate, mc_slope, cell_area
 
 
-def init_cells(config, cycle_length, final_cell_mass, cell_death_rate, mc_slope, cell_area, device):
+def init_cells(config, cycle_length, final_cell_mass, cell_death_rate, mc_slope, cell_area, bc_pos, bc_dpos, dimension, device):
     simulation_config = config.simulation
     n_particles = simulation_config.n_particles
     n_particle_types = simulation_config.n_particle_types
@@ -55,7 +57,15 @@ def init_cells(config, cycle_length, final_cell_mass, cell_death_rate, mc_slope,
     dpos_init = simulation_config.dpos_init
 
     if (simulation_config.boundary == 'periodic'):  # | (simulation_config.dimension == 3):
-        pos = torch.rand(n_particles, dimension, device=device)
+
+        pos = torch.rand(1, dimension, device=device)
+        count = 1
+        while count < n_particles:
+            new_pos = torch.rand(1, dimension, device=device)
+            distance = torch.sum(bc_dpos(pos[:, None, :] - new_pos[None, :, :]) ** 2, dim=2)
+            if torch.all(distance > 0.025**2):
+                pos = torch.cat((pos, new_pos), 0)
+                count += 1
     else:
         pos = torch.randn(n_particles, dimension, device=device) * 0.5
 
@@ -85,7 +95,6 @@ def init_cells(config, cycle_length, final_cell_mass, cell_death_rate, mc_slope,
     cell_age = torch.rand(n_particles, device=device)
     cell_age = cell_age * cycle_length[to_numpy(type)].squeeze()
     cell_age = cell_age[:, None]
-
     cell_stage = update_cell_cycle_stage(cell_age, cycle_length, type, device)
 
     growth_rate = final_cell_mass / (2 * cycle_length)

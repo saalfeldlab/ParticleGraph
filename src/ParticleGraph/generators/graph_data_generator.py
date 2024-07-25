@@ -471,10 +471,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             cycle_length, final_cell_mass, cell_death_rate, mc_slope, cell_area = init_cell_range(config, device=device)
 
         N1, X1, V1, T1, H1, A1, S1, M1, R1, CL1, DR1, MC1, AR1 = init_cells(config, cycle_length, final_cell_mass,
-                                                                            cell_death_rate, mc_slope, cell_area,
+                                                                            cell_death_rate, mc_slope, cell_area, bc_pos, bc_dpos, dimension,
                                                                             device=device)
-
-        V1 = V1*0
 
         T1_list = T1.clone().detach()
 
@@ -667,8 +665,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
                 X1_ = X1_.clone().detach()
                 X1 = bc_pos(X1_.clone().detach())
-
-                ax, fig = fig_init()
 
 
             y_voronoi = (bc_dpos(X1 - first_X1) / delta_t - V1) / delta_t
