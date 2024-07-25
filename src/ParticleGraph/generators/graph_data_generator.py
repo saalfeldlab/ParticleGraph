@@ -662,7 +662,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
                 loss = (target_areas - voronoi_area).norm(2)
 
-                print(loss.item())
                 loss.backward()
                 optimizer.step()
 
