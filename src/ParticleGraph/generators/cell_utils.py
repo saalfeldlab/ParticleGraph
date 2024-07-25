@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.spatial import Voronoi, voronoi_plot_2d
+from scipy.spatial import Voronoi, voronoi_plot_2d,  Delaunay
 import torch
 from ParticleGraph.utils import to_numpy
 import math
@@ -105,7 +105,6 @@ def init_cells(config, cycle_length, final_cell_mass, cell_death_rate, mc_slope,
 
     return particle_id, pos, dpos, type, status, cell_age, cell_stage, cell_mass_distrib, growth_rate_distrib, cycle_length_distrib, cell_death_rate_distrib, mc_slope_distrib, cell_area_distrib
 
-
 def update_cell_cycle_stage(cell_age, cycle_length, type_list, device):
     g1 = 0.46
     s = 0.33
@@ -134,20 +133,20 @@ def update_cell_cycle_stage(cell_age, cycle_length, type_list, device):
 
     return cell_stage[:, None]
 
-
 def get_vertices(points=[], device=[]):
 
-    extra_points = points
+    all_points = points
     if points.shape[1] == 3:   # has 3D
         v_list = [[-1, -1, 1], [-1, 0, 1], [-1, 1, 1], [0, 1, 1], [1, 1, 1], [1, 0, 1], [1, -1, 1], [0, -1, 1], [0, 0, 1],
                   [-1, -1, 0], [-1, 0, 0], [-1, 1, 0], [0, 1, 0], [1, 1, 0], [1, 0, 0], [1, -1, 0], [0, -1, 0],
                   [-1, -1, -1], [-1, 0, -1], [-1, 1, -1], [0, 1, -1], [1, 1, -1], [1, 0, -1], [1, -1, -1], [0, -1, -1], [0, 0, -1]]
     else:
         v_list = [[-1, -1], [-1, 0], [-1, 1], [0, 1], [1, 1], [1, 0], [1, -1], [0, -1]]
+    v_list = torch.tensor(v_list, device=device)
     for n in range(len(v_list)):
-        extra_points = np.concatenate((extra_points, points + v_list[n]), axis=0)
+        all_points = torch.concatenate((all_points, points + v_list[n]), axis=0)
 
-    vor = Voronoi(extra_points)
+    vor = Voronoi(to_numpy(all_points))
     # vertices_index collect all vertices index of regions of interest
     vertices_per_cell = []
     for n in range(len(points)):
@@ -173,7 +172,44 @@ def get_vertices(points=[], device=[]):
     vertices_pos = torch.tensor(vertices_pos, device=device)
     vertices_pos = vertices_pos.to(dtype=torch.float32)
 
-    return vor, vertices_pos, vertices_per_cell
+    return vor, vertices_pos, vertices_per_cell, all_points
+
+def get_Delaunay(points=[], device=[]):
+
+    tri = Delaunay(to_numpy(points))  # Compute Delaunay triangulation
+
+
+    p = points[tri.simplices]  # Triangle vertices
+
+    # Triangle vertices
+    A = p[:,0,:].T
+    B = p[:,1,:].T
+    C = p[:,2,:].T
+
+    # Compute circumcenters (cc)
+    a = A - C
+    b = B - C
+
+    cc = cross2(sq2(a) * b - sq2(b) * a, a, b) / (2 * ncross2(a, b) + 1E-6) + C
+
+    cc = cc.t()
+
+    return cc
+
+
+def dot2(u, v):
+    return u[0]*v[0] + u[1]*v[1]
+
+def cross2(u, v, w):
+    """u x (v x w)"""
+    return dot2(u, w)*v - dot2(u, v)*w
+
+def ncross2(u, v):
+    """|| u x v ||^2"""
+    return sq2(u)*sq2(v) - dot2(u, v)**2
+
+def sq2(u):
+    return dot2(u, u)
 
 def get_voronoi_areas(vertices_pos, vertices_per_cell, device):
 
@@ -193,7 +229,7 @@ def get_voronoi_areas(vertices_pos, vertices_per_cell, device):
 
     areas = torch.stack(areas)
 
-    return centroids, areas
+    return areas
 
 def get_voronoi_perimeters(vertices_pos, vertices_per_cell, device):
     lengths = get_voronoi_lengths(vertices_pos, vertices_per_cell, device)
