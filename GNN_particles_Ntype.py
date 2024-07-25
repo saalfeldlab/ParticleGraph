@@ -35,10 +35,10 @@ if __name__ == '__main__':
     # matplotlib.use("Qt5Agg")
 
     # config_list = ["boids_16_256_division_model_2_small"]
-    config_list = ["boids_16_256_division_model_5"]
+    # config_list = ["boids_16_256_division_model_5"]
     # config_list = ["signal_N_100_2_asym_a"]
     # config_list = ["arbitrary_3_sequence_e"]
-    # config_list = ["boids_voronoi_division_a"]
+    config_list = ["boids_voronoi_division_a"]
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
