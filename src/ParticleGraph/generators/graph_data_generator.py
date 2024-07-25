@@ -532,7 +532,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     n_particles = n_particles + n_add_nodes
 
                     angle = torch.atan(V1[pos, 1] / (V1[pos, 0] + 1E-10))
-                    separation = [torch.cos(angle) * 0.005,torch.sin(angle) * 0.005]
+                    separation = [torch.cos(angle) * 0.01,torch.sin(angle) * 0.01]
                     separation = torch.stack(separation)
                     separation = separation.t()
 
