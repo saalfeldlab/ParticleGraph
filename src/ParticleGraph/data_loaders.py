@@ -1,6 +1,8 @@
 """
 A collection of functions for loading data from various sources.
 """
+import os
+import re
 from dataclasses import dataclass
 from typing import Dict, Tuple, Literal
 
@@ -8,6 +10,7 @@ import astropy.units as u
 import h5py
 import numpy as np
 import pandas as pd
+import torch
 from astropy.units import Unit
 from scipy.interpolate import CubicSpline, interp1d, make_interp_spline
 from tqdm import trange
@@ -217,13 +220,13 @@ def load_shrofflab_celegans(
     # Put values into a TimeSeries object
     relevant_fields = ["x", "y", "z", "cpm", "cell_id"]
     tensors_np = {name: np.nan * np.ones((n_cells * n_normal_timepoints)) for name in relevant_fields}
-    time_idx = (raw_data["t"].values - start_time).astype(int)
+    time_idx = (raw_data["t"].to_numpy() - start_time).astype(int)
     cell_id = np.repeat(np.arange(n_cells), n_timepoints)
     raw_data.insert(0, "cell_id", cell_id)
     idx = np.ravel_multi_index((cell_id, time_idx), (n_cells, n_normal_timepoints))
     tensors = {}
     for name in relevant_fields:
-        tensors_np[name][idx] = raw_data[name].values
+        tensors_np[name][idx] = raw_data[name].to_numpy()
         split_tensors = np.squeeze(
             np.hsplit(tensors_np[name].reshape((n_cells, n_normal_timepoints)), n_normal_timepoints))
         tensors[name] = [torch.tensor(t, device=device) for t in split_tensors]
@@ -326,6 +329,64 @@ def load_celegans_gene_data(
     return time_series, cell_info
 
 
+def load_agent_data(
+        data_directory,
+        *,
+        device='cuda:0'
+):
+    """
+    Load simulated agent data and convert it to a time series.
+
+    :param data_directory: The directory containing the agent data.
+    :param device: The PyTorch device to allocate the tensors on.
+    :return: A tuple consisting of:
+     * A :py:class:`TimeSeries` object containing the loaded data for each time point.
+     * The names of the cells in the data.
+    :raises ValueError: If the time series are not part of the same timeframe or if too many cells have abnormal time
+    series lengths.
+    """
+
+    # Check how many files (each a timestep) there are
+    files = os.listdir(data_directory)
+    file_name_pattern = re.compile(r'particles\d+.txt')
+    n_time_points = sum(1 for f in files if file_name_pattern.match(f))
+
+    dtype = {
+        "x": np.float32,
+        "y": np.float32,
+        "internal": np.float32,
+        "orientation": np.float32,
+        "reversal_timer": np.int64,
+        "state": np.int64
+    }
+
+    data = []
+    time = torch.arange(1, n_time_points + 1, device=device)
+    for i in range(n_time_points):
+        file_path = os.path.join(data_directory, f"particles{i + 1}.txt")
+        time_point = pd.read_csv(file_path, sep=",", names=list(dtype.keys()), dtype=dtype)
+        position = torch.stack([torch.tensor(time_point["x"].to_numpy(), device=device),
+                                torch.tensor(time_point["y"].to_numpy(), device=device)], dim=1)
+        data.append(Data(
+            time=time[i],
+            pos=position,
+            internal=torch.tensor(time_point["internal"].to_numpy(), device=device),
+            orientation=torch.tensor(time_point["orientation"].to_numpy(), device=device),
+            reversal_timer=torch.tensor(time_point["reversal_timer"].to_numpy(), dtype=torch.float32, device=device),
+            state=torch.tensor(time_point["state"].to_numpy(), dtype=torch.float32, device=device),
+        ))
+
+    time_series = TimeSeries(time, data)
+    velocity = time_series.compute_derivative('pos')
+    for i, data in enumerate(time_series):
+        data.velocity = velocity[i]
+
+    signal = np.loadtxt(os.path.join(data_directory, "signal.txt"))
+    signal = torch.tensor(signal, device=device)
+
+    return time_series, signal
+
+
 def ensure_local_path_exists(path):
     """
     Ensure that the local path exists. If it doesn't, create the directory structure.
@@ -398,7 +459,7 @@ def load_wanglab_salivary_gland(
                                   unit=u.dimensionless_unscaled),
     }
     raw_data = load_csv_from_descriptors(column_descriptors, skiprows=3)
-    raw_tensors = {name: torch.tensor(raw_data[name].values, device=device) for name in column_descriptors.keys()}
+    raw_tensors = {name: torch.tensor(raw_data[name].to_numpy(), device=device) for name in column_descriptors.keys()}
 
     # Split into individual data objects for each time point
     t = raw_tensors['t']
