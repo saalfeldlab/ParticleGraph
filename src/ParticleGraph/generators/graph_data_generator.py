@@ -648,33 +648,42 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 X1_.requires_grad = True
 
                 optimizer = torch.optim.Adam([X1_], lr=1E-3)
-                optimizer.zero_grad()
 
-                vor, vertices_pos, vertices_per_cell, all_points = get_vertices(points=X1_, device=device)
-                cc = get_Delaunay(all_points,device)
-                distance = torch.sum((vertices_pos[:, None, :].clone().detach() - cc[None, :, :]) ** 2, dim=2)
-                result = distance.min(dim=1)
-                index = result.indices
-                cc = cc[index]
-                voronoi_area = get_voronoi_areas(cc, vertices_per_cell, device)
+                mask=[]
+                n_particles = len(X1)
+                rnd_index = torch.randperm(n_particles, device=device)
+                for n in range(n_particles):
+                    index = torch.argwhere(rnd_index % 4 == n).squeeze()
+                    mask.append(index.squeeze())
 
-                try:
-                    loss = (target_areas - voronoi_area).norm(2)
-                    loss.backward()
-                    optimizer.step()
-                except:
-                    logger.info('memory_usage pb during gradient descent')
-                    print('memory_usage pb during gradient descent')
-                    logger.info(f"GPU memory: total {t} reserved {r} allocated {a}")
-                    logger.info(
-                        f'{x.shape[0]} particles,  {edge_index.shape[1]} edges, max_radius: {np.round(max_radius, 3)}')
-                    memory_usage_x_list = 0
-                    memory_usage_edge_list = 0
-                    for n in range(len(x_list)):
-                        memory_usage_x_list += x_list[n].element_size() * x_list[n].nelement()
-                        memory_usage_edge_list += edge_p_p_list[n].nbytes
-                    logger.info(
-                        f'memory usage x_list: {memory_usage_x_list / 1E6} MB, memory usage edge_list: {memory_usage_edge_list / 1E6} MB')
+                for n in range(4):
+
+                    optimizer.zero_grad()
+                    vor, vertices_pos, vertices_per_cell, all_points = get_vertices(points=X1_, device=device)
+                    cc = get_Delaunay(all_points,device)
+                    distance = torch.sum((vertices_pos[:, None, :].clone().detach() - cc[None, :, :]) ** 2, dim=2)
+                    result = distance.min(dim=1)
+                    index = result.indices
+                    cc = cc[index]
+                    voronoi_area = get_voronoi_areas(cc, vertices_per_cell, device)
+
+                    try:
+                        loss = (target_areas[mask[n]] - voronoi_area[mask[n]]).norm(2)
+                        loss.backward()
+                        optimizer.step()
+                    except:
+                        logger.info('memory_usage pb during gradient descent')
+                        print('memory_usage pb during gradient descent')
+                        logger.info(f"GPU memory: total {t} reserved {r} allocated {a}")
+                        logger.info(
+                            f'{x.shape[0]} particles,  {edge_index.shape[1]} edges, max_radius: {np.round(max_radius, 3)}')
+                        memory_usage_x_list = 0
+                        memory_usage_edge_list = 0
+                        for n in range(len(x_list)):
+                            memory_usage_x_list += x_list[n].element_size() * x_list[n].nelement()
+                            memory_usage_edge_list += edge_p_p_list[n].nbytes
+                        logger.info(
+                            f'memory usage x_list: {memory_usage_x_list / 1E6} MB, memory usage edge_list: {memory_usage_edge_list / 1E6} MB')
 
                 X1_ = X1_.clone().detach()
                 X1 = bc_pos(X1_.clone().detach())

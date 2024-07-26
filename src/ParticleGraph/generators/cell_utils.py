@@ -71,7 +71,6 @@ def init_cells(config, cycle_length, final_cell_mass, cell_death_rate, mc_slope,
             intermediate_count += 1
             if intermediate_count > 100:
                 distance_threshold = distance_threshold * 0.99
-                print(f"distance_threshold: {distance_threshold}")
                 intermediate_count = 0
 
     else:
