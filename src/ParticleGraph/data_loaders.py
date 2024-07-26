@@ -251,14 +251,13 @@ def load_celegans_gene_data(
         file_path,
         *,
         coordinate_system: Literal["cartesian", "polar"] = "cartesian",
-        replace_missing_cpm=None,
         device='cuda:0'
 ):
     """
     Load C. elegans cell data from an HDF5 file (positions and gene expressions) and convert it to a PyTorch tensor.
 
     :param file_path: The path to the HDF5 file.
-    :param replace_missing_cpm: If not None, replace missing cpm values (NaN) with this value.
+    :param coordinate_system: The coordinate system to use for the positions (either "cartesian" or "polar").
     :param device: The PyTorch device to allocate the tensors on.
     :return: A tuple consisting of:
      * A :py:class:`TimeSeries` object containing the loaded data for each time point.
