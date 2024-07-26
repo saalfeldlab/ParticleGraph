@@ -8,7 +8,7 @@ import torch
 from ParticleGraph.data_loaders import load_shrofflab_celegans
 
 # Load the data set (insert the path to the data set on your system)
-# The data consists of a list of time points, each containing a :py:class:`torch_geometric.data.Data` object and
+# The data consists of a list of time points, each containing a :py:class:`torch_geometric.data.Data` object, and
 # a list of cell names
 root = "<path-to-data>"
 path = os.path.join(root, "log10_mean-and-smoothed_lin-32.csv")

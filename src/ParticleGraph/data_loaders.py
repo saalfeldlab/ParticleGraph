@@ -264,9 +264,7 @@ def load_celegans_gene_data(
     :param device: The PyTorch device to allocate the tensors on.
     :return: A tuple consisting of:
      * A :py:class:`TimeSeries` object containing the loaded data for each time point.
-     * The names of the cells in the data.
-    :raises ValueError: If the time series are not part of the same timeframe or if too many cells have abnormal time
-    series lengths.
+     * A :py:class:`pandas.DataFrame` object containing information about the cells.
     """
 
     # Load cell information from the HDF5 file (metadata string) into pandas dataframe
@@ -341,9 +339,7 @@ def load_agent_data(
     :param device: The PyTorch device to allocate the tensors on.
     :return: A tuple consisting of:
      * A :py:class:`TimeSeries` object containing the loaded data for each time point.
-     * The names of the cells in the data.
-    :raises ValueError: If the time series are not part of the same timeframe or if too many cells have abnormal time
-    series lengths.
+     * A 2D grid of the signal that the agents are responding to.
     """
 
     # Check how many files (each a timestep) there are
@@ -351,6 +347,7 @@ def load_agent_data(
     file_name_pattern = re.compile(r'particles\d+.txt')
     n_time_points = sum(1 for f in files if file_name_pattern.match(f))
 
+    # Load the data from text (csv) files and convert everything to to Data objects (all fields are float32)
     dtype = {
         "x": np.float32,
         "y": np.float32,
@@ -376,11 +373,13 @@ def load_agent_data(
             state=torch.tensor(time_point["state"].to_numpy(), dtype=torch.float32, device=device),
         ))
 
+    # Compute the velocity as the derivative of the position and add it to the time series
     time_series = TimeSeries(time, data)
     velocity = time_series.compute_derivative('pos')
     for i, data in enumerate(time_series):
         data.velocity = velocity[i]
 
+    # Load the signal
     signal = np.loadtxt(os.path.join(data_directory, "signal.txt"))
     signal = torch.tensor(signal, device=device)
 
