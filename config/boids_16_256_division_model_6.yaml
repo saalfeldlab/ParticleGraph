@@ -1,5 +1,5 @@
 description: 'Boids 16 different types, division'
-dataset: 'boids_16_256_division_model_5'
+dataset: 'boids_16_256_division_model_6'
 
 simulation:
   params: [[42.031494,  19.948257,  89.53507  ],
@@ -25,11 +25,11 @@ simulation:
   min_radius: 0.001
   max_radius: 0.04
   max_edges: 500000
-  n_particles: 512
+  n_particles: 5120
   has_cell_division: True
   cell_inert_model_coeff: 0.001
   cell_active_model_coeff: 1.0
-  n_particles_max: 6000
+  n_particles_max: 20000
   n_particle_types: 16
   n_interactions: 16
   n_frames: 12000

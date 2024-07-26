@@ -658,23 +658,42 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 cc = cc[index]
                 voronoi_area = get_voronoi_areas(cc, vertices_per_cell, device)
 
-                loss = (target_areas - voronoi_area).norm(2)
-
-                loss.backward()
-                optimizer.step()
+                try:
+                    loss = (target_areas - voronoi_area).norm(2)
+                    loss.backward()
+                    optimizer.step()
+                except:
+                    logger.info('memory_usage pb during gradient descent')
+                    print('memory_usage pb during gradient descent')
+                    logger.info(f"GPU memory: total {t} reserved {r} allocated {a}")
+                    logger.info(
+                        f'{x.shape[0]} particles,  {edge_index.shape[1]} edges, max_radius: {np.round(max_radius, 3)}')
+                    memory_usage_x_list = 0
+                    memory_usage_edge_list = 0
+                    for n in range(len(x_list)):
+                        memory_usage_x_list += x_list[n].element_size() * x_list[n].nelement()
+                        memory_usage_edge_list += edge_p_p_list[n].nbytes
+                    logger.info(
+                        f'memory usage x_list: {memory_usage_x_list / 1E6} MB, memory usage edge_list: {memory_usage_edge_list / 1E6} MB')
 
                 X1_ = X1_.clone().detach()
                 X1 = bc_pos(X1_.clone().detach())
-
 
             y_voronoi = (bc_dpos(X1 - first_X1) / delta_t - V1) / delta_t
 
             if (it) % 500 == 0:
                 t, r, a = get_gpu_memory_map(device)
                 logger.info(f"GPU memory: total {t} reserved {r} allocated {a}")
-                logger.info(
-                    f'{x.shape[0]} particles,  {edge_index.shape[1]} edges, max_radius: {np.round(max_radius, 3)},')
-                logger.info(f'max_radius {max_radius} {edge_index.shape[1]}')
+                logger.info(f'{x.shape[0]} particles,  {edge_index.shape[1]} edges, max_radius: {np.round(max_radius, 3)}')
+                memory_usage_x_list=0
+                memory_usage_edge_list=0
+                for n in range(len(x_list)):
+                    memory_usage_x_list += x_list[n].element_size() * x_list[n].nelement()
+                    memory_usage_edge_list += edge_p_p_list[n].nbytes
+                logger.info(f'memory usage x_list: {memory_usage_x_list/1E6} MB, memory usage edge_list: {memory_usage_edge_list/1E6} MB')
+                print(f"GPU memory: total {t} reserved {r} allocated {a}")
+                print(f'{x.shape[0]} particles,  {edge_index.shape[1]} edges, max_radius: {np.round(max_radius, 3)}')
+                print(f'memory usage x_list: {memory_usage_x_list/1E6} MB, memory usage edge_list: {memory_usage_edge_list/1E6} MB')
 
             # append list
             if (it >= 0):
@@ -917,24 +936,19 @@ def data_generate_cell_3D(config, visualize=True, run_vizualized=0, style='color
     n_frames = simulation_config.n_frames
     cmap = CustomColorMap(config=config)
     dataset_name = config.dataset
-    marker_size = config.plotting.marker_size
+    has_inert_model = simulation_config.cell_inert_model_coeff > 0
 
     max_radius_list = []
     edges_len_list = []
     folder = f'./graphs_data/graphs_{dataset_name}/'
     os.makedirs(folder, exist_ok=True)
     os.makedirs(f'./graphs_data/graphs_{dataset_name}/Fig/', exist_ok=True)
-    os.makedirs(f'./graphs_data/graphs_{dataset_name}/GT/', exist_ok=True)
     if erase:
         files = glob.glob(f"{folder}/*")
         for f in files:
-            if (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (
-                    f != 'generation_code.py'):
+            if (f[-3:] != 'Fig') & (f[-2:] != 'GT') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (f != 'generation_code.py'):
                 os.remove(f)
         files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Fig/*')
-        for f in files:
-            os.remove(f)
-        files = glob.glob(f'./graphs_data/graphs_{dataset_name}/GT/*')
         for f in files:
             os.remove(f)
 
@@ -987,7 +1001,7 @@ def data_generate_cell_3D(config, visualize=True, run_vizualized=0, style='color
 
         N1, X1, V1, T1, H1, A1, S1, M1, R1, CL1, DR1, MC1, AR1 = init_cells(config, cycle_length, final_cell_mass,
                                                                             cell_death_rate, mc_slope, cell_area,
-                                                                            device=device)
+                                                                            bc_pos, bc_dpos, dimension, device=device)
 
         T1_list = T1.clone().detach()
         n_particles_alive = len(T1)
@@ -1138,7 +1152,7 @@ def data_generate_cell_3D(config, visualize=True, run_vizualized=0, style='color
                 vertices_per_cell_list.append(vertices_per_cell)
                 vertices_pos.requires_grad = True
                 optimizer = torch.optim.Adam([vertices_pos], lr=1E-3)
-                first_centroids, voronoi_area = get_voronoi_areas(vertices_pos, vertices_per_cell, device)
+                voronoi_area = get_voronoi_areas(vertices_pos, vertices_per_cell, device)
 
                 # for i in range(2):
                 #     optimizer.zero_grad()
@@ -1170,7 +1184,7 @@ def data_generate_cell_3D(config, visualize=True, run_vizualized=0, style='color
                 V1 = y
 
             V1 = V1 * alive[:, None].repeat(1, dimension)
-            X1 = bc_pos(X1 + V1 * delta_t + delta_centroids * simulation_config.cell_inert_model_coeff)
+            X1 = bc_pos(X1 + V1 * delta_t)
 
 
             # output plots
@@ -1178,7 +1192,7 @@ def data_generate_cell_3D(config, visualize=True, run_vizualized=0, style='color
 
                 n_particles = len(X1)
                 print(f'frame {it}, {n_particles} particles, {edge_index.shape[1]} edges')
-                vor, vertices_pos, vertices_per_cell = get_vertices(points=to_numpy(X1), device=device)
+                vor, vertices_pos, vertices_per_cell, all_points = get_vertices(points=X1, device=device)
 
                 cells = [[] for i in range(n_particles)]
                 for (l, r), vertices in vor.ridge_dict.items():

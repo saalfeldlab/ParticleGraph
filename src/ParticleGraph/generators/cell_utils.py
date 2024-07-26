@@ -60,12 +60,20 @@ def init_cells(config, cycle_length, final_cell_mass, cell_death_rate, mc_slope,
 
         pos = torch.rand(1, dimension, device=device)
         count = 1
+        intermediate_count = 0
+        distance_threshold = 0.025
         while count < n_particles:
             new_pos = torch.rand(1, dimension, device=device)
             distance = torch.sum(bc_dpos(pos[:, None, :] - new_pos[None, :, :]) ** 2, dim=2)
-            if torch.all(distance > 0.025**2):
+            if torch.all(distance > distance_threshold**2):
                 pos = torch.cat((pos, new_pos), 0)
                 count += 1
+            intermediate_count += 1
+            if intermediate_count > 100:
+                distance_threshold = distance_threshold * 0.99
+                print(f"distance_threshold: {distance_threshold}")
+                intermediate_count = 0
+
     else:
         pos = torch.randn(n_particles, dimension, device=device) * 0.5
 
