@@ -2,12 +2,14 @@
 A collection of functions for loading data from various sources.
 """
 from dataclasses import dataclass
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Literal
 
 import astropy.units as u
+import h5py
 import numpy as np
 import pandas as pd
 from astropy.units import Unit
+from scipy.interpolate import CubicSpline, interp1d, make_interp_spline
 from tqdm import trange
 
 from ParticleGraph.TimeSeries import TimeSeries
@@ -245,6 +247,79 @@ def load_shrofflab_celegans(
     return time_series, cell_names
 
 
+def load_celegans_gene_data(
+        file_path,
+        *,
+        coordinate_system: Literal["cartesian", "polar"] = "cartesian",
+        replace_missing_cpm=None,
+        device='cuda:0'
+):
+    """
+    Load C. elegans cell data from an HDF5 file (positions and gene expressions) and convert it to a PyTorch tensor.
+
+    :param file_path: The path to the HDF5 file.
+    :param replace_missing_cpm: If not None, replace missing cpm values (NaN) with this value.
+    :param device: The PyTorch device to allocate the tensors on.
+    :return: A tuple consisting of:
+     * A :py:class:`TimeSeries` object containing the loaded data for each time point.
+     * The names of the cells in the data.
+    :raises ValueError: If the time series are not part of the same timeframe or if too many cells have abnormal time
+    series lengths.
+    """
+
+    # Load cell information from the HDF5 file (metadata string) into pandas dataframe
+    file = h5py.File(file_path, 'r')
+    cell_info_raw = file["cellinf"][0][0].decode("utf-8")
+    cell_info_raw = cell_info_raw.replace("false", "False").replace("true", "True")
+    cell_info_raw = eval(cell_info_raw)
+
+    names = [info.pop('name') for info in cell_info_raw]
+    cell_info = pd.DataFrame(cell_info_raw, index=names)
+
+    # There are two time series: one for the gene expressions (sparse) and one for the positions (dense)
+    # Compute intersection of both time series and interpolate gene expressions where they are not defined
+    gene_time = file["gene_time"][0]
+    pos_time = file["pos_time"][0]
+    min_t = max(gene_time[0], pos_time[0])
+    max_t = min(gene_time[-1], pos_time[-1])
+    time = np.arange(min_t, max_t + 1)
+    pos_overlap = np.isin(pos_time, time)
+    genes_overlap = np.isin(gene_time, time)
+
+    # Assign positions
+    match coordinate_system:
+        case "cartesian":
+            positions = file["pos_xyz"][pos_overlap]
+        case "polar":
+            positions = file["pos_rpz"][pos_overlap]
+        case _:
+            raise ValueError(f"Invalid coordinate system '{coordinate_system}'")
+
+    # Interpolate gene expressions by piecewise linear spline
+    gene_data = file["gene_CPM"][genes_overlap]
+    t = gene_time[genes_overlap]
+    f = make_interp_spline(t, gene_data, k=1, axis=0, check_finite=False)
+
+    # Due to NaNs in the gene data, the interpolation is not perfect; make sure at least original data is present
+    genes_are_present = np.isin(time, gene_time)
+    interpolated_to_present_data = np.NaN * np.ones_like(time)
+    interpolated_to_present_data[genes_are_present] = np.arange(np.count_nonzero(genes_overlap))
+
+    # Bundle everything in a TimeSeries object
+    data = []
+    for t in range(len(time)):
+        interpolated_gene_data = gene_data if genes_are_present[t] else f(time[t])
+        data.append(Data(
+            time=time[t],
+            pos=torch.tensor(positions[t], device=device),
+            gene_cpm=torch.tensor(interpolated_gene_data.T, device=device),
+        ))
+
+    file.close()
+    time_series = TimeSeries(torch.tensor(time, device=device), data)
+    return time_series, cell_info
+
+
 def ensure_local_path_exists(path):
     """
     Ensure that the local path exists. If it doesn't, create the directory structure.
@@ -283,7 +358,6 @@ def load_csv_from_descriptors(
     for file in different_files:
         dtypes = {descriptor.column_name: descriptor.type for descriptor in column_descriptors.values()
                   if descriptor.filename == file}
-        names = [name for name, descriptor in column_descriptors.items() if descriptor.filename == file]
         print(f"Loading data from '{file}':")
         for column_name, dtype in dtypes.items():
             print(f"  - column {column_name} as {dtype}")
