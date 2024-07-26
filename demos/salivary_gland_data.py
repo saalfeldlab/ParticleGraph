@@ -22,6 +22,7 @@ X = bundle_fields(frame_data, "track_id", "pos", "velocity")
 acceleration, mask = time_series.compute_derivative("velocity", id_name="track_id")
 Y = acceleration[frame]
 Y = Y[mask[frame], :]
+print(f"NaNs in sanitized acceleration: {torch.isnan(Y).sum()}")
 
 # Sanity-check one to one correspondence between X and Y
 #   pred = GNN(X)
