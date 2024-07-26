@@ -240,9 +240,9 @@ def load_shrofflab_celegans(
     # Compute the velocity and the derivative of the gene expressions and add them to the time series
     velocity = time_series.compute_derivative('pos')
     d_cpm = time_series.compute_derivative('cpm')
-    for i in range(len(time_series)):
-        data[i].velocity = velocity[i]
-        data[i].d_cpm = d_cpm[i]
+    for i, data in enumerate(time_series):
+        data.velocity = velocity[i]
+        data.d_cpm = d_cpm[i]
 
     return time_series, cell_names
 
@@ -314,9 +314,16 @@ def load_celegans_gene_data(
             pos=torch.tensor(positions[t], device=device),
             gene_cpm=torch.tensor(interpolated_gene_data.T, device=device),
         ))
-
-    file.close()
     time_series = TimeSeries(torch.tensor(time, device=device), data)
+    file.close()
+
+    # Compute the velocity and the derivative of the gene expressions and add them to the time series
+    velocity = time_series.compute_derivative('pos')
+    d_cpm = time_series.compute_derivative('gene_cpm')
+    for i, data in enumerate(time_series):
+        data.velocity = velocity[i]
+        data.d_gene_cpm = d_cpm[i]
+
     return time_series, cell_info
 
 
