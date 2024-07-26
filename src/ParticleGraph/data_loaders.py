@@ -167,8 +167,7 @@ def load_shrofflab_celegans(
     :param replace_missing_cpm: If not None, replace missing cpm values (NaN) with this value.
     :param device: The PyTorch device to allocate the tensors on.
     :return: A tuple consisting of:
-     * A list of PyTorch tensors containing the loaded data for each time point.
-     * The time points corresponding to the data.
+     * A :py:class:`TimeSeries` object containing the loaded data for each time point.
      * The names of the cells in the data.
     :raises ValueError: If the time series are not part of the same timeframe or if too many cells have abnormal time
     series lengths.
