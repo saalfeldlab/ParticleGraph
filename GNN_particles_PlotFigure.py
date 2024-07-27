@@ -2036,14 +2036,19 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
             x_data_ = x_data[pos[:, 0]]
             y_data_ = y_data[pos[:, 0]]
             lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
+
+
             residuals = y_data_ - linear_model(x_data_, *lin_fit)
             ss_res = np.sum(residuals ** 2)
-            ss_tot = np.sum((y_data - np.mean(y_data_)) ** 2)
+            ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
             r_squared = 1 - (ss_res / ss_tot)
+
+
             print(f'R^2$: {np.round(r_squared, 2)}  Slope: {np.round(lin_fit[0], 2)}  outliers: {np.sum(relative_error > threshold)}  threshold: {threshold} ')
             logger.info(f'R^2$: {np.round(r_squared, 2)}  Slope: {np.round(lin_fit[0], 2)}  outliers: {np.sum(relative_error > threshold)}  threshold: {threshold} ')
 
             fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
+            plt.scatter(x_data_,y_data_, color='k', s=1, alpha=0.5)
             plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
             plt.scatter(p_list, popt_list, color='k', s=50, alpha=0.5)
             plt.xlabel(r'True mass ', fontsize=64)
@@ -2195,7 +2200,7 @@ def plot_gravity_continuous(config_file, epoch_list, log_dir, logger, device):
         lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
         residuals = y_data_ - linear_model(x_data_, *lin_fit)
         ss_res = np.sum(residuals ** 2)
-        ss_tot = np.sum((y_data - np.mean(y_data_)) ** 2)
+        ss_tot = np.sum((y_data_ - np.mean(y_data_)) ** 2)
         r_squared = 1 - (ss_res / ss_tot)
         print(f'R^2$: {np.round(r_squared, 2)}  Slope: {np.round(lin_fit[0], 2)}  outliers: {np.sum(relative_error > threshold)}  threshold: {threshold} ')
         logger.info(f'R^2$: {np.round(r_squared, 2)}  Slope: {np.round(lin_fit[0], 2)}  outliers: {np.sum(relative_error > threshold)}  threshold: {threshold} ')
@@ -4419,7 +4424,7 @@ def get_figures(index):
         case 'supp9':
             config_list = ['gravity_16_noise_0_4', 'Coulomb_3_noise_0_4', 'Coulomb_3_noise_0_3', 'gravity_16_noise_0_3']
         case 'supp10':
-            config_list = [ 'gravity_16_dropout_30', 'Coulomb_3_dropout_10_no_ghost', 'Coulomb_3_dropout_10', 'gravity_16_dropout_10']
+            config_list = ['gravity_16_dropout_10', 'gravity_16_dropout_30', 'Coulomb_3_dropout_10_no_ghost', 'Coulomb_3_dropout_10']
         case 'supp11':
             config_list = ['boids_16_256']
             epoch_list = ['0_0', '0_2000', '0_10000', '20']
@@ -4581,11 +4586,11 @@ def get_figures(index):
             config = ParticleGraphConfig.from_yaml(f'./config/wave_slit_bis.yaml')
             data_generate(config, device=device, visualize=True, run_vizualized=1, style='latex color', alpha=1,
                           erase=True,
-                          scenario='', ratio=1, bSave=True, step=config.simulation.n_frames // 3)
+                          scenario='', ratio=1, bSave=True, step=config.simulation.n_frames // 100)
             config_file = 'wave_slit_bis'
             config = ParticleGraphConfig.from_yaml(f'./config/wave_slit_bis.yaml')
             data_test(config=config, config_file=config_file, visualize=True, style='latex color', verbose=False,
-                      best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
+                      best_model=20, run=1, step=config.simulation.n_frames // 100, test_simulation=False,
                       sample_embedding=False, device=device)
 
         case 'supp16':
@@ -4600,7 +4605,7 @@ def get_figures(index):
             config_file = 'wave_boat_bis'
             config = ParticleGraphConfig.from_yaml(f'./config/wave_boat_bis.yaml')
             data_test(config=config, config_file=config_file, visualize=True, style='latex color', verbose=False,
-                      best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
+                      best_model=20, run=1, step=config.simulation.n_frames // 100, test_simulation=False,
                       sample_embedding=False, device=device)
 
         case 'supp17':
@@ -4623,8 +4628,8 @@ def get_figures(index):
             for config_file in config_list:
                 config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
                 data_plot(config=config, config_file=config_file, epoch_list=epoch_list, device=device)
-            data_test(config=config, config_file=config_file, visualize=True, style='latex color', verbose=False,
-                              best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False,
+            data_test(config=config, config_file=config_file, visualize=True, style=' color', verbose=False,
+                              best_model=20, run=0, step=config.simulation.n_frames // 100, test_simulation=False,
                               sample_embedding=False, device=device)
 
     print(' ')
@@ -4642,20 +4647,19 @@ if __name__ == '__main__':
 
     matplotlib.use("Qt5Agg")
 
-    config_list =['arbitrary_3_sequence_d','arbitrary_3_sequence_e']
+    # config_list =['arbitrary_3_sequence_d','arbitrary_3_sequence_e']
+    # # config_list = ['signal_N_100_2_d']
+    # # config_list = ['signal_N_100_2_asym_a']
+    # # config_list = ['boids_16_256_division_model_2_new']
+    # for config_file in config_list:
+    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+    #     data_plot(config=config, config_file=config_file, epoch_list=['15','20'], device=device)
+    #     # plot_generated(config=config, run=0, style='white voronoi', step = 120, device=device)
+    #     # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 
-    # config_list = ['signal_N_100_2_d']
-    # config_list = ['signal_N_100_2_asym_a']
-    # config_list = ['boids_16_256_division_model_2_new']
-    for config_file in config_list:
-        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['15','20'], device=device)
-        # plot_generated(config=config, run=0, style='white voronoi', step = 120, device=device)
-        # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
-
-    # f_list = ['supp10']
-    # for f in f_list:
-    #     config_list,epoch_list = get_figures(f)
+    f_list = ['supp15']
+    for f in f_list:
+        config_list,epoch_list = get_figures(f)
 
 
 

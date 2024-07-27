@@ -1,5 +1,5 @@
 description: 'Boids 16 different types, division'
-dataset: 'boids_16_256_division_model_6'
+dataset: 'boids_division_model_f1'
 
 simulation:
   params: [[42.031494,  19.948257,  89.53507  ],
@@ -21,18 +21,18 @@ simulation:
   cell_cycle_length:  [129.60669,250.58319,248.17961,245.92522,225.17038,300.4388 ,180.9825 ,281.869  ,237.0785 ,214.83209,253.48967,222.98715,285.5585 ,212.19756,301.14725,276.9949 ]
   cell_death_rate: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
   final_cell_mass: [100, 300, 400, 500, 100, 300, 400, 500, 100, 300, 400, 500, 100, 300, 400, 500]
-  cell_area: [1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4]
+  cell_area: [0.4,1,1.5,1.8,0.4,1,1.5,1.8,0.4,1,1.5,1.8,0.4,1,1.5,1.8]
   min_radius: 0.001
   max_radius: 0.04
   max_edges: 500000
-  n_particles: 5120
+  n_particles: 512
   has_cell_division: True
-  cell_inert_model_coeff: 0.004
+  cell_inert_model_coeff: 1.0E-3
   cell_active_model_coeff: 1.0
-  n_particles_max: 20000
+  n_particles_max: 5000
   n_particle_types: 16
   n_interactions: 16
-  n_frames: 12000
+  n_frames: 2500
   sigma: 0.005
   delta_t: 0.5
   dpos_init: 5.0E-4
@@ -62,7 +62,7 @@ training:
   batch_size: 1
   small_init_batch_size: False
   sub_batches: 4
-  n_runs: 1
+  n_runs: 2
   noise_level: 0
   sparsity: 'replace_embedding'
   cluster_method: 'distance_plot'
