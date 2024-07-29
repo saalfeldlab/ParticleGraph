@@ -383,6 +383,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
     #     logger.removeHandler(handler)
 
 
+
 def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,
                        ratio=1, scenario='none', device=None, bSave=True):
     torch.random.fork_rng(devices=device)
@@ -406,6 +407,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
     marker_size = config.plotting.marker_size
     has_inert_model = simulation_config.cell_inert_model_coeff > 0
     has_cell_death = simulation_config.has_cell_death
+    has_cell_division = True
 
     max_radius_list = []
     edges_len_list = []
@@ -504,7 +506,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
             # calculate cell death and cell division
-            if (it > 0) & (n_particles_alive < simulation_config.n_particles_max):
+
+            if has_cell_death:
                 # cell death
                 sample = torch.rand(len(X1), device=device)
                 H1[sample.squeeze() < DR1.squeeze() / 5E4, 0] = 0
@@ -516,11 +519,11 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 n_particles_alive = torch.sum(H1[:, 0])
                 n_particles_dead = n_particles - n_particles_alive
 
+            if (it > 0) & (has_cell_division):
 
                 # cell division
                 pos = torch.argwhere(
-                    (A1.squeeze() >= CL1.squeeze()) & (H1[:, 0].squeeze() == 1) & (S1[:, 0].squeeze() == 3) & (
-                                n_particles_alive < n_particles_max)).flatten()
+                    (A1.squeeze() >= CL1.squeeze()) & (H1[:, 0].squeeze() == 1) & (S1[:, 0].squeeze() == 3) & (n_particles_alive < n_particles_max)).flatten()
                 if (len(pos) > 0):
                     n_add_nodes = len(pos) * 2
                     pos = to_numpy(pos).astype(int)
@@ -571,27 +574,33 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     AR1 = torch.cat((AR1, AR1[pos, :], AR1[pos, :]), dim=0)
                     R1 = M1 / (2 * CL1)
 
-                alive = torch.argwhere(H1[:, 0] == 1).squeeze()
+                    n_particles_alive = torch.sum(H1[:, 0])
 
-                N1 = N1[alive]
-                X1 = X1[alive]
-                V1 = V1[alive]
-                T1 = T1[alive]
-                H1 = H1[alive]
-                A1 = A1[alive]
-                S1 = S1[alive]
-                M1 = M1[alive]
-                CL1 = CL1[alive]
-                R1 = R1[alive]
-                DR1 = DR1[alive]
-                MC1 = MC1[alive]
-                AR1 = AR1[alive]
+                    if (n_particles_alive >= simulation_config.n_particles_max):
+                        has_cell_division = False
+                        has_cell_death = False
 
-                index_particles = []
-                for n in range(n_particle_types):
-                    pos = torch.argwhere(T1 == n)
-                    pos = to_numpy(pos[:, 0].squeeze()).astype(int)
-                    index_particles.append(pos)
+            alive = torch.argwhere(H1[:, 0] == 1).squeeze()
+
+            N1 = N1[alive]
+            X1 = X1[alive]
+            V1 = V1[alive]
+            T1 = T1[alive]
+            H1 = H1[alive]
+            A1 = A1[alive]
+            S1 = S1[alive]
+            M1 = M1[alive]
+            CL1 = CL1[alive]
+            R1 = R1[alive]
+            DR1 = DR1[alive]
+            MC1 = MC1[alive]
+            AR1 = AR1[alive]
+
+            index_particles = []
+            for n in range(n_particle_types):
+                pos = torch.argwhere(T1 == n)
+                pos = to_numpy(pos[:, 0].squeeze()).astype(int)
+                index_particles.append(pos)
 
             # calculate cell type change
             if simulation_config.state_type == 'sequence':
@@ -839,16 +848,20 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                                 dpi=85.35)
                     plt.close()
 
-                fig = plt.figure(figsize=(12, 6))
-                ax = fig.add_subplot(1, 2, 1)
+                fig = plt.figure(figsize=(12, 4))
+                ax = fig.add_subplot(1, 3, 1)
                 plt.plot(max_radius_list)
                 plt.xlabel('Frame')
                 plt.ylabel('Max radius')
                 plt.ylim([0, simulation_config.max_radius * 1.1])
-                ax = fig.add_subplot(1, 2, 2)
+                ax = fig.add_subplot(1, 3, 2)
                 plt.plot(x_len_list, edges_len_list)
                 plt.xlabel('Number of particles')
                 plt.ylabel('Number of edges')
+                ax = fig.add_subplot(1, 3, 3)
+                plt.plot(x_len_list)
+                plt.xlabel('Number of particles')
+                plt.xlabel('Frame')
                 plt.tight_layout()
                 plt.savefig(f"graphs_data/graphs_{dataset_name}/max_radius_{run}.jpg", dpi=170.7)
                 plt.close()
@@ -877,12 +890,14 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                                     cell = vertices_per_cell[i]
                                     vertices = to_numpy(vertices_pos[cell, :])
                                     patches.append(Polygon(vertices, closed=True))
+                                pc = PatchCollection(patches, alpha=0.4, facecolors=cmap.color(n))
+                                ax.add_collection(pc)
                             elif pos.shape[0]==1:
                                 cell = vertices_per_cell[i]
                                 vertices = to_numpy(vertices_pos[cell, :])
                                 patches.append(Polygon(vertices, closed=True))
-                            pc = PatchCollection(patches, alpha=0.4, facecolors=cmap.color(n))
-                            ax.add_collection(pc)
+                                pc = PatchCollection(patches, alpha=0.4, facecolors=cmap.color(n))
+                                ax.add_collection(pc)
 
                             if 'center' in style:
                                 plt.scatter(to_numpy(X1[index_particles[n], 0]), to_numpy(X1[index_particles[n], 1]), s=1, color=cmap.color(n))
@@ -1146,6 +1161,7 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
         if bSave:
             torch.save(x_mesh_list, f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt')
             torch.save(y_mesh_list, f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt')
+
 
 
 def data_generate_particle_field(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
