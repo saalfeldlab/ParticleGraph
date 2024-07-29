@@ -14,6 +14,7 @@ simulation:
   max_edges: 500000
   n_particles: 1024
   has_cell_division: True
+  has_cell_death: True
   cell_inert_model_coeff: 1.0E-1
   cell_active_model_coeff: 0.0
   cell_type_map: 'cell_map_1.tif'

@@ -405,6 +405,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
     dataset_name = config.dataset
     marker_size = config.plotting.marker_size
     has_inert_model = simulation_config.cell_inert_model_coeff > 0
+    has_cell_death = simulation_config.has_cell_death
 
     max_radius_list = []
     edges_len_list = []
@@ -508,9 +509,10 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 sample = torch.rand(len(X1), device=device)
                 H1[sample.squeeze() < DR1.squeeze() / 5E4, 0] = 0
                 # removal if too small
-                pos = torch.argwhere(AR1.squeeze()<1E-5)# & (T1.squeeze() == 0))
-                if len(pos) > 0:
-                    H1[pos,0]=0
+                if has_cell_death:
+                    pos = torch.argwhere(AR1.squeeze()<1E-5)# & (T1.squeeze() == 0))
+                    if len(pos) > 0:
+                        H1[pos,0]=0
                 n_particles_alive = torch.sum(H1[:, 0])
                 n_particles_dead = n_particles - n_particles_alive
 
@@ -668,6 +670,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 cc = cc[index]
                 voronoi_area = get_voronoi_areas(cc, vertices_per_cell, device)
 
+                AR1 = voronoi_area[:, None].clone().detach()
+
                 try:
                     # loss = (target_areas[mask] - voronoi_area[mask]).norm(2)
                     loss = (target_areas - voronoi_area).norm(2)
@@ -723,8 +727,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             V1 = V1 * alive[:, None].repeat(1, 2)
 
             X1 = bc_pos(first_X1 + V1 * delta_t)
-
-            AR1 = voronoi_area[:, None].clone().detach()
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):

@@ -37,6 +37,7 @@ class SimulationConfig(BaseModel):
     pos_rate: list[list[float]] = None
     neg_rate: list[list[float]] = None
     has_cell_division: bool = False
+    has_cell_death: bool = False
     cell_inert_model_coeff: float = 0
     cell_active_model_coeff: float = 1
     n_frames: int = 1000
