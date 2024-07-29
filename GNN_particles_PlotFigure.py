@@ -1032,9 +1032,11 @@ def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoc
     return accuracy
 
 
-def plot_cell_rates(config, device, log_dir, n_particle_types, x_list, new_labels, cmap, logger):
+def plot_cell_rates(config, device, log_dir, n_particle_types, type_list, x_list, new_labels, cmap, logger):
 
     n_frames = config.simulation.n_frames
+    delta_t = config.simulation.delta_t
+
     cell_cycle_length = np.array(config.simulation.cell_cycle_length)
     if len(cell_cycle_length) == 1:
         cell_cycle_length = to_numpy(torch.load(f'graphs_data/graphs_{config.dataset}/cycle_length.pt', map_location=device))
@@ -1105,19 +1107,22 @@ def plot_cell_rates(config, device, log_dir, n_particle_types, x_list, new_label
     plt.savefig(f"./{log_dir}/results/cell_dead_{config_file}.tif", dpi=300)
     plt.close()
 
+    #         6,7 H1 cell status dim=2  H1[:,0] = cell alive flag, alive : 0 , death : 0 , H1[:,1] = cell division flag, dividing : 1
+    #         8 A1 cell age dim=1
 
-    pos = np.argwhere(x_[:, 7:8] > 0)
-    pos = pos[:, 0]
-    division_list = np.concatenate((x_[pos, 5:6], x_[pos, 7:8]), axis=1)
-    reconstructed_cell_cycle_length = np.zeros((n_particle_types, 1))
+    division_list = {}
+    for n in np.unique(new_labels):
+        division_list[n] = []
+    for n in trange(len(type_list)):
+        pos = np.argwhere(x_[:, 0:1] == n)
+        if len(pos)>0:
+            division_list[new_labels[n]].append(len(pos)) * delta_t
 
+    reconstructed_cell_cycle_length = np.zeros(n_particle_types)
     for k in range(n_particle_types):
-        pos = np.argwhere(division_list[:, 0] == k)
-        pos = pos[:, 0]
-        if len(pos>0):
-            print(f'Cell type {k} division rate: {np.mean(division_list[pos, 1:2])}+/-{np.std(division_list[pos, 1:2])}')
-            logger.info(f'Cell type {k} division rate: {np.mean(division_list[pos, 1:2])}+/-{np.std(division_list[pos, 1:2])}')
-            reconstructed_cell_cycle_length[k] = np.mean(division_list[pos, 1:2])
+        print(f'Cell type {k} division rate: {np.mean(division_list[k])}+/-{np.std(division_list[k])}')
+        logger.info(f'Cell type {k} division rate: {np.mean(division_list[k])}+/-{np.std(division_list[k])}')
+        reconstructed_cell_cycle_length[k] = np.mean(division_list[k])
 
     x_data = cell_cycle_length
     y_data = reconstructed_cell_cycle_length.squeeze()
@@ -2821,7 +2826,7 @@ def plot_boids(config_file, epoch_list, log_dir, logger, device):
             f'final result     accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
         if has_cell_division:
-            plot_cell_rates(config, device, log_dir, n_particle_types, x_list, new_labels, cmap, logger)
+            plot_cell_rates(config, device, log_dir, n_particle_types, type_list, x_list, new_labels, cmap, logger)
 
         print('compare reconstructed interaction with ground truth...')
 
@@ -4666,8 +4671,8 @@ if __name__ == '__main__':
     # config_list =['arbitrary_3_sequence_d','arbitrary_3_sequence_e']
     # # config_list = ['signal_N_100_2_d']
     # # config_list = ['signal_N_100_2_asym_a']
-    config_list = ['boids_16_256', 'boids_division_model_f2']
-    # config_list = ['boids_16_256']
+    config_list = ['boids_division_model_f2']
+    # config_list = ['boids_16_256_division_model_2_new']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')

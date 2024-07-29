@@ -549,6 +549,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     H1[pos, 0] = 0  # mother cell is removed, considered dead
                     H1[pos, 1] = 1  # cell division flag
                     H1 = torch.concatenate((H1, torch.ones((n_add_nodes, 2), device=device)), 0)
+                    H1 [-n_add_nodes:, 1] = 0  # cell division flag = 0 for new daughter cells
                     A1 = torch.cat((A1, torch.ones((n_add_nodes, 1), device=device)), 0)
                     S1 = torch.cat((S1, torch.ones((n_add_nodes, 1), device=device)), 0)
                     M1 = torch.cat((M1, final_cell_mass[to_numpy(T1[pos, 0]), None] / 2,
