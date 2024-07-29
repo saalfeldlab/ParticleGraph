@@ -12,7 +12,7 @@ simulation:
   min_radius: 0.001
   max_radius: 0.04
   max_edges: 500000
-  n_particles: 1024
+  n_particles: 2048
   has_cell_division: True
   has_cell_death: True
   cell_inert_model_coeff: 1.0E-1

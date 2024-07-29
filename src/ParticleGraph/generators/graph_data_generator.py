@@ -892,12 +892,12 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                                     patches.append(Polygon(vertices, closed=True))
                                 pc = PatchCollection(patches, alpha=0.4, facecolors=cmap.color(n))
                                 ax.add_collection(pc)
-                            elif pos.shape[0]==1:
-                                cell = vertices_per_cell[i]
-                                vertices = to_numpy(vertices_pos[cell, :])
-                                patches.append(Polygon(vertices, closed=True))
-                                pc = PatchCollection(patches, alpha=0.4, facecolors=cmap.color(n))
-                                ax.add_collection(pc)
+                            # elif pos.shape[0]==1:
+                            #     cell = vertices_per_cell[pos]
+                            #     vertices = to_numpy(vertices_pos[cell, :])
+                            #     patches = Polygon(vertices, closed=True)
+                            #     pc = PatchCollection(patches, alpha=0.4, facecolors=cmap.color(n))
+                            #     ax.add_collection(pc)
 
                             if 'center' in style:
                                 plt.scatter(to_numpy(X1[index_particles[n], 0]), to_numpy(X1[index_particles[n], 1]), s=1, color=cmap.color(n))
