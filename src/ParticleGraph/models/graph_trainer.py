@@ -1406,6 +1406,7 @@ def data_train_cell(config, config_file, device):
     x = x_list[1][0].clone().detach()
     y = y_list[1][0].clone().detach()
     config.simulation.n_particles_max = n_particles_max
+
     for run in range(1,n_runs):
         for k in trange(n_frames):
             if (k % 10 == 0) | (n_frames < 1000):
