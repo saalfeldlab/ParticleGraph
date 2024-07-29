@@ -506,9 +506,15 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             if (it > 0) & (n_particles_alive < simulation_config.n_particles_max):
                 # cell death
                 sample = torch.rand(len(X1), device=device)
-                H1[sample.squeeze() < DR1.squeeze() / 5E4, 0] = 0  # H1[:,0] = cell alive flag, alive : 1 , death : 0
+                H1[sample.squeeze() < DR1.squeeze() / 5E4, 0] = 0
+                # removal if too small
+                pos = torch.argwhere(AR1.squeeze()<1E-5)# & (T1.squeeze() == 0))
+                if len(pos) > 0:
+                    H1[pos,0]=0
                 n_particles_alive = torch.sum(H1[:, 0])
                 n_particles_dead = n_particles - n_particles_alive
+
+
                 # cell division
                 pos = torch.argwhere(
                     (A1.squeeze() >= CL1.squeeze()) & (H1[:, 0].squeeze() == 1) & (S1[:, 0].squeeze() == 3) & (
@@ -563,27 +569,27 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     AR1 = torch.cat((AR1, AR1[pos, :], AR1[pos, :]), dim=0)
                     R1 = M1 / (2 * CL1)
 
-                    alive = torch.argwhere(H1[:, 0] == 1).squeeze()
+                alive = torch.argwhere(H1[:, 0] == 1).squeeze()
 
-                    N1 = N1[alive]
-                    X1 = X1[alive]
-                    V1 = V1[alive]
-                    T1 = T1[alive]
-                    H1 = H1[alive]
-                    A1 = A1[alive]
-                    S1 = S1[alive]
-                    M1 = M1[alive]
-                    CL1 = CL1[alive]
-                    R1 = R1[alive]
-                    DR1 = DR1[alive]
-                    MC1 = MC1[alive]
-                    AR1 = AR1[alive]
+                N1 = N1[alive]
+                X1 = X1[alive]
+                V1 = V1[alive]
+                T1 = T1[alive]
+                H1 = H1[alive]
+                A1 = A1[alive]
+                S1 = S1[alive]
+                M1 = M1[alive]
+                CL1 = CL1[alive]
+                R1 = R1[alive]
+                DR1 = DR1[alive]
+                MC1 = MC1[alive]
+                AR1 = AR1[alive]
 
-                    index_particles = []
-                    for n in range(n_particle_types):
-                        pos = torch.argwhere(T1 == n)
-                        pos = to_numpy(pos[:, 0].squeeze()).astype(int)
-                        index_particles.append(pos)
+                index_particles = []
+                for n in range(n_particle_types):
+                    pos = torch.argwhere(T1 == n)
+                    pos = to_numpy(pos[:, 0].squeeze()).astype(int)
+                    index_particles.append(pos)
 
             # calculate cell type change
             if simulation_config.state_type == 'sequence':
@@ -638,8 +644,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 coeff = 0
                 num_cells = []
                 for i in range(n_particle_types):
-                    pos = to_numpy(torch.argwhere(T1.squeeze() == i)).squeeze()
-                    num_cells.append(len(pos))
+                    pos = torch.argwhere(T1.squeeze() == i).shape[0]
+                    num_cells.append(pos)
                     coeff += num_cells[i] * cell_area[i]
                 target_areas_per_type = torch.tensor([cell_area[i] / coeff for i in range(n_particle_types)], device=device)
                 target_areas = target_areas_per_type[to_numpy(T1).astype(int)].squeeze().clone().detach()
@@ -862,19 +868,20 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
                         for n in range(n_particle_types):
                             pos = torch.argwhere((T1.squeeze() == n) & (H1[:, 0].squeeze() == 1))
-                            pos = to_numpy(pos[:, 0].squeeze()).astype(int)
-                            index_particles.append(pos)
-
-                            size = set_size(x, index_particles[n], 10) / 10
-
-                            patches = []
-                            for i in index_particles[n]:
+                            if pos.shape[0]>1:
+                                pos = to_numpy(pos[:, 0].squeeze()).astype(int)
+                                patches = []
+                                for i in pos:
+                                    cell = vertices_per_cell[i]
+                                    vertices = to_numpy(vertices_pos[cell, :])
+                                    patches.append(Polygon(vertices, closed=True))
+                            elif pos.shape[0]==1:
                                 cell = vertices_per_cell[i]
                                 vertices = to_numpy(vertices_pos[cell, :])
                                 patches.append(Polygon(vertices, closed=True))
-
                             pc = PatchCollection(patches, alpha=0.4, facecolors=cmap.color(n))
                             ax.add_collection(pc)
+
                             if 'center' in style:
                                 plt.scatter(to_numpy(X1[index_particles[n], 0]), to_numpy(X1[index_particles[n], 1]), s=1, color=cmap.color(n))
 

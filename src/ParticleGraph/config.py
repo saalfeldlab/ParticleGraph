@@ -44,6 +44,7 @@ class SimulationConfig(BaseModel):
     delta_t: float = 1
     dpos_init: float = 0
     boundary: Literal['periodic', 'no', 'periodic_special'] = 'periodic'
+    cell_type_map: Optional[str] = None
     node_coeff_map: Optional[str] = None
     node_value_map: Optional[str] = None
     node_proliferation_map: Optional[str] = None

@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from tifffile import imread, imsave
 
 def init_cell_range(config, device, scenario="None"):
     simulation_config = config.simulation
@@ -47,7 +48,6 @@ def init_cell_range(config, device, scenario="None"):
 
     return cycle_length, final_cell_mass, cell_death_rate, mc_slope, cell_area
 
-
 def init_cells(config, cycle_length, final_cell_mass, cell_death_rate, mc_slope, cell_area, bc_pos, bc_dpos, dimension, device):
     simulation_config = config.simulation
     n_particles = simulation_config.n_particles
@@ -82,12 +82,22 @@ def init_cells(config, cycle_length, final_cell_mass, cell_death_rate, mc_slope,
     dpos = dpos_init * torch.randn((n_particles, dimension), device=device)
     dpos = torch.clamp(dpos, min=-torch.std(dpos), max=+torch.std(dpos))
     # specify type
-    type = torch.zeros(int(n_particles / n_particle_types), device=device)
-    for n in range(1, n_particle_types):
-        type = torch.cat((type, n * torch.ones(int(n_particles / n_particle_types), device=device)), 0)
-    if (simulation_config.params == 'continuous') | (
-            config.simulation.non_discrete_level > 0):  # TODO: params is a list[list[float]]; this can never happen?
-        type = torch.tensor(np.arange(n_particles), device=device)
+    if config.simulation.cell_type_map is not None:
+        i0 = imread(f'graphs_data/{config.simulation.cell_type_map}')
+        type_values = np.unique(i0)
+        i0_ = np.zeros_like(i0)
+        for n, pixel_values in enumerate(type_values):
+            i0_[i0 == pixel_values] = n
+        type = i0_[255-(to_numpy(pos[:, 1]) * 255).astype(int), (to_numpy(pos[:, 0]) * 255).astype(int)].astype(int)
+        type = torch.tensor(type, device=device)
+        type = torch.clamp(type, min=0, max=n_particle_types - 1)
+    else:
+        type = torch.zeros(int(n_particles / n_particle_types), device=device)
+        for n in range(1, n_particle_types):
+            type = torch.cat((type, n * torch.ones(int(n_particles / n_particle_types), device=device)), 0)
+        if (simulation_config.params == 'continuous') | (
+                config.simulation.non_discrete_level > 0):  # TODO: params is a list[list[float]]; this can never happen?
+            type = torch.tensor(np.arange(n_particles), device=device)
     # specify cell status dim=2  H1[:,0] = cell alive flag, alive : 0 , death : 0 , H1[:,1] = cell division flag, dividing : 1
     status = torch.ones(n_particles, 2, device=device)
     status[:, 1] = 0
@@ -211,7 +221,6 @@ def get_Delaunay(points=[], device=[]):
     cc = cc.t()
 
     return cc
-
 
 def dot2(u, v):
     return u[0]*v[0] + u[1]*v[1]

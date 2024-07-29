@@ -1,5 +1,5 @@
 description: 'Boids 16 different types, division'
-dataset: 'boids_division_model_h'
+dataset: 'boids_division_model_i'
 
 simulation:
   params: [[42.031494,  19.948257,  89.53507  ],
@@ -16,7 +16,7 @@ simulation:
   has_cell_division: True
   cell_inert_model_coeff: 1.0E-1
   cell_active_model_coeff: 0.0
-  cell_type_map: 'cell_map_1.tif'
+  cell_type_map: 'cell_map_2.tif'
   n_particles_max: 5000
   n_particle_types: 3
   n_interactions: 3
