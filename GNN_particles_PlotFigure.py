@@ -4371,7 +4371,7 @@ def data_plot(config, config_file, epoch_list, device):
                 plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device)
         case 'PDE_A_bis':
             plot_attraction_repulsion_asym(config_file, epoch_list, log_dir, logger, device)
-        case 'PDE_B':
+        case 'PDE_B' | 'PDE_Cell_B':
             plot_boids(config_file, epoch_list, log_dir, logger, device)
         case 'PDE_ParticleField_B' | 'PDE_ParticleField_A':
             plot_particle_field(config_file, epoch_list, log_dir, logger, 'grey', device)
@@ -4650,16 +4650,16 @@ if __name__ == '__main__':
     # config_list =['arbitrary_3_sequence_d','arbitrary_3_sequence_e']
     # # config_list = ['signal_N_100_2_d']
     # # config_list = ['signal_N_100_2_asym_a']
-    # # config_list = ['boids_16_256_division_model_2_new']
-    # for config_file in config_list:
-    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-    #     data_plot(config=config, config_file=config_file, epoch_list=['15','20'], device=device)
-    #     # plot_generated(config=config, run=0, style='white voronoi', step = 120, device=device)
-    #     # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
+    config_list = ['boids_division_model_f2']
+    for config_file in config_list:
+        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+        data_plot(config=config, config_file=config_file, epoch_list=['15','20'], device=device)
+        # plot_generated(config=config, run=0, style='white voronoi', step = 120, device=device)
+        # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 
-    f_list = ['supp15']
-    for f in f_list:
-        config_list,epoch_list = get_figures(f)
+    # f_list = ['supp15']
+    # for f in f_list:
+    #     config_list,epoch_list = get_figures(f)
 
 
 
