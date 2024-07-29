@@ -5,7 +5,7 @@ import scipy.cluster.hierarchy as hcluster
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from matplotlib import pyplot as plt
-# from GNN_particles_PlotFigure import fig_init
+from ParticleGraph.utils import *
 import time
 
 
@@ -50,7 +50,7 @@ class EmbeddingCluster:
         return clusters, n_clusters
 
 
-def sparsify_cluster(cluster_method, proj_interaction, embedding, cluster_distance_threshold, index_particles, n_particle_types, embedding_cluster):
+def sparsify_cluster(cluster_method, proj_interaction, embedding, cluster_distance_threshold, type_list, n_particle_types, embedding_cluster):
 
     # normalization of projection because UMAP output is not normalized
     proj_interaction = (proj_interaction - np.min(proj_interaction)) / (np.max(proj_interaction) - np.min(proj_interaction)+1e-10)
@@ -78,9 +78,22 @@ def sparsify_cluster(cluster_method, proj_interaction, embedding, cluster_distan
             labels, n_clusters = embedding_cluster.get(new_projection, 'distance', thresh=cluster_distance_threshold)
     label_list = []
     for n in range(n_particle_types):
-        tmp = labels[index_particles[n]]
-        label_list.append(np.round(np.median(tmp)))
+        pos = torch.argwhere(type_list == n)
+        pos = to_numpy(pos)
+        if len(pos) > 0:
+            tmp = labels[pos[:,0]]
+            label_list.append(np.round(np.median(tmp)))
+            pos_ = np.argwhere(labels == np.median(tmp))
+
     label_list = np.array(label_list)
+
+    # fig,ax = fig_init()
+    # for n in label_list:
+    #     pos = np.argwhere(labels == n)
+    #     print(len(pos))
+    #     if len(pos) > 0:
+    #         ax.scatter(embedding[pos, 0], embedding[pos, 1], s=5)
+
     new_labels = np.ones_like(labels) * n_particle_types
     for n in range(n_particle_types):
         new_labels[labels == label_list[n]] = n
@@ -88,12 +101,9 @@ def sparsify_cluster(cluster_method, proj_interaction, embedding, cluster_distan
     computation_time = time.time() - start_time
     print(f"Clustering computation time is {computation_time} seconds.")
 
-    # fig,ax = fig_init()
-    # ax.scatter(embedding[:, 0], embedding[:, 1], c=labels, s=5, cmap='tab20')
-    # plt.close()
-    #
-    # fig,ax = fig_init()
-    # ax.scatter(proj_interaction[:, 0], proj_interaction[:, 1], c=labels, s=5, cmap='tab20')
+
+    fig,ax = fig_init()
+    ax.scatter(proj_interaction[:, 0], proj_interaction[:, 1], c=new_labels, s=5, cmap='tab20')
     # plt.close()
 
     return labels, n_clusters, new_labels

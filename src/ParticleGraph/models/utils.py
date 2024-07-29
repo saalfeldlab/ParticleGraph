@@ -48,7 +48,7 @@ def get_in_features(rr, embedding_, config_model, max_radius):
         case 'PDE_A_bis':
             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                      rr[:, None] / max_radius, embedding_, embedding_), dim=1)
-        case 'PDE_B':
+        case 'PDE_B' | 'PDE_Cell_B':
             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                      rr[:, None] / max_radius, 0 * rr[:, None], 0 * rr[:, None],
                                      0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
@@ -487,7 +487,6 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, n_particl
                 in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                          torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
                                          0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-
             case 'PDE_Cell_B_area':
                 in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                          torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
@@ -694,7 +693,6 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
             rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
 
     print('interaction functions ...')
-    fig, ax = fig_init()
     func_list = []
     for n in range(n_particles):
         if config.training.has_no_tracking:
@@ -708,8 +706,8 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
 
         func = func[:, 0]
         func_list.append(func)
-        # if ((n % 5 == 0) | (config.graph_model.particle_model_name=='PDE_GS') | ('PDE_N' in config_model)) & vizualize:
-        plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),2, color=cmap.color(type_list[n].astype(int)), linewidth=2, alpha=0.25)
+        if ((n % 5 == 0) | (config.graph_model.particle_model_name=='PDE_GS') | ('PDE_N' in config_model)) & vizualize:
+            plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),2, color=cmap.color(type_list[n].astype(int)), linewidth=2, alpha=0.25)
 
     func_list = torch.stack(func_list)
     func_list_ = to_numpy(func_list)
@@ -726,17 +724,6 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
             trans = umap.UMAP(n_neighbors=50, n_components=2, transform_queue_size=0).fit(func_list_)
             proj_interaction = trans.transform(func_list_)
     print('done ...')
-
-    fig, ax = fig_init()
-    proj_interaction = (proj_interaction - np.min(proj_interaction)) / (
-                np.max(proj_interaction) - np.min(proj_interaction) + 1e-10)
-    plt.scatter(proj_interaction[:,0], proj_interaction[:,1], color='k', s=200, alpha=0.01)
-
-    plt.xlabel(r'UMAP 0', fontsize=78)
-    plt.ylabel(r'UMAP 1', fontsize=78)
-    plt.xlim([-0.2, 1.2])
-    plt.ylim([-0.2, 1.2])
-    plt.tight_layout()
 
     if vizualize:
         if config.graph_model.particle_model_name == 'PDE_GS':

@@ -15,6 +15,7 @@ os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 from GNN_particles_Ntype import *
 from ParticleGraph.embedding_cluster import *
 from ParticleGraph.models.utils import *
+from ParticleGraph.models.MLP import *
 from ParticleGraph.utils import to_numpy, CustomColorMap
 import matplotlib as mpl
 from io import StringIO
@@ -127,7 +128,7 @@ class Interaction_Particle_extract(MessagePassing):
         match self.model:
             case 'PDE_A':
                 in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
-            case 'PDE_B' | 'PDE_B_bis':
+            case 'PDE_B' | 'PDE_B_bis' | 'PDE_Cell_B':
                 in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
                                          dpos_y_j[:, None], embedding_i), dim=-1)
             case 'PDE_G':
@@ -370,7 +371,7 @@ def plot_embedding_func_cluster_tracking(model, config, config_file, embedding_c
 
 
     labels, n_clusters, new_labels = sparsify_cluster(config.training.cluster_method, proj_interaction, embedding,
-                                                      config.training.cluster_distance_threshold, index_particles,
+                                                      config.training.cluster_distance_threshold, type_list,
                                                       n_particle_types, embedding_cluster)
 
     accuracy = metrics.accuracy_score(type_list, new_labels)
@@ -481,8 +482,10 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
                     cmap=cc)
     else:
         for n in range(n_particle_types):
-            plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n),
-                        s=200, alpha=alpha)
+            pos = torch.argwhere(type_list == n)
+            pos = to_numpy(pos)
+            if len(pos) > 0:
+                plt.scatter(embedding[pos, 0], embedding[pos, 1], s=100, alpha=alpha)
     plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
     plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
     plt.tight_layout()
@@ -506,8 +509,11 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
     proj_interaction = (proj_interaction - np.min(proj_interaction)) / (
                 np.max(proj_interaction) - np.min(proj_interaction) + 1e-10)
     for n in range(n_particle_types):
-        plt.scatter(proj_interaction[index_particles[n], 0],
-                    proj_interaction[index_particles[n], 1], color=cmap.color(n), s=200, alpha=0.1)
+        pos = torch.argwhere(type_list == n)
+        pos = to_numpy(pos)
+        if len(pos) > 0:
+            plt.scatter(proj_interaction[pos, 0],
+                        proj_interaction[pos, 1], color=cmap.color(n), s=200, alpha=0.1)
     plt.xlabel(r'UMAP 0', fontsize=78)
     plt.ylabel(r'UMAP 1', fontsize=78)
     plt.xlim([-0.2, 1.2])
@@ -516,11 +522,12 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
     plt.savefig(f"./{log_dir}/results/UMAP_{config_file}_{epoch}.tif", dpi=170.7)
     plt.close()
 
+    config.training.cluster_distance_threshold = 0.01
     labels, n_clusters, new_labels = sparsify_cluster(config.training.cluster_method, proj_interaction, embedding,
-                                                      config.training.cluster_distance_threshold, index_particles,
+                                                      config.training.cluster_distance_threshold, type_list,
                                                       n_particle_types, embedding_cluster)
-
     accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
+    print(accuracy, n_clusters)
 
     model_a_ = model.a[1].clone().detach()
     for n in range(n_clusters):
@@ -540,7 +547,10 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
                     cmap=cc)
     else:
         for n in range(n_particle_types):
-            plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n),
+            pos = torch.argwhere(type_list == n)
+            pos = to_numpy(pos)
+            if len(pos) > 0:
+                plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n),
                         s=100, alpha=0.1)
     plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
     plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
@@ -2768,6 +2778,7 @@ def plot_boids(config_file, epoch_list, log_dir, logger, device):
     print('load data ...')
     x_list = []
     y_list = []
+
     x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_1.pt', map_location=device))
     y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_1.pt', map_location=device))
     vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'), map_location=device)
@@ -2780,8 +2791,12 @@ def plot_boids(config_file, epoch_list, log_dir, logger, device):
     type_list = get_type_list(x, dimension)
     n_particles = x.shape[0]
     if has_cell_division:
+        T1_list = []
+        T1_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/T1_list_1.pt', map_location=device))
         n_particles_max = np.load(os.path.join(log_dir, 'n_particles_max.npy'))
         config.simulation.n_particles_max = n_particles_max
+        type_list = T1_list[0]
+        n_particles = len(type_list)
 
     for epoch in epoch_list:
 
@@ -2795,6 +2810,7 @@ def plot_boids(config_file, epoch_list, log_dir, logger, device):
 
         alpha = 0.5
         print('clustering ...')
+
         accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
                                                                        cmap, index_particles, type_list,
                                                                        n_particle_types, n_particles, ynorm, epoch,
@@ -4650,8 +4666,9 @@ if __name__ == '__main__':
     # config_list =['arbitrary_3_sequence_d','arbitrary_3_sequence_e']
     # # config_list = ['signal_N_100_2_d']
     # # config_list = ['signal_N_100_2_asym_a']
-    config_list = ['boids_division_model_f2']
-    config_list = ['boids_16_256']
+    config_list = ['boids_16_256', 'boids_division_model_f2']
+    # config_list = ['boids_16_256']
+
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         data_plot(config=config, config_file=config_file, epoch_list=['15','20'], device=device)

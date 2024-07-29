@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import torch
 
 from GNN_particles_Ntype import *
-from ParticleGraph.generators.utils import *
 from ParticleGraph.models.utils import *
 from ParticleGraph.models.Siren_Network import *
 from ParticleGraph.models.Ghost_Particles import *
@@ -485,7 +484,7 @@ def data_train_particles(config, config_file, device):
                                                                     type_list=to_numpy(x[:, 1+2*dimension]),
                                                                     cmap=cmap, dimension=dimension, device=device)
 
-                labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding, train_config.cluster_distance_threshold, index_particles, n_particle_types, embedding_cluster)
+                labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding, train_config.cluster_distance_threshold, type_list, n_particle_types, embedding_cluster)
 
 
                 accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
@@ -1773,7 +1772,7 @@ def data_train_mesh(config, config_file, device):
                 proj_interaction = popt_list
                 proj_interaction[:, 1] = proj_interaction[:, 0]
 
-            labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding, train_config.cluster_distance_threshold, index_nodes, n_node_types, embedding_cluster)
+            labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding, train_config.cluster_distance_threshold, type_list, n_node_types, embedding_cluster)
 
             accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
             print(f'accuracy: {np.round(accuracy, 3)}   n_clusters: {n_clusters}')
@@ -2259,7 +2258,7 @@ def data_train_particle_field(config, config_file, device):
                                                             cmap=cmap, dimension=dimension, device=device)
 
         labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding,
-                                                          train_config.cluster_distance_threshold, index_particles,
+                                                          train_config.cluster_distance_threshold, type_list,
                                                           n_particle_types, embedding_cluster)
 
         accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
