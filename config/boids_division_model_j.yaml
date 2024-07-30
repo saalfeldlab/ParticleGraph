@@ -7,8 +7,8 @@ simulation:
  [94.129265, 20.24777,    4.7820106]]
   cell_cycle_length:  [1.0E6, 250,200]
   cell_death_rate: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-  final_cell_mass: [100, 300, 400]
-  cell_area: [0.01,1,2]
+  final_cell_mass: [100, 2000, 400]
+  cell_area: [0.001,1,2]
   min_radius: 0.001
   max_radius: 0.04
   max_edges: 500000

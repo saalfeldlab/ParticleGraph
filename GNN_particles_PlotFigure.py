@@ -1116,7 +1116,7 @@ def plot_cell_rates(config, device, log_dir, n_particle_types, type_list, x_list
     for n in trange(len(type_list)):
         pos = np.argwhere(x_[:, 0:1] == n)
         if len(pos)>0:
-            division_list[new_labels[n]].append(len(pos)) * delta_t
+            division_list[new_labels[n]].append(len(pos)* delta_t)
 
     reconstructed_cell_cycle_length = np.zeros(n_particle_types)
     for k in range(n_particle_types):
@@ -1142,6 +1142,19 @@ def plot_cell_rates(config, device, log_dir, n_particle_types, type_list, x_list
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/cell_cycle_length_{config_file}.tif", dpi=170)
     plt.close()
+
+
+    division_list = {}
+    for n in np.unique(new_labels):
+        division_list[n] = []
+    for n in trange(n_frames):
+        x = x_list[0][n].clone().detach()
+        pos = torch.argwhere(x[:, 7:8] == 0)
+        if pos.shape[0]>1:
+            x = x[pos]
+            for x_ in x:
+                division_list[x_[5]].append(x_[8])
+
 
 
 def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
