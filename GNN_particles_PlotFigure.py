@@ -4670,7 +4670,7 @@ if __name__ == '__main__':
 
     # config_list =['arbitrary_3_sequence_d','arbitrary_3_sequence_e']
     # # config_list = ['signal_N_100_2_d']
-    # # config_list = ['signal_N_100_2_asym_a']
+    # config_list = ['signal_N_100_2_a']
     config_list = ['boids_division_model_f2']
     # config_list = ['boids_16_256_division_model_2_new']
 

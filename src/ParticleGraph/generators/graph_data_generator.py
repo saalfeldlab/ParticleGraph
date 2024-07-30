@@ -647,26 +647,35 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             with torch.no_grad():
                 y = model(dataset, has_field=True)
                 y = y * alive[:, None].repeat(1, 2)
+                y = y * simulation_config.cell_active_model_coeff
 
             first_X1 = X1.clone().detach()
 
-            if has_inert_model:
+            if (it>0) & (has_inert_model):
 
-                coeff = 0
-                num_cells = []
-                for i in range(n_particle_types):
-                    pos = torch.argwhere(T1.squeeze() == i).shape[0]
-                    num_cells.append(pos)
-                    coeff += num_cells[i] * cell_area[i]
-                target_areas_per_type = torch.tensor([cell_area[i] / coeff for i in range(n_particle_types)], device=device)
-                target_areas = target_areas_per_type[to_numpy(T1).astype(int)].squeeze().clone().detach()
 
+                if True:
+                    sum = torch.sum(cell_area)
+                    target_areas = torch.zeros_like(AR1)
+                    for i in range(n_particle_types):
+                        pos = torch.argwhere(T1.squeeze() == i)
+                        if pos.shape[0]>1:
+                            target = cell_area[i] / sum / pos.shape[0]
+                            target_areas[pos] = target
+                else:
+                    coeff = 0
+                    num_cells = []
+                    for i in range(n_particle_types):
+                        pos = torch.argwhere(T1.squeeze() == i).shape[0]
+                        num_cells.append(pos)
+                        coeff += num_cells[i] * cell_area[i]
+                    target_areas_per_type = torch.tensor([cell_area[i] / coeff for i in range(n_particle_types)], device=device)
+                    target_areas = target_areas_per_type[to_numpy(T1).astype(int)].squeeze().clone().detach()
 
                 X1_ = X1.clone().detach()
                 X1_.requires_grad = True
 
                 optimizer = torch.optim.Adam([X1_], lr=1E-3)
-
                 # rnd_index = torch.randperm(len(X1), device=device)
                 # mask = torch.argwhere(rnd_index % 8 == n).squeeze()
 
@@ -703,7 +712,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 X1_ = X1_.clone().detach()
                 X1 = bc_pos(X1_.clone().detach())
 
-            y_voronoi = (bc_dpos(X1 - first_X1) / delta_t - V1) / delta_t
+                y += bc_dpos(X1 - first_X1) / delta_t * simulation_config.cell_inert_model_coeff
 
             if (it) % 100 == 0:
                 t, r, a = get_gpu_memory_map(device)
@@ -722,14 +731,14 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             # append list
             if (it >= 0):
                 x_list.append(x)
-                y_list.append(y * simulation_config.cell_active_model_coeff + y_voronoi * simulation_config.cell_inert_model_coeff)
+                y_list.append(y)
 
             # get mass_coeff
             # mass_coeff = set_mass_coeff(mc_slope_distrib, cell_mass[to_numpy(T1[:, 0])], M1, device)
 
             # cell update
             if model_config.prediction == '2nd_derivative':
-                V1 += y * delta_t * simulation_config.cell_active_model_coeff + y_voronoi * delta_t * simulation_config.cell_inert_model_coeff
+                V1 += y * delta_t
             else:
                 V1 = y
 
@@ -848,20 +857,25 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                                 dpi=85.35)
                     plt.close()
 
-                fig = plt.figure(figsize=(12, 4))
-                ax = fig.add_subplot(1, 3, 1)
+                fig = plt.figure(figsize=(12, 12))
+                ax = fig.add_subplot(2, 2, 1)
                 plt.plot(max_radius_list)
                 plt.xlabel('Frame')
                 plt.ylabel('Max radius')
                 plt.ylim([0, simulation_config.max_radius * 1.1])
-                ax = fig.add_subplot(1, 3, 2)
+                ax = fig.add_subplot(2, 2, 2)
                 plt.plot(x_len_list, edges_len_list)
                 plt.xlabel('Number of particles')
                 plt.ylabel('Number of edges')
-                ax = fig.add_subplot(1, 3, 3)
+                ax = fig.add_subplot(2, 2, 3)
                 plt.plot(x_len_list)
                 plt.xlabel('Number of particles')
                 plt.xlabel('Frame')
+                ax = fig.add_subplot(2, 2, 4)
+                for n in range(n_particle_types):
+                    pos = torch.argwhere((T1.squeeze() == n) & (H1[:, 0].squeeze() == 1))
+                    if pos.shape[0] > 1:
+                        plt.hist(to_numpy(AR1[pos].squeeze()), bins=50, alpha=0.5)
                 plt.tight_layout()
                 plt.savefig(f"graphs_data/graphs_{dataset_name}/max_radius_{run}.jpg", dpi=170.7)
                 plt.close()
