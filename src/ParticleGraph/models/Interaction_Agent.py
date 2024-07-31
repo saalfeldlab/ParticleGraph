@@ -98,14 +98,14 @@ class Interaction_Agent(pyg.nn.MessagePassing):
 
         pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id, field=field, features=features)
 
-        if self.has_state:
-            embedding = self.a[self.data_id, self.frame, to_numpy(particle_id), :].squeeze()
-        else:
-            embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
+        if self.update_type == 'linear':
+            if self.has_state:
+                embedding = self.a[self.data_id, self.frame, to_numpy(particle_id), :].squeeze()
+            else:
+                embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
 
-        in_features = torch.cat((d_pos, pred, embedding), dim=-1)
-
-        pred = self.phi(in_features)
+            in_features = torch.cat((d_pos, pred, embedding), dim=-1)
+            pred = self.phi(in_features)
 
         return pred
 

@@ -170,6 +170,8 @@ def data_train_particles(config, config_file, device):
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
+    Niter = n_frames * data_augmentation_loop // batch_size
+    print(f'plot every {Niter // 50} iterations')
 
     list_loss = []
     time.sleep(1)
@@ -2744,8 +2746,12 @@ def data_train_agents(config, config_file, device):
         raise ValueError('Discovered NaN in velocities. Aborting.')
     velocities = bc_dpos(velocities)
 
-    vnorm = torch.std(velocities[:, :, 0])
-    ynorm = vnorm
+    if model_config.prediction == 'first_derivative':
+        vnorm = torch.std(velocities[:, :, 0]) / 10
+        ynorm = vnorm
+    else:
+        vnorm = torch.std(velocities[:, :, 0]) / 10
+        ynorm = vnorm / 10
 
     positions = torch.stack([t.pos for t in time_series])
     min = torch.min(positions[:, :, 0])
@@ -2807,6 +2813,8 @@ def data_train_agents(config, config_file, device):
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
+    Niter = n_frames * data_augmentation_loop // batch_size
+    print(f'plot every {Niter // 50} iterations')
 
     list_loss = []
     time.sleep(1)
@@ -2827,7 +2835,7 @@ def data_train_agents(config, config_file, device):
             dataset_batch = []
             for batch in range(batch_size):
 
-                k = np.random.randint(1, n_frames - 1)
+                k = np.random.randint(2, n_frames - 2)
 
                 time_point = time_series[k]
                 x = bundle_fields(time_point, "pos", "velocity", "internal", "state", "reversal_timer").clone().detach()
@@ -2839,8 +2847,17 @@ def data_train_agents(config, config_file, device):
                 dataset = data.Data(x=x[:, :], edge_index=edges)
                 dataset_batch.append(dataset)
 
-                time_point = time_series[k+1]
-                y = bc_dpos(time_point.velocity.clone().detach() / 1000)
+
+                if model_config.prediction == 'first_derivative':
+                    time_point = time_series[k+1]
+                    y = bc_dpos(time_point.velocity.clone().detach() / 1000)
+                else:
+                    time_point = time_series[k+1]
+                    v_prev = bc_dpos(time_point.velocity.clone().detach() / 1000)
+                    time_point = time_series[k-1]
+                    v_next = bc_dpos(time_point.velocity.clone().detach() / 1000)
+                    y = (v_next - v_prev)
+
                 if noise_level > 0:
                     y = y * (1 + torch.randn_like(y) * noise_level)
 
@@ -2872,7 +2889,7 @@ def data_train_agents(config, config_file, device):
                 if has_state:
                     ax, fig = fig_init()
                     embedding = torch.reshape(model.a[0], (n_particles*n_frames,2))
-                    plt.scatter(to_numpy(embedding[:, 0]), to_numpy(embedding[:, 0]), s=0.1, alpha=0.1, c='k')
+                    plt.scatter(to_numpy(embedding[:, 0]), to_numpy(embedding[:, 1]), s=0.1, alpha=0.01, c='k')
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
@@ -2880,7 +2897,7 @@ def data_train_agents(config, config_file, device):
                 else:
                     ax, fig = fig_init()
                     embedding = model.a[0]
-                    plt.scatter(to_numpy(embedding[:, 0]), to_numpy(embedding[:, 0]), s=1, alpha=0.1, c='k')
+                    plt.scatter(to_numpy(embedding[:, 0]), to_numpy(embedding[:, 1]), s=1, alpha=0.1, c='k')
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
@@ -2888,8 +2905,8 @@ def data_train_agents(config, config_file, device):
 
 
                 fig, ax = fig_init()
-                plt.scatter(to_numpy(y[:, 0]), to_numpy(pred[:, 0]), s=0.1, alpha=0.1)
-                plt.scatter(to_numpy(y[:, 1]), to_numpy(pred[:, 1]), s=0.1, alpha=0.1)
+                plt.scatter(to_numpy(y[:, 0]), to_numpy(pred[:, 0]), s=0.1, c='k')
+                # plt.scatter(to_numpy(y[:, 1]), to_numpy(pred[:, 1]), s=0.1, alpha=0.1)
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
