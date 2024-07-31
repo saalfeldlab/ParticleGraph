@@ -1,7 +1,7 @@
 
 import umap
 from matplotlib.ticker import FormatStrFormatter
-from ParticleGraph.models import Interaction_Particle, Interaction_Cell, Interaction_Particle_Field, Signal_Propagation, Mesh_Laplacian, Mesh_RPS, Interaction_Particle_Tracking
+from ParticleGraph.models import Interaction_Particle, Interaction_Agent, Interaction_Cell, Interaction_Particle_Field, Signal_Propagation, Mesh_Laplacian, Mesh_RPS, Interaction_Particle_Tracking
 from ParticleGraph.utils import *
 
 from GNN_particles_Ntype import *
@@ -761,6 +761,8 @@ def choose_training_model(model_config, device):
             model = Interaction_Particle_Field(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos,
                                           dimension=dimension)
             model.edges = []
+        case 'PDE_Agents':
+            model = Interaction_Agent(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
         case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_mass' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G':
             if has_no_tracking:
                 model=Interaction_Particle_Tracking(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)

@@ -307,7 +307,7 @@ def load_celegans_gene_data(
 
     # Bundle everything in a TimeSeries object
     data = []
-    for t in range(len(time)):
+    for t in trange(len(time)):
         interpolated_gene_data = gene_data if genes_are_present[t] else f(time[t])
         data.append(Data(
             time=time[t],
@@ -359,7 +359,7 @@ def load_agent_data(
 
     data = []
     time = torch.arange(1, n_time_points + 1, device=device)
-    for i in range(n_time_points):
+    for i in trange(n_time_points):
         file_path = os.path.join(data_directory, f"particles{i + 1}.txt")
         time_point = pd.read_csv(file_path, sep=",", names=list(dtype.keys()), dtype=dtype)
         position = torch.stack([torch.tensor(time_point["x"].to_numpy(), device=device),
