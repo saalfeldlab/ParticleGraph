@@ -268,6 +268,7 @@ def load_celegans_gene_data(
     """
 
     # Load cell information from the HDF5 file (metadata string) into pandas dataframe
+    print(f"Loading data from '{file_path}'...")
     file = h5py.File(file_path, 'r')
     cell_info_raw = file["cellinf"][0][0].decode("utf-8")
     cell_info_raw = cell_info_raw.replace("false", "False").replace("true", "True")
@@ -302,13 +303,16 @@ def load_celegans_gene_data(
 
     # Due to NaNs in the gene data, the interpolation is not perfect; make sure at least original data is present
     genes_are_present = np.isin(time, gene_time)
-    interpolated_to_present_data = np.NaN * np.ones_like(time)
+    interpolated_to_present_data = -np.ones_like(time, dtype=int)
     interpolated_to_present_data[genes_are_present] = np.arange(np.count_nonzero(genes_overlap))
 
     # Bundle everything in a TimeSeries object
     data = []
     for t in trange(len(time)):
-        interpolated_gene_data = gene_data if genes_are_present[t] else f(time[t])
+        if genes_are_present[t]:
+            interpolated_gene_data = gene_data[interpolated_to_present_data[t]]
+        else:
+            interpolated_gene_data = f(time[t])
         data.append(Data(
             time=time[t],
             pos=torch.tensor(positions[t], device=device),
@@ -343,6 +347,7 @@ def load_agent_data(
     """
 
     # Check how many files (each a timestep) there are
+    print(f"Loading data from '{data_directory}'...")
     files = os.listdir(data_directory)
     file_name_pattern = re.compile(r'particles\d+.txt')
     n_time_points = sum(1 for f in files if file_name_pattern.match(f))
