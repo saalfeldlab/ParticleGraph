@@ -11,9 +11,10 @@ simulation:
   n_frames: 149
   delta_t: 1
   boundary: 'periodic'
+  state_type: 'sequence'
 
 graph_model:
-  particle_model_name: 'PDE_Agents'
+  particle_model_name: 'PDE_Agents_A'
   mesh_model_name: ''
   prediction: 'first_derivative'
   input_size: 9
@@ -22,7 +23,7 @@ graph_model:
   n_mp_layers: 5
   aggr_type: 'mean'
   embedding_dim: 2
-  update_type: 'none'
+  update_type: 'linear'
 
 plotting:
   colormap: 'tab10'

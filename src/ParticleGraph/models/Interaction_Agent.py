@@ -61,7 +61,7 @@ class Interaction_Agent(pyg.nn.MessagePassing):
 
         if self.has_state:
             self.a = nn.Parameter(
-                torch.tensor(np.ones((self.n_dataset, int(self.n_particles), int(self.n_frames) , self.embedding_dim)),
+                torch.tensor(np.ones((self.n_dataset, int(self.n_frames), int(self.n_particles), self.embedding_dim)),
                              device=self.device,
                              requires_grad=True, dtype=torch.float32))
         else:
@@ -69,14 +69,18 @@ class Interaction_Agent(pyg.nn.MessagePassing):
                 torch.tensor(np.ones((self.n_dataset, int(self.n_particles), self.embedding_dim)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
 
+        if self.update_type == 'linear':
+            self.phi = MLP(input_size=6, output_size=2, nlayers=5, hidden_size=64, device=self.device)
 
-    def forward(self, data=[], data_id=[], training=[], vnorm=[], phi=[], has_field=False):
+
+    def forward(self, data=[], data_id=[], training=[], vnorm=[], phi=[], frame=[], has_field=False):
 
         self.data_id = data_id
         self.vnorm = vnorm
         self.cos_phi = torch.cos(phi)
         self.sin_phi = torch.sin(phi)
         self.training = training
+        self.frame = frame
         self.has_field = has_field
 
         x, edge_index = data.x, data.edge_index
@@ -89,15 +93,25 @@ class Interaction_Agent(pyg.nn.MessagePassing):
 
         pos = x[:, 1:self.dimension+1]
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
+        features = x[:, 1+2*self.dimension:]
         particle_id = x[:, 0:1]
 
-        pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id, field=field)
+        pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id, field=field, features=features)
+
+        if self.has_state:
+            embedding = self.a[self.data_id, self.frame, to_numpy(particle_id), :].squeeze()
+        else:
+            embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
+
+        in_features = torch.cat((d_pos, pred, embedding), dim=-1)
+
+        pred = self.phi(in_features)
 
         return pred
 
-    def message(self, pos_i, pos_j, d_pos_i, d_pos_j, particle_id_i, particle_id_j, field_j):
+    def message(self, pos_i, pos_j, d_pos_i, d_pos_j, particle_id_i, particle_id_j, field_j, features_i, features_j):
         # distance normalized by the max radius
-        r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
+        r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1))
         delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
         dpos_x_i = d_pos_i[:, 0] / self.vnorm
         dpos_y_i = d_pos_i[:, 1] / self.vnorm
@@ -121,10 +135,18 @@ class Interaction_Agent(pyg.nn.MessagePassing):
             dpos_x_j = new_dpos_x_j
             dpos_y_j = new_dpos_y_j
 
-        embedding_i = self.a[self.data_id, to_numpy(particle_id_i), :].squeeze()
-        embedding_j = self.a[self.data_id, to_numpy(particle_id_j), :].squeeze()
+        if self.has_state:
+            embedding_i = self.a[self.data_id, self.frame, to_numpy(particle_id_i), :].squeeze()
+            embedding_j = self.a[self.data_id, self.frame, to_numpy(particle_id_j), :].squeeze()
+        else:
+            embedding_i = self.a[self.data_id, to_numpy(particle_id_i), :].squeeze()
+            embedding_j = self.a[self.data_id, to_numpy(particle_id_j), :].squeeze()
 
-        in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None], dpos_y_j[:, None], embedding_i), dim=-1)
+        match self.model:
+            case 'PDE_Agents_A':
+                in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None], dpos_y_j[:, None], embedding_i), dim=-1)
+            case 'PDE_Agents_B':
+                in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None], dpos_y_j[:, None], embedding_i, features_j), dim=-1)
 
         out = self.lin_edge(in_features) * field_j
 

@@ -1012,6 +1012,160 @@ def plot_generated(config, run, style, step, device):
             plt.close()
 
 
+
+def plot_agents(config, config_file, device):
+
+    simulation_config = config.simulation
+    train_config = config.training
+    model_config = config.graph_model
+
+    print(f'Training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+
+    dimension = simulation_config.dimension
+    delta_t = simulation_config.delta_t
+    dataset_name = config.dataset
+    n_frames = simulation_config.n_frames
+    n_runs = train_config.n_runs
+
+    l_dir = os.path.join('.', 'log')
+    log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
+
+    os.makedirs(os.path.join(log_dir, 'generated_bw'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'generated_velocity'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'generated_internal'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'generated_state'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'generated_reversal_timer'), exist_ok=True)
+
+    files = glob.glob(f"./{log_dir}/generated_bw/*")
+    for f in files:
+        os.remove(f)
+    files = glob.glob(f"./{log_dir}/generated_velocity/*")
+    for f in files:
+        os.remove(f)
+    files = glob.glob(f"./{log_dir}/generated_internal/*")
+    for f in files:
+        os.remove(f)
+    files = glob.glob(f"./{log_dir}/generated_state/*")
+    for f in files:
+        os.remove(f)
+    files = glob.glob(f"./{log_dir}/generated_reversal_timer/*")
+    for f in files:
+        os.remove(f)
+
+    model, bc_pos, bc_dpos = choose_training_model(config, device)
+
+    print('Load data ...')
+
+    time_series, signal = load_agent_data(dataset_name, device=device)
+
+    velocities = [t.velocity for t in time_series]
+    velocities.pop(0)  # the first element is always NaN
+    velocities = torch.stack(velocities)
+    if torch.any(torch.isnan(velocities)):
+        raise ValueError('Discovered NaN in velocities. Aborting.')
+    velocities = bc_dpos(velocities)
+
+    vnorm = torch.std(velocities[:, :, 0])
+    ynorm = vnorm
+
+    positions = torch.stack([t.pos for t in time_series])
+    min = torch.min(positions[:, :, 0])
+    max = torch.max(positions[:, :, 0])
+    mean = torch.mean(positions[:, :, 0])
+    std = torch.std(positions[:, :, 0])
+    print(f"min: {min}, max: {max}, mean: {mean}, std: {std}")
+
+    n_particles = config.simulation.n_particles
+    print(f'N particles: {n_particles}')
+
+    if os.path.exists(f'./log/try_{config_file}/edge_p_p_list.npz'):
+        print('Load list of edges index ...')
+        edge_p_p_list = np.load(f'./log/try_{config_file}/edge_p_p_list.npz')
+    else:
+        print('Create list of edges index ...')
+        edge_p_p_list = []
+        for k in trange(n_frames):
+            time_point = time_series[k]
+            x = bundle_fields(time_point, "pos", "velocity", "internal", "state", "reversal_timer").clone().detach()
+            x = torch.column_stack((torch.arange(0, n_particles, device=device), x))
+
+            nbrs = NearestNeighbors(n_neighbors=simulation_config.n_neighbors, algorithm='auto').fit(to_numpy(x[:, 1:dimension + 1]))
+            distances, indices = nbrs.kneighbors(to_numpy(x[:, 1:dimension + 1]))
+            edge_index = []
+            for i in range(indices.shape[0]):
+                for j in range(1, indices.shape[1]):  # Start from 1 to avoid self-loop
+                    edge_index.append((i, indices[i, j]))
+            edge_index = np.array(edge_index)
+            edge_index = torch.tensor(edge_index, device=device).t().contiguous()
+            edge_p_p_list.append(to_numpy(edge_index))
+        np.savez(f'./log/try_{config_file}/edge_p_p_list', *edge_p_p_list)
+
+    for k in trange(1,n_frames):
+
+        time_point = time_series[k]
+        x = bundle_fields(time_point, "pos", "velocity", "internal", "state", "reversal_timer").clone().detach()
+        x = torch.column_stack((torch.arange(0,n_particles, device=device),x))
+        x [:, 1:5] = x[:, 1:5]/1000
+        x[:,3:5] = bc_dpos(x[:,3:5])
+
+        edges = edge_p_p_list[f'arr_{k}']
+        edges = torch.tensor(edges, dtype=torch.int64, device=device)
+        dataset = data.Data(x=x[:, :], edge_index=edges)
+
+        fig, ax = fig_init()
+        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=1, alpha=0.1,c='k')
+        plt.xticks(fontsize=16.0)
+        plt.yticks(fontsize=16.0)
+        plt.xlim([0,1])
+        plt.ylim([0,1])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/generated_bw/Fig_{k}.tif", dpi=87)
+        plt.close()
+
+        v = to_numpy(torch.norm(x[:, 3:5], dim=1))
+        fig, ax = fig_init()
+        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), c=v, s=1, alpha=1.0, cmap='viridis',vmin=0, vmax=vnorm/20)
+        plt.xticks(fontsize=16.0)
+        plt.yticks(fontsize=16.0)
+        plt.xlim([0,1])
+        plt.ylim([0,1])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/generated_velocity/Fig_{k}.tif", dpi=87)
+        plt.close()
+
+        internal = to_numpy(torch.norm(x[:, 5:6], dim=1))
+        fig, ax = fig_init()
+        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), c=internal, s=1, alpha=1.0, cmap='viridis',vmin=0, vmax=0.5)
+        plt.xticks(fontsize=16.0)
+        plt.yticks(fontsize=16.0)
+        plt.xlim([0,1])
+        plt.ylim([0,1])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/generated_internal/Fig_{k}.tif", dpi=87)
+        plt.close()
+
+        state = to_numpy(torch.norm(x[:, 6:7], dim=1))
+        fig, ax = fig_init()
+        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), c=state, s=1, alpha=1.0, cmap='viridis',vmin=0, vmax=1)
+        plt.xticks(fontsize=16.0)
+        plt.yticks(fontsize=16.0)
+        plt.xlim([0,1])
+        plt.ylim([0,1])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/generated_state/Fig_{k}.tif", dpi=87)
+        plt.close()
+
+        reversal_timer = to_numpy(torch.norm(x[:, 7:8], dim=1))
+        fig, ax = fig_init()
+        plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), c=reversal_timer, s=1, alpha=1.0, cmap='viridis',vmin=0, vmax=125)
+        plt.xticks(fontsize=16.0)
+        plt.yticks(fontsize=16.0)
+        plt.xlim([0,1])
+        plt.ylim([0,1])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/generated_reversal_timer/Fig_{k}.tif", dpi=87)
+        plt.close()
+
 def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoch, it, fig, ax):
     # print(f'plot confusion matrix epoch:{epoch} it: {it}')
     plt.text(-0.25, 1.1, f'{index}', ha='left', va='top', transform=ax.transAxes, fontsize=12)
@@ -1154,7 +1308,6 @@ def plot_cell_rates(config, device, log_dir, n_particle_types, type_list, x_list
             x = x[pos]
             for x_ in x:
                 division_list[x_[5]].append(x_[8])
-
 
 
 def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
@@ -4679,17 +4832,18 @@ if __name__ == '__main__':
     print(f'device {device}')
     print(' ')
 
-    matplotlib.use("Qt5Agg")
+    # matplotlib.use("Qt5Agg")
 
     # config_list =['arbitrary_3_sequence_d','arbitrary_3_sequence_e']
     # # config_list = ['signal_N_100_2_d']
     # config_list = ['signal_N_100_2_a']
-    config_list = ['boids_division_model_f2']
-    # config_list = ['boids_16_256_division_model_2_new']
+    # config_list = ['boids_division_model_f2']
+    config_list = ["agents"]
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
+        # data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
+        plot_agents(config, config_file, device)
         # plot_generated(config=config, run=0, style='white voronoi', step = 120, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 
