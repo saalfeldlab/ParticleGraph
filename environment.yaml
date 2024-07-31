@@ -23,6 +23,7 @@ dependencies:
   - vispy
   - scikit-image
   - pysr
+  - h5py
   - pip:
     - geomloss
     - torch_geometric

@@ -1,15 +1,21 @@
 """
 A collection of functions for loading data from various sources.
 """
-from typing import Dict, Tuple
+import os
+import re
+from dataclasses import dataclass
+from typing import Dict, Tuple, Literal
 
 import astropy.units as u
+import h5py
+import numpy as np
 import pandas as pd
-from torch_geometric.data import Data
+import torch
+from astropy.units import Unit
+from scipy.interpolate import CubicSpline, interp1d, make_interp_spline
 from tqdm import trange
 
 from ParticleGraph.TimeSeries import TimeSeries
-from ParticleGraph.field_descriptors import CsvDescriptor, DerivedFieldDescriptor
 from ParticleGraph.utils import *
 
 
@@ -162,45 +168,46 @@ def load_shrofflab_celegans(
     """
     Load the Shrofflab C. elegans data from a CSV file and convert it to a PyTorch tensor.
 
-    Args:
-        file_path (str): The path to the CSV file.
-        replace_missing_cpm (float): If not None, replace missing cpm values with this value.
-        device (str): The PyTorch device to use for the tensor.
-
-    Returns:
-        tensor_list (List[torch.Tensor]): A list of PyTorch tensors containing the loaded data for each time point.
-        time (np.ndarray): The time points corresponding to the data.
-        cell_names (np.ndarray): The names of the cells in the data.
-
-    Raises: ValueError: If the time series are not part of the same timeframe or if too many cells have abnormal time
+    :param file_path: The path to the CSV file.
+    :param replace_missing_cpm: If not None, replace missing cpm values (NaN) with this value.
+    :param device: The PyTorch device to allocate the tensors on.
+    :return: A tuple consisting of:
+     * A :py:class:`TimeSeries` object containing the loaded data for each time point.
+     * The names of the cells in the data.
+    :raises ValueError: If the time series are not part of the same timeframe or if too many cells have abnormal time
     series lengths.
     """
 
     # Load the data from the CSV file and clean it a bit:
     # - drop rows with missing time values (occurs only at the end of the data)
     # - fill missing cpm values (don't interpolate because data is missing at the beginning or end)
-    print(f"Loading data from {file_path}...")
-    dtypes = {"time": np.float32, "x": np.float32, "y": np.float32,
-              "z": np.float32, "cell": str, "log10 mean cpm": str}
-    data = pd.read_csv(file_path, dtype=dtypes)
-    print(f"Loaded {data.shape[0]} rows of data, dropping rows with missing time values...")
-    data.dropna(subset=["time"], inplace=True)
-    print(f"Remaining: {data.shape[0]} rows")
+    column_descriptors = {
+        "x": CsvDescriptor(filename=file_path, column_name="x", type=np.float32, unit=u.micrometer),
+        "y": CsvDescriptor(filename=file_path, column_name="y", type=np.float32, unit=u.micrometer),
+        "z": CsvDescriptor(filename=file_path, column_name="z", type=np.float32, unit=u.micrometer),
+        "t": CsvDescriptor(filename=file_path, column_name="time", type=np.float32, unit=u.day),
+        "cell": CsvDescriptor(filename=file_path, column_name="cell", type=str, unit=u.dimensionless_unscaled),
+        "cpm": CsvDescriptor(filename=file_path, column_name="log10 mean cpm", type=np.float32, unit=u.dimensionless_unscaled),
+    }
+    raw_data = load_csv_from_descriptors(column_descriptors)
+    print(f"Loaded {raw_data.shape[0]} rows of data, dropping rows with missing time values...")
+    raw_data.dropna(subset=["t"], inplace=True)
+    print(f"Remaining: {raw_data.shape[0]} rows")
     if replace_missing_cpm is not None:
         print(f"Filling missing cpm values with {replace_missing_cpm}...")
-        data.fillna(replace_missing_cpm, inplace=True)
+        raw_data.fillna(replace_missing_cpm, inplace=True)
 
     # Find the indices where the data for each cell begins (time resets)
-    time_reset = np.where(np.diff(data["time"]) < 0)[0] + 1
-    timeseries_boundaries = np.hstack([0, time_reset, data.shape[0]])
+    time_reset = np.where(np.diff(raw_data["t"]) < 0)[0] + 1
+    timeseries_boundaries = np.hstack([0, time_reset, raw_data.shape[0]])
     n_timepoints = np.diff(timeseries_boundaries).astype(int)
     n_normal_timepoints = np.median(n_timepoints).astype(int)
-    start_time, end_time = np.min(data["time"]), np.max(data["time"]) + 1
+    start_time, end_time = np.min(raw_data["t"]), np.max(raw_data["t"]) + 1
     n_cells = len(n_timepoints)
 
     # Sanity checks to make sure the data is not too bad
     n_normal_data = np.count_nonzero(n_timepoints == n_normal_timepoints)
-    cell_names = data["cell"].values[timeseries_boundaries[:-1]]
+    cell_names = raw_data["cell"].values[timeseries_boundaries[:-1]]
     if (end_time - start_time) != n_normal_timepoints:
         raise ValueError("The time series are not part of the same timeframe.")
     if n_normal_data < 0.5 * n_cells:
@@ -210,59 +217,207 @@ def load_shrofflab_celegans(
         abnormal_cells = cell_names[abnormal_data]
         print(f"Warning: incomplete time series data for {abnormal_cells}")
 
-    # Put values into a 3D tensor
-    relevant_fields = ["x", "y", "z", "log10 mean cpm"]
-    shape = (n_cells, n_normal_timepoints, len(relevant_fields))
-    tensor = np.nan * np.ones((shape[0] * shape[1], shape[2]))
-    time_idx = (data["time"].values - start_time).astype(int)
-    cell_idx = np.repeat(np.arange(n_cells), n_timepoints)
-    idx = np.ravel_multi_index((cell_idx, time_idx), (n_cells, n_normal_timepoints))
-    for i, name in enumerate(relevant_fields):
-        tensor[idx, i] = data[name].values
-    tensor = np.transpose(tensor.reshape(shape), (1, 0, 2))
+    # Put values into a TimeSeries object
+    relevant_fields = ["x", "y", "z", "cpm", "cell_id"]
+    tensors_np = {name: np.nan * np.ones((n_cells * n_normal_timepoints)) for name in relevant_fields}
+    time_idx = (raw_data["t"].to_numpy() - start_time).astype(int)
+    cell_id = np.repeat(np.arange(n_cells), n_timepoints)
+    raw_data.insert(0, "cell_id", cell_id)
+    idx = np.ravel_multi_index((cell_id, time_idx), (n_cells, n_normal_timepoints))
+    tensors = {}
+    for name in relevant_fields:
+        tensors_np[name][idx] = raw_data[name].to_numpy()
+        split_tensors = np.squeeze(
+            np.hsplit(tensors_np[name].reshape((n_cells, n_normal_timepoints)), n_normal_timepoints))
+        tensors[name] = [torch.tensor(t, device=device) for t in split_tensors]
 
-    # Compute the time derivatives and concatenate such that columns correspond to:
-    # x, y, z, d/dt x, d/dt y, d/dt z, cpm, d/dt cpm
-    tensor_gradient = tensor - np.roll(tensor, 1, 0)
-    tensor_gradient[0, :, :] = np.nan
-    tensor = np.concatenate([tensor[:, :, 0:3], tensor_gradient[:, :, 0:3],
-                             tensor[:, :, 3:4], tensor_gradient[:, :, 3:4]], axis=2)
+    time = torch.arange(start_time, end_time)
+    data = [Data(
+        time=time[i],
+        cell_id=tensors["cell_id"][i],
+        pos=torch.stack([tensors["x"][i], tensors["y"][i], tensors["z"][i]], dim=1),
+        cpm=tensors["cpm"][i],
+    ) for i in range(n_normal_timepoints)]
+    time_series = TimeSeries(time, data)
 
-    # Put all the time points into a separate tensor
-    tensor_list = []
-    for i in range(n_normal_timepoints):
-        cell_tensor = tensor[i]
-        cell_ids = np.where(~np.isnan(cell_tensor[:, 0]))[0]
-        cell_tensor = np.column_stack((cell_ids, cell_tensor[cell_ids, :]))
-        tensor_list.append(torch.tensor(cell_tensor, device=device))
+    # Compute the velocity and the derivative of the gene expressions and add them to the time series
+    velocity = time_series.compute_derivative('pos')
+    d_cpm = time_series.compute_derivative('cpm')
+    for i, data in enumerate(time_series):
+        data.velocity = velocity[i]
+        data.d_cpm = d_cpm[i]
 
-    time = np.arange(start_time, end_time)
+    return time_series, cell_names
 
-    return tensor_list, time, cell_names
+
+def load_celegans_gene_data(
+        file_path,
+        *,
+        coordinate_system: Literal["cartesian", "polar"] = "cartesian",
+        device='cuda:0'
+):
+    """
+    Load C. elegans cell data from an HDF5 file (positions and gene expressions) and convert it to a PyTorch tensor.
+
+    :param file_path: The path to the HDF5 file.
+    :param coordinate_system: The coordinate system to use for the positions (either "cartesian" or "polar").
+    :param device: The PyTorch device to allocate the tensors on.
+    :return: A tuple consisting of:
+     * A :py:class:`TimeSeries` object containing the loaded data for each time point.
+     * A :py:class:`pandas.DataFrame` object containing information about the cells.
+    """
+
+    # Load cell information from the HDF5 file (metadata string) into pandas dataframe
+    file = h5py.File(file_path, 'r')
+    cell_info_raw = file["cellinf"][0][0].decode("utf-8")
+    cell_info_raw = cell_info_raw.replace("false", "False").replace("true", "True")
+    cell_info_raw = eval(cell_info_raw)
+
+    names = [info.pop('name') for info in cell_info_raw]
+    cell_info = pd.DataFrame(cell_info_raw, index=names)
+
+    # There are two time series: one for the gene expressions (sparse) and one for the positions (dense)
+    # Compute intersection of both time series and interpolate gene expressions where they are not defined
+    gene_time = file["gene_time"][0]
+    pos_time = file["pos_time"][0]
+    min_t = max(gene_time[0], pos_time[0])
+    max_t = min(gene_time[-1], pos_time[-1])
+    time = np.arange(min_t, max_t + 1)
+    pos_overlap = np.isin(pos_time, time)
+    genes_overlap = np.isin(gene_time, time)
+
+    # Assign positions
+    match coordinate_system:
+        case "cartesian":
+            positions = file["pos_xyz"][pos_overlap]
+        case "polar":
+            positions = file["pos_rpz"][pos_overlap]
+        case _:
+            raise ValueError(f"Invalid coordinate system '{coordinate_system}'")
+
+    # Interpolate gene expressions by piecewise linear spline
+    gene_data = file["gene_CPM"][genes_overlap]
+    t = gene_time[genes_overlap]
+    f = make_interp_spline(t, gene_data, k=1, axis=0, check_finite=False)
+
+    # Due to NaNs in the gene data, the interpolation is not perfect; make sure at least original data is present
+    genes_are_present = np.isin(time, gene_time)
+    interpolated_to_present_data = np.NaN * np.ones_like(time)
+    interpolated_to_present_data[genes_are_present] = np.arange(np.count_nonzero(genes_overlap))
+
+    # Bundle everything in a TimeSeries object
+    data = []
+    for t in range(len(time)):
+        interpolated_gene_data = gene_data if genes_are_present[t] else f(time[t])
+        data.append(Data(
+            time=time[t],
+            pos=torch.tensor(positions[t], device=device),
+            gene_cpm=torch.tensor(interpolated_gene_data.T, device=device),
+        ))
+    time_series = TimeSeries(torch.tensor(time, device=device), data)
+    file.close()
+
+    # Compute the velocity and the derivative of the gene expressions and add them to the time series
+    velocity = time_series.compute_derivative('pos')
+    d_cpm = time_series.compute_derivative('gene_cpm')
+    for i, data in enumerate(time_series):
+        data.velocity = velocity[i]
+        data.d_gene_cpm = d_cpm[i]
+
+    return time_series, cell_info
+
+
+def load_agent_data(
+        data_directory,
+        *,
+        device='cuda:0'
+):
+    """
+    Load simulated agent data and convert it to a time series.
+
+    :param data_directory: The directory containing the agent data.
+    :param device: The PyTorch device to allocate the tensors on.
+    :return: A tuple consisting of:
+     * A :py:class:`TimeSeries` object containing the loaded data for each time point.
+     * A 2D grid of the signal that the agents are responding to.
+    """
+
+    # Check how many files (each a timestep) there are
+    files = os.listdir(data_directory)
+    file_name_pattern = re.compile(r'particles\d+.txt')
+    n_time_points = sum(1 for f in files if file_name_pattern.match(f))
+
+    # Load the data from text (csv) files and convert everything to to Data objects (all fields are float32)
+    dtype = {
+        "x": np.float32,
+        "y": np.float32,
+        "internal": np.float32,
+        "orientation": np.float32,
+        "reversal_timer": np.int64,
+        "state": np.int64
+    }
+
+    data = []
+    time = torch.arange(1, n_time_points + 1, device=device)
+    for i in range(n_time_points):
+        file_path = os.path.join(data_directory, f"particles{i + 1}.txt")
+        time_point = pd.read_csv(file_path, sep=",", names=list(dtype.keys()), dtype=dtype)
+        position = torch.stack([torch.tensor(time_point["x"].to_numpy(), device=device),
+                                torch.tensor(time_point["y"].to_numpy(), device=device)], dim=1)
+        data.append(Data(
+            time=time[i],
+            pos=position,
+            internal=torch.tensor(time_point["internal"].to_numpy(), device=device),
+            orientation=torch.tensor(time_point["orientation"].to_numpy(), device=device),
+            reversal_timer=torch.tensor(time_point["reversal_timer"].to_numpy(), dtype=torch.float32, device=device),
+            state=torch.tensor(time_point["state"].to_numpy(), dtype=torch.float32, device=device),
+        ))
+
+    # Compute the velocity as the derivative of the position and add it to the time series
+    time_series = TimeSeries(time, data)
+    velocity = time_series.compute_derivative('pos')
+    for i, data in enumerate(time_series):
+        data.velocity = velocity[i]
+
+    # Load the signal
+    signal = np.loadtxt(os.path.join(data_directory, "signal.txt"))
+    signal = torch.tensor(signal, device=device)
+
+    return time_series, signal
 
 
 def ensure_local_path_exists(path):
     """
     Ensure that the local path exists. If it doesn't, create the directory structure.
 
-    Args:
-        path (str): The path to be checked and created if necessary.
-
-    Returns:
-        str: The absolute path of the created directory.
+    :param path: The path to be checked and created if necessary.
+    :return: The absolute path of the created directory.
     """
 
-    if not os.path.exists(path):
-        os.makedirs(path)
+    os.makedirs(path, exist_ok=True)
     return os.path.join(os.getcwd(), path)
+
+
+@dataclass
+class CsvDescriptor:
+    """A class to describe the location of data in a dataset as a column of a CSV file."""
+    filename: str
+    column_name: str
+    type: np.dtype
+    unit: Unit
 
 
 def load_csv_from_descriptors(
         column_descriptors: Dict[str, CsvDescriptor],
-        *,
-        device: str = 'cuda:0',
         **kwargs
-) -> Dict[str, torch.Tensor]:
+) -> pd.DataFrame:
+    """
+    Load data from a CSV file based on a set of column descriptors.
+
+    :param column_descriptors: A dictionary mapping field names to CsvDescriptors.
+    :param kwargs: Additional keyword arguments to pass to pd.read_csv.
+    :return: A pandas DataFrame containing the loaded data.
+    """
     different_files = set(descriptor.filename for descriptor in column_descriptors.values())
     columns = []
 
@@ -270,17 +425,14 @@ def load_csv_from_descriptors(
         dtypes = {descriptor.column_name: descriptor.type for descriptor in column_descriptors.values()
                   if descriptor.filename == file}
         print(f"Loading data from '{file}':")
-        for column_name, type in dtypes.items():
-            print(f"  - column {column_name} as {type}")
+        for column_name, dtype in dtypes.items():
+            print(f"  - column {column_name} as {dtype}")
         columns.append(pd.read_csv(file, dtype=dtypes, usecols=list(dtypes.keys()), **kwargs))
 
-    entire_data = pd.concat(columns, axis='columns')
+    data = pd.concat(columns, axis='columns')
+    data.rename(columns={descriptor.column_name: name for name, descriptor in column_descriptors.items()}, inplace=True)
 
-    tensors = {}
-    for name, descriptor in column_descriptors.items():
-        tensors[name] = torch.tensor(entire_data[descriptor.column_name].values, device=device)
-
-    return tensors
+    return data
 
 
 def load_wanglab_salivary_gland(
@@ -291,12 +443,9 @@ def load_wanglab_salivary_gland(
     """
     Load the Wanglab salivary gland data from a CSV file and convert it to a pytorch_geometric Data object.
 
-    Args:
-        file_path (str): The path to the CSV file.
-        device (str): The PyTorch device to use for the tensor.
-
-    Returns:
-        time_series: (TimeSeries): A dataset containing the loaded data for each time point.
+    :param file_path: The path to the CSV file.
+    :param device: The PyTorch device to allocate the tensors on.
+    :return: A :py:class:`TimeSeries` object containing the loaded data for each time point.
     """
 
     # Load the data of interest from the CSV file
@@ -305,18 +454,20 @@ def load_wanglab_salivary_gland(
         'y': CsvDescriptor(filename=file_path, column_name="Position Y", type=np.float32, unit=u.micrometer),
         'z': CsvDescriptor(filename=file_path, column_name="Position Z", type=np.float32, unit=u.micrometer),
         't': CsvDescriptor(filename=file_path, column_name="Time", type=np.float32, unit=u.day),
-        'track_id': CsvDescriptor(filename=file_path, column_name="TrackID", type=np.int64, unit=u.dimensionless_unscaled),
+        'track_id': CsvDescriptor(filename=file_path, column_name="TrackID", type=np.int64,
+                                  unit=u.dimensionless_unscaled),
     }
-    raw_data = load_csv_from_descriptors(column_descriptors, device=device, skiprows=3)
+    raw_data = load_csv_from_descriptors(column_descriptors, skiprows=3)
+    raw_tensors = {name: torch.tensor(raw_data[name].to_numpy(), device=device) for name in column_descriptors.keys()}
 
     # Split into individual data objects for each time point
-    t = raw_data['t']
+    t = raw_tensors['t']
     time_jumps = torch.where(torch.diff(t).ne(0))[0] + 1
     time = torch.unique_consecutive(t)
-    x = torch.tensor_split(raw_data['x'], time_jumps.tolist())
-    y = torch.tensor_split(raw_data['y'], time_jumps.tolist())
-    z = torch.tensor_split(raw_data['z'], time_jumps.tolist())
-    global_ids, id_indices = torch.unique(raw_data['track_id'], return_inverse=True)
+    x = torch.tensor_split(raw_tensors['x'], time_jumps.tolist())
+    y = torch.tensor_split(raw_tensors['y'], time_jumps.tolist())
+    z = torch.tensor_split(raw_tensors['z'], time_jumps.tolist())
+    global_ids, id_indices = torch.unique(raw_tensors['track_id'], return_inverse=True)
     id = torch.tensor_split(id_indices, time_jumps.tolist())
 
     # Combine the data into a TimeSeries object
@@ -329,17 +480,11 @@ def load_wanglab_salivary_gland(
             track_id=id[i],
         ))
 
-    field_descriptors = {
-        'time': column_descriptors['t'],
-        'pos': DerivedFieldDescriptor(description="concatenating", constituent_fields=[column_descriptors[key] for key in ['x', 'y', 'z']]),
-        'track_id': DerivedFieldDescriptor(description="finding indices of globally unique ids", constituent_fields=[column_descriptors['track_id']])
-    }
-    time_series = TimeSeries(time, data, field_descriptors)
+    time_series = TimeSeries(time, data)
 
     # Compute the velocity as the derivative of the position and add it to the time series
     velocity, _ = time_series.compute_derivative('pos', id_name='track_id')
     for i in range(n_time_steps):
         data[i].velocity = velocity[i]
-    time_series.fields['velocity'] = DerivedFieldDescriptor(description="differentiating", constituent_fields=[time_series.fields['pos']])
 
     return time_series, global_ids
