@@ -99,8 +99,9 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         pos = x[:, 1:self.dimension+1]
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
         particle_id = x[:, 0:1]
+        embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
 
-        pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id, field=field)
+        pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
 
         if self.update_type == 'linear':
             embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
@@ -114,7 +115,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
 
         return pred
 
-    def message(self, pos_i, pos_j, d_pos_i, d_pos_j, particle_id_i, particle_id_j, field_j):
+    def message(self, pos_i, pos_j, d_pos_i, d_pos_j, embedding_i, embedding_j, field_j):
         # distance normalized by the max radius
         r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
         delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
@@ -122,9 +123,6 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         dpos_y_i = d_pos_i[:, 1] / self.vnorm
         dpos_x_j = d_pos_j[:, 0] / self.vnorm
         dpos_y_j = d_pos_j[:, 1] / self.vnorm
-        if self.dimension == 3:
-            dpos_z_i = d_pos_i[:, 2] / self.vnorm
-            dpos_z_j = d_pos_j[:, 2] / self.vnorm
 
         if self.data_augmentation & (self.training == True):
             new_delta_pos_x = self.cos_phi * delta_pos[:, 0] + self.sin_phi * delta_pos[:, 1]
@@ -139,9 +137,6 @@ class Interaction_Particle(pyg.nn.MessagePassing):
             new_dpos_y_j = -self.sin_phi * dpos_x_j + self.cos_phi * dpos_y_j
             dpos_x_j = new_dpos_x_j
             dpos_y_j = new_dpos_y_j
-
-        embedding_i = self.a[self.data_id, to_numpy(particle_id_i), :].squeeze()
-        embedding_j = self.a[self.data_id, to_numpy(particle_id_j), :].squeeze()
 
         match self.model:
             case 'PDE_A'|'PDE_ParticleField_A':
@@ -163,21 +158,6 @@ class Interaction_Particle(pyg.nn.MessagePassing):
                     (delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
 
         out = self.lin_edge(in_features) * field_j
-
-        if self.model == 'PDE_B':
-            self.diffx = delta_pos * self.max_radius
-            self.lin_edge_out = out
-            self.particle_id = particle_id_i
-        if self.model == 'PDE_A_bis':
-            self.diffx = delta_pos * self.max_radius
-            self.lin_edge_out = out
-            self.particle_id_i = particle_id_i
-            self.particle_id_j = particle_id_j
-        if self.model == 'PDE_GS':
-            self.in_features = in_features
-            self.r = r
-            self.lin_edge_out = out
-
 
         return out
 

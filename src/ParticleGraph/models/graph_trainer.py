@@ -74,7 +74,6 @@ def data_train_particles(config, config_file, device):
     sparsity_freq = train_config.sparsity_freq
     has_ghost = train_config.n_ghosts > 0
     n_ghosts = train_config.n_ghosts
-    has_large_range = train_config.large_range
     if train_config.small_init_batch_size:
         get_batch_size = increasing_batch_size(target_batch_size)
     else:
@@ -249,10 +248,7 @@ def data_train_particles(config, config_file, device):
             if has_ghost:
                 loss = ((pred[mask_ghost] - y_batch)).norm(2)
             else:
-                if not (has_large_range):
-                    loss = (pred - y_batch).norm(2)
-                else:
-                    loss = ((pred - y_batch) / (y_batch)).norm(2) / 1E9
+                loss = (pred - y_batch).norm(2)
 
             visualize_embedding = True
             if visualize_embedding & (((epoch < 30 ) & (N%(Niter//50) == 0)) | (N==0)):
@@ -339,7 +335,6 @@ def data_train_particles(config, config_file, device):
         if (simulation_config.n_interactions < 100):
 
             if has_state:
-
 
                 ax = fig.add_subplot(1, 5, 2)
                 model_a = model.a[1].clone().detach()
@@ -2927,8 +2922,6 @@ def data_train_agents(config, config_file, device):
                     'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
-
-
 
 
 def data_test(config=None, config_file=None, visualize=False, style='color frame', verbose=True, best_model=20, step=15, ratio=1, run=1, test_simulation=False, sample_embedding = False, device=[]):
