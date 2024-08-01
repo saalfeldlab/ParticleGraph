@@ -1,5 +1,6 @@
 """
-This script demonstrates how to load a larger C. elegans data set and how to access the data.
+This script demonstrates how to load a large C. elegans data set with cell positions and gene expression data and how
+to access the data.
 """
 import os.path
 
@@ -32,6 +33,6 @@ print(f"Time point fields: {time_point.node_attrs()}")
 print(f"Number of cells in time point 0: {time_point.num_nodes}")
 
 print(f"Position shape: {time_point.pos.shape}")
-print(f"Gene expression shape: {time_point.gene_cpm.shape}")
 print(f"Velocity shape: {time_point.velocity.shape}")
+print(f"Gene expression shape: {time_point.gene_cpm.shape}")
 print(f"Gene expression derivative shape: {time_point.d_gene_cpm.shape}")
