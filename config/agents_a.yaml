@@ -7,7 +7,6 @@ simulation:
   max_radius: 5
   n_neighbors: 10
   n_particles: 300000
-  n_particle_types: 10
   n_frames: 149
   delta_t: 1
   boundary: 'periodic'

@@ -7,7 +7,6 @@ simulation:
   max_radius: 5
   n_neighbors: 10
   n_particles: 300000
-  n_particle_types: 10
   n_frames: 149
   delta_t: 1
   boundary: 'periodic'
@@ -17,12 +16,12 @@ graph_model:
   particle_model_name: 'PDE_Agents_A'
   mesh_model_name: ''
   prediction: '2nd_derivative'
-  input_size: 9
+  input_size: 8
   output_size: 2
   hidden_dim: 128
   n_mp_layers: 5
   aggr_type: 'mean'
-  embedding_dim: 2
+  embedding_dim: 1
   update_type: 'none'
 
 plotting:

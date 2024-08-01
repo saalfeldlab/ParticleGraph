@@ -40,13 +40,13 @@ if __name__ == '__main__':
     # config_list = ["signal_N_100_2_asym_a"]
     # config_list = ["arbitrary_3_sequence_e"]
     # config_list = ["boids_voronoi_division_a"]
-    config_list = ["agents_f"]
+    config_list = ["agents_e"]
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         device = set_device(config.training.device)
         print(f'device {device}')
         # data_generate(config, device=device, visualize=True, run_vizualized=0, style='voronoi', alpha=1, erase=True, bSave=True, step=1) # config.simulation.n_frames // config.simulation.n_frames)
-        data_train(config, config_file, device)
-        # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 3, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
+        # data_train(config, config_file, device)
+        data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False, best_model=20, run=1, step=1) #config.simulation.n_frames // 3, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 

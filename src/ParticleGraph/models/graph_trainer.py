@@ -2888,8 +2888,9 @@ def data_train_agents(config, config_file, device):
 
                 if has_state:
                     ax, fig = fig_init()
-                    embedding = torch.reshape(model.a[0], (n_particles*n_frames,2))
-                    plt.scatter(to_numpy(embedding[:, 0]), to_numpy(embedding[:, 1]), s=0.1, alpha=0.01, c='k')
+                    embedding = torch.reshape(model.a[0], (n_particles*n_frames, model_config.embedding_dim))
+                    plt.hist(to_numpy(embedding[:, 0]), bins=1000)
+                    # plt.scatter(to_numpy(embedding[:, 0]), to_numpy(embedding[:, 1]), s=0.1, alpha=0.01, c='k')
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
@@ -2897,7 +2898,8 @@ def data_train_agents(config, config_file, device):
                 else:
                     ax, fig = fig_init()
                     embedding = model.a[0]
-                    plt.scatter(to_numpy(embedding[:, 0]), to_numpy(embedding[:, 1]), s=1, alpha=0.1, c='k')
+                    plt.hist(to_numpy(embedding[:, 0]), bins=1000)
+                    # plt.scatter(to_numpy(embedding[:, 0]), to_numpy(embedding[:, 1]), s=1, alpha=0.1, c='k')
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
@@ -2905,12 +2907,15 @@ def data_train_agents(config, config_file, device):
 
 
                 fig, ax = fig_init()
-                plt.scatter(to_numpy(y[:, 0]), to_numpy(pred[:, 0]), s=0.1, c='k')
+                plt.scatter(to_numpy(y[:, 0]), to_numpy(pred[:, 0]), s=0.1, c='k', alpha=0.1)
                 # plt.scatter(to_numpy(y[:, 1]), to_numpy(pred[:, 1]), s=0.1, alpha=0.1)
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_training/particle/Fig_{epoch}_{N}.tif", dpi=87)
+
+                torch.save({'model_state_dict': model.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
             loss.backward()
             optimizer.step()
