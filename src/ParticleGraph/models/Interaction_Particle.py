@@ -3,6 +3,7 @@ import torch_geometric.utils as pyg_utils
 from ParticleGraph.models.MLP import MLP
 from ParticleGraph.utils import to_numpy
 from ParticleGraph.models.Siren_Network import *
+from ParticleGraph.models.Gumbel import gumbel_softmax_sample, gumbel_softmax
 
 
 class Interaction_Particle(pyg.nn.MessagePassing):
@@ -104,8 +105,9 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         if not(self.hot_vector_embedding):
             embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
         else:
-            class_list = torch.softmax(self.a[self.data_id, to_numpy(particle_id), :])
-            embedding = torch.matmul(class_list, self.b)
+            temperature = torch.tensor(0.5, device=self.device)
+            model_a = gumbel_softmax(self.a[self.data_id, to_numpy(particle_id), :], temperature, hard=True, device=self.device)
+            embedding = torch.matmul(model_a, self.b)
 
         pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
 

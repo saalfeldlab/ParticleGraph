@@ -12,6 +12,7 @@ import warnings
 import numpy as np
 import time
 
+
 def linear_model(x, a, b):
     return a * x + b
 
@@ -858,6 +859,8 @@ def get_index_particles(x, n_particle_types, dimension):
 def get_type_list(x, dimension):
     type_list = x[:, 1 + 2 * dimension:2 + 2 * dimension].clone().detach()
     return type_list
+
+
 
 
 

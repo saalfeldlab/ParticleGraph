@@ -7,7 +7,7 @@ from ParticleGraph.models.Siren_Network import *
 from ParticleGraph.models.Ghost_Particles import *
 from geomloss import SamplesLoss
 from ParticleGraph.embedding_cluster import EmbeddingCluster, sparsify_cluster, sparsify_cluster_state
-from ParticleGraph.models import Cell_Area
+from ParticleGraph.models.Gumbel import gumbel_softmax_sample, gumbel_softmax
 
 import random
 from ParticleGraph.data_loaders import load_agent_data
@@ -528,7 +528,7 @@ def data_train_particles_with_states(config, config_file, device):
         total_loss = 0
         Niter = n_frames * data_augmentation_loop // batch_size
 
-        if False:
+        if model.hot_vector_embedding:
             for N in range(Niter):
 
                 phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
@@ -578,42 +578,35 @@ def data_train_particles_with_states(config, config_file, device):
                 visualize_embedding = True
                 if visualize_embedding & (((epoch < 30 ) & (N%(Niter//50) == 0)) | (N==0)):
                     model_a = model.a[1].clone().detach()
-                    if  model.hot_vector_embedding:
-                        fig = plt.figure(figsize=(10, 10))
-                        ax = fig.add_subplot(1, 1,12, projection='3d')
-                        plt.scatter(to_numpy(model_a[:, 0]), to_numpy(model_a[:, 1]), to_numpy(model_a[:, 2]), s=1, c='k')
-                    else:
-                        fig, ax = fig_init()
-                        for k in range(config.simulation.n_frames - 2):
-                            embedding = to_numpy(model_a[k * n_particles:(k + 1) * n_particles, :].clone().detach())
-                            index_particles = get_index_particles(x_list[1][k].clone().detach(), n_particle_types,
-                                                                  dimension)
-                            for n in range(n_particle_types):
-                                plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=1,
-                                            color=cmap.color(n), alpha=0.025)
-                        plt.tight_layout()
-                        plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=80)
-                        plt.close()
-                        type_list = torch.stack(x_list[1]).clone().detach()
-                        t = to_numpy(type_list[:, :, 5])
-                        type_list = to_numpy(type_list[:, :, 5].flatten())
-                        type_list = type_list[0:len(type_list) - n_particles]
-                        fig, ax = fig_init()
-                        rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
-                        for n in range(5000):
-                            sample = np.random.randint(0, len(type_list))
-                            type = type_list[sample].astype(int)
-                            embedding_ = model_a[sample, :] * torch.ones((1000, config.graph_model.embedding_dim),
-                                                                         device=device)
-                            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                                     rr[:, None] / max_radius, embedding_), dim=1)
-                            with torch.no_grad():
-                                func = model.lin_edge(in_features.float())
-                            func = func[:, 0]
-                            plt.plot(to_numpy(rr),
-                                     to_numpy(func) * to_numpy(ynorm),
-                                     color=cmap.color(type), linewidth=2, alpha=0.1)
-                        plt.xlim([0, max_radius])
+                    fig, ax = fig_init()
+                    for n in range(n_particle_types):
+                        pos = np.argwhere(type_list == n).squeeze().astype(int)
+                        if pos.size > 0:
+                            plt.scatter(to_numpy(model_a[pos, 0]), to_numpy(model_a[pos, 1]), s=1, color=cmap.color(n))
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=80)
+                    plt.close()
+
+                    type_list = torch.stack(x_list[1]).clone().detach()
+                    t = to_numpy(type_list[:, :, 5])
+                    type_list = to_numpy(type_list[:, :, 5].flatten())
+                    type_list = type_list[0:len(type_list) - n_particles]
+                    fig, ax = fig_init()
+                    rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+                    for n in range(5000):
+                        sample = np.random.randint(0, len(type_list))
+                        type = type_list[sample].astype(int)
+                        embedding_ = model_a[sample, :] * torch.ones((1000, config.graph_model.embedding_dim),
+                                                                     device=device)
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / max_radius, embedding_), dim=1)
+                        with torch.no_grad():
+                            func = model.lin_edge(in_features.float())
+                        func = func[:, 0]
+                        plt.plot(to_numpy(rr),
+                                 to_numpy(func) * to_numpy(ynorm),
+                                 color=cmap.color(type), linewidth=2, alpha=0.1)
+                    plt.xlim([0, max_radius])
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif", dpi=80)
                     plt.close()
@@ -641,67 +634,77 @@ def data_train_particles_with_states(config, config_file, device):
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
 
+        ax = fig.add_subplot(1, 5, 2)
+        model_a = model.a[1].clone().detach()
         if model.hot_vector_embedding:
+            temperature = 0.5
+            model_a = gumbel_softmax(model_a, torch.tensor(temperature,device=device), hard=True, device=device)
+            model_a = torch.matmul(model_a, model.b)
+        for n in range(n_particle_types):
+            pos = np.argwhere(type_list == n).squeeze().astype(int)
+            if pos.size > 0:
+                plt.scatter(to_numpy(model_a[pos, 0]), to_numpy(model_a[pos, 1]), s=1, color=cmap.color(n))
 
-            ax = fig.add_subplot(1, 5, 2, projection='3d')
-            model_a = model.a[1].clone().detach()
-            plt.scatter(to_numpy(model_a[:, 0]), to_numpy(model_a[:, 1]), to_numpy(model_a[:, 2]), s=1,c='k')
+        ax = fig.add_subplot(1, 5, 3)
+        func_list, proj_interaction, index, index_next = analyze_edge_function_state(rr=[], vizualize=True,
+                                                                                     config=config,
+                                                                                     model_MLP=model.lin_edge,
+                                                                                     model_a=model_a,
+                                                                                     type_list=type_list,
+                                                                                     ynorm=ynorm,
+                                                                                     cmap=cmap, device=device)
 
-        else:
+        type_list_short = type_list[index]
+        embedding = to_numpy(model_a[index])
+        labels, n_clusters, new_labels = sparsify_cluster_state(config.training.cluster_method,
+                                                                proj_interaction, embedding,
+                                                                config.training.cluster_distance_threshold,
+                                                                index, index_next, type_list_short,
+                                                                n_particle_types, embedding_cluster)
 
-            ax = fig.add_subplot(1, 5, 2)
-            model_a = model.a[1].clone().detach()
-            for k in trange(config.simulation.n_frames - 2):
-                embedding = to_numpy(model_a[k * n_particles:(k + 1) * n_particles, :].clone().detach())
-                index_particles = get_index_particles(x_list[1][k].clone().detach(), n_particle_types,
-                                                      dimension)
-                for n in range(n_particle_types):
-                    plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=0.1,
-                                color=cmap.color(n), alpha=0.025)
-            plt.tight_layout()
+        ax = fig.add_subplot(1, 5, 4)
+        for n in range(n_particle_types):
+            pos = np.argwhere(type_list_short == n).squeeze().astype(int)
+            if len(pos) > 0:
+                plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=10,
+                            alpha=0.25)
+        plt.xlabel(r'UMAP 0', fontsize=12)
+        plt.ylabel(r'UMAP 1', fontsize=12)
+        plt.xlim([-0.2, 1.2])
+        plt.ylim([-0.2, 1.2])
+        plt.tight_layout()
 
-            ax = fig.add_subplot(1, 5, 3)
-            func_list, proj_interaction, index, index_next = analyze_edge_function_state(rr=[], vizualize=True,
-                                                                                         config=config,
-                                                                                         model_MLP=model.lin_edge,
-                                                                                         model_a=model_a,
-                                                                                         type_list=type_list,
-                                                                                         ynorm=ynorm,
-                                                                                         cmap=cmap, device=device)
-
-            type_list_short = type_list[index]
-            labels, n_clusters, new_labels = sparsify_cluster_state(config.training.cluster_method,
-                                                                    proj_interaction, embedding,
-                                                                    config.training.cluster_distance_threshold,
-                                                                    index, index_next, type_list_short,
-                                                                    n_particle_types, embedding_cluster)
-
-            ax = fig.add_subplot(1, 5, 4)
-            for n in range(n_particle_types):
-                pos = np.argwhere(type_list_short == n).squeeze().astype(int)
-                if len(pos) > 0:
-                    plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=10,
-                                alpha=0.25)
-            plt.xlabel(r'UMAP 0', fontsize=12)
-            plt.ylabel(r'UMAP 1', fontsize=12)
-            plt.xlim([-0.2, 1.2])
-            plt.ylim([-0.2, 1.2])
-            plt.tight_layout()
-
-            accuracy = metrics.accuracy_score(type_list_short, new_labels)
-            print(f'accuracy: {np.round(accuracy, 3)}   n_clusters: {n_clusters}')
-            logger.info(f'accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}')
+        accuracy = metrics.accuracy_score(type_list_short, new_labels)
+        print(f'accuracy: {np.round(accuracy, 3)}   n_clusters: {n_clusters}')
+        logger.info(f'accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}')
 
 
-            if (epoch == 5):
-                model.hot_vector_embedding = True
-                hot_vectors = np.zeros((model.n_dataset, model.n_particles, n_clusters))
-                for k in range(model.n_dataset):
-                    hot_vectors[k, :, :] = np.eye(n_clusters)
-                self.a = nn.Parameter(torch.tensor(hot_vectors, device=self.device, requires_grad=True, dtype=torch.float32))
+        if (epoch == 5):
+            model.hot_vector_embedding = True
 
-                self.b = nn.Parameter(torch.tensor(np.ones((n_clusters, self.embedding_dim)),device=self.device, requires_grad=True, dtype=torch.float32))
-                optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+            model_a_list_short = model.a[1, index, :].clone().detach()
+            median_center_list = []
+            for n in range(n_clusters):
+                pos = np.argwhere(new_labels == n).squeeze().astype(int)
+                pos = np.array(pos)
+                if pos.size > 0:
+                    median_center = model_a_list_short[pos, :]
+                    median_center = torch.median(median_center, dim=0).values
+                    median_center_list.append(median_center)
+            median_center_list = torch.stack(median_center_list)
+
+            distance = torch.sum((model_a[:, None, :] - median_center_list[None, :, :]) ** 2, dim=2)
+            result = distance.min(dim=1)
+            min_index = result.indices
+
+            new_labels = to_numpy(min_index).astype(int)
+
+            hot_vectors = np.zeros((model.n_dataset, model.n_particles * model.n_frames, n_clusters))
+            for k in range(model.n_dataset):
+                hot_vectors[k, :, :] = np.eye(n_clusters)[new_labels]
+            model.a = nn.Parameter(torch.tensor(hot_vectors, device=device, requires_grad=True, dtype=torch.float32))
+            model.b = nn.Parameter(torch.tensor(to_numpy(median_center_list),device=device, requires_grad=True, dtype=torch.float32))
+            optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
