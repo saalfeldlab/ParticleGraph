@@ -55,6 +55,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         self.dimension = dimension
         self.has_state = config.simulation.state_type != 'discrete'
         self.n_frames = simulation_config.n_frames
+        self.hot_vector_embedding = False
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device)
@@ -99,7 +100,14 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         pos = x[:, 1:self.dimension+1]
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
         particle_id = x[:, 0:1]
-        embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
+
+        if not(self.hot_vector_embedding):
+            embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
+        else:
+            class_list = torch.softmax(self.a[self.data_id, to_numpy(particle_id), :])
+            embedding = torch.matmul(class_list, self.b)
+
+
 
         pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
 
