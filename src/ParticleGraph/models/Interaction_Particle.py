@@ -107,8 +107,6 @@ class Interaction_Particle(pyg.nn.MessagePassing):
             class_list = torch.softmax(self.a[self.data_id, to_numpy(particle_id), :])
             embedding = torch.matmul(class_list, self.b)
 
-
-
         pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
 
         if self.update_type == 'linear':
