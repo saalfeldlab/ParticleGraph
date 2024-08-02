@@ -19,7 +19,7 @@ graph_model:
   particle_model_name: 'PDE_A'
   mesh_model_name: ''
   prediction: 'first_derivative'
-  input_size: 5
+  input_size: 6
   output_size: 2
   hidden_dim: 128
   n_mp_layers: 5

@@ -502,9 +502,19 @@ def data_train_particles_with_states(config, config_file, device):
     print(f'N particles: {n_particles} {len(torch.unique(type_list))} types')
     logger.info(f'N particles:  {n_particles} {len(torch.unique(type_list))} types')
 
+    # if not(state_hot_encoding):
+    #     index_l = []
+    #     index = 0
+    #     for k in range(n_frames):
+    #         new_index = torch.arange(index, index + n_particles)
+    #         index_l.append(new_index)
+    #         x_list[1][k][:, 0] = new_index
+    #         index += n_particles
+
     type_list = torch.stack(x_list[1]).clone().detach()
     type_list = to_numpy(type_list[:, :, 5].flatten())
     type_list = type_list[0:len(type_list) - n_particles]
+
 
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
@@ -534,7 +544,6 @@ def data_train_particles_with_states(config, config_file, device):
 
             distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
             adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-            t = torch.Tensor([max_radius ** 2])
             edges = adj_t.nonzero().t().contiguous()
             dataset = data.Data(x=x[:, :], edge_index=edges)
 
@@ -558,21 +567,27 @@ def data_train_particles_with_states(config, config_file, device):
 
             loss = (pred - y).norm(2)
 
+            loss.backward()
+            optimizer.step()
+
+            total_loss += loss.item()
+
             visualize_embedding = True
             if visualize_embedding & (((epoch < 30 ) & (N%(Niter//100) == 0)) | (N==0)):
                 model_a = model.a[1].clone().detach()
-                fig, ax = fig_init()
                 if state_hot_encoding:
                     model_a = torch.reshape(model_a, (model.n_particles * model.n_frames, model.n_particle_types))
-                    model_a = gumbel_softmax(model_a, model.temperature, hard=True, device=device)
-                    model_a = torch.matmul(model_a, model.b)
-                    for n in range(n_particle_types):
-                        plt.scatter(to_numpy(model.b[n, 0]), to_numpy(model.b[n, 1]), s=400, color=cmap.color(n))
+                    model_a = torch.softmax(model_a, dim =1)
                 else:
-                    for n in range(n_particle_types):
-                        pos = np.argwhere(type_list == n).squeeze().astype(int)
-                        if pos.size > 0:
-                            plt.scatter(to_numpy(model_a[pos, 0]), to_numpy(model_a[pos, 1]), s=1, color=cmap.color(n), alpha=0.01)
+                    model_a = torch.reshape(model_a, (model.n_particles * model.n_frames, model.embedding_dim))
+                fig, ax = fig_init()
+                for n in range(n_particle_types):
+                    pos = np.argwhere(type_list == n).squeeze().astype(int)
+                    if pos.size > 0:
+                        plt.scatter(to_numpy(model_a[pos, 0]), to_numpy(model_a[pos, 1]), s=1, color=cmap.color(n), alpha=0.01)
+                if state_hot_encoding:
+                    model_a = gumbel_softmax(model_a, model.temperature, hard=True, device=device)
+                    plt.scatter(to_numpy(model_a[:, 0]), to_numpy(model_a[:, 1]), s=100, color='r')
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=80)
                 plt.close()
@@ -586,8 +601,10 @@ def data_train_particles_with_states(config, config_file, device):
                 for n in range(5000):
                     sample = np.random.randint(0, len(type_list))
                     type = type_list[sample].astype(int)
-                    embedding_ = model_a[sample, :] * torch.ones((1000, config.graph_model.embedding_dim),
-                                                                 device=device)
+                    if state_hot_encoding:
+                        embedding_ = model_a[sample, :] * torch.ones((1000, model.n_particle_types),device=device)
+                    else:
+                        embedding_ = model_a[sample, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
                     in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                              rr[:, None] / max_radius, embedding_), dim=1)
                     with torch.no_grad():
@@ -595,7 +612,7 @@ def data_train_particles_with_states(config, config_file, device):
                     func = func[:, 0]
                     plt.plot(to_numpy(rr),
                              to_numpy(func) * to_numpy(ynorm),
-                             color=cmap.color(type), linewidth=2, alpha=0.1)
+                             color=cmap.color(type), linewidth=8, alpha=0.1)
                 plt.xlim([0, max_radius])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif", dpi=80)
@@ -604,10 +621,7 @@ def data_train_particles_with_states(config, config_file, device):
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
-            loss.backward()
-            optimizer.step()
 
-            total_loss += loss.item()
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
@@ -628,8 +642,10 @@ def data_train_particles_with_states(config, config_file, device):
         model_a = model.a[1].clone().detach()
         if state_hot_encoding:
             model_a = torch.reshape(model_a, (model.n_particles * model.n_frames, model.n_particle_types))
+            model_a = torch.softmax(model_a, dim = 1)
             model_a = gumbel_softmax(model_a, model.temperature, hard=True, device=device)
-            model_a = torch.matmul(model_a, model.b)
+        else:
+            model_a = torch.reshape(model_a, (model.n_particles * model.n_frames, model.embedding_dim))
         for n in range(n_particle_types):
             pos = np.argwhere(type_list == n).squeeze().astype(int)
             if pos.size > 0:

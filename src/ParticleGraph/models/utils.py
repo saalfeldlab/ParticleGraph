@@ -587,11 +587,13 @@ def analyze_edge_function_state(rr=[], vizualize=False, config=None, model_MLP=[
 
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
+    state_hot_encoding = config.graph_model.state_hot_encoding
 
     n_states = min(int(10E3),int(len(model_a)))
     index_ = np.random.permutation(len(model_a))
     index = index_[0:n_states]
     index_next = index_[n_states:]
+
 
     if config.graph_model.particle_model_name != '':
         config_model = config.graph_model.particle_model_name
@@ -614,7 +616,11 @@ def analyze_edge_function_state(rr=[], vizualize=False, config=None, model_MLP=[
 
     func_list = []
     for n in range(n_states):
-        embedding_ = model_a[index[n], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+
+        if state_hot_encoding:
+            embedding_ = model_a[index[n], :] * torch.ones((1000, config.simulation.n_particle_types), device=device)
+        else:
+            embedding_ = model_a[index[n], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
         in_features = get_in_features(rr, embedding_, config_model, max_radius)
         with torch.no_grad():
             func = model_MLP(in_features.float())
@@ -623,7 +629,7 @@ def analyze_edge_function_state(rr=[], vizualize=False, config=None, model_MLP=[
         if vizualize:
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
-                     color=cmap.color(type_list[index[n]].astype(int)), linewidth=2, alpha=0.1)
+                     color=cmap.color(type_list[index[n]].astype(int)), linewidth=8, alpha=0.1)
     func_list = torch.stack(func_list)
     func_list_ = to_numpy(func_list)
 
