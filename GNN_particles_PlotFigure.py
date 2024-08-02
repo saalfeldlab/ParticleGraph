@@ -4484,6 +4484,14 @@ def plot_agents(config_file, epoch_list, log_dir, logger, device):
             # in_features = torch.cat((torch.zeros((300000,7),device=device), embedding), dim=-1)
             # out = model.lin_edge(in_features.float())
 
+        fig, ax = fig_init()
+        plt.scatter(to_numpy(y[:, 0]), embedding[:, 0], s=0.1, c='k', alpha=0.1)
+        plt.tight_layout()
+
+        from kan import *
+
+
+
 
 
 
@@ -4508,8 +4516,7 @@ def plot_agents(config_file, epoch_list, log_dir, logger, device):
         #     plt.tight_layout()
         #     plt.savefig(f"./{log_dir}/tmp_training/embedding/Fig_{epoch}_{N}.tif", dpi=87)
         #
-        # fig, ax = fig_init()
-        # plt.scatter(to_numpy(y[:, 0]), to_numpy(pred[:, 0]), s=0.1, c='k')
+
         # # plt.scatter(to_numpy(y[:, 1]), to_numpy(pred[:, 1]), s=0.1, alpha=0.1)
         # plt.xticks([])
         # plt.yticks([])
@@ -4999,7 +5006,7 @@ if __name__ == '__main__':
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['17_0'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['1_0'], device=device)
         # plot_generated_agents(config, config_file, device)
         # plot_generated(config=config, run=0, style='white voronoi', step = 120, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

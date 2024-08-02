@@ -502,13 +502,6 @@ def data_train_particles_with_states(config, config_file, device):
     print(f'N particles: {n_particles} {len(torch.unique(type_list))} types')
     logger.info(f'N particles:  {n_particles} {len(torch.unique(type_list))} types')
 
-    index_l = []
-    index = 0
-    for k in range(n_frames):
-        new_index = torch.arange(index, index + n_particles)
-        index_l.append(new_index)
-        x_list[1][k][:, 0] = new_index
-        index += n_particles
     type_list = torch.stack(x_list[1]).clone().detach()
     type_list = to_numpy(type_list[:, :, 5].flatten())
     type_list = type_list[0:len(type_list) - n_particles]
@@ -517,7 +510,7 @@ def data_train_particles_with_states(config, config_file, device):
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     Niter = n_frames * data_augmentation_loop // batch_size
-    print(f'plot every {Niter // 50} iterations')
+    print(f'plot every {Niter // 100} iterations')
 
     list_loss = []
     time.sleep(1)
@@ -528,63 +521,58 @@ def data_train_particles_with_states(config, config_file, device):
         total_loss = 0
         Niter = n_frames * data_augmentation_loop // batch_size
 
-        for N in range(Niter):
-
+        for N in trange(Niter):
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
             sin_phi = torch.sin(phi)
 
             run = 1 + np.random.randint(n_runs - 1)
 
-            dataset_batch = []
-            for batch in range(batch_size):
+            k = np.random.randint(n_frames - 1)
 
-                k = np.random.randint(n_frames - 1)
+            x = x_list[run][k].clone().detach()
 
-                x = x_list[run][k].clone().detach()
+            distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+            adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+            t = torch.Tensor([max_radius ** 2])
+            edges = adj_t.nonzero().t().contiguous()
+            dataset = data.Data(x=x[:, :], edge_index=edges)
 
-                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                t = torch.Tensor([max_radius ** 2])
-                edges = adj_t.nonzero().t().contiguous()
-                dataset = data.Data(x=x[:, :], edge_index=edges)
-                dataset_batch.append(dataset)
+            y = y_list[run][k].clone().detach()
+            if noise_level > 0:
+                y = y * (1 + torch.randn_like(y) * noise_level)
 
-                y = y_list[run][k].clone().detach()
-                if noise_level > 0:
-                    y = y * (1 + torch.randn_like(y) * noise_level)
+            y = y / ynorm
 
-                y = y / ynorm
+            if data_augmentation:
+                new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
+                new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
+                y[:, 0] = new_x
+                y[:, 1] = new_y
 
-                if data_augmentation:
-                    new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
-                    new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
-                    y[:, 0] = new_x
-                    y[:, 1] = new_y
-                if batch == 0:
-                    y_batch = y[:, 0:2]
-                else:
-                    y_batch = torch.cat((y_batch, y[:, 0:2]), dim=0)
+            y = y[:, 0:2]
 
-            batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
 
-            for batch in batch_loader:
-                pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi)
+            pred = model(dataset, data_id=run, training=True, vnorm=vnorm, phi=phi, frame=k)
 
-            loss = (pred - y_batch).norm(2)
+            loss = (pred - y).norm(2)
 
             visualize_embedding = True
-            if visualize_embedding & (((epoch < 30 ) & (N%(Niter//50) == 0)) | (N==0)):
+            if visualize_embedding & (((epoch < 30 ) & (N%(Niter//100) == 0)) | (N==0)):
                 model_a = model.a[1].clone().detach()
+                fig, ax = fig_init()
                 if state_hot_encoding:
+                    model_a = torch.reshape(model_a, (model.n_particles * model.n_frames, model.n_particle_types))
                     model_a = gumbel_softmax(model_a, model.temperature, hard=True, device=device)
                     model_a = torch.matmul(model_a, model.b)
-                fig, ax = fig_init()
-                for n in range(n_particle_types):
-                    pos = np.argwhere(type_list == n).squeeze().astype(int)
-                    if pos.size > 0:
-                        plt.scatter(to_numpy(model_a[pos, 0]), to_numpy(model_a[pos, 1]), s=1, color=cmap.color(n), alpha=0.01)
+                    for n in range(n_particle_types):
+                        plt.scatter(to_numpy(model.b[n, 0]), to_numpy(model.b[n, 1]), s=400, color=cmap.color(n))
+                else:
+                    for n in range(n_particle_types):
+                        pos = np.argwhere(type_list == n).squeeze().astype(int)
+                        if pos.size > 0:
+                            plt.scatter(to_numpy(model_a[pos, 0]), to_numpy(model_a[pos, 1]), s=1, color=cmap.color(n), alpha=0.01)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=80)
                 plt.close()
@@ -639,6 +627,7 @@ def data_train_particles_with_states(config, config_file, device):
         ax = fig.add_subplot(1, 5, 2)
         model_a = model.a[1].clone().detach()
         if state_hot_encoding:
+            model_a = torch.reshape(model_a, (model.n_particles * model.n_frames, model.n_particle_types))
             model_a = gumbel_softmax(model_a, model.temperature, hard=True, device=device)
             model_a = torch.matmul(model_a, model.b)
         for n in range(n_particle_types):

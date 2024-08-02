@@ -79,14 +79,15 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         elif self.has_state:
             if self.state_hot_encoding:
                 self.a = nn.Parameter(
-                    torch.tensor(np.ones((self.n_dataset, int(self.n_frames * (self.n_particles + self.n_ghosts)), self.n_particle_types)),
+                    torch.tensor(np.ones((self.n_dataset, int(self.n_frames), int(self.n_particles + self.n_ghosts), self.n_particle_types)),
                                  device=self.device, requires_grad=True, dtype=torch.float32))
+                angles = np.linspace(0, 2 * np.pi, self.n_particle_types+1)[:-1]
+                b_ = np.array([np.cos(angles), np.sin(angles)]).T
                 self.b = nn.Parameter(
-                    torch.tensor(np.ones((int(self.n_particle_types), int(self.embedding_dim))),
-                                 device=self.device, requires_grad=True, dtype=torch.float32))
+                    torch.tensor(b_, device=self.device, requires_grad=True, dtype=torch.float32))
             else:
                 self.a = nn.Parameter(
-                    torch.tensor(np.ones((self.n_dataset, int(self.n_frames * (self.n_particles + self.n_ghosts)), self.embedding_dim)),
+                    torch.tensor(np.ones((self.n_dataset, int(self.n_frames),  int(self.n_particles + self.n_ghosts), self.embedding_dim)),
                                  device=self.device, requires_grad=True, dtype=torch.float32))
         else:
             self.a = nn.Parameter(
@@ -94,7 +95,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
                              requires_grad=True, dtype=torch.float32))
 
 
-    def forward(self, data=[], data_id=[], training=[], vnorm=[], phi=[], has_field=False):
+    def forward(self, data=[], data_id=[], training=[], vnorm=[], phi=[], has_field=False, frame=[]):
 
         self.data_id = data_id
         self.vnorm = vnorm
@@ -116,9 +117,9 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         particle_id = x[:, 0:1]
 
         if not(self.state_hot_encoding):
-            embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
+            embedding = self.a[self.data_id, frame, to_numpy(particle_id), :].squeeze()
         else:
-            model_a = gumbel_softmax(self.a[self.data_id, to_numpy(particle_id), :].squeeze(), self.temperature, hard=True, device=self.device)
+            model_a = gumbel_softmax(self.a[self.data_id, frame, to_numpy(particle_id), :].squeeze(), self.temperature, hard=True, device=self.device)
             embedding = torch.matmul(model_a, self.b)
 
         pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
