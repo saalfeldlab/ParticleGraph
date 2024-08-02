@@ -1167,6 +1167,19 @@ def plot_generated_agents(config, config_file, device):
         plt.close()
 
 
+def plot_celegans(config, config_file, device):
+
+
+
+
+def plot_salivary_gland(config, config_file, device)
+
+
+
+
+
+
+
 def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoch, it, fig, ax):
     # print(f'plot confusion matrix epoch:{epoch} it: {it}')
     plt.text(-0.25, 1.1, f'{index}', ha='left', va='top', transform=ax.transAxes, fontsize=12)

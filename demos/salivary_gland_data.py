@@ -4,6 +4,7 @@ from ParticleGraph.data_loaders import load_wanglab_salivary_gland
 from ParticleGraph.utils import bundle_fields
 
 path = "/groups/wang/wanglab/GNN/240104-SMG-HisG-PNA-Cy3-001-SIL/1 - Denoised_Statistics/1 - Denoised_Position.csv"
+
 time_series, global_ids = load_wanglab_salivary_gland(path, device="cpu")
 
 frame = 100
