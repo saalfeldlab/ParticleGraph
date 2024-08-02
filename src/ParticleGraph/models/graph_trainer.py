@@ -437,6 +437,8 @@ def data_train_particles_with_states(config, config_file, device):
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     embedding_cluster = EmbeddingCluster(config)
     n_runs = train_config.n_runs
+    state_hot_encoding = train_config.state_hot_encoding
+
 
     l_dir, log_dir, logger = create_log_dir(config, config_file)
     print(f'Graph files N: {n_runs}')
@@ -526,7 +528,6 @@ def data_train_particles_with_states(config, config_file, device):
         total_loss = 0
         Niter = n_frames * data_augmentation_loop // batch_size
 
-
         for N in range(Niter):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
@@ -576,9 +577,8 @@ def data_train_particles_with_states(config, config_file, device):
             visualize_embedding = True
             if visualize_embedding & (((epoch < 30 ) & (N%(Niter//50) == 0)) | (N==0)):
                 model_a = model.a[1].clone().detach()
-                if model.hot_vector_embedding:
-                    temperature = torch.tensor(0.5, device=device)
-                    model_a = gumbel_softmax(model_a, temperature, hard=True, device=device)
+                if state_hot_encoding:
+                    model_a = gumbel_softmax(model_a, model.temperature, hard=True, device=device)
                     model_a = torch.matmul(model_a, model.b)
                 fig, ax = fig_init()
                 for n in range(n_particle_types):
@@ -638,9 +638,8 @@ def data_train_particles_with_states(config, config_file, device):
 
         ax = fig.add_subplot(1, 5, 2)
         model_a = model.a[1].clone().detach()
-        if model.hot_vector_embedding:
-            temperature = torch.tensor(0.5, device=device)
-            model_a = gumbel_softmax(model_a, temperature, hard=True, device=device)
+        if state_hot_encoding:
+            model_a = gumbel_softmax(model_a, model.temperature, hard=True, device=device)
             model_a = torch.matmul(model_a, model.b)
         for n in range(n_particle_types):
             pos = np.argwhere(type_list == n).squeeze().astype(int)
@@ -720,9 +719,8 @@ def data_train_particles_with_states(config, config_file, device):
         #
         #         prev = model.a[1,:-2*n_particles]
         #         next = model.a[1,n_particles:-n_particles]
-        #         # temperature = torch.tensor(0.5, device=device)
-        #         # prev = gumbel_softmax(prev, temperature, hard = True, device = device)
-        #         # next = gumbel_softmax(next, temperature, hard = True, device = device)
+        #         # prev = gumbel_softmax(prev, model.temperature, hard = True, device = device)
+        #         # next = gumbel_softmax(next, model.temperature, hard = True, device = device)
         #         diff = torch.sum((prev - next) ** 2)
         #         loss = diff*1E3 + 0 * (model.a[1] - model_a).norm(2)
         #
@@ -3028,8 +3026,7 @@ def data_train_agents(config, config_file, device):
                 if has_state:
                     ax, fig = fig_init()
                     embedding = torch.reshape(model.a[0], (n_particles*n_frames, model_config.embedding_dim))
-                    plt.hist(to_numpy(embedding[:, 0]), bins=1000)
-                    # plt.scatter(to_numpy(embedding[:, 0]), to_numpy(embedding[:, 1]), s=0.1, alpha=0.01, c='k')
+                    plt.scatter(to_numpy(embedding[:, 0]), to_numpy(embedding[:, 1]), s=0.1, alpha=0.01, c='k')
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
@@ -3037,8 +3034,8 @@ def data_train_agents(config, config_file, device):
                 else:
                     ax, fig = fig_init()
                     embedding = model.a[0]
-                    plt.hist(to_numpy(embedding[:, 0]), bins=1000)
-                    # plt.scatter(to_numpy(embedding[:, 0]), to_numpy(embedding[:, 1]), s=1, alpha=0.1, c='k')
+                    # plt.hist(to_numpy(embedding[:, 0]), bins=1000)
+                    plt.scatter(to_numpy(embedding[:, 0]), to_numpy(embedding[:, 1]), s=1, alpha=0.1, c='k')
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()

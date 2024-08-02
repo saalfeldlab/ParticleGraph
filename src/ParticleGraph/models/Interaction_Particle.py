@@ -58,6 +58,11 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         self.has_state = config.simulation.state_type != 'discrete'
         self.n_frames = simulation_config.n_frames
         self.state_hot_encoding = train_config.state_hot_encoding
+        
+        temperature = train_config.state_temperature
+        self.temperature = torch.tensor(temperature, device=self.device)
+
+
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device)
@@ -74,7 +79,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         elif self.has_state:
             if self.state_hot_encoding:
                 self.a = nn.Parameter(
-                    torch.tensor(np.ones((self.n_dataset, int(self.n_frames * (self.n_particles + self.n_ghosts)), self.n_particle_types) / self.n_particle_types),
+                    torch.tensor(np.ones((self.n_dataset, int(self.n_frames * (self.n_particles + self.n_ghosts)), self.n_particle_types)),
                                  device=self.device, requires_grad=True, dtype=torch.float32))
                 self.b = nn.Parameter(
                     torch.tensor(np.ones((int(self.n_particle_types), int(self.embedding_dim))),
@@ -113,8 +118,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         if not(self.state_hot_encoding):
             embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
         else:
-            temperature = torch.tensor(0.5, device=self.device)
-            model_a = gumbel_softmax(self.a[self.data_id, to_numpy(particle_id), :].squeeze(), temperature, hard=True, device=self.device)
+            model_a = gumbel_softmax(self.a[self.data_id, to_numpy(particle_id), :].squeeze(), self.temperature, hard=True, device=self.device)
             embedding = torch.matmul(model_a, self.b)
 
         pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, field=field)

@@ -76,8 +76,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
     if erase:
         files = glob.glob(f"{folder}/*")
         for f in files:
-            if (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (
-                    f != 'generation_code.py'):
+            if (f[-3:] != 'Fig') & (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (f != 'generation_code.py'):
                 os.remove(f)
     os.makedirs(folder, exist_ok=True)
     os.makedirs(f'./graphs_data/graphs_{dataset_name}/Fig/', exist_ok=True)
