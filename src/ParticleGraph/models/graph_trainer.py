@@ -680,65 +680,65 @@ def data_train_particles_with_states(config, config_file, device):
         print(f'accuracy: {np.round(accuracy, 3)}   n_clusters: {n_clusters}')
         logger.info(f'accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}')
 
-
-        if (epoch == 5):
-            model.hot_vector_embedding = True
-
-            model_a_list_short = model.a[1, index, :].clone().detach()
-            median_center_list = []
-            for n in range(n_clusters):
-                pos = np.argwhere(new_labels == n).squeeze().astype(int)
-                pos = np.array(pos)
-                if pos.size > 0:
-                    median_center = model_a_list_short[pos, :]
-                    median_center = torch.median(median_center, dim=0).values
-                    median_center_list.append(median_center)
-            median_center_list = torch.stack(median_center_list)
-
-            distance = torch.sum((model_a[:, None, :] - median_center_list[None, :, :]) ** 2, dim=2)
-            result = distance.min(dim=1)
-            min_index = result.indices
-
-            new_labels = to_numpy(min_index).astype(int)
-
-            hot_vectors = np.zeros((model.n_dataset, model.n_particles * model.n_frames, n_clusters))
-            for k in range(model.n_dataset):
-                hot_vectors[k, :, :] = np.eye(n_clusters)[new_labels]
-            model.a = nn.Parameter(torch.tensor(hot_vectors, device=device, requires_grad=True, dtype=torch.float32))
-            model.b = nn.Parameter(torch.tensor(to_numpy(median_center_list),device=device, requires_grad=True, dtype=torch.float32))
-            optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+        # if (epoch == 5):
+        #     model.hot_vector_embedding = True
+        #
+        #     model_a_list_short = model.a[1, index, :].clone().detach()
+        #     median_center_list = []
+        #     for n in range(n_clusters):
+        #         pos = np.argwhere(new_labels == n).squeeze().astype(int)
+        #         pos = np.array(pos)
+        #         if pos.size > 0:
+        #             median_center = model_a_list_short[pos, :]
+        #             median_center = torch.median(median_center, dim=0).values
+        #             median_center_list.append(median_center)
+        #     median_center_list = torch.stack(median_center_list)
+        #
+        #     distance = torch.sum((model_a[:, None, :] - median_center_list[None, :, :]) ** 2, dim=2)
+        #     result = distance.min(dim=1)
+        #     min_index = result.indices
+        #
+        #     new_labels = to_numpy(min_index).astype(int)
+        #
+        #     hot_vectors = np.zeros((model.n_dataset, model.n_particles * model.n_frames, n_clusters))
+        #     for k in range(model.n_dataset):
+        #         hot_vectors[k, :, :] = np.eye(n_clusters)[new_labels]
+        #     model.a = nn.Parameter(torch.tensor(hot_vectors, device=device, requires_grad=True, dtype=torch.float32))
+        #     model.b = nn.Parameter(torch.tensor(to_numpy(median_center_list),device=device, requires_grad=True, dtype=torch.float32))
+        #     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
         plt.close()
 
-        if (epoch == 8) | (epoch == 12) | (epoch == 16):
+        # if (epoch == 8) | (epoch == 12) | (epoch == 16):
+        #
+        #     model_a = model.a[1].clone().detach()
+        #
+        #     for k in trange(1000):
+        #         optimizer.zero_grad()
+        #
+        #         prev = model.a[1,:-2*n_particles]
+        #         next = model.a[1,n_particles:-n_particles]
+        #         # temperature = torch.tensor(0.5, device=device)
+        #         # prev = gumbel_softmax(prev, temperature, hard = True, device = device)
+        #         # next = gumbel_softmax(next, temperature, hard = True, device = device)
+        #         diff = torch.sum((prev - next) ** 2)
+        #         loss = diff*1E3 + 0 * (model.a[1] - model_a).norm(2)
+        #
+        #         loss.backward()
+        #         optimizer.step()
+        #
+        #     # print(loss.item())
+        #     # class_list = torch.argmax(model.a[1], dim=1)
+        #     # class_list = torch.reshape(class_list, (n_frames, model.n_particles))
+        #     # fig, ax = fig_init()
+        #     # plt.imshow(to_numpy(class_list[:,2400:2800]), aspect='auto')
+        #     # fig, ax = fig_init()
+        #     # plt.plot(to_numpy(class_list[:,2453:2454]))
+        #     # with torch.no_grad():
+        #     #     model.a[1] = model_a.clone().detach()
 
-            model_a = model.a[1].clone().detach()
-
-            for k in trange(1000):
-                optimizer.zero_grad()
-
-                prev = model.a[1,:-2*n_particles]
-                next = model.a[1,n_particles:-n_particles]
-                # temperature = torch.tensor(0.5, device=device)
-                # prev = gumbel_softmax(prev, temperature, hard = True, device = device)
-                # next = gumbel_softmax(next, temperature, hard = True, device = device)
-                diff = torch.sum((prev - next) ** 2)
-                loss = diff*1E3 + 0 * (model.a[1] - model_a).norm(2)
-
-                loss.backward()
-                optimizer.step()
-
-            # print(loss.item())
-            # class_list = torch.argmax(model.a[1], dim=1)
-            # class_list = torch.reshape(class_list, (n_frames, model.n_particles))
-            # fig, ax = fig_init()
-            # plt.imshow(to_numpy(class_list[:,2400:2800]), aspect='auto')
-            # fig, ax = fig_init()
-            # plt.plot(to_numpy(class_list[:,2453:2454]))
-            # with torch.no_grad():
-            #     model.a[1] = model_a.clone().detach()
 
 def data_train_tracking(config, config_file, device):
 
@@ -1507,8 +1507,6 @@ def data_train_cell(config, config_file, device):
     target_batch_size = train_config.batch_size
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
-    has_ghost = train_config.n_ghosts > 0
-    n_ghosts = train_config.n_ghosts
     if train_config.small_init_batch_size:
         get_batch_size = increasing_batch_size(target_batch_size)
     else:

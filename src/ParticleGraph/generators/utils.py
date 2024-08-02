@@ -47,7 +47,7 @@ def choose_model(config, device):
 
     # create GNN depending in type specified in config file
     match particle_model_name:
-        case 'PDE_A' | 'PDE_ParticleField_A' :
+        case 'PDE_A' | 'PDE_ParticleField_A' | 'PDE_Cell_A' :
             p = torch.ones(n_particle_types, 4, device=device) + torch.rand(n_particle_types, 4, device=device)
             if config.simulation.non_discrete_level>0:
                 pp=[]

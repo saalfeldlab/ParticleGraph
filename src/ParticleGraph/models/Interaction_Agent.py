@@ -144,7 +144,7 @@ class Interaction_Agent(pyg.nn.MessagePassing):
 
         match self.model:
             case 'PDE_Agents_A':
-                in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None], dpos_y_j[:, None], embedding_i[:,None]), dim=-1)
+                in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None], dpos_y_j[:, None], embedding_i), dim=-1)
             case 'PDE_Agents_B':
                 in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None], dpos_y_j[:, None], embedding_i, features_j), dim=-1)
 

@@ -7,7 +7,6 @@ simulation:
   max_radius: 0.075
   n_particles: 4800
   n_particle_types: 3
-  n_interactions: 3
   n_frames: 250
   sigma: 0.005
   delta_t: 0.1
@@ -43,6 +42,8 @@ training:
   data_augmentation: True
   data_augmentation_loop: 200
   fix_cluster_embedding: True
+  state_hot_encoding: True
+  state_temperature: 0.5
   device: 'auto'
   sequence: ['none']
 

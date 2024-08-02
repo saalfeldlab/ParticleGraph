@@ -39,6 +39,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         self.hidden_dim = model_config.hidden_dim
         self.n_layers = model_config.n_mp_layers
         self.n_particles = simulation_config.n_particles
+        self.n_particle_types = simulation_config.n_particle_types
         self.max_radius = simulation_config.max_radius
         self.data_augmentation = train_config.data_augmentation
         self.noise_level = train_config.noise_level
@@ -56,7 +57,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         self.dimension = dimension
         self.has_state = config.simulation.state_type != 'discrete'
         self.n_frames = simulation_config.n_frames
-        self.hot_vector_embedding = False
+        self.state_hot_encoding = train_config.state_hot_encoding
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device)
@@ -71,10 +72,17 @@ class Interaction_Particle(pyg.nn.MessagePassing):
                                  requires_grad=True, dtype=torch.float32))
                 self.phi = MLP(input_size=3, output_size=1, nlayers=5, hidden_size=32, device=self.device)
         elif self.has_state:
-            self.a = nn.Parameter(
-                torch.tensor(np.ones((self.n_dataset, int(self.n_frames * (self.n_particles + self.n_ghosts)), self.embedding_dim)),
-                             device=self.device,
-                             requires_grad=True, dtype=torch.float32))
+            if self.state_hot_encoding:
+                self.a = nn.Parameter(
+                    torch.tensor(np.ones((self.n_dataset, int(self.n_frames * (self.n_particles + self.n_ghosts)), self.n_particle_types) / self.n_particle_types),
+                                 device=self.device, requires_grad=True, dtype=torch.float32))
+                self.b = nn.Parameter(
+                    torch.tensor(np.ones((int(self.n_particle_types), int(self.embedding_dim))),
+                                 device=self.device, requires_grad=True, dtype=torch.float32))
+            else:
+                self.a = nn.Parameter(
+                    torch.tensor(np.ones((self.n_dataset, int(self.n_frames * (self.n_particles + self.n_ghosts)), self.embedding_dim)),
+                                 device=self.device, requires_grad=True, dtype=torch.float32))
         else:
             self.a = nn.Parameter(
                 torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
@@ -102,7 +110,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
         particle_id = x[:, 0:1]
 
-        if not(self.hot_vector_embedding):
+        if not(self.state_hot_encoding):
             embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
         else:
             temperature = torch.tensor(0.5, device=self.device)

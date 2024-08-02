@@ -220,7 +220,7 @@ def get_Delaunay(points=[], device=[]):
 
     cc = cc.t()
 
-    return cc
+    return cc, tri.simplices
 
 def dot2(u, v):
     return u[0]*v[0] + u[1]*v[1]

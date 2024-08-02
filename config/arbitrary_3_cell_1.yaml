@@ -1,23 +1,30 @@
 description: 'attraction-repulsion with 3 types particles'
-dataset: 'arbitrary_3_sequence_d'
+dataset: 'arbitrary_3_cell_1'
 
 simulation:
-  params: [[1.6233, 1.0413, 1.6012, 1.5615], [1.7667, 1.8308, 1.0855, 1.9055], [1.7226, 1.7850, 1.0584, 1.8579]]
+  params: [[1.6233, 1.0413, 1.6012, 1.5615], [1.7667, 1.8308, 1.0855, 1.9055],  [1.7226, 1.7850, 1.0584, 1.8579]]
+  cell_cycle_length: [ 129.60669,250.58319,248.17961]
+  cell_death_rate: [ 0,0,0]
+  final_cell_mass: [ 100, 300, 400]
+  cell_area: [ 0.8,1,1.2]
   min_radius: 0
   max_radius: 0.075
-  n_particles: 4800
+  max_edges: 500000
+  n_particles: 492
+  has_cell_division: True
+  cell_inert_model_coeff: 1.0E-2
+  cell_active_model_coeff: 1.0
+  n_particles_max: 5000
   n_particle_types: 3
   n_interactions: 3
-  n_frames: 250
+  n_frames: 2000
   sigma: 0.005
   delta_t: 0.1
   dpos_init: 0
   boundary: 'periodic'
-  state_type: 'sequence'
-  state_params: [250]
 
 graph_model:
-  particle_model_name: 'PDE_A'
+  particle_model_name: 'PDE_Cell_A'
   mesh_model_name: ''
   prediction: 'first_derivative'
   input_size: 5
@@ -36,15 +43,14 @@ plotting:
 training:
   n_epochs: 20
   batch_size: 8
-  small_init_batch_size: True
+  small_init_batch_size: False
   n_runs: 2
   sparsity: 'replace_embedding_function'
-  cluster_method: 'kmeans_auto_plot'
+  cluster_method: 'distance_plot'
   data_augmentation: True
-  data_augmentation_loop: 200
+  data_augmentation_loop: 100
   fix_cluster_embedding: True
   device: 'auto'
-  sequence: ['none']
 
 
 

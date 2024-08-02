@@ -146,6 +146,9 @@ class Interaction_Cell(pyg.nn.MessagePassing):
 
         match self.model:
 
+            case 'PDE_Cell_A':
+                in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
+
             case 'PDE_Cell_B':
                 in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
                                          dpos_y_j[:, None], embedding_i), dim=-1)

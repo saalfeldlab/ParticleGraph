@@ -151,6 +151,10 @@ class TrainingConfig(BaseModel):
     cluster_method: Literal['kmeans', 'kmeans_auto_plot', 'kmeans_auto_embedding', 'distance_plot', 'distance_embedding', 'distance_both', 'inconsistent_plot', 'inconsistent_embedding', 'none'] = 'distance_plot'
     cluster_distance_threshold: float = 0.01
     cluster_connectivity: Literal['single','average'] = 'single'
+
+    state_hot_encoding: bool = False
+    state_temperature: float = 0.5
+
     device: Annotated[str, Field(pattern=r'^(auto|cpu|cuda:\d+)$')] = 'auto'
 
 

@@ -44,6 +44,7 @@ training:
   data_augmentation_loop: 200
   fix_cluster_embedding: True
   device: 'auto'
+  learning_rate_embedding_start: 0.01
   sequence: ['none']
 
 

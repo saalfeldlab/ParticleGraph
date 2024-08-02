@@ -40,7 +40,7 @@ def get_type_time_series(new_labels=None, dataset_number=None, cell_id=None, n_p
 
 def get_in_features(rr, embedding_, config_model, max_radius):
     match config_model:
-        case 'PDE_A':
+        case 'PDE_A' | 'PDE_Cell_A':
             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                      rr[:, None] / max_radius, embedding_), dim=1)
         case 'PDE_ParticleField_A':
@@ -484,6 +484,9 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, n_particl
         else:
             embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
         match model_config.particle_model_name:
+            case 'PDE_Cell_A':
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                         rr[:, None] / max_radius, embedding_), dim=1)
             case 'PDE_Cell_B':
                 in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                          torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
@@ -755,7 +758,7 @@ def choose_training_model(model_config, device):
     model=[]
     model_name = model_config.graph_model.particle_model_name
     match model_name:
-        case 'PDE_Cell_B' | 'PDE_Cell_B_area':
+        case 'PDE_Cell_A' | 'PDE_Cell_B' | 'PDE_Cell_B_area':
             model = Interaction_Cell(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
         case 'PDE_ParticleField_A' | 'PDE_ParticleField_B':
