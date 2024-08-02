@@ -22,6 +22,7 @@ from io import StringIO
 import sys
 from scipy.stats import pearsonr
 from scipy.spatial import Voronoi, voronoi_plot_2d
+from ParticleGraph.kan import *
 
 # matplotlib.use("Qt5Agg")
 
@@ -4484,15 +4485,40 @@ def plot_agents(config_file, epoch_list, log_dir, logger, device):
             # in_features = torch.cat((torch.zeros((300000,7),device=device), embedding), dim=-1)
             # out = model.lin_edge(in_features.float())
 
-        fig, ax = fig_init()
-        plt.scatter(to_numpy(y[:, 0]), embedding[:, 0], s=0.1, c='k', alpha=0.1)
-        plt.tight_layout()
+        for x_ in [0,1]:
+            for y_ in [0,1]:
+                fig = plt.figure(figsize=(5, 5))
+                plt.scatter(to_numpy(y[:, x_]), embedding[:, y_], s=0.1, c='k', alpha=0.01)
+                plt.xlabel(f'$x_{x_}$', fontsize=48)
+                plt.ylabel(f'$y_{y_}$', fontsize=48)
+                plt.tight_layout()
 
-        from kan import *
+        x = model.a[0][k].squeeze()
 
 
+        model_kan = KAN(width=[2, 5, 2])
+        dataset={}
+
+        dataset['train_input'] = x[0:10000]
+        dataset['test_input'] = x[12000:13000]
+        dataset['train_label'] = y[0:10000]
+        dataset['test_label'] = y[12000:13000]
+
+        model_kan.train(dataset, opt="LBFGS", steps=200, lamb=0.01, lamb_entropy=10.)
+
+        model_kan.plot()
+
+        lib = ['x', 'x^2', 'x^3', 'x^4', 'exp', 'log', 'sqrt', 'tanh', 'sin', 'abs']
+        model_kan.auto_symbolic(lib=lib)
+        model_kan.train(dataset, steps=20)
 
 
+        fig = plt.figure(figsize=(5, 5))
+        plt.scatter(to_numpy(y[:, 1]), to_numpy(embedding[:, 0]), s=0.1, c='k', alpha=0.01)
+
+        fig = plt.figure(figsize=(10, 10))
+        ax = fig.add_subplot(1, 1, 1, projection='3d')
+        ax.scatter(to_numpy(embedding[:, 0]), to_numpy(embedding[:, 1]), to_numpy(y[:, 0]), s=0.1, c='k', alpha=0.1)
 
 
 
