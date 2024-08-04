@@ -587,7 +587,7 @@ def analyze_edge_function_state(rr=[], vizualize=False, config=None, model_MLP=[
 
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
-    state_hot_encoding = config.graph_model.state_hot_encoding
+    state_hot_encoding = config.training.state_hot_encoding
 
     n_states = min(int(10E3),int(len(model_a)))
     index_ = np.random.permutation(len(model_a))

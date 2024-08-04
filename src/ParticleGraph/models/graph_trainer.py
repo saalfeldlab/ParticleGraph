@@ -586,8 +586,8 @@ def data_train_particles_with_states(config, config_file, device):
                     if pos.size > 0:
                         plt.scatter(to_numpy(model_a[pos, 0]), to_numpy(model_a[pos, 1]), s=1, color=cmap.color(n), alpha=0.01)
                 if state_hot_encoding:
-                    model_a = gumbel_softmax(model_a, model.temperature, hard=True, device=device)
-                    plt.scatter(to_numpy(model_a[:, 0]), to_numpy(model_a[:, 1]), s=100, color='r')
+                    model_a = model_a + gumbel_softmax(model_a, model.temperature, hard=True, device=device)
+                    plt.scatter(to_numpy(model_a[:, 0]), to_numpy(model_a[:, 1]), s=1, color='r', alpha=0.01)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=80)
                 plt.close()
@@ -643,7 +643,7 @@ def data_train_particles_with_states(config, config_file, device):
         if state_hot_encoding:
             model_a = torch.reshape(model_a, (model.n_particles * model.n_frames, model.n_particle_types))
             model_a = torch.softmax(model_a, dim = 1)
-            model_a = gumbel_softmax(model_a, model.temperature, hard=True, device=device)
+            model_a = model_a + gumbel_softmax(model_a, model.temperature, hard=True, device=device)
         else:
             model_a = torch.reshape(model_a, (model.n_particles * model.n_frames, model.embedding_dim))
         for n in range(n_particle_types):

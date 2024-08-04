@@ -473,6 +473,10 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         N1, X1, V1, T1, H1, A1, S1, M1, R1, CL1, DR1, MC1, AR1 = init_cells(config, cycle_length, final_cell_mass,
                                                                             cell_death_rate, mc_slope, cell_area, bc_pos, bc_dpos, dimension,
                                                                             device=device)
+        if has_inert_model:
+
+            target_areas_per_type = torch.tensor([cell_area[i] / n_particles for i in range(n_particle_types)], device=device)
+            target_areas = target_areas_per_type[to_numpy(T1).astype(int)].squeeze().clone().detach()
 
         T1_list = T1.clone().detach()
 
@@ -493,7 +497,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
         index_particles = []
         for n in range(n_particle_types):
-            pos = torch.argwhere(T1 == n)
+            pos = torch.argwhere(T1.squeeze() == n)
             pos = to_numpy(pos[:, 0].squeeze()).astype(int)
             index_particles.append(pos)
         n_particles_alive = len(X1)
@@ -527,8 +531,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     N1_ = n_particles + torch.arange(n_add_nodes, device=device)
                     N1 = torch.cat((N1, N1_[:, None]), dim=0)
 
-                    man_track_ = torch.cat((N1_[:, None] + 1, torch.zeros((n_add_nodes, 3), device=device)),
-                                           1)  # cell ID
+                    man_track_ = torch.cat((N1_[:, None] + 1, torch.zeros((n_add_nodes, 3), device=device)),1)  # cell ID
                     man_track_[:, 1] = it  # start time
                     man_track_[:, 2] = -1  # end time
                     man_track_[0:n_add_nodes // 2, 3:4] = N1[pos] + 1  # parent cell
@@ -570,6 +573,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     AR1 = torch.cat((AR1, AR1[pos, :], AR1[pos, :]), dim=0)
                     R1 = M1 / (2 * CL1)
 
+                    target_areas = torch.cat((target_areas, target_areas[pos], target_areas[pos]), dim=0)
+
                     n_particles_alive = torch.sum(H1[:, 0])
 
                     if (n_particles_alive >= simulation_config.n_particles_max):
@@ -591,10 +596,11 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             DR1 = DR1[alive]
             MC1 = MC1[alive]
             AR1 = AR1[alive]
+            target_areas = target_areas[alive]
 
             index_particles = []
             for n in range(n_particle_types):
-                pos = torch.argwhere(T1 == n)
+                pos = torch.argwhere(T1.squeeze() == n)
                 pos = to_numpy(pos[:, 0].squeeze()).astype(int)
                 index_particles.append(pos)
 
@@ -648,15 +654,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
             if has_inert_model:
 
-                coeff = 0
-                num_cells = []
-                for i in range(n_particle_types):
-                    pos = torch.argwhere(T1.squeeze() == i).shape[0]
-                    num_cells.append(pos)
-                    coeff += num_cells[i] * cell_area[i]
-                target_areas_per_type = torch.tensor([cell_area[i] / coeff for i in range(n_particle_types)], device=device)
-                target_areas = target_areas_per_type[to_numpy(T1).astype(int)].squeeze().clone().detach()
-
                 X1_ = X1.clone().detach()
                 X1_.requires_grad = True
 
@@ -677,7 +674,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 loss = (target_areas - voronoi_area).norm(2)
                 loss.backward()
                 optimizer.step()
-                print(loss.item())
 
                 X1_ = X1_.clone().detach()
                 X1 = bc_pos(X1_.clone().detach())
