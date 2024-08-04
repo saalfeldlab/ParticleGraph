@@ -404,7 +404,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
     dataset_name = config.dataset
     marker_size = config.plotting.marker_size
     has_inert_model = simulation_config.cell_inert_model_coeff > 0
-    has_cell_death = simulation_config.has_cell_death
+    has_cell_death = simulation_config.has_cell_division
     has_cell_division = True
 
     max_radius_list = []
@@ -475,7 +475,16 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                                                                             device=device)
         if has_inert_model:
 
-            target_areas_per_type = torch.tensor([cell_area[i] / n_particles for i in range(n_particle_types)], device=device)
+            # target_areas_per_type = torch.tensor([cell_area[i] / n_particles for i in range(n_particle_types)], device=device)
+            # target_areas = target_areas_per_type[to_numpy(T1).astype(int)].squeeze().clone().detach()
+
+            coeff = 0
+            num_cells = []
+            for i in range(n_particle_types):
+                pos = torch.argwhere(T1.squeeze() == i).shape[0]
+                num_cells.append(pos)
+                coeff += num_cells[i] * cell_area[i]
+            target_areas_per_type = torch.tensor([cell_area[i] / coeff for i in range(n_particle_types)], device=device)
             target_areas = target_areas_per_type[to_numpy(T1).astype(int)].squeeze().clone().detach()
 
         T1_list = T1.clone().detach()
@@ -671,7 +680,10 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
                 AR1 = voronoi_area[:, None].clone().detach()
 
-                loss = (target_areas - voronoi_area).norm(2)
+                loss = training_config.coeff_area * (target_areas - voronoi_area).norm(2)
+                if training_config.coeff_perimeter>0:
+                    perimeter = get_voronoi_perimeters(vertices_pos, vertices_per_cell, device)
+                    loss += training_config.coeff_perimeter * torch.sum(perimeter**2)
                 loss.backward()
                 optimizer.step()
 
