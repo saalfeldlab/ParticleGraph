@@ -523,7 +523,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 sample = torch.rand(len(X1), device=device)
                 H1[sample.squeeze() < DR1.squeeze() / 5E4, 0] = 0
                 # removal if too small
-                pos = torch.argwhere(AR1.squeeze()<5E-6)# & (T1.squeeze() == 0))
+                pos = torch.argwhere((AR1.squeeze()<2E-4) & (A1.squeeze() > 25))
                 if len(pos) > 0:
                     H1[pos,0]=0
                 n_particles_alive = torch.sum(H1[:, 0])
@@ -684,12 +684,12 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
                 if simulation_config.coeff_perimeter>0:
                     perimeter = get_voronoi_perimeters(cc, vertices_per_cell, device)
-                    loss += simulation_config.coeff_perimeter * torch.log(torch.sum(perimeter**2))
-
-                print(f'loss {loss.item()}')
+                    loss += simulation_config.coeff_perimeter * torch.sum(perimeter**2)
 
                 loss.backward()
                 optimizer.step()
+
+                print(f'loss {loss.item()}')
 
                 # fig = plt.figure(figsize=(12, 12))
                 # ax = fig.add_subplot(1, 1, 1)
@@ -738,13 +738,13 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             # get mass_coeff
             # mass_coeff = set_mass_coeff(mc_slope_distrib, cell_mass[to_numpy(T1[:, 0])], M1, device)
 
-            # # cell update
-            # if model_config.prediction == '2nd_derivative':
-            #     V1 += (y + y_voronoi) * delta_t
-            # else:
-            #     V1 = y + y_voronoi
-            #
-            # X1 = bc_pos(first_X1 + V1 * delta_t)
+            # cell update
+            if model_config.prediction == '2nd_derivative':
+                V1 += (y + y_voronoi) * delta_t
+            else:
+                V1 = y + y_voronoi
+
+            X1 = bc_pos(first_X1 + V1 * delta_t)
 
 
 
@@ -879,7 +879,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     if pos.shape[0] > 1:
                         plt.hist(to_numpy(AR1[pos].squeeze()), bins=50, alpha=0.5)
                 plt.tight_layout()
-                plt.savefig(f"graphs_data/graphs_{dataset_name}/max_radius_{run}.jpg", dpi=170.7)
+                plt.savefig(f"graphs_data/graphs_{dataset_name}/gen_{run}.jpg", dpi=170.7)
                 plt.close()
 
 
@@ -1296,7 +1296,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             dataset_f_p = data.Data(x=x_particle_field, pos=x_particle_field[:, 1:3], edge_index=edge_index)
             if not (has_particle_dropout):
                 edge_f_p_list.append(edge_index)
-
 
             # model prediction
             with torch.no_grad():
