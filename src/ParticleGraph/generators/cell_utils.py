@@ -204,7 +204,6 @@ def get_Delaunay(points=[], device=[]):
 
     tri = Delaunay(to_numpy(points))  # Compute Delaunay triangulation
 
-
     p = points[tri.simplices]  # Triangle vertices
 
     # Triangle vertices
@@ -216,7 +215,7 @@ def get_Delaunay(points=[], device=[]):
     a = A - C
     b = B - C
 
-    cc = cross2(sq2(a) * b - sq2(b) * a, a, b) / (2 * ncross2(a, b) + 1E-6) + C
+    cc = cross2(sq2(a) * b - sq2(b) * a, a, b) / (2 * ncross2(a, b) + 1E-16) + C
 
     cc = cc.t()
 
@@ -245,9 +244,9 @@ def get_voronoi_areas(vertices_pos, vertices_per_cell, device):
         v_list = vertices_per_cell[i]
         per_cell = 0
         for v in range(-1, len(v_list)-1):
-            vert1 = 10 * vertices_pos[v_list[v]]-centroids[i]
-            vert2 = 10 * vertices_pos[v_list[v+1]]-centroids[i]
-            cross_product = 10 * vert1[0] * vert2[1] - vert1[1] * vert2[0]
+            vert1 = vertices_pos[v_list[v]]-centroids[i]
+            vert2 = vertices_pos[v_list[v+1]]-centroids[i]
+            cross_product = vert1[0] * vert2[1] - vert1[1] * vert2[0]
             per_cell += torch.abs(cross_product)/2
 
         areas.append(per_cell)

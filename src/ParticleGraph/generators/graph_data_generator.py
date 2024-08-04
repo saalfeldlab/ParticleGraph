@@ -486,7 +486,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 num_cells.append(pos)
                 coeff += num_cells[i] * cell_area[i]
             target_areas_per_type = torch.tensor([cell_area[i] / coeff for i in range(n_particle_types)], device=device)
-            target_areas = target_areas_per_type[to_numpy(T1).astype(int)].squeeze().clone().detach() * 1000
+            target_areas = target_areas_per_type[to_numpy(T1).astype(int)].squeeze().clone().detach()
 
         T1_list = T1.clone().detach()
 
@@ -677,24 +677,38 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 index = result.indices
                 cc = cc[index]
                 # tri = tri[index]
+
                 voronoi_area = get_voronoi_areas(cc, vertices_per_cell, device)
-
                 AR1 = voronoi_area[:, None].clone().detach()
-
                 loss = simulation_config.coeff_area * (target_areas - voronoi_area).norm(2)
 
-                print(f'loss {loss.item()}')
+                if simulation_config.coeff_perimeter>0:
+                    perimeter = get_voronoi_perimeters(cc, vertices_per_cell, device)
+                    loss += simulation_config.coeff_perimeter * torch.log(torch.sum(perimeter**2))
 
-                # if simulation_config.coeff_perimeter>0:
-                #     perimeter = get_voronoi_perimeters(vertices_pos, vertices_per_cell, device)
-                #     loss += simulation_config.coeff_perimeter * torch.log(torch.sum(perimeter**2))
+                print(f'loss {loss.item()}')
 
                 loss.backward()
                 optimizer.step()
 
+                # fig = plt.figure(figsize=(12, 12))
+                # ax = fig.add_subplot(1, 1, 1)
+                # vor, vertices_pos, vertices_per_cell, all_points = get_vertices(points=X1, device=device)
+                # voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='black', line_width=1, line_alpha=0.5,
+                #                 point_size=0)
+                # plt.scatter(to_numpy(cc[:, 0]), to_numpy(cc[:, 1]), s=1, color='r')
+
+                # fig = plt.figure(figsize=(12, 12))
+                # ax = fig.add_subplot(1, 1, 1)
+                # vor, vertices_pos, vertices_per_cell, all_points = get_vertices(points=X1, device=device)
+                # voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='black', line_width=1, line_alpha=0.5,
+                #                 point_size=0)
+                # vor, vertices_pos, vertices_per_cell, all_points = get_vertices(points=X1_, device=device)
+                # voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='red', line_width=1, line_alpha=0.5,
+                #                 point_size=0)
+
                 current_loss.append(loss.item())
 
-                X1_ = X1_.clone().detach()
                 X1 = bc_pos(X1_.clone().detach())
 
             if model_config.prediction == '2nd_derivative':
@@ -879,7 +893,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         ax = fig.add_subplot(1, 1, 1)
                         plt.xticks([])
                         plt.yticks([])
-                        index_particles = []
 
                         voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='black', line_width=1, line_alpha=0.5,
                                         point_size=0)

@@ -17,9 +17,9 @@ simulation:
   has_cell_division: True
   has_cell_death: False
   cell_inert_model_coeff: 1.0
-  coeff_area: 1
-  coeff_perimeter: 0
-  cell_active_model_coeff: 1.0E-7
+  coeff_area: 0
+  coeff_perimeter: 1
+  cell_active_model_coeff: 1.0E-2
   cell_type_map: 'cell_map_2.tif'
   n_particle_types: 3
   n_interactions: 3
