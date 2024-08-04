@@ -404,7 +404,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
     dataset_name = config.dataset
     marker_size = config.plotting.marker_size
     has_inert_model = simulation_config.cell_inert_model_coeff > 0
-    has_cell_death = simulation_config.has_cell_division
+    has_cell_death = simulation_config.has_cell_death
     has_cell_division = True
 
     max_radius_list = []
@@ -444,6 +444,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         edge_p_p_list = []
         vertices_pos_list = []
         vertices_per_cell_list = []
+        current_loss =[]
 
         '''
         INITIALIZE PER CELL TYPE VALUES1000
@@ -485,7 +486,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 num_cells.append(pos)
                 coeff += num_cells[i] * cell_area[i]
             target_areas_per_type = torch.tensor([cell_area[i] / coeff for i in range(n_particle_types)], device=device)
-            target_areas = target_areas_per_type[to_numpy(T1).astype(int)].squeeze().clone().detach()
+            target_areas = target_areas_per_type[to_numpy(T1).astype(int)].squeeze().clone().detach() * 1000
 
         T1_list = T1.clone().detach()
 
@@ -513,7 +514,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         n_particles_dead = 0
 
         time.sleep(0.5)
-        for it in trange(simulation_config.start_frame, n_frames + 1):
+        for it in range(simulation_config.start_frame, n_frames + 1):
 
             # calculate cell death and cell division
 
@@ -681,11 +682,17 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 AR1 = voronoi_area[:, None].clone().detach()
 
                 loss = simulation_config.coeff_area * (target_areas - voronoi_area).norm(2)
-                if simulation_config.coeff_perimeter>0:
-                    perimeter = get_voronoi_perimeters(vertices_pos, vertices_per_cell, device)
-                    loss += simulation_config.coeff_perimeter * torch.sum(perimeter**2)
+
+                print(f'loss {loss.item()}')
+
+                # if simulation_config.coeff_perimeter>0:
+                #     perimeter = get_voronoi_perimeters(vertices_pos, vertices_per_cell, device)
+                #     loss += simulation_config.coeff_perimeter * torch.log(torch.sum(perimeter**2))
+
                 loss.backward()
                 optimizer.step()
+
+                current_loss.append(loss.item())
 
                 X1_ = X1_.clone().detach()
                 X1 = bc_pos(X1_.clone().detach())
@@ -717,13 +724,15 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             # get mass_coeff
             # mass_coeff = set_mass_coeff(mc_slope_distrib, cell_mass[to_numpy(T1[:, 0])], M1, device)
 
-            # cell update
-            if model_config.prediction == '2nd_derivative':
-                V1 += (y + y_voronoi) * delta_t
-            else:
-                V1 = y + y_voronoi
+            # # cell update
+            # if model_config.prediction == '2nd_derivative':
+            #     V1 += (y + y_voronoi) * delta_t
+            # else:
+            #     V1 = y + y_voronoi
+            #
+            # X1 = bc_pos(first_X1 + V1 * delta_t)
 
-            X1 = bc_pos(first_X1 + V1 * delta_t)
+
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
@@ -839,10 +848,9 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
                 fig = plt.figure(figsize=(12, 12))
                 ax = fig.add_subplot(2, 2, 1)
-                plt.plot(max_radius_list)
-                plt.xlabel('Frame')
-                plt.ylabel('Max radius')
-                plt.ylim([0, simulation_config.max_radius * 1.1])
+                plt.plot(current_loss)
+                plt.xlabel('N')
+                plt.ylabel('Current_loss')
                 ax = fig.add_subplot(2, 2, 2)
                 plt.plot(x_len_list, edges_len_list)
                 plt.xlabel('Number of particles')
@@ -894,8 +902,9 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                             #     pc = PatchCollection(patches, alpha=0.4, facecolors=cmap.color(n))
                             #     ax.add_collection(pc)
 
-                            if 'center' in style:
-                                plt.scatter(to_numpy(X1[index_particles[n], 0]), to_numpy(X1[index_particles[n], 1]), s=1, color=cmap.color(n))
+                        if 'center' in style:
+                            plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=1, c='k')
+                            plt.scatter(to_numpy(first_X1[:, 0]), to_numpy(first_X1[:, 1]), s=1, c='r')
 
                         if 'vertices' in style:
                             plt.scatter(to_numpy(vertices_pos[:, 0]), to_numpy(vertices_pos[:, 1]), s=5, color='k')

@@ -5,18 +5,18 @@ simulation:
   params: [[42.031494,  19.948257,  89.53507  ],
  [35.10319,   44.282894,  17.424503 ],
  [94.129265, 20.24777,    4.7820106]]
-  cell_cycle_length:  [1.0E6, 500,700]
+  cell_cycle_length:  [1.0E6, 250,200]
   cell_death_rate: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
   final_cell_mass: [100, 400, 2000]
-  cell_area: [0.4,1,2]
+  cell_area: [1,1,1]
   min_radius: 0.001
   max_radius: 0.04
   max_edges: 500000
   n_particles: 2048
-  n_particles_max: 4096
+  n_particles_max: 1
   has_cell_division: True
-  has_cell_death: True
-  cell_inert_model_coeff: 1.0E-1
+  has_cell_death: False
+  cell_inert_model_coeff: 1.0E-8
   coeff_area: 1
   coeff_perimeter: 0
   cell_active_model_coeff: 0.0
@@ -33,7 +33,7 @@ simulation:
 graph_model:
   particle_model_name: 'PDE_Cell_B'
   mesh_model_name: ''
-  prediction: '2nd_derivative'
+  prediction: 'first_derivative'
   input_size: 9
   output_size: 2
   hidden_dim: 256
