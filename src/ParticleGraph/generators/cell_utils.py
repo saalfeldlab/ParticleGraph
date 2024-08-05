@@ -129,7 +129,9 @@ def init_cells(config, cycle_length, final_cell_mass, cell_death_rate, mc_slope,
     particle_id = particle_id[:, None]
     type = type[:, None]
 
-    return particle_id, pos, dpos, type, status, cell_age, cell_stage, cell_mass_distrib, growth_rate_distrib, cycle_length_distrib, cell_death_rate_distrib, mc_slope_distrib, cell_area_distrib
+    perimeter = torch.zeros((n_particles,1), device=device)
+
+    return particle_id, pos, dpos, type, status, cell_age, cell_stage, cell_mass_distrib, growth_rate_distrib, cycle_length_distrib, cell_death_rate_distrib, mc_slope_distrib, cell_area_distrib, perimeter
 
 def update_cell_cycle_stage(cell_age, cycle_length, type_list, device):
     g1 = 0.46
