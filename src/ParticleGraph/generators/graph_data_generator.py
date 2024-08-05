@@ -899,7 +899,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                                     cell = vertices_per_cell[i]
                                     vertices = to_numpy(vertices_pos[cell, :])
                                     patches.append(Polygon(vertices, closed=True))
-                                if (n==0) & has_cell_death:
+                                if (n==0) & (has_cell_death) & (n_particle_types==3):
                                     pc = PatchCollection(patches, alpha=0.4, facecolors='k')
                                 else:
                                     pc = PatchCollection(patches, alpha=0.4, facecolors=cmap.color(n))
