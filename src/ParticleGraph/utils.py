@@ -67,12 +67,14 @@ def symmetric_cutoff(x, percent=1):
     x_upper = np.percentile(x, 100 - percent)
     return x_lower, x_upper
 
+
 def norm_area(xx, device):
 
     pos = torch.argwhere(xx[:, -1]<1.0)
     ax = torch.std(xx[pos, -1])
 
     return torch.tensor([ax], device=device)
+
 
 def norm_velocity(xx, dimension, device):
     if dimension == 2:
@@ -376,3 +378,9 @@ def get_time_series(x_list, cell_id, feature):
         else:
             time_series.append(torch.tensor([0.0]))
     return to_numpy(torch.stack(time_series))
+
+
+def reparameterize(mu, logvar):
+    std = torch.exp(0.5*logvar)
+    eps = torch.randn_like(std)
+    return eps.mul(std).add_(mu)

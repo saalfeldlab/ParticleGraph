@@ -565,7 +565,7 @@ def data_train_particles_with_states(config, config_file, device):
 
             pred = model(dataset, data_id=run, training=True, vnorm=vnorm, phi=phi, frame=k)
 
-            loss = (pred - y).norm(2)
+            loss = (pred - y).norm(2) + 1E2 * model.logvar.exp()
 
             loss.backward()
             optimizer.step()
@@ -578,16 +578,20 @@ def data_train_particles_with_states(config, config_file, device):
                 if state_hot_encoding:
                     model_a = torch.reshape(model_a, (model.n_particles * model.n_frames, model.n_particle_types))
                     model_a = torch.softmax(model_a, dim =1)
+                    model_a = gumbel_softmax(model_a, model.temperature, hard=True, device=device)
+                    mu = torch.matmul(model_a, model.mu)
+                    logvar = torch.matmul(model_a, model.logvar.repeat(n_particle_types))
+                    logvar = logvar[:, None].repeat(1, 2)
+                    model_a = reparameterize(mu, logvar)
                 else:
                     model_a = torch.reshape(model_a, (model.n_particles * model.n_frames, model.embedding_dim))
+
                 fig, ax = fig_init()
                 for n in range(n_particle_types):
                     pos = np.argwhere(type_list == n).squeeze().astype(int)
                     if pos.size > 0:
                         plt.scatter(to_numpy(model_a[pos, 0]), to_numpy(model_a[pos, 1]), s=1, color=cmap.color(n), alpha=0.01)
-                if state_hot_encoding:
-                    model_a = model_a + gumbel_softmax(model_a, model.temperature, hard=True, device=device)
-                    plt.scatter(to_numpy(model_a[:, 0]), to_numpy(model_a[:, 1]), s=1, color='r', alpha=0.01)
+
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=80)
                 plt.close()
@@ -601,10 +605,7 @@ def data_train_particles_with_states(config, config_file, device):
                 for n in range(5000):
                     sample = np.random.randint(0, len(type_list))
                     type = type_list[sample].astype(int)
-                    if state_hot_encoding:
-                        embedding_ = model_a[sample, :] * torch.ones((1000, model.n_particle_types),device=device)
-                    else:
-                        embedding_ = model_a[sample, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                    embedding_ = model_a[sample, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
                     in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                              rr[:, None] / max_radius, embedding_), dim=1)
                     with torch.no_grad():
@@ -642,8 +643,12 @@ def data_train_particles_with_states(config, config_file, device):
         model_a = model.a[1].clone().detach()
         if state_hot_encoding:
             model_a = torch.reshape(model_a, (model.n_particles * model.n_frames, model.n_particle_types))
-            model_a = torch.softmax(model_a, dim = 1)
-            model_a = model_a + gumbel_softmax(model_a, model.temperature, hard=True, device=device)
+            model_a = torch.softmax(model_a, dim=1)
+            model_a = gumbel_softmax(model_a, model.temperature, hard=True, device=device)
+            mu = torch.matmul(model_a, model.mu)
+            logvar = torch.matmul(model_a, model.logvar.repeat(n_particle_types))
+            logvar = logvar[:, None].repeat(1, 2)
+            model_a = reparameterize(mu, logvar)
         else:
             model_a = torch.reshape(model_a, (model.n_particles * model.n_frames, model.embedding_dim))
         for n in range(n_particle_types):

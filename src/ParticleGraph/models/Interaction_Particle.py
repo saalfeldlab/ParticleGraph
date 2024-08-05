@@ -1,9 +1,10 @@
 import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
 from ParticleGraph.models.MLP import MLP
-from ParticleGraph.utils import to_numpy
+from ParticleGraph.utils import to_numpy, reparameterize
 from ParticleGraph.models.Siren_Network import *
 from ParticleGraph.models.Gumbel import gumbel_softmax_sample, gumbel_softmax
+# from ParticleGraph.models.utils import reparameterize
 
 
 class Interaction_Particle(pyg.nn.MessagePassing):
@@ -76,15 +77,18 @@ class Interaction_Particle(pyg.nn.MessagePassing):
                     torch.tensor(np.ones((self.n_dataset, 20500, 2)), device=self.device,
                                  requires_grad=True, dtype=torch.float32))
                 self.phi = MLP(input_size=3, output_size=1, nlayers=5, hidden_size=32, device=self.device)
+
         elif self.has_state:
             if self.state_hot_encoding:
                 self.a = nn.Parameter(
                     torch.tensor(np.ones((self.n_dataset, int(self.n_frames), int(self.n_particles + self.n_ghosts), self.n_particle_types)),
                                  device=self.device, requires_grad=True, dtype=torch.float32))
                 angles = np.linspace(0, 2 * np.pi, self.n_particle_types+1)[:-1]
-                b_ = np.array([np.cos(angles), np.sin(angles)]).T
-                self.b = nn.Parameter(
-                    torch.tensor(b_, device=self.device, requires_grad=True, dtype=torch.float32))
+                mu_ = np.array([np.cos(angles), np.sin(angles)]).T
+                self.mu = nn.Parameter(torch.tensor(mu_, device=self.device, requires_grad=True, dtype=torch.float32))
+                logvar = -1 * torch.ones(1, device=self.device, requires_grad=True, dtype=torch.float32)
+                self.logvar = nn.Parameter(logvar)
+
             else:
                 self.a = nn.Parameter(
                     torch.tensor(np.ones((self.n_dataset, int(self.n_frames),  int(self.n_particles + self.n_ghosts), self.embedding_dim)),
@@ -121,8 +125,13 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         else:
             # model_a = gumbel_softmax(self.a[self.data_id, frame, to_numpy(particle_id), :].squeeze(), self.temperature, hard=True, device=self.device)
             # embedding = torch.matmul(model_a, self.b)
+
             model_a = torch.softmax(self.a[self.data_id, frame, to_numpy(particle_id), :].squeeze(), dim =1)
-            embedding = model_a + gumbel_softmax(model_a, self.temperature, hard=True, device=self.device)
+            model_a = gumbel_softmax(model_a, self.temperature, hard=True, device=self.device)
+            mu = torch.matmul(model_a, self.mu)
+            logvar = torch.matmul(model_a, self.logvar.repeat(self.n_particle_types))
+            logvar = logvar[:,None].repeat(1, 2)
+            embedding = reparameterize(mu, logvar)
 
         pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
 
