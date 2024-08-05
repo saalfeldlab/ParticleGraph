@@ -394,19 +394,20 @@ def plot_embedding_func_cluster_state(model, config, config_file, embedding_clus
     n_particles = config.simulation.n_particles
 
     model_a = model.a[1].clone().detach()
+    model_a = torch.reshape(model_a, (model.n_particles * model.n_frames, model.embedding_dim))
     embedding = to_numpy(model_a)
 
     fig, ax = fig_init()
     for n in range(n_particle_types):
-        plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=1,
-                    color=cmap.color(n), alpha=0.025)
+        pos = np.argwhere(type_list == n).squeeze().astype(int)
+        if pos.size > 0:
+            plt.scatter(to_numpy(model_a[pos, 0]), to_numpy(model_a[pos, 1]), s=1, color=cmap.color(n), alpha=0.01)
     plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
     plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/first_embedding_{config_file}_{epoch}.tif", dpi=170.7)
     plt.close()
 
-    fig, ax = fig_init()
     if 'PDE_N' in config.graph_model.signal_model_name:
         model_MLP_ = model.lin_phi
     else:
@@ -416,8 +417,6 @@ def plot_embedding_func_cluster_state(model, config, config_file, embedding_clus
                                                         model_MLP=model_MLP_, model_a=model_a,
                                                         type_list=type_list, ynorm=ynorm,
                                                         cmap=cmap, device=device)
-
-    plt.close()
 
     fig, ax = fig_init()
     type_list_short = type_list[index]
@@ -434,15 +433,12 @@ def plot_embedding_func_cluster_state(model, config, config_file, embedding_clus
     plt.close()
 
     np.save(f"./{log_dir}/results/UMAP_{config_file}_{epoch}.npy", proj_interaction)
-    np.save(f"./{log_dir}/results/embedding_{config_file}_{epoch}.npy", embedding)
 
     labels, n_clusters, new_labels = sparsify_cluster_state(config.training.cluster_method, proj_interaction, embedding,
                                                       config.training.cluster_distance_threshold, index, index_next, type_list_short,
                                                       n_particle_types, embedding_cluster)
 
-    type_list_short = type_list[index]
-
-    model_a_list_short = model.a[1,index, :].clone().detach()
+    model_a_list_short = model_a[index, :].clone().detach()
     median_center_list = []
     for n in range(n_clusters):
         pos = np.argwhere(new_labels == n).squeeze().astype(int)
@@ -459,8 +455,11 @@ def plot_embedding_func_cluster_state(model, config, config_file, embedding_clus
 
     new_labels = to_numpy(min_index).astype(int)
 
+    median_center_list = median_center_list[new_labels].clone().detach()
+    median_center_list = torch.reshape(median_center_list, (n_frames, n_particles, model.embedding_dim))
+
     with torch.no_grad():
-        model.a[1] = median_center_list[new_labels].clone().detach()
+        model.a[1] = median_center_list.clone().detach()
 
     accuracy = metrics.accuracy_score(type_list, new_labels)
 
@@ -1165,19 +1164,6 @@ def plot_generated_agents(config, config_file, device):
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/generated_reversal_timer/Fig_{k}.tif", dpi=87)
         plt.close()
-
-
-def plot_celegans(config, config_file, device):
-
-
-
-
-def plot_salivary_gland(config, config_file, device)
-
-
-
-
-
 
 
 def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoch, it, fig, ax):
@@ -5037,15 +5023,15 @@ if __name__ == '__main__':
 
     matplotlib.use("Qt5Agg")
 
-    # config_list =['arbitrary_3_sequence_d','arbitrary_3_sequence_e']
+    config_list =['arbitrary_3_sequence_d_bis']
     # # config_list = ['signal_N_100_2_d']
     # config_list = ['signal_N_100_2_a']
     # config_list = ['boids_division_model_f2']
-    config_list = ["agents_e"]
+    # config_list = ["agents_e"]
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['1_0'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['15_0','20_0'], device=device)
         # plot_generated_agents(config, config_file, device)
         # plot_generated(config=config, run=0, style='white voronoi', step = 120, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

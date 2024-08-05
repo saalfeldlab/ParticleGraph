@@ -86,7 +86,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
                 angles = np.linspace(0, 2 * np.pi, self.n_particle_types+1)[:-1]
                 mu_ = np.array([np.cos(angles), np.sin(angles)]).T
                 self.mu = nn.Parameter(torch.tensor(mu_, device=self.device, requires_grad=True, dtype=torch.float32))
-                logvar = -1 * torch.ones(1, device=self.device, requires_grad=True, dtype=torch.float32)
+                logvar = -5 * torch.ones(1, device=self.device, requires_grad=True, dtype=torch.float32)
                 self.logvar = nn.Parameter(logvar)
 
             else:
