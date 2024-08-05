@@ -1469,14 +1469,14 @@ def plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logger, de
         print(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
         logger.info(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
+        model_a = model.a[1].clone().detach()
+        model_a = torch.reshape(model_a, (model.n_particles * model.n_frames, model.embedding_dim))
+
         fig, ax = fig_init()
-        embedding = get_embedding(model.a, 1)
         for n in range(n_particle_types):
-            plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], color=cmap.color(n), s=400,
-                        alpha=0.01)
-        for n in range(n_particle_types):
-            m = np.median(embedding[index_particles[n]],axis=0)
-            plt.scatter(m[0], m[1], color='k', s=100, alpha=1)
+            pos = np.argwhere(new_labels == n).squeeze().astype(int)
+            if pos.size > 0:
+                plt.scatter(to_numpy(model_a[pos, 0]), to_numpy(model_a[pos, 1]), s=400, color=cmap.color(n), alpha=0.01)
         plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
         plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
         plt.tight_layout()
@@ -1525,7 +1525,6 @@ def plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logger, de
         plt.savefig(f"./{log_dir}/results/true_kinograph_{config_file}.tif", dpi=170.7)
         plt.close()
 
-
         fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
         plt.imshow(learned_time_series, aspect='auto', cmap='tab10',vmin=0, vmax=2)
         plt.xlabel('frame', fontsize=78)
@@ -1534,26 +1533,32 @@ def plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logger, de
         plt.savefig(f"./{log_dir}/results/learned_kinograph_{config_file}.tif", dpi=170.7)
         plt.close()
 
-        cell_id = 800
-        GT_time_series = get_time_series(x_list=x_list[1], cell_id=cell_id, feature='type')
-        learned_time_series = get_type_time_series(new_labels=new_labels, dataset_number=1, cell_id=cell_id,
-                                                   n_particles=n_particles, n_frames=n_frames,
-                                                   has_cell_division=has_cell_division)
-        fig = plt.figure(figsize=(6, 12))
-        ax = fig.add_subplot(2, 1, 1)
-        plt.plot(GT_time_series, color='k', ls="--")
-        plt.ylim([0,2])
-        plt.ylabel('cell type', fontsize=32)
-        ax = fig.add_subplot(2, 1, 2)
-        plt.plot(learned_time_series, color='k', ls="--")
-        plt.ylim([0,2])
-        plt.ylabel('cell type', fontsize=32)
-        plt.xlabel('frame', fontsize=32)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/comparison_sequence_{config_file}.tif", dpi=170.7)
-        plt.close()
+        from scipy.ndimage import median_filter
 
-        print(f'accuracy {metrics.accuracy_score(GT_time_series[0:250], learned_time_series[0:250])}')
+        GT = GT_time_series[:,0:n_frames]
+        time_series = learned_time_series
+
+        new_time_series = 0 * time_series
+        accuracy_list = []
+        for k in trange(n_particles):
+            input = time_series[k]
+            output = median_filter(input, size=5, mode='nearest')
+            new_time_series[k] = output
+            accuracy = metrics.accuracy_score(GT[k], output)
+            accuracy_list.append(accuracy)
+
+        accuracy = np.array(accuracy_list)
+        print(f'accuracy: {np.mean(accuracy)} +/- {np.std(accuracy)}')
+
+        fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
+        plt.imshow(new_time_series, aspect='auto', cmap='tab10',vmin=0, vmax=2)
+        plt.xlabel('frame', fontsize=78)
+        plt.ylabel('cell_id', fontsize=78)
+        plt.savefig(f"./{log_dir}/results/filtered_learned_kinograph_{config_file}.tif", dpi=170.7)
+        plt.tight_layout()
+
+
+
 
 
 def plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, logger, device):
@@ -5023,7 +5028,7 @@ if __name__ == '__main__':
 
     matplotlib.use("Qt5Agg")
 
-    config_list =['arbitrary_3_sequence_d_bis']
+    config_list =['arbitrary_3_sequence_d']
     # # config_list = ['signal_N_100_2_d']
     # config_list = ['signal_N_100_2_a']
     # config_list = ['boids_division_model_f2']

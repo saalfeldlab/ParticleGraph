@@ -42,7 +42,7 @@ if __name__ == '__main__':
     # config_list = ["boids_division_model_g_3"]
     # config_list = ["signal_N_100_2_asym_a"]
     # config_list = ["arbitrary_3_sequence_d_bis"]
-    config_list = ["arbitrary_3_sequence_f_hot"]
+    config_list = ["arbitrary_3_sequence_f"]
     # config_list = ["boids_division_model_f2_inert_only"]
     # config_list = ["agents_e"]
     # config_list = ["arbitrary_3_cell_0"]
