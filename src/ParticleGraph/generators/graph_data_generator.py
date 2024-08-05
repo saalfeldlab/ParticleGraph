@@ -474,19 +474,15 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         N1, X1, V1, T1, H1, A1, S1, M1, R1, CL1, DR1, MC1, AR1 = init_cells(config, cycle_length, final_cell_mass,
                                                                             cell_death_rate, mc_slope, cell_area, bc_pos, bc_dpos, dimension,
                                                                             device=device)
-        if has_inert_model:
 
-            # target_areas_per_type = torch.tensor([cell_area[i] / n_particles for i in range(n_particle_types)], device=device)
-            # target_areas = target_areas_per_type[to_numpy(T1).astype(int)].squeeze().clone().detach()
-
-            coeff = 0
-            num_cells = []
-            for i in range(n_particle_types):
-                pos = torch.argwhere(T1.squeeze() == i).shape[0]
-                num_cells.append(pos)
-                coeff += num_cells[i] * cell_area[i]
-            target_areas_per_type = torch.tensor([cell_area[i] / coeff for i in range(n_particle_types)], device=device)
-            target_areas = target_areas_per_type[to_numpy(T1).astype(int)].squeeze().clone().detach()
+        coeff = 0
+        num_cells = []
+        for i in range(n_particle_types):
+            pos = torch.argwhere(T1.squeeze() == i).shape[0]
+            num_cells.append(pos)
+            coeff += num_cells[i] * cell_area[i]
+        target_areas_per_type = torch.tensor([cell_area[i] / coeff for i in range(n_particle_types)], device=device)
+        target_areas = target_areas_per_type[to_numpy(T1).astype(int)].squeeze().clone().detach()
 
         T1_list = T1.clone().detach()
 
@@ -552,7 +548,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     n_particles = n_particles + n_add_nodes
 
                     angle = torch.atan(V1[pos, 1] / (V1[pos, 0] + 1E-10))
-                    separation = [torch.cos(angle) * 0.01,torch.sin(angle) * 0.01]
+                    separation = [torch.cos(angle) * 0.005,torch.sin(angle) * 0.005]
                     separation = torch.stack(separation)
                     separation = separation.t()
 
@@ -689,7 +685,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 loss.backward()
                 optimizer.step()
 
-                print(f'loss {loss.item()}')
+                # print(f'loss {loss.item()}')
 
                 # fig = plt.figure(figsize=(12, 12))
                 # ax = fig.add_subplot(1, 1, 1)
@@ -906,14 +902,20 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                                     cell = vertices_per_cell[i]
                                     vertices = to_numpy(vertices_pos[cell, :])
                                     patches.append(Polygon(vertices, closed=True))
-                                pc = PatchCollection(patches, alpha=0.4, facecolors=cmap.color(n))
+                                if (n==0) & has_cell_death:
+                                    pc = PatchCollection(patches, alpha=0.9, facecolors='k')
+                                else:
+                                    pc = PatchCollection(patches, alpha=0.8, facecolors=cmap.color(n))
                                 ax.add_collection(pc)
-                            # elif pos.shape[0]==1:
-                            #     cell = vertices_per_cell[pos]
-                            #     vertices = to_numpy(vertices_pos[cell, :])
-                            #     patches = Polygon(vertices, closed=True)
-                            #     pc = PatchCollection(patches, alpha=0.4, facecolors=cmap.color(n))
-                            #     ax.add_collection(pc)
+                            elif pos.shape[0]==1:
+                                try:
+                                    cell = vertices_per_cell[pos]
+                                    vertices = to_numpy(vertices_pos[cell, :])
+                                    patches = Polygon(vertices, closed=True)
+                                    pc = PatchCollection(patches, alpha=0.4, facecolors=cmap.color(n))
+                                    ax.add_collection(pc)
+                                except:
+                                    pass
 
                         if 'center' in style:
                             plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=1, c='k')
@@ -985,6 +987,20 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 man_track = np.int16(man_track)
                 np.savetxt(f'graphs_data/graphs_{dataset_name}/man_track.txt', man_track, fmt="%d", delimiter=" ",
                            newline="\n")
+
+    if bSave:
+        run = run + 1
+
+        torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
+        torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
+        torch.save(T1_list, f'graphs_data/graphs_{dataset_name}/T1_list_{run}.pt')
+        np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}', *edge_p_p_list)
+
+        torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
+        torch.save(CL1, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
+        torch.save(cell_death_rate, f'graphs_data/graphs_{dataset_name}/cell_death_rate.pt')
+        torch.save(DR1, f'graphs_data/graphs_{dataset_name}/cell_death_rate_distrib.pt')
+        torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
 
     for handler in logger.handlers[:]:
         handler.close()

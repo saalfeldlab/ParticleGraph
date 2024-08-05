@@ -21,13 +21,16 @@ simulation:
   cell_cycle_length:  [129.60669,250.58319,248.17961,245.92522,225.17038,300.4388 ,180.9825 ,281.869  ,237.0785 ,214.83209,253.48967,222.98715,285.5585 ,212.19756,301.14725,276.9949 ]
   cell_death_rate: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
   final_cell_mass: [100, 300, 400, 500, 100, 300, 400, 500, 100, 300, 400, 500, 100, 300, 400, 500]
-  cell_area: [0.4,1,1.5,1.8,0.4,1,1.5,1.8,0.4,1,1.5,1.8,0.4,1,1.5,1.8]
+  cell_area: [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
   min_radius: 0.001
   max_radius: 0.04
   max_edges: 500000
   n_particles: 512
   has_cell_division: True
+  has_cell_death: False
   cell_inert_model_coeff: 0
+  coeff_area: 1
+  coeff_perimeter: 1.0E-4
   cell_active_model_coeff: 1.0
   n_particles_max: 5000
   n_particle_types: 16

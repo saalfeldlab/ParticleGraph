@@ -7,8 +7,8 @@ simulation:
  [94.129265, 20.24777,    4.7820106]]
   cell_cycle_length:  [1.0E6, 500,400]
   cell_death_rate: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
-  final_cell_mass: [100, 400, 2000]
-  cell_area: [0.01,1,1.2]
+  final_cell_mass: [100, 600, 600]
+  cell_area: [0.01,1,1]
   min_radius: 0.001
   max_radius: 0.04
   max_edges: 500000
@@ -23,7 +23,7 @@ simulation:
   cell_type_map: 'cell_map_1.tif'
   n_particle_types: 3
   n_interactions: 3
-  n_frames: 1000
+  n_frames: 500
   sigma: 0.005
   delta_t: 0.5
   dpos_init: 5.0E-4
@@ -43,7 +43,7 @@ graph_model:
   update_type: 'none'
 
 plotting:
-  colormap: 'tab20'
+  colormap: 'tab10'
   arrow_length: 5
   marker_size: 10
   ylim: [-1.0E-4,1.0E-4]
