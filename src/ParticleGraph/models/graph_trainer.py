@@ -439,6 +439,7 @@ def data_train_particles_with_states(config, config_file, device):
     embedding_cluster = EmbeddingCluster(config)
     n_runs = train_config.n_runs
     state_hot_encoding = train_config.state_hot_encoding
+    replace_with_cluster = 'replace' in train_config.sparsity
 
 
     l_dir, log_dir, logger = create_log_dir(config, config_file)
@@ -475,10 +476,10 @@ def data_train_particles_with_states(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    net = f"./log/try_{config_file}/models/best_model_with_1_graphs_1.pt"
-    print(f'Loading existing model {net}...')
-    state_dict = torch.load(net,map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
+    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0.pt"
+    # print(f'Loading existing model {net}...')
+    # state_dict = torch.load(net,map_location=device)
+    # model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -723,82 +724,86 @@ def data_train_particles_with_states(config, config_file, device):
             print(f'accuracy: {np.round(accuracy, 3)}   n_clusters: {n_clusters}')
             logger.info(f'accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}')
 
-            median_center_list = median_center_list[new_labels].clone().detach()
-            median_center_list = torch.reshape(median_center_list, (n_frames, n_particles, model.embedding_dim))
-            with torch.no_grad():
-                model.a[1] = median_center_list.clone().detach()
+            if (replace_with_cluster):
+                median_center_list = median_center_list[new_labels].clone().detach()
+                median_center_list = torch.reshape(median_center_list, (n_frames, n_particles, model.embedding_dim))
+                with torch.no_grad():
+                    model.a[1] = median_center_list.clone().detach()
 
-            logger.info(f'replace_embedding_function')
-            y_func_list = func_list * 0
+                if train_config.sparsity == 'replace_embedding_function':
 
-            ax = fig.add_subplot(2, 5, 6)
-            for n in np.unique(new_labels_short):
-                pos = np.argwhere(new_labels_short == n)
-                pos = pos.squeeze()
-                if pos.size > 0:
-                    target_func = torch.median(func_list[pos, :], dim=0).values.squeeze()
-                    y_func_list[pos] = target_func
-                plt.plot(to_numpy(target_func) * to_numpy(ynorm), linewidth=2, alpha=1)
-            plt.xticks([])
-            plt.yticks([])
-            plt.tight_layout()
+                    logger.info(f'replace_embedding_function')
+                    y_func_list = func_list * 0
 
-            lr_embedding = 1E-12
-            optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-            for sub_epochs in range(20):
-                loss = 0
-                rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
-                pred = []
-                optimizer.zero_grad()
-                for n in trange(len(index)):
-                    embedding_ = model_a_list_short[n, :].clone().detach() * torch.ones(
-                        (1000, model_config.embedding_dim), device=device)
-                    match model_config.particle_model_name:
-                        case 'PDE_ParticleField_A' | 'PDE_A':
-                            in_features = torch.cat(
-                                (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                 rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
-                        case 'PDE_ParticleField_B' | 'PDE_B':
-                            in_features = torch.cat(
-                                (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                 rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                 0 * rr[:, None],
-                                 0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-                    pred.append(model.lin_edge(in_features.float()))
-                pred = torch.stack(pred)
-                loss = (pred[:, :, 0] - y_func_list.clone().detach()).norm(2)
-                print(f'    loss: {np.round(loss.item() / n_particles, 3)}')
-                loss.backward()
-                optimizer.step()
+                    ax = fig.add_subplot(2, 5, 6)
+                    for n in np.unique(new_labels_short):
+                        pos = np.argwhere(new_labels_short == n)
+                        pos = pos.squeeze()
+                        if pos.size > 0:
+                            target_func = torch.median(func_list[pos, :], dim=0).values.squeeze()
+                            y_func_list[pos] = target_func
+                        plt.plot(to_numpy(target_func) * to_numpy(ynorm), linewidth=2, alpha=1)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
 
-            ax = fig.add_subplot(2, 5, 7)
-            model_a = model.a[1].clone().detach()
-            if state_hot_encoding:
-                model_a = torch.reshape(model_a, (model.n_particles * model.n_frames, model.n_particle_types))
-                model_a = torch.softmax(model_a, dim=1)
-                model_a = gumbel_softmax(model_a, model.temperature, hard=True, device=device)
-                mu = torch.matmul(model_a, model.mu)
-                logvar = torch.matmul(model_a, model.logvar.repeat(n_particle_types))
-                logvar = logvar[:, None].repeat(1, 2)
-                model_a = reparameterize(mu, logvar)
-            else:
-                model_a = torch.reshape(model_a, (model.n_particles * model.n_frames, model.embedding_dim))
-            func_list, proj_interaction, index, index_next = analyze_edge_function_state(rr=[], vizualize=True,
-                                                                                         config=config,
-                                                                                         model_MLP=model.lin_edge,
-                                                                                         model_a=model_a,
-                                                                                         type_list=type_list,
-                                                                                         ynorm=ynorm,
-                                                                                         cmap=cmap, device=device)
-            ax = fig.add_subplot(2, 5, 8)
-            for n in range(n_particle_types):
-                pos = np.argwhere(type_list == n).squeeze().astype(int)
-                if pos.size > 0:
-                    plt.scatter(to_numpy(model_a[pos, 0]), to_numpy(model_a[pos, 1]), s=40, color=cmap.color(n), alpha=0.01)
+                    lr_embedding = 1E-12
+                    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                    for sub_epochs in range(20):
+                        loss = 0
+                        rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+                        pred = []
+                        optimizer.zero_grad()
+                        for n in trange(len(index)):
+                            embedding_ = model_a_list_short[n, :].clone().detach() * torch.ones(
+                                (1000, model_config.embedding_dim), device=device)
+                            match model_config.particle_model_name:
+                                case 'PDE_ParticleField_A' | 'PDE_A':
+                                    in_features = torch.cat(
+                                        (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                         rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
+                                case 'PDE_ParticleField_B' | 'PDE_B':
+                                    in_features = torch.cat(
+                                        (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                         rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                         0 * rr[:, None],
+                                         0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                            pred.append(model.lin_edge(in_features.float()))
+                        pred = torch.stack(pred)
+                        loss = (pred[:, :, 0] - y_func_list.clone().detach()).norm(2)
+                        print(f'    loss: {np.round(loss.item() / n_particles, 3)}')
+                        loss.backward()
+                        optimizer.step()
 
-            lr = train_config.learning_rate_start
-            lr_embedding = train_config.learning_rate_embedding_start
-            optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                    ax = fig.add_subplot(2, 5, 7)
+                    model_a = model.a[1].clone().detach()
+                    if state_hot_encoding:
+                        model_a = torch.reshape(model_a, (model.n_particles * model.n_frames, model.n_particle_types))
+                        model_a = torch.softmax(model_a, dim=1)
+                        model_a = gumbel_softmax(model_a, model.temperature, hard=True, device=device)
+                        mu = torch.matmul(model_a, model.mu)
+                        logvar = torch.matmul(model_a, model.logvar.repeat(n_particle_types))
+                        logvar = logvar[:, None].repeat(1, 2)
+                        model_a = reparameterize(mu, logvar)
+                    else:
+                        model_a = torch.reshape(model_a, (model.n_particles * model.n_frames, model.embedding_dim))
+                    func_list, proj_interaction, index, index_next = analyze_edge_function_state(rr=[], vizualize=True,
+                                                                                                 config=config,
+                                                                                                 model_MLP=model.lin_edge,
+                                                                                                 model_a=model_a,
+                                                                                                 type_list=type_list,
+                                                                                                 ynorm=ynorm,
+                                                                                                 cmap=cmap, device=device)
+                    ax = fig.add_subplot(2, 5, 8)
+                    for n in range(n_particle_types):
+                        pos = np.argwhere(type_list == n).squeeze().astype(int)
+                        if pos.size > 0:
+                            plt.scatter(to_numpy(model_a[pos, 0]), to_numpy(model_a[pos, 1]), s=40, color=cmap.color(n), alpha=0.01)
+
+        lr_embedding = train_config.learning_rate_embedding_start
+        lr = train_config.learning_rate_start
+        optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+        logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
