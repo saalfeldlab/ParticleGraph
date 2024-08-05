@@ -510,7 +510,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         n_particles_dead = 0
 
         time.sleep(0.5)
-        for it in range(simulation_config.start_frame, n_frames + 1):
+        for it in trange(simulation_config.start_frame, n_frames + 1):
 
             # calculate cell death and cell division
 
@@ -903,7 +903,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                                     vertices = to_numpy(vertices_pos[cell, :])
                                     patches.append(Polygon(vertices, closed=True))
                                 if (n==0) & has_cell_death:
-                                    pc = PatchCollection(patches, alpha=0.9, facecolors='k')
+                                    pc = PatchCollection(patches, alpha=0.8, facecolors='k')
                                 else:
                                     pc = PatchCollection(patches, alpha=0.8, facecolors=cmap.color(n))
                                 ax.add_collection(pc)

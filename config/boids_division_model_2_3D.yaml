@@ -1,7 +1,8 @@
 description: 'Boids 16 different types, division'
-dataset: 'boids_16_256_division_model_2_new'
+dataset: 'boids_division_model_2_3D'
 
 simulation:
+  dimension: 3
   params: [[42.031494,  19.948257,  89.53507  ],
  [35.10319,   44.282894,  17.424503 ],
  [94.129265, 20.24777,    4.7820106],
@@ -9,28 +10,23 @@ simulation:
  [31.489408,   2.5899503, 51.467194 ],
  [89.52404,   86.077866,  50.448505 ],
  [92.9688,   91.75417,   71.636795 ],
- [58.27974,   22.423145,  19.553406 ],
- [52.71797,   72.904045,   3.8504272],
- [50.76912,   45.051323,  43.630688 ],
- [75.63795,   41.372513,  29.515842 ],
- [68.54703,   45.911587,   4.405114 ],
- [19.455656,  14.693377,  69.88952  ],
- [50.666637,  90.47082,   78.763435 ],
- [ 5.5842586, 37.232105,  61.94832  ],
- [17.403606,  28.465649,  88.44606  ]]
-  cell_cycle_length:  [129.60669,250.58319,248.17961,245.92522,225.17038,300.4388 ,180.9825 ,281.869  ,237.0785 ,214.83209,253.48967,222.98715,285.5585 ,212.19756,301.14725,276.9949 ]
-  cell_death_rate: [1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4]
+ [58.27974,   22.423145,  19.553406 ]]
+  cell_cycle_length:  [129.60669,250.58319,248.17961,245.92522,225.17038,300.4388 ,180.9825 ,281.869]
+  cell_death_rate: [0,0,0,0,0,0,0,0]
+  mc_slope: [-30, -15, 15, 30, -30, -15, 15, 30]
+  final_cell_mass: [200, 300, 400, 500, 200, 300, 400, 500]
+  cell_area: [-1]
   min_radius: 0.001
-  max_radius: 0.04
+  max_radius: 0.4
   max_edges: 500000
   n_particles: 512
   has_cell_division: True
   cell_inert_model_coeff: 0.0
-  cell_active_model_coeff: 1.0
-  n_particles_max: 20000
-  n_particle_types: 16
-  n_interactions: 16
-  n_frames: 12000
+  cell_active_model_coeff: 0.0
+  n_particles_max: 4096
+  n_particle_types: 8
+  n_interactions: 8
+  n_frames: 1000
   sigma: 0.005
   delta_t: 0.5
   dpos_init: 5.0E-4
@@ -38,7 +34,7 @@ simulation:
   start_frame: 0
 
 graph_model:
-  particle_model_name: 'PDE_Cell_B'
+  particle_model_name: 'PDE_B'
   mesh_model_name: ''
   prediction: '2nd_derivative'
   input_size: 9
@@ -47,7 +43,7 @@ graph_model:
   n_mp_layers: 5
   aggr_type: 'mean'
   embedding_dim: 2
-  update_type: 'none'
+  update_type: 'embedding_MLP'
 
 plotting:
   colormap: 'tab20'
@@ -56,7 +52,7 @@ plotting:
   ylim: [-1.0E-4,1.0E-4]
 
 training:
-  n_epochs: 20
+  n_epochs: 1
   batch_size: 1
   small_init_batch_size: False
   sub_batches: 4

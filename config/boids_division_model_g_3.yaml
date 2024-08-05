@@ -1,26 +1,29 @@
 description: 'Boids 16 different types, division'
-dataset: 'boids_voronoi_division_b'
+dataset: 'boids_division_model_g_3'
 
 simulation:
   params: [[42.031494,  19.948257,  89.53507  ],
  [35.10319,   44.282894,  17.424503 ],
- [94.129265, 20.24777,    34.7820106]]
-  cell_cycle_length:  [300, 900, 1500]
-  cell_death_rate: [0,0,0]
-  mc_slope: [-30, -15, 15]
-  final_cell_mass: [100, 300, 500]
-  cell_area: [0.8, 1.0, 1.2]
+ [94.129265, 20.24777,    4.7820106]]
+  cell_cycle_length:  [1.0E6, 500,400]
+  cell_death_rate: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
+  final_cell_mass: [100, 600, 600]
+  cell_area: [0.01,1,1]
   min_radius: 0.001
   max_radius: 0.04
   max_edges: 500000
-  n_particles: 480
+  n_particles: 2048
+  n_particles_max: 4096
   has_cell_division: True
-  cell_inert_model_coeff: 0.01
-  cell_active_model_coeff: 1.0
-  n_particles_max: 2000
+  has_cell_death: True
+  cell_inert_model_coeff: 1.0
+  coeff_area: 1
+  coeff_perimeter: 1.0E-4
+  cell_active_model_coeff: 0
+  cell_type_map: 'cell_map_1.tif'
   n_particle_types: 3
   n_interactions: 3
-  n_frames: 2000
+  n_frames: 500
   sigma: 0.005
   delta_t: 0.5
   dpos_init: 5.0E-4
@@ -37,25 +40,25 @@ graph_model:
   n_mp_layers: 5
   aggr_type: 'mean'
   embedding_dim: 2
-  update_type: 'embedding_MLP'
+  update_type: 'none'
 
 plotting:
   colormap: 'tab10'
   arrow_length: 5
   marker_size: 10
-  ylim: [-2,2]
+  ylim: [-1.0E-4,1.0E-4]
 
 training:
   n_epochs: 20
-  batch_size: 8
-  small_init_batch_size: True
+  batch_size: 1
+  small_init_batch_size: False
   sub_batches: 4
   n_runs: 2
   noise_level: 0
   sparsity: 'replace_embedding'
-  cluster_method: 'distance_plot'
+  cluster_method: 'distance_embedding'
   data_augmentation: True
-  data_augmentation_loop: 2000
+  data_augmentation_loop: 50
   fix_cluster_embedding: True
   device: 'auto'
 

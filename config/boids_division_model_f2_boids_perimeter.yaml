@@ -28,8 +28,8 @@ simulation:
   n_particles: 512
   has_cell_division: True
   has_cell_death: False
-  cell_inert_model_coeff: 1.0
-  coeff_area: 1.0
+  cell_inert_model_coeff: 1.0E-3
+  coeff_area: 0
   coeff_perimeter: 1.0E-4
   cell_active_model_coeff: 1.0
   n_particles_max: 5000
