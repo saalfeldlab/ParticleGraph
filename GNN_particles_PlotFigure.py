@@ -7,6 +7,7 @@ import imageio
 from matplotlib import rc
 from ParticleGraph.fitting_models import *
 from ParticleGraph.utils import set_size
+from scipy.ndimage import median_filter
 
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
@@ -1533,8 +1534,6 @@ def plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logger, de
         plt.savefig(f"./{log_dir}/results/learned_kinograph_{config_file}.tif", dpi=170.7)
         plt.close()
 
-        from scipy.ndimage import median_filter
-
         GT = GT_time_series[:,0:n_frames]
         time_series = learned_time_series
 
@@ -1554,11 +1553,8 @@ def plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logger, de
         plt.imshow(new_time_series, aspect='auto', cmap='tab10',vmin=0, vmax=2)
         plt.xlabel('frame', fontsize=78)
         plt.ylabel('cell_id', fontsize=78)
-        plt.savefig(f"./{log_dir}/results/filtered_learned_kinograph_{config_file}.tif", dpi=170.7)
         plt.tight_layout()
-
-
-
+        plt.savefig(f"./{log_dir}/results/filtered_learned_kinograph_{config_file}.tif", dpi=170.7)
 
 
 def plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, logger, device):
