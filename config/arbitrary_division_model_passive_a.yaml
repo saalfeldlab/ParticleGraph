@@ -27,12 +27,12 @@ simulation:
   start_frame: 0
 
 graph_model:
-  particle_model_name: 'PDE_Cell_A'
+  particle_model_name: 'PDE_Cell_A_area'
   mesh_model_name: ''
   prediction: 'first_derivative'
-  input_size: 5
+  input_size: 9
   output_size: 2
-  hidden_dim: 128
+  hidden_dim: 256
   n_mp_layers: 5
   aggr_type: 'mean'
   embedding_dim: 2
@@ -52,9 +52,10 @@ training:
   n_runs: 2
   noise_level: 0
   sparsity: 'replace_embedding'
-  cluster_method: 'distance_embedding'
+  cluster_method: 'kmeans'
   data_augmentation: True
   data_augmentation_loop: 200
   fix_cluster_embedding: True
+  learning_rate_start: 0.0001
   device: 'auto'
 

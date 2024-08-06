@@ -89,14 +89,11 @@ def plot_celegans(config, config_file, device):
     data = time_series[50]
     x = bundle_fields(data, "pos").clone().detach()
 
-    plt.tight_layout()
-    plt.show()
 
     n_backgrounds = 1000
-
     count = 1
     intermediate_count = 0
-    distance_threshold = 1
+    distance_threshold = 50
     while count < n_backgrounds+1:
 
         new_pos = torch.rand(1, dimension, device=device)
@@ -105,8 +102,7 @@ def plot_celegans(config, config_file, device):
         new_pos[:, 2] *= 175
 
         distance = torch.sum((x[:, None, 0:3] - new_pos[None, :, :]) ** 2, dim=2)
-
-        if outside_box:
+        if torch.all(distance > distance_threshold ** 2):
             x = torch.cat((x, new_pos), 0)
             count += 1
         intermediate_count += 1
@@ -116,13 +112,15 @@ def plot_celegans(config, config_file, device):
 
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d', box_aspect=[1, 1, 1])
-    ax.scatter(to_numpy(x[-1000:, 0]), to_numpy(x[-1000:, 1]), to_numpy(x[-1000:, 2]), c="r", marker="o")
-    ax.scatter(to_numpy(x[:321, 0]), to_numpy(x[:321, 1]), to_numpy(x[:321, 2]), c="k", marker="o")
+    ax.scatter(to_numpy(x[-1000:, 0]), to_numpy(x[-1000:, 1]), to_numpy(x[-1000:, 2]), c="r", marker="o", s=1)
+    ax.scatter(to_numpy(x[:321, 0]), to_numpy(x[:321, 1]), to_numpy(x[:321, 2]), c="k", marker="o", s=10)
     ax.set_xlim(-10, 10)
     ax.set_ylim(-10, 10)
     ax.set_zlim(0, 175)
 
-
+    fig = plt.figure()
+    plt.scatter(to_numpy(x[-1000:, 0]), to_numpy(x[-1000:, 1]), c="r", marker="o")
+    ax.scatter(to_numpy(x[:321, 0]), to_numpy(x[:321, 1]), to_numpy(x[:321, 2]), c="k", marker="o")
 
 
 def plot_generated_agents(config, config_file, device):

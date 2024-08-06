@@ -25,6 +25,7 @@ simulation:
   dpos_init: 5.0E-4
   boundary: 'periodic'
   start_frame: 0
+  state_type: 'sequence'
 
 graph_model:
   particle_model_name: 'PDE_Cell_A_area'
@@ -56,5 +57,7 @@ training:
   data_augmentation: True
   data_augmentation_loop: 200
   fix_cluster_embedding: True
+  state_hot_encoding: True
+  state_temperature: 1.0E-4
   device: 'auto'
 

@@ -57,7 +57,7 @@ class Interaction_Cell(pyg.nn.MessagePassing):
         self.n_frames = simulation_config.n_frames
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
-                                hidden_size=self.hidden_dim, device=self.device)
+                                hidden_size=self.hidden_dim, device=self.device, initialisation='zeros')
 
         if simulation_config.has_cell_division :
             self.a = nn.Parameter(
@@ -148,6 +148,10 @@ class Interaction_Cell(pyg.nn.MessagePassing):
 
             case 'PDE_Cell_A':
                 in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
+
+            case 'PDE_Cell_A_area':
+                in_features = torch.cat((delta_pos, r[:, None], area_i * 1E3, area_j * 1E3, embedding_i, embedding_j), dim=-1)
+
 
             case 'PDE_Cell_B':
                 in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],

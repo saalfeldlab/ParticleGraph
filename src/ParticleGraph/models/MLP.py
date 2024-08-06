@@ -13,7 +13,7 @@ import os
 
 class MLP(nn.Module):
 
-    def __init__(self, input_size=None, output_size=None, nlayers=None, hidden_size=None, device=None, activation=None):
+    def __init__(self, input_size=None, output_size=None, nlayers=None, hidden_size=None, device=None, activation=None, initialisation=None):
 
         super(MLP, self).__init__()
         self.layers = nn.ModuleList()
@@ -25,8 +25,13 @@ class MLP(nn.Module):
                 nn.init.zeros_(layer.bias)
                 self.layers.append(layer)
         layer = nn.Linear(hidden_size, output_size, device=device)
-        nn.init.normal_(layer.weight, std=0.1)
-        nn.init.zeros_(layer.bias)
+
+        if initialisation == 'zeros':
+            nn.init.zeros_(layer.weight)
+            nn.init.zeros_(layer.bias)
+        else :
+            nn.init.normal_(layer.weight, std=0.1)
+            nn.init.zeros_(layer.bias)
         self.layers.append(layer)
 
         if activation=='tanh':

@@ -868,9 +868,7 @@ def plot_generated(config, run, style, step, device):
             matplotlib.use("Qt5Agg")
             matplotlib.rcParams['savefig.pad_inches'] = 0
 
-
-            vor, vertices_pos, vertices_per_cell = get_vertices(points=to_numpy(X1), device=device)
-            centroids, areas = get_voronoi_areas(vertices_pos, vertices_per_cell, device)
+            vor, vertices_pos, vertices_per_cell, all_points = get_vertices(points=X1, device=device)
 
             fig = plt.figure(figsize=(12, 12))
             ax = fig.add_subplot(1, 1, 1)
@@ -878,8 +876,7 @@ def plot_generated(config, run, style, step, device):
             plt.yticks([])
             index_particles = []
 
-            voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='black', line_width=1, line_alpha=0.5,
-                            point_size=0)
+            voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='black', line_width=1, line_alpha=0.5, point_size=0)
 
             if 'color' in style:
                 for n in range(n_particle_types):
@@ -4652,17 +4649,18 @@ if __name__ == '__main__':
 
     matplotlib.use("Qt5Agg")
 
-    config_list =['arbitrary_3_sequence_d']
+    # config_list =['arbitrary_3_sequence_d']
+    config_list =['arbitrary_3_tracking']
     # # config_list = ['signal_N_100_2_d']
     # config_list = ['signal_N_100_2_a']
     # config_list = ['boids_division_model_f2']
     # config_list = ["agents_e"]
+    # config_list = ["arbitrary_division_model_passive_v"]
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         data_plot(config=config, config_file=config_file, epoch_list=['15_0','20_0'], device=device)
-        # plot_generated_agents(config, config_file, device)
-        # plot_generated(config=config, run=0, style='white voronoi', step = 120, device=device)
+        # plot_generated(config=config, run=0, style='white voronoi', step = 10, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 
     # f_list = ['supp13']

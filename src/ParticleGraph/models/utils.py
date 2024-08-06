@@ -464,7 +464,10 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, n_particl
         pos =torch.argwhere(type_list == n)
         pos = to_numpy(pos)
         if len(pos) > 0:
-            plt.scatter(embedding[pos, 0], embedding[pos, 1], s=1)
+            if len(type_list) > 4000:
+                plt.scatter(embedding[pos, 0], embedding[pos, 1], s=1)
+            else:
+                plt.scatter(embedding[pos, 0], embedding[pos, 1], s=100, alpha=0.5)
     plt.xticks([])
     plt.yticks([])
     plt.tight_layout()
@@ -487,6 +490,9 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, n_particl
             case 'PDE_Cell_A':
                 in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                          rr[:, None] / max_radius, embedding_), dim=1)
+            case 'PDE_Cell_A_area':
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                         rr[:, None] / max_radius, torch.ones_like(rr[:, None])*0.1, torch.ones_like(rr[:, None])*0.4, embedding_, embedding_), dim=1)
             case 'PDE_Cell_B':
                 in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                          torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
@@ -764,7 +770,7 @@ def choose_training_model(model_config, device):
     model=[]
     model_name = model_config.graph_model.particle_model_name
     match model_name:
-        case 'PDE_Cell_A' | 'PDE_Cell_B' | 'PDE_Cell_B_area':
+        case 'PDE_Cell_A' | 'PDE_Cell_B' | 'PDE_Cell_B_area' | 'PDE_Cell_A_area':
             model = Interaction_Cell(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
         case 'PDE_ParticleField_A' | 'PDE_ParticleField_B':

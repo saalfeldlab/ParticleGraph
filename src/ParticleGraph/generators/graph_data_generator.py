@@ -625,10 +625,15 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 S1 = update_cell_cycle_stage(A1, cycle_length, T1, device)
                 M1 += R1 * delta_t
 
+            if (it==simulation_config.start_frame):
+                ID1 = torch.arange(len(N1), device=device)[:, None]
+            else:
+                ID1 = torch.arange(int(ID1[-1]), int(ID1[-1]+len(N1)),device=device)[:, None]
+
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                                    H1.clone().detach(), A1.clone().detach(), S1.clone().detach(), M1.clone().detach(),
                                    R1.clone().detach(), DR1.clone().detach(), MC1.clone().detach(),
-                                   AR1.clone().detach(), P1.clone().detach()), 1)
+                                   AR1.clone().detach(), P1.clone().detach(), ID1.clone().detach() ), 1)
 
             # calculate connectivity
             with torch.no_grad():
@@ -868,8 +873,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 ax = fig.add_subplot(2, 2, 4)
                 for n in range(n_particle_types):
                     pos = torch.argwhere((T1.squeeze() == n) & (H1[:, 0].squeeze() == 1))
-                    if pos.shape[0] > 1:
-                        sns.kdeplot(to_numpy(AR1[pos].squeeze()), fill=True, color=cmap.color(n), alpha=0.5)
+                    # if pos.shape[0] > 1:
+                        # sns.kdeplot(to_numpy(AR1[pos].squeeze()), fill=True, color=cmap.color(n), alpha=0.5)
                         # plt.hist(to_numpy(AR1[pos].squeeze()), bins=100, alpha=0.5)
                 plt.tight_layout()
                 plt.savefig(f"graphs_data/graphs_{dataset_name}/gen_{run}.jpg", dpi=170.7)

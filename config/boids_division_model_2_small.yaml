@@ -27,12 +27,12 @@ simulation:
   min_radius: 0.001
   max_radius: 0.04
   max_edges: 500000
-  n_particles: 192
+  n_particles: 96
   has_cell_division: True
   n_particles_max: 400
   n_particle_types: 16
   n_interactions: 16
-  n_frames: 100
+  n_frames: 500
   sigma: 0.005
   delta_t: 1
   dpos_init: 5.0E-4
@@ -40,7 +40,7 @@ simulation:
   start_frame: 0
 
 graph_model:
-  particle_model_name: 'PDE_B_mass'
+  particle_model_name: 'PDE_Cell_B'
   mesh_model_name: ''
   prediction: '2nd_derivative'
   input_size: 9
@@ -49,7 +49,7 @@ graph_model:
   n_mp_layers: 5
   aggr_type: 'mean'
   embedding_dim: 2
-  update_type: 'embedding_MLP'
+  update_type: 'none'
 
 plotting:
   colormap: 'tab20'
@@ -58,7 +58,7 @@ plotting:
   ylim: [-1.0E-4,1.0E-4]
 
 training:
-  n_epochs: 1
+  n_epochs: 10
   batch_size: 1
   small_init_batch_size: False
   sub_batches: 4
@@ -70,4 +70,6 @@ training:
   data_augmentation_loop: 50
   fix_cluster_embedding: True
   device: 'auto'
+  has_no_tracking: False
+  learning_rate_start: 0.0001
 
