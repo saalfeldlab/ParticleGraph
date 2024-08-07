@@ -3177,6 +3177,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     dimension = simulation_config.dimension
     has_siren_time = 'siren_with_time' in model_config.field_type
     has_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
+    do_tracking = training_config.do_tracking
+    has_state = (config.simulation.state_type != 'discrete')
 
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
@@ -3187,71 +3189,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         net = f"./log/try_{config_file}/models/best_model_with_{n_runs-1}_graphs.pt"
     else:
         net = f"./log/try_{config_file}/models/best_model_with_{n_runs-1}_graphs_{best_model}.pt"
-
-    model, bc_pos, bc_dpos = choose_training_model(config, device)
-    table = PrettyTable(["Modules", "Parameters"])
-    total_params = 0
-    for name, parameter in model.named_parameters():
-        if not parameter.requires_grad:
-            continue
-        param = parameter.numel()
-        table.add_row([name, param])
-        total_params += param
-
-    if verbose:
-        print(f'Test data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
-        print('log_dir: {}'.format(log_dir))
-        print(f'network: {net}')
-        print(table)
-        print(f"Total Trainable Params: {total_params}")
-
-    if test_simulation:
-        model, bc_pos, bc_dpos = choose_model(config, device=device)
-    else:
-        if has_mesh:
-            mesh_model, bc_pos, bc_dpos = choose_training_model(config, device)
-            state_dict = torch.load(net, map_location=device)
-            mesh_model.load_state_dict(state_dict['model_state_dict'])
-            mesh_model.eval()
-        else:
-            state_dict = torch.load(net, map_location=device)
-            model.load_state_dict(state_dict['model_state_dict'])
-            model.eval()
-            mesh_model = None
-        if has_field:
-            model_f_p = model
-
-            image_width = int(np.sqrt(n_nodes))
-            if has_siren_time:
-                model_f = Siren_Network(image_width=image_width, in_features=3, out_features=1, hidden_features=128,
-                                        hidden_layers=5, outermost_linear=True, device=device, first_omega_0=80,
-                                        hidden_omega_0=80.)
-                net = f'./log/try_{config_file}/models/best_model_f_with_1_graphs_{best_model}.pt'
-                state_dict = torch.load(net, map_location=device)
-                model_f.load_state_dict(state_dict['model_state_dict'])
-                model_f.to(device=device)
-                model_f.eval()
-                table = PrettyTable(["Modules", "Parameters"])
-                total_params = 0
-                for name, parameter in model_f.named_parameters():
-                    if not parameter.requires_grad:
-                        continue
-                    param = parameter.numel()
-                    table.add_row([name, param])
-                    total_params += param
-                if verbose:
-                    print(table)
-                    print(f"Total Trainable Params: {total_params}")
-            else:
-                t = model.field[run].reshape(image_width, image_width)
-                t = torch.rot90(t)
-                t = torch.flipud(t)
-                t = t.reshape(image_width * image_width,1)
-                with torch.no_grad():
-                    model.a = a_.clone().detach()
-                    model.field[run] = t.clone().detach()
-
-    first_embedding = model.a[1].data.clone().detach()
 
     n_sub_population = n_particles // n_particle_types
 
@@ -3310,6 +3247,15 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 index_particles.append(index)
                 n_particle_types = 3
 
+    if do_tracking | has_state:
+        for k in range(len(x_list[0])):
+            type = x_list[0][k][:,5]
+            if k==0:
+                type_list = type
+            else:
+                type_list = torch.concatenate((type_list,type))
+        n_particles_max = len(type_list)
+        config.simulation.n_particles_max = n_particles_max
     if ratio > 1:
         new_nparticles = int(n_particles * ratio)
         model.a = nn.Parameter(
@@ -3363,11 +3309,73 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         edge_index = adj_t.nonzero().t().contiguous()
         edge_attr_adjacency = adjacency[adj_t]
 
+    if verbose:
+        print(f'Test data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+        print('log_dir: {}'.format(log_dir))
+        print(f'network: {net}')
+        print(table)
+        print(f"Total Trainable Params: {total_params}")
+
+    model, bc_pos, bc_dpos = choose_training_model(config, device)
+    table = PrettyTable(["Modules", "Parameters"])
+    total_params = 0
+    for name, parameter in model.named_parameters():
+        if not parameter.requires_grad:
+            continue
+        param = parameter.numel()
+        table.add_row([name, param])
+        total_params += param
+    if test_simulation:
+        model, bc_pos, bc_dpos = choose_model(config, device=device)
+    else:
+        if has_mesh:
+            mesh_model, bc_pos, bc_dpos = choose_training_model(config, device)
+            state_dict = torch.load(net, map_location=device)
+            mesh_model.load_state_dict(state_dict['model_state_dict'])
+            mesh_model.eval()
+        else:
+            state_dict = torch.load(net, map_location=device)
+            model.load_state_dict(state_dict['model_state_dict'])
+            model.eval()
+            mesh_model = None
+        if has_field:
+            model_f_p = model
+
+            image_width = int(np.sqrt(n_nodes))
+            if has_siren_time:
+                model_f = Siren_Network(image_width=image_width, in_features=3, out_features=1, hidden_features=128,
+                                        hidden_layers=5, outermost_linear=True, device=device, first_omega_0=80,
+                                        hidden_omega_0=80.)
+                net = f'./log/try_{config_file}/models/best_model_f_with_1_graphs_{best_model}.pt'
+                state_dict = torch.load(net, map_location=device)
+                model_f.load_state_dict(state_dict['model_state_dict'])
+                model_f.to(device=device)
+                model_f.eval()
+                table = PrettyTable(["Modules", "Parameters"])
+                total_params = 0
+                for name, parameter in model_f.named_parameters():
+                    if not parameter.requires_grad:
+                        continue
+                    param = parameter.numel()
+                    table.add_row([name, param])
+                    total_params += param
+                if verbose:
+                    print(table)
+                    print(f"Total Trainable Params: {total_params}")
+            else:
+                t = model.field[run].reshape(image_width, image_width)
+                t = torch.rot90(t)
+                t = torch.flipud(t)
+                t = t.reshape(image_width * image_width,1)
+                with torch.no_grad():
+                    model.a = a_.clone().detach()
+                    model.field[run] = t.clone().detach()
+
     rmserr_list= []
     gloss = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
     geomloss_list=[]
     time.sleep(1)
-    for it in trange(n_frames+1):
+    for it in trange(n_frames):
 
         x0 = x_list[0][it].clone().detach()
         y0 = y_list[0][it].clone().detach()
@@ -3390,7 +3398,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         elif model_config.mesh_model_name == 'RD_RPS_Mesh':
             rmserr = torch.sqrt(torch.mean(torch.sum((x[mask_mesh.squeeze(), 6:9] - x0[mask_mesh.squeeze(), 6:9]) ** 2, axis=1)))
         else:
-            rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 1:3] - x0[:, 1:3]) ** 2, axis=1)))
+            if do_tracking:
+                rmserr = torch.zeros(1,device=device)
+            else:
+                rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 1:3] - x0[:, 1:3]) ** 2, axis=1)))
             if x.shape[0]>5000:
                 geomloss = gloss(x[0:5000, 1:3], x0[0:5000, 1:3])
             else:
@@ -3569,6 +3580,18 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 ax.tick_params(axis='both', which='major', pad=15)
                 plt.text(0, 1.1, f'   ', ha='left', va='top', transform=ax.transAxes, fontsize=48)
                 plt.tight_layout()
+            elif do_tracking:
+                plt.scatter(to_numpy(x0[:, 2]), to_numpy(x0[:, 1]), s=20, c='k')
+                plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=20, c='r')
+                try:
+                    x1 = x_list[0][it+1].clone().detach()
+                    plt.scatter(to_numpy(x1[:, 2]), to_numpy(x1[:, 1]), s=20, c='g')
+                except:
+                    pass
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+
             else:
                 s_p = 100
                 if simulation_config.has_cell_division:
@@ -3602,7 +3625,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.ylim([-2, 2])
 
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{it}.tif", dpi=170.7)
+            plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{it}.tif", dpi=80) #170.7)
             # plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{10000+it}.tif", dpi=42.675)
             plt.close()
 
@@ -3700,7 +3723,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         print('average rollout Sinkhorn div. {:.3e}+/-{:.3e}'.format(np.mean(geomloss_list), np.std(geomloss_list)))
         np.save(f"./{log_dir}/rmserr_geomloss_{config_file}.npy", r)
 
-        if True:
+        if False:
             rmserr_list = np.array(rmserr_list)
             fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
             x_ = np.arange(len(rmserr_list))
@@ -3713,7 +3736,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/rmserr_{config_file}_plot.tif", dpi=170.7)
 
-        if True:
+        if False:
 
             x0_next = x_list[0][it].clone().detach()
 
