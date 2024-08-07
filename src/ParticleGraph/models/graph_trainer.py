@@ -1285,7 +1285,6 @@ def data_train_cell_tracking(config, config_file, device):
     n_particles = x.shape[0]
     config.simulation.n_particles = n_particles
 
-
     # index_l = []
     # index = 0
     # for k in range(n_frames):
@@ -1667,14 +1666,13 @@ def data_train_cell(config, config_file, device):
                 y = y_list[run][k].clone().detach()
                 if noise_level > 0:
                     y = y * (1 + torch.randn_like(y) * noise_level)
-
                 y = y / ynorm
 
-                if data_augmentation:
-                    new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
-                    new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
-                    y[:, 0] = new_x
-                    y[:, 1] = new_y
+                # if data_augmentation:
+                #     new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
+                #     new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
+                #     y[:, 0] = new_x
+                #     y[:, 1] = new_y
                 if batch == 0:
                     y_batch = y[:, 0:2]
                 else:
@@ -1685,6 +1683,11 @@ def data_train_cell(config, config_file, device):
 
             for batch in batch_loader:
                 pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=True)
+            if data_augmentation:
+                new_x = cos_phi * pred[:, 0] - sin_phi * pred[:, 1]
+                new_y = sin_phi * pred[:, 0] + cos_phi * pred[:, 1]
+                pred[:, 0] = new_x
+                pred[:, 1] = new_y
 
             loss = ((pred - y_batch)).norm(2)
 
