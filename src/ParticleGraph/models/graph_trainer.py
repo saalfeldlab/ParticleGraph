@@ -1608,13 +1608,12 @@ def data_train_cell(config, config_file, device):
     logger.info(f'vnorm ynorm: {to_numpy(vnorm)} {to_numpy(ynorm)}')
 
     if do_tracking | has_state:
-        for k in range(len(x_list[1])):
-            type = x_list[1][k][:,5]
-            if k==0:
-                type_list = type
-            else:
-                type_list = torch.concatenate((type_list,type))
-        n_particles_max = len(type_list)
+        type_list=[]
+        n_particles_max = 0
+        for k in range(n_frames+1):
+            type = x_list[1][k][:, 5]
+            type_list.append(type)
+            n_particles_max += len(type)
         config.simulation.n_particles_max = n_particles_max
 
     x = []
@@ -1654,7 +1653,7 @@ def data_train_cell(config, config_file, device):
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
 
     Niter = n_frames * data_augmentation_loop // batch_size
-    print(f'plot every {Niter // 100} iterations')
+    print(f'plot every {Niter // 20} iterations')
 
     list_loss = []
     time.sleep(1)
@@ -1730,9 +1729,13 @@ def data_train_cell(config, config_file, device):
 
             visualize_embedding = True
 
-            if visualize_embedding & (((epoch < 3 ) & (N%(Niter//100) == 0)) | (N==0)):
+            if visualize_embedding & (((epoch < 3 ) & (N%(Niter//20) == 0)) | (N==0)):
                 if do_tracking:
-                    plot_training_cell(config=config, dataset_name=dataset_name, log_dir=log_dir,
+                    id_list = []
+                    for k in range(n_frames + 1):
+                        ids = x_list[1][k][:, -1]
+                        id_list.append(ids)
+                    plot_training_cell_tracking(config=config, id_list=id_list, dataset_name=dataset_name, log_dir=log_dir,
                                        epoch=epoch, N=N, model=model, n_particle_types=n_particle_types,
                                        type_list=type_list, ynorm=ynorm, cmap=cmap, device=device)
                 else:
