@@ -3576,6 +3576,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 for n in range(n_particle_types):
                     plt.scatter(x[index_particles[n], 2].detach().cpu().numpy(),
                                 x[index_particles[n], 1].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
+
             if 'latex' in style:
                 plt.xlabel(r'$x$', fontsize=78)
                 plt.ylabel(r'$y$', fontsize=78)
@@ -3680,6 +3681,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_recons/Ghost3_{config_file}_{it}.tif", dpi=170.7)
                 plt.close()
+
+    if save_velocity:
+        torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}_learned.pt')
 
     print('average rollout RMS {:.3e}+/-{:.3e}'.format(np.mean(rmserr_list), np.std(rmserr_list)))
     if has_mesh:
