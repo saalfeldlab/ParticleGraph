@@ -13,6 +13,7 @@ import random
 from ParticleGraph.data_loaders import load_agent_data
 from sklearn.neighbors import NearestNeighbors
 from scipy.ndimage import median_filter
+from ParticleGraph.generators.cell_utils import *
 
 def data_train(config, config_file, device):
 
@@ -1542,6 +1543,9 @@ def data_train_cell(config, config_file, device):
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     embedding_cluster = EmbeddingCluster(config)
     n_runs = train_config.n_runs
+    has_inert_model = simulation_config.cell_inert_model_coeff > 0
+    do_tracking = train_config.do_tracking
+    max_radius = simulation_config.max_radius
 
     l_dir, log_dir, logger = create_log_dir(config, config_file)
     print(f'Graph files N: {n_runs}')
@@ -1552,6 +1556,8 @@ def data_train_cell(config, config_file, device):
     y_list = []
     T1_list = []
     edge_p_p_list = []
+    vertices_pos_list = []
+
     n_particles_max = 0
     for run in trange(n_runs):
         x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
@@ -1565,6 +1571,9 @@ def data_train_cell(config, config_file, device):
             y_list.append(y)
             edge_p_p_list.append(edge_p_p)
             T1_list.append(T1)
+            # if has_inert_model:
+            #     vertices_pos = np.load(f'graphs_data/graphs_{dataset_name}/vertices_pos_list_{run}.npz')
+            #     vertices_pos_list.append(vertices_pos)
         else:
             # first dataset is not loaded to spare memory
             # first dataset is not used for training but for validation
@@ -1572,6 +1581,7 @@ def data_train_cell(config, config_file, device):
             x_list.append(small_tensor)
             y_list.append(small_tensor)
             T1_list.append(small_tensor)
+            # vertices_pos_list.append(small_tensor)
             edge_p_p_list.append(to_numpy(small_tensor))
     n_particles_max= int(to_numpy(n_particles_max))
     x = x_list[1][0].clone().detach()
@@ -1695,7 +1705,7 @@ def data_train_cell(config, config_file, device):
                 pos_pre = min_value
                 loss = torch.sum(pos_pre)*1E5
             else:
-                loss = ((pred - y_batch)).norm(2)
+                loss = (pred - y_batch).norm(2)
 
             visualize_embedding = True
             if visualize_embedding & (((epoch < 3 ) & (N%(Niter//100) == 0)) | (N==0)):

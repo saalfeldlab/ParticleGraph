@@ -213,11 +213,18 @@ def get_Delaunay(points=[], device=[]):
     B = p[:,1,:].T
     C = p[:,2,:].T
 
+    # fig = plt.figure()
+    # plt.scatter(to_numpy(A[0, 100]), to_numpy(A[1,100]), s=10, color='blue')
+    # plt.scatter(to_numpy(B[0, 100]), to_numpy(B[1,100]), s=10, color='blue')
+    # plt.scatter(to_numpy(C[0, 100]), to_numpy(C[1,100]), s=10, color='blue')
+
     # Compute circumcenters (cc)
     a = A - C
     b = B - C
 
     cc = cross2(sq2(a) * b - sq2(b) * a, a, b) / (2 * ncross2(a, b) + 1E-16) + C
+
+    # plt.scatter(to_numpy(cc[0, 100]), to_numpy(cc[1,100]), s=10, color='red')
 
     cc = cc.t()
 
