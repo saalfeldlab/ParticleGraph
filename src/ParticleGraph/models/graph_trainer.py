@@ -44,7 +44,7 @@ def data_train(config, config_file, device):
     elif has_signal:
         data_train_signal(config, config_file, device)
     elif do_tracking & has_cell_division:
-        data_train_cell_tracking(config, config_file, device)
+        data_train_cell(config, config_file, device)
     elif do_tracking:
         data_train_tracking(config, config_file, device)
     elif has_cell_division:
@@ -1696,14 +1696,19 @@ def data_train_cell(config, config_file, device):
                 x_next = x_list[run][k+1]
                 x_pos_next = x_next[:,1:3].clone().detach()
                 if model_config.prediction == '2nd_derivative':
-                    x_pos_pred = (x[:, 1:3] + delta_t * (x[:, 3:5] + delta_t * pred))
+                    x_pos_pred = (x[:, 1:3] + delta_t * (x[:, 3:5] + delta_t * pred * ynorm))
                 else:
                     x_pos_pred = (x[:,1:3] + delta_t * pred * ynorm)
                 distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
                 result = distance.min(dim=1)
                 min_value = result.values
                 pos_pre = min_value
-                loss = torch.sum(pos_pre)*1E5
+                indices = result.indices
+                pos = torch.argwhere(min_value < 0.5E-5)
+                if model_config.prediction == '2nd_derivative':
+                    loss = torch.sum(pos_pre[pos])*1E8
+                else:
+                    loss = torch.sum(pos_pre)*1E5
             else:
                 loss = (pred - y_batch).norm(2)
 
@@ -1715,6 +1720,18 @@ def data_train_cell(config, config_file, device):
                             'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
                 t, r, a = get_gpu_memory_map(device)
                 logger.info(f"GPU memory: total {t} reserved {r} allocated {a}")
+
+            # print(loss.item())
+            # if k == 193:
+            #     print(loss.item())
+            #     fig = plt.figure(figsize=(8, 8))
+            #     plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=1, c='k', alpha=1)
+            #     plt.scatter(to_numpy(x_pos_pred[:, 0]), to_numpy(x_pos_pred[:, 1]), s=1, c='g', alpha=1)
+            #     plt.scatter(to_numpy(x_pos_next[:, 0]), to_numpy(x_pos_next[:, 1]), s=1, c='r', alpha=1)
+            #     fig = plt.figure(figsize=(8, 8))
+            #     plt.hist(to_numpy(pos_pre), bins=100)
+
+
 
             loss.backward()
             optimizer.step()

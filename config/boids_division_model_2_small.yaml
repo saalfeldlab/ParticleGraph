@@ -70,6 +70,6 @@ training:
   data_augmentation_loop: 50
   fix_cluster_embedding: True
   device: 'auto'
-  has_no_tracking: False
+  do_tracking: True
   learning_rate_start: 0.0001
 

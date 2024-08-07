@@ -37,16 +37,15 @@ if __name__ == '__main__':
     except:
         pass
 
-    #
     # config_list = ["boids_16_division_model_2_Voronoi_3D"]
     # config_list = ["boids_division_model_g_3"]
     # config_list = ["signal_N_100_2_asym_a"]
     # config_list = ["arbitrary_3_tracking"]
     # config_list = ["arbitrary_3_sequence_f"]
-    config_list = ["arbitrary_division_model_passive_a"]
+    # config_list = ["arbitrary_division_model_passive_a"]
     # config_list = ["agents_e"]
     # config_list = ["arbitrary_3_cell"]
-    # config_list = ["boids_division_model_2"]
+    config_list = ["boids_division_model_2_small"]
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')

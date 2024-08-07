@@ -56,6 +56,7 @@ class Interaction_Cell(pyg.nn.MessagePassing):
         self.has_state = config.simulation.state_type != 'discrete'
         self.n_frames = simulation_config.n_frames
 
+
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device, initialisation='zeros')
 
