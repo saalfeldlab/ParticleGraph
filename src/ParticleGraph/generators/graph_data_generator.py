@@ -743,7 +743,9 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
             X1 = bc_pos(first_X1 + V1 * delta_t)
 
-
+            if has_inert_model:
+                vor, vertices_pos, vertices_per_cell, all_points = get_vertices(points=X1, device=device)
+                vertices_pos_list.append(to_numpy(vertices_pos))
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
@@ -974,6 +976,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
             torch.save(T1_list, f'graphs_data/graphs_{dataset_name}/T1_list_{run}.pt')
             np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}', *edge_p_p_list)
+            if has_inert_model:
+                np.savez(f'graphs_data/graphs_{dataset_name}/vertices_pos_list_{run}', *vertices_pos_list)
 
             torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
             torch.save(CL1, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
@@ -997,6 +1001,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
         torch.save(T1_list, f'graphs_data/graphs_{dataset_name}/T1_list_{run}.pt')
         np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}', *edge_p_p_list)
+        if has_inert_model:
+            np.savez(f'graphs_data/graphs_{dataset_name}/vertices_pos_list_{run}', *vertices_pos_list)
 
         torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
         torch.save(CL1, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
