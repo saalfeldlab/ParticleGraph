@@ -29,6 +29,7 @@ simulation:
   max_edges: 500000
   n_particles: 96
   has_cell_division: True
+  has_cell_death: True
   n_particles_max: 400
   n_particle_types: 16
   n_interactions: 16

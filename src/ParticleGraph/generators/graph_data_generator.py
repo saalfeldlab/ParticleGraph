@@ -523,8 +523,10 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 pos = torch.argwhere((AR1.squeeze()<2E-4) & (A1.squeeze() > 25))
                 if len(pos) > 0:
                     H1[pos,0]=0
+                    man_track[to_numpy(N1[pos]).astype(int), 2] = it - 1
                 n_particles_alive = torch.sum(H1[:, 0])
                 n_particles_dead = n_particles - n_particles_alive
+
 
             if (it > 0) & (has_cell_division):
 
