@@ -478,7 +478,12 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, n_particl
     rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
     func_list = []
 
-    for n in range(len(type_list)):
+    if len(type_list) > 10000:
+        step = len(type_list) // 1000
+    else:
+        step = 5
+
+    for n in range(1,len(type_list),step):
         if do_tracking:
             embedding_ = model.a[n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
         else:
@@ -503,8 +508,7 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, n_particl
             func = model.lin_edge(in_features.float())
         func = func[:, 0]
         func_list.append(func)
-        if False: # n % 5 == 0:
-            plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
+        plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
                      color=cmap.color( int(type_list[n])   ), linewidth=2)
     plt.xlim([-max_radius, max_radius])
     ax.xaxis.set_major_locator(plt.MaxNLocator(3))

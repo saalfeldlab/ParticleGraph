@@ -89,16 +89,18 @@ class Interaction_Cell(pyg.nn.MessagePassing):
             field = x[:,6:7]
         else:
             field = torch.ones_like(x[:,6:7])
-
         pos = x[:, 1:self.dimension+1]
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
-        particle_id = x[:, 0:1]
+
         area = x[:, 14:15]
         if self.do_tracking:
+            particle_id = x[:, -1][:, None]
             embedding = self.a[to_numpy(particle_id), :].squeeze()
         elif self.has_state:
+            particle_id = x[:, -1][:, None]
             embedding = self.a[self.data_id, frame, to_numpy(particle_id), :].squeeze()
         else:
+            particle_id = x[:, 0:1]
             embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
 
         pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id, embedding=embedding, field=field, area=area)
