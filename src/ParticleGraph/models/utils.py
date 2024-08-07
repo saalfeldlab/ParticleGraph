@@ -229,7 +229,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
-    has_no_tracking = train_config.has_no_tracking
+    do_tracking = train_config.do_tracking
     matplotlib.rcParams['savefig.pad_inches'] = 0
 
     if model_config.mesh_model_name == 'WaveMesh':
@@ -272,7 +272,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                     dpi=87)
     else:
         fig = plt.figure(figsize=(8, 8))
-        if has_no_tracking:
+        if do_tracking:
             embedding = to_numpy(model.a)
         else:
             embedding = get_embedding(model.a, 1)
@@ -290,7 +290,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 ax = fig.add_subplot(1, 2, 1)
                 rr = torch.tensor(np.logspace(7, 9, 1000)).to(device)
                 for n in range(n_particles):
-                    if has_no_tracking:
+                    if do_tracking:
                         embedding_ = model.a[n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
                     else:
                         embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
@@ -326,7 +326,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
                 func_list = []
                 for n in range(n_particles):
-                    if has_no_tracking:
+                    if do_tracking:
                         embedding_ = model.a[n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
                     else:
                         embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
@@ -340,7 +340,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                     if n % 5 == 0:
                         plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
                                  color=cmap.color(int(n // (n_particles / n_particle_types))), linewidth=2)
-                if not(has_no_tracking):
+                if not(do_tracking):
                     plt.ylim([-1E-4, 1E-4])
                 plt.xlim([-max_radius, max_radius])
                 # plt.xlabel(r'$x_j-x_i$', fontsize=64)
@@ -409,7 +409,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                     plt.tight_layout()
                 rr = torch.tensor(np.linspace(0, simulation_config.max_radius, 200)).to(device)
                 for n in range(n_particles):
-                    if has_no_tracking:
+                    if do_tracking:
                         embedding_ = model.a[n, :] * torch.ones((200, model_config.embedding_dim), device=device)
                     else:
                         embedding_ = model.a[1, n, :] * torch.ones((200, model_config.embedding_dim), device=device)
@@ -440,7 +440,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                                  to_numpy(func*ynorm),
                                  linewidth=2,
                                  color=cmap.color(to_numpy(x[n, 5]).astype(int)), alpha=0.25)
-                if not (has_no_tracking):
+                if not (do_tracking):
                     plt.ylim(config.plotting.ylim)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
@@ -452,9 +452,9 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, n_particl
     train_config = config.training
     model_config = config.graph_model
     matplotlib.rcParams['savefig.pad_inches'] = 0
-    has_no_tracking = train_config.has_no_tracking
+    do_tracking = train_config.do_tracking
 
-    if has_no_tracking:
+    if do_tracking:
         embedding = to_numpy(model.a)
     else:
         embedding = get_embedding(model.a, 1)
@@ -482,7 +482,7 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, n_particl
     func_list = []
 
     for n in range(len(type_list)):
-        if has_no_tracking:
+        if do_tracking:
             embedding_ = model.a[n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
         else:
             embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
@@ -711,7 +711,7 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
     print('interaction functions ...')
     func_list = []
     for n in range(n_particles):
-        if config.training.has_no_tracking:
+        if config.training.do_tracking:
             embedding_ = model_a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
         else:
             embedding_ = model_a[dataset_number, n_nodes+n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
@@ -763,7 +763,7 @@ def choose_training_model(model_config, device):
     n_particle_types = model_config.simulation.n_particle_types
     n_particles = model_config.simulation.n_particles
     dimension = model_config.simulation.dimension
-    has_no_tracking = model_config.training.has_no_tracking
+    do_tracking = model_config.training.do_tracking
 
     bc_pos, bc_dpos = choose_boundary_values(model_config.simulation.boundary)
 
@@ -780,10 +780,10 @@ def choose_training_model(model_config, device):
         case 'PDE_Agents' | 'PDE_Agents_A' | 'PDE_Agents_B' | 'PDE_Agents_C':
             model = Interaction_Agent(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
         case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_mass' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G':
-            if has_no_tracking:
+            if do_tracking:
                 model=Interaction_Particle_Tracking(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             else:
-                model = Interaction_Particle(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
+            model = Interaction_Particle(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
         case 'PDE_GS':
             model = Interaction_Particle(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)

@@ -57,7 +57,6 @@ class SimulationConfig(BaseModel):
     final_cell_mass: list[float] = [-1]
     mc_slope: list[float] = [-1]
 
-
 class GraphModelConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     particle_model_name: str = ''
@@ -116,7 +115,7 @@ class TrainingConfig(BaseModel):
     batch_size: int = 1
     small_init_batch_size: bool = True
     large_range: bool = False
-    has_no_tracking: bool = False
+    do_tracking: bool = False
 
     n_runs: int = 2
     seed : int = 40

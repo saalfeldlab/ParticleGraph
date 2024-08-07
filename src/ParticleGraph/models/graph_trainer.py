@@ -28,7 +28,7 @@ def data_train(config, config_file, device):
     has_signal = (config.graph_model.signal_model_name != '')
     has_particle_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
     has_cell_division = config.simulation.has_cell_division
-    has_no_tracking = config.training.has_no_tracking
+    do_tracking = config.training.do_tracking
     has_state = (config.simulation.state_type != 'discrete')
     dataset_name = config.dataset
     print('')
@@ -42,9 +42,9 @@ def data_train(config, config_file, device):
         data_train_mesh(config, config_file, device)
     elif has_signal:
         data_train_signal(config, config_file, device)
-    elif has_no_tracking & has_cell_division:
+    elif do_tracking & has_cell_division:
         data_train_cell_tracking(config, config_file, device)
-    elif has_no_tracking:
+    elif do_tracking:
         data_train_tracking(config, config_file, device)
     elif has_cell_division:
         data_train_cell(config, config_file, device)
@@ -972,7 +972,6 @@ def data_train_tracking(config, config_file, device):
             distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
             result = distance.min(dim=1)
             min_value = result.values
-            min_index = result.indices
             pos_pre = min_value / delta_t**2
 
             # cell_index = x[:, 0].to(torch.int64).clone().detach()
@@ -1667,12 +1666,6 @@ def data_train_cell(config, config_file, device):
                 if noise_level > 0:
                     y = y * (1 + torch.randn_like(y) * noise_level)
                 y = y / ynorm
-
-                # if data_augmentation:
-                #     new_x = cos_phi * y[:, 0] + sin_phi * y[:, 1]
-                #     new_y = -sin_phi * y[:, 0] + cos_phi * y[:, 1]
-                #     y[:, 0] = new_x
-                #     y[:, 1] = new_y
                 if batch == 0:
                     y_batch = y[:, 0:2]
                 else:
@@ -1689,7 +1682,20 @@ def data_train_cell(config, config_file, device):
                 pred[:, 0] = new_x
                 pred[:, 1] = new_y
 
-            loss = ((pred - y_batch)).norm(2)
+            if do_tracking:
+                x_next = x_list[run][k+1]
+                x_pos_next = x_next[:,1:3].clone().detach()
+                if model_config.prediction == '2nd_derivative':
+                    x_pos_pred = (x[:, 1:3] + delta_t * (x[:, 3:5] + delta_t * pred))
+                else:
+                    x_pos_pred = (x[:,1:3] + delta_t * pred * ynorm)
+                distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
+                result = distance.min(dim=1)
+                min_value = result.values
+                pos_pre = min_value
+                loss = torch.sum(pos_pre)*1E5
+            else:
+                loss = ((pred - y_batch)).norm(2)
 
             visualize_embedding = True
             if visualize_embedding & (((epoch < 3 ) & (N%(Niter//100) == 0)) | (N==0)):
