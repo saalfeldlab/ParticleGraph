@@ -1,5 +1,5 @@
 description: 'Boids 16 different types, division'
-dataset: 'boids_division_model_2_small'
+dataset: 'boids_division_model_2'
 
 simulation:
   params: [[42.031494,  19.948257,  89.53507  ],
@@ -20,21 +20,19 @@ simulation:
  [17.403606,  28.465649,  88.44606  ]]
   cell_cycle_length:  [129.60669,250.58319,248.17961,245.92522,225.17038,300.4388 ,180.9825 ,281.869  ,237.0785 ,214.83209,253.48967,222.98715,285.5585 ,212.19756,301.14725,276.9949 ]
   cell_death_rate: [1,2,3,4,1,2,3,4,1,2,3,4,1,2,3,4]
-  mc_slope: [-30, -15, 15, 30, -30, -15, 15, 30,-30, -15, 15, 30,-30, -15, 15, 30]
-  final_cell_mass: [200, 300, 400, 500, 200, 300, 400, 500, 200, 300, 400, 500, 200, 300, 400, 500]
-  cell_inert_model_coeff: 0.0
-  cell_active_model_coeff: 1.0
   min_radius: 0.001
   max_radius: 0.04
   max_edges: 500000
-  n_particles: 96
+  n_particles: 512
   has_cell_division: True
-  n_particles_max: 400
+  cell_inert_model_coeff: 0.0
+  cell_active_model_coeff: 1.0
+  n_particles_max: 20000
   n_particle_types: 16
   n_interactions: 16
-  n_frames: 500
+  n_frames: 12000
   sigma: 0.005
-  delta_t: 1
+  delta_t: 0.5
   dpos_init: 5.0E-4
   boundary: 'periodic'
   start_frame: 0
@@ -58,7 +56,7 @@ plotting:
   ylim: [-1.0E-4,1.0E-4]
 
 training:
-  n_epochs: 10
+  n_epochs: 20
   batch_size: 1
   small_init_batch_size: False
   sub_batches: 4
@@ -71,5 +69,4 @@ training:
   fix_cluster_embedding: True
   device: 'auto'
   do_tracking: True
-  learning_rate_start: 0.0001
 

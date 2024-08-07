@@ -540,6 +540,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     N1_ = n_particles + torch.arange(n_add_nodes, device=device)
                     N1 = torch.cat((N1, N1_[:, None]), dim=0)
 
+                    # man_track = tracklet ID, start time, end time, parent tracklet
                     man_track_ = torch.cat((N1_[:, None] + 1, torch.zeros((n_add_nodes, 3), device=device)),1)  # cell ID
                     man_track_[:, 1] = it  # start time
                     man_track_[:, 2] = -1  # end time

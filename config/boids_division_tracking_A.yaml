@@ -1,5 +1,5 @@
 description: 'Boids 16 different types, division'
-dataset: 'boids_division_model_2_small'
+dataset: 'boids_division_tracking_A'
 
 simulation:
   params: [[42.031494,  19.948257,  89.53507  ],
@@ -30,7 +30,7 @@ simulation:
   n_particles: 96
   has_cell_division: True
   has_cell_death: True
-  n_particles_max: 400
+  n_particles_max: 1000
   n_particle_types: 16
   n_interactions: 16
   n_frames: 500
@@ -59,7 +59,7 @@ plotting:
   ylim: [-1.0E-4,1.0E-4]
 
 training:
-  n_epochs: 10
+  n_epochs: 1
   batch_size: 1
   small_init_batch_size: False
   sub_batches: 4
@@ -71,6 +71,5 @@ training:
   data_augmentation_loop: 50
   fix_cluster_embedding: True
   device: 'auto'
-  do_tracking: False
-  learning_rate_start: 0.0001
+  do_tracking: True
 

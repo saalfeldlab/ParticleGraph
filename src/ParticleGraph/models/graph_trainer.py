@@ -1704,7 +1704,7 @@ def data_train_cell(config, config_file, device):
                 pred[:, 0] = new_x
                 pred[:, 1] = new_y
 
-            if True:
+            if do_tracking:
                 x_next = x_list[run][k+1]
                 x_pos_next = x_next[:,1:3].clone().detach()
                 if model_config.prediction == '2nd_derivative':
@@ -3155,7 +3155,7 @@ def data_train_agents(config, config_file, device):
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
 
-def data_test(config=None, config_file=None, visualize=False, style='color frame', verbose=True, best_model=20, step=15, ratio=1, run=1, test_simulation=False, sample_embedding = False, device=[]):
+def data_test(config=None, config_file=None, visualize=False, style='color frame', verbose=True, best_model=20, step=15, ratio=1, run=1, save_velocity=False, test_simulation=False, sample_embedding = False, device=[]):
     dataset_name = config.dataset
     simulation_config = config.simulation
     model_config = config.graph_model
@@ -3455,6 +3455,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t)
         else:
 
+            if save_velocity:
+                x = x0
+
             x_ = x
             if has_ghost:
                 x_ghost = model_ghost.get_pos(dataset_id=run, frame=it, bc_pos=bc_pos)
@@ -3495,6 +3498,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     x[:, 3:5] = y
 
             x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t)  # position update
+
+            if save_velocity:
+                x_list[0][it][:, 3:3+dimension] = x[:, 3:3+dimension].clone().detach()
+
 
         if (it % step == 0) & (it >= 0) & visualize:
 
@@ -3761,3 +3768,4 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/GT_{config_file}_{it}.tif", dpi=170.7)
             plt.close()
+
