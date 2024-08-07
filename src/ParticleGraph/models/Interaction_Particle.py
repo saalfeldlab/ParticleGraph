@@ -120,18 +120,19 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
         particle_id = x[:, 0:1]
 
-        if not(self.state_hot_encoding):
-            embedding = self.a[self.data_id, frame, to_numpy(particle_id), :].squeeze()
-        else:
+        if self.state_hot_encoding:
             # model_a = gumbel_softmax(self.a[self.data_id, frame, to_numpy(particle_id), :].squeeze(), self.temperature, hard=True, device=self.device)
             # embedding = torch.matmul(model_a, self.b)
-
             model_a = torch.softmax(self.a[self.data_id, frame, to_numpy(particle_id), :].squeeze(), dim =1)
             model_a = gumbel_softmax(model_a, self.temperature, hard=True, device=self.device)
             mu = torch.matmul(model_a, self.mu)
             logvar = torch.matmul(model_a, self.logvar.repeat(self.n_particle_types))
             logvar = logvar[:,None].repeat(1, 2)
             embedding = reparameterize(mu, logvar)
+        else:
+            embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
+
+
 
         pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, embedding=embedding, field=field)
 

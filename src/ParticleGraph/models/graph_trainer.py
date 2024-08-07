@@ -1545,6 +1545,7 @@ def data_train_cell(config, config_file, device):
     n_runs = train_config.n_runs
     has_inert_model = simulation_config.cell_inert_model_coeff > 0
     do_tracking = train_config.do_tracking
+    has_state = (simulation_config.state_type != 'discrete')
     max_radius = simulation_config.max_radius
 
     l_dir, log_dir, logger = create_log_dir(config, config_file)
@@ -1604,6 +1605,17 @@ def data_train_cell(config, config_file, device):
     time.sleep(0.5)
     print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
     logger.info(f'vnorm ynorm: {to_numpy(vnorm)} {to_numpy(ynorm)}')
+
+    if do_tracking | has_state:
+        for k in range(len(x_list[1])):
+            type = x_list[1][k][:,5]
+            if k==0:
+                type_list = type
+            else:
+                type_list = torch.concatenate((type_list,type))
+        n_particles_max = len(type_list)
+
+    config.simulation.n_particles_max = n_particles_max
 
     x = []
     y = []
@@ -1714,12 +1726,17 @@ def data_train_cell(config, config_file, device):
 
             visualize_embedding = True
             if visualize_embedding & (((epoch < 3 ) & (N%(Niter//100) == 0)) | (N==0)):
-                plot_training_cell(config=config, dataset_name=dataset_name, log_dir=log_dir,
+                if do_tracking:
+                    plot_training_cell(config=config, dataset_name=dataset_name, log_dir=log_dir,
+                                       epoch=epoch, N=N, model=model, n_particle_types=n_particle_types,
+                                       type_list=type_list, ynorm=ynorm, cmap=cmap, device=device)
+                else:
+                    plot_training_cell(config=config, dataset_name=dataset_name, log_dir=log_dir,
                               epoch=epoch, N=N, model=model, n_particle_types=n_particle_types, type_list=T1_list[1], ynorm=ynorm, cmap=cmap, device=device)
-                torch.save({'model_state_dict': model.state_dict(),
-                            'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
-                t, r, a = get_gpu_memory_map(device)
-                logger.info(f"GPU memory: total {t} reserved {r} allocated {a}")
+            torch.save({'model_state_dict': model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+            t, r, a = get_gpu_memory_map(device)
+            logger.info(f"GPU memory: total {t} reserved {r} allocated {a}")
 
             # print(loss.item())
             # if k == 193:

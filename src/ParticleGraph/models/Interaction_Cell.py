@@ -55,32 +55,25 @@ class Interaction_Cell(pyg.nn.MessagePassing):
         self.dimension = dimension
         self.has_state = config.simulation.state_type != 'discrete'
         self.n_frames = simulation_config.n_frames
+        self.do_tracking = train_config.do_tracking
 
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device, initialisation='zeros')
 
-        if simulation_config.has_cell_division :
-            self.a = nn.Parameter(
-                torch.tensor(np.ones((self.n_dataset, self.n_particles_max, 2)), device=self.device,
-                             requires_grad=True, dtype=torch.float32))
-            if self.update_type == 'embedding_MLP':
-                self.b = nn.Parameter(
-                    torch.tensor(np.ones((self.n_dataset, 20500, 2)), device=self.device,
-                                 requires_grad=True, dtype=torch.float32))
-                self.phi = MLP(input_size=3, output_size=1, nlayers=5, hidden_size=32, device=self.device)
+        if self.do_tracking:
+            self.a = nn.Parameter(torch.tensor(np.ones((self.n_particles_max, 2)), device=self.device, requires_grad=True, dtype=torch.float32))
         elif self.has_state:
             self.a = nn.Parameter(
-                torch.tensor(np.ones((self.n_dataset, int(self.n_frames * (self.n_particles + self.n_ghosts)), self.embedding_dim)),
+                torch.tensor(np.ones((self.n_dataset, int(self.n_frames), int(self.n_particles), self.embedding_dim)),
                              device=self.device,
                              requires_grad=True, dtype=torch.float32))
         else:
-            self.a = nn.Parameter(
-                torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
-                             requires_grad=True, dtype=torch.float32))
+            self.a = nn.Parameter(torch.tensor(np.ones((self.n_dataset, self.n_particles_max, 2)), device=self.device, requires_grad=True, dtype=torch.float32))
 
 
-    def forward(self, data=[], data_id=[], training=[], vnorm=[], phi=[], has_field=False):
+
+    def forward(self, data=[], data_id=[], training=[], vnorm=[], phi=[], has_field=False, frame=[]):
 
         self.data_id = data_id
         self.vnorm = vnorm
@@ -101,22 +94,18 @@ class Interaction_Cell(pyg.nn.MessagePassing):
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
         particle_id = x[:, 0:1]
         area = x[:, 14:15]
-
-        pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id, field=field, area=area)
-
-        if self.update_type == 'linear':
+        if self.do_tracking:
+            embedding = self.a[to_numpy(particle_id), :].squeeze()
+        elif self.has_state:
+            embedding = self.a[self.data_id, frame, to_numpy(particle_id), :].squeeze()
+        else:
             embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
-            pred = self.lin_update(torch.cat((pred, x[:, 3:5], embedding), dim=-1))
 
-        if self.update_type == 'embedding_Siren':
-            embedding = self.b[self.data_id, to_numpy(particle_id), :].squeeze()
-            in_features = torch.cat((x[:, 8:9]/250, embedding), dim=-1)
-            self.phi_ =  self.phi(in_features).repeat(1,2)
-            pred = pred * self.phi_
+        pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id, embedding=embedding, field=field, area=area)
 
         return pred
 
-    def message(self, pos_i, pos_j, d_pos_i, d_pos_j, particle_id_i, particle_id_j, field_j, area_i, area_j):
+    def message(self, pos_i, pos_j, d_pos_i, d_pos_j, particle_id_i, particle_id_j, embedding_i, embedding_j, field_j, area_i, area_j):
         # distance normalized by the max radius
         r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
         delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
@@ -141,9 +130,6 @@ class Interaction_Cell(pyg.nn.MessagePassing):
             new_dpos_y_j = -self.sin_phi * dpos_x_j + self.cos_phi * dpos_y_j
             dpos_x_j = new_dpos_x_j
             dpos_y_j = new_dpos_y_j
-
-        embedding_i = self.a[self.data_id, to_numpy(particle_id_i), :].squeeze()
-        embedding_j = self.a[self.data_id, to_numpy(particle_id_j), :].squeeze()
 
         match self.model:
 

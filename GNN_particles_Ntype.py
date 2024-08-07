@@ -46,6 +46,7 @@ if __name__ == '__main__':
     # config_list = ["agents_e"]
     # config_list = ["arbitrary_3_cell"]
     config_list = ["boids_division_model_2_small"]
+    # config_list = ['arbitrary_3_test']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')

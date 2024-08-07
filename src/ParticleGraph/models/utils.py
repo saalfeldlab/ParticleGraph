@@ -454,7 +454,7 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, n_particl
     matplotlib.rcParams['savefig.pad_inches'] = 0
     do_tracking = train_config.do_tracking
 
-    if False: # do_tracking:
+    if do_tracking:
         embedding = to_numpy(model.a)
     else:
         embedding = get_embedding(model.a, 1)
@@ -482,7 +482,7 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, n_particl
     func_list = []
 
     for n in range(len(type_list)):
-        if False: #do_tracking:
+        if do_tracking:
             embedding_ = model.a[n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
         else:
             embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
