@@ -464,16 +464,13 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, n_particl
         pos =torch.argwhere(type_list == n)
         pos = to_numpy(pos)
         if len(pos) > 0:
-            if len(type_list) > 4000:
-                plt.scatter(embedding[pos, 0], embedding[pos, 1], s=1)
-            else:
-                plt.scatter(embedding[pos, 0], embedding[pos, 1], s=100, alpha=0.5)
+            plt.scatter(embedding[pos, 0], embedding[pos, 1], s=1, alpha=0.5)
+
     plt.xticks([])
     plt.yticks([])
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=87)
     plt.close()
-
 
     max_radius = 0.04
     fig = plt.figure(figsize=(12, 12))
@@ -506,7 +503,7 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, n_particl
             func = model.lin_edge(in_features.float())
         func = func[:, 0]
         func_list.append(func)
-        if n % 5 == 0:
+        if False: # n % 5 == 0:
             plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
                      color=cmap.color( int(type_list[n])   ), linewidth=2)
     plt.xlim([-max_radius, max_radius])

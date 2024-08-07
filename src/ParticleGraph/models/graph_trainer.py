@@ -123,10 +123,10 @@ def data_train_particles(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_3.pt"
-    # print(f'Loading existing model {net}...')
-    # state_dict = torch.load(net,map_location=device)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    net = f"./log/try_{config_file}/models/best_model_with_1_graphs_3.pt"
+    print(f'Loading existing model {net}...')
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -1614,15 +1614,14 @@ def data_train_cell(config, config_file, device):
             else:
                 type_list = torch.concatenate((type_list,type))
         n_particles_max = len(type_list)
-
-    config.simulation.n_particles_max = n_particles_max
+        config.simulation.n_particles_max = n_particles_max
 
     x = []
     y = []
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_20.pt"
+    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0_9249.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
 
@@ -1694,6 +1693,7 @@ def data_train_cell(config, config_file, device):
                     y_batch = torch.cat((y_batch, y[:, 0:2]), dim=0)
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
+
             optimizer.zero_grad()
 
             for batch in batch_loader:
@@ -1704,7 +1704,7 @@ def data_train_cell(config, config_file, device):
                 pred[:, 0] = new_x
                 pred[:, 1] = new_y
 
-            if do_tracking:
+            if True:
                 x_next = x_list[run][k+1]
                 x_pos_next = x_next[:,1:3].clone().detach()
                 if model_config.prediction == '2nd_derivative':
@@ -1748,10 +1748,16 @@ def data_train_cell(config, config_file, device):
             #     fig = plt.figure(figsize=(8, 8))
             #     plt.hist(to_numpy(pos_pre), bins=100)
 
-
+            model_a_first = model.a.clone().detach()
 
             loss.backward()
             optimizer.step()
+
+            model_a_last = model.a.clone().detach()
+
+            diff_pos = torch.argwhere((model_a_first - model_a_last) != 0)
+
+
 
             total_loss += loss.item()
 

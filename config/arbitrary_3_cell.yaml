@@ -49,6 +49,7 @@ training:
   data_augmentation: True
   data_augmentation_loop: 100
   fix_cluster_embedding: True
+  do_tracking: False
   device: 'auto'
 
 
