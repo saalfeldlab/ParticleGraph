@@ -986,7 +986,7 @@ def data_train_cell(config, config_file, device):
                 else:
                     loss = torch.sum(pos_pre)*1E5
             else:
-                loss = (pred - y_batch).norm(2) + model.a.norm(1) * 1E-4
+                loss = (pred - y_batch).norm(2) # + model.a.norm(1) * 1E-3
 
             visualize_embedding = True
 
@@ -1007,23 +1007,12 @@ def data_train_cell(config, config_file, device):
                 t, r, a = get_gpu_memory_map(device)
                 logger.info(f"GPU memory: total {t} reserved {r} allocated {a}")
 
-            # if k == 193:
-            #     print(loss.item())
-            #     fig = plt.figure(figsize=(8, 8))
-            #     plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=20, c='k', alpha=0.5)
-            #     plt.scatter(to_numpy(x_pos_pred[:, 0]), to_numpy(x_pos_pred[:, 1]), s=10, c='r', alpha=0.5)
-            #     plt.scatter(to_numpy(x_pos_next[:, 0]), to_numpy(x_pos_next[:, 1]), s=40, c='g', alpha=0.5)
-
             model_a_first = model.a.clone().detach()
 
             loss.backward()
             optimizer.step()
 
             model_a_last = model.a.clone().detach()
-
-            diff_pos = torch.argwhere((model_a_first - model_a_last) != 0)
-
-
 
             total_loss += loss.item()
 
