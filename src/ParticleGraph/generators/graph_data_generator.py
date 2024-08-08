@@ -631,7 +631,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             if (it==simulation_config.start_frame):
                 ID1 = torch.arange(len(N1), device=device)[:, None]
             else:
-                ID1 = torch.arange(int(ID1[-1]), int(ID1[-1]+len(N1)),device=device)[:, None]
+                ID1 = torch.arange(int(ID1[-1]+1), int(ID1[-1]+len(N1)+1),device=device)[:, None]
 
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                                    H1.clone().detach(), A1.clone().detach(), S1.clone().detach(), M1.clone().detach(),

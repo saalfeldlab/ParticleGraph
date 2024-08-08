@@ -451,8 +451,7 @@ def plot_training_cell_tracking(config, id_list, dataset_name, log_dir, epoch, N
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
-    matplotlib.rcParams['savefig.pad_inches'] = 0
-    do_tracking = train_config.do_tracking
+
 
     fig = plt.figure(figsize=(8, 8))
     for k in range(1,len(type_list),len(type_list)//40):
@@ -461,7 +460,6 @@ def plot_training_cell_tracking(config, id_list, dataset_name, log_dir, epoch, N
             if len(pos) > 0:
                 embedding = to_numpy(model.a[to_numpy(id_list[k][pos]).astype(int)].squeeze())
                 plt.scatter(embedding[:, 0], embedding[:, 1], s=1, color=cmap.color(n), alpha=1)
-
     plt.xticks([])
     plt.yticks([])
     plt.tight_layout()
@@ -648,17 +646,10 @@ def analyze_edge_function_tracking(rr=[], vizualize=False, config=None, model_ML
 
     return func_list, proj_interaction
 
-def analyze_edge_function_state(rr=[], vizualize=False, config=None, model_MLP=[], model_a=None, type_stack=None, cmap=None, ynorm=None, device=None):
+def analyze_edge_function_state(rr=[], config=None, model_MLP=[], model_a=None, id_list=None, type_list=None, cmap=None, ynorm=None, device=None):
 
     max_radius = config.simulation.max_radius
-    min_radius = config.simulation.min_radius
     state_hot_encoding = config.training.state_hot_encoding
-
-    n_states = min(int(10E3),int(len(model_a)))
-    index_ = np.random.permutation(len(model_a))
-    index = index_[0:n_states]
-    index_next = index_[n_states:]
-
 
     if config.graph_model.particle_model_name != '':
         config_model = config.graph_model.particle_model_name
@@ -667,38 +658,43 @@ def analyze_edge_function_state(rr=[], vizualize=False, config=None, model_MLP=[
     elif config.graph_model.mesh_model_name != '':
         config_model = config.graph_model.mesh_model_name
 
-    if rr==[]:
-        if config_model == 'PDE_G':
-            rr = torch.tensor(np.linspace(0, max_radius * 1.3, 1000)).to(device)
-        elif config_model == 'PDE_GS':
-            rr = torch.tensor(np.logspace(7, 9, 1000)).to(device)
-        elif config_model == 'PDE_E':
-            rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-        elif 'PDE_N' in config_model:
-            rr = torch.tensor(np.linspace(0, 2, 1000)).to(device)
-        else:
-            rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
-
-    vizualize=True
-    fig = plt.figure(figsize=(12, 12))
     func_list = []
-    for n in range(n_states):
-        if state_hot_encoding:
-            embedding_ = model_a[index[n], :] * torch.ones((1000, config.simulation.n_particle_types), device=device)
-        else:
-            embedding_ = model_a[index[n], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-        in_features = get_in_features(rr, embedding_, config_model, max_radius)
-        with torch.no_grad():
-            func = model_MLP(in_features.float())
-        func = func[:, 0]
-        func_list.append(func)
-        if vizualize:
-            type = to_numpy(type_stack[index[n]]).astype(int)
-            plt.plot(to_numpy(rr),
-                     to_numpy(func) * to_numpy(ynorm),
-                     color=cmap.color(type), linewidth=8, alpha=0.1)
+    true_type_list = []
+    short_model_a_list = []
+    rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+    for k in range(1,len(type_list), 5):
+        for n in range(1,len(type_list[k]),5):
+                short_model_a_list.append(model_a[to_numpy(id_list[k][n]).astype(int)])
+                embedding_ = model_a[to_numpy(id_list[k][n]).astype(int)]
+                embedding_ = embedding_ * torch.ones((1000, config.simulation.dimension), device=device)
+
+                match config_model:
+                    case 'PDE_Cell_A':
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / max_radius, embedding_), dim=1)
+                    case 'PDE_Cell_A_area':
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / max_radius, torch.ones_like(rr[:, None])*0.1, torch.ones_like(rr[:, None])*0.4, embedding_, embedding_), dim=1)
+                    case 'PDE_Cell_B':
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                 torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                                 0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                    case 'PDE_Cell_B_area':
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                 torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                                 0 * rr[:, None], 0 * rr[:, None], torch.ones_like(rr[:, None])*0.001, torch.ones_like(rr[:, None])*0.001, embedding_, embedding_), dim=1)
+
+                with torch.no_grad():
+                    func = model_MLP(in_features.float())
+                func = func[:, 0]
+                func_list.append(func)
+                true_type_list.append(type_list[k][n])
+
     func_list = torch.stack(func_list)
     func_list_ = to_numpy(func_list)
+    true_type_list = torch.stack(true_type_list)
+    true_type_list = to_numpy(true_type_list)
+    short_model_a_list = torch.stack(short_model_a_list)
 
     print('UMAP reduction ...')
     start_time = time.time()
@@ -708,42 +704,13 @@ def analyze_edge_function_state(rr=[], vizualize=False, config=None, model_MLP=[
     computation_time = time.time() - start_time
     print(f"UMAP computation time is {computation_time} seconds.")
 
-    print('interaction function dimension reduction ...')
-    start_time = time.time()
-    func_list = []
-    for n in range(n_states):  # len(type_list)):
-        embedding_ = model_a[index[n], :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-        in_features = get_in_features(rr, embedding_, config_model, max_radius)
-        with torch.no_grad():
-            func = model_MLP(in_features.float())
-        func = func[:, 0]
-        func_list.append(func)
-    func_list = torch.stack(func_list)
-    func_list_ = to_numpy(func_list)
-
     proj_interaction = trans.transform(func_list_)
     proj_interaction = (proj_interaction - np.min(proj_interaction)) / (np.max(proj_interaction) - np.min(proj_interaction) + 1e-10)
 
     computation_time = time.time() - start_time
     print(f"dimension reduction computation time is {computation_time} seconds.")
 
-    if vizualize:
-        plt.xlim([0, max_radius])
-        plt.ylim(config.plotting.ylim)
-        if config.graph_model.particle_model_name == 'PDE_GS':
-            plt.xscale('log')
-            plt.yscale('log')
-        if config.graph_model.particle_model_name == 'PDE_G':
-            plt.xscale('log')
-            plt.yscale('log')
-            plt.xlim([1E-3, 0.2])
-        if config.graph_model.particle_model_name == 'PDE_E':
-            plt.xlim([0, 0.05])
-        plt.xlabel('Distance [a.u]')
-        plt.ylabel('MLP [a.u]')
-        plt.tight_layout()
-
-    return func_list, proj_interaction, index, index_next
+    return func_list, true_type_list, short_model_a_list, proj_interaction
 
 def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], model_a=None, n_nodes=0, dataset_number = 0, n_particles=None, ynorm=None, type_list=None, cmap=None, dimension=2, device=None):
 

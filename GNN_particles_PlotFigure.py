@@ -393,8 +393,8 @@ def plot_embedding_func_cluster_state(model, config, config_file, embedding_clus
     n_particles = config.simulation.n_particles
 
     fig, ax = fig_init()
-    for k in range(1,len(type_list),len(type_list)//40):
-        for n in range(n_particle_types):
+    for k in range(0,len(type_list)):
+        for n in range(1,2):
             pos =torch.argwhere(type_list[k] == n)
             if len(pos) > 0:
                 embedding = to_numpy(model.a[to_numpy(id_list[k][pos]).astype(int)].squeeze())
@@ -406,15 +406,14 @@ def plot_embedding_func_cluster_state(model, config, config_file, embedding_clus
     plt.savefig(f"./{log_dir}/results/first_embedding_{config_file}_{epoch}.tif", dpi=170.7)
     plt.close()
 
-    func_list, proj_interaction, index, index_next = analyze_edge_function_state(rr=[], vizualize=False, config=config,
+    func_list, true_type_list, short_model_a_list, proj_interaction = analyze_edge_function_state(rr=[], config=config,
                                                         model_MLP=model.lin_edge, model_a=model.a,
-                                                        type_stack=type_stack, ynorm=ynorm,
+                                                        id_list=id_list, type_list=type_list, ynorm=ynorm,
                                                         cmap=cmap, device=device)
 
     fig, ax = fig_init()
-    type_list_short = to_numpy(type_stack[index])
     for n in range(n_particle_types):
-        pos = np.argwhere(type_list_short == n).squeeze().astype(int)
+        pos = np.argwhere(true_type_list == n).squeeze().astype(int)
         if len(pos)>0:
             plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=10, alpha=0.25)
     plt.xlabel(r'UMAP 0', fontsize=78)
@@ -427,34 +426,82 @@ def plot_embedding_func_cluster_state(model, config, config_file, embedding_clus
 
     np.save(f"./{log_dir}/results/UMAP_{config_file}_{epoch}.npy", proj_interaction)
 
+    embedding = proj_interaction
     labels, n_clusters, new_labels = sparsify_cluster_state(config.training.cluster_method, proj_interaction, embedding,
-                                                      config.training.cluster_distance_threshold, index, index_next, type_list_short,
+                                                      config.training.cluster_distance_threshold, true_type_list,
                                                       n_particle_types, embedding_cluster)
 
-    model_a_list_short = model_a[index, :].clone().detach()
+    fig, ax = fig_init()
+    for n in range(n_particle_types):
+        pos = np.argwhere(new_labels == n).squeeze().astype(int)
+        if len(pos)>0:
+            plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=10, alpha=0.25)
+    plt.xlim([-0.2, 1.2])
+    plt.ylim([-0.2, 1.2])
+    plt.tight_layout()
+
+    accuracy = metrics.accuracy_score(true_type_list, new_labels)
+
     median_center_list = []
     for n in range(n_clusters):
         pos = np.argwhere(new_labels == n).squeeze().astype(int)
         pos = np.array(pos)
         if pos.size > 0:
-            median_center = model_a_list_short[pos, :]
-            median_center = torch.median(median_center, dim=0).values
+            median_center = short_model_a_list[pos, :]
+            plt.scatter(to_numpy(short_model_a_list[pos,0]),to_numpy(short_model_a_list[pos,1]))
+            median_center = torch.mean(median_center, dim=0)
+            plt.scatter(to_numpy(median_center[0]), to_numpy(median_center[1]), s=100, color='black')
             median_center_list.append(median_center)
     median_center_list = torch.stack(median_center_list)
+    median_center_list = median_center_list.to(dtype=torch.float32)
 
-    distance = torch.sum((model_a[:, None, :] - median_center_list[None, :, :]) ** 2, dim=2)
+    distance = torch.sum((model.a[:, None, :] - median_center_list[None, :, :]) ** 2, dim=2)
     result = distance.min(dim=1)
     min_index = result.indices
 
-    new_labels = to_numpy(min_index).astype(int)
+    new_labels_ = to_numpy(min_index).astype(int)
 
-    median_center_list = median_center_list[new_labels].clone().detach()
-    median_center_list = torch.reshape(median_center_list, (n_frames, n_particles, model.embedding_dim))
+    median_center_list = median_center_list[new_labels_].clone().detach()
 
-    with torch.no_grad():
-        model.a[1] = median_center_list.clone().detach()
+    fig = plt.figure(figsize=(10, 10))
+    plt.imshow(new_labels_.reshape(n_frames+1, n_particles), cmap='tab20')
 
-    accuracy = metrics.accuracy_score(type_list, new_labels)
+
+
+
+    for k in range(len(type_list)):
+        if k==0:
+            type_stack=type_list[k]
+        else:
+            type_stack=torch.concatenate((type_stack,type_list[k]),dim=0)
+    type_stack=type_stack.squeeze()
+
+    fig = plt.figure(figsize=(10, 10))
+    plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), c=to_numpy(type_stack), s=10, cmap='tab10')
+
+    fig = plt.figure(figsize=(10, 10))
+    plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), c=new_labels_, s=1, cmap='tab10')
+
+    fig = plt.figure(figsize=(8, 8))
+    for k in range(0,len(type_list),len(type_list)//40):
+        for n in range(1,3):
+            pos =torch.argwhere(type_list[k] == n)
+            if len(pos) > 0:
+                embedding = to_numpy(model.a[to_numpy(id_list[k][pos]).astype(int)].squeeze())
+                plt.scatter(embedding[:, 0], embedding[:, 1], s=1, color=cmap.color(n), alpha=1)
+    plt.xticks([])
+    plt.yticks([])
+    plt.tight_layout()
+
+    fig = plt.figure(figsize=(8, 8))
+    for n in range(n_particle_types):
+        pos = np.argwhere(to_numpy(type_stack) == n)
+        if len(pos) > 0:
+            embedding = to_numpy(model.a[pos].squeeze())
+            plt.scatter(embedding[:, 0], embedding[:, 1], s=1, color=cmap.color(n), alpha=1)
+
+
+    accuracy = metrics.accuracy_score(to_numpy(type_stack.squeeze()), new_labels_)
 
     return accuracy, n_clusters, new_labels
 
@@ -1268,15 +1315,17 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, device):
     x_list, y_list, vnorm, ynorm = load_training_data(dataset_name, n_runs, log_dir, device)
     logger.info("vnorm:{:.2e},  ynorm:{:.2e}".format(to_numpy(vnorm), to_numpy(ynorm)))
 
-
-    type_list=[]
     type_stack = torch.stack(x_list[1])[:,:,5]
     type_stack = torch.reshape(type_stack, ((n_frames + 1)* n_particles,1))
 
     n_particles_max = 0
+    id_list = []
+    type_list=[]
     for k in range(n_frames+1):
         type = x_list[1][k][:, 5]
         type_list.append(type)
+        ids = x_list[1][k][:, -1]
+        id_list.append(ids)
         n_particles_max += len(type)
     config.simulation.n_particles_max = n_particles_max
 
@@ -1290,15 +1339,8 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, device):
         model.load_state_dict(state_dict['model_state_dict'])
         model.eval()
 
-        model_a = model.a.clone().detach()
-        cell_id = 400
-
-        alpha=0.1
-
-        id_list = []
-        for k in range(n_frames + 1):
-            ids = x_list[1][k][:, -1]
-            id_list.append(ids)
+        fig = plt.figure(figsize=(10, 10))
+        plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), c=to_numpy(type_stack), s=1, cmap='tab10')
 
         accuracy, n_clusters, new_labels = plot_embedding_func_cluster_state(model, config, config_file, embedding_cluster,
                                                                        cmap, type_list, type_stack, id_list,
@@ -1308,20 +1350,6 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, device):
 
         print(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
         logger.info(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
-
-        model_a = model.a[1].clone().detach()
-        model_a = torch.reshape(model_a, (model.n_particles * model.n_frames, model.embedding_dim))
-
-        fig, ax = fig_init()
-        for n in range(n_particle_types):
-            pos = np.argwhere(new_labels == n).squeeze().astype(int)
-            if pos.size > 0:
-                plt.scatter(to_numpy(model_a[pos, 0]), to_numpy(model_a[pos, 1]), s=400, color=cmap.color(n), alpha=0.01)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{epoch}.tif", dpi=170.7)
-        plt.close()
 
         fig, ax = fig_init()
         plots = []
@@ -1344,7 +1372,7 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, device):
         accuracy_list=[]
         for cell_id in trange(n_particles):
             GT_time_series = get_time_series(x_list=x_list[1], cell_id=cell_id, feature='type')
-            learned_time_series = get_type_time_series(new_labels=new_labels, dataset_number=1, cell_id=cell_id,
+            learned_time_series = get_type_time_series(new_labels=new_labels, cell_id=cell_id,
                                                                   n_particles=n_particles, n_frames=n_frames,
                                                                   has_cell_division=has_cell_division)
             GT_time_series_list.append(GT_time_series)
@@ -1354,6 +1382,16 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, device):
         GT_time_series = np.stack(GT_time_series_list)
         learned_time_series = np.stack(learned_time_series_list)
         accuracy = np.array(accuracy_list)
+
+        tmp = np.reshape(new_labels, (n_frames + 1, n_particles))
+
+        cell_id = 480
+        GT_time_series = get_time_series(x_list=x_list[1], cell_id=cell_id, feature='type')
+        learned_time_series = get_type_time_series(new_labels=new_labels, cell_id=cell_id,
+                                                   n_particles=n_particles, n_frames=n_frames,
+                                                   has_cell_division=has_cell_division)
+        fig = plt.figure(figsize=(8, 8))
+        plt.imshow(tmp)
 
         print(f'accuracy: {np.mean(accuracy)} +/- {np.std(accuracy)}')
 
@@ -4645,7 +4683,7 @@ if __name__ == '__main__':
 
     matplotlib.use("Qt5Agg")
 
-    config_list = ["arbitrary_3_cell_sequence_f"]
+    config_list = ["arbitrary_3_cell_sequence_d"]
     # config_list = ["arbitrary_3_cell_sequence_f"]
     # # config_list = ['signal_N_100_2_d']
     # config_list = ['signal_N_100_2_a']
@@ -4655,7 +4693,7 @@ if __name__ == '__main__':
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['1_0'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['0_40000'], device=device)
         # plot_generated(config=config, run=0, style='white voronoi', step = 10, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 

@@ -986,7 +986,7 @@ def data_train_cell(config, config_file, device):
                 else:
                     loss = torch.sum(pos_pre)*1E5
             else:
-                loss = (pred - y_batch).norm(2)
+                loss = (pred - y_batch).norm(2) + model.a.norm(1) * 1E-4
 
             visualize_embedding = True
 

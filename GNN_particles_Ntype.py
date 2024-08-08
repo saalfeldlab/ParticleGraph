@@ -37,7 +37,8 @@ if __name__ == '__main__':
     except:
         pass
 
-    config_list = ["arbitrary_3_cell_sequence_d"]
+    # config_list = ["arbitrary_3_cell_sequence_d"]
+    config_list = ["arbitrary_3_cell_sequence_d_a"]
     # config_list = ["arbitrary_3_cell_sequence_f"]
 
     # config_list = ["arbitrary_3_cell"]

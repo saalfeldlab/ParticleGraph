@@ -108,7 +108,7 @@ def sparsify_cluster(cluster_method, proj_interaction, embedding, cluster_distan
 
     return labels, n_clusters, new_labels
 
-def sparsify_cluster_state(cluster_method, proj_interaction, embedding, cluster_distance_threshold, index, index_next, type_list_short, n_particle_types, embedding_cluster):
+def sparsify_cluster_state(cluster_method, proj_interaction, embedding, cluster_distance_threshold, true_type_list, n_particle_types, embedding_cluster):
 
     # normalization of projection because UMAP output is not normalized
     proj_interaction = (proj_interaction - np.min(proj_interaction)) / (np.max(proj_interaction) - np.min(proj_interaction)+1e-10)
@@ -140,7 +140,7 @@ def sparsify_cluster_state(cluster_method, proj_interaction, embedding, cluster_
 
     label_list = []
     for n in range(n_particle_types):
-        pos = np.argwhere(type_list_short == n).squeeze().astype(int)
+        pos = np.argwhere(true_type_list == n).squeeze().astype(int)
         if len(pos)>0:
             tmp = labels[pos]
             label_list.append(np.round(np.median(tmp)))
