@@ -59,7 +59,7 @@ plotting:
   ylim: [-1.0E-4,1.0E-4]
 
 training:
-  n_epochs: 2
+  n_epochs: 10
   batch_size: 1
   small_init_batch_size: False
   sub_batches: 4
@@ -68,7 +68,7 @@ training:
   sparsity: 'replace_embedding'
   cluster_method: 'distance_plot'
   data_augmentation: True
-  data_augmentation_loop: 100
+  data_augmentation_loop: 200
   fix_cluster_embedding: True
   device: 'auto'
   do_tracking: True
