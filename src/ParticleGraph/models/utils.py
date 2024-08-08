@@ -472,9 +472,9 @@ def plot_training_cell_tracking(config, id_list, dataset_name, log_dir, epoch, N
     max_radius = 0.04
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(1,1,1)
-    rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
+    rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
 
-    for k in trange(1,len(type_list), 10):
+    for k in range(1,len(type_list), 10):
         for n in range(1,len(type_list[k]),10):
                 embedding_ = model.a[to_numpy(id_list[k][n]).astype(int)]
                 embedding_ = embedding_ * torch.ones((1000, model_config.embedding_dim), device=device)
@@ -500,8 +500,7 @@ def plot_training_cell_tracking(config, id_list, dataset_name, log_dir, epoch, N
                 func = func[:, 0]
                 type = to_numpy(type_list[k][n])
                 plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
-                             color=cmap.color(type), linewidth=2)
-    plt.xlim([-max_radius, max_radius])
+                             color=cmap.color(int(type)), linewidth=2,alpha=0.1)
     ax.xaxis.set_major_locator(plt.MaxNLocator(3))
     ax.yaxis.set_major_locator(plt.MaxNLocator(5))
     ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
