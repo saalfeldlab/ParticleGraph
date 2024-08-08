@@ -468,50 +468,50 @@ def plot_training_cell_tracking(config, id_list, dataset_name, log_dir, epoch, N
     plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=87)
     plt.close()
 
-    if False:
-        max_radius = 0.04
-        fig = plt.figure(figsize=(12, 12))
-        ax = fig.add_subplot(1,1,1)
-        rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
 
-        for k in trange(1,len(type_list), 10):
-            for n in range(1,len(type_list[k]),10):
-                    embedding_ = model.a[to_numpy(id_list[k][n]).astype(int)]
-                    embedding_ = embedding_ * torch.ones((1000, model_config.embedding_dim), device=device)
+    max_radius = 0.04
+    fig = plt.figure(figsize=(12, 12))
+    ax = fig.add_subplot(1,1,1)
+    rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
 
-                    match model_config.particle_model_name:
-                        case 'PDE_Cell_A':
-                            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                                     rr[:, None] / max_radius, embedding_), dim=1)
-                        case 'PDE_Cell_A_area':
-                            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                                     rr[:, None] / max_radius, torch.ones_like(rr[:, None])*0.1, torch.ones_like(rr[:, None])*0.4, embedding_, embedding_), dim=1)
-                        case 'PDE_Cell_B':
-                            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                                     torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
-                                                     0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-                        case 'PDE_Cell_B_area':
-                            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                                     torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
-                                                     0 * rr[:, None], 0 * rr[:, None], torch.ones_like(rr[:, None])*0.001, torch.ones_like(rr[:, None])*0.001, embedding_, embedding_), dim=1)
+    for k in trange(1,len(type_list), 10):
+        for n in range(1,len(type_list[k]),10):
+                embedding_ = model.a[to_numpy(id_list[k][n]).astype(int)]
+                embedding_ = embedding_ * torch.ones((1000, model_config.embedding_dim), device=device)
 
-                    with torch.no_grad():
-                        func = model.lin_edge(in_features.float())
-                    func = func[:, 0]
-                    type = to_numpy(type_list[k][n])
-                    plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
-                                 color=cmap.color(type), linewidth=2)
-        plt.xlim([-max_radius, max_radius])
-        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-        ax.yaxis.set_major_locator(plt.MaxNLocator(5))
-        ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
-        fmt = lambda x, pos: '{:.1f}e-5'.format((x) * 1e5, pos)
-        ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
-        plt.xticks(fontsize=32.0)
-        plt.yticks(fontsize=32.0)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif",dpi=87)
-        plt.close()
+                match model_config.particle_model_name:
+                    case 'PDE_Cell_A':
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / max_radius, embedding_), dim=1)
+                    case 'PDE_Cell_A_area':
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                 rr[:, None] / max_radius, torch.ones_like(rr[:, None])*0.1, torch.ones_like(rr[:, None])*0.4, embedding_, embedding_), dim=1)
+                    case 'PDE_Cell_B':
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                 torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                                 0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                    case 'PDE_Cell_B_area':
+                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                 torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                                 0 * rr[:, None], 0 * rr[:, None], torch.ones_like(rr[:, None])*0.001, torch.ones_like(rr[:, None])*0.001, embedding_, embedding_), dim=1)
+
+                with torch.no_grad():
+                    func = model.lin_edge(in_features.float())
+                func = func[:, 0]
+                type = to_numpy(type_list[k][n])
+                plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
+                             color=cmap.color(type), linewidth=2)
+    plt.xlim([-max_radius, max_radius])
+    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+    ax.yaxis.set_major_locator(plt.MaxNLocator(5))
+    ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+    fmt = lambda x, pos: '{:.1f}e-5'.format((x) * 1e5, pos)
+    ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmt))
+    plt.xticks(fontsize=32.0)
+    plt.yticks(fontsize=32.0)
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif",dpi=87)
+    plt.close()
 
 def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, n_particle_types, type_list, ynorm, cmap, device):
 
