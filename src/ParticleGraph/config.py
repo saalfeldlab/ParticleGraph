@@ -30,6 +30,7 @@ class SimulationConfig(BaseModel):
     n_particles_max: int = 20000
     n_particle_types: int = 5
     n_interactions: int = 5
+    has_cell_state: bool = False
     state_type: Literal['discrete', 'sequence', 'continuous'] = 'discrete'
     state_params: list[float] =[-1]
     non_discrete_level: float = 0

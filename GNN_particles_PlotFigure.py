@@ -386,41 +386,33 @@ def plot_embedding_func_cluster_tracking(model, config, config_file, embedding_c
     return accuracy, n_clusters, new_labels
 
 
-def plot_embedding_func_cluster_state(model, config, config_file, embedding_cluster, cmap, index_particles, type_list,
-                                n_particle_types, n_particles, ynorm, epoch, log_dir, alpha, device):
+def plot_embedding_func_cluster_state(model, config, config_file, embedding_cluster, cmap, type_list, type_stack, id_list,
+                                n_particle_types, ynorm, epoch, log_dir, device):
 
-    has_no_tracking = config.training.has_no_tracking
-    has_cell_division = config.simulation.has_cell_division
     n_frames = config.simulation.n_frames
     n_particles = config.simulation.n_particles
 
-    model_a = model.a[1].clone().detach()
-    model_a = torch.reshape(model_a, (model.n_particles * model.n_frames, model.embedding_dim))
-    embedding = to_numpy(model_a)
-
     fig, ax = fig_init()
-    for n in range(n_particle_types):
-        pos = np.argwhere(type_list == n).squeeze().astype(int)
-        if pos.size > 0:
-            plt.scatter(to_numpy(model_a[pos, 0]), to_numpy(model_a[pos, 1]), s=1, color=cmap.color(n), alpha=0.01)
+    for k in range(1,len(type_list),len(type_list)//40):
+        for n in range(n_particle_types):
+            pos =torch.argwhere(type_list[k] == n)
+            if len(pos) > 0:
+                embedding = to_numpy(model.a[to_numpy(id_list[k][pos]).astype(int)].squeeze())
+                plt.scatter(embedding[:, 0], embedding[:, 1], s=1, color=cmap.color(n), alpha=1)
+
     plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
     plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/results/first_embedding_{config_file}_{epoch}.tif", dpi=170.7)
     plt.close()
 
-    if 'PDE_N' in config.graph_model.signal_model_name:
-        model_MLP_ = model.lin_phi
-    else:
-        model_MLP_ = model.lin_edge
-
     func_list, proj_interaction, index, index_next = analyze_edge_function_state(rr=[], vizualize=False, config=config,
-                                                        model_MLP=model_MLP_, model_a=model_a,
-                                                        type_list=type_list, ynorm=ynorm,
+                                                        model_MLP=model.lin_edge, model_a=model.a,
+                                                        type_stack=type_stack, ynorm=ynorm,
                                                         cmap=cmap, device=device)
 
     fig, ax = fig_init()
-    type_list_short = type_list[index]
+    type_list_short = to_numpy(type_stack[index])
     for n in range(n_particle_types):
         pos = np.argwhere(type_list_short == n).squeeze().astype(int)
         if len(pos)>0:
@@ -471,7 +463,7 @@ def plot_embedding_func_cluster(model, config, config_file, embedding_cluster, c
                                 n_particle_types, n_particles, ynorm, epoch, log_dir, alpha, device):
 
     fig, ax = fig_init()
-    if config.training.has_no_tracking:
+    if config.training.do_tracking:
         embedding = to_numpy(model.a[0:n_particles])
     else:
         embedding = get_embedding(model.a, 1)
@@ -1010,7 +1002,6 @@ def plot_generated(config, run, style, step, device):
             plt.close()
 
 
-
 def plot_confusion_matrix(index, true_labels, new_labels, n_particle_types, epoch, it, fig, ax):
     # print(f'plot confusion matrix epoch:{epoch} it: {it}')
     plt.text(-0.25, 1.1, f'{index}', ha='left', va='top', transform=ax.transAxes, fontsize=12)
@@ -1257,7 +1248,7 @@ def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
         plt.close()
 
 
-def plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logger, device):
+def plot_cell_state(config_file, epoch_list, log_dir, logger, device):
 
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
@@ -1269,7 +1260,7 @@ def plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logger, de
     cmap = CustomColorMap(config=config)
     n_runs = config.training.n_runs
     n_frames = config.simulation.n_frames
-    has_no_tracking = config.training.has_no_tracking
+    do_tracking = config.training.do_tracking
     has_cell_division = config.simulation.has_cell_division
 
     embedding_cluster = EmbeddingCluster(config)
@@ -1277,15 +1268,17 @@ def plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logger, de
     x_list, y_list, vnorm, ynorm = load_training_data(dataset_name, n_runs, log_dir, device)
     logger.info("vnorm:{:.2e},  ynorm:{:.2e}".format(to_numpy(vnorm), to_numpy(ynorm)))
 
-    type_list = torch.stack(x_list[1]).clone().detach()
-    type_list = to_numpy(type_list[:, :, 5].flatten())
-    type_list = type_list[0:len(type_list) - n_particles]
 
-    index_particles = []
-    for n in range(n_particle_types):
-        pos = np.argwhere(type_list == n)
-        pos = pos[:, 0]
-        index_particles.append(pos)
+    type_list=[]
+    type_stack = torch.stack(x_list[1])[:,:,5]
+    type_stack = torch.reshape(type_stack, ((n_frames + 1)* n_particles,1))
+
+    n_particles_max = 0
+    for k in range(n_frames+1):
+        type = x_list[1][k][:, 5]
+        type_list.append(type)
+        n_particles_max += len(type)
+    config.simulation.n_particles_max = n_particles_max
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
@@ -1297,18 +1290,20 @@ def plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logger, de
         model.load_state_dict(state_dict['model_state_dict'])
         model.eval()
 
-        if has_no_tracking == False:
-            model_a = model.a[1].clone().detach()
-        else:
-            model_a = model.a.clone().detach()
-
+        model_a = model.a.clone().detach()
         cell_id = 400
 
         alpha=0.1
+
+        id_list = []
+        for k in range(n_frames + 1):
+            ids = x_list[1][k][:, -1]
+            id_list.append(ids)
+
         accuracy, n_clusters, new_labels = plot_embedding_func_cluster_state(model, config, config_file, embedding_cluster,
-                                                                       cmap, index_particles, type_list,
-                                                                       n_particle_types, n_particles, ynorm, epoch,
-                                                                       log_dir, alpha, device)
+                                                                       cmap, type_list, type_stack, id_list,
+                                                                       n_particle_types, ynorm, epoch,
+                                                                       log_dir, device)
 
 
         print(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
@@ -4362,12 +4357,13 @@ def data_plot(config, config_file, epoch_list, device):
     match config.graph_model.particle_model_name:
         case 'PDE_Agents_A' | 'PDE_Agents_B':
             plot_agents(config_file, epoch_list, log_dir, logger, device)
+        case 'PDE_Cell_A' | 'PDE_Cell_B':
+            if config.simulation.has_cell_state:
+                plot_cell_state(config_file, epoch_list, log_dir, logger, device)
         case 'PDE_A':
             if config.simulation.non_discrete_level>0:
                 plot_attraction_repulsion_continuous(config_file, epoch_list, log_dir, logger, device)
-            elif (config.simulation.state_type != 'discrete'):
-                plot_attraction_repulsion_state(config_file, epoch_list, log_dir, logger, device)
-            elif config.training.has_no_tracking:
+            elif config.training.do_tracking:
                 plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, logger, device)
             else:
                 plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device)
@@ -4649,8 +4645,8 @@ if __name__ == '__main__':
 
     matplotlib.use("Qt5Agg")
 
-    # config_list =['arbitrary_3_sequence_d']
-    config_list =['arbitrary_3_tracking']
+    config_list = ["arbitrary_3_cell_sequence_f"]
+    # config_list = ["arbitrary_3_cell_sequence_f"]
     # # config_list = ['signal_N_100_2_d']
     # config_list = ['signal_N_100_2_a']
     # config_list = ['boids_division_model_f2']
@@ -4659,7 +4655,7 @@ if __name__ == '__main__':
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['15_0','20_0'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['1_0'], device=device)
         # plot_generated(config=config, run=0, style='white voronoi', step = 10, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 

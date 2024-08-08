@@ -1,4 +1,4 @@
-
+import matplotlib.pyplot as plt
 import umap
 from matplotlib.ticker import FormatStrFormatter
 from ParticleGraph.models import Interaction_Particle, Interaction_Agent, Interaction_Cell, Interaction_Particle_Field, Signal_Propagation, Mesh_Laplacian, Mesh_RPS
@@ -11,7 +11,7 @@ from torch_geometric.utils.convert import to_networkx
 import warnings
 import numpy as np
 import time
-
+import tqdm
 
 def linear_model(x, a, b):
     return a * x + b
@@ -649,7 +649,7 @@ def analyze_edge_function_tracking(rr=[], vizualize=False, config=None, model_ML
 
     return func_list, proj_interaction
 
-def analyze_edge_function_state(rr=[], vizualize=False, config=None, model_MLP=[], model_a=None, type_list=None, cmap=None, ynorm=None, device=None):
+def analyze_edge_function_state(rr=[], vizualize=False, config=None, model_MLP=[], model_a=None, type_stack=None, cmap=None, ynorm=None, device=None):
 
     max_radius = config.simulation.max_radius
     min_radius = config.simulation.min_radius
@@ -680,9 +680,10 @@ def analyze_edge_function_state(rr=[], vizualize=False, config=None, model_MLP=[
         else:
             rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
 
+    vizualize=True
+    fig = plt.figure(figsize=(12, 12))
     func_list = []
     for n in range(n_states):
-
         if state_hot_encoding:
             embedding_ = model_a[index[n], :] * torch.ones((1000, config.simulation.n_particle_types), device=device)
         else:
@@ -693,9 +694,10 @@ def analyze_edge_function_state(rr=[], vizualize=False, config=None, model_MLP=[
         func = func[:, 0]
         func_list.append(func)
         if vizualize:
+            type = to_numpy(type_stack[index[n]]).astype(int)
             plt.plot(to_numpy(rr),
                      to_numpy(func) * to_numpy(ynorm),
-                     color=cmap.color(type_list[index[n]].astype(int)), linewidth=8, alpha=0.1)
+                     color=cmap.color(type), linewidth=8, alpha=0.1)
     func_list = torch.stack(func_list)
     func_list_ = to_numpy(func_list)
 
