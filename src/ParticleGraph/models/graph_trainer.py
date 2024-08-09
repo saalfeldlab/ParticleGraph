@@ -123,7 +123,7 @@ def data_train_particles(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    net = f"./log/try_{config_file}/models/best_model_with_1_graphs_3.pt"
+    net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0_0.pt"
     print(f'Loading existing model {net}...')
     state_dict = torch.load(net,map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
@@ -135,7 +135,7 @@ def data_train_particles(config, config_file, device):
     logger.info(f'Learning rates: {lr}, {lr_embedding}')
     model.train()
 
-    net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs.pt"
+    net = f"./log/try_{config_file}/models/best_model_with_{n_runs-1}_graphs.pt"
     print(f'network: {net}')
     print(f'initial batch_size: {batch_size}')
     print('')
@@ -262,6 +262,14 @@ def data_train_particles(config, config_file, device):
                 #     plt.imshow(to_numpy(ghosts_particles.data[run, :, 120, :].squeeze()))
                 #     fig.savefig(f"{log_dir}/tmp_training/embedding/ghosts_{N}.jpg", dpi=300)
                 #     plt.close()
+
+            gradients = {}
+            for name, param in model.named_parameters():
+                print(name)
+                if param.grad is not None:
+                    gradients[name] = param.grad.clone().detach().cpu().numpy()
+
+            np.save('gradients_model_0_epoch_0.npy', gradients)
 
             total_loss += loss.item()
 

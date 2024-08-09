@@ -40,7 +40,7 @@ if __name__ == '__main__':
     # config_list = ["arbitrary_3_cell_sequence_d"]
     # config_list = ["arbitrary_3_cell_sequence_d_a"]
     # config_list = ["arbitrary_3_cell_sequence_f"]
-    config_list = ["arbitrary_3_cell_sequence_d_3"]
+    # config_list = ["arbitrary_3_cell_sequence_d_3"]
 
     # config_list = ["arbitrary_3_cell"]
     # config_list = ["arbitrary_3_cell_tracking"]
@@ -49,7 +49,7 @@ if __name__ == '__main__':
     # config_list = ["boids_division_tracking_ctrl"]
     # config_list = ['boids_division_model_2_tracking']
 
-    # config_list = ["arbitrary_3_test"]
+    config_list = ["boids_16_256"]
 
     for config_file in config_list:
 

@@ -1346,6 +1346,8 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, device):
         plt.savefig(f"./{log_dir}/results/learned_kinograph_{config_file}.tif", dpi=170.7)
         plt.close()
 
+        fig = plt.figure(figsize=(10, 10))
+
         GT = GT_time_series
         time_series = learned_time_series
 
@@ -4618,7 +4620,7 @@ if __name__ == '__main__':
 
     matplotlib.use("Qt5Agg")
 
-    config_list = ["arbitrary_3_cell_sequence_d","arbitrary_3_cell_sequence_d_a","arbitrary_3_cell_sequence_f"]
+    config_list = ["arbitrary_3_cell_sequence_d"]
     # config_list = ["arbitrary_3_cell_sequence_f"]
     # # config_list = ['signal_N_100_2_d']
     # config_list = ['signal_N_100_2_a']
@@ -4628,7 +4630,7 @@ if __name__ == '__main__':
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['0_40000','5_0','10_0'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['10_0'], device=device)
         # plot_generated(config=config, run=0, style='white voronoi', step = 10, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 

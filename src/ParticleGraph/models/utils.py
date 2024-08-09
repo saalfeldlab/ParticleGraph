@@ -662,6 +662,7 @@ def analyze_edge_function_state(rr=[], config=None, model_MLP=[], model_a=None, 
     true_type_list = []
     short_model_a_list = []
     rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+    fig = plt.figure(figsize=(12, 12))
     for k in range(1,len(type_list), 10):
         for n in range(1,len(type_list[k]),10):
                 short_model_a_list.append(model_a[to_numpy(id_list[k][n]).astype(int)])
@@ -689,6 +690,7 @@ def analyze_edge_function_state(rr=[], config=None, model_MLP=[], model_a=None, 
                 func = func[:, 0]
                 func_list.append(func)
                 true_type_list.append(type_list[k][n])
+                plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),color=cmap.color(int(type_list[k][n])), linewidth=2, alpha=0.25)
 
     func_list = torch.stack(func_list)
     func_list_ = to_numpy(func_list)
