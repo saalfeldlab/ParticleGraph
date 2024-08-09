@@ -394,7 +394,7 @@ def plot_embedding_func_cluster_state(model, config, config_file, embedding_clus
 
     fig, ax = fig_init()
     for k in range(0,len(type_list)):
-        for n in range(1,2):
+        for n in range(n_particle_types):
             pos =torch.argwhere(type_list[k] == n)
             if len(pos) > 0:
                 embedding = to_numpy(model.a[to_numpy(id_list[k][pos]).astype(int)].squeeze())
@@ -459,49 +459,9 @@ def plot_embedding_func_cluster_state(model, config, config_file, embedding_clus
     result = distance.min(dim=1)
     min_index = result.indices
 
-    new_labels_ = to_numpy(min_index).astype(int)
+    new_labels = to_numpy(min_index).astype(int)
 
-    median_center_list = median_center_list[new_labels_].clone().detach()
-
-    fig = plt.figure(figsize=(10, 10))
-    plt.imshow(new_labels_.reshape(n_frames+1, n_particles), cmap='tab20')
-
-
-
-
-    for k in range(len(type_list)):
-        if k==0:
-            type_stack=type_list[k]
-        else:
-            type_stack=torch.concatenate((type_stack,type_list[k]),dim=0)
-    type_stack=type_stack.squeeze()
-
-    fig = plt.figure(figsize=(10, 10))
-    plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), c=to_numpy(type_stack), s=10, cmap='tab10')
-
-    fig = plt.figure(figsize=(10, 10))
-    plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), c=new_labels_, s=1, cmap='tab10')
-
-    fig = plt.figure(figsize=(8, 8))
-    for k in range(0,len(type_list),len(type_list)//40):
-        for n in range(1,3):
-            pos =torch.argwhere(type_list[k] == n)
-            if len(pos) > 0:
-                embedding = to_numpy(model.a[to_numpy(id_list[k][pos]).astype(int)].squeeze())
-                plt.scatter(embedding[:, 0], embedding[:, 1], s=1, color=cmap.color(n), alpha=1)
-    plt.xticks([])
-    plt.yticks([])
-    plt.tight_layout()
-
-    fig = plt.figure(figsize=(8, 8))
-    for n in range(n_particle_types):
-        pos = np.argwhere(to_numpy(type_stack) == n)
-        if len(pos) > 0:
-            embedding = to_numpy(model.a[pos].squeeze())
-            plt.scatter(embedding[:, 0], embedding[:, 1], s=1, color=cmap.color(n), alpha=1)
-
-
-    accuracy = metrics.accuracy_score(to_numpy(type_stack.squeeze()), new_labels_)
+    accuracy = metrics.accuracy_score(to_numpy(type_stack.squeeze()), new_labels)
 
     return accuracy, n_clusters, new_labels
 
@@ -1367,36 +1327,11 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, device):
         plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=170.7)
         plt.close()
 
-        GT_time_series_list=[]
-        learned_time_series_list=[]
-        accuracy_list=[]
-        for cell_id in trange(n_particles):
-            GT_time_series = get_time_series(x_list=x_list[1], cell_id=cell_id, feature='type')
-            learned_time_series = get_type_time_series(new_labels=new_labels, cell_id=cell_id,
-                                                                  n_particles=n_particles, n_frames=n_frames,
-                                                                  has_cell_division=has_cell_division)
-            GT_time_series_list.append(GT_time_series)
-            learned_time_series_list.append(learned_time_series)
-            accuracy = metrics.accuracy_score(GT_time_series[0:250], learned_time_series[0:250])
-            accuracy_list.append(accuracy)
-        GT_time_series = np.stack(GT_time_series_list)
-        learned_time_series = np.stack(learned_time_series_list)
-        accuracy = np.array(accuracy_list)
-
-        tmp = np.reshape(new_labels, (n_frames + 1, n_particles))
-
-        cell_id = 480
-        GT_time_series = get_time_series(x_list=x_list[1], cell_id=cell_id, feature='type')
-        learned_time_series = get_type_time_series(new_labels=new_labels, cell_id=cell_id,
-                                                   n_particles=n_particles, n_frames=n_frames,
-                                                   has_cell_division=has_cell_division)
-        fig = plt.figure(figsize=(8, 8))
-        plt.imshow(tmp)
-
-        print(f'accuracy: {np.mean(accuracy)} +/- {np.std(accuracy)}')
+        learned_time_series = np.reshape(new_labels, (n_frames + 1, n_particles))
+        GT_time_series = np.reshape(to_numpy(type_stack), (n_frames + 1, n_particles))
 
         fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
-        plt.imshow(GT_time_series, aspect='auto', cmap='tab10',vmin=0, vmax=2)
+        plt.imshow(np.rot90(GT_time_series), aspect='auto', cmap='tab10',vmin=0, vmax=2)
         plt.xlabel('frame', fontsize=78)
         plt.ylabel('cell_id', fontsize=78)
         plt.tight_layout()
@@ -1404,30 +1339,30 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, device):
         plt.close()
 
         fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
-        plt.imshow(learned_time_series, aspect='auto', cmap='tab10',vmin=0, vmax=2)
+        plt.imshow(np.rot90(learned_time_series), aspect='auto', cmap='tab10',vmin=0, vmax=2)
         plt.xlabel('frame', fontsize=78)
         plt.ylabel('cell_id', fontsize=78)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/learned_kinograph_{config_file}.tif", dpi=170.7)
         plt.close()
 
-        GT = GT_time_series[:,0:n_frames]
+        GT = GT_time_series
         time_series = learned_time_series
 
         new_time_series = 0 * time_series
         accuracy_list = []
         for k in trange(n_particles):
-            input = time_series[k]
+            input = time_series[:,k]
             output = median_filter(input, size=5, mode='nearest')
-            new_time_series[k] = output
-            accuracy = metrics.accuracy_score(GT[k], output)
+            new_time_series[:,k] = output
+            accuracy = metrics.accuracy_score(GT[:,k], output)
             accuracy_list.append(accuracy)
 
         accuracy = np.array(accuracy_list)
         print(f'accuracy: {np.mean(accuracy)} +/- {np.std(accuracy)}')
 
         fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
-        plt.imshow(new_time_series, aspect='auto', cmap='tab10',vmin=0, vmax=2)
+        plt.imshow(np.rot90(new_time_series), aspect='auto', cmap='tab10',vmin=0, vmax=2)
         plt.xlabel('frame', fontsize=78)
         plt.ylabel('cell_id', fontsize=78)
         plt.tight_layout()
@@ -4683,7 +4618,7 @@ if __name__ == '__main__':
 
     matplotlib.use("Qt5Agg")
 
-    config_list = ["arbitrary_3_cell_sequence_d"]
+    config_list = ["arbitrary_3_cell_sequence_d","arbitrary_3_cell_sequence_d_a","arbitrary_3_cell_sequence_f"]
     # config_list = ["arbitrary_3_cell_sequence_f"]
     # # config_list = ['signal_N_100_2_d']
     # config_list = ['signal_N_100_2_a']
@@ -4693,7 +4628,7 @@ if __name__ == '__main__':
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['0_40000'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['0_40000','5_0','10_0'], device=device)
         # plot_generated(config=config, run=0, style='white voronoi', step = 10, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 

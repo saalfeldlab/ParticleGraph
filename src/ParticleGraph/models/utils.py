@@ -662,8 +662,8 @@ def analyze_edge_function_state(rr=[], config=None, model_MLP=[], model_a=None, 
     true_type_list = []
     short_model_a_list = []
     rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
-    for k in range(1,len(type_list), 5):
-        for n in range(1,len(type_list[k]),5):
+    for k in range(1,len(type_list), 10):
+        for n in range(1,len(type_list[k]),10):
                 short_model_a_list.append(model_a[to_numpy(id_list[k][n]).astype(int)])
                 embedding_ = model_a[to_numpy(id_list[k][n]).astype(int)]
                 embedding_ = embedding_ * torch.ones((1000, config.simulation.dimension), device=device)

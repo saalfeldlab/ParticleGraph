@@ -38,8 +38,9 @@ if __name__ == '__main__':
         pass
 
     # config_list = ["arbitrary_3_cell_sequence_d"]
-    config_list = ["arbitrary_3_cell_sequence_d_a"]
+    # config_list = ["arbitrary_3_cell_sequence_d_a"]
     # config_list = ["arbitrary_3_cell_sequence_f"]
+    config_list = ["arbitrary_3_cell_sequence_d_3"]
 
     # config_list = ["arbitrary_3_cell"]
     # config_list = ["arbitrary_3_cell_tracking"]
@@ -51,6 +52,8 @@ if __name__ == '__main__':
     # config_list = ["arbitrary_3_test"]
 
     for config_file in config_list:
+
+
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         device = set_device(config.training.device)
         print(f'device {device}')
