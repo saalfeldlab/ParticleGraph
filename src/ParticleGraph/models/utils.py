@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import torch
 import umap
 from matplotlib.ticker import FormatStrFormatter
 from ParticleGraph.models import Interaction_Particle, Interaction_Agent, Interaction_Cell, Interaction_Particle_Field, Signal_Propagation, Mesh_Laplacian, Mesh_RPS

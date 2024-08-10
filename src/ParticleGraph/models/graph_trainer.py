@@ -14,12 +14,13 @@ from ParticleGraph.data_loaders import load_agent_data
 from sklearn.neighbors import NearestNeighbors
 from scipy.ndimage import median_filter
 from ParticleGraph.generators.cell_utils import *
+import torch.nn.functional as F
 
 def data_train(config, config_file, device):
 
     # matplotlib.use("Qt5Agg")
 
-    Try:
+    try:
         plt.rcParams['text.usetex'] = True
         rc('font', **{'family': 'serif', 'serif': ['Palatino']})
         matplotlib.rcParams['savefig.pad_inches'] = 0
@@ -668,8 +669,6 @@ def data_train_cell(config, config_file, device):
 
         if (do_sparsity) and (epoch % sparsity_freq == 0):
 
-                sparsify_model(config, model, device)
-
                 fig, ax = fig_init()
                 func_list, true_type_list, short_model_a_list, proj_interaction = analyze_edge_function_state(rr=[],
                                                                                                               config=config,
@@ -725,27 +724,28 @@ def data_train_cell(config, config_file, device):
                 plt.tight_layout()
                 y_func_list = torch.stack(y_func_list)
 
-                model_b = []
-                for k in range(n_clusters):
-                    b = [np.cos(k * 2 * np.pi / n_clusters), np.sin(k * 2 * np.pi / 3)]
-                    model_b.append(b)
-                model_b = np.array(model_b)
-                model.b = nn.Parameter(torch.tensor(model_b, dtype=torch.float32, requires_grad=True, device=device))
+                # model_b = []
+                # for k in range(n_clusters):
+                #     b = [np.cos(k * 2 * np.pi / n_clusters), np.sin(k * 2 * np.pi / 3)]
+                #     model_b.append(b)
+                # model_b = np.array(model_b)
+                # model.b = nn.Parameter(torch.tensor(model_b, dtype=torch.float32, requires_grad=True, device=device))
+                median_center_list = to_numpy(median_center_list)
+                model.b = nn.Parameter(torch.tensor(median_center_list, dtype=torch.float32, requires_grad=False, device=device))
 
                 lr_embedding = 1E-12
                 lr = 5E-2
                 optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-                sub_loops = 32
-
-                for loop in trange(10000):
+                sub_loops = 100
+                for loop in trange(1000):
                     rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
                     pred = []
                     index_list = np.random.randint(0, 3, sub_loops)
                     optimizer.zero_grad()
-                    fig, ax = fig_init()
                     for n in range(sub_loops):
                         index = np.random.randint(0, 3)
-                        c = model_b[index_list[n]] + 0.5 * torch.randn(2, device=device)
+                        c = model.b[index_list[n]]
+                        c = c + 0.1 * torch.randn_like(c, device=device)
                         embedding_ = c * torch.ones((1000, model_config.embedding_dim), device=device)
                         match model_config.particle_model_name:
                             case 'PDE_ParticleField_A' | 'PDE_A' | 'PDE_Cell_A':
@@ -760,12 +760,33 @@ def data_train_cell(config, config_file, device):
                                      0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
                         pred_ = model.lin_edge(in_features.float())
                         pred.append(pred_)
-                        plt.scatter(to_numpy(rr), to_numpy(pred_[:,0]), color=cmap.color(index_list[n]), linewidths=0.1, alpha=0.01)
                     pred = torch.stack(pred)
                     loss = (pred[:, :, 0] - y_func_list[index_list].clone().detach()).norm(2)
-                    # print(f'    loss: {np.round(loss.item() / n_particles, 3)}')
                     loss.backward()
                     optimizer.step()
+
+                    sub_loops = 1000
+                    index_list = np.random.randint(0, 3, sub_loops)
+                    optimizer.zero_grad()
+                    fig, ax = fig_init()
+                    for n in range(sub_loops):
+                        index = np.random.randint(0, 3)
+                        c = model.b[index_list[n]]
+                        c = c + 0.1 * torch.randn_like(c, device=device)
+                        embedding_ = c * torch.ones((1000, model_config.embedding_dim), device=device)
+                        in_features = torch.cat(
+                            (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                             rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
+                        pred_ = model.lin_edge(in_features.float())
+                        plt.scatter(to_numpy(rr), to_numpy(pred_[:,0]), color=cmap.color(index_list[n]), linewidths=0.1, alpha=0.01)
+
+                    num_classes = 3
+                    class_values = torch.tensor([0, 1, 2, 1, 0])
+                    one_hot_vectors = F.one_hot(torch.tensor(new_labels), num_classes)
+
+                    a = torch.randint(0, 3, (1000, 1))
+
+                    torch.save('one_hot_vectors',one_hot_vectors)
 
 
 
