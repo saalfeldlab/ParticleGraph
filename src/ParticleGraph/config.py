@@ -122,7 +122,7 @@ class TrainingConfig(BaseModel):
     seed : int = 40
     clamp: float = 0
     pred_limit: float = 1.E+10
-    sparsity: Literal['none', 'replace_embedding', 'replace_embedding_function'] = 'none'
+    sparsity: Literal['none', 'replace_embedding', 'replace_embedding_function', 'replace_state', 'replace_track'] = 'none'
     sparsity_freq : int = 5
     particle_dropout: float = 0
     n_ghosts: int = 0

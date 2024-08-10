@@ -1,5 +1,5 @@
 # TODO: IN PROGRESS
-from ParticleGraph.embedding_cluster import *
+from ParticleGraph.sparsify import *
 # from GNN_particles_Ntype import cc
 from ParticleGraph.utils import to_numpy
 from tqdm import trange

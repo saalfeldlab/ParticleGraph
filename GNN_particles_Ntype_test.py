@@ -22,7 +22,7 @@ from prettytable import PrettyTable
 
 from ParticleGraph.config import ParticleGraphConfig
 from ParticleGraph.data_loaders import *
-from ParticleGraph.embedding_cluster import *
+from ParticleGraph.sparsify import *
 from ParticleGraph.fitting_models import linear_model
 
 from ParticleGraph.generators.utils import *

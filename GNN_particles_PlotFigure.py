@@ -14,7 +14,7 @@ os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 # from data_loaders import *
 
 from GNN_particles_Ntype import *
-from ParticleGraph.embedding_cluster import *
+from ParticleGraph.sparsify import *
 from ParticleGraph.models.utils import *
 from ParticleGraph.models.MLP import *
 from ParticleGraph.utils import to_numpy, CustomColorMap
@@ -406,10 +406,12 @@ def plot_embedding_func_cluster_state(model, config, config_file, embedding_clus
     plt.savefig(f"./{log_dir}/results/first_embedding_{config_file}_{epoch}.tif", dpi=170.7)
     plt.close()
 
+    fig, ax = fig_init()
     func_list, true_type_list, short_model_a_list, proj_interaction = analyze_edge_function_state(rr=[], config=config,
                                                         model_MLP=model.lin_edge, model_a=model.a,
                                                         id_list=id_list, type_list=type_list, ynorm=ynorm,
-                                                        cmap=cmap, device=device)
+                                                        cmap=cmap, visualize=True, device=device)
+    np.save(f"./{log_dir}/results/function_{config_file}_{epoch}.npy", proj_interaction)
 
     fig, ax = fig_init()
     for n in range(n_particle_types):
