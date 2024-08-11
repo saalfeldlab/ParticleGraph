@@ -453,14 +453,13 @@ def plot_training_cell_tracking(config, id_list, dataset_name, log_dir, epoch, N
     train_config = config.training
     model_config = config.graph_model
 
-
     fig = plt.figure(figsize=(8, 8))
     for k in range(1,len(type_list),len(type_list)//40):
         for n in range(n_particle_types):
             pos =torch.argwhere(type_list[k] == n)
             if len(pos) > 0:
                 if model.use_hot_encoding:
-                    embedding = model.cc + torch.matmul(model.a[to_numpy(id_list[k][pos]).astype(int), :], model.basis).squeeze()
+                    embedding = to_numpy(model.cc + torch.matmul(model.a[to_numpy(id_list[k][pos]).astype(int), :], model.basis).squeeze())
                 else:
                     embedding = to_numpy(model.a[to_numpy(id_list[k][pos]).astype(int)].squeeze())
                 plt.scatter(embedding[:, 0], embedding[:, 1], s=1, color=cmap.color(n), alpha=1)
@@ -481,7 +480,7 @@ def plot_training_cell_tracking(config, id_list, dataset_name, log_dir, epoch, N
                 if model.use_hot_encoding:
                     embedding_ = model.cc + torch.matmul(model.a[to_numpy(id_list[k][pos]).astype(int), :], model.basis).squeeze()
                 else:
-                    embedding_ = to_numpy(model.a[to_numpy(id_list[k][pos]).astype(int)].squeeze())
+                    embedding_ = model.a[to_numpy(id_list[k][pos]).astype(int)].squeeze()
                 embedding_ = embedding_ * torch.ones((1000, model_config.embedding_dim), device=device)
 
                 match model_config.particle_model_name:
@@ -716,13 +715,13 @@ def analyze_edge_function_state(rr=[], config=None, model_MLP=[], model_a=None, 
         warnings.simplefilter('ignore')
         trans = umap.UMAP(n_neighbors=100, n_components=2, transform_queue_size=0).fit(func_list_)
     computation_time = time.time() - start_time
-    print(f"UMAP computation time is {computation_time} seconds.")
+    print(f"UMAP computation time is {np.round(computation_time)} seconds.")
 
     proj_interaction = trans.transform(func_list_)
     proj_interaction = (proj_interaction - np.min(proj_interaction)) / (np.max(proj_interaction) - np.min(proj_interaction) + 1e-10)
 
     computation_time = time.time() - start_time
-    print(f"dimension reduction computation time is {computation_time} seconds.")
+    print(f"dimension reduction computation time is {np.round(computation_time)} seconds.")
 
     return func_list, true_type_list, short_model_a_list, proj_interaction
 
