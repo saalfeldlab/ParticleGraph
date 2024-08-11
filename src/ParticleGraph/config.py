@@ -123,6 +123,7 @@ class TrainingConfig(BaseModel):
     clamp: float = 0
     pred_limit: float = 1.E+10
     sparsity: Literal['none', 'replace_embedding', 'replace_embedding_function', 'replace_state', 'replace_track'] = 'none'
+    use_hot_encoding: bool = False
     sparsity_freq : int = 5
     particle_dropout: float = 0
     n_ghosts: int = 0

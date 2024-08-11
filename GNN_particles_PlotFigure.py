@@ -933,10 +933,10 @@ def plot_generated(config, run, style, step, device):
                 # plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
                 #             s=marker_size, color=cmap.color(n))
 
-                size = set_size(x, index_particles[n], 10)
+                size = set_size(x, index_particles[n], 10) / 10
 
                 plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                            s=size/10, color=cmap.color(n))
+                            s=40, color=cmap.color(n))
             dead_cell = np.argwhere(to_numpy(H1[:, 0]) == 0)
             if len(dead_cell) > 0:
                 plt.scatter(to_numpy(X1[dead_cell[:, 0].squeeze(), 0]), to_numpy(X1[dead_cell[:, 0].squeeze(), 1]),
@@ -1333,7 +1333,7 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, device):
         GT_time_series = np.reshape(to_numpy(type_stack), (n_frames + 1, n_particles))
 
         fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
-        plt.imshow(np.rot90(GT_time_series), aspect='auto', cmap='tab10',vmin=0, vmax=2)
+        plt.imshow(np.rot90(GT_time_series[:,0:80]), aspect='auto', cmap='tab10',vmin=0, vmax=2)
         plt.xlabel('frame', fontsize=78)
         plt.ylabel('cell_id', fontsize=78)
         plt.tight_layout()
@@ -1341,7 +1341,7 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, device):
         plt.close()
 
         fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
-        plt.imshow(np.rot90(learned_time_series), aspect='auto', cmap='tab10',vmin=0, vmax=2)
+        plt.imshow(np.rot90(learned_time_series[:,0:80]), aspect='auto', cmap='tab10',vmin=0, vmax=2)
         plt.xlabel('frame', fontsize=78)
         plt.ylabel('cell_id', fontsize=78)
         plt.tight_layout()
@@ -4622,8 +4622,8 @@ if __name__ == '__main__':
 
     matplotlib.use("Qt5Agg")
 
-    config_list = ["arbitrary_3_cell_sequence_d"]
-    # config_list = ["arbitrary_3_cell_sequence_f"]
+    # config_list = ["arbitrary_3_cell_sequence_d"]
+    config_list = ["arbitrary_3_cell_sequence_f"]
     # # config_list = ['signal_N_100_2_d']
     # config_list = ['signal_N_100_2_a']
     # config_list = ['boids_division_model_f2']
@@ -4632,8 +4632,8 @@ if __name__ == '__main__':
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['10_0'], device=device)
-        # plot_generated(config=config, run=0, style='white voronoi', step = 10, device=device)
+        # data_plot(config=config, config_file=config_file, epoch_list=['10_0'], device=device)
+        plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 
     # f_list = ['supp13']

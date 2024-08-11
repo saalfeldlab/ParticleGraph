@@ -459,7 +459,10 @@ def plot_training_cell_tracking(config, id_list, dataset_name, log_dir, epoch, N
         for n in range(n_particle_types):
             pos =torch.argwhere(type_list[k] == n)
             if len(pos) > 0:
-                embedding = to_numpy(model.a[to_numpy(id_list[k][pos]).astype(int)].squeeze())
+                if model.use_hot_encoding:
+                    embedding = model.cc + torch.matmul(model.a[to_numpy(id_list[k][pos]).astype(int), :], model.basis).squeeze()
+                else:
+                    embedding = to_numpy(model.a[to_numpy(id_list[k][pos]).astype(int)].squeeze())
                 plt.scatter(embedding[:, 0], embedding[:, 1], s=1, color=cmap.color(n), alpha=1)
     plt.xticks([])
     plt.yticks([])
@@ -475,7 +478,10 @@ def plot_training_cell_tracking(config, id_list, dataset_name, log_dir, epoch, N
 
     for k in range(1,len(type_list), 10):
         for n in range(1,len(type_list[k]),10):
-                embedding_ = model.a[to_numpy(id_list[k][n]).astype(int)]
+                if model.use_hot_encoding:
+                    embedding_ = model.cc + torch.matmul(model.a[to_numpy(id_list[k][pos]).astype(int), :], model.basis).squeeze()
+                else:
+                    embedding_ = to_numpy(model.a[to_numpy(id_list[k][pos]).astype(int)].squeeze())
                 embedding_ = embedding_ * torch.ones((1000, model_config.embedding_dim), device=device)
 
                 match model_config.particle_model_name:
@@ -703,8 +709,6 @@ def analyze_edge_function_state(rr=[], config=None, model_MLP=[], model_a=None, 
     true_type_list = torch.stack(true_type_list)
     true_type_list = to_numpy(true_type_list)
     short_model_a_list = torch.stack(short_model_a_list)
-
-
 
     print('UMAP reduction ...')
     start_time = time.time()
