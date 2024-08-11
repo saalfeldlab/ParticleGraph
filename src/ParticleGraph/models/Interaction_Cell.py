@@ -92,7 +92,7 @@ class Interaction_Cell(pyg.nn.MessagePassing):
         if self.do_tracking | self.has_state:
             particle_id = x[:, -1][:, None]
             if self.use_hot_encoding:
-                embedding = self.cc + torch.matmul(self.a[to_numpy(particle_id), :], self.basis).squeeze()
+                embedding = self.cc.clone().detach() + torch.matmul(self.a[to_numpy(particle_id), :], self.basis.clone().detach()).squeeze()
             else:
                 embedding = self.a[to_numpy(particle_id), :].squeeze()
         else:

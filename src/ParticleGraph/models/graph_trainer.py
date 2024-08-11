@@ -248,6 +248,9 @@ def data_train_particles(config, config_file, device):
             else:
                 loss = (pred - y_batch).norm(2)
 
+            loss.backward()
+            optimizer.step()
+
             visualize_embedding = True
             if visualize_embedding & (((epoch < 30 ) & (N%(Niter//50) == 0)) | (N==0)):
                 plot_training(config=config, dataset_name=dataset_name, log_dir=log_dir,
@@ -255,9 +258,6 @@ def data_train_particles(config, config_file, device):
                               index_particles=index_particles, n_particles=n_particles,
                               n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
                 torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
-
-            loss.backward()
-            optimizer.step()
 
             if has_ghost:
                 optimizer_ghost_particles.step()
@@ -628,8 +628,12 @@ def data_train_cell(config, config_file, device):
                 else:
                     loss = (pred - y_batch).norm(2) # + model.a.norm(1) * 1E-3
 
-                visualize_embedding = True
+                loss.backward()
+                optimizer.step()
 
+                total_loss += loss.item()
+
+                visualize_embedding = True
                 if visualize_embedding & (((epoch < 10 ) & (N%(Niter//20) == 0)) | (N==0)):
                     if do_tracking | has_state :
                         id_list = []
@@ -647,10 +651,7 @@ def data_train_cell(config, config_file, device):
                     t, r, a = get_gpu_memory_map(device)
                     logger.info(f"GPU memory: total {t} reserved {r} allocated {a}")
 
-                loss.backward()
-                optimizer.step()
 
-                total_loss += loss.item()
 
             print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
             logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
@@ -725,6 +726,7 @@ def data_train_cell(config, config_file, device):
             #     model_b.append(b)
             # model_b = np.array(model_b)
             # model.b = nn.Parameter(torch.tensor(model_b, dtype=torch.float32, requires_grad=True, device=device))
+
             median_center_list = to_numpy(median_center_list)
             model.b = nn.Parameter(torch.tensor(median_center_list, dtype=torch.float32, requires_grad=False, device=device))
 
@@ -774,8 +776,11 @@ def data_train_cell(config, config_file, device):
                      rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
                 pred_ = model.lin_edge(in_features.float())
                 plt.scatter(to_numpy(rr), to_numpy(pred_[:,0]), color=cmap.color(index_list[n]), linewidths=0.1, alpha=0.01)
+            plt.savefig(f"./{log_dir}/tmp_training/re-trained MLP.tif")
+            plt.close()
 
-            model.b = nn.Parameter(torch.tensor(median_center_list, dtype=torch.float32, requires_grad=False, device=device))
+
+
             A = model.b[0, :].T
             B = model.b[1, :].T
             C = model.b[2, :].T
@@ -783,11 +788,12 @@ def data_train_cell(config, config_file, device):
             a = A - C
             b = B - C
             cc = cross2(sq2(a) * b - sq2(b) * a, a, b) / (2 * ncross2(a, b)) + C
-            model.cc = cc.t()
+            model.cc = cc.t().clone().detach()
             model.basis = model.b - model.cc
+            model.basis = model.basis.clone().detach()
             hot_vectors = F.one_hot(torch.tensor(new_labels), n_particle_types)
             hot_vectors = to_numpy(hot_vectors)
-            hot_vectors = hot_vectors + 0.25 * np.random.randn(hot_vectors.shape[0], hot_vectors.shape[1])
+            hot_vectors = hot_vectors + 0.15 * np.random.randn(hot_vectors.shape[0], hot_vectors.shape[1])
             model.a = nn.Parameter(torch.tensor(hot_vectors, dtype=torch.float32, requires_grad=True, device=device))
             embedding = model.cc + torch.matmul(model.a, model.basis)
             model.use_hot_encoding = True
@@ -799,11 +805,29 @@ def data_train_cell(config, config_file, device):
                 pos = np.argwhere(new_labels == k).squeeze().astype(int)
                 plt.scatter(to_numpy(embedding[pos, 0]), to_numpy(embedding[pos, 1]), s=1, alpha=0.01)
             plt.scatter(to_numpy(model.b[:, 0]), to_numpy(model.b[:, 1]), s=100, c='k')
+            plt.savefig(f"./{log_dir}/tmp_training/hot encoding.tif")
+            plt.close()
 
 
+            sub_loops = 1000
+            index_list = np.random.randint(0, 3, sub_loops)
+            optimizer.zero_grad()
+            fig, ax = fig_init()
+            for n in range(sub_loops):
+                index = np.random.randint(0, 3)
+                c = model.b[index_list[n]]
+                c = c + 0.1 * torch.randn_like(c, device=device)
+                embedding_ = c * torch.ones((1000, model_config.embedding_dim), device=device)
+                in_features = torch.cat(
+                    (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                     rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
+                pred_ = model.lin_edge(in_features.float())
+                plt.scatter(to_numpy(rr), to_numpy(pred_[:,0]), color=cmap.color(index_list[n]), linewidths=0.1, alpha=0.01)
+            plt.savefig(f"./{log_dir}/tmp_training/check re-trained MLP.tif")
+            plt.close()
 
-            lr = 1E-12
-            lr_embedding = 1E-3
+            lr = train_config.learning_rate_start / 10
+            lr_embedding = train_config.learning_rate_embedding_start / 100
             optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
 
 
