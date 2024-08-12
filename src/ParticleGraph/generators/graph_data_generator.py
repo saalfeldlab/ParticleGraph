@@ -383,6 +383,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
     #     logger.removeHandler(handler)
 
 
+
 def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,
                        ratio=1, scenario='none', device=None, bSave=True):
     torch.random.fork_rng(devices=device)
@@ -518,6 +519,11 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             if has_cell_death:
                 # cell death
                 sample = torch.rand(len(X1), device=device)
+                if True:
+                    H1[X1[:,0]<0] = 0
+                    H1[X1[:,0]>1] = 0
+                    H1[X1[:,1]<0] = 0
+                    H1[X1[:,1]>1] = 0
                 H1[sample.squeeze() < DR1.squeeze() / 5E4, 0] = 0
                 # removal if too small
                 pos = torch.argwhere((AR1.squeeze()<2E-4) & (A1.squeeze() > 25))
