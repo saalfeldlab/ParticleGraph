@@ -408,7 +408,7 @@ def plot_embedding_func_cluster_state(model, config, config_file, embedding_clus
 
     fig, ax = fig_init()
     func_list, true_type_list, short_model_a_list, proj_interaction = analyze_edge_function_state(rr=[], config=config,
-                                                        model_MLP=model.lin_edge, model_a=model.a,
+                                                        model=model,
                                                         id_list=id_list, type_list=type_list, ynorm=ynorm,
                                                         cmap=cmap, visualize=True, device=device)
     np.save(f"./{log_dir}/results/function_{config_file}_{epoch}.npy", proj_interaction)
@@ -1291,6 +1291,7 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, device):
         n_particles_max += len(type)
     config.simulation.n_particles_max = n_particles_max
 
+    config.training.use_hot_encoding = True
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
     for epoch in epoch_list:
@@ -1303,6 +1304,10 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, device):
 
         fig = plt.figure(figsize=(10, 10))
         plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), c=to_numpy(type_stack), s=1, cmap='tab10')
+
+        fig = plt.figure(figsize=(10, 10))
+        ax = fig.add_subplot(1, 1, 1, projection='3d')
+        ax.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), to_numpy(model.a[:, 2]), c=to_numpy(type_stack), s=1, cmap='tab20')
 
         accuracy, n_clusters, new_labels = plot_embedding_func_cluster_state(model, config, config_file, embedding_cluster,
                                                                        cmap, type_list, type_stack, id_list,
@@ -4622,8 +4627,8 @@ if __name__ == '__main__':
 
     matplotlib.use("Qt5Agg")
 
-    # config_list = ["arbitrary_3_cell_sequence_d"]
-    config_list = ["arbitrary_3_cell_sequence_f"]
+    config_list = ["arbitrary_3_cell_sequence_d_bis"]
+    # config_list = ["arbitrary_3_cell_sequence_f"]
     # # config_list = ['signal_N_100_2_d']
     # config_list = ['signal_N_100_2_a']
     # config_list = ['boids_division_model_f2']
@@ -4632,8 +4637,8 @@ if __name__ == '__main__':
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        # data_plot(config=config, config_file=config_file, epoch_list=['10_0'], device=device)
-        plot_generated(config=config, run=0, style='color', step = 2, device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['40_0'], device=device)
+        # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 
     # f_list = ['supp13']

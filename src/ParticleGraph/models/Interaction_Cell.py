@@ -38,6 +38,7 @@ class Interaction_Cell(pyg.nn.MessagePassing):
         self.hidden_dim = model_config.hidden_dim
         self.n_layers = model_config.n_mp_layers
         self.n_particles = simulation_config.n_particles
+        self.n_particle_types = simulation_config.n_particle_types
         self.max_radius = simulation_config.max_radius
         self.data_augmentation = train_config.data_augmentation
         self.noise_level = train_config.noise_level
@@ -63,10 +64,18 @@ class Interaction_Cell(pyg.nn.MessagePassing):
                                 hidden_size=self.hidden_dim, device=self.device, initialisation='zeros')
 
         if self.do_tracking | self.has_state:
-            self.a = nn.Parameter(torch.tensor(np.ones((self.n_particles_max, self.embedding_dim)), device=self.device, requires_grad=True, dtype=torch.float32))
+            if self.use_hot_encoding:
+                self.a = nn.Parameter(torch.tensor(np.ones((self.n_particles_max, self.n_particle_types)), device=self.device,
+                                     requires_grad=True, dtype=torch.float32))
+            else:
+                self.a = nn.Parameter(torch.tensor(np.ones((self.n_particles_max, self.embedding_dim)), device=self.device, requires_grad=True, dtype=torch.float32))
         else:
             self.a = nn.Parameter(torch.tensor(np.ones((self.n_dataset, self.n_particles_max, 2)), device=self.device, requires_grad=True, dtype=torch.float32))
 
+        if self.use_hot_encoding:
+            self.cc = nn.Parameter(torch.tensor(np.zeros((self.embedding_dim)), device=self.device, requires_grad=False, dtype=torch.float32))
+            self.b = nn.Parameter(torch.tensor(np.zeros((self.n_particle_types, self.embedding_dim)), device=self.device, requires_grad=False, dtype=torch.float32))
+            self.basis = nn.Parameter(torch.tensor(np.zeros((self.n_particle_types, self.embedding_dim)), device=self.device, requires_grad=False, dtype=torch.float32))
 
 
     def forward(self, data=[], data_id=[], training=[], vnorm=[], phi=[], has_field=False, frame=[]):

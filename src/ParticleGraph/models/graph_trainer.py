@@ -519,9 +519,9 @@ def data_train_cell(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    net = f"./log/try_{config_file}/models/best_model_with_1_graphs_10.pt"
-    state_dict = torch.load(net,map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
+    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_1.pt"
+    # state_dict = torch.load(net,map_location=device)
+    # model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -563,111 +563,109 @@ def data_train_cell(config, config_file, device):
         total_loss = 0
         Niter = n_frames * data_augmentation_loop // batch_size
 
-        if epoch>2:
-            for N in trange(Niter):
+        for N in trange(Niter):
 
-                phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
-                cos_phi = torch.cos(phi)
-                sin_phi = torch.sin(phi)
+            phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
+            cos_phi = torch.cos(phi)
+            sin_phi = torch.sin(phi)
 
-                run = 1 + np.random.randint(n_runs - 1)
+            run = 1 + np.random.randint(n_runs - 1)
 
-                dataset_batch = []
-                frame_list = []
+            dataset_batch = []
+            frame_list = []
 
-                for batch in range(batch_size):
+            for batch in range(batch_size):
 
-                    k = np.random.randint(n_frames - 2)
-                    frame_list.append(k)
+                k = np.random.randint(n_frames - 2)
+                frame_list.append(k)
 
-                    x = x_list[run][k].clone().detach()
+                x = x_list[run][k].clone().detach()
 
-                    edges = edge_p_p_list[run][f'arr_{k}']
-                    edges = torch.tensor(edges, dtype=torch.int64, device=device)
-                    dataset = data.Data(x=x[:, :], edge_index=edges)
-                    dataset_batch.append(dataset)
+                edges = edge_p_p_list[run][f'arr_{k}']
+                edges = torch.tensor(edges, dtype=torch.int64, device=device)
+                dataset = data.Data(x=x[:, :], edge_index=edges)
+                dataset_batch.append(dataset)
 
-                    y = y_list[run][k].clone().detach()
-                    if noise_level > 0:
-                        y = y * (1 + torch.randn_like(y) * noise_level)
-                    y = y / ynorm
-                    if batch == 0:
-                        y_batch = y[:, 0:2]
-                    else:
-                        y_batch = torch.cat((y_batch, y[:, 0:2]), dim=0)
-
-                batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
-
-                optimizer.zero_grad()
-
-                for i, batch in enumerate(batch_loader):
-                    pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=True, frame=frame_list[i])
-                if data_augmentation:
-                    new_x = cos_phi * pred[:, 0] - sin_phi * pred[:, 1]
-                    new_y = sin_phi * pred[:, 0] + cos_phi * pred[:, 1]
-                    pred[:, 0] = new_x
-                    pred[:, 1] = new_y
-
-                if do_tracking:
-                    x_next = x_list[run][k+1]
-                    x_pos_next = x_next[:,1:3].clone().detach()
-                    if model_config.prediction == '2nd_derivative':
-                        x_pos_pred = (x[:, 1:3] + delta_t * (x[:, 3:5] + delta_t * pred * ynorm))
-                    else:
-                        x_pos_pred = (x[:,1:3] + delta_t * pred * ynorm)
-                    distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
-                    result = distance.min(dim=1)
-                    min_value = result.values
-                    pos_pre = min_value
-                    indices = result.indices
-                    pos = torch.argwhere(min_value < 0.5E-5)
-                    if model_config.prediction == '2nd_derivative':
-                        loss = torch.sum(pos_pre[pos])*1E8
-                    else:
-                        loss = torch.sum(pos_pre)*1E5
+                y = y_list[run][k].clone().detach()
+                if noise_level > 0:
+                    y = y * (1 + torch.randn_like(y) * noise_level)
+                y = y / ynorm
+                if batch == 0:
+                    y_batch = y[:, 0:2]
                 else:
-                    loss = (pred - y_batch).norm(2) # + model.a.norm(1) * 1E-3
+                    y_batch = torch.cat((y_batch, y[:, 0:2]), dim=0)
 
-                loss.backward()
-                optimizer.step()
+            batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
 
-                total_loss += loss.item()
+            optimizer.zero_grad()
 
-                visualize_embedding = True
-                if visualize_embedding & (((epoch < 10 ) & (N%(Niter//20) == 0)) | (N==0)):
-                    if do_tracking | has_state :
-                        id_list = []
-                        for k in range(n_frames + 1):
-                            ids = x_list[1][k][:, -1]
-                            id_list.append(ids)
-                        plot_training_cell_tracking(config=config, id_list=id_list, dataset_name=dataset_name, log_dir=log_dir,
-                                           epoch=epoch, N=N, model=model, n_particle_types=n_particle_types,
-                                           type_list=type_list, ynorm=ynorm, cmap=cmap, device=device)
-                    else:
-                        plot_training_cell(config=config, dataset_name=dataset_name, log_dir=log_dir,
-                                  epoch=epoch, N=N, model=model, n_particle_types=n_particle_types, type_list=T1_list[1], ynorm=ynorm, cmap=cmap, device=device)
-                    torch.save({'model_state_dict': model.state_dict(),
-                                'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
-                    t, r, a = get_gpu_memory_map(device)
-                    logger.info(f"GPU memory: total {t} reserved {r} allocated {a}")
+            for i, batch in enumerate(batch_loader):
+                pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=True, frame=frame_list[i])
+            if data_augmentation:
+                new_x = cos_phi * pred[:, 0] - sin_phi * pred[:, 1]
+                new_y = sin_phi * pred[:, 0] + cos_phi * pred[:, 1]
+                pred[:, 0] = new_x
+                pred[:, 1] = new_y
+
+            if do_tracking:
+                x_next = x_list[run][k+1]
+                x_pos_next = x_next[:,1:3].clone().detach()
+                if model_config.prediction == '2nd_derivative':
+                    x_pos_pred = (x[:, 1:3] + delta_t * (x[:, 3:5] + delta_t * pred * ynorm))
+                else:
+                    x_pos_pred = (x[:,1:3] + delta_t * pred * ynorm)
+                distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
+                result = distance.min(dim=1)
+                min_value = result.values
+                pos_pre = min_value
+                indices = result.indices
+                pos = torch.argwhere(min_value < 0.5E-5)
+                if model_config.prediction == '2nd_derivative':
+                    loss = torch.sum(pos_pre[pos])*1E8
+                else:
+                    loss = torch.sum(pos_pre)*1E5
+            else:
+                loss = (pred - y_batch).norm(2) # + model.a.norm(1) * 1E-3
+
+            loss.backward()
+            optimizer.step()
+
+            total_loss += loss.item()
+
+            visualize_embedding = True
+            if visualize_embedding & (((epoch < 10 ) & (N%(Niter//20) == 0)) | (N==0)):
+                if do_tracking | has_state :
+                    id_list = []
+                    for k in range(n_frames + 1):
+                        ids = x_list[1][k][:, -1]
+                        id_list.append(ids)
+                    plot_training_cell_tracking(config=config, id_list=id_list, dataset_name=dataset_name, log_dir=log_dir,
+                                       epoch=epoch, N=N, model=model, n_particle_types=n_particle_types,
+                                       type_list=type_list, ynorm=ynorm, cmap=cmap, device=device)
+                else:
+                    plot_training_cell(config=config, dataset_name=dataset_name, log_dir=log_dir,
+                              epoch=epoch, N=N, model=model, n_particle_types=n_particle_types, type_list=T1_list[1], ynorm=ynorm, cmap=cmap, device=device)
+                torch.save({'model_state_dict': model.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+                t, r, a = get_gpu_memory_map(device)
+                logger.info(f"GPU memory: total {t} reserved {r} allocated {a}")
 
 
 
-            print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
-            logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
-            torch.save({'model_state_dict': model.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict()},
-                       os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
-            list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
-            torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
+        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
+        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
+        torch.save({'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict()},
+                   os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
+        list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
+        torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
         if (do_sparsity) and (epoch == 2):
 
             fig, ax = fig_init()
             func_list, true_type_list, short_model_a_list, proj_interaction = analyze_edge_function_state(rr=[],
                                                                                                           config=config,
-                                                                                                          model_MLP=model.lin_edge,
-                                                                                                          model_a=model.a,
+                                                                                                          model=model,
                                                                                                           id_list=id_list,
                                                                                                           type_list=type_list,
                                                                                                           ynorm=ynorm,
@@ -727,6 +725,8 @@ def data_train_cell(config, config_file, device):
             # model_b = np.array(model_b)
             # model.b = nn.Parameter(torch.tensor(model_b, dtype=torch.float32, requires_grad=True, device=device))
 
+            config.training.use_hot_encoding = True
+
             median_center_list = to_numpy(median_center_list)
             model.b = nn.Parameter(torch.tensor(median_center_list, dtype=torch.float32, requires_grad=False, device=device))
 
@@ -779,8 +779,6 @@ def data_train_cell(config, config_file, device):
             plt.savefig(f"./{log_dir}/tmp_training/re-trained MLP.tif")
             plt.close()
 
-
-
             A = model.b[0, :].T
             B = model.b[1, :].T
             C = model.b[2, :].T
@@ -788,9 +786,13 @@ def data_train_cell(config, config_file, device):
             a = A - C
             b = B - C
             cc = cross2(sq2(a) * b - sq2(b) * a, a, b) / (2 * ncross2(a, b)) + C
-            model.cc = cc.t().clone().detach()
-            model.basis = model.b - model.cc
-            model.basis = model.basis.clone().detach()
+            cc = cc.t()
+            cc = to_numpy(cc)
+
+            model.cc = nn.Parameter(torch.tensor(cc, dtype=torch.float32, requires_grad=False, device=device))
+            basis = to_numpy(model.b - model.cc)
+            model.basis = nn.Parameter(torch.tensor(basis, dtype=torch.float32, requires_grad=False, device=device))
+
             hot_vectors = F.one_hot(torch.tensor(new_labels), n_particle_types)
             hot_vectors = to_numpy(hot_vectors)
             hot_vectors = hot_vectors + 0.15 * np.random.randn(hot_vectors.shape[0], hot_vectors.shape[1])
@@ -799,15 +801,14 @@ def data_train_cell(config, config_file, device):
             model.use_hot_encoding = True
 
             fig, ax = fig_init()
-            plt.scatter(cc[0].detach().cpu(), cc[1].detach().cpu(), s=100, c='k')
-            plt.text(cc[0].detach().cpu() + 0.02, cc[1].detach().cpu(), 'circumcenter')
+            plt.scatter(cc[0], cc[1], s=100, c='k')
+            plt.text(cc[0] + 0.05, cc[1], 'circumcenter')
             for k in range(3):
                 pos = np.argwhere(new_labels == k).squeeze().astype(int)
                 plt.scatter(to_numpy(embedding[pos, 0]), to_numpy(embedding[pos, 1]), s=1, alpha=0.01)
             plt.scatter(to_numpy(model.b[:, 0]), to_numpy(model.b[:, 1]), s=100, c='k')
             plt.savefig(f"./{log_dir}/tmp_training/hot encoding.tif")
             plt.close()
-
 
             sub_loops = 1000
             index_list = np.random.randint(0, 3, sub_loops)

@@ -51,8 +51,8 @@ training:
   cluster_method: 'kmeans_auto_plot'
   data_augmentation: True
   data_augmentation_loop: 200
-  learning_rate_start: 0.001
-  learning_rate_embedding_start: 0.001
+  learning_rate_start: 0.005
+  learning_rate_embedding_start: 0.005
   fix_cluster_embedding: True
   device: 'auto'
   sequence: ['none']

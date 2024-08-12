@@ -652,7 +652,7 @@ def analyze_edge_function_tracking(rr=[], vizualize=False, config=None, model_ML
 
     return func_list, proj_interaction
 
-def analyze_edge_function_state(rr=[], config=None, model_MLP=[], model_a=None, id_list=None, type_list=None, cmap=None, ynorm=None, visualize=False, device=None):
+def analyze_edge_function_state(rr=[], config=None, model=None, id_list=None, type_list=None, cmap=None, ynorm=None, visualize=False, device=None):
 
     max_radius = config.simulation.max_radius
     state_hot_encoding = config.training.state_hot_encoding
@@ -670,8 +670,11 @@ def analyze_edge_function_state(rr=[], config=None, model_MLP=[], model_a=None, 
     rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
     for k in range(1,len(type_list), 10):
         for n in range(1,len(type_list[k]),10):
-                short_model_a_list.append(model_a[to_numpy(id_list[k][n]).astype(int)])
-                embedding_ = model_a[to_numpy(id_list[k][n]).astype(int)]
+                short_model_a_list.append(model.a[to_numpy(id_list[k][n]).astype(int)])
+                if config.training.use_hot_encoding:
+                    embedding_ = model.cc + torch.matmul(model.a[to_numpy(id_list[k][n]).astype(int), :], model.basis).squeeze()
+                else:
+                    embedding_ = model.a[to_numpy(id_list[k][n]).astype(int)]
                 embedding_ = embedding_ * torch.ones((1000, config.simulation.dimension), device=device)
 
                 match config_model:
@@ -691,7 +694,7 @@ def analyze_edge_function_state(rr=[], config=None, model_MLP=[], model_a=None, 
                                                  0 * rr[:, None], 0 * rr[:, None], torch.ones_like(rr[:, None])*0.001, torch.ones_like(rr[:, None])*0.001, embedding_, embedding_), dim=1)
 
                 with torch.no_grad():
-                    func = model_MLP(in_features.float())
+                    func = model.lin_edge(in_features.float())
                 func = func[:, 0]
                 func_list.append(func)
                 true_type_list.append(type_list[k][n])
