@@ -430,6 +430,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
     logger.setLevel(logging.INFO)
     logger.info(config)
 
+    kill_cell_leaving = True
+
     for run in range(config.training.n_runs-1):
 
         torch.cuda.empty_cache()
@@ -519,7 +521,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             if has_cell_death:
                 # cell death
                 sample = torch.rand(len(X1), device=device)
-                if True:
+                if kill_cell_leaving:
                     H1[X1[:,0]<0] = 0
                     H1[X1[:,0]>1] = 0
                     H1[X1[:,1]<0] = 0
@@ -750,7 +752,10 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             else:
                 V1 = y + y_voronoi
 
-            X1 = bc_pos(first_X1 + V1 * delta_t)
+            if kill_cell_leaving:
+                X1 = first_X1 + V1 * delta_t
+            else:
+                X1 = bc_pos(X1 + V1 * delta_t)
 
             if has_inert_model:
                 vor, vertices_pos, vertices_per_cell, all_points = get_vertices(points=X1, device=device)
