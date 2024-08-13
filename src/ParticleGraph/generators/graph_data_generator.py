@@ -1054,6 +1054,7 @@ def data_generate_cell_from_fluo (config, visualize=True, run_vizualized=0, styl
     has_inert_model = simulation_config.cell_inert_model_coeff > 0
     has_cell_death = simulation_config.has_cell_death
     has_cell_division = True
+    fluo_width = simulation_config.fluo_width
 
     max_radius_list = []
     edges_len_list = []
@@ -1121,11 +1122,14 @@ def data_generate_cell_from_fluo (config, visualize=True, run_vizualized=0, styl
         files = glob.glob(f"{path}/*.tif")
         frame = 17
 
+        x_list = []
+        y_list = []
 
         for slice in range(57,58): #range(10,120,5):
 
-            x_cell, x_cell_plus, radius= get_cells_from_fluo(config=config, dimension=dimension, files=files, frame=frame, slice=slice, device=device)
+            x_cell, x_cell_plus, radius, i0 = get_cells_from_fluo(config=config, dimension=dimension, files=files, frame=frame, slice=slice, device=device)
             target_areas = radius.clone().detach() ** 2 * 3.1411516
+            target_areas = target_areas / torch.sum(target_areas)
 
             X1_ = x_cell_plus.clone().detach()
             X1_.requires_grad = True
@@ -1134,19 +1138,20 @@ def data_generate_cell_from_fluo (config, visualize=True, run_vizualized=0, styl
 
             optimizer = torch.optim.Adam([X1_], lr=1E-3)
 
-            for k in trange(3):
+            for k in trange(5):
 
-                vor = Voronoi(to_numpy(X1_))
+                vor = Voronoi(to_numpy(X1_) * fluo_width)
                 fig = plt.figure(figsize=(10, 10))
                 ax = fig.add_subplot(1, 1, 1)
-                voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='black', line_width=1, line_alpha=0.5,
+                plt.imshow(i0)
+                voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='w', line_width=1, line_alpha=0.5,
                                 point_size=0)
-                plt.scatter(to_numpy(x_cell[:, 0]), to_numpy(x_cell[:, 1]), s=10, color='g')
-                plt.scatter(to_numpy(X1_[0:n_true_cells, 0]), to_numpy(X1_[0:n_true_cells, 1]), s=10, color='b',alpha=0.5)
-                plt.xlim([0,1])
-                plt.ylim([0, 1])
+                plt.scatter(to_numpy(x_cell[:, 0])* fluo_width, to_numpy(x_cell[:, 1])* fluo_width, s=to_numpy(target_areas[0:n_true_cells])*2E5, color='g',alpha=0.5)
+                # plt.scatter(to_numpy(X1_[0:n_true_cells, 0]) * fluo_width, to_numpy(X1_[0:n_true_cells, 1]) * fluo_width, s=10, color='r',alpha=0.5)
+                plt.xlim([0, fluo_width])
+                plt.ylim([0, fluo_width])
                 num = f"{slice:04}"
-                fig.savefig(f'graphs_data/graphs_{dataset_name}/Fig/voronoi_{num}_{k}.tif', dpi=80)
+                fig.savefig(f'graphs_data/graphs_{dataset_name}/Fig/voronoi_{num}_{k}.tif', dpi=280)
                 plt.close()
 
                 optimizer.zero_grad()
@@ -1160,7 +1165,7 @@ def data_generate_cell_from_fluo (config, visualize=True, run_vizualized=0, styl
                 voronoi_area = get_voronoi_areas(cc, vertices_per_cell, device)
                 perimeter = get_voronoi_perimeters(cc, vertices_per_cell, device)
 
-                loss = 100 * (target_areas - voronoi_area).norm(2) + 0.2 * torch.sum(perimeter ** 2) + 10 * (first_X1 - X1_[0:n_true_cells]).norm(2)
+                loss = 5E2 * (target_areas - voronoi_area).norm(2) + 0.2 * torch.sum(perimeter ** 2) + 10 * (first_X1 - X1_[0:n_true_cells]).norm(2)
 
                 # loss = simulation_config.coeff_area * (target_areas - voronoi_area).norm(2)
                 # if simulation_config.coeff_perimeter > 0:
@@ -1169,6 +1174,15 @@ def data_generate_cell_from_fluo (config, visualize=True, run_vizualized=0, styl
                 loss.backward()
                 optimizer.step()
 
+            x = torch.cat((x_cell,X1_[n_true_cells:].clone().detach()), 0)
+            y = torch.zeros((x.shape[0],1), dtype=torch.float32, device=device)
+            y[0:n_true_cells] = 1
+            x_list.append(X1_.clone().detach())
+            y_list.append(y.clone().detach())
+
+        if bSave:
+            torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
+            torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
 
 
 
