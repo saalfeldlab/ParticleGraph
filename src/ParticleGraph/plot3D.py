@@ -1,6 +1,6 @@
 
-# import jax
-# import jax.numpy as jp
+import jax
+import jax.numpy as jp
 
 def norm(v, axis=-1, keepdims=False, eps=0.0):
   return jp.sqrt((v*v).sum(axis, keepdims=keepdims).clip(eps))
@@ -46,7 +46,7 @@ def imencode(a, fmt='jpeg'):
   return f.getvalue()
 
 
-def imshow(a, fmt='jpeg', display=display):
+def imshow(a=[], fmt='jpeg', display=[]):
   return display(Image(data=imencode(a, fmt)))
 
 

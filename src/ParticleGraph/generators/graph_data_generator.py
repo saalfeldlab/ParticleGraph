@@ -21,6 +21,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
     has_particle_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
     has_mesh = (config.graph_model.mesh_model_name != '')
     has_cell_divsion = config.simulation.has_cell_division
+    has_fluo = config.simulation.has_fluo
     dataset_name = config.dataset
     print('')
     print(f'dataset_name: {dataset_name}')
@@ -33,12 +34,13 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
         data_generate_mesh(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
                                         alpha=0.2, ratio=ratio,
                                         scenario=scenario, device=device, bSave=bSave)
+    elif has_fluo:
+        data_generate_cell_from_fluo(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase,
+                           step=step,
+                           alpha=0.2, ratio=ratio,
+                           scenario=scenario, device=device, bSave=bSave)
+
     elif has_cell_divsion:
-        if config.simulation.dimension == 3:
-            data_generate_cell_3D(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
-                                        alpha=0.2, ratio=ratio,
-                                        scenario=scenario, device=device, bSave=bSave)
-        else:
             data_generate_cell(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
                                         alpha=0.2, ratio=ratio,
                                         scenario=scenario, device=device, bSave=bSave)
@@ -430,7 +432,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
     logger.setLevel(logging.INFO)
     logger.info(config)
 
-    kill_cell_leaving = True
+    kill_cell_leaving = False
 
     for run in range(config.training.n_runs-1):
 
@@ -676,7 +678,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 X1_.requires_grad = True
 
                 optimizer = torch.optim.Adam([X1_], lr=1E-3)
-
                 optimizer.zero_grad()
                 vor, vertices_pos, vertices_per_cell, all_points = get_vertices(points=X1_, device=device)
                 cc, tri = get_Delaunay(all_points,device)
@@ -1023,6 +1024,141 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         torch.save(cell_death_rate, f'graphs_data/graphs_{dataset_name}/cell_death_rate.pt')
         torch.save(DR1, f'graphs_data/graphs_{dataset_name}/cell_death_rate_distrib.pt')
         torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
+
+    for handler in logger.handlers[:]:
+        handler.close()
+        logger.removeHandler(handler)
+
+
+def data_generate_cell_from_fluo (config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,
+                       ratio=1, scenario='none', device=None, bSave=True):
+    torch.random.fork_rng(devices=device)
+    torch.random.manual_seed(42)
+
+    simulation_config = config.simulation
+    training_config = config.training
+    model_config = config.graph_model
+
+    print(f'Generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+
+    dimension = simulation_config.dimension
+    max_radius = simulation_config.max_radius
+    min_radius = simulation_config.min_radius
+    n_particle_types = simulation_config.n_particle_types
+    n_particles_max = simulation_config.n_particles_max
+    delta_t = simulation_config.delta_t
+    n_frames = simulation_config.n_frames
+    cmap = CustomColorMap(config=config)
+    dataset_name = config.dataset
+    marker_size = config.plotting.marker_size
+    has_inert_model = simulation_config.cell_inert_model_coeff > 0
+    has_cell_death = simulation_config.has_cell_death
+    has_cell_division = True
+
+    max_radius_list = []
+    edges_len_list = []
+    folder = f'./graphs_data/graphs_{dataset_name}/'
+    os.makedirs(folder, exist_ok=True)
+    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Fig/', exist_ok=True)
+    if erase:
+        files = glob.glob(f"{folder}/*")
+        for f in files:
+            if (f[-3:] != 'Fig') & (f[-2:] != 'GT') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (f != 'generation_code.py'):
+                os.remove(f)
+        files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Fig/*')
+        for f in files:
+            os.remove(f)
+
+
+    logging.basicConfig(filename=f'./graphs_data/graphs_{dataset_name}/generator.log', format='%(asctime)s %(message)s',
+                        filemode='w')
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    logger.info(config)
+
+    kill_cell_leaving = False
+
+    for run in range(config.training.n_runs-1):
+
+        torch.cuda.empty_cache()
+
+        model, bc_pos, bc_dpos = choose_model(config, device=device)
+
+        n_particles = simulation_config.n_particles
+
+        x_list = []
+        y_list = []
+
+        x_len_list = []
+        edge_p_p_list = []
+        vertices_pos_list = []
+
+        current_loss =[]
+
+        '''
+        INITIALIZE PER CELL TYPE VALUES1000
+        cycle_length
+        final_cell_mass
+        cell_death_rate
+        mc_slope: scalar used in the function set_mass_coeff
+
+        INITIALIZE PER CELL VALUES
+        0 N1 cell index dim=1
+        1,2 X1 positions dim=2
+        3,4 V1 velocities dim=2
+        5 T1 cell type dim=1
+        6,7 H1 cell status dim=2  H1[:,0] = cell alive flag, alive : 0 , death : 0 , H1[:,1] = cell division flag, dividing : 1
+        8 A1 cell age dim=1
+        9 S1 cell stage dim=1  0 = G1 , 1 = S, 2 = G2, 3 = M
+        10 M1 cell_mass_distrib mass dim=1 (per node)
+        11 R1 cell growth rate dim=1
+        12 DR1 cell death rate dim=1
+        13 MC1 mass coefficient of the cell (relation between velocity and mass)
+        14 AR1 area of the cell
+        '''
+
+        path = simulation_config.fluo_path
+        files = glob.glob(f"{path}/*.tif")
+        slice = 57
+
+        n_cells, x_cell, radius= get_cells_from_fluo(config=config, dimension=dimension, files=files, frame=17, slice=57, device=device)
+
+        first_X1 = x_cell.clone().detach()
+        X1_ = x_cell.clone().detach()
+        X1_.requires_grad = True
+
+        optimizer = torch.optim.Adam([X1_], lr=1E-3)
+
+        for k in range(10):
+            optimizer.zero_grad()
+            vor, vertices_pos, vertices_per_cell, all_points = get_vertices(points=X1_, device=device)
+            cc, tri = get_Delaunay(all_points, device)
+            distance = torch.sum((vertices_pos[:, None, :].clone().detach() - cc[None, :, :]) ** 2, dim=2)
+            result = distance.min(dim=1)
+            index = result.indices
+            cc = cc[index]
+            # tri = tri[index]
+
+            voronoi_area = get_voronoi_areas(cc, vertices_per_cell, device)
+            perimeter = get_voronoi_perimeters(cc, vertices_per_cell, device)
+            AR1 = voronoi_area[:, None].clone().detach()
+            P1 = perimeter[:, None].clone().detach()
+
+            loss = simulation_config.coeff_area * (target_areas - voronoi_area).norm(2)
+            if simulation_config.coeff_perimeter > 0:
+                loss += simulation_config.coeff_perimeter * torch.sum(perimeter ** 2)
+
+            loss.backward()
+            optimizer.step()
+
+        vor = Voronoi(to_numpy(X1_))
+        fig = plt.figure(figsize=(10, 10))
+        ax = fig.add_subplot(1, 1, 1)
+        voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='black', line_width=1, line_alpha=0.5,
+                        point_size=0)
+
+
+
 
     for handler in logger.handlers[:]:
         handler.close()
@@ -1566,3 +1702,5 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             torch.save(edge_p_p_list, f'graphs_data/graphs_{dataset_name}/edge_p_p_list{run}.pt')
             torch.save(edge_f_p_list, f'graphs_data/graphs_{dataset_name}/edge_f_p_list{run}.pt')
             torch.save(model_p_p.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
+
+

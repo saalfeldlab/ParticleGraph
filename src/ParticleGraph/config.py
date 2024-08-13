@@ -57,6 +57,9 @@ class SimulationConfig(BaseModel):
     start_frame: int = 0
     final_cell_mass: list[float] = [-1]
     mc_slope: list[float] = [-1]
+    has_fluo: bool = False
+    fluo_path: str = ''
+    fluo_width: int = 1024
 
 class GraphModelConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')

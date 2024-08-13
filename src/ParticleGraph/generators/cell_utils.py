@@ -10,6 +10,8 @@ from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from tifffile import imread, imsave
+import glob
+from skimage.measure import regionprops
 
 def init_cell_range(config, device, scenario="None"):
     simulation_config = config.simulation
@@ -133,6 +135,69 @@ def init_cells(config, cycle_length, final_cell_mass, cell_death_rate, mc_slope,
 
     return particle_id, pos, dpos, type, status, cell_age, cell_stage, cell_mass_distrib, growth_rate_distrib, cycle_length_distrib, cell_death_rate_distrib, mc_slope_distrib, cell_area_distrib, perimeter
 
+def get_cells_from_fluo(config, dimension, files, frame, slice, device):
+    simulation_config = config.simulation
+    n_particles = simulation_config.n_particles
+    n_particle_types = simulation_config.n_particle_types
+    dimension = simulation_config.dimension
+    fluo_width = simulation_config.fluo_width
+
+
+    i0 = imread(files[frame])
+    i0 = i0[slice,:,:]
+
+    fig = plt.figure(figsize=(10, 10))
+    plt.imshow(i0)
+
+    regions = regionprops(i0)
+    y_ = []
+    x_ = []
+    r_ = []
+    list_mask = []
+    for reg in regions:
+        y_.append(reg.centroid[0])
+        x_.append(reg.centroid[1])
+        r_.append(reg.equivalent_diameter / 2)
+
+    n_cells = len(regions)
+    print(f'{n_cells} cells')
+    x = np.array(x_)[:, None]
+    y = np.array(y_)[:, None]
+    r = np.array(r_)[:, None]
+
+    # fig = plt.figure(figsize=(10, 10))
+    # plt.imshow(i0 * 0, cmap='grey')
+    # plt.scatter(x, y, c='g', s=r ** 2, edgecolors='none')
+
+    x = np.concatenate((x, y, r), axis=1)
+    x = torch.tensor(x, device=device)
+
+    n_particles = 6000
+    count = 1
+    intermediate_count = 0
+    distance_threshold = 10
+    r_mean = torch.mean(x[:, 2])
+    n_cells = len(x)
+
+    while count < n_particles:
+        new_pos = torch.rand(1, 3, device=device) * fluo_width
+        new_pos[0, 2] = r_mean
+        distance = torch.sum((x[:, None, 0:2] - new_pos[None, :, 0:2]) ** 2, dim=2)
+        if torch.all(distance > distance_threshold ** 2):
+            x = torch.cat((x, new_pos), 0)
+            count += 1
+        intermediate_count += 1
+        if intermediate_count > 100:
+            distance_threshold = distance_threshold * 0.99
+            intermediate_count = 0
+
+    n_cells = len(x)
+    x_cell = x[:,0:2] / fluo_width
+    radius = x[:,2] / (fluo_width**2)
+
+    return n_cells, x_cell, radius
+
+
 def update_cell_cycle_stage(cell_age, cycle_length, type_list, device):
     g1 = 0.46
     s = 0.33
@@ -174,7 +239,19 @@ def get_vertices(points=[], device=[]):
     for n in range(len(v_list)):
         all_points = torch.concatenate((all_points, points + v_list[n]), axis=0)
 
+    if points.shape[1] == 3:
+        pos = torch.argwhere((all_points[:, 0] > -0.05) & (all_points[:, 0] < 1.05) & (all_points[:, 1] > -0.05) & (
+                    all_points[:, 1] < 1.05) & (all_points[:, 2] > -0.05) & (all_points[:, 2] < 1.05))
+    else:
+        pos = torch.argwhere ((all_points[:,0] >-0.05) & (all_points[:,0] <1.05) & (all_points[:,1] >-0.05) & (all_points[:,1] <1.05))
+    all_points = all_points[pos].squeeze()
+
     vor = Voronoi(to_numpy(all_points))
+
+    # fig = plt.figure()
+    # voronoi_plot_2d(vor, ax=fig.gca(), show_vertices=False, line_colors='black', line_width=1, line_alpha=0.5)
+    # plt.scatter(to_numpy(points[:, 0]), to_numpy(points[:, 1]), s=30, color='red')
+
     # vertices_index collect all vertices index of regions of interest
     vertices_per_cell = []
     for n in range(len(points)):
