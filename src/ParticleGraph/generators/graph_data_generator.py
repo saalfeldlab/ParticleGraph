@@ -1119,43 +1119,57 @@ def data_generate_cell_from_fluo (config, visualize=True, run_vizualized=0, styl
 
         path = simulation_config.fluo_path
         files = glob.glob(f"{path}/*.tif")
-        slice = 57
+        frame = 17
 
-        n_cells, x_cell, radius= get_cells_from_fluo(config=config, dimension=dimension, files=files, frame=17, slice=57, device=device)
 
-        first_X1 = x_cell.clone().detach()
-        X1_ = x_cell.clone().detach()
-        X1_.requires_grad = True
+        for slice in range(57,58): #range(10,120,5):
 
-        optimizer = torch.optim.Adam([X1_], lr=1E-3)
+            x_cell, x_cell_plus, radius= get_cells_from_fluo(config=config, dimension=dimension, files=files, frame=frame, slice=slice, device=device)
+            target_areas = radius.clone().detach() ** 2 * 3.1411516
 
-        for k in range(10):
-            optimizer.zero_grad()
-            vor, vertices_pos, vertices_per_cell, all_points = get_vertices(points=X1_, device=device)
-            cc, tri = get_Delaunay(all_points, device)
-            distance = torch.sum((vertices_pos[:, None, :].clone().detach() - cc[None, :, :]) ** 2, dim=2)
-            result = distance.min(dim=1)
-            index = result.indices
-            cc = cc[index]
-            # tri = tri[index]
+            X1_ = x_cell_plus.clone().detach()
+            X1_.requires_grad = True
+            first_X1 = X1_[0:len(x_cell)].clone().detach()
+            n_true_cells = len(x_cell)
 
-            voronoi_area = get_voronoi_areas(cc, vertices_per_cell, device)
-            perimeter = get_voronoi_perimeters(cc, vertices_per_cell, device)
-            AR1 = voronoi_area[:, None].clone().detach()
-            P1 = perimeter[:, None].clone().detach()
+            optimizer = torch.optim.Adam([X1_], lr=1E-3)
 
-            loss = simulation_config.coeff_area * (target_areas - voronoi_area).norm(2)
-            if simulation_config.coeff_perimeter > 0:
-                loss += simulation_config.coeff_perimeter * torch.sum(perimeter ** 2)
+            for k in trange(3):
 
-            loss.backward()
-            optimizer.step()
+                vor = Voronoi(to_numpy(X1_))
+                fig = plt.figure(figsize=(10, 10))
+                ax = fig.add_subplot(1, 1, 1)
+                voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='black', line_width=1, line_alpha=0.5,
+                                point_size=0)
+                plt.scatter(to_numpy(x_cell[:, 0]), to_numpy(x_cell[:, 1]), s=10, color='g')
+                plt.scatter(to_numpy(X1_[0:n_true_cells, 0]), to_numpy(X1_[0:n_true_cells, 1]), s=10, color='b',alpha=0.5)
+                plt.xlim([0,1])
+                plt.ylim([0, 1])
+                num = f"{slice:04}"
+                fig.savefig(f'graphs_data/graphs_{dataset_name}/Fig/voronoi_{num}_{k}.tif', dpi=80)
+                plt.close()
 
-        vor = Voronoi(to_numpy(X1_))
-        fig = plt.figure(figsize=(10, 10))
-        ax = fig.add_subplot(1, 1, 1)
-        voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='black', line_width=1, line_alpha=0.5,
-                        point_size=0)
+                optimizer.zero_grad()
+                vor, vertices_pos, vertices_per_cell, all_points = get_vertices(points=X1_, device=device)
+                cc, tri = get_Delaunay(all_points, device)
+                distance = torch.sum((vertices_pos[:, None, :].clone().detach() - cc[None, :, :]) ** 2, dim=2)
+                result = distance.min(dim=1)
+                index = result.indices
+                cc = cc[index]
+
+                voronoi_area = get_voronoi_areas(cc, vertices_per_cell, device)
+                perimeter = get_voronoi_perimeters(cc, vertices_per_cell, device)
+
+                loss = 100 * (target_areas - voronoi_area).norm(2) + 0.2 * torch.sum(perimeter ** 2) + 10 * (first_X1 - X1_[0:n_true_cells]).norm(2)
+
+                # loss = simulation_config.coeff_area * (target_areas - voronoi_area).norm(2)
+                # if simulation_config.coeff_perimeter > 0:
+                #     loss += simulation_config.coeff_perimeter * torch.sum(perimeter ** 2)
+
+                loss.backward()
+                optimizer.step()
+
+
 
 
 

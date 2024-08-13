@@ -191,12 +191,11 @@ def get_cells_from_fluo(config, dimension, files, frame, slice, device):
             distance_threshold = distance_threshold * 0.99
             intermediate_count = 0
 
-    n_cells = len(x)
-    x_cell = x[:,0:2] / fluo_width
+    x_cell = x[0:len(regions), 0:2] / fluo_width
+    x_cell_plus = x[:,0:2] / fluo_width
     radius = x[:,2] / (fluo_width**2)
 
-    return n_cells, x_cell, radius
-
+    return x_cell, x_cell_plus, radius
 
 def update_cell_cycle_stage(cell_age, cycle_length, type_list, device):
     g1 = 0.46
