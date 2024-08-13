@@ -1125,7 +1125,7 @@ def data_generate_cell_from_fluo (config, visualize=True, run_vizualized=0, styl
         x_list = []
         y_list = []
 
-        for slice in range(57,58): #range(10,120,5):
+        for slice in range(10,100,5):
 
             x_cell, x_cell_plus, radius, i0 = get_cells_from_fluo(config=config, dimension=dimension, files=files, frame=frame, slice=slice, device=device)
             target_areas = radius.clone().detach() ** 2 * 3.1411516
@@ -1146,7 +1146,7 @@ def data_generate_cell_from_fluo (config, visualize=True, run_vizualized=0, styl
                 plt.imshow(i0)
                 voronoi_plot_2d(vor, ax=ax, show_vertices=False, line_colors='w', line_width=1, line_alpha=0.5,
                                 point_size=0)
-                plt.scatter(to_numpy(x_cell[:, 0])* fluo_width, to_numpy(x_cell[:, 1])* fluo_width, s=to_numpy(target_areas[0:n_true_cells])*2E5, color='g',alpha=0.5)
+                plt.scatter(to_numpy(x_cell[:, 0])* fluo_width, to_numpy(x_cell[:, 1])* fluo_width, s=to_numpy(target_areas[0:n_true_cells])*2E5, color='g',alpha=0.4, edgecolors='none')
                 # plt.scatter(to_numpy(X1_[0:n_true_cells, 0]) * fluo_width, to_numpy(X1_[0:n_true_cells, 1]) * fluo_width, s=10, color='r',alpha=0.5)
                 plt.xlim([0, fluo_width])
                 plt.ylim([0, fluo_width])
@@ -1175,6 +1175,7 @@ def data_generate_cell_from_fluo (config, visualize=True, run_vizualized=0, styl
                 optimizer.step()
 
             x = torch.cat((x_cell,X1_[n_true_cells:].clone().detach()), 0)
+            x = torch.cat((x, voronoi_area[:,None], perimeter[:,None]), 1)
             y = torch.zeros((x.shape[0],1), dtype=torch.float32, device=device)
             y[0:n_true_cells] = 1
             x_list.append(X1_.clone().detach())
