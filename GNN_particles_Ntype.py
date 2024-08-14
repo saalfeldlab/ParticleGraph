@@ -51,8 +51,8 @@ if __name__ == '__main__':
 
     # config_list = ["boids_division_tracking_A", "boids_division_tracking_B"]
 
-    config_list = ["gland_SMG2-processed"]
-    # config_list = ["boids_division_model_j"]
+    # config_list = ["gland_SMG2-processed"]
+    config_list = ["MDCK_FN_PB-Kleb_JF585"]
 
     for config_file in config_list:
 

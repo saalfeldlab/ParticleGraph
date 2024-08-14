@@ -1054,7 +1054,6 @@ def data_generate_cell_from_fluo (config, visualize=True, run_vizualized=0, styl
     has_inert_model = simulation_config.cell_inert_model_coeff > 0
     has_cell_death = simulation_config.has_cell_death
     has_cell_division = True
-    fluo_width = simulation_config.fluo_width
 
     max_radius_list = []
     edges_len_list = []
@@ -1120,14 +1119,15 @@ def data_generate_cell_from_fluo (config, visualize=True, run_vizualized=0, styl
 
         path = simulation_config.fluo_path
         files = glob.glob(f"{path}/*.tif")
-        frame = 17
+        frame = 0
 
         x_list = []
         y_list = []
 
-        for slice in range(10,100,5):
+        for slice in range(-1,0,1):
 
             x_cell, x_cell_plus, radius, i0 = get_cells_from_fluo(config=config, dimension=dimension, files=files, frame=frame, slice=slice, device=device)
+            fluo_width = i0.shape[0]
             target_areas = radius.clone().detach() ** 2 * 3.1411516
             target_areas = target_areas / torch.sum(target_areas)
 
@@ -1138,7 +1138,7 @@ def data_generate_cell_from_fluo (config, visualize=True, run_vizualized=0, styl
 
             optimizer = torch.optim.Adam([X1_], lr=1E-3)
 
-            for k in trange(5):
+            for k in trange(10):
 
                 vor = Voronoi(to_numpy(X1_) * fluo_width)
                 fig = plt.figure(figsize=(10, 10))

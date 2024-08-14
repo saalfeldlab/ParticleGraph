@@ -140,11 +140,14 @@ def get_cells_from_fluo(config, dimension, files, frame, slice, device):
     n_particles = simulation_config.n_particles
     n_particle_types = simulation_config.n_particle_types
     dimension = simulation_config.dimension
-    fluo_width = simulation_config.fluo_width
-
+    fluo_method = simulation_config.fluo_method
 
     i0 = imread(files[frame])
-    i0 = i0[slice,:,:]
+    if slice == -1:
+        i0 = i0
+    else:
+        i0 = i0[slice,:,:]
+    fluo_width = i0.shape[0]
 
     fig = plt.figure(figsize=(10, 10))
     plt.imshow(i0)
@@ -172,28 +175,29 @@ def get_cells_from_fluo(config, dimension, files, frame, slice, device):
     x = np.concatenate((x, y, r), axis=1)
     x = torch.tensor(x, device=device)
 
-    n_particles = 6000
-    count = 1
-    intermediate_count = 0
-    distance_threshold = 10
-    r_mean = torch.mean(x[:, 2])
-    n_cells = len(x)
-
-    while count < n_particles:
-        new_pos = torch.rand(1, 3, device=device) * fluo_width
-        new_pos[0, 2] = r_mean
-        distance = torch.sum((x[:, None, 0:2] - new_pos[None, :, 0:2]) ** 2, dim=2)
-        if torch.all(distance > distance_threshold ** 2):
-            x = torch.cat((x, new_pos), 0)
-            count += 1
-        intermediate_count += 1
-        if intermediate_count > 100:
-            distance_threshold = distance_threshold * 0.99
+    match fluo_method:
+        case 'add':
+            n_particles = 6000
+            count = 1
             intermediate_count = 0
+            distance_threshold = 10
+            r_mean = torch.mean(x[:, 2])
+            while count < n_particles:
+                new_pos = torch.rand(1, 3, device=device) * fluo_width
+                new_pos[0, 2] = r_mean
+                distance = torch.sum((x[:, None, 0:2] - new_pos[None, :, 0:2]) ** 2, dim=2)
+                if torch.all(distance > distance_threshold ** 2):
+                    x = torch.cat((x, new_pos), 0)
+                    count += 1
+                intermediate_count += 1
+                if intermediate_count > 100:
+                    distance_threshold = distance_threshold * 0.99
+                    intermediate_count = 0
 
     x_cell = x[0:len(regions), 0:2] / fluo_width
     x_cell_plus = x[:,0:2] / fluo_width
     radius = x[:,2] / fluo_width
+
 
     return x_cell, x_cell_plus, radius, i0
 
@@ -247,7 +251,7 @@ def get_vertices(points=[], device=[]):
 
     vor = Voronoi(to_numpy(all_points))
 
-    # fig = plt.figure()
+    fig = plt.figure(figsize=(10, 10))
     # voronoi_plot_2d(vor, ax=fig.gca(), show_vertices=False, line_colors='black', line_width=1, line_alpha=0.5)
     # plt.scatter(to_numpy(points[:, 0]), to_numpy(points[:, 1]), s=30, color='red')
 

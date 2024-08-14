@@ -1,10 +1,10 @@
 description: 'attraction-repulsion with 3 types particles'
-dataset: 'gland_SMG2-processed'
+dataset: 'MDCK_FN_PB-Kleb_JF585'
 
 simulation:
   has_fluo: True
-  fluo_path: '/groups/wang/wanglab/GNN/240408-LVpD80-E10-IAI/SMG2-processed/masks/'
-  fluo_method: 'add'
+  fluo_path: '/groups/saalfeld/home/allierc/signaling/MDCK/dataset 2/MDCK_FN_PB-Kleb_JF585/center area/masks'
+  fluo_method: 'padding'
   params: [[-1]]
   min_radius: 0
   max_radius: 5

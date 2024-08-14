@@ -59,7 +59,7 @@ class SimulationConfig(BaseModel):
     mc_slope: list[float] = [-1]
     has_fluo: bool = False
     fluo_path: str = ''
-    fluo_width: int = 1024
+    fluo_method: str = 'padding'
 
 class GraphModelConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
