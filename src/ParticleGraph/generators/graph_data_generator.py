@@ -39,7 +39,6 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                            step=step,
                            alpha=0.2, ratio=ratio,
                            scenario=scenario, device=device, bSave=bSave)
-
     elif has_cell_divsion:
             data_generate_cell(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
                                         alpha=0.2, ratio=ratio,

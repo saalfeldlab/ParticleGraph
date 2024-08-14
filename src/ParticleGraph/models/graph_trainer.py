@@ -832,7 +832,6 @@ def data_train_cell(config, config_file, device):
             optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
 
 
-
 def data_train_mesh(config, config_file, device):
 
     simulation_config = config.simulation
