@@ -1118,12 +1118,12 @@ def data_generate_cell_from_fluo (config, visualize=True, run_vizualized=0, styl
 
         path = simulation_config.fluo_path
         files = glob.glob(f"{path}/*.tif")
-        frame = 0
+        frame = 17
 
         x_list = []
         y_list = []
 
-        for slice in range(-1,0,1):
+        for slice in range(70,71):
 
             x_cell, x_cell_plus, radius, i0 = get_cells_from_fluo(config=config, dimension=dimension, files=files, frame=frame, slice=slice, device=device)
             fluo_width = i0.shape[0]
