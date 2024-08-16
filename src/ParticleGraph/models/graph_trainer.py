@@ -1702,7 +1702,10 @@ def data_train_signal(config, config_file, device):
         x_list.append(x)
         y_list.append(y)
     vnorm = torch.tensor(1.0, device=device)
-    ynorm = torch.tensor(1.0, device=device)
+    if config_file == 'signal_N2':
+        ynorm = torch.tensor(1.0E-6, device=device)
+    else:
+        ynorm = torch.tensor(1.0, device=device)
     torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
     torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
     time.sleep(0.5)
@@ -1742,7 +1745,6 @@ def data_train_signal(config, config_file, device):
     logger.info(f'N epochs: {n_epochs}')
     logger.info(f'initial batch_size: {batch_size}')
 
-
     print('Update variables ...')
     # update variable if particle_dropout, cell_division, etc ...
     x = x_list[1][n_frames - 1].clone().detach()
@@ -1761,10 +1763,12 @@ def data_train_signal(config, config_file, device):
     if 'mat' in simulation_config.connectivity_file:
         mat = scipy.io.loadmat(simulation_config.connectivity_file)
         adjacency = torch.tensor(mat['A'], device=device)
+        adj_t = adjacency > 0
+        edge_index = adj_t.nonzero().t().contiguous()
     else:
-        adjacency = torch.load(simulation_config.connectivity_file, map_location=device)
-    adj_t = adjacency > 0
-    edge_index = adj_t.nonzero().t().contiguous()
+        adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt', map_location=device)
+        adj_t = torch.abs(adjacency) > 0
+        edge_index = adj_t.nonzero().t().contiguous()
 
     if config_file == 'signal_N_100_2_b':
         for n in trange(20000):
@@ -1792,6 +1796,7 @@ def data_train_signal(config, config_file, device):
                     edge_index = torch.cat((edge_index, ij_s), dim=1)
                 edge_index = edge_index.to(dtype=torch.int64)
 
+
     model.edges = edge_index
     logger.info(f'edge_index.shape {edge_index.shape} ')
 
@@ -1808,19 +1813,10 @@ def data_train_signal(config, config_file, device):
         logger.info(f'batch_size: {batch_size}')
         if epoch == 1:
             repeat_factor = batch_size // old_batch_size
-            if has_mesh:
-                mask_mesh = mask_mesh.repeat(repeat_factor, 1)
-            if has_ghost:
-                mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
-                mask_ghost = np.tile(mask_ghost, batch_size)
-                mask_ghost = np.argwhere(mask_ghost == 1)
-                mask_ghost = mask_ghost[:, 0].astype(int)
 
         total_loss = 0
 
         Niter = n_frames * data_augmentation_loop // batch_size
-        if (has_mesh) & (batch_size == 1):
-            Niter = Niter // 4
         print(f'Niter = {Niter}')
         logger.info(f'Niter = {Niter}')
 
@@ -1920,9 +1916,11 @@ def data_train_signal(config, config_file, device):
 
             total_loss += loss.item()
 
-            visualize_embedding = False
-            if visualize_embedding & (((epoch == 0) & (N < 10000) & (N % 1000 == 0)) | (N==0)):
+            visualize_embedding = 'PDE_N2' in config.graph.signal_model_name
+            if visualize_embedding & (((epoch < 30 ) & (N%(Niter//50) == 0)) | (N==0)):
                 plot_training_signal(config, dataset, model, adjacency, log_dir, epoch, N, index_particles, n_particles, n_particle_types, device)
+
+
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))

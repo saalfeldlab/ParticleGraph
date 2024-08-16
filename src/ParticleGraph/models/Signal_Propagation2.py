@@ -80,12 +80,13 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
     def message(self, edge_index_i, edge_index_j, u_j, embedding_i):
 
         A = self.vals.t()
-        self.activation = self.lin_edge(u_j)
+
+        in_features = torch.cat((u_j, embedding_i), dim=-1)
+        weight_ij = A[to_numpy(edge_index_i),to_numpy(edge_index_j),None]
+        self.activation = self.lin_edge(in_features)
         self.u_j = u_j
 
-        weight_ij = A[to_numpy(edge_index_i),to_numpy(edge_index_j),None]
-
-        return weight_ij * self.lin_edge(u_j, embedding_i)
+        return weight_ij * self.lin_edge(in_features)
 
     def update(self, aggr_out):
         return aggr_out

@@ -433,7 +433,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         plt.close()
 
         adjacency = config.simulation.connectivity_init[1] * torch.randn((n_particles, n_particles), dtype=torch.float32, device=device)
-        torch.save(adjacency, f'./graphs_data/adjacency_asym.pt')
+        torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt')
 
         i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
         adjacency[i,j] = adjacency[j,i]

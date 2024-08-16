@@ -76,29 +76,32 @@ def get_in_features(rr, embedding_, config_model, max_radius):
 
 def plot_training_signal(config, dataset, model, adjacency, log_dir, epoch, N, index_particles, n_particles, n_particle_types, device):
 
-    fig = plt.figure(figsize=(12, 12))
-    ax = fig.add_subplot(1, 1, 1)
-    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-    ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-
-    x = dataset.x
-    adj_t = adjacency > 0
-    edge_index = adj_t.nonzero().t().contiguous()
-    edge_attr_adjacency = model.A[adj_t]
-    dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
-    vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-    pos = nx.spring_layout(vis, weight='weight', seed=42, k=1)
-    nx.draw(vis, pos,  node_size=10, alpha=0.025, cmap='viridis')
-    for k, v in pos.items():
-        x[k, 1:3] = torch.tensor([v[0], v[1]], device=device)
-    plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), c=np.arange(len(x)), s=100, cmap='viridis')
-    plt.xlim([-1.25, 1.25])
-    plt.ylim([-1.25, 1.25])
+    fig = plt.figure(figsize=(8, 8))
+    embedding = get_embedding(model.a, 1)
+    for n in range(n_particle_types):
+        plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=20)
+    plt.xticks([])
+    plt.yticks([])
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/particle/network_{epoch}_{N}.tif", dpi=170.7)
+    plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=87)
     plt.close()
+
+    fig, ax = fig_init()
+    ax.xaxis.get_major_formatter()._usetex = False
+    ax.yaxis.get_major_formatter()._usetex = False
+    rr = torch.tensor(np.linspace(0, 4, 1000)).to(device)
+    print(n_particles)
+    func_list, proj_interaction = analyze_edge_function(rr=rr, vizualize=True, config=config,
+                                                        model_MLP=model.lin_phi, model_a=model.a,
+                                                        dataset_number=1,
+                                                        n_particles=int(
+                                                            n_particles * (1 - config.training.particle_dropout)),
+                                                        ynorm=ynorm,
+                                                        type_list=to_numpy(x[:, 5]),
+                                                        cmap=cmap, device=device)
+
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif", dpi=87)
 
 def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dataset_name, n_frames, model_name, log_dir, epoch, N, x, x_mesh, model_field, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 
@@ -849,7 +852,7 @@ def choose_training_model(model_config, device):
             model.edges = []
     model_name = model_config.graph_model.signal_model_name
     match model_name:
-        case 'PDE_N'':
+        case 'PDE_N':
             model = Signal_Propagation(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
         case 'PDE_N2':
