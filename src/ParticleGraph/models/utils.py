@@ -69,12 +69,12 @@ def get_in_features(rr, embedding_, config_model, max_radius):
         case 'PDE_E':
             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                      rr[:, None] / max_radius, embedding_, embedding_), dim=1)
-        case 'PDE_N' | 'PDE_N_bis':
+        case 'PDE_N' | 'PDE_N2':
             in_features = torch.cat((rr[:, None], embedding_), dim=1)
 
     return in_features
 
-def plot_training_signal(config, dataset, model, adjacency, log_dir, epoch, N, index_particles, n_particles, n_particle_types, device):
+def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, index_particles, n_particles, n_particle_types, type_list, cmap, device):
 
     fig = plt.figure(figsize=(8, 8))
     embedding = get_embedding(model.a, 1)
@@ -86,22 +86,44 @@ def plot_training_signal(config, dataset, model, adjacency, log_dir, epoch, N, i
     plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=87)
     plt.close()
 
-    fig, ax = fig_init()
-    ax.xaxis.get_major_formatter()._usetex = False
-    ax.yaxis.get_major_formatter()._usetex = False
-    rr = torch.tensor(np.linspace(0, 4, 1000)).to(device)
-    print(n_particles)
-    func_list, proj_interaction = analyze_edge_function(rr=rr, vizualize=True, config=config,
-                                                        model_MLP=model.lin_phi, model_a=model.a,
-                                                        dataset_number=1,
-                                                        n_particles=int(
-                                                            n_particles * (1 - config.training.particle_dropout)),
-                                                        ynorm=ynorm,
-                                                        type_list=to_numpy(x[:, 5]),
-                                                        cmap=cmap, device=device)
-
+    fig = plt.figure(figsize=(16, 8))
+    ax = fig.add_subplot(1, 2, 1)
+    rr = torch.tensor(np.linspace(-50, 0, 1000)).to(device)
+    for n in range(n_particles):
+        embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+        in_features = torch.cat((rr[:,None], embedding_), dim=-1)
+        with torch.no_grad():
+            func = model.lin_phi(in_features.float())
+        if (n % 2 == 0):
+            plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
+    ax = fig.add_subplot(1, 2, 2)
+    for n in range(n_particles):
+        embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+        in_features = torch.cat((rr[:,None], embedding_), dim=-1)
+        with torch.no_grad():
+            func = model.lin_edge(in_features.float())
+        if (n % 2 == 0):
+            plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif", dpi=87)
+
+    A = torch.zeros(n_particles, n_particles, device=device, requires_grad=False, dtype=torch.float32)
+    if 'asymmetric' in config.simulation.adjacency_matrix:
+        A = model.vals
+    else:
+        i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+        A[i, j] = model.vals
+        A.T[i, j] = model.vals
+
+    fig, ax = fig_init()
+    fig = plt.figure(figsize=(12, 6))
+    ax = fig.add_subplot(1, 2, 1)
+    plt.imshow(to_numpy(A), cmap='viridis')
+    ax = fig.add_subplot(1, 2, 2)
+    plt.imshow(to_numpy(A) > 0.01, cmap='viridis')
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/field/{dataset_name}_{epoch}_{N}.tif", dpi=87)
+    plt.close()
 
 def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dataset_name, n_frames, model_name, log_dir, epoch, N, x, x_mesh, model_field, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 

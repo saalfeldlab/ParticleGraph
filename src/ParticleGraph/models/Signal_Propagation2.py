@@ -52,7 +52,10 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
         self.a = nn.Parameter(torch.zeros((self.n_dataset,int(self.n_particles), self.embedding_dim), device=self.device, requires_grad=True, dtype=torch.float32))
 
-        self.vals = nn.Parameter(torch.zeros((int(self.n_particles),int(self.n_particles)), device=self.device, requires_grad=True, dtype=torch.float32))
+        if 'asymmetric' in self.adjacency_matrix:
+            self.vals = nn.Parameter(torch.zeros((int(self.n_particles),int(self.n_particles)), device=self.device, requires_grad=True, dtype=torch.float32))
+        else:
+            self.vals = nn.Parameter(torch.zeros((int(self.n_particles*(self.n_particles+1)/2)), device=self.device, requires_grad=True, dtype=torch.float32))
 
 
     def forward(self, data=[], data_id=[], return_all=False):
@@ -75,7 +78,14 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
     def message(self, edge_index_i, edge_index_j, u_j, embedding_i):
 
-        A = self.vals.t()
+        A = torch.zeros(self.n_particles, self.n_particles, device=self.device, requires_grad=False, dtype=torch.float32)
+
+        if 'asymmetric' in self.adjacency_matrix:
+            A = self.vals.t()
+        else:
+            i, j = torch.triu_indices(self.n_particles, self.n_particles, requires_grad=False, device=self.device)
+            A[i,j] = self.vals
+            A.T[i,j] = self.vals
 
         in_features = torch.cat((u_j, embedding_i), dim=-1)
         weight_ij = A[to_numpy(edge_index_i),to_numpy(edge_index_j),None]

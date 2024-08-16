@@ -1688,6 +1688,7 @@ def data_train_signal(config, config_file, device):
     batch_size = get_batch_size(0)
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     embedding_cluster = EmbeddingCluster(config)
+    cmap = CustomColorMap(config=config)
     n_runs = train_config.n_runs
 
     l_dir, log_dir, logger = create_log_dir(config, config_file)
@@ -1759,6 +1760,7 @@ def data_train_signal(config, config_file, device):
         else:
             index = np.argwhere(x[:, 7].detach().cpu().numpy() == n)
         index_particles.append(index.squeeze())
+    type_list = get_type_list(x, dimension)
 
     if 'mat' in simulation_config.connectivity_file:
         mat = scipy.io.loadmat(simulation_config.connectivity_file)
@@ -1803,6 +1805,7 @@ def data_train_signal(config, config_file, device):
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
+    print(f'plot every {Niter // 50} iterations')
 
     list_loss = []
     time.sleep(1)
@@ -1925,7 +1928,7 @@ def data_train_signal(config, config_file, device):
 
             visualize_embedding = ('PDE_N2' in config.graph_model.signal_model_name)
             if visualize_embedding & (((epoch < 30 ) & (N%(Niter//50) == 0)) | (N==0)):
-                plot_training_signal(config, dataset, model, adjacency, log_dir, epoch, N, index_particles, n_particles, n_particle_types, device)
+                plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, index_particles, n_particles, n_particle_types, type_list, cmap, device)
 
 
 

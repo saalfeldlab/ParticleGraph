@@ -448,7 +448,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         # bl[pos] = val[indexes]
         # adjacency[j,i] = bl
 
-
         adj_t = torch.abs(adjacency) > 0
         edge_index = adj_t.nonzero().t().contiguous()
         edge_attr_adjacency = adjacency[adj_t]
