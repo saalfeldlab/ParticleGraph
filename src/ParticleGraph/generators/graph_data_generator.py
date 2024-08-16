@@ -385,6 +385,9 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     cmap = CustomColorMap(config=config)
     dataset_name = config.dataset
 
+    torch.random.fork_rng(devices=device)
+    torch.random.manual_seed(24)
+
     if config.data_folder_name != 'none':
         print(f'Generating from data ...')
         generate_from_data(config=config, device=device, visualize=visualize, folder=folder, step=step)
@@ -416,21 +419,52 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     if 'mat' in simulation_config.connectivity_file:
         mat = scipy.io.loadmat(simulation_config.connectivity_file)
         adjacency = torch.tensor(mat['A'], device=device)
+
+        adj_t = adjacency > 0
+        edge_index = adj_t.nonzero().t().contiguous()
+        edge_attr_adjacency = adjacency[adj_t]
+
     else:
         mat = scipy.io.loadmat('./graphs_data/Brain.mat')
-        adjacency = torch.tensor(mat['A'], device=device)
-        i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-        bl = adjacency[j,i]
-        pos = torch.argwhere(bl>0)
-        val = bl[pos]
-        indexes = torch.randperm(val.shape[0])
-        bl[pos] = val[indexes]
-        adjacency[j,i] = bl
+        first_adjacency = torch.tensor(mat['A'], device=device)
+        fig = plt.figure(figsize=(12, 12))
+        plt.imshow(to_numpy(first_adjacency>0.01), cmap='viridis')
+        plt.colorbar()
+        plt.close()
+
+        adjacency = config.simulation.connectivity_init[1] * torch.randn((n_particles, n_particles), dtype=torch.float32, device=device)
         torch.save(adjacency, f'./graphs_data/adjacency_asym.pt')
 
-    adj_t = adjacency > 0
-    edge_index = adj_t.nonzero().t().contiguous()
-    edge_attr_adjacency = adjacency[adj_t]
+        i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+        adjacency[i,j] = adjacency[j,i]
+        adjacency[i, i] = 0
+
+
+        # i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+        # bl = adjacency[j,i]
+        # pos = torch.argwhere(bl>0)
+        # val = bl[pos]
+        # indexes = torch.randperm(val.shape[0])
+        # bl[pos] = val[indexes]
+        # adjacency[j,i] = bl
+
+
+        adj_t = torch.abs(adjacency) > 0
+        edge_index = adj_t.nonzero().t().contiguous()
+        edge_attr_adjacency = adjacency[adj_t]
+        edge_attr_adjacency_ = to_numpy(edge_attr_adjacency)
+
+        fig = plt.figure(figsize=(12, 6))
+        ax = fig.add_subplot(1, 2, 1)
+        plt.imshow(to_numpy(adjacency), cmap='viridis')
+        plt.text (0,-10,f'weight {np.round(np.mean(edge_attr_adjacency_),6)}+/-{np.round(np.std(edge_attr_adjacency_),6)}')
+
+        ax = fig.add_subplot(1, 2, 2)
+        plt.imshow(to_numpy(adjacency)>0.01, cmap='viridis')
+        plt.text (0,-10,f'{edge_index.shape[1]} edges')
+        plt.tight_layout()
+        plt.savefig(f"graphs_data/graphs_{dataset_name}/adjacency.tif", dpi=70)
+        plt.close()
 
 
     for run in range(config.training.n_runs):
@@ -442,15 +476,14 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
         # initialize particle and graph states
         X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
-        if has_adjacency_matrix:
-            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
-            adj_t = adjacency > 0
-            edge_index = adj_t.nonzero().t().contiguous()
-            dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
-            vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-            pos = nx.spring_layout(vis, weight='weight', seed=42, k=1)
-            for k,v in pos.items():
-                X1[k,:] = torch.tensor([v[0],v[1]], device=device)
+
+        x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
+
+        dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
+        vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
+        pos = nx.spring_layout(vis, weight='weight', seed=42, k=1)
+        for k,v in pos.items():
+            X1[k,:] = torch.tensor([v[0],v[1]], device=device)
 
         time.sleep(0.5)
         for it in trange(simulation_config.start_frame, n_frames + 1):
@@ -467,13 +500,11 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
             index_particles = get_index_particles(x, n_particle_types, dimension)  # can be different from frame to frame
 
-            adj_t = adjacency > 0
-            edge_index = adj_t.nonzero().t().contiguous()
             dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
 
             # model prediction
             with torch.no_grad():
-                y = model(dataset)
+                y, s_tanhu, msg = model(dataset, return_all=True)
 
             # append list
             if (it >= 0) & bSave:
@@ -490,46 +521,52 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     y_list.append(y.clone().detach())
 
             # Particle update
-
-            H1[:, 1] = y.squeeze()
-            H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
+            if it>0:
+                H1[:, 1] = y.squeeze()
+                H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
 
             A1 = A1 + 1
 
             # output plots
-            if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
+            if visualize & (run <= run_vizualized + 5 ) & (it % step == 0) & (it >= 0):
 
                 if 'color' in style:
 
                     matplotlib.rcParams['savefig.pad_inches'] = 0
-                    fig = plt.figure(figsize=(14, 12))
-                    ax = fig.add_subplot(1, 1, 1)
-                    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-                    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-                    ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                    plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=200, c=to_numpy(H1[:, 0])*3, cmap='viridis', vmin=0, vmax=3)
+                    fig = plt.figure(figsize=(16, 14))
+                    ax = fig.add_subplot(2, 2, 1)
+                    plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=60, c=to_numpy(H1[:, 0]), cmap='viridis') #, vmin=0, vmax=10)
                     plt.colorbar()
                     plt.xlim([-1.2, 1.2])
                     plt.ylim([-1.2, 1.2])
-                    # plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=24)
-                    # cbar = plt.colorbar(shrink=0.5)
-                    # cbar.ax.tick_params(labelsize=32)
-                    if 'latex' in style:
-                        plt.xlabel(r'$x$', fontsize=78)
-                        plt.ylabel(r'$y$', fontsize=78)
-                        plt.xticks(fontsize=48.0)
-                        plt.yticks(fontsize=48.0)
-                    elif 'frame' in style:
-                        plt.xlabel('x', fontsize=48)
-                        plt.ylabel('y', fontsize=48)
-                        plt.xticks(fontsize=48.0)
-                        plt.yticks(fontsize=48.0)
-                        ax.tick_params(axis='both', which='major', pad=15)
-                        plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=48)
-                    else:
-                        plt.xticks([])
-                        plt.yticks([])
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.title('u')
+                    ax = fig.add_subplot(2, 2, 2)
+                    plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=60, c=to_numpy(H1[:, 1]), cmap='viridis', vmin=-3E-6, vmax=3E-6)
+                    plt.colorbar()
+                    plt.xlim([-1.2, 1.2])
+                    plt.ylim([-1.2, 1.2])
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.title('du')
+                    ax = fig.add_subplot(2, 2, 3)
+                    plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=60, c=to_numpy(s_tanhu), cmap='viridis') #, vmin=0, vmax=10)
+                    plt.colorbar()
+                    plt.xlim([-1.2, 1.2])
+                    plt.ylim([-1.2, 1.2])
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.title('s.tanh(u)')
+                    ax = fig.add_subplot(2, 2, 4)
+                    plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=60, c=to_numpy(msg), cmap='viridis') #, vmin=0, vmax=10)
+                    plt.colorbar()
+                    plt.xlim([-1.2, 1.2])
+                    plt.ylim([-1.2, 1.2])
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.title('relu(g.msg)')
+
                     plt.tight_layout()
                     plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{10000 + it}.tif", dpi=70)
                     plt.close()

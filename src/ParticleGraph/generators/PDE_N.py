@@ -43,7 +43,7 @@ class PDE_N(pyg.nn.MessagePassing):
         du = -b*u + c*torch.tanh(u) + msg
 
         if return_all:
-            return du, msg, -b*u + c*torch.tanh(u)
+            return du, -b*u + c*torch.tanh(u), msg
         else:
             return du
 

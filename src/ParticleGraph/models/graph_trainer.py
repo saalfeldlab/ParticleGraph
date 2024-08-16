@@ -1856,11 +1856,9 @@ def data_train_signal(config, config_file, device):
                     y = y / ynorm
                     y = y[:, 0:2]
 
-
                     func_f = model.lin_edge(torch.zeros(1,device=device))
                     in_features = torch.cat((torch.zeros((n_particles,1),device=device),  model.a[1, :]), dim=1)
                     func_phi = model.lin_phi(in_features.float())
-
 
                     loss = (pred1 + pred2 - y).norm(2) / 2 + model.vals.norm(1) * config.training.coeff_L1 + func_f.norm(2) + func_phi.norm(2)
 

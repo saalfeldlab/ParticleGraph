@@ -28,7 +28,7 @@ class PDE_N2(pyg.nn.MessagePassing):
 
     def forward(self, data=[], return_all=False):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
-        edge_index, _ = pyg_utils.remove_self_loops(edge_index)
+        # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         particle_type = to_numpy(x[:, 5])
         parameters = self.p[particle_type]
         s = parameters[:, 0:1]
@@ -38,10 +38,10 @@ class PDE_N2(pyg.nn.MessagePassing):
 
         msg = self.propagate(edge_index, u=u, edge_attr=edge_attr)
 
-        du = -u + s * torch.tanh(u) + g * msg
+        du = -u + s * torch.tanh(u) + g * torch.relu(msg)
 
         if return_all:
-            return du, msg, -b*u + c*torch.tanh(u)
+            return du, s * torch.tanh(u), g * torch.relu(msg)
         else:
             return du
 
