@@ -63,14 +63,10 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         particle_id = x[:, 0:1]
         embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
 
-        msg = self.propagate(edge_index, u=u,  embedding=embedding)
-
-        particle_id = to_numpy(x[:, 0])
-        embedding = self.a[1, particle_id, :]   # common embedding for all dataset
+        msg = self.propagate(edge_index, u=u,  embedding=embedding)  # common embedding for all dataset
 
         input_phi = torch.cat((u, embedding), dim=-1)
         pred = self.lin_phi(input_phi) + msg
-
 
         if return_all:
             return pred, msg, self.lin_phi(input_phi), input_phi
