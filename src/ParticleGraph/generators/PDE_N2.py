@@ -4,7 +4,7 @@ import torch_geometric.utils as pyg_utils
 from ParticleGraph.utils import to_numpy
 
 
-class PDE_N(pyg.nn.MessagePassing):
+class PDE_N2(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
@@ -41,7 +41,7 @@ class PDE_N(pyg.nn.MessagePassing):
         du = -u + s * torch.tanh(u) + g * msg
 
         if return_all:
-            return du = -u + s * torch.tanh(u) + g * msg
+            return du, msg, -b*u + c*torch.tanh(u)
         else:
             return du
 

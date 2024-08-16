@@ -19,7 +19,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
                   scenario='none', device=None, bSave=True):
 
     has_particle_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
-    has_signal = ('PDE_ParticleField' in config.graph_model.particle_model_name)
+    has_signal = ('PDE_N' in config.graph_model.signal_model_name)
     has_mesh = (config.graph_model.mesh_model_name != '')
     has_cell_divsion = config.simulation.has_cell_division
     has_fluo = config.simulation.has_fluo
@@ -67,8 +67,6 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
     delta_t = simulation_config.delta_t
-    has_signal = (config.graph_model.signal_model_name != '')
-    has_adjacency_matrix = (simulation_config.connectivity_file != '')
     n_frames = simulation_config.n_frames
     has_particle_dropout = training_config.particle_dropout > 0
     cmap = CustomColorMap(config=config)
@@ -101,25 +99,6 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         particle_dropout_mask = draw[0:cut]
         inv_particle_dropout_mask = draw[cut:]
         x_removed_list = []
-    if has_adjacency_matrix:
-        if 'mat' in simulation_config.connectivity_file:
-            mat = scipy.io.loadmat(simulation_config.connectivity_file)
-            adjacency = torch.tensor(mat['A'], device=device)
-        else:
-            mat = scipy.io.loadmat('./graphs_data/Brain.mat')
-            adjacency = torch.tensor(mat['A'], device=device)
-            i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-            bl = adjacency[j,i]
-            pos = torch.argwhere(bl>0)
-            val = bl[pos]
-            indexes = torch.randperm(val.shape[0])
-            bl[pos] = val[indexes]
-            adjacency[j,i] = bl
-            torch.save(adjacency, f'./graphs_data/adjacency_asym.pt')
-
-        adj_t = adjacency > 0
-        edge_index = adj_t.nonzero().t().contiguous()
-        edge_attr_adjacency = adjacency[adj_t]
 
     if simulation_config.angular_Bernouilli != [-1]:
         b = simulation_config.angular_Bernouilli
@@ -207,15 +186,12 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                     y_list.append(y.clone().detach())
 
             # Particle update
-            if has_signal:
-                H1[:, 1] = y.squeeze()
-                H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
+
+            if model_config.prediction == '2nd_derivative':
+                V1 += y * delta_t
             else:
-                if model_config.prediction == '2nd_derivative':
-                    V1 += y * delta_t
-                else:
-                    V1 = y
-                X1 = bc_pos(X1 + V1 * delta_t)
+                V1 = y
+            X1 = bc_pos(X1 + V1 * delta_t)
             A1 = A1 + 1
 
             # output plots
@@ -403,7 +379,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
     delta_t = simulation_config.delta_t
-    has_signal = (config.graph_model.signal_model_name != '')
     has_adjacency_matrix = (simulation_config.connectivity_file != '')
     n_frames = simulation_config.n_frames
     has_particle_dropout = training_config.particle_dropout > 0
@@ -437,29 +412,26 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         particle_dropout_mask = draw[0:cut]
         inv_particle_dropout_mask = draw[cut:]
         x_removed_list = []
-    if has_adjacency_matrix:
-        if 'mat' in simulation_config.connectivity_file:
-            mat = scipy.io.loadmat(simulation_config.connectivity_file)
-            adjacency = torch.tensor(mat['A'], device=device)
-        else:
-            mat = scipy.io.loadmat('./graphs_data/Brain.mat')
-            adjacency = torch.tensor(mat['A'], device=device)
-            i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-            bl = adjacency[j,i]
-            pos = torch.argwhere(bl>0)
-            val = bl[pos]
-            indexes = torch.randperm(val.shape[0])
-            bl[pos] = val[indexes]
-            adjacency[j,i] = bl
-            torch.save(adjacency, f'./graphs_data/adjacency_asym.pt')
 
-        adj_t = adjacency > 0
-        edge_index = adj_t.nonzero().t().contiguous()
-        edge_attr_adjacency = adjacency[adj_t]
+    if 'mat' in simulation_config.connectivity_file:
+        mat = scipy.io.loadmat(simulation_config.connectivity_file)
+        adjacency = torch.tensor(mat['A'], device=device)
+    else:
+        mat = scipy.io.loadmat('./graphs_data/Brain.mat')
+        adjacency = torch.tensor(mat['A'], device=device)
+        i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+        bl = adjacency[j,i]
+        pos = torch.argwhere(bl>0)
+        val = bl[pos]
+        indexes = torch.randperm(val.shape[0])
+        bl[pos] = val[indexes]
+        adjacency[j,i] = bl
+        torch.save(adjacency, f'./graphs_data/adjacency_asym.pt')
 
-    if simulation_config.angular_Bernouilli != [-1]:
-        b = simulation_config.angular_Bernouilli
-        generative_m = np.array([stats.norm(b[0], b[2]), stats.norm(b[1], b[2])])
+    adj_t = adjacency > 0
+    edge_index = adj_t.nonzero().t().contiguous()
+    edge_attr_adjacency = adjacency[adj_t]
+
 
     for run in range(config.training.n_runs):
 
@@ -495,38 +467,13 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
             index_particles = get_index_particles(x, n_particle_types, dimension)  # can be different from frame to frame
 
-            # compute connectivity rule
-            if has_adjacency_matrix:
-                adj_t = adjacency > 0
-                edge_index = adj_t.nonzero().t().contiguous()
-                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
-            else:
-                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                edge_index = adj_t.nonzero().t().contiguous()
-                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=[])
+            adj_t = adjacency > 0
+            edge_index = adj_t.nonzero().t().contiguous()
+            dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
 
             # model prediction
             with torch.no_grad():
                 y = model(dataset)
-
-            if simulation_config.angular_sigma > 0:
-                phi = torch.randn(n_particles, device=device) * simulation_config.angular_sigma / 360 * np.pi * 2
-                cos_phi = torch.cos(phi)
-                sin_phi = torch.sin(phi)
-                new_vx = cos_phi * y[:, 0] - sin_phi * y[:, 1]
-                new_vy = sin_phi * y[:, 0] + cos_phi * y[:, 1]
-                y = torch.cat((new_vx[:, None], new_vy[:, None]), 1).clone().detach()
-            if simulation_config.angular_Bernouilli != [-1]:
-                z_i = stats.bernoulli(b[3]).rvs(n_particles)
-                phi = np.array([g.rvs() for g in generative_m[z_i]]) / 360 * np.pi * 2
-                phi = torch.tensor(phi, device=device, dtype=torch.float32)
-                cos_phi = torch.cos(phi)
-                sin_phi = torch.sin(phi)
-                new_vx = cos_phi * y[:, 0] - sin_phi * y[:, 1]
-                new_vy = sin_phi * y[:, 0] + cos_phi * y[:, 1]
-                y = torch.cat((new_vx[:, None], new_vy[:, None]), 1).clone().detach()
-
 
             # append list
             if (it >= 0) & bSave:
@@ -543,173 +490,50 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     y_list.append(y.clone().detach())
 
             # Particle update
-            if has_signal:
-                H1[:, 1] = y.squeeze()
-                H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
-            else:
-                if model_config.prediction == '2nd_derivative':
-                    V1 += y * delta_t
-                else:
-                    V1 = y
-                X1 = bc_pos(X1 + V1 * delta_t)
+
+            H1[:, 1] = y.squeeze()
+            H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
+
             A1 = A1 + 1
 
             # output plots
             if visualize & (run == run_vizualized) & (it % step == 0) & (it >= 0):
 
-                if 'latex' in style:
-                    plt.rcParams['text.usetex'] = True
-                    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+                if 'color' in style:
 
-                if 'bw' in style:
-
-                    fig, ax = fig_init(formatx="%.1f", formaty="%.1f")
-                    s_p = 100
-                    for n in range(n_particle_types):
-                            plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                                        s=s_p, color='k')
-                    if training_config.particle_dropout > 0:
-                        plt.scatter(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
-                                    x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), s=25, color='k',
-                                    alpha=0.75)
-                        plt.plot(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
-                                 x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), '+', color='w')
-                    plt.xlim([0, 1])
-                    plt.ylim([0, 1])
-                    if 'PDE_G' in model_config.particle_model_name:
-                        plt.xlim([-2, 2])
-                        plt.ylim([-2, 2])
+                    matplotlib.rcParams['savefig.pad_inches'] = 0
+                    fig = plt.figure(figsize=(14, 12))
+                    ax = fig.add_subplot(1, 1, 1)
+                    ax.xaxis.set_major_locator(plt.MaxNLocator(3))
+                    ax.yaxis.set_major_locator(plt.MaxNLocator(3))
+                    ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                    ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+                    plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=200, c=to_numpy(H1[:, 0])*3, cmap='viridis', vmin=0, vmax=3)
+                    plt.colorbar()
+                    plt.xlim([-1.2, 1.2])
+                    plt.ylim([-1.2, 1.2])
+                    # plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=24)
+                    # cbar = plt.colorbar(shrink=0.5)
+                    # cbar.ax.tick_params(labelsize=32)
                     if 'latex' in style:
                         plt.xlabel(r'$x$', fontsize=78)
                         plt.ylabel(r'$y$', fontsize=78)
                         plt.xticks(fontsize=48.0)
                         plt.yticks(fontsize=48.0)
                     elif 'frame' in style:
-                        plt.xlabel(r'$x$', fontsize=78)
-                        plt.ylabel(r'$y$', fontsize=78)
+                        plt.xlabel('x', fontsize=48)
+                        plt.ylabel('y', fontsize=48)
                         plt.xticks(fontsize=48.0)
                         plt.yticks(fontsize=48.0)
+                        ax.tick_params(axis='both', which='major', pad=15)
+                        plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=48)
                     else:
                         plt.xticks([])
                         plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=170.7)
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{10000 + it}.tif", dpi=70)
                     plt.close()
 
-                if 'color' in style:
-
-                    if model_config.particle_model_name == 'PDE_O':
-                        fig = plt.figure(figsize=(12, 12))
-                        plt.scatter(H1[:, 0].detach().cpu().numpy(), H1[:, 1].detach().cpu().numpy(), s=100,
-                                    c=np.sin(to_numpy(H1[:, 2])), vmin=-1, vmax=1, cmap='viridis')
-                        plt.xlim([0, 1])
-                        plt.ylim([0, 1])
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Lut_Fig_{run}_{it}.jpg",
-                                    dpi=170.7)
-                        plt.close()
-
-                        fig = plt.figure(figsize=(12, 12))
-                        # plt.scatter(H1[:, 0].detach().cpu().numpy(), H1[:, 1].detach().cpu().numpy(), s=5, c='b')
-                        plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=10, c='lawngreen',
-                                    alpha=0.75)
-                        plt.xlim([0, 1])
-                        plt.ylim([0, 1])
-                        plt.xticks([])
-                        plt.yticks([])
-                        plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Rot_{run}_Fig{it}.jpg",
-                                    dpi=170.7)
-                        plt.close()
-
-                    elif 'PDE_N' in model_config.signal_model_name:
-
-                        matplotlib.rcParams['savefig.pad_inches'] = 0
-                        fig = plt.figure(figsize=(12, 12))
-                        ax = fig.add_subplot(1, 1, 1)
-                        ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-                        ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-                        ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                        ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=200, c=to_numpy(H1[:, 0])*3, cmap='viridis')     # vmin=0, vmax=3)
-                        plt.colorbar()
-                        plt.xlim([-1.2, 1.2])
-                        plt.ylim([-1.2, 1.2])
-                        # plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=24)
-                        # cbar = plt.colorbar(shrink=0.5)
-                        # cbar.ax.tick_params(labelsize=32)
-                        if 'latex' in style:
-                            plt.xlabel(r'$x$', fontsize=78)
-                            plt.ylabel(r'$y$', fontsize=78)
-                            plt.xticks(fontsize=48.0)
-                            plt.yticks(fontsize=48.0)
-                        elif 'frame' in style:
-                            plt.xlabel('x', fontsize=48)
-                            plt.ylabel('y', fontsize=48)
-                            plt.xticks(fontsize=48.0)
-                            plt.yticks(fontsize=48.0)
-                            ax.tick_params(axis='both', which='major', pad=15)
-                            plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=48)
-                        else:
-                            plt.xticks([])
-                            plt.yticks([])
-                        plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{10000 + it}.tif", dpi=70)
-                        plt.close()
-
-                    elif (model_config.particle_model_name == 'PDE_A') & (dimension == 3):
-
-                        fig = plt.figure(figsize=(12, 12))
-                        ax = fig.add_subplot(111, projection='3d')
-                        for n in range(n_particle_types):
-                            ax.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
-                                       to_numpy(x[index_particles[n], 3]), s=50, color=cmap.color(n))
-                        ax.set_xlim([0, 1])
-                        ax.set_ylim([0, 1])
-                        ax.set_zlim([0, 1])
-                        pl.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=170.7)
-                        plt.close()
-
-                    else:
-                        # matplotlib.use("Qt5Agg")
-
-                        fig, ax = fig_init(formatx="%.1f", formaty="%.1f")
-                        s_p = 100
-                        for n in range(n_particle_types):
-                                plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
-                                            s=s_p, color=cmap.color(n))
-                        if training_config.particle_dropout > 0:
-                            plt.scatter(x[inv_particle_dropout_mask, 2].detach().cpu().numpy(),
-                                        x[inv_particle_dropout_mask, 1].detach().cpu().numpy(), s=25, color='k',
-                                        alpha=0.75)
-                            plt.plot(x[inv_particle_dropout_mask, 2].detach().cpu().numpy(),
-                                     x[inv_particle_dropout_mask, 1].detach().cpu().numpy(), '+', color='w')
-                        plt.xlim([0, 1])
-                        plt.ylim([0, 1])
-                        if 'PDE_G' in model_config.particle_model_name:
-                            plt.xlim([-2, 2])
-                            plt.ylim([-2, 2])
-                        if 'latex' in style:
-                            plt.xlabel(r'$x$', fontsize=78)
-                            plt.ylabel(r'$y$', fontsize=78)
-                            plt.xticks(fontsize=48.0)
-                            plt.yticks(fontsize=48.0)
-                        if 'frame' in style:
-                            plt.xlabel('x', fontsize=48)
-                            plt.ylabel('y', fontsize=48)
-                            plt.xticks(fontsize=48.0)
-                            plt.yticks(fontsize=48.0)
-                            ax.tick_params(axis='both', which='major', pad=15)
-                            plt.text(0, 1.1, f'frame {it}', ha='left', va='top', transform=ax.transAxes, fontsize=48)
-                        if 'no_ticks' in style:
-                            plt.xticks([])
-                            plt.yticks([])
-                        plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{it}.tif", dpi=80) # 170.7)
-                        # plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{10000+it}.tif", dpi=42.675)
-                        plt.close()
 
         if bSave:
             torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')

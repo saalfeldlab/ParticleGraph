@@ -4,8 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 # matplotlib.use("Qt5Agg")
 from tifffile import imread
-from ParticleGraph.generators import PDE_A, PDE_B, PDE_B_bis, PDE_B_mass, PDE_E, PDE_G, PDE_GS, PDE_N, PDE_N_bis, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, \
-    PDE_Laplacian, PDE_O
+from ParticleGraph.generators import PDE_A, PDE_B, PDE_B_bis, PDE_B_mass, PDE_E, PDE_G, PDE_GS, PDE_N, PDE_N2, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, PDE_Laplacian, PDE_O
 from ParticleGraph.utils import choose_boundary_values
 from ParticleGraph.data_loaders import load_solar_system
 from time import sleep
@@ -141,12 +140,12 @@ def choose_model(config, device):
                 for n in range(n_particle_types):
                     p[n] = torch.tensor(params[n])
             model = PDE_N(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
-        case 'PDE_N_bis':
+        case 'PDE_N2':
             p = torch.rand(n_particle_types, 2, device=device) * 100  # comprised between 10 and 50
             if params[0] != [-1]:
                 for n in range(n_particle_types):
                     p[n] = torch.tensor(params[n])
-            model = PDE_N_bis(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
+            model = PDE_N2(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
 
 
 
@@ -228,10 +227,9 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
         type = torch.cat((type, n * torch.ones(int(n_particles / n_particle_types), device=device)), 0)
     if (simulation_config.params == 'continuous') | (config.simulation.non_discrete_level > 0):  # TODO: params is a list[list[float]]; this can never happen?
         type = torch.tensor(np.arange(n_particles), device=device)
-    if 'PDE_N_bis' in config.graph_model.signal_model_name:
-        features = 15 * torch.cat( (torch.rand((n_particles, 1), device=device), 0.1 * torch.randn((n_particles, 1), device=device)), 1)
-    else:
-        features = torch.cat((torch.rand((n_particles, 1), device=device) , 0.1 * torch.randn((n_particles, 1), device=device)), 1)
+
+    features = torch.cat((torch.rand((n_particles, 1), device=device) , 0.1 * torch.randn((n_particles, 1), device=device)), 1)
+
     type = type[:, None]
     particle_id = torch.arange(n_particles, device=device)
     particle_id = particle_id[:, None]
