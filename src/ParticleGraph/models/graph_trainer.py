@@ -1676,10 +1676,6 @@ def data_train_signal(config, config_file, device):
     data_augmentation_loop = train_config.data_augmentation_loop
     recursive_loop = train_config.recursive_loop
     target_batch_size = train_config.batch_size
-    has_mesh = (config.graph_model.mesh_model_name != '')
-    replace_with_cluster = 'replace' in train_config.sparsity
-    has_ghost = train_config.n_ghosts > 0
-    sparsity_freq = train_config.sparsity_freq
     delta_t = simulation_config.delta_t
     if train_config.small_init_batch_size:
         get_batch_size = increasing_batch_size(target_batch_size)
@@ -1690,6 +1686,7 @@ def data_train_signal(config, config_file, device):
     embedding_cluster = EmbeddingCluster(config)
     cmap = CustomColorMap(config=config)
     n_runs = train_config.n_runs
+    is_N2 = 'signal_N2' in dataset_name
 
     l_dir, log_dir, logger = create_log_dir(config, config_file)
     print(f'Graph files N: {n_runs}')
@@ -1703,10 +1700,7 @@ def data_train_signal(config, config_file, device):
         x_list.append(x)
         y_list.append(y)
     vnorm = torch.tensor(1.0, device=device)
-    if config_file == 'signal_N2':
-        ynorm = torch.tensor(1.0E-6, device=device)
-    else:
-        ynorm = torch.tensor(1.0, device=device)
+    ynorm = torch.tensor(1.0, device=device)
     torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
     torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
     time.sleep(0.5)
@@ -1762,6 +1756,7 @@ def data_train_signal(config, config_file, device):
         index_particles.append(index.squeeze())
     type_list = get_type_list(x, dimension)
 
+
     if 'mat' in simulation_config.connectivity_file:
         mat = scipy.io.loadmat(simulation_config.connectivity_file)
         adjacency = torch.tensor(mat['A'], device=device)
@@ -1769,36 +1764,14 @@ def data_train_signal(config, config_file, device):
         edge_index = adj_t.nonzero().t().contiguous()
     else:
         adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt', map_location=device)
-        adj_t = torch.abs(adjacency) > 0
-        edge_index = adj_t.nonzero().t().contiguous()
-
-    if config_file == 'signal_N_100_2_b':
-        for n in trange(20000):
-            i = np.random.randint(n_particles)
-            j = np.random.randint(n_particles)
-            if adjacency[i,j]==0:
-                edge_index = torch.cat((edge_index, torch.tensor([[i], [j]], device=device)), 1)
-                edge_index = torch.cat((edge_index, torch.tensor([[j], [i]], device=device)), 1)
-    if config_file == 'signal_N_100_2_c':
-        for n in trange(40000):
-            i = np.random.randint(n_particles)
-            j = np.random.randint(n_particles)
-            if adjacency[i,j]==0:
-                edge_index = torch.cat((edge_index, torch.tensor([[i], [j]], device=device)), 1)
-                edge_index = torch.cat((edge_index, torch.tensor([[j], [i]], device=device)), 1)
-    if (config_file == 'signal_N_100_2_d') | ('signal_N_100_2_asym' in config_file):
-        print('Fully connected...')
-        for i in trange(n_particles):
-                i_s = torch.ones(n_particles, device=device) * i
-                j_s = torch.arange(n_particles, device=device)
-                ij_s = torch.cat((i_s[:,None], j_s[:,None]), dim=1).t()
-                if i==0:
-                    edge_index = ij_s
-                else:
-                    edge_index = torch.cat((edge_index, ij_s), dim=1)
-                edge_index = edge_index.to(dtype=torch.int64)
-
-
+        if is_N2:
+            adjacency_ = adjacency.t().clone().detach()
+            adj_t = torch.abs(adjacency_) > 0
+            edge_index = adj_t.nonzero().t().contiguous()
+        else:
+            adj_t = torch.abs(adjacency) > 0
+            edge_index = adj_t.nonzero().t().contiguous()
+    excitation = torch.ones((n_particles, n_frames + 1), device=device) * 0
     model.edges = edge_index
     logger.info(f'edge_index.shape {edge_index.shape} ')
 
@@ -1837,7 +1810,7 @@ def data_train_signal(config, config_file, device):
 
                     x = x_list[run][k].clone().detach()
                     dataset = data.Data(x=x[:, :], edge_index=model.edges)
-                    pred = model(dataset, data_id=run)
+                    pred = model(dataset, data_id=run, excitation=excitation[:, k])
                     y = y_list[run][k].clone().detach()
                     y = y / ynorm
                     y = y[:, 0:2]
@@ -1847,40 +1820,38 @@ def data_train_signal(config, config_file, device):
 
                     x = x_list[run][k].clone().detach()
                     dataset = data.Data(x=x[:, :], edge_index=model.edges)
-                    pred1 = model(dataset, data_id=run)
+                    pred1 = model(dataset, data_id=run, excitation = excitation[:, k].clone().detach())
                     x[:, 6:7] += pred1 * delta_t
-                    dataset = data.Data(x=x[:, :], edge_index=model.edges)
-                    pred2 = model(dataset, data_id=run)
+                    dataset = data.Data(x=x[:, :].clone().detach(), edge_index=model.edges)
+                    pred2 = model(dataset, data_id=run, excitation = excitation[:, k].clone().detach())
 
                     y = (y_list[run][k].clone().detach() + y_list[run][k + 1].clone().detach())
                     y = y / ynorm
                     y = y[:, 0:2]
 
-                    if 'PDE_N2' in config.graph_model.signal_model_name:
-                        in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :]), dim=1)
-                        func_f = model.lin_edge(in_features)
-                        in_features = torch.cat((torch.zeros((n_particles,1),device=device),  model.a[1, :]), dim=1)
+                    if is_N2:
+                        in_features = torch.zeros((1,1),device=device)
                         func_phi = model.lin_phi(in_features.float())
+                        loss = (pred1 + pred2 - y).norm(2) / 2 + model.W.norm(1) * config.training.coeff_L1 + func_phi.norm(2)
+
                     else:
                         func_f = model.lin_edge(torch.zeros(1,device=device))
                         in_features = torch.cat((torch.zeros((n_particles,1),device=device),  model.a[1, :]), dim=1)
                         func_phi = model.lin_phi(in_features.float())
-
-
-                    loss = (pred1 + pred2 - y).norm(2) / 2 + model.vals.norm(1) * config.training.coeff_L1 + func_f.norm(2) + func_phi.norm(2)
+                        loss = (pred1 + pred2 - y).norm(2) / 2 + model.vals.norm(1) * config.training.coeff_L1 + func_f.norm(2) + func_phi.norm(2)
 
                         
                 case 3:
 
                     x = x_list[run][k].clone().detach()
                     dataset = data.Data(x=x[:, :], edge_index=model.edges)
-                    pred1 = model(dataset, data_id=run)
+                    pred1 = model(dataset, data_id=run, excitation=excitation[:, k])
                     x[:, 6:7] += pred1 * delta_t
                     dataset = data.Data(x=x[:, :], edge_index=model.edges)
-                    pred2 = model(dataset, data_id=run)
+                    pred2 = model(dataset, data_id=run, excitation=excitation[:, k])
                     x[:, 6:7] += pred2 * delta_t
                     dataset = data.Data(x=x[:, :], edge_index=model.edges)
-                    pred3 = model(dataset, data_id=run)
+                    pred3 = model(dataset, data_id=run, excitation=excitation[:, k])
 
                     y1 = y_list[run][k].clone().detach()/ ynorm
                     y2 = y_list[run][k+1].clone().detach()/ ynorm
@@ -1895,19 +1866,19 @@ def data_train_signal(config, config_file, device):
 
                     x = x_list[run][k].clone().detach()
                     dataset = data.Data(x=x[:, :], edge_index=model.edges)
-                    pred1 = model(dataset, data_id=run)
+                    pred1 = model(dataset, data_id=run, excitation=excitation[:, k])
                     x[:, 6:7] += pred1 * delta_t
                     dataset = data.Data(x=x[:, :], edge_index=model.edges)
-                    pred2 = model(dataset, data_id=run)
+                    pred2 = model(dataset, data_id=run, excitation=excitation[:, k])
                     x[:, 6:7] += pred2 * delta_t
                     dataset = data.Data(x=x[:, :], edge_index=model.edges)
-                    pred3 = model(dataset, data_id=run)
+                    pred3 = model(dataset, data_id=run, excitation=excitation[:, k])
                     x[:, 6:7] += pred3 * delta_t
                     dataset = data.Data(x=x[:, :], edge_index=model.edges)
-                    pred4 = model(dataset, data_id=run)
+                    pred4 = model(dataset, data_id=run, excitation=excitation[:, k])
                     x[:, 6:7] += pred4 * delta_t
                     dataset = data.Data(x=x[:, :], edge_index=model.edges)
-                    pred5 = model(dataset, data_id=run)
+                    pred5 = model(dataset, data_id=run, excitation=excitation[:, k])
 
                     y1 = y_list[run][k].clone().detach()/ ynorm
                     y2 = y_list[run][k+1].clone().detach()/ ynorm
@@ -1931,8 +1902,6 @@ def data_train_signal(config, config_file, device):
             if visualize_embedding & (((epoch < 30 ) & (N%(Niter//50) == 0)) | (N==0)):
                 plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, index_particles, n_particles, n_particle_types, type_list, cmap, device)
 
-
-
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         torch.save({'model_state_dict': model.state_dict(),
@@ -1940,47 +1909,6 @@ def data_train_signal(config, config_file, device):
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
-
-        fig = plt.figure(figsize=(22, 4))
-
-        ax = fig.add_subplot(1, 6, 1)
-        plt.plot(list_loss, color='k')
-        plt.xlim([0, n_epochs])
-        plt.ylabel('Loss', fontsize=12)
-        plt.xlabel('Epochs', fontsize=12)
-
-        ax = fig.add_subplot(1, 6, 2)
-        embedding = get_embedding(model.a, 1)
-        for n in range(n_particle_types):
-            plt.scatter(embedding[index_particles[n], 0],
-                        embedding[index_particles[n], 1], color=cmap.color(n), s=0.1)
-        plt.xlabel('Embedding 0', fontsize=12)
-        plt.ylabel('Embedding 1', fontsize=12)
-
-        A = torch.zeros(n_particles, n_particles, device=device, requires_grad=False, dtype=torch.float32)
-        if 'asymmetric' in config.simulation.adjacency_matrix:
-            A = model.vals
-        else:
-            i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-            A[i,j] = model.vals
-            A.T[i,j] = model.vals
-
-        ax = fig.add_subplot(1, 6, 3)
-        gt_weight = to_numpy(adjacency[adj_t])
-        pred_weight = to_numpy(A[adj_t])
-        plt.scatter(gt_weight, pred_weight, s=0.1,c='k')
-        plt.xlabel('gt weight', fontsize=12)
-        plt.ylabel('predicted weight', fontsize=12)
-        ax = fig.add_subplot(1, 6, 4)
-        gt_weight = to_numpy(adjacency)
-        pred_weight = to_numpy(A)
-        plt.scatter(gt_weight, pred_weight, s=0.1,c='k')
-        plt.xlabel('all gt weight', fontsize=12)
-        plt.ylabel('all predicted weight', fontsize=12)
-        ax = fig.add_subplot(1, 6, 5)
-        plt.imshow(to_numpy(adjacency), cmap='viridis', vmin=0, vmax=0.01)
-        ax = fig.add_subplot(1, 6, 6)
-        plt.imshow(np.abs(to_numpy(A)), cmap='viridis', vmin=0, vmax=0.001)
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")

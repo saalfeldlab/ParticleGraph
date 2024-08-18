@@ -5,14 +5,16 @@ simulation:
     connectivity_file: ''
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
-    params: [[2.5,-5],[1.5,-4]]
+    params: [[2.0,1.0],[2.0,1.0]]
+    phi: 'tanh'
+    tau: 1.0
     min_radius: 1.0
     max_radius: 1.0E6
-    n_particles: 998
+    n_particles: 1000
     n_particle_types: 2
     n_interactions: 2
-    n_frames: 1000
-    delta_t: 1
+    n_frames: 10000
+    delta_t: 0.01
     dpos_init:  0
     boundary: 'no'
     start_frame: 0 # -1000
@@ -22,7 +24,7 @@ graph_model:
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
-    input_size: 3
+    input_size: 1
     output_size: 1
     hidden_dim: 64
     n_mp_layers: 3
@@ -42,7 +44,7 @@ training:
     recursive_loop: 2
     batch_size: 1
     small_init_batch_size: False
-    n_runs: 100
+    n_runs: 10
     large_range: False
     learning_rate_start: 0.000001
     learning_rate_end: 0.0000005

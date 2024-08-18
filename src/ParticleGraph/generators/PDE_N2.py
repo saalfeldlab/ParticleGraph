@@ -114,7 +114,7 @@ class PDE_N2(pyg.nn.MessagePassing):
         du = -u + s * self.phi(u) + g * msg + excitation[:,None]
 
         if return_all:
-            return du, s * self.phi(u), g
+            return du, s * self.phi(u), g * msg
         else:
             return du
 

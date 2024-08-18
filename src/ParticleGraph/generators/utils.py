@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 # matplotlib.use("Qt5Agg")
 from tifffile import imread
-from ParticleGraph.generators import PDE_A, PDE_B, PDE_B_bis, PDE_B_mass, PDE_E, PDE_G, PDE_GS, PDE_N, PDE_N2, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, PDE_Laplacian, PDE_O
+from ParticleGraph.generators import PDE_A, PDE_B, PDE_B_bis, PDE_B_mass, PDE_E, PDE_G, PDE_GS, PDE_N, PDE_N2, constructRandomMatrices, runNetworkSimulation, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, PDE_Laplacian, PDE_O
 from ParticleGraph.utils import choose_boundary_values
 from ParticleGraph.data_loaders import load_solar_system
 from time import sleep
@@ -31,7 +31,7 @@ def generate_from_data(config, device, visualize=True, folder=None, step=None):
             raise ValueError(f'Unknown data folder name {data_folder_name}')
 
 
-def choose_model(config, device):
+def choose_model(config=[], W=[], phi=[], device=[]):
     particle_model_name = config.graph_model.particle_model_name
     model_signal_name = config.graph_model.signal_model_name
     aggr_type = config.graph_model.aggr_type
@@ -145,7 +145,7 @@ def choose_model(config, device):
             if params[0] != [-1]:
                 for n in range(n_particle_types):
                     p[n] = torch.tensor(params[n])
-            model = PDE_N2(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
+            model = PDE_N2(aggr_type=aggr_type, p=torch.squeeze(p), W=W, phi=phi)
 
 
 

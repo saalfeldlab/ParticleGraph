@@ -16,6 +16,8 @@ class SimulationConfig(BaseModel):
     connectivity_file: str = ''
     connectivity_init: list[float] =[-1]
     adjacency_matrix: str = ''
+    phi: str = 'tanh'
+    tau: float = 1.0
     params: list[list[float]]
     cell_cycle_length: list[float] =[-1]
     cell_death_rate: list[float] = [-1]

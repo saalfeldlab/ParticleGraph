@@ -57,7 +57,7 @@ class Signal_Propagation(pyg.nn.MessagePassing):
         else:
             self.vals = nn.Parameter(torch.zeros((int(self.n_particles*(self.n_particles+1)/2)), device=self.device, requires_grad=True, dtype=torch.float32))
 
-    def forward(self, data=[], data_id=[], return_all=False, training_mode='all'):
+    def forward(self, data=[], data_id=[], return_all=False, training_mode='all', excitation=[]):
         self.data_id = data_id
         x, edge_index = data.x, data.edge_index
 
