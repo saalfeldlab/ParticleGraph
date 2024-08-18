@@ -1805,6 +1805,7 @@ def data_train_signal(config, config_file, device):
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
+    Niter = n_frames * data_augmentation_loop // batch_size
     print(f'plot every {Niter // 50} iterations')
 
     list_loss = []
@@ -1926,7 +1927,7 @@ def data_train_signal(config, config_file, device):
 
             total_loss += loss.item()
 
-            visualize_embedding = ('PDE_N2' in config.graph_model.signal_model_name)
+            visualize_embedding = True
             if visualize_embedding & (((epoch < 30 ) & (N%(Niter//50) == 0)) | (N==0)):
                 plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, index_particles, n_particles, n_particle_types, type_list, cmap, device)
 

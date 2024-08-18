@@ -5,7 +5,7 @@ from ParticleGraph.models.MLP import MLP
 from ParticleGraph.utils import to_numpy
 
 
-class Signal_Propagation2(pyg.nn.MessagePassing):
+class Signal_Propagation(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
@@ -25,7 +25,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
     """
 
     def __init__(self, aggr_type=None, config=None, device=None, bc_dpos=None):
-        super(Signal_Propagation2, self).__init__(aggr=aggr_type)
+        super(Signal_Propagation, self).__init__(aggr=aggr_type)
 
         simulation_config = config.simulation
         model_config = config.graph_model
@@ -57,26 +57,33 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         else:
             self.vals = nn.Parameter(torch.zeros((int(self.n_particles*(self.n_particles+1)/2)), device=self.device, requires_grad=True, dtype=torch.float32))
 
-
-    def forward(self, data=[], data_id=[], return_all=False):
+    def forward(self, data=[], data_id=[], return_all=False, training_mode='all'):
         self.data_id = data_id
         x, edge_index = data.x, data.edge_index
 
         u = data.x[:, 6:7]
-        particle_id = x[:, 0:1]
-        embedding = self.a[self.data_id, to_numpy(particle_id), :].squeeze()
 
-        msg = self.propagate(edge_index, u=u,  embedding=embedding)  # common embedding for all dataset
+        msg = self.propagate(edge_index, u=u)
+
+        particle_id = to_numpy(x[:, 0])
+        embedding = self.a[1, particle_id, :]   # common embedding for all dataset
 
         input_phi = torch.cat((u, embedding), dim=-1)
-        pred = self.lin_phi(input_phi) + msg
+
+        match training_mode:
+            case 'all':
+                pred = self.lin_phi(input_phi) + msg
+            case 'update_only':
+                pred = self.lin_phi(input_phi) + 0 * msg
+            case 'msg_only':
+                pred = 0 * self.lin_phi(input_phi) + msg
 
         if return_all:
             return pred, msg, self.lin_phi(input_phi), input_phi
         else:
             return pred
 
-    def message(self, edge_index_i, edge_index_j, u_j, embedding_i):
+    def message(self, edge_index_i, edge_index_j, u_j):
 
         A = torch.zeros(self.n_particles, self.n_particles, device=self.device, requires_grad=False, dtype=torch.float32)
 
@@ -87,12 +94,11 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
             A[i,j] = self.vals
             A.T[i,j] = self.vals
 
-        in_features = torch.cat((u_j, embedding_i), dim=-1)
-        weight_ij = A[to_numpy(edge_index_i),to_numpy(edge_index_j),None]
-        self.activation = self.lin_edge(in_features)
+        self.activation = self.lin_edge(u_j)
         self.u_j = u_j
 
-        return weight_ij * self.lin_edge(in_features)
+        weight_ij = A[to_numpy(edge_index_i),to_numpy(edge_index_j),None]
+        return weight_ij * self.lin_edge(u_j)
 
     def update(self, aggr_out):
         return aggr_out

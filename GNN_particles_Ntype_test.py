@@ -40,7 +40,7 @@ from ParticleGraph.utils import *
 if __name__ == '__main__':
 
     # config_list = ['arbitrary_3_test', 'arbitrary_3_field_video_bison_test', 'boids_16_256_test', 'signal_N_100_2_test', 'wave_slit_test', 'boids_16_256_bison_2_test']
-    config_list = ['arbitrary_3_field_video_bison_test']
+    config_list = ['wave_slit_test']
 
     for config_file in config_list:
         # Load parameters from config file

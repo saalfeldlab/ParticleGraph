@@ -90,7 +90,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
         os.remove(f)
 
     # create GNN
-    model, bc_pos, bc_dpos = choose_model(config, device=device)
+    model, bc_pos, bc_dpos = choose_model(config=config, device=device)
 
     particle_dropout_mask = np.arange(n_particles)
     if has_particle_dropout:
@@ -374,16 +374,14 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     print(f'Generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     dimension = simulation_config.dimension
-    max_radius = simulation_config.max_radius
-    min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
     delta_t = simulation_config.delta_t
-    has_adjacency_matrix = (simulation_config.connectivity_file != '')
     n_frames = simulation_config.n_frames
     has_particle_dropout = training_config.particle_dropout > 0
     cmap = CustomColorMap(config=config)
     dataset_name = config.dataset
+    is_N2 = 'signal_N2' in dataset_name
 
     torch.random.fork_rng(devices=device)
     torch.random.manual_seed(24)
@@ -405,9 +403,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     for f in files:
         os.remove(f)
 
-    # create GNN
-    model, bc_pos, bc_dpos = choose_model(config, device=device)
-
     particle_dropout_mask = np.arange(n_particles)
     if has_particle_dropout:
         draw = np.random.permutation(np.arange(n_particles))
@@ -424,6 +419,15 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         edge_index = adj_t.nonzero().t().contiguous()
         edge_attr_adjacency = adjacency[adj_t]
 
+    elif is_N2:
+        adjacency = constructRandomMatrices(n_neurons=n_particles, density=1.0, showplots=True, device=device)
+        adjacency_ = adjacency.t().clone().detach()
+        adj_t = torch.abs(adjacency_) > 0
+        edge_index = adj_t.nonzero().t().contiguous()
+        edge_attr_adjacency = adjacency_[adj_t]
+
+        torch.save(adjacency.t(), f'./graphs_data/graphs_{dataset_name}/adjacency.pt')
+
     else:
         mat = scipy.io.loadmat('./graphs_data/Brain.mat')
         first_adjacency = torch.tensor(mat['A'], device=device)
@@ -438,7 +442,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
         adjacency[i,j] = adjacency[j,i]
         adjacency[i, i] = 0
-
 
         # i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
         # bl = adjacency[j,i]
@@ -465,16 +468,64 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         plt.savefig(f"graphs_data/graphs_{dataset_name}/adjacency.tif", dpi=70)
         plt.close()
 
+    n_neurons = 1000
+    density = 1.0
+    Tmax = 100
+    dt = 0.01
+    T = np.arange(0, Tmax, dt)
+    I = torch.ones((n_neurons, len(T)), device=device) * 0
+
+    X_ = runNetworkSimulation(adjacency, n_neurons, density, I,
+                             g=2.0, s=1.0,
+                             Tmax=100, dt=0.01, tau=1.0, phi=torch.tanh, showplots=False, device=device)
+
+    plt.figure(figsize=(10, 3))
+    plt.subplot(121)
+    ax = sns.heatmap(to_numpy(X_), center=0, cbar_kws={'fraction': 0.046})
+    ax.invert_yaxis()
+    plt.title('Firing rate', fontsize=12)
+    plt.ylabel('Units', fontsize=12)
+    plt.xlabel('Time', fontsize=12)
+    plt.xticks([])
+    plt.yticks([0, 999], [1, 1000], fontsize=12)
+
+    plt.subplot(122)
+    plt.title('Firing rate samples', fontsize=12)
+    for i in range(5):
+        plt.plot(to_numpy(X_[i, :]))
+    plt.xlabel('Time', fontsize=12)
+    plt.ylabel('Normalized activity', fontsize=12)
+    plt.xticks([])
+    plt.yticks(fontsize=12)
+
+    plt.tight_layout()
+    plt.savefig(f'graphs_data/graphs_{dataset_name}/first_activity.png', dpi=300)
+
+    # create GNN
+    if is_N2:
+        excitation = torch.ones((n_particles, n_frames+1), device=device) * 0
+        match config.simulation.phi:
+            case 'tanh':
+                model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, phi=torch.tanh, device=device)
+            case _:
+                model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, phi=torch.tanh, device=device)
+    else:
+        model, bc_pos, bc_dpos = choose_model(config=config, device=device)
+    
+
 
     for run in range(config.training.n_runs):
 
-        n_particles = simulation_config.n_particles
+        X = torch.zeros((n_particles, n_frames + 1), device=device)
 
         x_list = []
         y_list = []
 
         # initialize particle and graph states
         X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
+
+        if (is_N2) & (run == 0):
+            H1[:,0] = X_[:, 0].clone().detach()
 
         x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
 
@@ -497,13 +548,16 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 (N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                  H1.clone().detach(), A1.clone().detach()), 1)
 
-            index_particles = get_index_particles(x, n_particle_types, dimension)  # can be different from frame to frame
+            X[:, it] = H1[:, 0].clone().detach()
 
             dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
 
             # model prediction
             with torch.no_grad():
-                y, s_tanhu, msg = model(dataset, return_all=True)
+                if is_N2:
+                    y, s_tanhu, msg = model(dataset, return_all=True, excitation=excitation[:, it])
+                else:
+                    y, s_tanhu, msg = model(dataset, return_all=True)
 
             # append list
             if (it >= 0) & bSave:
@@ -520,7 +574,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     y_list.append(y.clone().detach())
 
             # Particle update
-            if it>0:
+            if it>=0:
                 H1[:, 1] = y.squeeze()
                 H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
 
@@ -569,6 +623,29 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     plt.tight_layout()
                     plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{10000 + it}.tif", dpi=70)
                     plt.close()
+
+        if run==0:
+            plt.figure(figsize=(10, 3))
+            plt.subplot(121)
+            ax = sns.heatmap(to_numpy(X), center=0, cbar_kws={'fraction': 0.046})
+            ax.invert_yaxis()
+            plt.title('Firing rate', fontsize=12)
+            plt.ylabel('Units', fontsize=12)
+            plt.xlabel('Time', fontsize=12)
+            plt.xticks([])
+            plt.yticks([0, 999], [1, 1000], fontsize=12)
+
+            plt.subplot(122)
+            plt.title('Firing rate samples', fontsize=12)
+            for i in range(5):
+                plt.plot(to_numpy(X[i, :]))
+            plt.xlabel('Time', fontsize=12)
+            plt.ylabel('Normalized activity', fontsize=12)
+            plt.xticks([])
+            plt.yticks(fontsize=12)
+            plt.tight_layout()
+            plt.savefig(f'graphs_data/graphs_{dataset_name}/activity.png', dpi=300)
+            plt.close()
 
 
         if bSave:
@@ -638,7 +715,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
         torch.cuda.empty_cache()
 
-        model, bc_pos, bc_dpos = choose_model(config, device=device)
+        model, bc_pos, bc_dpos = choose_model(config=config, device=device)
 
         n_particles = simulation_config.n_particles
 
@@ -1282,7 +1359,7 @@ def data_generate_cell_from_fluo (config, visualize=True, run_vizualized=0, styl
 
         torch.cuda.empty_cache()
 
-        model, bc_pos, bc_dpos = choose_model(config, device=device)
+        model, bc_pos, bc_dpos = choose_model(config=config, device=device)
 
         n_particles = simulation_config.n_particles
 
@@ -1612,7 +1689,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
         os.remove(f)
     copyfile(os.path.realpath(__file__), os.path.join(folder, 'generation_code.py'))
 
-    model_p_p, bc_pos, bc_dpos = choose_model(config, device=device)
+    model_p_p, bc_pos, bc_dpos = choose_model(config=config, device=device)
     model_f_p = model_p_p
 
     # model_f_f = choose_mesh_model(config, device=device)

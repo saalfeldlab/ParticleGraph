@@ -86,26 +86,27 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
     plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=87)
     plt.close()
 
-    fig = plt.figure(figsize=(16, 8))
-    ax = fig.add_subplot(1, 2, 1)
-    rr = torch.tensor(np.linspace(-50, 0, 1000)).to(device)
-    for n in range(n_particles):
-        embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-        in_features = torch.cat((rr[:,None], embedding_), dim=-1)
-        with torch.no_grad():
-            func = model.lin_phi(in_features.float())
-        if (n % 2 == 0):
-            plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
-    ax = fig.add_subplot(1, 2, 2)
-    for n in range(n_particles):
-        embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-        in_features = torch.cat((rr[:,None], embedding_), dim=-1)
-        with torch.no_grad():
-            func = model.lin_edge(in_features.float())
-        if (n % 2 == 0):
-            plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif", dpi=87)
+    if 'PDE_N2' in config.graph_model.signal_model_name:
+        fig = plt.figure(figsize=(16, 8))
+        ax = fig.add_subplot(1, 2, 1)
+        rr = torch.tensor(np.linspace(-50, 0, 1000)).to(device)
+        for n in range(n_particles):
+            embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+            in_features = torch.cat((rr[:,None], embedding_), dim=-1)
+            with torch.no_grad():
+                func = model.lin_phi(in_features.float())
+            if (n % 2 == 0):
+                plt.plot(to_numpy(rr), to_numpy(func),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
+        ax = fig.add_subplot(1, 2, 2)
+        for n in range(n_particles):
+            embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+            in_features = torch.cat((rr[:,None], embedding_), dim=-1)
+            with torch.no_grad():
+                func = model.lin_edge(in_features.float())
+            if (n % 2 == 0):
+                plt.plot(to_numpy(rr), to_numpy(func),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif", dpi=87)
 
     A = torch.zeros(n_particles, n_particles, device=device, requires_grad=False, dtype=torch.float32)
     if 'asymmetric' in config.simulation.adjacency_matrix:
