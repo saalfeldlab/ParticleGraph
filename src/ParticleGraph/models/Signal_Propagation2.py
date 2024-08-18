@@ -50,9 +50,9 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.lin_phi = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                             hidden_size=self.hidden_dim, device=self.device)
 
-        self.a = nn.Parameter(torch.zeros((self.n_dataset,int(self.n_particles), self.embedding_dim), device=self.device, requires_grad=True, dtype=torch.float32))
+        self.a = nn.Parameter(torch.ones((self.n_dataset,int(self.n_particles), self.embedding_dim), device=self.device, requires_grad=True, dtype=torch.float32))
 
-        self.W = nn.Parameter(torch.zeros((int(self.n_particles),int(self.n_particles)), device=self.device, requires_grad=True, dtype=torch.float32))
+        self.W = nn.Parameter(torch.randn((int(self.n_particles),int(self.n_particles)), device=self.device, requires_grad=True, dtype=torch.float32))
 
         self.mask = torch.ones((int(self.n_particles),int(self.n_particles)), device=self.device, requires_grad=False, dtype=torch.float32)
         self.mask.fill_diagonal_(0)
@@ -67,9 +67,9 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         embedding = self.a[1, particle_id, :]
 
         # msg = self.propagate(edge_index, u=u)
-        msg = torch.matmul(torch.matmul(self.W, self.mask), self.lin_edge(u))
+        msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
 
-        pred = -u + embedding[:,1:2] * self.lin_phi(u) + embedding[:,0:1] * msg + excitation[:,None]
+        pred = -u + embedding[:,1:2] * self.lin_phi(u) + embedding[:,0:1] * msg + excitation
 
         return pred
 

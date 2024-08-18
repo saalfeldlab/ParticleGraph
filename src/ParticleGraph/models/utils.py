@@ -86,27 +86,30 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
     plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=87)
     plt.close()
 
-    if 'PDE_N2' in config.graph_model.signal_model_name:
-        fig = plt.figure(figsize=(8, 8))
-        rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
-        for n in range(n_particles):
-            # embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            in_features =rr
-            with torch.no_grad():
-                func = model.lin_phi(in_features.float())
-            if (n % 2 == 0):
-                plt.plot(to_numpy(rr), to_numpy(func),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
-        plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif", dpi=87)
+    fig = plt.figure(figsize=(8, 8))
+    rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
+    for n in range(n_particles):
+        if 'PDE_N2' in config.graph_model.signal_model_name:
+            in_features =rr[:, None]
+        else:
+            embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+            in_features = torch.cat((rr[:, None], embedding_), dim=1)
+        with torch.no_grad():
+            func = model.lin_phi(in_features.float())
+        if (n % 2 == 0):
+            plt.plot(to_numpy(rr), to_numpy(func),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
+    plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif", dpi=87)
 
-    A = torch.zeros(n_particles, n_particles, device=device, requires_grad=False, dtype=torch.float32)
-    if 'asymmetric' in config.simulation.adjacency_matrix:
+    i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+    if 'PDE_N2' in config.graph_model.signal_model_name:
+        A = model.W.clone().detach()
+        A[i,i] = 0
+    elif 'asymmetric' in config.simulation.adjacency_matrix:
         A = model.vals
     else:
-        i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+        A = torch.zeros(n_particles, n_particles, device=device, requires_grad=False, dtype=torch.float32)
         A[i, j] = model.vals
         A.T[i, j] = model.vals
-
-    fig, ax = fig_init()
     fig = plt.figure(figsize=(12, 6))
     ax = fig.add_subplot(1, 2, 1)
     plt.imshow(to_numpy(A), cmap='viridis')
