@@ -13,6 +13,7 @@ import warnings
 import numpy as np
 import time
 import tqdm
+import seaborn as sns
 
 def linear_model(x, a, b):
     return a * x + b
@@ -103,6 +104,7 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
     i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
     if 'PDE_N2' in config.graph_model.signal_model_name:
         A = model.W.clone().detach()
+        A = A.t()
         A[i,i] = 0
     elif 'asymmetric' in config.simulation.adjacency_matrix:
         A = model.vals
@@ -110,12 +112,15 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
         A = torch.zeros(n_particles, n_particles, device=device, requires_grad=False, dtype=torch.float32)
         A[i, j] = model.vals
         A.T[i, j] = model.vals
-    fig = plt.figure(figsize=(12, 6))
-    ax = fig.add_subplot(1, 2, 1)
+    fig = plt.figure(figsize=(8, 8))
+    ax = sns.heatmap(to_numpy(A),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046})
+    ax.invert_yaxis()
+    plt.title('Random connectivity matrix',fontsize=12);
+    plt.xticks([0,n_particles-1],[1,n_particles],fontsize=10)
+    plt.yticks([0,n_particles-1],[1,n_particles],fontsize=10)
+
     plt.imshow(to_numpy(A), cmap='viridis')
-    ax = fig.add_subplot(1, 2, 2)
-    plt.imshow(to_numpy(A) > 0.01, cmap='viridis')
-    plt.tight_layout()
+
     plt.savefig(f"./{log_dir}/tmp_training/field/{dataset_name}_{epoch}_{N}.tif", dpi=87)
     plt.close()
 

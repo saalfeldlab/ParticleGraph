@@ -1,5 +1,8 @@
 import matplotlib.pyplot as plt
 import torch
+import seaborn as sns
+import torch.nn.functional as F
+import random
 
 from GNN_particles_Ntype import *
 from ParticleGraph.models.utils import *
@@ -9,12 +12,12 @@ from geomloss import SamplesLoss
 from ParticleGraph.sparsify import EmbeddingCluster, sparsify_cluster, sparsify_cluster_state
 from ParticleGraph.models.Gumbel import gumbel_softmax_sample, gumbel_softmax
 
-import random
+
 from ParticleGraph.data_loaders import load_agent_data
 from sklearn.neighbors import NearestNeighbors
 from scipy.ndimage import median_filter
 from ParticleGraph.generators.cell_utils import *
-import torch.nn.functional as F
+
 
 def data_train(config, config_file, device):
 
@@ -1709,9 +1712,9 @@ def data_train_signal(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    net = f"./log/try_{config_file}/models/best_model_with_9_graphs_1.pt"
-    state_dict = torch.load(net,map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
+    # net = f"./log/try_{config_file}/models/best_model_with_9_graphs_1.pt"
+    # state_dict = torch.load(net,map_location=device)
+    # model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -1904,6 +1907,7 @@ def data_train_signal(config, config_file, device):
             visualize_embedding = True
             if visualize_embedding & (((epoch < 30 ) & (N%(Niter//50) == 0)) | (N==0)):
                 plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, index_particles, n_particles, n_particle_types, type_list, cmap, device)
+                torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
@@ -1913,7 +1917,7 @@ def data_train_signal(config, config_file, device):
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
-        fig = plt.figure(figsize=(16, 4))
+        fig = plt.figure(figsize=(20, 4))
 
         ax = fig.add_subplot(1, 5, 1)
         plt.plot(list_loss, color='k')
@@ -1932,6 +1936,7 @@ def data_train_signal(config, config_file, device):
         i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
         if is_N2:
             A = model.W.clone().detach()
+            A = A.t()
             A[i,i] = 0
         elif 'asymmetric' in config.simulation.adjacency_matrix:
             A = model.vals
@@ -1940,35 +1945,43 @@ def data_train_signal(config, config_file, device):
             A[i,j] = model.vals
             A.T[i,j] = model.vals
 
+
+
         ax = fig.add_subplot(1, 5, 3)
+        # sigma = to_numpy(torch.std(adjacency))
+        # plt.imshow(to_numpy(adjacency), cmap='viridis', vmin = -sigma, vmax= sigma)
+        ax = sns.heatmap(to_numpy(adjacency),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046})
+        ax.invert_yaxis()
+        plt.title('True connectivity matrix',fontsize=12);
+        plt.xticks([0,n_particles-1],[1,n_particles],fontsize=10)
+        plt.yticks([0,n_particles-1],[1,n_particles],fontsize=10)
+        ax = fig.add_subplot(1, 5, 4)
+        # sigma = to_numpy(torch.std(A))
+        # plt.imshow(to_numpy(A), cmap='viridis', vmin = -sigma, vmax= sigma)
+        ax = sns.heatmap(to_numpy(A),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046})
+        ax.invert_yaxis()
+        plt.title('Learned connectivity matrix',fontsize=12);
+        plt.xticks([0,n_particles-1],[1,n_particles],fontsize=10)
+        plt.yticks([0,n_particles-1],[1,n_particles],fontsize=10)
+
+        ax = fig.add_subplot(1, 5, 5)
         gt_weight = to_numpy(adjacency)
         pred_weight = to_numpy(A)
         plt.scatter(gt_weight, pred_weight, s=0.1,c='k',alpha=0.01)
-        plt.xlabel('gt weight', fontsize=12)
-        plt.ylabel('predicted weight', fontsize=12)
-
-        ax = fig.add_subplot(1, 5, 4)
-        sigma = to_numpy(torch.std(adjacency))/4
-        plt.imshow(to_numpy(adjacency), cmap='viridis', vmin = -sigma, vmax= sigma)
-        ax = fig.add_subplot(1, 5, 5)
-        sigma = to_numpy(torch.std(A))/4
-        plt.imshow(to_numpy(A), cmap='viridis', vmin = -sigma, vmax= sigma)
+        plt.xlabel('true weight', fontsize=12)
+        plt.ylabel('learned weight', fontsize=12)
+        plt.title('comparison')
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
         plt.close()
 
-        i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-        fig = plt.figure(figsize=(8,8))
-        A = model.W.clone().detach()
-        A[i,i] = 0
-        plt.imshow(to_numpy(A), cmap='viridis')
-
-        fig = plt.figure(figsize=(8,8))
-        A = adjacency.clone().detach()
-        A[i,i] = 0
-        plt.imshow(to_numpy(A), cmap='viridis')
-
+        plt.figure(figsize=(3,3))
+        ax = sns.heatmap(to_numpy(A),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046})
+        ax.invert_yaxis()
+        plt.title('Random connectivity matrix',fontsize=12);
+        plt.xticks([0,n_particles-1],[1,n_particles],fontsize=10)
+        plt.yticks([0,n_particles-1],[1,n_particles],fontsize=10)
 
 
 def data_train_agents(config, config_file, device):
