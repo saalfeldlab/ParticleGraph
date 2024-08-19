@@ -53,7 +53,7 @@ if __name__ == '__main__':
 
     # config_list = ["gland_SMG2-processed"]
     # config_list = ["MDCK_FN_PB-Kleb_JF585"]
-    config_list = ['signal_N2_a_r1']
+    config_list = ['signal_N2_b_r2']
 
     for config_file in config_list:
 

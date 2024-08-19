@@ -1709,9 +1709,9 @@ def data_train_signal(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_9_graphs_3.pt"
-    # state_dict = torch.load(net,map_location=device)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    net = f"./log/try_{config_file}/models/best_model_with_9_graphs_1.pt"
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -1834,42 +1834,53 @@ def data_train_signal(config, config_file, device):
                         func_f = model.lin_edge(torch.zeros(1,device=device))
                         in_features = torch.cat((torch.zeros((n_particles,1),device=device),  model.a[1, :]), dim=1)
                         func_phi = model.lin_phi(in_features.float())
-                        loss = (pred1 + pred2 - y).norm(2) / 2 + model.vals.norm(1) + func_f.norm(2) + func_phi.norm(2)
+                        loss = (pred1 + pred2 - y).norm(2) + model.vals.norm(1) + func_f.norm(2) + func_phi.norm(2)
 
                 case 3:
 
                     x = x_list[run][k].clone().detach()
                     dataset = data.Data(x=x, edge_index=model.edges)
                     pred1 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
-                    x[:, 6:7] += pred1 * delta_t
-                    dataset = data.Data(x=x, edge_index=model.edges)
+                    x_ = x.clone().detach()
+                    x_[:, 6:7] += pred1 * delta_t
+                    dataset = data.Data(x=x_, edge_index=model.edges)
                     pred2 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
-                    x[:, 6:7] += pred2 * delta_t
-                    dataset = data.Data(x=x, edge_index=model.edges)
+                    x_ = x.clone().detach()
+                    x_[:, 6:7] += (pred1+pred2) * delta_t
+                    dataset = data.Data(x=x_, edge_index=model.edges)
                     pred3 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
 
                     y1 = y_list[run][k].clone().detach()/ ynorm
                     y2 = y_list[run][k+1].clone().detach()/ ynorm
                     y3 = y_list[run][k+2].clone().detach()/ ynorm
 
-                    loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)
+                    if is_N2:
+                        in_features = torch.zeros((n_particles,1),device=device)
+                        func_phi = model.lin_phi(in_features.float())
+                        loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2) + model.W.norm(1) * 1E-6 + func_phi.norm(2)
+                    else:
+                        loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)
 
                 case 5:
 
                     x = x_list[run][k].clone().detach()
                     dataset = data.Data(x=x, edge_index=model.edges)
                     pred1 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
-                    x[:, 6:7] += pred1 * delta_t
-                    dataset = data.Data(x=x, edge_index=model.edges)
+                    x_ = x.clone().detach()
+                    x_[:, 6:7] += pred1 * delta_t
+                    dataset = data.Data(x=x_, edge_index=model.edges)
                     pred2 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
-                    x[:, 6:7] += pred2 * delta_t
-                    dataset = data.Data(x=x, edge_index=model.edges)
+                    x_ = x.clone().detach()
+                    x_[:, 6:7] += (pred1+pred2) * delta_t
+                    dataset = data.Data(x=x_, edge_index=model.edges)
                     pred3 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
-                    x[:, 6:7] += pred3 * delta_t
-                    dataset = data.Data(x=x, edge_index=model.edges)
+                    x_ = x.clone().detach()
+                    x_[:, 6:7] += (pred1+pred2+pred3) * delta_t
+                    dataset = data.Data(x=x_, edge_index=model.edges)
                     pred4 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
-                    x[:, 6:7] += pred4 * delta_t
-                    dataset = data.Data(x=x, edge_index=model.edges)
+                    x_ = x.clone().detach()
+                    x_[:, 6:7] += (pred1+pred2+pred3+pred4) * delta_t
+                    dataset = data.Data(x=x_, edge_index=model.edges)
                     pred5 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
 
                     y1 = y_list[run][k].clone().detach()/ ynorm
@@ -1878,7 +1889,12 @@ def data_train_signal(config, config_file, device):
                     y4 = y_list[run][k+3].clone().detach()/ ynorm
                     y5 = y_list[run][k+4].clone().detach()/ ynorm
 
-                    loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2)
+                    if is_N2:
+                        in_features = torch.zeros((n_particles,1),device=device)
+                        func_phi = model.lin_phi(in_features.float())
+                        loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2) + model.W.norm(1) * 1E-6 + func_phi.norm(2)
+                    else:
+                        loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2)
 
             loss.backward()
             optimizer.step()
