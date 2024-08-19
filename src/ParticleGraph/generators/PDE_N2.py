@@ -6,20 +6,25 @@ from scipy import sparse
 import seaborn as sns
 import numpy as np
 import matplotlib.pyplot as plt
+from tifffile import imread
 
 
-def constructRandomMatrices(n_neurons=1000, density=1.0, showplots=True, device=[]):
+def constructRandomMatrices(n_neurons=1000, density=1.0, showplots=True, connectivity_mask=[], device=[]):
     """
     n_neurons = Number
     density = density of connections
     """
-
-    K = n_neurons * density
-
-    W = np.multiply(np.random.normal(loc=0, scale=1, size=(n_neurons, n_neurons)),
-                    np.random.rand(n_neurons, n_neurons) < density)
-
-    W = W / np.sqrt(K)
+    if connectivity_mask=='':
+        K = n_neurons * density
+        W = np.multiply(np.random.normal(loc=0, scale=1, size=(n_neurons, n_neurons)),
+                        np.random.rand(n_neurons, n_neurons) < density)
+        W = W / np.sqrt(K)
+    else:
+        mask = (imread(connectivity_mask)>0.1)*1.0
+        density = np.sum(mask) / (n_neurons**2)
+        K = n_neurons * density
+        W = np.multiply(np.random.normal(loc=0, scale=1, size=(n_neurons, n_neurons)),mask)
+        W = W / np.sqrt(K)
 
     np.fill_diagonal(W, 0)
 

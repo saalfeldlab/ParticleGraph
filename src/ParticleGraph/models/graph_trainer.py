@@ -1709,7 +1709,7 @@ def data_train_signal(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_99_graphs_20.pt"
+    # net = f"./log/try_{config_file}/models/best_model_with_9_graphs_3.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
 
@@ -1811,7 +1811,10 @@ def data_train_signal(config, config_file, device):
                     pred = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
                     y = y_list[run][k].clone().detach()
                     y = y / ynorm
-                    loss = (pred - y).norm(2)
+                    if is_N2:
+                        loss = (pred - y).norm(2) + model.W.norm(1) * 1E-6
+                    else:
+                        loss = (pred - y).norm(2)
 
                 case 2:
 
@@ -1826,12 +1829,12 @@ def data_train_signal(config, config_file, device):
                     if is_N2:
                         in_features = torch.zeros((n_particles,1),device=device)
                         func_phi = model.lin_phi(in_features.float())
-                        loss = (pred1 + pred2 - y).norm(2) / 2 + model.W.norm(1) * config.training.coeff_L1 + func_phi.norm(2)
+                        loss = (pred1 + pred2 - y).norm(2) / 2 + model.W.norm(1) * 1E-6 + func_phi.norm(2)
                     else:
                         func_f = model.lin_edge(torch.zeros(1,device=device))
                         in_features = torch.cat((torch.zeros((n_particles,1),device=device),  model.a[1, :]), dim=1)
                         func_phi = model.lin_phi(in_features.float())
-                        loss = (pred1 + pred2 - y).norm(2) / 2 + model.vals.norm(1) * config.training.coeff_L1 + func_f.norm(2) + func_phi.norm(2)
+                        loss = (pred1 + pred2 - y).norm(2) / 2 + model.vals.norm(1) + func_f.norm(2) + func_phi.norm(2)
 
                 case 3:
 
@@ -1894,15 +1897,15 @@ def data_train_signal(config, config_file, device):
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
-        fig = plt.figure(figsize=(22, 4))
+        fig = plt.figure(figsize=(16, 4))
 
-        ax = fig.add_subplot(1, 6, 1)
+        ax = fig.add_subplot(1, 5, 1)
         plt.plot(list_loss, color='k')
         plt.xlim([0, n_epochs])
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
 
-        ax = fig.add_subplot(1, 6, 2)
+        ax = fig.add_subplot(1, 5, 2)
         embedding = get_embedding(model.a, 1)
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0],
@@ -1921,26 +1924,35 @@ def data_train_signal(config, config_file, device):
             A[i,j] = model.vals
             A.T[i,j] = model.vals
 
-        ax = fig.add_subplot(1, 6, 3)
-        gt_weight = to_numpy(adjacency[adj_t])
-        pred_weight = to_numpy(A[adj_t])
-        plt.scatter(gt_weight, pred_weight, s=0.1,c='k')
-        plt.xlabel('gt weight', fontsize=12)
-        plt.ylabel('predicted weight', fontsize=12)
-        ax = fig.add_subplot(1, 6, 4)
+        ax = fig.add_subplot(1, 5, 3)
         gt_weight = to_numpy(adjacency)
         pred_weight = to_numpy(A)
-        plt.scatter(gt_weight, pred_weight, s=0.1,c='k')
-        plt.xlabel('all gt weight', fontsize=12)
-        plt.ylabel('all predicted weight', fontsize=12)
-        ax = fig.add_subplot(1, 6, 5)
-        plt.imshow(to_numpy(adjacency), cmap='viridis', vmin=0, vmax=0.01)
-        ax = fig.add_subplot(1, 6, 6)
-        plt.imshow(np.abs(to_numpy(A)), cmap='viridis', vmin=0, vmax=0.001)
+        plt.scatter(gt_weight, pred_weight, s=0.1,c='k',alpha=0.01)
+        plt.xlabel('gt weight', fontsize=12)
+        plt.ylabel('predicted weight', fontsize=12)
+
+        ax = fig.add_subplot(1, 5, 4)
+        sigma = to_numpy(torch.std(adjacency))/4
+        plt.imshow(to_numpy(adjacency), cmap='viridis', vmin = -sigma, vmax= sigma)
+        ax = fig.add_subplot(1, 5, 5)
+        sigma = to_numpy(torch.std(A))/4
+        plt.imshow(to_numpy(A), cmap='viridis', vmin = -sigma, vmax= sigma)
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
         plt.close()
+
+        i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+        fig = plt.figure(figsize=(8,8))
+        A = model.W.clone().detach()
+        A[i,i] = 0
+        plt.imshow(to_numpy(A), cmap='viridis')
+
+        fig = plt.figure(figsize=(8,8))
+        A = adjacency.clone().detach()
+        A[i,i] = 0
+        plt.imshow(to_numpy(A), cmap='viridis')
+
 
 
 def data_train_agents(config, config_file, device):

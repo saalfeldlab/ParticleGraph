@@ -420,7 +420,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         edge_attr_adjacency = adjacency[adj_t]
 
     elif is_N2:
-        adjacency = constructRandomMatrices(n_neurons=n_particles, density=1.0, showplots=True, device=device)
+        adjacency = constructRandomMatrices(n_neurons=n_particles, density=1.0, showplots=True, connectivity_mask=f"./graphs_data/{config.simulation.connectivity_mask}" ,device=device)
         adjacency_ = adjacency.t().clone().detach()
         adj_t = torch.abs(adjacency_) > 0
         edge_index = adj_t.nonzero().t().contiguous()
