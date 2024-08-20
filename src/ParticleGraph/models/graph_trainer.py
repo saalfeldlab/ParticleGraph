@@ -1945,24 +1945,18 @@ def data_train_signal(config, config_file, device):
             A[i,j] = model.vals
             A.T[i,j] = model.vals
 
-
-
         ax = fig.add_subplot(1, 5, 3)
-        # sigma = to_numpy(torch.std(adjacency))
-        # plt.imshow(to_numpy(adjacency), cmap='viridis', vmin = -sigma, vmax= sigma)
         ax = sns.heatmap(to_numpy(adjacency),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046})
-        ax.invert_yaxis()
+        # ax.invert_yaxis()
         plt.title('True connectivity matrix',fontsize=12);
-        plt.xticks([0,n_particles-1],[1,n_particles],fontsize=10)
-        plt.yticks([0,n_particles-1],[1,n_particles],fontsize=10)
+        plt.xticks([0,n_particles-1],[1,n_particles],fontsize=8)
+        plt.yticks([0,n_particles-1],[1,n_particles],fontsize=8)
         ax = fig.add_subplot(1, 5, 4)
-        # sigma = to_numpy(torch.std(A))
-        # plt.imshow(to_numpy(A), cmap='viridis', vmin = -sigma, vmax= sigma)
         ax = sns.heatmap(to_numpy(A),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046})
-        ax.invert_yaxis()
+        # ax.invert_yaxis()
         plt.title('Learned connectivity matrix',fontsize=12);
-        plt.xticks([0,n_particles-1],[1,n_particles],fontsize=10)
-        plt.yticks([0,n_particles-1],[1,n_particles],fontsize=10)
+        plt.xticks([0,n_particles-1],[1,n_particles],fontsize=8)
+        plt.yticks([0,n_particles-1],[1,n_particles],fontsize=8)
 
         ax = fig.add_subplot(1, 5, 5)
         gt_weight = to_numpy(adjacency)

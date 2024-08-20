@@ -19,8 +19,15 @@ def constructRandomMatrices(n_neurons=1000, density=1.0, showplots=True, connect
         W = np.multiply(np.random.normal(loc=0, scale=1, size=(n_neurons, n_neurons)),
                         np.random.rand(n_neurons, n_neurons) < density)
         W = W / np.sqrt(K)
+    elif 'conn' in connectivity_mask:
+        W = imread(connectivity_mask)
+        n_neurons = W.shape[0]
+        polarity = (np.random.rand(W.shape[0],W.shape[1])>0.5)*2-1
+        W = W  / np.max(W)
+        W = W * polarity
     else:
         mask = (imread(connectivity_mask)>0.1)*1.0
+        plt.imshow(mask,vmin=0,vmax=1)
         density = np.sum(mask) / (n_neurons**2)
         K = n_neurons * density
         W = np.multiply(np.random.normal(loc=0, scale=1, size=(n_neurons, n_neurons)),mask)
@@ -29,12 +36,15 @@ def constructRandomMatrices(n_neurons=1000, density=1.0, showplots=True, connect
     np.fill_diagonal(W, 0)
 
     if showplots:
-        plt.figure(figsize=(3, 3))
+        plt.figure(figsize=(8, 8))
         ax = sns.heatmap(W, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
-        ax.invert_yaxis()
-        plt.title('Random connectivity matrix', fontsize=12);
-        plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=10)
-        plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=10)
+        # ax.invert_yaxis()
+        plt.title('True connectivity matrix', fontsize=12);
+        plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=8)
+        plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=8)
+        plt.tight_layout()
+        plt.close()
+
 
     W = torch.tensor(W, dtype=torch.float32, device=device)
 

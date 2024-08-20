@@ -14,6 +14,7 @@ from matplotlib.collections import PatchCollection
 import tifffile
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import seaborn as sns
+from fa2_modified import ForceAtlas2
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
@@ -384,7 +385,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     is_N2 = 'signal_N2' in dataset_name
 
     torch.random.fork_rng(devices=device)
-    torch.random.manual_seed(24)
+    torch.random.manual_seed(42)
 
     if config.data_folder_name != 'none':
         print(f'Generating from data ...')
@@ -426,40 +427,48 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         edge_index = adj_t.nonzero().t().contiguous()
         edge_attr_adjacency = adjacency_[adj_t]
 
+        n_particles = adjacency.shape[0]
+        config.simulation.n_particles = n_particles
+
+        # Initial conditions
+        X_ = torch.zeros((n_particles, n_frames), device=device)
+        Xinit = torch.rand(n_particles, )  # Initial conditions
+        X_[:, 0] = Xinit
+
         torch.save(adjacency.t(), f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt')
 
-        n_neurons = 1000
-        density = 1.0
-        Tmax = 100
-        dt = 0.01
-        T = np.arange(0, Tmax, dt)
-        I = torch.ones((n_neurons, len(T)), device=device) * 0
-
-        X_ = runNetworkSimulation(adjacency, n_neurons, density, I,
-                                  g=2.0, s=1.0,
-                                  Tmax=100, dt=0.01, tau=1.0, phi=torch.tanh, showplots=False, device=device)
-
-        plt.figure(figsize=(10, 3))
-        plt.subplot(121)
-        ax = sns.heatmap(to_numpy(X_), center=0, cbar_kws={'fraction': 0.046})
-        ax.invert_yaxis()
-        plt.title('Firing rate', fontsize=12)
-        plt.ylabel('Units', fontsize=12)
-        plt.xlabel('Time', fontsize=12)
-        plt.xticks([])
-        plt.yticks([0, 999], [1, 1000], fontsize=12)
-
-        plt.subplot(122)
-        plt.title('Firing rate samples', fontsize=12)
-        for i in range(5):
-            plt.plot(to_numpy(X_[i, :]))
-        plt.xlabel('Time', fontsize=12)
-        plt.ylabel('Normalized activity', fontsize=12)
-        plt.xticks([])
-        plt.yticks(fontsize=12)
-
-        plt.tight_layout()
-        plt.savefig(f'graphs_data/graphs_{dataset_name}/first_activity.png', dpi=300)
+        # n_neurons = 1000
+        # density = 1.0
+        # Tmax = 100
+        # dt = 0.01
+        # T = np.arange(0, Tmax, dt)
+        # I = torch.ones((n_neurons, len(T)), device=device) * 0
+        #
+        # X_ = runNetworkSimulation(adjacency, n_neurons, density, I,
+        #                           g=2.0, s=1.0,
+        #                           Tmax=100, dt=0.01, tau=1.0, phi=torch.tanh, showplots=False, device=device)
+        #
+        # plt.figure(figsize=(10, 3))
+        # plt.subplot(121)
+        # ax = sns.heatmap(to_numpy(X_), center=0, cbar_kws={'fraction': 0.046})
+        # ax.invert_yaxis()
+        # plt.title('Firing rate', fontsize=12)
+        # plt.ylabel('Units', fontsize=12)
+        # plt.xlabel('Time', fontsize=12)
+        # plt.xticks([])
+        # plt.yticks([0, 999], [1, 1000], fontsize=12)
+        #
+        # plt.subplot(122)
+        # plt.title('Firing rate samples', fontsize=12)
+        # for i in range(25):
+        #     plt.plot(to_numpy(X_[i, :]))
+        # plt.xlabel('Time', fontsize=12)
+        # plt.ylabel('Normalized activity', fontsize=12)
+        # plt.xticks([])
+        # plt.yticks(fontsize=12)
+        #
+        # plt.tight_layout()
+        # plt.savefig(f'graphs_data/graphs_{dataset_name}/first_activity.png', dpi=300)
 
     else:
         mat = scipy.io.loadmat('./graphs_data/Brain.mat')
@@ -530,10 +539,35 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
 
         dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
-        vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-        pos = nx.spring_layout(vis, weight='weight', seed=42, k=1)
-        for k,v in pos.items():
-            X1[k,:] = torch.tensor([v[0],v[1]], device=device)
+        G = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
+        forceatlas2 = ForceAtlas2(
+            # Behavior alternatives
+            outboundAttractionDistribution=True,  # Dissuade hubs
+            linLogMode=False,  # NOT IMPLEMENTED
+            adjustSizes=False,  # Prevent overlap (NOT IMPLEMENTED)
+            edgeWeightInfluence=1.0,
+
+            # Performance
+            jitterTolerance=1.0,  # Tolerance
+            barnesHutOptimize=True,
+            barnesHutTheta=1.2,
+            multiThreaded=False,  # NOT IMPLEMENTED
+
+            # Tuning
+            scalingRatio=2.0,
+            strongGravityMode=True,
+            gravity=1.0,
+
+            # Log
+            verbose=True)
+        positions = forceatlas2.forceatlas2_networkx_layout(G, pos=None, iterations=20000)
+        positions = np.array(list(positions.values()))
+        X1 = torch.tensor(positions, dtype=torch.float32, device=device)
+        X1 = X1 - torch.mean(X1, 0)
+
+        # pos = nx.spring_layout(G, weight='weight', seed=42, k=1)
+        # for k,p in pos.items():
+        #     X1[k,:] = torch.tensor([v[0],v[1]], device=device)
 
         time.sleep(0.5)
         for it in trange(simulation_config.start_frame, n_frames + 1):
@@ -586,41 +620,47 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 if 'color' in style:
 
                     matplotlib.rcParams['savefig.pad_inches'] = 0
-                    fig = plt.figure(figsize=(16, 14))
-                    ax = fig.add_subplot(2, 2, 1)
-                    plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=60, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-2.5, vmax=2.5)
-                    plt.colorbar()
-                    plt.xlim([-1.2, 1.2])
-                    plt.ylim([-1.2, 1.2])
+                    fig = plt.figure(figsize=(13, 10))
+                    if 'conn' in config.simulation.connectivity_mask:
+                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=15, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-5,vmax=5)
+                        plt.colorbar()
+                        plt.xlim([-4000, 4000])
+                        plt.ylim([-4000, 4000])
+                    else:
+                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=20, c=to_numpy(H1[:, 0]), cmap='viridis')
+                        plt.colorbar()
+                        plt.xlim([-np.std(positions[:, 0]) / 31, np.std(positions[:, 0]) / 3])
+                        plt.ylim([-np.std(positions[:, 1]) / 3, np.std(positions[:, 1]) / 3])
                     plt.xticks([])
                     plt.yticks([])
-                    plt.title('u')
-                    ax = fig.add_subplot(2, 2, 2)
-                    plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=60, c=to_numpy(H1[:, 1]), cmap='viridis', vmin=-2.5, vmax=2.5)
-                    plt.colorbar()
-                    plt.xlim([-1.2, 1.2])
-                    plt.ylim([-1.2, 1.2])
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.title('du')
-                    ax = fig.add_subplot(2, 2, 3)
-                    plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=60, c=to_numpy(s_tanhu), cmap='viridis', vmin=-2.5, vmax=2.5)
-                    plt.colorbar()
-                    plt.xlim([-1.2, 1.2])
-                    plt.ylim([-1.2, 1.2])
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.title('s.tanh(u)')
-                    ax = fig.add_subplot(2, 2, 4)
-                    plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=60, c=to_numpy(msg), cmap='viridis', vmin=-2.5, vmax=2.5)
-                    plt.colorbar()
-                    plt.xlim([-1.2, 1.2])
-                    plt.ylim([-1.2, 1.2])
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.title('g.msg')
-
                     plt.tight_layout()
+
+                    # ax = fig.add_subplot(2, 2, 2)
+                    # plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=60, c=to_numpy(H1[:, 1]), cmap='viridis', vmin=-2.5, vmax=2.5)
+                    # plt.colorbar()
+                    # plt.xlim([-1.2, 1.2])
+                    # plt.ylim([-1.2, 1.2])
+                    # plt.xticks([])
+                    # plt.yticks([])
+                    # plt.title('du')
+                    # ax = fig.add_subplot(2, 2, 3)
+                    # plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=60, c=to_numpy(s_tanhu), cmap='viridis', vmin=-2.5, vmax=2.5)
+                    # plt.colorbar()
+                    # plt.xlim([-1.2, 1.2])
+                    # plt.ylim([-1.2, 1.2])
+                    # plt.xticks([])
+                    # plt.yticks([])
+                    # plt.title('s.tanh(u)')
+                    # ax = fig.add_subplot(2, 2, 4)
+                    # plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=60, c=to_numpy(msg), cmap='viridis', vmin=-2.5, vmax=2.5)
+                    # plt.colorbar()
+                    # plt.xlim([-1.2, 1.2])
+                    # plt.ylim([-1.2, 1.2])
+                    # plt.xticks([])
+                    # plt.yticks([])
+                    # plt.title('g.msg')
+
+
                     plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{10000 + it}.tif", dpi=70)
                     plt.close()
 
@@ -637,8 +677,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
             plt.subplot(122)
             plt.title('Firing rate samples', fontsize=12)
-            for i in range(5):
-                plt.plot(to_numpy(X[i, :]))
+            for i in range(50):
+                plt.plot(to_numpy(X[i, :]), linewidth=1)
             plt.xlabel('Time', fontsize=12)
             plt.ylabel('Normalized activity', fontsize=12)
             plt.xticks([])

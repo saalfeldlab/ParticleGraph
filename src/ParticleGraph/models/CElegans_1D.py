@@ -171,8 +171,8 @@ if __name__ == '__main__':
     config['device'] = device
     config['input_size'] = 4
     config['output_size'] = 1
-    config['hidden_dim'] = 128
-    config['n_layers'] = 3
+    config['hidden_dim'] = 256
+    config['n_layers'] = 8
     config['n_datasets'] = 12
     config['n_frames'] = n_length[0]
 
@@ -199,7 +199,7 @@ if __name__ == '__main__':
         ddy = torch.load(f'{path}/ddy.pt', map_location=device)
         Laplace_y = torch.load(f'{path}/Laplace_y.pt', map_location=device)
 
-    optimizer = torch.optim.Adam(lr=1e-3, params=model.parameters())
+    optimizer = torch.optim.Adam(lr=1e-4, params=model.parameters())
 
     for epoch in range(200000):
         optimizer.zero_grad()
