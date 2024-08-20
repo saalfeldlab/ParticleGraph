@@ -1,4 +1,3 @@
-from .Interaction_CElegans import Interaction_CElegans
 from .Interaction_Particle import Interaction_Particle
 from .Interaction_Agent import Interaction_Agent
 from .Interaction_Cell import Interaction_Cell
@@ -17,5 +16,5 @@ from .graph_trainer import *
 from .utils import get_embedding, get_embedding_time_series, choose_training_model, constant_batch_size, increasing_batch_size, set_trainable_parameters, set_trainable_division_parameters, plot_training
 from .Gumbel import sample_gumbel, gumbel_softmax_sample, gumbel_softmax
 
-__all__ = [graph_trainer, Interaction_CElegans, Interaction_Agent, Interaction_Particle, Interaction_Cell, Cell_Area, Interaction_Particle_Field, Siren_Network, Signal_Propagation, Signal_Propagation2, Mesh_RPS, Mesh_RPS_bis, Mesh_Laplacian, Division_Predictor, Ghost_Particles, get_embedding, get_embedding_time_series, choose_training_model, constant_batch_size,
+__all__ = [graph_trainer, Interaction_Agent, Interaction_Particle, Interaction_Cell, Cell_Area, Interaction_Particle_Field, Siren_Network, Signal_Propagation, Signal_Propagation2, Mesh_RPS, Mesh_RPS_bis, Mesh_Laplacian, Division_Predictor, Ghost_Particles, get_embedding, get_embedding_time_series, choose_training_model, constant_batch_size,
            increasing_batch_size, set_trainable_parameters, set_trainable_division_parameters, plot_training, sample_gumbel, gumbel_softmax_sample, gumbel_softmax]
