@@ -37,7 +37,7 @@ def constructRandomMatrices(n_neurons=1000, density=1.0, showplots=True, connect
 
     if showplots:
         plt.figure(figsize=(8, 8))
-        ax = sns.heatmap(W, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046})
+        ax = sns.heatmap(W, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.01, vmax=0.01)
         # ax.invert_yaxis()
         plt.title('True connectivity matrix', fontsize=12);
         plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=8)

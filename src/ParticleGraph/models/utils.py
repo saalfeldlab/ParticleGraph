@@ -113,7 +113,7 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
         A[i, j] = model.vals
         A.T[i, j] = model.vals
     fig = plt.figure(figsize=(8, 8))
-    ax = sns.heatmap(to_numpy(A),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046})
+    ax = sns.heatmap(to_numpy(A),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046}, vmin=-0.01, vmax=0.01)
     # ax.invert_yaxis()
     plt.title('Random connectivity matrix',fontsize=12);
     plt.xticks([0,n_particles-1],[1,n_particles],fontsize=8)

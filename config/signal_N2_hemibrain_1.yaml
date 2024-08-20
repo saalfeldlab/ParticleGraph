@@ -6,6 +6,7 @@ simulation:
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
     connectivity_mask: 'conn-eb-fb-pb-no.tif'
+    excitation: 'none'
     params: [[10.0,1.0],[10.0,2.0]]
     phi: 'tanh'
     tau: 1.0
@@ -53,3 +54,4 @@ training:
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'
+    seed: 42

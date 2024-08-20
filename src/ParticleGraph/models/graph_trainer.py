@@ -1952,11 +1952,11 @@ def data_train_signal(config, config_file, device):
         plt.xticks([0,n_particles-1],[1,n_particles],fontsize=8)
         plt.yticks([0,n_particles-1],[1,n_particles],fontsize=8)
         ax = fig.add_subplot(1, 5, 4)
-        ax = sns.heatmap(to_numpy(A),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046})
+        ax = sns.heatmap(to_numpy(A),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046}, vmin=-0.01, vmax=0.01)
         # ax.invert_yaxis()
         plt.title('Learned connectivity matrix',fontsize=12);
         plt.xticks([0,n_particles-1],[1,n_particles],fontsize=8)
-        plt.yticks([0,n_particles-1],[1,n_particles],fontsize=8)
+        plt.yticks([0,n_particles-1],[1,n_particles],fontsize=8 )
 
         ax = fig.add_subplot(1, 5, 5)
         gt_weight = to_numpy(adjacency)
@@ -1971,7 +1971,7 @@ def data_train_signal(config, config_file, device):
         plt.close()
 
         plt.figure(figsize=(3,3))
-        ax = sns.heatmap(to_numpy(A),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046})
+        ax = sns.heatmap(to_numpy(A),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046}, vmin=-0.01, vmax=0.01)
         ax.invert_yaxis()
         plt.title('Random connectivity matrix',fontsize=12);
         plt.xticks([0,n_particles-1],[1,n_particles],fontsize=10)

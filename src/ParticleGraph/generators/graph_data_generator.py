@@ -385,7 +385,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     is_N2 = 'signal_N2' in dataset_name
 
     torch.random.fork_rng(devices=device)
-    torch.random.manual_seed(42)
+    torch.random.manual_seed(training_config.seed)
 
     if config.data_folder_name != 'none':
         print(f'Generating from data ...')
@@ -437,39 +437,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
         torch.save(adjacency.t(), f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt')
 
-        # n_neurons = 1000
-        # density = 1.0
-        # Tmax = 100
-        # dt = 0.01
-        # T = np.arange(0, Tmax, dt)
-        # I = torch.ones((n_neurons, len(T)), device=device) * 0
-        #
-        # X_ = runNetworkSimulation(adjacency, n_neurons, density, I,
-        #                           g=2.0, s=1.0,
-        #                           Tmax=100, dt=0.01, tau=1.0, phi=torch.tanh, showplots=False, device=device)
-        #
-        # plt.figure(figsize=(10, 3))
-        # plt.subplot(121)
-        # ax = sns.heatmap(to_numpy(X_), center=0, cbar_kws={'fraction': 0.046})
-        # ax.invert_yaxis()
-        # plt.title('Firing rate', fontsize=12)
-        # plt.ylabel('Units', fontsize=12)
-        # plt.xlabel('Time', fontsize=12)
-        # plt.xticks([])
-        # plt.yticks([0, 999], [1, 1000], fontsize=12)
-        #
-        # plt.subplot(122)
-        # plt.title('Firing rate samples', fontsize=12)
-        # for i in range(25):
-        #     plt.plot(to_numpy(X_[i, :]))
-        # plt.xlabel('Time', fontsize=12)
-        # plt.ylabel('Normalized activity', fontsize=12)
-        # plt.xticks([])
-        # plt.yticks(fontsize=12)
-        #
-        # plt.tight_layout()
-        # plt.savefig(f'graphs_data/graphs_{dataset_name}/first_activity.png', dpi=300)
-
     else:
         mat = scipy.io.loadmat('./graphs_data/Brain.mat')
         first_adjacency = torch.tensor(mat['A'], device=device)
@@ -512,7 +479,11 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
     # create GNN
     if is_N2:
-        excitation = torch.ones((n_particles, n_frames+1), device=device) * 0
+        match config.simulation.excitation:
+            case 'none':
+                excitation = torch.ones((n_particles, n_frames+1), device=device) * 0
+            case 'constant':
+                excitation = torch.ones((n_particles, n_frames + 1), device=device)
         match config.simulation.phi:
             case 'tanh':
                 model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, phi=torch.tanh, device=device)
@@ -555,12 +526,12 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
             # Tuning
             scalingRatio=2.0,
-            strongGravityMode=True,
+            strongGravityMode=False,
             gravity=1.0,
 
             # Log
             verbose=True)
-        positions = forceatlas2.forceatlas2_networkx_layout(G, pos=None, iterations=20000)
+        positions = forceatlas2.forceatlas2_networkx_layout(G, pos=None, iterations=2000)
         positions = np.array(list(positions.values()))
         X1 = torch.tensor(positions, dtype=torch.float32, device=device)
         X1 = X1 - torch.mean(X1, 0)
