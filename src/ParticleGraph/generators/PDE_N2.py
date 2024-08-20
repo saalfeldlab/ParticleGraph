@@ -14,7 +14,7 @@ def constructRandomMatrices(n_neurons=1000, density=1.0, showplots=True, connect
     n_neurons = Number
     density = density of connections
     """
-    if connectivity_mask=='':
+    if connectivity_mask=='./graphs_data/':
         K = n_neurons * density
         W = np.multiply(np.random.normal(loc=0, scale=1, size=(n_neurons, n_neurons)),
                         np.random.rand(n_neurons, n_neurons) < density)
@@ -116,7 +116,8 @@ class PDE_N2(pyg.nn.MessagePassing):
         msg_ = self.propagate(edge_index, u=u, edge_attr=edge_attr)
         msg = torch.matmul(self.W, self.phi(u))
 
-        du = -u + s * self.phi(u) + g * msg + excitation[:,None]
+        du = -u + s * self.phi(u) + msg + excitation[:, None]
+        # du = -u + s * self.phi(u) + g * msg + excitation[:,None]
 
         if return_all:
             return du, s * self.phi(u), g * msg
