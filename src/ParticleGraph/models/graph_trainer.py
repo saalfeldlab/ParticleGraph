@@ -19,7 +19,7 @@ from scipy.ndimage import median_filter
 from ParticleGraph.generators.cell_utils import *
 
 
-def data_train(config, config_file, device):
+def data_train(config, config_file, erase, device):
 
     # plt.rcParams['text.usetex'] = True
     # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
@@ -45,24 +45,24 @@ def data_train(config, config_file, device):
     if 'Agents' in config.graph_model.particle_model_name:
         data_train_agents(config, config_file, device)
     elif has_particle_field:
-        data_train_particle_field(config, config_file, device)
+        data_train_particle_field(config, config_file, erase, device)
     elif has_mesh:
-        data_train_mesh(config, config_file, device)
+        data_train_mesh(config, config_file, erase, device)
     elif has_signal:
-        data_train_signal(config, config_file, device)
+        data_train_signal(config, config_file, erase, device)
     elif do_tracking & has_cell_division:
-        data_train_cell(config, config_file, device)
+        data_train_cell(config, config_file, erase, device)
     elif do_tracking:
-        data_train_tracking(config, config_file, device)
+        data_train_tracking(config, config_file, erase, device)
     elif has_cell_division:
-        data_train_cell(config, config_file, device)
+        data_train_cell(config, config_file, erase, device)
     elif has_state:
-        data_train_particles_with_states(config, config_file, device)
+        data_train_particles_with_states(config, config_file, erase, device)
     else:
-        data_train_particles(config, config_file, device)
+        data_train_particles(config, config_file, erase, device)
 
 
-def data_train_particles(config, config_file, device):
+def data_train_particles(config, config_file, erase, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -96,7 +96,7 @@ def data_train_particles(config, config_file, device):
     n_runs = train_config.n_runs
     has_state = (config.simulation.state_type != 'discrete')
 
-    l_dir, log_dir, logger = create_log_dir(config, config_file)
+    l_dir, log_dir, logger = create_log_dir(config, config_file,erase)
     print(f'Graph files N: {n_runs}')
     logger.info(f'Graph files N: {n_runs}')
     time.sleep(0.5)
@@ -413,7 +413,7 @@ def data_train_particles(config, config_file, device):
         plt.close()
 
 
-def data_train_cell(config, config_file, device):
+def data_train_cell(config, config_file, erase, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -446,7 +446,7 @@ def data_train_cell(config, config_file, device):
     has_state = (simulation_config.state_type != 'discrete')
     max_radius = simulation_config.max_radius
 
-    l_dir, log_dir, logger = create_log_dir(config, config_file)
+    l_dir, log_dir, logger = create_log_dir(config, config_file,erase)
     print(f'Graph files N: {n_runs}')
     logger.info(f'Graph files N: {n_runs}')
     time.sleep(0.5)
@@ -835,7 +835,7 @@ def data_train_cell(config, config_file, device):
             optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
 
 
-def data_train_mesh(config, config_file, device):
+def data_train_mesh(config, config_file, erase, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -862,7 +862,7 @@ def data_train_mesh(config, config_file, device):
     n_runs = train_config.n_runs
     sparsity_freq = train_config.sparsity_freq
 
-    l_dir, log_dir, logger = create_log_dir(config, config_file)
+    l_dir, log_dir, logger = create_log_dir(config, config_file,erase)
     logger.info(f'Graph files N: {n_runs}')
 
 
@@ -1194,7 +1194,7 @@ def data_train_mesh(config, config_file, device):
         plt.close()
 
 
-def data_train_particle_field(config, config_file, device):
+def data_train_particle_field(config, config_file, erase, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -1233,7 +1233,7 @@ def data_train_particle_field(config, config_file, device):
     n_runs = train_config.n_runs
     sparsity_freq = train_config.sparsity_freq
 
-    l_dir, log_dir, logger = create_log_dir(config, config_file)
+    l_dir, log_dir, logger = create_log_dir(config, config_file,erase)
     print(f'Graph files N: {n_runs}')
     logger.info(f'Graph files N: {n_runs}')
     time.sleep(0.5)
@@ -1663,7 +1663,7 @@ def data_train_particle_field(config, config_file, device):
                 logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
 
-def data_train_signal(config, config_file, device):
+def data_train_signal(config, config_file, erase, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -1691,7 +1691,7 @@ def data_train_signal(config, config_file, device):
     n_runs = train_config.n_runs
     is_N2 = 'signal_N2' in dataset_name
 
-    l_dir, log_dir, logger = create_log_dir(config, config_file)
+    l_dir, log_dir, logger = create_log_dir(config, config_file,erase)
     print(f'Graph files N: {n_runs}')
     logger.info(f'Graph files N: {n_runs}')
 
@@ -1712,9 +1712,9 @@ def data_train_signal(config, config_file, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_9_graphs_1.pt"
-    # state_dict = torch.load(net,map_location=device)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    net = f"./log/try_{config_file}/models/best_model_with_9_graphs_8_0.pt"
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -1946,13 +1946,13 @@ def data_train_signal(config, config_file, device):
             A.T[i,j] = model.vals
 
         ax = fig.add_subplot(1, 5, 3)
-        ax = sns.heatmap(to_numpy(adjacency),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046})
+        ax = sns.heatmap(to_numpy(adjacency),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046}, vmin=-0.001, vmax=0.001)
         # ax.invert_yaxis()
         plt.title('True connectivity matrix',fontsize=12);
         plt.xticks([0,n_particles-1],[1,n_particles],fontsize=8)
         plt.yticks([0,n_particles-1],[1,n_particles],fontsize=8)
         ax = fig.add_subplot(1, 5, 4)
-        ax = sns.heatmap(to_numpy(A),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046}, vmin=-0.01, vmax=0.01)
+        ax = sns.heatmap(to_numpy(A),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046}, vmin=-1, vmax=1)
         # ax.invert_yaxis()
         plt.title('Learned connectivity matrix',fontsize=12);
         plt.xticks([0,n_particles-1],[1,n_particles],fontsize=8)
@@ -1978,7 +1978,7 @@ def data_train_signal(config, config_file, device):
         plt.yticks([0,n_particles-1],[1,n_particles],fontsize=10)
 
 
-def data_train_agents(config, config_file, device):
+def data_train_agents(config, config_file, erase, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -2008,7 +2008,7 @@ def data_train_agents(config, config_file, device):
     n_runs = train_config.n_runs
     has_state = (config.simulation.state_type != 'discrete')
 
-    l_dir, log_dir, logger = create_log_dir(config, config_file)
+    l_dir, log_dir, logger = create_log_dir(config, config_file,erase)
     print(f'Graph files N: {n_runs}')
     logger.info(f'Graph files N: {n_runs}')
     time.sleep(0.5)

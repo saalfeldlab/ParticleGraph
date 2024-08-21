@@ -483,7 +483,10 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             case 'none':
                 excitation = torch.ones((n_particles, n_frames+1), device=device) * 0
             case 'constant':
-                excitation = torch.ones((n_particles, n_frames + 1), device=device)
+                excitation = torch.ones((n_particles, n_frames+1), device=device) * 0.5
+            case 'sine':
+                excitation = torch.sin(torch.arange(n_frames+1, device=device)/100) * 2
+                excitation = excitation.repeat(n_particles, 1)
         match config.simulation.phi:
             case 'tanh':
                 model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, phi=torch.tanh, device=device)

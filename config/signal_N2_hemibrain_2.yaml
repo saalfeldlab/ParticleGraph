@@ -53,4 +53,4 @@ training:
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'
-    seed: 32
+    seed: 42
