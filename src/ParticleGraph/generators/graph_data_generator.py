@@ -435,7 +435,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         Xinit = torch.rand(n_particles, )  # Initial conditions
         X_[:, 0] = Xinit
 
-        torch.save(adjacency.t(), f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt')
+        torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt')
 
     else:
         mat = scipy.io.loadmat('./graphs_data/Brain.mat')
@@ -534,7 +534,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
             # Log
             verbose=True)
-        positions = forceatlas2.forceatlas2_networkx_layout(G, pos=None, iterations=2000)
+        positions = forceatlas2.forceatlas2_networkx_layout(G, pos=None, iterations=500)
         positions = np.array(list(positions.values()))
         X1 = torch.tensor(positions, dtype=torch.float32, device=device)
         X1 = X1 - torch.mean(X1, 0)

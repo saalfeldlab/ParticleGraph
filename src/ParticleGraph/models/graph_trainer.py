@@ -1936,7 +1936,6 @@ def data_train_signal(config, config_file, erase, device):
         i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
         if is_N2:
             A = model.W.clone().detach()
-            A = A.t()
             A[i,i] = 0
         elif 'asymmetric' in config.simulation.adjacency_matrix:
             A = model.vals

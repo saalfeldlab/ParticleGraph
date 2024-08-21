@@ -104,7 +104,6 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
     i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
     if 'PDE_N2' in config.graph_model.signal_model_name:
         A = model.W.clone().detach()
-        A = A.t()
         A[i,i] = 0
     elif 'asymmetric' in config.simulation.adjacency_matrix:
         A = model.vals
