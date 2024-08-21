@@ -421,7 +421,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         edge_attr_adjacency = adjacency[adj_t]
 
     elif is_N2:
-        adjacency = constructRandomMatrices(n_neurons=n_particles, density=1.0, showplots=True, connectivity_mask=f"./graphs_data/{config.simulation.connectivity_mask}" ,device=device)
+        adjacency = constructRandomMatrices(n_neurons=n_particles, density=1.0, connectivity_mask=f"./graphs_data/{config.simulation.connectivity_mask}" ,device=device)
         adjacency_ = adjacency.t().clone().detach()
         adj_t = torch.abs(adjacency_) > 0
         edge_index = adj_t.nonzero().t().contiguous()
@@ -436,6 +436,15 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         X_[:, 0] = Xinit
 
         torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt')
+
+        plt.figure(figsize=(8, 8))
+        ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.01, vmax=0.01)
+        plt.title('True connectivity matrix', fontsize=12);
+        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+        plt.tight_layout()
+        torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency.tif')
+        plt.close()
 
     else:
         mat = scipy.io.loadmat('./graphs_data/Brain.mat')

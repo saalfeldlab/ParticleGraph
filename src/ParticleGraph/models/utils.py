@@ -14,6 +14,7 @@ import numpy as np
 import time
 import tqdm
 import seaborn as sns
+from tifffile import imsave
 
 def linear_model(x, a, b):
     return a * x + b
@@ -113,15 +114,14 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
         A.T[i, j] = model.vals
     fig = plt.figure(figsize=(8, 8))
     ax = sns.heatmap(to_numpy(A),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046}, vmin=-0.01, vmax=0.01)
-    # ax.invert_yaxis()
     plt.title('Random connectivity matrix',fontsize=12);
     plt.xticks([0,n_particles-1],[1,n_particles],fontsize=8)
     plt.yticks([0,n_particles-1],[1,n_particles],fontsize=8)
-
     plt.imshow(to_numpy(A), cmap='viridis')
-
     plt.savefig(f"./{log_dir}/tmp_training/field/{dataset_name}_{epoch}_{N}.tif", dpi=87)
     plt.close()
+
+    imsave(f"./{log_dir}/tmp_training/field/adjacency_{dataset_name}__{epoch}_{N}.tif", to_numpy(A))
 
 def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dataset_name, n_frames, model_name, log_dir, epoch, N, x, x_mesh, model_field, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 

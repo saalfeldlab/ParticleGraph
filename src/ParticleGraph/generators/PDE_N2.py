@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from tifffile import imread
 
 
-def constructRandomMatrices(n_neurons=1000, density=1.0, showplots=True, connectivity_mask=[], device=[]):
+def constructRandomMatrices(n_neurons=1000, density=1.0, connectivity_mask=[], device=[]):
     """
     n_neurons = Number
     density = density of connections
@@ -34,17 +34,6 @@ def constructRandomMatrices(n_neurons=1000, density=1.0, showplots=True, connect
         W = W / np.sqrt(K)
 
     np.fill_diagonal(W, 0)
-
-    if showplots:
-        plt.figure(figsize=(8, 8))
-        ax = sns.heatmap(W, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.01, vmax=0.01)
-        # ax.invert_yaxis()
-        plt.title('True connectivity matrix', fontsize=12);
-        plt.xticks([0, n_neurons - 1], [1, n_neurons], fontsize=8)
-        plt.yticks([0, n_neurons - 1], [1, n_neurons], fontsize=8)
-        plt.tight_layout()
-        plt.close()
-
 
     W = torch.tensor(W, dtype=torch.float32, device=device)
 
