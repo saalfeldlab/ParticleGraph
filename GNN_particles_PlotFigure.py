@@ -4422,9 +4422,6 @@ def get_figures(index):
             config_list = ['RD_RPS']
         case 'supp18':
             config_list = ['signal_N_100_2_a']
-
-        case '25':
-            config_list = ['signal_N_100_2_a', 'signal_N_100_2_b', 'signal_N_100_2_c', 'signal_N_100_2_d']
         case _:
             config_list = ['arbitrary_3']
 
@@ -4434,9 +4431,9 @@ def get_figures(index):
             for config_file in config_list:
                 config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
                 data_plot(config=config, config_file=config_file, epoch_list=epoch_list, device=device)
-                # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
-                #                   best_model=20, run=0, step=64, test_simulation=False,
-                #                   sample_embedding=False, device=device)  # config.simulation.n_frames // 7
+                data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False,
+                                  best_model=20, run=0, step=64, test_simulation=False,
+                                  sample_embedding=False, device=device)  # config.simulation.n_frames // 7
                 print(' ')
                 print(' ')
 
@@ -4627,7 +4624,16 @@ if __name__ == '__main__':
 
     matplotlib.use("Qt5Agg")
 
-    config_list = ["arbitrary_3_cell_sequence_d_bis"]
+
+
+    f_list = ['supp13']
+    for f in f_list:
+        config_list,epoch_list = get_figures(f)
+
+
+
+
+    # config_list = ["arbitrary_3_cell_sequence_d_bis"]
     # config_list = ["arbitrary_3_cell_sequence_f"]
     # # config_list = ['signal_N_100_2_d']
     # config_list = ['signal_N_100_2_a']
@@ -4635,15 +4641,11 @@ if __name__ == '__main__':
     # config_list = ["agents_e"]
     # config_list = ["arbitrary_division_model_passive_v"]
 
-    for config_file in config_list:
-        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['40_0'], device=device)
-        # plot_generated(config=config, run=0, style='color', step = 2, device=device)
-        # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
-
-    # f_list = ['supp13']
-    # for f in f_list:
-    #     config_list,epoch_list = get_figures(f)
+    # for config_file in config_list:
+    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+    #     data_plot(config=config, config_file=config_file, epoch_list=['40_0'], device=device)
+    #     # plot_generated(config=config, run=0, style='color', step = 2, device=device)
+    #     # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
 
 
 
