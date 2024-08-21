@@ -984,8 +984,8 @@ def data_train_mesh(config, config_file, erase, device):
 
             total_loss += loss.item()
 
-            visualize_embedding = False
-            if visualize_embedding & (((epoch < 30 ) & (N%(Niter//50) == 0)) | (N==0)):
+            visualize_embedding = ('Wave' in model_config.mesh_model_name)
+            if visualize_embedding & (((epoch < 10 ) & (N%(Niter//50) == 0)) | (N==0)):
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()},
                            os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
@@ -1071,39 +1071,44 @@ def data_train_mesh(config, config_file, erase, device):
                 proj_interaction = popt_list
                 proj_interaction[:, 1] = proj_interaction[:, 0]
 
-            labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding, train_config.cluster_distance_threshold, type_list, n_node_types, embedding_cluster)
-
-            accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-            print(f'accuracy: {np.round(accuracy, 3)}   n_clusters: {n_clusters}')
-            logger.info(f'accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}')
-
-            ax = fig.add_subplot(1, 5, 4)
-            for n in np.unique(new_labels):
-                pos = np.array(np.argwhere(new_labels == n).squeeze().astype(int))
-                if pos.size > 0:
-                    plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], s=5)
-            plt.xlabel('proj 0', fontsize=12)
-            plt.ylabel('proj 1', fontsize=12)
-            plt.text(0, 1.1, f'accuracy: {np.round(accuracy, 3)},  {n_clusters} clusters', ha='left', va='top', transform=ax.transAxes,fontsize=10)
-
-            ax = fig.add_subplot(1, 5, 5)
-            model_a_ = model.a[1].clone().detach()
-            for n in range(n_clusters):
-                pos = np.argwhere(labels == n).squeeze().astype(int)
-                pos = np.array(pos)
-                if pos.size > 0:
-                    median_center = model_a_[pos, :]
-                    median_center = torch.median(median_center, dim=0).values
-                    plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='r', alpha=0.25)
-                    model_a_[pos, :] = median_center
-                    plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=10, c='k')
-
-            plt.xlabel('ai0', fontsize=12)
-            plt.ylabel('ai1', fontsize=12)
-            plt.xticks(fontsize=10.0)
-            plt.yticks(fontsize=10.0)
-
             if (replace_with_cluster) & ((epoch+1) % sparsity_freq == 0):
+
+                labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction,
+                                                                  embedding, train_config.cluster_distance_threshold,
+                                                                  type_list, n_node_types, embedding_cluster)
+
+                accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
+                print(f'accuracy: {np.round(accuracy, 3)}   n_clusters: {n_clusters}')
+                logger.info(f'accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}')
+
+                ax = fig.add_subplot(1, 5, 4)
+                for n in np.unique(new_labels):
+                    pos = np.array(np.argwhere(new_labels == n).squeeze().astype(int))
+                    if pos.size > 0:
+                        plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], s=5)
+                plt.xlabel('proj 0', fontsize=12)
+                plt.ylabel('proj 1', fontsize=12)
+                plt.text(0, 1.1, f'accuracy: {np.round(accuracy, 3)},  {n_clusters} clusters', ha='left', va='top',
+                         transform=ax.transAxes, fontsize=10)
+
+                ax = fig.add_subplot(1, 5, 5)
+                model_a_ = model.a[1].clone().detach()
+                for n in range(n_clusters):
+                    pos = np.argwhere(labels == n).squeeze().astype(int)
+                    pos = np.array(pos)
+                    if pos.size > 0:
+                        median_center = model_a_[pos, :]
+                        median_center = torch.median(median_center, dim=0).values
+                        plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='r', alpha=0.25)
+                        model_a_[pos, :] = median_center
+                        plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=10, c='k')
+
+                plt.xlabel('ai0', fontsize=12)
+                plt.ylabel('ai1', fontsize=12)
+                plt.xticks(fontsize=10.0)
+                plt.yticks(fontsize=10.0)
+
+
                 match train_config.sparsity:
                     case 'replace_embedding':
                         # Constrain embedding domain

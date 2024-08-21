@@ -57,7 +57,7 @@ if __name__ == '__main__':
     config_list = ['signal_N2_b_r1']
     # config_list = ['signal_N2_b_r2']
     # config_list = ['signal_N2_b_r5']
-    config_list = ['signal_N2_hemibrain_4']
+    config_list = ['signal_N2_hemibrain_2']
 
     for config_file in config_list:
 
@@ -65,5 +65,5 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
         # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=10) # config.simulation.n_frames // config.simulation.n_frames)
-        data_train(config, config_file, True, device)
+        data_train(config, config_file, False, device)
         # data_test (config=config, config_file=config_file, visualize=True, style='color', verbose=False, best_model='0_7500', run=0, step=1, save_velocity=True, device=device) #config.simulation.n_frames // 3, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7

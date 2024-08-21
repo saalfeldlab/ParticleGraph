@@ -4622,11 +4622,12 @@ if __name__ == '__main__':
     print(f'device {device}')
     print(' ')
 
-    matplotlib.use("Qt5Agg")
+    try:
+        matplotlib.use("Qt5Agg")
+    except:
+        pass
 
-
-
-    f_list = ['supp13']
+    f_list = ['supp15']
     for f in f_list:
         config_list,epoch_list = get_figures(f)
 
