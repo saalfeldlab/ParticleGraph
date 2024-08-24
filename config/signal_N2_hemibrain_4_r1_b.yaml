@@ -1,12 +1,11 @@
 description: 'Hemibrain'
-dataset: 'signal_N2_hemibrain_2'
+dataset: 'signal_N2_hemibrain_4'
 
 simulation:
     connectivity_file: ''
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
-    connectivity_mask: 'conn-eb-fb-pb-no.tif'
-    excitation: 'none'
+    connectivity_mask: 'conn-eb-fb-pb-no-T.tif'
     params: [[10.0,1.0],[10.0,2.0]]
     phi: 'tanh'
     tau: 1.0
@@ -42,16 +41,17 @@ plotting:
     arrow_length: 1
 
 training:
-    n_epochs: 20
+    n_epochs: 10
     recursive_loop: 1
-    batch_size: 1
+    batch_size: 16
     small_init_batch_size: False
     n_runs: 10
     large_range: False
     sparsity: 'none'
     data_augmentation: False
-    data_augmentation_loop: 100
+    data_augmentation_loop: 500
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'
     seed: 42
+    coeff_L1: 1.0E-5

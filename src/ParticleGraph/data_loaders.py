@@ -79,8 +79,7 @@ def load_solar_system(config, device=None, visualize=False, folder=None, step=10
     # Step = 4(hours)
 
     object_list = ['sun', 'mercury', 'venus', 'earth', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'pluto', 'io',
-                   'europa',
-                   'ganymede', 'callisto', 'mimas', 'enceladus', 'tethys', 'dione', 'rhea', 'titan', 'hyperion', 'moon',
+                   'europa', 'ganymede', 'callisto', 'mimas', 'enceladus', 'tethys', 'dione', 'rhea', 'titan', 'hyperion', 'moon',
                    'phobos', 'deimos', 'charon']
 
     # matplotlib.use("Qt5Agg")

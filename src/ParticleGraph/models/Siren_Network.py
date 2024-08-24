@@ -131,7 +131,7 @@ if __name__ == '__main__':
     model_siren = model_siren.to(device=device)
     optimizer = torch.optim.Adam(lr=1e-4, params=model_siren.parameters())
 
-    i0 = imread('pics_boat.tif')
+    i0 = imread('data/pics_boat.tif')
 
     y = torch.tensor(i0, dtype=torch.float32, device=device)
     y = y.flatten()

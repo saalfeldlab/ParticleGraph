@@ -1810,99 +1810,101 @@ def data_train_signal(config, config_file, erase, device):
 
             optimizer.zero_grad()
 
-            match recursive_loop:
+            for batch in range(batch_size):
 
-                case 1:
+                match recursive_loop:
 
-                    x = x_list[run][k].clone().detach()
-                    dataset = data.Data(x=x, edge_index=model.edges)
-                    pred = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
-                    y = y_list[run][k].clone().detach()
-                    y = y / ynorm
-                    if is_N2:
-                        loss = (pred - y).norm(2) + model.W.norm(1) * 1E-6
-                    else:
-                        loss = (pred - y).norm(2)
+                    case 1:
 
-                case 2:
+                        x = x_list[run][k].clone().detach()
+                        dataset = data.Data(x=x, edge_index=model.edges)
+                        pred = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                        y = y_list[run][k].clone().detach()
+                        y = y / ynorm
+                        if is_N2:
+                            loss = (pred - y).norm(2) + model.W.norm(1) * train_config.coeff_L1
+                        else:
+                            loss = (pred - y).norm(2)
 
-                    x = x_list[run][k].clone().detach()
-                    dataset = data.Data(x=x, edge_index=model.edges)
-                    pred1 = model(dataset, data_id = run, excitation=excitation[:, k:k + 1])
-                    x_ = x.clone().detach()
-                    x_[:, 6:7] += pred1 * delta_t
-                    dataset = data.Data(x=x_, edge_index=model.edges)
-                    pred2 = model(dataset, data_id = run, excitation=excitation[:, k:k + 1])
-                    y = (y_list[run][k].clone().detach() + y_list[run][k+1].clone().detach()) / ynorm
-                    if is_N2:
-                        in_features = torch.zeros((n_particles,1),device=device)
-                        func_phi = model.lin_phi(in_features.float())
-                        loss = (pred1 + pred2 - y).norm(2) / 2 + model.W.norm(1) * 1E-6 + func_phi.norm(2)
-                    else:
-                        func_f = model.lin_edge(torch.zeros(1,device=device))
-                        in_features = torch.cat((torch.zeros((n_particles,1),device=device),  model.a[1, :]), dim=1)
-                        func_phi = model.lin_phi(in_features.float())
-                        loss = (pred1 + pred2 - y).norm(2) + model.vals.norm(1) + func_f.norm(2) + func_phi.norm(2)
+                    case 2:
 
-                case 3:
+                        x = x_list[run][k].clone().detach()
+                        dataset = data.Data(x=x, edge_index=model.edges)
+                        pred1 = model(dataset, data_id = run, excitation=excitation[:, k:k + 1])
+                        x_ = x.clone().detach()
+                        x_[:, 6:7] += pred1 * delta_t
+                        dataset = data.Data(x=x_, edge_index=model.edges)
+                        pred2 = model(dataset, data_id = run, excitation=excitation[:, k:k + 1])
+                        y = (y_list[run][k].clone().detach() + y_list[run][k+1].clone().detach()) / ynorm
+                        if is_N2:
+                            in_features = torch.zeros((n_particles,1),device=device)
+                            func_phi = model.lin_phi(in_features.float())
+                            loss = (pred1 + pred2 - y).norm(2) / 2 + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2)
+                        else:
+                            func_f = model.lin_edge(torch.zeros(1,device=device))
+                            in_features = torch.cat((torch.zeros((n_particles,1),device=device),  model.a[1, :]), dim=1)
+                            func_phi = model.lin_phi(in_features.float())
+                            loss = (pred1 + pred2 - y).norm(2) + model.vals.norm(1) + func_f.norm(2) + func_phi.norm(2)
 
-                    x = x_list[run][k].clone().detach()
-                    dataset = data.Data(x=x, edge_index=model.edges)
-                    pred1 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
-                    x_ = x.clone().detach()
-                    x_[:, 6:7] += pred1 * delta_t
-                    dataset = data.Data(x=x_, edge_index=model.edges)
-                    pred2 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
-                    x_ = x.clone().detach()
-                    x_[:, 6:7] += (pred1+pred2) * delta_t
-                    dataset = data.Data(x=x_, edge_index=model.edges)
-                    pred3 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                    case 3:
 
-                    y1 = y_list[run][k].clone().detach()/ ynorm
-                    y2 = y_list[run][k+1].clone().detach()/ ynorm
-                    y3 = y_list[run][k+2].clone().detach()/ ynorm
+                        x = x_list[run][k].clone().detach()
+                        dataset = data.Data(x=x, edge_index=model.edges)
+                        pred1 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                        x_ = x.clone().detach()
+                        x_[:, 6:7] += pred1 * delta_t
+                        dataset = data.Data(x=x_, edge_index=model.edges)
+                        pred2 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                        x_ = x.clone().detach()
+                        x_[:, 6:7] += (pred1+pred2) * delta_t
+                        dataset = data.Data(x=x_, edge_index=model.edges)
+                        pred3 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
 
-                    if is_N2:
-                        in_features = torch.zeros((n_particles,1),device=device)
-                        func_phi = model.lin_phi(in_features.float())
-                        loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2) + model.W.norm(1) * 1E-6 + func_phi.norm(2)
-                    else:
-                        loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)
+                        y1 = y_list[run][k].clone().detach()/ ynorm
+                        y2 = y_list[run][k+1].clone().detach()/ ynorm
+                        y3 = y_list[run][k+2].clone().detach()/ ynorm
 
-                case 5:
+                        if is_N2:
+                            in_features = torch.zeros((n_particles,1),device=device)
+                            func_phi = model.lin_phi(in_features.float())
+                            loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2)
+                        else:
+                            loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)
 
-                    x = x_list[run][k].clone().detach()
-                    dataset = data.Data(x=x, edge_index=model.edges)
-                    pred1 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
-                    x_ = x.clone().detach()
-                    x_[:, 6:7] += pred1 * delta_t
-                    dataset = data.Data(x=x_, edge_index=model.edges)
-                    pred2 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
-                    x_ = x.clone().detach()
-                    x_[:, 6:7] += (pred1+pred2) * delta_t
-                    dataset = data.Data(x=x_, edge_index=model.edges)
-                    pred3 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
-                    x_ = x.clone().detach()
-                    x_[:, 6:7] += (pred1+pred2+pred3) * delta_t
-                    dataset = data.Data(x=x_, edge_index=model.edges)
-                    pred4 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
-                    x_ = x.clone().detach()
-                    x_[:, 6:7] += (pred1+pred2+pred3+pred4) * delta_t
-                    dataset = data.Data(x=x_, edge_index=model.edges)
-                    pred5 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                    case 5:
 
-                    y1 = y_list[run][k].clone().detach()/ ynorm
-                    y2 = y_list[run][k+1].clone().detach()/ ynorm
-                    y3 = y_list[run][k+2].clone().detach()/ ynorm
-                    y4 = y_list[run][k+3].clone().detach()/ ynorm
-                    y5 = y_list[run][k+4].clone().detach()/ ynorm
+                        x = x_list[run][k].clone().detach()
+                        dataset = data.Data(x=x, edge_index=model.edges)
+                        pred1 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                        x_ = x.clone().detach()
+                        x_[:, 6:7] += pred1 * delta_t
+                        dataset = data.Data(x=x_, edge_index=model.edges)
+                        pred2 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                        x_ = x.clone().detach()
+                        x_[:, 6:7] += (pred1+pred2) * delta_t
+                        dataset = data.Data(x=x_, edge_index=model.edges)
+                        pred3 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                        x_ = x.clone().detach()
+                        x_[:, 6:7] += (pred1+pred2+pred3) * delta_t
+                        dataset = data.Data(x=x_, edge_index=model.edges)
+                        pred4 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                        x_ = x.clone().detach()
+                        x_[:, 6:7] += (pred1+pred2+pred3+pred4) * delta_t
+                        dataset = data.Data(x=x_, edge_index=model.edges)
+                        pred5 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
 
-                    if is_N2:
-                        in_features = torch.zeros((n_particles,1),device=device)
-                        func_phi = model.lin_phi(in_features.float())
-                        loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2) + model.W.norm(1) * 1E-6 + func_phi.norm(2)
-                    else:
-                        loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2)
+                        y1 = y_list[run][k].clone().detach()/ ynorm
+                        y2 = y_list[run][k+1].clone().detach()/ ynorm
+                        y3 = y_list[run][k+2].clone().detach()/ ynorm
+                        y4 = y_list[run][k+3].clone().detach()/ ynorm
+                        y5 = y_list[run][k+4].clone().detach()/ ynorm
+
+                        if is_N2:
+                            in_features = torch.zeros((n_particles,1),device=device)
+                            func_phi = model.lin_phi(in_features.float())
+                            loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2)
+                        else:
+                            loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2)
 
             loss.backward()
             optimizer.step()
@@ -2219,7 +2221,7 @@ def data_train_agents(config, config_file, erase, device):
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
 
-def data_test(config=None, config_file=None, visualize=False, style='color frame', verbose=True, best_model=20, step=15, ratio=1, run=1, save_velocity=False, test_simulation=False, sample_embedding = False, device=[]):
+def data_test(config=None, config_file=None, visualize=False, style='color frame', verbose=True, best_model=20, step=15, ratio=1, run=1, test_simulation=False, sample_embedding = False, device=[]):
     dataset_name = config.dataset
     simulation_config = config.simulation
     model_config = config.graph_model
@@ -2448,17 +2450,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 6:7] - x0[:, 6:7]) ** 2, axis=1)))
         elif model_config.mesh_model_name == 'WaveMesh':
             rmserr = torch.sqrt(torch.mean((x[mask_mesh.squeeze(), 6:7] - x0[mask_mesh.squeeze(), 6:7]) ** 2))
-            # errors = (x[mask_mesh.squeeze(), 6:7] - x0[mask_mesh.squeeze(), 6:7]) ** 2
-            # percentile_90th = torch.quantile(errors, 0.9)
-            # errors = errors[errors < percentile_95th]
-            # rmserr_95 = torch.sqrt(torch.mean(errors))
-            #
-            fig, ax = plt.subplots()
-            plt.scatter(to_numpy(x0[mask_mesh.squeeze(), 6:7]), to_numpy(x[mask_mesh.squeeze(), 6:7]), s=2, c='r')
-            # fig, ax = plt.subplots()
-            # errors = (x[mask_mesh.squeeze(), 6:7] - x0[mask_mesh.squeeze(), 6:7]) ** 2
-            # plt.plot(to_numpy(torch.sqrt(errors)), c='k')
-
         elif model_config.mesh_model_name == 'RD_RPS_Mesh':
             rmserr = torch.sqrt(torch.mean(torch.sum((x[mask_mesh.squeeze(), 6:9] - x0[mask_mesh.squeeze(), 6:9]) ** 2, axis=1)))
         else:
@@ -2530,9 +2521,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t)
         else:
 
-            if save_velocity:
-                x = x0
-
             x_ = x
             if has_ghost:
                 x_ghost = model_ghost.get_pos(dataset_id=run, frame=it, bc_pos=bc_pos)
@@ -2551,10 +2539,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 edge_index = adj_t.nonzero().t().contiguous()
                 dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index)
                 if test_simulation:
-                    # y = y0 / ynorm
-                    dataset.x[:,5] = x0[:,5]
-                    index_particles = get_index_particles(dataset.x, n_particle_types, dimension)
-                    y = model(dataset) / ynorm
+                    y = y0 / ynorm
+                    # dataset.x[:,5] = x0[:,5]
+                    # index_particles = get_index_particles(dataset.x, n_particle_types, dimension)
+                    # y = model(dataset) / ynorm
                 else:
                     with torch.no_grad():
                         y = model(dataset, data_id=1, training=False, vnorm=vnorm,
@@ -2573,9 +2561,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     x[:, 3:5] = y
 
             x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t)  # position update
-
-            if save_velocity:
-                x_list[0][it][:, 3:3+dimension] = x[:, 3:3+dimension].clone().detach()
 
 
         if (it % step == 0) & (it >= 0) & visualize:
@@ -2687,6 +2672,50 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             if 'PDE_G' in model_config.particle_model_name:
                 plt.xlim([-2, 2])
                 plt.ylim([-2, 2])
+            if 'PDE_GS' in model_config.particle_model_name:
+
+                object_list = ['sun', 'mercury', 'venus', 'earth', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune',
+                               'pluto', 'io',
+                               'europa', 'ganymede', 'callisto', 'mimas', 'enceladus', 'tethys', 'dione', 'rhea',
+                               'titan', 'hyperion', 'moon',
+                               'phobos', 'deimos', 'charon']
+
+                masses = torch.tensor([1.989e30,3.30e23, 4.87e24,5.97e24,6.42e23,1.90e27,5.68e26,8.68e25,1.02e26,1.31e22,8.93e22,4.80e22, 1.48e23,1.08e23,3.75e19,1.08e20,
+                6.18e20,1.10e21,2.31e21,1.35e23,5.62e18,7.35e22,1.07e16,1.48e15, 1.52e21], device=device)
+
+                pos = x[:,1:3] - x[0,1:3]
+                distance = torch.sqrt(torch.sum(bc_dpos(pos[:, None, :] - pos[None, 0, :]) ** 2, dim=2))
+                unit_vector = pos / distance
+
+                if it == 0 :
+
+                    log_coeff = torch.log(distance[1:])
+                    log_coeff_min = torch.min(log_coeff)
+                    log_coeff_max = torch.max(log_coeff)
+                    log_coeff_diff = log_coeff_max - log_coeff_min
+                    d_log = [log_coeff_min, log_coeff_max, log_coeff_diff]
+
+                    log_coeff = torch.log(masses)
+                    log_coeff_min = torch.min(log_coeff)
+                    log_coeff_max = torch.max(log_coeff)
+                    log_coeff_diff = log_coeff_max - log_coeff_min
+                    m_log = [log_coeff_min, log_coeff_max, log_coeff_diff]
+
+                    m_ = torch.log(masses) / m_log[2]
+
+                distance_ = (torch.log(distance) - d_log[0]) / d_log[2]
+                pos = distance_ * unit_vector
+                pos = to_numpy(pos)
+                pos[0] = 0
+
+                fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
+                for n in range(25):
+                    plt.scatter(pos[n,1], pos[n, 0], s=200 * to_numpy(m_[n]**3), color=cmap.color(n))
+                    # plt.text(pos[n,1], pos[n, 0], object_list[n], fontsize=8)
+                plt.xlim([-1.2, 1.2])
+                plt.ylim([-1.2, 1.2])
+                plt.xticks([])
+                plt.yticks([])
 
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{it}.tif", dpi=80) #170.7)
@@ -2768,9 +2797,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_recons/Ghost3_{config_file}_{it}.tif", dpi=170.7)
                 plt.close()
-
-    if save_velocity:
-        torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}_learned.pt')
 
     print('average rollout RMS {:.3e}+/-{:.3e}'.format(np.mean(rmserr_list), np.std(rmserr_list)))
     if has_mesh:

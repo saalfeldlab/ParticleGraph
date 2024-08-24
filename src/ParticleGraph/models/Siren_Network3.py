@@ -174,7 +174,7 @@ class ImageFitting(Dataset):
 
 if __name__ == '__main__':
 
-    i0 = imread('pics_boat.tif')
+    i0 = imread('data/pics_boat.tif')
     i0 = torch.tensor(i0,device='cuda:0')
     i0 = i0.flatten()
     i0 = i0[:,None]
