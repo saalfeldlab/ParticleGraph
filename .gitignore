@@ -18,6 +18,7 @@ archive/*/*
 *.gif
 *.jpg
 *.png
+*.pkl
 *.iml
 *.mp4
 *.avi
