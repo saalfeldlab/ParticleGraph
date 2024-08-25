@@ -180,10 +180,10 @@ if __name__ == '__main__':
         dy = torch.zeros_like(y)
         ddy = torch.zeros_like(y)
         Laplace_y = torch.zeros_like(y)
-        for k in trange(n_datasset):
+        for k in trange(n_datasset-1):
             for i in range(1,n_length[k]-1):
                 dy[k,i] = (y[k,i+1]-y[k,i-1])/2
-                ddy[k,i] = (y[k,i+1]-2*y[k,i]+y[k,i-1])
+                ddy[k+1,i] = (y[k,i+1]-2*y[k,i]+y[k,i-1])
                 Laplace_y[k,i] = laplacian_1d(y[k,i])
         torch.save(y, f'{path}/y.pt')
         torch.save(dy, f'{path}/dy.pt')

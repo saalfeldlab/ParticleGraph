@@ -2456,7 +2456,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             if do_tracking:
                 rmserr = torch.zeros(1,device=device)
             else:
-                rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 1:3] - x0[:, 1:3]) ** 2, axis=1)))
+                rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 1:dimension + 1] - x0[:, 1:dimension + 1]) ** 2, axis=1)))
             if x.shape[0]>5000:
                 geomloss = gloss(x[0:5000, 1:3], x0[0:5000, 1:3])
             else:
@@ -2552,15 +2552,15 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             if model_config.prediction == '2nd_derivative':
                 y = y * ynorm * delta_t
-                x[:, 3:5] = x[:, 3:5] + y  # speed update
+                x[:, dimension + 1:2*dimension+1] = x[:, dimension + 1:2*dimension+1] + y  # speed update
             else:
                 y = y * vnorm
                 if model_config.signal_model_name == 'PDE_N':
                     x[:, 6:7] += y * delta_t    # signal update
                 else:
-                    x[:, 3:5] = y
+                    x[:, dimension + 1:2*dimension+1] = y
 
-            x[:, 1:3] = bc_pos(x[:, 1:3] + x[:, 3:5] * delta_t)  # position update
+            x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:,dimension + 1:2*dimension+1] * delta_t)  # position update
 
 
         if (it % step == 0) & (it >= 0) & visualize:

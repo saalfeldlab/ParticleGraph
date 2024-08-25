@@ -93,7 +93,7 @@ def load_solar_system(config, device=None, visualize=False, step=1000):
     x_list = []
     y_list = []
 
-    for it in trange(5, n_frames - 1):
+    for it in trange(5, n_frames - 5):
         for n in range(25):
             x = all_data[n][it, 1]
             y = all_data[n][it, 2]
@@ -109,9 +109,9 @@ def load_solar_system(config, device=None, visualize=False, step=1000):
             else:
                 object_data = torch.cat((object_data, tmp[None, :]), 0)
 
-            ax = all_data[n][it, 7]
-            ay = all_data[n][it, 8]
-            az = all_data[n][it, 9]
+            ax = all_data[n][it+1, 7]
+            ay = all_data[n][it+1, 8]
+            az = all_data[n][it+1, 9]
             tmp = torch.stack([ax, ay, az])
             if n == 0:
                 acc_data = tmp[None, :]
@@ -122,8 +122,8 @@ def load_solar_system(config, device=None, visualize=False, step=1000):
         y_list.append(acc_data.to(device))
 
     for run in range(2):
-        torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
-        torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
+        torch.save(x_list, f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_gravity_solar_system/x_list_{run}.pt')
+        torch.save(y_list, f'/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_gravity_solar_system/y_list_{run}.pt')
 
 
 def load_shrofflab_celegans(
