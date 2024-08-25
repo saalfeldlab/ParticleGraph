@@ -20,13 +20,13 @@ from torchvision.transforms import v2
 from scipy import ndimage
 
 
-def generate_from_data(config, device, visualize=True, folder=None, step=None):
+def generate_from_data(config, device, visualize=True, step=None):
 
     data_folder_name = config.data_folder_name
 
     match data_folder_name:
         case 'graphs_data/solar_system':
-            load_solar_system(config, device, visualize, folder, step)
+            load_solar_system(config, device, visualize, step)
         case _:
             raise ValueError(f'Unknown data folder name {data_folder_name}')
 

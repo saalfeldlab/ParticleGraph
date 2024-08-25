@@ -30,43 +30,7 @@ def skip_to(file, start_line):
         return pos + 1
 
 
-def convert_data(data, device, config, n_particle_types, n_frames):
-    x_list = []
-    y_list = []
-
-    for it in trange(n_frames - 1):
-        for n in range(n_particle_types):
-            # if (n==9):
-            #     p=1
-            x = data[n][it, 1].clone().detach()
-            y = data[n][it, 2].clone().detach()
-            z = data[n][it, 3].clone().detach()
-            vx = data[n][it, 4].clone().detach()
-            vy = data[n][it, 5].clone().detach()
-            vz = data[n][it, 6].clone().detach()
-
-            tmp = torch.stack(
-                [torch.tensor(n), x, y, vx, vy, torch.tensor(n), torch.tensor(0), torch.tensor(0), torch.tensor(0)])
-            if n == 0:
-                object_data = tmp[None, :]
-            else:
-                object_data = torch.cat((object_data, tmp[None, :]), 0)
-
-            ax = data[n][it + 1, 4] - data[n][it, 4]
-            ay = data[n][it + 1, 5] - data[n][it, 5]
-            tmp = torch.stack([ax, ay]) / config.simulation.delta_t
-            if n == 0:
-                acc_data = tmp[None, :]
-            else:
-                acc_data = torch.cat((acc_data, tmp[None, :]), 0)
-
-        x_list.append(object_data.to(device))
-        y_list.append(acc_data.to(device))
-
-    return x_list, y_list
-
-
-def load_solar_system(config, device=None, visualize=False, folder=None, step=1000):
+def load_solar_system(config, device=None, visualize=False, step=1000):
     # create output folder, empty it if bErase=True, copy files into it
     dataset_name = config.data_folder_name
     simulation_config = config.simulation
@@ -93,65 +57,69 @@ def load_solar_system(config, device=None, visualize=False, folder=None, step=10
         filename = os.path.join(dataset_name, f'{object}.txt')
 
         df = skip_to(filename, "$$SOE\n")
-        data = pd.read_csv(filename, header=None, skiprows=df, sep='', nrows=n_step)
-        tmp_x = data.iloc[:, 4:5].values
-        tmp_y = data.iloc[:, 5:6].values
-        tmp_z = data.iloc[:, 6:7].values
-        tmp_vx = data.iloc[:, 7:8].values
-        tmp_vy = data.iloc[:, 8:9].values
-        tmp_vz = data.iloc[:, 9:10].values
-        tmp_x = tmp_x[:, 0][:-1]
-        tmp_y = tmp_y[:, 0][:-1]
-        tmp_z = tmp_z[:, 0][:-1]
-        tmp_vx = tmp_vx[:, 0][:-1]
-        tmp_vy = tmp_vy[:, 0][:-1]
-        tmp_vz = tmp_vz[:, 0][:-1]
+        data = pd.read_csv(filename, header=None, skiprows=df, nrows=n_step)
+        x = data.iloc[:, 4:5].values
+        y = data.iloc[:, 5:6].values
+        z = data.iloc[:, 6:7].values
+
         # convert string to float
-        x = torch.ones((n_step - 1))
-        y = torch.ones((n_step - 1))
-        z = torch.ones((n_step - 1))
-        vx = torch.ones((n_step - 1))
-        vy = torch.ones((n_step - 1))
-        vz = torch.ones((n_step - 1))
-        for it in range(n_step - 1):
-            x[it] = torch.tensor(float(tmp_x[it][0:-1]))
-            y[it] = torch.tensor(float(tmp_y[it][0:-1]))
-            z[it] = torch.tensor(float(tmp_z[it][0:-1]))
-            vx[it] = torch.tensor(float(tmp_vx[it][0:-1]))
-            vy[it] = torch.tensor(float(tmp_vy[it][0:-1]))
-            vz[it] = torch.tensor(float(tmp_vz[it][0:-1]))
+        x = torch.tensor(x, device=device)
+        y = torch.tensor(y, device=device)
+        z = torch.tensor(z, device=device)
+        vx = torch.zeros_like(x)
+        vy = torch.zeros_like(y)
+        vz = torch.zeros_like(z)
+        vx[1:] = (x[1:] - x[:-1]) / simulation_config.delta_t
+        vy[1:] = (y[1:] - y[:-1]) / simulation_config.delta_t
+        vz[1:] = (z[1:] - z[:-1]) / simulation_config.delta_t
+        ax = torch.zeros_like(x)
+        ay = torch.zeros_like(y)
+        az = torch.zeros_like(z)
+        ax[2:] = (vx[2:] - vx[1:-1]) / simulation_config.delta_t
+        ay[2:] = (vy[2:] - vy[1:-1]) / simulation_config.delta_t
+        az[2:] = (vz[2:] - vz[1:-1]) / simulation_config.delta_t
 
         object_data = torch.cat((torch.ones_like(x[:, None]) * id, x[:, None], y[:, None], z[:, None], vx[:, None],
-                                 vy[:, None], vz[:, None], torch.ones_like(x[:, None]) * id,
-                                 torch.zeros_like(x[:, None]), torch.zeros_like(x[:, None]),
+                                 vy[:, None], vz[:, None], ax[:, None],
+                                 ay[:, None], az[:, None],
                                  torch.zeros_like(x[:, None])), 1)
+        object_data = object_data.squeeze()
+        object_data = object_data.to(device=device)
 
         all_data.append(object_data)
 
-        plt.plot(to_numpy(y), to_numpy(x))
-        plt.text(to_numpy(y[-1]), to_numpy(x[-1]), object, fontsize=6)
+    # convert_data
 
-    x_list, y_list = convert_data(all_data, device, config, n_particle_types, n_frames + 1)
+    x_list = []
+    y_list = []
 
-    dataset_name = config.dataset
+    for it in trange(5, n_frames - 1):
+        for n in range(25):
+            x = all_data[n][it, 1]
+            y = all_data[n][it, 2]
+            z = all_data[n][it, 3]
+            vx = all_data[n][it, 4]
+            vy = all_data[n][it, 5]
+            vz = all_data[n][it, 6]
 
-    if visualize:
-        for it in trange(n_frames - 1):
-            if it % step == 0:
-                fig = plt.figure(figsize=(12, 12))
-                for id, object in enumerate(object_list):
-                    plt.scatter(to_numpy(x_list[it][id, 1]), to_numpy(x_list[it][id, 2]), s=20)
-                    if id < 10:
-                        plt.text(to_numpy(x_list[it][id, 1]), to_numpy(x_list[it][id, 2]), object, fontsize=6)
-                    if id == 9:
-                        plt.arrow(to_numpy(x_list[it][id, 1]), to_numpy(x_list[it][id, 2]),
-                                  to_numpy(y_list[it][id, 0]) * 1E14, to_numpy(y_list[it][id, 1]) * 1E14,
-                                  head_width=0.5, head_length=0.7, fc='k', ec='k')
-                plt.xlim([-0.5E10, 0.5E10])
-                plt.ylim([-0.5E10, 0.5E10])
-                plt.tight_layout()
-                plt.savefig(f"graphs_data/graphs_{dataset_name}/generated_data/Fig_{it}.jpg", dpi=170.7)
-                plt.close()
+            tmp = torch.stack(
+                [torch.tensor(n,device=device), x, y, z, vx, vy, vz, torch.tensor(n,device=device), torch.tensor(0,device=device), torch.tensor(0,device=device), torch.tensor(0,device=device)])
+            if n == 0:
+                object_data = tmp[None, :]
+            else:
+                object_data = torch.cat((object_data, tmp[None, :]), 0)
+
+            ax = all_data[n][it, 7]
+            ay = all_data[n][it, 8]
+            az = all_data[n][it, 9]
+            tmp = torch.stack([ax, ay, az])
+            if n == 0:
+                acc_data = tmp[None, :]
+            else:
+                acc_data = torch.cat((acc_data, tmp[None, :]), 0)
+
+        x_list.append(object_data.to(device))
+        y_list.append(acc_data.to(device))
 
     for run in range(2):
         torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')

@@ -3,6 +3,7 @@ dataset: 'gravity_solar_system'
 data_folder_name: 'graphs_data/solar_system'
 
 simulation:
+    dimension: 3
     params: [[-1]]
     min_radius: 1.0
     max_radius: 1.0E6
