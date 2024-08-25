@@ -63,9 +63,9 @@ def load_solar_system(config, device=None, visualize=False, step=1000):
         z = data.iloc[:, 4:5].values
 
         # convert string to float
-        x = torch.tensor(x, device=device)
-        y = torch.tensor(y, device=device)
-        z = torch.tensor(z, device=device)
+        x = torch.tensor(x, dtype=torch.float32, device=device)
+        y = torch.tensor(y, dtype=torch.float32, device=device)
+        z = torch.tensor(z, dtype=torch.float32, device=device)
         vx = torch.zeros_like(x)
         vy = torch.zeros_like(y)
         vz = torch.zeros_like(z)

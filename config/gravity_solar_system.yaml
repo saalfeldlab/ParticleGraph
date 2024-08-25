@@ -6,7 +6,7 @@ simulation:
     dimension: 3
     params: [[-1]]
     min_radius: 1.0
-    max_radius: 1.0E9
+    max_radius: 1.0E12
     n_particles: 25
     n_particle_types: 25
     n_interactions: 25
@@ -21,7 +21,7 @@ graph_model:
     mesh_model_name: ''
     prediction: '2nd_derivative'
     input_size: 5
-    output_size: 2
+    output_size: 3
     hidden_dim: 128
     n_mp_layers: 5
     aggr_type: 'add'

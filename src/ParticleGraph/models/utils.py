@@ -315,12 +315,9 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 ax = fig.add_subplot(1, 2, 1)
                 rr = torch.tensor(np.logspace(7, 9, 1000)).to(device)
                 for n in range(n_particles):
-                    if do_tracking:
-                        embedding_ = model.a[n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
-                    else:
-                        embedding_ = model.a[1, n, :] * torch.ones((1000, model_config.embedding_dim), device=device)
+                    embedding_ = model.mass[n] * torch.ones((1000, model_config.embedding_dim), device=device)
                     in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                                             rr[:, None] / simulation_config.max_radius, 10 ** embedding_), dim=1)
+                                             rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
                     with torch.no_grad():
                         func = model.lin_edge(in_features.float())
                     func = func[:, 0]
@@ -336,8 +333,8 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                             alpha=0.15)
                 plt.scatter(np.log(np.abs(to_numpy(y_batch[:, 1]))), np.log(np.abs(to_numpy(pred[:, 1]))), c='k', s=1,
                             alpha=0.15)
-                plt.xlim([-10, 4])
-                plt.ylim([-10, 4])
+                # plt.xlim([-10, 4])
+                # plt.ylim([-10, 4])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_training/function/func_{dataset_name}_{epoch}_{N}.tif", dpi=87)
                 plt.close()
@@ -851,11 +848,13 @@ def choose_training_model(model_config, device):
             model = Interaction_Particle(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
         case 'PDE_GS':
-            model = Interaction_Planets(aggr_type=aggr_type, config=model_config, device=device)
+            model = Interaction_Planet(aggr_type=aggr_type, config=model_config, device=device)
             t = np.arange(model_config.simulation.n_particles)
             t1 = np.repeat(t, model_config.simulation.n_particles)
             t2 = np.tile(t, model_config.simulation.n_particles)
             e = np.stack((t1, t2), axis=0)
+            pos = np.argwhere(e[0, :] - e[1, :] != 0)
+            e = e[:, pos]
             model.edges = torch.tensor(e, dtype=torch.long, device=device)
     model_name = model_config.graph_model.mesh_model_name
     match model_name:

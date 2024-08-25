@@ -26,7 +26,7 @@ class Interaction_Planet(pyg.nn.MessagePassing):
         the acceleration of the particles (dimension 2)
     """
 
-    def __init__(self, config, device, aggr_type=None, bc_dpos=None, dimension=2):
+    def __init__(self, config, device, aggr_type=None, bc_dpos=None):
 
         super(Interaction_Planet, self).__init__(aggr=aggr_type)  # "Add" aggregation.
 
@@ -55,7 +55,7 @@ class Interaction_Planet(pyg.nn.MessagePassing):
         self.model = model_config.particle_model_name
         self.bc_dpos = bc_dpos
         self.n_ghosts = int(train_config.n_ghosts)
-        self.dimension = dimension
+        self.dimension = simulation_config.dimension
         self.has_state = config.simulation.state_type != 'discrete'
         self.n_frames = simulation_config.n_frames
         self.state_hot_encoding = train_config.state_hot_encoding
@@ -73,19 +73,17 @@ class Interaction_Planet(pyg.nn.MessagePassing):
                              requires_grad=True, dtype=torch.float32))
 
         self.mass = torch.tensor([1.989e30,3.30e23, 4.87e24,5.97e24,6.42e23,1.90e27,5.68e26,8.68e25,1.02e26,1.31e22,8.93e22,4.80e22, 1.48e23,1.08e23,3.75e19,1.08e20,
-                6.18e20,1.10e21,2.31e21,1.35e23,5.62e18,7.35e22,1.07e16,1.48e15, 1.52e21], device=device)
+                6.18e20,1.10e21,2.31e21,1.35e23,5.62e18,7.35e22,1.07e16,1.48e15, 1.52e21], dtype=torch.float32, device=self.device)
 
 
     def forward(self, data=[]):
-
-        self.data_id = data_id
 
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
         pos = x[:, 1:self.dimension+1]
         particle_id = x[:, 0:1]
-        mass = self.mass[to_numpy(particle_id), :].squeeze()
+        mass = self.mass[to_numpy(particle_id)] / 1E26
 
         pred = self.propagate(edge_index, pos=pos, mass=mass)
 

@@ -429,11 +429,16 @@ def data_solar_system(config, config_file, erase, device):
     min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
     delta_t = simulation_config.delta_t
-    noise_level = train_config.noise_level
+    target_batch_size = train_config.batch_size
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     n_runs = train_config.n_runs
+    if train_config.small_init_batch_size:
+        get_batch_size = increasing_batch_size(target_batch_size)
+    else:
+        get_batch_size = constant_batch_size(target_batch_size)
+    batch_size = get_batch_size(0)
 
     l_dir, log_dir, logger = create_log_dir(config, config_file,erase)
     print(f'Graph files N: {n_runs}')
@@ -449,7 +454,7 @@ def data_solar_system(config, config_file, erase, device):
         y_list.append(y)
 
     vnorm = torch.tensor(1, device=device)
-    ynorm = torch.tensor(1, device=device)
+    ynorm = torch.tensor(1.0E-6, device=device)
     torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
     torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
     time.sleep(0.5)
@@ -488,9 +493,9 @@ def data_solar_system(config, config_file, erase, device):
     logger.info(f'N particles:  {n_particles} {len(torch.unique(type_list))} types')
 
     print("Start training ...")
-    print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-    logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-    Niter = n_frames * data_augmentation_loop // batch_size
+    print(f'{n_frames // batch_size} iterations per epoch')
+    logger.info(f'{n_frames // batch_size} iterations per epoch')
+    Niter = n_frames // batch_size
     print(f'plot every {Niter // 50} iterations')
 
     list_loss = []
@@ -501,45 +506,50 @@ def data_solar_system(config, config_file, erase, device):
         logger.info(f'batch_size: {batch_size}')
 
         total_loss = 0
-        Niter = n_frames * data_augmentation_loop // batch_size
+        Niter = n_frames * batch_size
 
 
         for N in range(Niter):
 
             run = 1 + np.random.randint(n_runs - 1)
-            k = np.random.randint(n_frames - 1)
 
-            x = x_list[run][k].clone().detach()
+            dataset_batch = []
+            for batch in range(batch_size):
 
-            distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-            adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-            t = torch.Tensor([max_radius ** 2])
-            edges = adj_t.nonzero().t().contiguous()
-            dataset = data.Data(x=x[:, :], edge_index=edges)
+                k = np.random.randint(n_frames - 10)
 
-            y = y_list[run][k].clone().detach()
-            if noise_level > 0:
-                y = y * (1 + torch.randn_like(y) * noise_level)
+                x = x_list[run][k].clone().detach()
 
-            y = y / ynorm
+                dataset = data.Data(x=x[:, :], edge_index=model.edges)
+                dataset_batch.append(dataset)
 
+                y = y_list[run][k].clone().detach() / ynorm
+                if batch == 0:
+                    y_batch = y
+                else:
+                    y_batch = torch.cat((y_batch, y), dim=0)
+
+            batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
 
-            pred = model(dataset)
+            for batch in batch_loader:
+                pred = model(batch)
 
-            loss = (pred - y).norm(2)
+            loss = (pred - y_batch).norm(2)
 
             loss.backward()
             optimizer.step()
 
             visualize_embedding = True
-            if visualize_embedding & (((epoch < 30 ) & (N%(Niter//50) == 0)) | (N==0)):
-                plot_training(config=config, dataset_name=dataset_name, log_dir=log_dir,
-                              epoch=epoch, N=N, x=x, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
-                              index_particles=index_particles, n_particles=n_particles,
-                              n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
+            if visualize_embedding & (((epoch < 30 ) & (N%(Niter//100) == 0)) | (N==0)):
+                print(f'loss: {loss.item():.4e}')
+                fig, ax = fig_init()
+                plt.scatter(to_numpy(y_batch[:, 0]), to_numpy(pred[:, 0]), s=20, c='k')
+                ax.set_xscale('log')
+                ax.set_yscale('log')
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_training/function/func_{dataset_name}_{epoch}_{N}.tif", dpi=87)
                 torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
-
 
             total_loss += loss.item()
 
@@ -557,23 +567,6 @@ def data_solar_system(config, config_file, erase, device):
         plt.xlim([0, n_epochs])
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
-
-        if False:
-            embedding = get_embedding(model.a, 1)
-            for n in range(n_particle_types):
-                plt.scatter(embedding[index_particles[n], 0],
-                            embedding[index_particles[n], 1], color=cmap.color(n), s=0.1)
-            plt.xlabel('ai0', fontsize=12)
-            plt.ylabel('ai1', fontsize=12)
-
-            ax = fig.add_subplot(1, 5, 3)
-            func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
-                                                                model_MLP=model.lin_edge, model_a=model.a,
-                                                                n_nodes = 0,
-                                                                dataset_number=1,
-                                                                n_particles=n_particles, ynorm=ynorm,
-                                                                type_list=to_numpy(x[:, 1+2*dimension]),
-                                                                cmap=cmap, dimension=dimension, device=device)
 
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
