@@ -34,14 +34,10 @@ plotting:
 
 training:
     n_epochs: 20
-    batch_size: 8
+    batch_size: 16
     small_init_batch_size: False
     n_runs: 2
     large_range: True
-    learning_rate_start: 0.000001
-    learning_rate_end: 0.0000005
-    learning_rate_embedding_start: 0.0001
-    learning_rate_embedding_end: 0.0001
     sparsity: 'none'
     data_augmentation: False
     data_augmentation_loop: 1

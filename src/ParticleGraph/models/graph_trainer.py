@@ -496,7 +496,7 @@ def data_solar_system(config, config_file, erase, device):
     print(f'{n_frames // batch_size} iterations per epoch')
     logger.info(f'{n_frames // batch_size} iterations per epoch')
     Niter = n_frames // batch_size
-    print(f'plot every {Niter // 50} iterations')
+    print(f'plot every {Niter // 100} iterations')
 
     list_loss = []
     time.sleep(1)

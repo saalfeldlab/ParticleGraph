@@ -91,8 +91,8 @@ class Interaction_Planet(pyg.nn.MessagePassing):
 
     def message(self, pos_i, pos_j, mass_j):
 
-        r = torch.sqrt(torch.sum((pos_j - pos_i) ** 2, dim=1))
-        delta_pos = (pos_j - pos_i)
+        r = torch.sqrt(torch.sum((pos_j - pos_i) ** 2, dim=1)) / 1E6
+        delta_pos = (pos_j - pos_i) /1E6
 
         in_features = torch.cat((delta_pos, r[:, None], mass_j),dim=-1)
 
