@@ -58,9 +58,9 @@ def load_solar_system(config, device=None, visualize=False, step=1000):
 
         df = skip_to(filename, "$$SOE\n")
         data = pd.read_csv(filename, header=None, skiprows=df, nrows=n_step)
-        x = data.iloc[:, 4:5].values
-        y = data.iloc[:, 5:6].values
-        z = data.iloc[:, 6:7].values
+        x = data.iloc[:, 2:3].values
+        y = data.iloc[:, 3:4].values
+        z = data.iloc[:, 4:5].values
 
         # convert string to float
         x = torch.tensor(x, device=device)

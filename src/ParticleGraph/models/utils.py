@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import torch
 import umap
 from matplotlib.ticker import FormatStrFormatter
-from ParticleGraph.models import Interaction_Particle, Interaction_Agent, Interaction_Cell, Interaction_Particle_Field, Signal_Propagation, Signal_Propagation2, Mesh_Laplacian, Mesh_RPS
+from ParticleGraph.models import Interaction_Particle, Interaction_Planet, Interaction_Agent, Interaction_Cell, Interaction_Particle_Field, Signal_Propagation, Signal_Propagation2, Mesh_Laplacian, Mesh_RPS
 from ParticleGraph.utils import *
 
 from GNN_particles_Ntype import *
@@ -851,7 +851,7 @@ def choose_training_model(model_config, device):
             model = Interaction_Particle(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
         case 'PDE_GS':
-            model = Interaction_Particle(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
+            model = Interaction_Planets(aggr_type=aggr_type, config=model_config, device=device)
             t = np.arange(model_config.simulation.n_particles)
             t1 = np.repeat(t, model_config.simulation.n_particles)
             t2 = np.tile(t, model_config.simulation.n_particles)
