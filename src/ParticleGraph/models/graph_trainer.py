@@ -535,7 +535,8 @@ def data_solar_system(config, config_file, erase, device):
             for batch in batch_loader:
                 pred = model(batch)
 
-            loss = (pred - y_batch).norm(2)
+            # loss = (pred - y_batch).norm(2)
+            loss = ((pred - y_batch) / y_batch.norm(2)).norm(2)
 
             loss.backward()
             optimizer.step()
