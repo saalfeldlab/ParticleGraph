@@ -101,6 +101,7 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
         if (n % 2 == 0):
             plt.plot(to_numpy(rr), to_numpy(func),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
     plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif", dpi=87)
+    plt.close()
 
     i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
     if 'PDE_N2' in config.graph_model.signal_model_name:
