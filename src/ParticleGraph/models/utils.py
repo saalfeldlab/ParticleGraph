@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import torch
 import umap
 from matplotlib.ticker import FormatStrFormatter
-from ParticleGraph.models import Interaction_Particle, Interaction_Agent, Interaction_Cell, Interaction_Particle_Field, Signal_Propagation, Signal_Propagation2, Mesh_Laplacian, Mesh_RPS
+from ParticleGraph.models import Interaction_Particle, Interaction_Particle_Field, Signal_Propagation, Mesh_Laplacian, Mesh_RPS
 from ParticleGraph.utils import *
 
 from GNN_particles_Ntype import *
@@ -837,25 +837,13 @@ def choose_training_model(model_config, device):
     model=[]
     model_name = model_config.graph_model.particle_model_name
     match model_name:
-        case 'PDE_Cell_A' | 'PDE_Cell_B' | 'PDE_Cell_B_area' | 'PDE_Cell_A_area':
-            model = Interaction_Cell(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
-            model.edges = []
         case 'PDE_ParticleField_A' | 'PDE_ParticleField_B':
             model = Interaction_Particle_Field(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos,
                                           dimension=dimension)
             model.edges = []
-        case 'PDE_Agents' | 'PDE_Agents_A' | 'PDE_Agents_B' | 'PDE_Agents_C':
-            model = Interaction_Agent(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
         case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_mass' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G':
             model = Interaction_Particle(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
-        case 'PDE_GS':
-            model = Interaction_Particle(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
-            t = np.arange(model_config.simulation.n_particles)
-            t1 = np.repeat(t, model_config.simulation.n_particles)
-            t2 = np.tile(t, model_config.simulation.n_particles)
-            e = np.stack((t1, t2), axis=0)
-            model.edges = torch.tensor(e, dtype=torch.long, device=device)
     model_name = model_config.graph_model.mesh_model_name
     match model_name:
         case 'DiffMesh':
@@ -875,10 +863,7 @@ def choose_training_model(model_config, device):
         case 'PDE_N':
             model = Signal_Propagation(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
-        case 'PDE_N2':
-            model = Signal_Propagation2(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
-            model.edges = []
-  
+
     if model==[]:
         raise ValueError(f'Unknown model {model_name}')
 

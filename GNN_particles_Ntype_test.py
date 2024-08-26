@@ -29,7 +29,6 @@ from ParticleGraph.generators.utils import *
 from ParticleGraph.generators.graph_data_generator import *
 from ParticleGraph.models.graph_trainer import *
 
-from ParticleGraph.models import Division_Predictor
 # from ParticleGraph.Plot3D import *
 from ParticleGraph.models import Siren_Network
 from ParticleGraph.models.Ghost_Particles import Ghost_Particles

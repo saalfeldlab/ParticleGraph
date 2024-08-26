@@ -1,23 +1,17 @@
-import torch
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib
 # matplotlib.use("Qt5Agg")
-from tifffile import imread
-from ParticleGraph.generators import PDE_A, PDE_B, PDE_B_bis, PDE_B_mass, PDE_E, PDE_G, PDE_GS, PDE_N, PDE_N2, constructRandomMatrices, runNetworkSimulation, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, PDE_Laplacian, PDE_O
-from ParticleGraph.utils import choose_boundary_values
-from ParticleGraph.data_loaders import load_solar_system
 from time import sleep
+
 import numpy as np
 import torch
 from scipy.spatial import Delaunay
-from tifffile import imread, imsave
+from tifffile import imread
 from torch_geometric.utils import get_mesh_laplacian
 from tqdm import trange
 
+from ParticleGraph.data_loaders import load_solar_system
+from ParticleGraph.generators import PDE_A, PDE_B, PDE_E, PDE_G, PDE_N, PDE_Z, RD_RPS, PDE_Laplacian
+from ParticleGraph.utils import choose_boundary_values
 from ParticleGraph.utils import to_numpy
-from torchvision.transforms import v2
-from scipy import ndimage
 
 
 def generate_from_data(config, device, visualize=True, folder=None, step=None):
@@ -76,23 +70,6 @@ def choose_model(config=[], W=[], phi=[], device=[]):
             else:
                 print(p)
             model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos, dimension=dimension)
-        case 'PDE_B_mass':
-            p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
-            if params[0] != [-1]:
-                for n in range(n_particle_types):
-                    p[n] = torch.tensor(params[n])
-            else:
-                print(p)
-            final_cell_mass = torch.tensor(config.simulation.final_cell_mass, device=device)
-            model = PDE_B_mass(aggr_type=aggr_type, p=torch.squeeze(p), final_mass = final_cell_mass, bc_dpos=bc_dpos)
-        case 'PDE_B_bis':
-            p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
-            if params[0] != [-1]:
-                for n in range(n_particle_types):
-                    p[n] = torch.tensor(params[n])
-            else:
-                print(p)
-            model = PDE_B_bis(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
         case 'PDE_G':
             if params[0] == [-1]:
                 p = np.linspace(0.5, 5, n_particle_types)
@@ -102,15 +79,6 @@ def choose_model(config=[], W=[], phi=[], device=[]):
                     p[n] = torch.tensor(params[n])
             model = PDE_G(aggr_type=aggr_type, p=torch.squeeze(p), clamp=config.training.clamp,
                           pred_limit=config.training.pred_limit, bc_dpos=bc_dpos)
-        case 'PDE_GS':
-            if params[0] == [-1]:
-                p = np.linspace(0.5, 5, n_particle_types)
-                p = torch.tensor(p, device=device)
-            if len(params) > 1:
-                for n in range(n_particle_types):
-                    p[n] = torch.tensor(params[n])
-            model = PDE_GS(aggr_type=aggr_type, p=torch.squeeze(p), clamp=config.training.clamp,
-                          pred_limit=config.training.pred_limit, bc_dpos=bc_dpos)
         case 'PDE_E':
             p = initialize_random_values(n_particle_types, device)
             if len(params) > 0:
@@ -119,17 +87,6 @@ def choose_model(config=[], W=[], phi=[], device=[]):
             model = PDE_E(aggr_type=aggr_type, p=torch.squeeze(p),
                           clamp=config.training.clamp, pred_limit=config.training.pred_limit,
                           prediction=config.graph_model.prediction, bc_dpos=bc_dpos)
-        case 'PDE_O':
-            p = initialize_random_values(n_particle_types, device)
-            if len(params) > 0:
-                for n in range(n_particle_types):
-                    p[n] = torch.tensor(params[n])
-            model = PDE_O(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos, beta=config.simulation.beta)
-        case 'Maze':
-            p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
-            for n in range(n_particle_types):
-                p[n] = torch.tensor(params[n])
-            model = PDE_B(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
         case _:
             model = PDE_Z(device=device)
 
@@ -140,12 +97,6 @@ def choose_model(config=[], W=[], phi=[], device=[]):
                 for n in range(n_particle_types):
                     p[n] = torch.tensor(params[n])
             model = PDE_N(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
-        case 'PDE_N2':
-            p = torch.rand(n_particle_types, 2, device=device) * 100  # comprised between 10 and 50
-            if params[0] != [-1]:
-                for n in range(n_particle_types):
-                    p[n] = torch.tensor(params[n])
-            model = PDE_N2(aggr_type=aggr_type, p=torch.squeeze(p), W=W, phi=phi)
 
 
 
@@ -169,26 +120,12 @@ def choose_mesh_model(config, X1_mesh, device):
         beta = config.simulation.beta
 
         match mesh_model_name:
-            case 'RD_Gray_Scott_Mesh':
-                mesh_model = RD_Gray_Scott(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
-            case 'RD_FitzHugh_Nagumo_Mesh':
-                mesh_model = RD_FitzHugh_Nagumo(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
             case 'RD_RPS_Mesh':
                 mesh_model = RD_RPS(aggr_type=aggr_type, bc_dpos=bc_dpos)
             case 'RD_RPS_Mesh_bis':
                 mesh_model = RD_RPS(aggr_type=aggr_type, bc_dpos=bc_dpos)
             case 'DiffMesh' | 'WaveMesh':
                 mesh_model = PDE_Laplacian(aggr_type=aggr_type, beta=beta, bc_dpos=bc_dpos)
-            case 'Chemotaxism_Mesh':
-                c = initialize_random_values(n_node_types, device)
-                for n in range(n_node_types):
-                    c[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
-                mesh_model = PDE_Laplacian(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
-            case 'PDE_O_Mesh':
-                c = initialize_random_values(n_node_types, device)
-                for n in range(n_node_types):
-                    c[n] = torch.tensor(config.simulation.diffusion_coefficients[n])
-                mesh_model = PDE_Laplacian(aggr_type=aggr_type, c=torch.squeeze(c), beta=beta, bc_dpos=bc_dpos)
             case _:
                 mesh_model = PDE_Z(device=device)
 

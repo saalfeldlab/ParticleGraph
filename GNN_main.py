@@ -35,7 +35,6 @@ from ParticleGraph.data_loaders import *
 from ParticleGraph.utils import *
 from ParticleGraph.fitting_models import linear_model
 from ParticleGraph.sparsify import *
-from ParticleGraph.models import Division_Predictor
 # from ParticleGraph.Plot3D import *
 from GNN_particles_Ntype import *
 

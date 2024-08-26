@@ -1,10 +1,9 @@
 import torch_geometric as pyg
 import torch_geometric.utils as pyg_utils
+
 from ParticleGraph.models.MLP import MLP
-from ParticleGraph.utils import to_numpy, reparameterize
 from ParticleGraph.models.Siren_Network import *
-from ParticleGraph.models.Gumbel import gumbel_softmax_sample, gumbel_softmax
-# from ParticleGraph.models.utils import reparameterize
+from ParticleGraph.utils import to_numpy
 
 
 class Interaction_Particle(pyg.nn.MessagePassing):

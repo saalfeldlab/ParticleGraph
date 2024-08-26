@@ -10,7 +10,6 @@ from ParticleGraph.models.Siren_Network import *
 from ParticleGraph.models.Ghost_Particles import *
 from geomloss import SamplesLoss
 from ParticleGraph.sparsify import EmbeddingCluster, sparsify_cluster, sparsify_cluster_state
-from ParticleGraph.models.Gumbel import gumbel_softmax_sample, gumbel_softmax
 
 
 from ParticleGraph.data_loaders import load_agent_data
