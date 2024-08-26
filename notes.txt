@@ -53,3 +53,5 @@ E.g., for figure 3 (start with this one, this is the easiest case - the other fi
   * data_train
   * data_test
 * in GNN_particles_PlotFigure.py set `f_list` to the right figure (maybe modify the config list if not all columns are computed) and execute
+
+Use input data given by Cedric and pull it into the repository (into the graphs_data directory) piece by piece if it's missing
