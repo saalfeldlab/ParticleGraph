@@ -67,6 +67,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
     min_radius = simulation_config.min_radius
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
+    has_adjacency_matrix = (simulation_config.connectivity_file != '')
     delta_t = simulation_config.delta_t
     n_frames = simulation_config.n_frames
     has_particle_dropout = training_config.particle_dropout > 0
@@ -75,7 +76,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
 
     if config.data_folder_name != 'none':
         print(f'Generating from data ...')
-        generate_from_data(config=config, device=device, visualize=visualize, folder=folder, step=step)
+        generate_from_data(config=config, device=device, visualize=visualize, step=step)
         return
 
     folder = f'./graphs_data/graphs_{dataset_name}/'
@@ -114,16 +115,6 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
 
         # initialize particle and graph states
         X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
-        if has_adjacency_matrix:
-            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
-            adj_t = adjacency > 0
-            edge_index = adj_t.nonzero().t().contiguous()
-            dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
-            vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-            pos = nx.spring_layout(vis, weight='weight', seed=42, k=1)
-            for k,v in pos.items():
-                X1[k,:] = torch.tensor([v[0],v[1]], device=device)
-
         time.sleep(0.5)
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
@@ -140,15 +131,10 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
             index_particles = get_index_particles(x, n_particle_types, dimension)  # can be different from frame to frame
 
             # compute connectivity rule
-            if has_adjacency_matrix:
-                adj_t = adjacency > 0
-                edge_index = adj_t.nonzero().t().contiguous()
-                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
-            else:
-                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                edge_index = adj_t.nonzero().t().contiguous()
-                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=[])
+            distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+            adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+            edge_index = adj_t.nonzero().t().contiguous()
+            dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=[])
 
             # model prediction
             with torch.no_grad():
@@ -310,7 +296,7 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                         ax.set_xlim([0, 1])
                         ax.set_ylim([0, 1])
                         ax.set_zlim([0, 1])
-                        pl.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=170.7)
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=170.7)
                         plt.close()
 
                     else:
@@ -389,7 +375,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
     if config.data_folder_name != 'none':
         print(f'Generating from data ...')
-        generate_from_data(config=config, device=device, visualize=visualize, folder=folder, step=step)
+        generate_from_data(config=config, device=device, visualize=visualize, step=step)
         return
 
     folder = f'./graphs_data/graphs_{dataset_name}/'
