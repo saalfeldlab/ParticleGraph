@@ -113,6 +113,7 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
         A = torch.zeros(n_particles, n_particles, device=device, requires_grad=False, dtype=torch.float32)
         A[i, j] = model.vals
         A.T[i, j] = model.vals
+
     fig = plt.figure(figsize=(8, 8))
     ax = sns.heatmap(to_numpy(A),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046}, vmin=-0.01, vmax=0.01)
     plt.title('Random connectivity matrix',fontsize=12);

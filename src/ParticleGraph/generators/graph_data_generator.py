@@ -372,9 +372,11 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     training_config = config.training
     model_config = config.graph_model
 
+    torch.random.fork_rng(devices=device)
+    torch.random.manual_seed(42)
+
     print(f'Generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
-    dimension = simulation_config.dimension
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
     delta_t = simulation_config.delta_t
@@ -519,7 +521,12 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         if (is_N2) & (run == 0):
             H1[:,0] = X_[:, 0].clone().detach()
 
-        if run==0:
+        x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
+
+        X1 = torch.load(f'./graphs_data/X1.pt', map_location=device)
+
+        if run == 1000:
+
             dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
             G = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
             forceatlas2 = ForceAtlas2(
@@ -547,12 +554,16 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             X1 = torch.tensor(positions, dtype=torch.float32, device=device)
             X1 = X1 - torch.mean(X1, 0)
 
-        x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
+            torch.save(X1, f'./graphs_data/X1.pt')
+
+            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
+                                   H1.clone().detach(), A1.clone().detach()), 1)
+
+
 
         # pos = nx.spring_layout(G, weight='weight', seed=42, k=1)
         # for k,p in pos.items():
         #     X1[k,:] = torch.tensor([v[0],v[1]], device=device)
-
         time.sleep(0.5)
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
@@ -604,17 +615,18 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 if 'color' in style:
 
                     matplotlib.rcParams['savefig.pad_inches'] = 0
-                    fig = plt.figure(figsize=(13, 10))
+                    fig = plt.figure(figsize=(16, 8))
                     if 'conn' in config.simulation.connectivity_mask:
-                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=15, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-5,vmax=5)
+                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=40, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-5,vmax=5)
+                        # plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=10, c='k', alpha=0.75,edgecolors='none')
                         plt.colorbar()
-                        plt.xlim([-4000, 4000])
-                        plt.ylim([-4000, 4000])
+                        plt.xlim([-5000, 5000])
+                        plt.ylim([-2500, 2500])
                     else:
                         plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=20, c=to_numpy(H1[:, 0]), cmap='viridis')
                         plt.colorbar()
-                        plt.xlim([-np.std(positions[:, 0]) / 31, np.std(positions[:, 0]) / 3])
-                        plt.ylim([-np.std(positions[:, 1]) / 3, np.std(positions[:, 1]) / 3])
+                        plt.xlim([-np.std(positions[:, 0]) / 31, np.std(positions[:, 0]) ])
+                        plt.ylim([-np.std(positions[:, 1]) / 3, np.std(positions[:, 1]) ])
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
