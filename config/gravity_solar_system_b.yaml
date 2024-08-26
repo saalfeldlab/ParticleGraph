@@ -45,6 +45,6 @@ training:
     fix_cluster_embedding: True
     learning_rate_start: 1.0E-4
     learning_rate_end: 1.0E-4
-    learning_rate_embedding_start: 1.0E-4
-    learning_rate_embedding_end: 1.0E-4
+    learning_rate_embedding_start: 1.0E-5
+    learning_rate_embedding_end: 1.0E-5
     device: 'auto'
