@@ -7,7 +7,7 @@ from ParticleGraph.models.Gumbel import gumbel_softmax_sample, gumbel_softmax
 # from ParticleGraph.models.utils import reparameterize
 
 
-class Interaction_Planet(pyg.nn.MessagePassing):
+class Interaction_Planet2(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
@@ -28,7 +28,7 @@ class Interaction_Planet(pyg.nn.MessagePassing):
 
     def __init__(self, config, device, aggr_type=None, bc_dpos=None):
 
-        super(Interaction_Planet, self).__init__(aggr=aggr_type)  # "Add" aggregation.
+        super(Interaction_Planet2, self).__init__(aggr=aggr_type)  # "Add" aggregation.
 
         simulation_config = config.simulation
         model_config = config.graph_model
@@ -68,8 +68,7 @@ class Interaction_Planet(pyg.nn.MessagePassing):
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device)
 
-        self.a = nn.Parameter(
-                torch.tensor(np.ones((self.n_dataset, int(self.n_particles), self.embedding_dim)), device=self.device,
+        self.a = nn.Parameter(torch.tensor(np.ones((self.n_dataset, int(self.n_particles), self.embedding_dim)), device=self.device,
                              requires_grad=True, dtype=torch.float32))
 
         self.mass = torch.tensor([1.989e30,3.30e23, 4.87e24,5.97e24,6.42e23,1.90e27,5.68e26,8.68e25,1.02e26,1.31e22,8.93e22,4.80e22, 1.48e23,1.08e23,3.75e19,1.08e20,
@@ -78,23 +77,29 @@ class Interaction_Planet(pyg.nn.MessagePassing):
         self.log10_mass = torch.log10(self.mass) / 30
 
 
+
+
     def forward(self, data=[], data_id=[]):
 
+
+        self.data_id = data_id
         x, edge_index = data.x, data.edge_index
         edge_index, _ = pyg_utils.remove_self_loops(edge_index)
 
         pos = x[:, 1:self.dimension+1]
-        particle_id = x[:, 0:1]
-        mass = self.mass[to_numpy(particle_id)] / 1E26
+        particle_id = x[:, 0]
+        embedding = self.a[self.data_id, to_numpy(particle_id), :]
 
-        pred = self.propagate(edge_index, pos=pos, mass=mass)
+        pred = self.propagate(edge_index, pos=pos, embedding=embedding)
 
         return pred
 
-    def message(self, pos_i, pos_j, mass_j):
+    def message(self, pos_i, pos_j, embedding_j):
 
         r = torch.sqrt(torch.sum((pos_j - pos_i) ** 2, dim=1)) / 1E6
         delta_pos = (pos_j - pos_i) /1E6
+
+        mass_j = 10**(embedding_j * 30) / 1E26
 
         in_features = torch.cat((delta_pos, r[:, None], mass_j),dim=-1)
 

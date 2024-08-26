@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import torch
 import umap
 from matplotlib.ticker import FormatStrFormatter
-from ParticleGraph.models import Interaction_Particle, Interaction_Planet, Interaction_Agent, Interaction_Cell, Interaction_Particle_Field, Signal_Propagation, Signal_Propagation2, Mesh_Laplacian, Mesh_RPS
+from ParticleGraph.models import Interaction_Particle, Interaction_Planet, Interaction_Planet2, Interaction_Agent, Interaction_Cell, Interaction_Particle_Field, Signal_Propagation, Signal_Propagation2, Mesh_Laplacian, Mesh_RPS
 from ParticleGraph.utils import *
 
 from GNN_particles_Ntype import *
@@ -849,6 +849,15 @@ def choose_training_model(model_config, device):
             model.edges = []
         case 'PDE_GS':
             model = Interaction_Planet(aggr_type=aggr_type, config=model_config, device=device)
+            t = np.arange(model_config.simulation.n_particles)
+            t1 = np.repeat(t, model_config.simulation.n_particles)
+            t2 = np.tile(t, model_config.simulation.n_particles)
+            e = np.stack((t1, t2), axis=0)
+            pos = np.argwhere(e[0, :] - e[1, :] != 0)
+            e = e[:, pos]
+            model.edges = torch.tensor(e, dtype=torch.long, device=device)
+        case 'PDE_GS2':
+            model = Interaction_Planet2(aggr_type=aggr_type, config=model_config, device=device)
             t = np.arange(model_config.simulation.n_particles)
             t1 = np.repeat(t, model_config.simulation.n_particles)
             t2 = np.tile(t, model_config.simulation.n_particles)
