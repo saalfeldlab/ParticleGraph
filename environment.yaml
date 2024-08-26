@@ -7,6 +7,7 @@ dependencies:
   - umap-learn
   - numpy
   - scipy
+  - ipython
   - seaborn
   - pandas
   - matplotlib
@@ -24,7 +25,7 @@ dependencies:
   - scikit-image
   - pysr
   - h5py
+  - fa2_modified
   - pip:
     - geomloss
     - torch_geometric
-    - ipython
