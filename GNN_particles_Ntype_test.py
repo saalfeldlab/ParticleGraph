@@ -44,8 +44,7 @@ if __name__ == '__main__':
     except:
         pass
 
-    # config_list = ['arbitrary_3_test', 'arbitrary_3_field_video_bison_test', 'boids_16_256_test', 'signal_N_100_2_test', 'wave_slit_test', 'boids_16_256_bison_2_test']
-    config_list = ['arbitrary_3_test']
+    config_list = ['arbitrary_3_test', 'arbitrary_3_field_video_bison_test', 'boids_16_256_test', 'signal_N_100_2_test', 'wave_slit_test', 'boids_16_256_bison_2_test']
 
     for config_file in config_list:
         # Load parameters from config file
@@ -55,7 +54,7 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         print(f'device {device}')
 
-        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='frame color', alpha=1, erase=True, bSave=True, step=8) #config.simulation.n_frames // 1)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='frame color', alpha=1, erase=True, bSave=True, step=8) #config.simulation.n_frames // 1)
         data_train(config=config, config_file=config_file, erase=False, device=device)
         # data_test(config=config, config_file=config_file, visualize=True, style='latex frame color', verbose=False, best_model=20, run=1, step=config.simulation.n_frames // 25, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
 

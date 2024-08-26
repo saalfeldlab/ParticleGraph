@@ -432,6 +432,7 @@ def data_solar_system(config, config_file, erase, device):
     target_batch_size = train_config.batch_size
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
+    data_augmentation_loop = train_config.data_augmentation_loop
     cmap = CustomColorMap(config=config)  # create colormap for given model_config
     n_runs = train_config.n_runs
     if train_config.small_init_batch_size:
@@ -487,15 +488,14 @@ def data_solar_system(config, config_file, erase, device):
     x = x_list[1][0].clone().detach()
     n_particles = x.shape[0]
     config.simulation.n_particles = n_particles
-    index_particles = get_index_particles(x, n_particle_types, dimension)
     type_list = get_type_list(x, dimension)
     print(f'N particles: {n_particles} {len(torch.unique(type_list))} types')
     logger.info(f'N particles:  {n_particles} {len(torch.unique(type_list))} types')
 
     print("Start training ...")
-    print(f'{n_frames // batch_size} iterations per epoch')
-    logger.info(f'{n_frames // batch_size} iterations per epoch')
-    Niter = n_frames // batch_size
+    print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
+    logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
+    Niter = n_frames * data_augmentation_loop // batch_size
     print(f'plot every {Niter // 100} iterations')
 
     list_loss = []
@@ -506,8 +506,7 @@ def data_solar_system(config, config_file, erase, device):
         logger.info(f'batch_size: {batch_size}')
 
         total_loss = 0
-        Niter = n_frames * batch_size
-
+        Niter = n_frames * data_augmentation_loop // batch_size
 
         for N in range(Niter):
 
@@ -552,6 +551,7 @@ def data_solar_system(config, config_file, erase, device):
                 plt.yticks(fontsize=18.0)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_training/function/func_{dataset_name}_{epoch}_{N}.tif", dpi=87)
+                plt.close()
 
                 fig, ax = fig_init()
                 gt_mass_log = to_numpy(model.log10_mass.squeeze())
@@ -563,6 +563,7 @@ def data_solar_system(config, config_file, erase, device):
                 plt.yticks(fontsize=18.0)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_training/embedding/embedding_{dataset_name}_{epoch}_{N}.tif", dpi=87)
+                plt.close()
 
                 torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
