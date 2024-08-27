@@ -616,7 +616,9 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
                     matplotlib.rcParams['savefig.pad_inches'] = 0
                     fig = plt.figure(figsize=(16, 8))
+                    pos = torch.argwhere(T1==0)
                     if 'conn' in config.simulation.connectivity_mask:
+
                         plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=40, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-5,vmax=5)
                         # plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=10, c='k', alpha=0.75,edgecolors='none')
                         plt.colorbar()
