@@ -92,7 +92,26 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
     rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
     for n in range(n_particles):
         if 'PDE_N2' in config.graph_model.signal_model_name:
-            in_features =rr[:, None]
+            embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+            in_features = torch.cat((rr[:, None], embedding_), dim=1)
+        else:
+            embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+            in_features = torch.cat((rr[:, None], embedding_), dim=1)
+        with torch.no_grad():
+            func = model.lin_edge(in_features.float())
+        if (n % 2 == 0):
+            plt.plot(to_numpy(rr), to_numpy(func),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
+    plt.ylim([-0.25,0.25])
+    plt.savefig(f"./{log_dir}/tmp_training/function/msg_MLP/func_f_{epoch}_{N}.tif", dpi=87)
+
+    plt.close()
+
+    fig = plt.figure(figsize=(8, 8))
+    rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
+    for n in range(n_particles):
+        if 'PDE_N2' in config.graph_model.signal_model_name:
+            embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+            in_features = torch.cat((rr[:, None], embedding_), dim=1)
         else:
             embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             in_features = torch.cat((rr[:, None], embedding_), dim=1)
@@ -100,7 +119,8 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
             func = model.lin_phi(in_features.float())
         if (n % 2 == 0):
             plt.plot(to_numpy(rr), to_numpy(func),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
-    plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif", dpi=87)
+    plt.ylim([-0.25,0.25])
+    plt.savefig(f"./{log_dir}/tmp_training/function/update_MLP/func_MLP_{epoch}_{N}.tif", dpi=87)
     plt.close()
 
     i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
@@ -113,17 +133,15 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
         A = torch.zeros(n_particles, n_particles, device=device, requires_grad=False, dtype=torch.float32)
         A[i, j] = model.vals
         A.T[i, j] = model.vals
-
     fig = plt.figure(figsize=(8, 8))
-    ax = sns.heatmap(to_numpy(A),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046}, vmin=-0.01, vmax=0.01)
+    ax = sns.heatmap(to_numpy(A),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046}, vmin=-1, vmax=1)
     plt.title('Random connectivity matrix',fontsize=12);
     plt.xticks([0,n_particles-1],[1,n_particles],fontsize=8)
     plt.yticks([0,n_particles-1],[1,n_particles],fontsize=8)
-    plt.imshow(to_numpy(A), cmap='viridis')
     plt.savefig(f"./{log_dir}/tmp_training/field/{dataset_name}_{epoch}_{N}.tif", dpi=87)
     plt.close()
 
-    imsave(f"./{log_dir}/tmp_training/field/adjacency_{dataset_name}__{epoch}_{N}.tif", to_numpy(A))
+    # imsave(f"./{log_dir}/tmp_training/field/adjacency_{dataset_name}__{epoch}_{N}.tif", to_numpy(A))
 
 def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dataset_name, n_frames, model_name, log_dir, epoch, N, x, x_mesh, model_field, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 

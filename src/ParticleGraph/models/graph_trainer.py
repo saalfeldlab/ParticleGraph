@@ -2000,13 +2000,15 @@ def data_train_signal(config, config_file, erase, device):
                         pred = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
                         y = y_list[run][k].clone().detach()
                         y = y / ynorm
+
+                        in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :]), dim=1)
+                        func_f = model.lin_edge(in_features)
                         if is_N2:
-                            loss = (pred - y).norm(2) + model.W.norm(1) * train_config.coeff_L1
+                            loss = (pred - y).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_f.norm(2)
                         else:
                             loss = (pred - y).norm(2)
 
                     case 2:
-
                         x = x_list[run][k].clone().detach()
                         dataset = data.Data(x=x, edge_index=model.edges)
                         pred1 = model(dataset, data_id = run, excitation=excitation[:, k:k + 1])
@@ -2016,9 +2018,9 @@ def data_train_signal(config, config_file, erase, device):
                         pred2 = model(dataset, data_id = run, excitation=excitation[:, k:k + 1])
                         y = (y_list[run][k].clone().detach() + y_list[run][k+1].clone().detach()) / ynorm
                         if is_N2:
-                            in_features = torch.zeros((n_particles,1),device=device)
-                            func_phi = model.lin_phi(in_features.float())
-                            loss = (pred1 + pred2 - y).norm(2) / 2 + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2)
+                            in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :]),dim=1)
+                            func_f = model.lin_edge(in_features)
+                            loss = (pred1 + pred2 - y).norm(2) / 2 + model.W.norm(1) * train_config.coeff_L1 + func_f.norm(2)
                         else:
                             func_f = model.lin_edge(torch.zeros(1,device=device))
                             in_features = torch.cat((torch.zeros((n_particles,1),device=device),  model.a[1, :]), dim=1)
@@ -2044,9 +2046,9 @@ def data_train_signal(config, config_file, erase, device):
                         y3 = y_list[run][k+2].clone().detach()/ ynorm
 
                         if is_N2:
-                            in_features = torch.zeros((n_particles,1),device=device)
-                            func_phi = model.lin_phi(in_features.float())
-                            loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2)
+                            in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :]),dim=1)
+                            func_f = model.lin_edge(in_features)
+                            loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_f.norm(2)
                         else:
                             loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)
 
@@ -2079,9 +2081,9 @@ def data_train_signal(config, config_file, erase, device):
                         y5 = y_list[run][k+4].clone().detach()/ ynorm
 
                         if is_N2:
-                            in_features = torch.zeros((n_particles,1),device=device)
-                            func_phi = model.lin_phi(in_features.float())
-                            loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2)
+                            in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :]),dim=1)
+                            func_f = model.lin_edge(in_features)
+                            loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_f.norm(2)
                         else:
                             loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2)
 

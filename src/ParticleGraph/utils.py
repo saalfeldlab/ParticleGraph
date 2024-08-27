@@ -269,6 +269,8 @@ def create_log_dir(config=[], config_file=[], erase=True):
         os.makedirs(os.path.join(log_dir, 'tmp_training/particle'), exist_ok=True)
         os.makedirs(os.path.join(log_dir, 'tmp_training/field'), exist_ok=True)
         os.makedirs(os.path.join(log_dir, 'tmp_training/function'), exist_ok=True)
+        os.makedirs(os.path.join(log_dir, 'tmp_training/function/msg_MLP'), exist_ok=True)
+        os.makedirs(os.path.join(log_dir, 'tmp_training/function/update_MLP'), exist_ok=True)
         os.makedirs(os.path.join(log_dir, 'tmp_training/embedding'), exist_ok=True)
         if config.training.n_ghosts > 0:
             os.makedirs(os.path.join(log_dir, 'tmp_training/ghost'), exist_ok=True)
@@ -284,7 +286,10 @@ def create_log_dir(config=[], config_file=[], erase=True):
             os.remove(f)
         files = glob.glob(f"{log_dir}/tmp_training/function/*")
         for f in files:
-            os.remove(f)
+            if not(('msg_MLP' in f) | ('update_MLP' in f)):
+                os.remove(f)
+
+
         files = glob.glob(f"{log_dir}/tmp_training/embedding/*")
         for f in files:
             os.remove(f)
