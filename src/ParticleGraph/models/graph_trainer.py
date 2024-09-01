@@ -4,7 +4,6 @@ import seaborn as sns
 import torch.nn.functional as F
 import random
 
-from GNN_particles_Ntype import *
 from ParticleGraph.models.utils import *
 from ParticleGraph.models.Siren_Network import *
 from ParticleGraph.models.Ghost_Particles import *

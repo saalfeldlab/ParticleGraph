@@ -1,17 +1,14 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import networkx as nx
 import torch
 from ParticleGraph.generators.utils import *
 from ParticleGraph.models.utils import *
-from GNN_particles_Ntype import *
 from ParticleGraph.utils import set_size
 from ParticleGraph.generators.cell_utils import *
 from scipy import stats
 from scipy.spatial import Voronoi, voronoi_plot_2d
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
-import tifffile
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import seaborn as sns
 from fa2_modified import ForceAtlas2
@@ -533,10 +530,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         positions = np.array(list(positions.values()))
         X1 = torch.tensor(positions, dtype=torch.float32, device=device)
         X1 = X1 - torch.mean(X1, 0)
-
-        # pos = nx.spring_layout(G, weight='weight', seed=42, k=1)
-        # for k,p in pos.items():
-        #     X1[k,:] = torch.tensor([v[0],v[1]], device=device)
 
         time.sleep(0.5)
         for it in trange(simulation_config.start_frame, n_frames + 1):

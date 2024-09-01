@@ -1,29 +1,25 @@
+import sys
+import os
 
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 from torch_geometric.nn import MessagePassing
 import torch_geometric.utils as pyg_utils
-import imageio
 from matplotlib import rc
-from ParticleGraph.fitting_models import *
-from ParticleGraph.utils import set_size
+import matplotlib as mpl
+from io import StringIO
+from scipy.stats import pearsonr
+from scipy.spatial import Voronoi, voronoi_plot_2d
 from scipy.ndimage import median_filter
 
-os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
-
-# from data_loaders import *
-
-from GNN_particles_Ntype import *
+from ParticleGraph.fitting_models import *
+from ParticleGraph.utils import set_size
 from ParticleGraph.sparsify import *
 from ParticleGraph.models.utils import *
 from ParticleGraph.models.MLP import *
 from ParticleGraph.utils import to_numpy, CustomColorMap
-import matplotlib as mpl
-from io import StringIO
-import sys
-from scipy.stats import pearsonr
-from scipy.spatial import Voronoi, voronoi_plot_2d
-from ParticleGraph.kan import *
+
+os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
 # matplotlib.use("Qt5Agg")
 
