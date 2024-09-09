@@ -2001,10 +2001,13 @@ def data_train_signal(config, config_file, erase, device):
                         y = y_list[run][k].clone().detach()
                         y = y / ynorm
 
-                        in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :]), dim=1)
-                        func_f = model.lin_edge(in_features)
+                        # in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :]), dim=1)
+                        # func_f = model.lin_edge(in_features)
+
                         if is_N2:
-                            loss = (pred - y).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_f.norm(2)
+                            in_features = torch.zeros((n_particles, 1), device=device)
+                            func_phi = model.lin_phi(in_features.float())
+                            loss = (pred - y).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2)
                         else:
                             loss = (pred - y).norm(2)
 
