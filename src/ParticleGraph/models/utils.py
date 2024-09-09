@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import torch
 import umap
 from matplotlib.ticker import FormatStrFormatter
-from ParticleGraph.models import Interaction_Particle, Interaction_Planet, Interaction_Planet2, Interaction_Agent, Interaction_Cell, Interaction_Particle_Field, Signal_Propagation, Signal_Propagation2, Mesh_Laplacian, Mesh_RPS
+from ParticleGraph.models import Interaction_Particle, Interaction_Planet, Interaction_Planet2, Interaction_Agent, Interaction_Cell, Interaction_Particle_Field, Signal_Propagation, Signal_Propagation2, Signal_Propagation3, Mesh_Laplacian, Mesh_RPS
 from ParticleGraph.utils import *
 
 from GNN_particles_Ntype import *
@@ -92,35 +92,39 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
     rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
     for n in range(n_particles):
         if 'PDE_N2' in config.graph_model.signal_model_name:
+            in_features = rr[:, None]
+        elif 'PDE_N3' in config.graph_model.signal_model_name:
             embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             in_features = torch.cat((rr[:, None], embedding_), dim=1)
         else:
-            embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            in_features = torch.cat((rr[:, None], embedding_), dim=1)
+            in_features = rr[:, None]
+
         with torch.no_grad():
             func = model.lin_edge(in_features.float())
         if (n % 2 == 0):
             plt.plot(to_numpy(rr), to_numpy(func),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
-    plt.ylim([-0.25,0.25])
-    plt.savefig(f"./{log_dir}/tmp_training/function/msg_MLP/func_f_{epoch}_{N}.tif", dpi=87)
-
+    plt.ylim([-1,1])
+    plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/func_{epoch}_{N}.tif", dpi=87)
     plt.close()
 
     fig = plt.figure(figsize=(8, 8))
     rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
     for n in range(n_particles):
         if 'PDE_N2' in config.graph_model.signal_model_name:
+            in_features = rr[:, None]
+        elif 'PDE_N3' in config.graph_model.signal_model_name:
             embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             in_features = torch.cat((rr[:, None], embedding_), dim=1)
         else:
             embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             in_features = torch.cat((rr[:, None], embedding_), dim=1)
+
         with torch.no_grad():
             func = model.lin_phi(in_features.float())
         if (n % 2 == 0):
             plt.plot(to_numpy(rr), to_numpy(func),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
-    plt.ylim([-0.25,0.25])
-    plt.savefig(f"./{log_dir}/tmp_training/function/update_MLP/func_MLP_{epoch}_{N}.tif", dpi=87)
+    plt.ylim([-1,1])
+    plt.savefig(f"./{log_dir}/tmp_training/function/lin_phi/func_{epoch}_{N}.tif", dpi=87)
     plt.close()
 
     i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
@@ -904,6 +908,9 @@ def choose_training_model(model_config, device):
             model = Signal_Propagation(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
         case 'PDE_N2':
+            model = Signal_Propagation2(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
+            model.edges = []
+        case 'PDE_N3':
             model = Signal_Propagation2(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
   

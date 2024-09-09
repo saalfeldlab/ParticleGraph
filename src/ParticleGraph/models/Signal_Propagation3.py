@@ -5,7 +5,7 @@ from ParticleGraph.models.MLP import MLP
 from ParticleGraph.utils import to_numpy
 import numpy as np
 
-class Signal_Propagation2(pyg.nn.MessagePassing):
+class Signal_Propagation3(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
@@ -25,7 +25,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
     """
 
     def __init__(self, aggr_type=None, config=None, device=None, bc_dpos=None):
-        super(Signal_Propagation2, self).__init__(aggr=aggr_type)
+        super(Signal_Propagation3, self).__init__(aggr=aggr_type)
 
         simulation_config = config.simulation
         model_config = config.graph_model

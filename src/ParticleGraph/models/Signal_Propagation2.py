@@ -67,7 +67,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         embedding = self.a[1, particle_id, :]
 
         # msg = self.propagate(edge_index, u=u)
-        msg = torch.matmul(self.W * self.mask, self.lin_phi(u))
+        msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
 
         pred = -u + embedding[:,1:2] * self.lin_phi(u) + embedding[:,0:1] * msg + excitation
 
