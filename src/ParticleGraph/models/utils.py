@@ -128,7 +128,7 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
     plt.close()
 
     i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-    if 'PDE_N2' in config.graph_model.signal_model_name:
+    if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N3' in config.graph_model.signal_model_name):
         A = model.W.clone().detach()
         A[i,i] = 0
     elif 'asymmetric' in config.simulation.adjacency_matrix:
@@ -911,7 +911,7 @@ def choose_training_model(model_config, device):
             model = Signal_Propagation2(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
         case 'PDE_N3':
-            model = Signal_Propagation2(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
+            model = Signal_Propagation3(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
   
     if model==[]:

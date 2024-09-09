@@ -1968,6 +1968,11 @@ def data_train_signal(config, config_file, erase, device):
     Niter = n_frames * data_augmentation_loop // batch_size
     print(f'plot every {Niter // 100} iterations')
 
+
+
+
+
+
     list_loss = []
     time.sleep(1)
     for epoch in range(n_epochs + 1):
@@ -1993,6 +1998,10 @@ def data_train_signal(config, config_file, erase, device):
 
                 if 'PDE_N2' in config.graph_model.signal_model_name:
                     in_features = torch.zeros((n_particles, 1), device=device)
+                    func_phi = model.lin_phi(in_features.float())
+                    func_edge = model.lin_edge(in_features.float())
+                elif 'PDE_N3' in config.graph_model.signal_model_name:
+                    in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :]), dim=1)
                     func_phi = model.lin_phi(in_features.float())
                     func_edge = model.lin_edge(in_features.float())
                 else:
