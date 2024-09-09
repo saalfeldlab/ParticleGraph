@@ -2,7 +2,8 @@ import matplotlib.pyplot as plt
 import torch
 import umap
 from matplotlib.ticker import FormatStrFormatter
-from ParticleGraph.models import Interaction_Particle, Interaction_Planet, Interaction_Planet2, Interaction_Agent, Interaction_Cell, Interaction_Particle_Field, Signal_Propagation, Signal_Propagation2, Signal_Propagation3, Mesh_Laplacian, Mesh_RPS
+from ParticleGraph.models import Interaction_Particle, Interaction_Planet, Interaction_Planet2, Interaction_Agent, Interaction_Cell, Interaction_Particle_Field, Signal_Propagation, \
+    Signal_Propagation2, Signal_Propagation3, Signal_Propagation4, Signal_Propagation5, Signal_Propagation6, Mesh_Laplacian, Mesh_RPS
 from ParticleGraph.utils import *
 
 from GNN_particles_Ntype import *
@@ -912,6 +913,15 @@ def choose_training_model(model_config, device):
             model.edges = []
         case 'PDE_N3':
             model = Signal_Propagation3(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
+            model.edges = []
+        case 'PDE_N4':
+            model = Signal_Propagation4(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
+            model.edges = []
+        case 'PDE_N5':
+            model = Signal_Propagation5(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
+            model.edges = []
+        case 'PDE_N6':
+            model = Signal_Propagation6(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
   
     if model==[]:
