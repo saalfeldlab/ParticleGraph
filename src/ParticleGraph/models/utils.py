@@ -107,7 +107,7 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
             func = model.lin_edge(in_features.float())
         if (n % 2 == 0):
             plt.plot(to_numpy(rr), to_numpy(func),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
-    plt.ylim([-0.25,0.25])
+    plt.ylim([-0.5,0.5])
     plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/func_{epoch}_{N}.tif", dpi=87)
     plt.close()
 
@@ -129,7 +129,7 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
         with torch.no_grad():
             func = model.lin_phi(in_features.float())
         if (n % 2 == 0):
-            plt.plot(to_numpy(rr), to_numpy(func),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
+            plt.plot(to_numpy(rr), to_numpy(func),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.1)
     plt.ylim([-0.5,0.5])
     plt.savefig(f"./{log_dir}/tmp_training/function/lin_phi/func_{epoch}_{N}.tif", dpi=87)
     plt.close()

@@ -27,7 +27,7 @@ graph_model:
     prediction: 'first_derivative'
     input_size: 3
     output_size: 1
-    hidden_dim: 32
+    hidden_dim: 64
     n_mp_layers: 3
     input_size_update: 3
     n_layers_update: 3
