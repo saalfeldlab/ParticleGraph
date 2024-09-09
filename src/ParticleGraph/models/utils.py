@@ -95,7 +95,7 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
     fig = plt.figure(figsize=(8, 8))
     rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
     for n in range(n_particles):
-        if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N4' in config.graph_model.signal_model_name) | ('PDE_N5' in config.graph_model.signal_model_name):
+        if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N3' in config.graph_model.signal_model_name) | ('PDE_N4' in config.graph_model.signal_model_name) | ('PDE_N5' in config.graph_model.signal_model_name):
             in_features = rr[:, None]
         elif 'PDE_N3' in config.graph_model.signal_model_name:
             embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)

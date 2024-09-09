@@ -25,7 +25,7 @@ graph_model:
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
-    input_size: 3
+    input_size: 1
     output_size: 1
     hidden_dim: 64
     n_mp_layers: 3

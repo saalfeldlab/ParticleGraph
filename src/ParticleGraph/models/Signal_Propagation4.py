@@ -69,20 +69,16 @@ class Signal_Propagation4(pyg.nn.MessagePassing):
         in_features = torch.cat([u, embedding], dim=1)
 
         msg = self.propagate(edge_index, u=u, embedding=embedding)
-
-        msg = torch.matmul(self.W * self.mask, self.lin_edge(in_features))
-        msg = torch.matmul(self.W * self.mask, torch.tanh(u))
-
         pred = self.lin_phi(in_features) + msg
 
         return pred
 
     def message(self, edge_index_i, edge_index_j, u_j, embedding_i, embedding_j):
 
-        in_features = torch.cat([u_j, embedding_i], dim=1)
+        in_features = torch.cat([u_j, embedding_i, embedding_j], dim=1)
         T = self.W * self.mask
 
-        return T[to_numpy(edge_index_i),to_numpy(edge_index_j)][:,None] * torch.tanh(u_j) #self.lin_edge(in_features)
+        return T[to_numpy(edge_index_i),to_numpy(edge_index_j)][:,None]*self.lin_edge(in_features)
 
     def update(self, aggr_out):
         return aggr_out
