@@ -1968,11 +1968,6 @@ def data_train_signal(config, config_file, erase, device):
     Niter = n_frames * data_augmentation_loop // batch_size
     print(f'plot every {Niter // 100} iterations')
 
-
-
-
-
-
     list_loss = []
     time.sleep(1)
     for epoch in range(n_epochs + 1):
@@ -1996,7 +1991,7 @@ def data_train_signal(config, config_file, erase, device):
 
             for batch in range(batch_size):
 
-                if 'PDE_N2' in config.graph_model.signal_model_name:
+                if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N5' in config.graph_model.signal_model_name):
                     in_features = torch.zeros((n_particles, 1), device=device)
                     func_phi = model.lin_phi(in_features.float())
                     func_edge = model.lin_edge(in_features.float())
@@ -2004,6 +1999,26 @@ def data_train_signal(config, config_file, erase, device):
                     in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :]), dim=1)
                     func_phi = model.lin_phi(in_features.float())
                     func_edge = model.lin_edge(in_features.float())
+
+                    u = x_list[run][k].clone().detach()
+                    u = u[:,6:7]
+                    embedding_ = model.a[1, :, :]
+                    in_features = torch.cat((u, embedding_), dim=1)
+                    in_features_ = torch.cat((u+0.1, embedding_), dim=1)
+                    diff = torch.relu(model.lin_edge(in_features.float()) - model.lin_edge(in_features_.float())).norm(2)
+
+                elif 'PDE_N4' in config.graph_model.signal_model_name:
+                    in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1,:]), dim=1)
+                    in_features = in_features[:,0:3]
+                    func_phi = model.lin_phi(in_features.float())
+                    in_features = torch.zeros((n_particles, 1), device=device)
+                    func_edge = model.lin_edge(in_features.float())
+
+                    rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
+                    in_features = rr[:, None]
+                    func_edge_bis = model.lin_edge(in_features.float())
+                    diff = torch.relu(-torch.diff(func_edge_bis, dim=0)).norm(2)
+
                 else:
                     func_edge = model.lin_edge(torch.zeros(1, device=device))
                     in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :]), dim=1)
@@ -2019,7 +2034,7 @@ def data_train_signal(config, config_file, erase, device):
                         y = y / ynorm
 
                         if is_N2:
-                            loss = (pred - y).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2) + func_edge.norm(2)
+                            loss = (pred - y).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 1E4
                         else:
                             loss = (pred - y).norm(2) + func_phi.norm(2) + func_edge.norm(2)
 

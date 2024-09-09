@@ -82,7 +82,10 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
     fig = plt.figure(figsize=(8, 8))
     embedding = get_embedding(model.a, 1)
     for n in range(n_particle_types):
-        plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=20)
+        if 'PDE_N5' in config.graph_model.signal_model_name:
+            plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 3], s=20)
+        else:
+            plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=20)
     plt.xticks([])
     plt.yticks([])
     plt.tight_layout()
@@ -92,7 +95,7 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
     fig = plt.figure(figsize=(8, 8))
     rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
     for n in range(n_particles):
-        if 'PDE_N2' in config.graph_model.signal_model_name:
+        if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N4' in config.graph_model.signal_model_name) | ('PDE_N5' in config.graph_model.signal_model_name):
             in_features = rr[:, None]
         elif 'PDE_N3' in config.graph_model.signal_model_name:
             embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
@@ -104,17 +107,20 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
             func = model.lin_edge(in_features.float())
         if (n % 2 == 0):
             plt.plot(to_numpy(rr), to_numpy(func),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
-    plt.ylim([-1,1])
+    plt.ylim([-0.25,0.25])
     plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/func_{epoch}_{N}.tif", dpi=87)
     plt.close()
 
     fig = plt.figure(figsize=(8, 8))
     rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
     for n in range(n_particles):
-        if 'PDE_N2' in config.graph_model.signal_model_name:
+        if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N5' in config.graph_model.signal_model_name):
             in_features = rr[:, None]
         elif 'PDE_N3' in config.graph_model.signal_model_name:
             embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+            in_features = torch.cat((rr[:, None], embedding_), dim=1)
+        elif 'PDE_N4' in config.graph_model.signal_model_name:
+            embedding_ = model.a[1, n, 0:2] * torch.ones((1000, 2), device=device)
             in_features = torch.cat((rr[:, None], embedding_), dim=1)
         else:
             embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
@@ -124,12 +130,12 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
             func = model.lin_phi(in_features.float())
         if (n % 2 == 0):
             plt.plot(to_numpy(rr), to_numpy(func),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
-    plt.ylim([-1,1])
+    plt.ylim([-0.5,0.5])
     plt.savefig(f"./{log_dir}/tmp_training/function/lin_phi/func_{epoch}_{N}.tif", dpi=87)
     plt.close()
 
     i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-    if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N3' in config.graph_model.signal_model_name):
+    if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N3' in config.graph_model.signal_model_name) | ('PDE_N4' in config.graph_model.signal_model_name) | ('PDE_N5' in config.graph_model.signal_model_name) | ('PDE_N6' in config.graph_model.signal_model_name):
         A = model.W.clone().detach()
         A[i,i] = 0
     elif 'asymmetric' in config.simulation.adjacency_matrix:

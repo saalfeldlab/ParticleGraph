@@ -1,11 +1,11 @@
 description: 'Hemibrain'
-dataset: 'signal_N2_hemibrain_4'
+dataset: 'signal_N2_hemibrain_3'
 
 simulation:
     connectivity_file: ''
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
-    connectivity_mask: 'conn-eb-fb-pb-no-T.tif'
+    connectivity_mask: 'conn-eb-fb-pb-no.tif'
     params: [[10.0,1.0],[10.0,2.0]]
     phi: 'tanh'
     tau: 1.0
@@ -21,13 +21,13 @@ simulation:
     start_frame: 0 # -1000
 
 graph_model:
-    signal_model_name: 'PDE_N2'
+    signal_model_name: 'PDE_N3'
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
-    input_size: 1
+    input_size: 3
     output_size: 1
-    hidden_dim: 64
+    hidden_dim: 32
     n_mp_layers: 3
     input_size_update: 3
     n_layers_update: 3
