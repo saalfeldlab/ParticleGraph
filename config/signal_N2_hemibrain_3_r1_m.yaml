@@ -21,13 +21,13 @@ simulation:
     start_frame: 0 # -1000
 
 graph_model:
-    signal_model_name: 'PDE_N3'
+    signal_model_name: 'PDE_N4'
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
-    input_size: 1
+    input_size: 5
     output_size: 1
-    hidden_dim: 64
+    hidden_dim: 32
     n_mp_layers: 3
     input_size_update: 3
     n_layers_update: 3
@@ -47,7 +47,7 @@ training:
     small_init_batch_size: False
     n_runs: 10
     large_range: False
-    sparsity: 'replace_embedding_function'
+    sparsity: 'none'
     sparsity_freq: 3
     data_augmentation: False
     data_augmentation_loop: 500

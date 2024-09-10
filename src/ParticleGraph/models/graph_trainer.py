@@ -1898,9 +1898,9 @@ def data_train_signal(config, config_file, erase, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    net = f"./log/try_{config_file}/models/best_model_with_9_graphs_5_0.pt"
-    state_dict = torch.load(net,map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
+    # net = f"./log/try_{config_file}/models/best_model_with_9_graphs_5_0.pt"
+    # state_dict = torch.load(net,map_location=device)
+    # model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -1972,7 +1972,7 @@ def data_train_signal(config, config_file, erase, device):
 
     list_loss = []
     time.sleep(2)
-    for epoch in range(4, n_epochs + 1):
+    for epoch in range(n_epochs + 1):
 
         batch_size = get_batch_size(epoch)
         logger.info(f'batch_size: {batch_size}')
@@ -1983,147 +1983,146 @@ def data_train_signal(config, config_file, erase, device):
         print(f'Niter = {Niter}')
         logger.info(f'Niter = {Niter}')
 
-        if epoch>4:
-            for N in trange(Niter):
 
-                run = 1 + np.random.randint(n_runs - 1)
-                k = np.random.randint(n_frames - 6)
+        for N in trange(Niter):
 
-                optimizer.zero_grad()
+            run = 1 + np.random.randint(n_runs - 1)
+            k = np.random.randint(n_frames - 6)
 
-                for batch in range(batch_size):
+            optimizer.zero_grad()
 
-                    if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N5' in config.graph_model.signal_model_name):
-                        in_features = torch.zeros((n_particles, 1), device=device)
-                        func_phi = model.lin_phi(in_features.float())
-                        func_edge = model.lin_edge(in_features.float())
-                    elif 'PDE_N3' in config.graph_model.signal_model_name:
-                        in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :]), dim=1)
-                        func_phi = model.lin_phi(in_features.float())
-                        in_features = torch.zeros((n_particles, 1), device=device)
-                        func_edge = model.lin_edge(in_features.float())
+            for batch in range(batch_size):
+
+                if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N5' in config.graph_model.signal_model_name):
+                    in_features = torch.zeros((n_particles, 1), device=device)
+                    func_phi = model.lin_phi(in_features.float())
+                    func_edge = model.lin_edge(in_features.float())
+                elif 'PDE_N3' in config.graph_model.signal_model_name:
+                    in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :]), dim=1)
+                    func_phi = model.lin_phi(in_features.float())
+                    in_features = torch.zeros((n_particles, 1), device=device)
+                    func_edge = model.lin_edge(in_features.float())
+                    u = x_list[run][k].clone().detach()
+                    u = u[:,6:7]
+                    diff = torch.relu(model.lin_edge(u) - model.lin_edge(u+0.1)).norm(2)
+                elif 'PDE_N4' in config.graph_model.signal_model_name:
+                    in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1,:]), dim=1)
+                    func_phi = model.lin_phi(in_features.float())
+                    in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :], model.a[1, :]), dim=1)
+                    func_edge = model.lin_edge(in_features.float())
+                    if epoch==0:
                         u = x_list[run][k].clone().detach()
                         u = u[:,6:7]
-                        diff = torch.relu(model.lin_edge(u) - model.lin_edge(u+0.1)).norm(2)
-                    elif 'PDE_N4' in config.graph_model.signal_model_name:
-                        in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1,:]), dim=1)
-                        in_features = in_features[:,0:3]
-                        func_phi = model.lin_phi(in_features.float())
-                        in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :], model.a[1, :]), dim=1)
-                        func_edge = model.lin_edge(in_features.float())
-                        if epoch==0:
-                            u = x_list[run][k].clone().detach()
-                            u = u[:,6:7]
-                            embedding_ = model.a[1, :, :]
-                            in_features = torch.cat((u, embedding_,embedding_), dim=1)
-                            in_features_ = torch.cat((u+0.1, embedding_,embedding_), dim=1)
-                            diff = torch.relu(model.lin_edge(in_features.float()) - model.lin_edge(in_features_.float())).norm(2)
-                    else:
-                        func_edge = model.lin_edge(torch.zeros(1, device=device))
-                        in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :]), dim=1)
-                        func_phi = model.lin_phi(in_features.float())
+                        embedding_ = model.a[1, :, :]
+                        in_features = torch.cat((u, embedding_,embedding_), dim=1)
+                        in_features_ = torch.cat((u+0.1, embedding_,embedding_), dim=1)
+                        diff = torch.relu(model.lin_edge(in_features.float()) - model.lin_edge(in_features_.float())).norm(2)
+                else:
+                    func_edge = model.lin_edge(torch.zeros(1, device=device))
+                    in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :]), dim=1)
+                    func_phi = model.lin_phi(in_features.float())
 
-                    match recursive_loop:
+                match recursive_loop:
 
-                        case 1:
-                            x = x_list[run][k].clone().detach()
-                            dataset = data.Data(x=x, edge_index=model.edges)
-                            pred = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
-                            y = y_list[run][k].clone().detach()
-                            y = y / ynorm
+                    case 1:
+                        x = x_list[run][k].clone().detach()
+                        dataset = data.Data(x=x, edge_index=model.edges)
+                        pred = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                        y = y_list[run][k].clone().detach()
+                        y = y / ynorm
 
-                            if is_N2:
-                                loss = (pred - y).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 10 * (epoch==0)
-                            else:
-                                loss = (pred - y).norm(2) + func_phi.norm(2) + func_edge.norm(2)
+                        if is_N2:
+                            loss = (pred - y).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 10 * (epoch==0)
+                        else:
+                            loss = (pred - y).norm(2) + func_phi.norm(2) + func_edge.norm(2)
 
-                        case 2:
-                            x = x_list[run][k].clone().detach()
-                            dataset = data.Data(x=x, edge_index=model.edges)
-                            pred1 = model(dataset, data_id = run, excitation=excitation[:, k:k + 1])
-                            x_ = x.clone().detach()
-                            x_[:, 6:7] += pred1 * delta_t
-                            dataset = data.Data(x=x_, edge_index=model.edges)
-                            pred2 = model(dataset, data_id = run, excitation=excitation[:, k:k + 1])
-                            y = (y_list[run][k].clone().detach() + y_list[run][k+1].clone().detach()) / ynorm
+                    case 2:
+                        x = x_list[run][k].clone().detach()
+                        dataset = data.Data(x=x, edge_index=model.edges)
+                        pred1 = model(dataset, data_id = run, excitation=excitation[:, k:k + 1])
+                        x_ = x.clone().detach()
+                        x_[:, 6:7] += pred1 * delta_t
+                        dataset = data.Data(x=x_, edge_index=model.edges)
+                        pred2 = model(dataset, data_id = run, excitation=excitation[:, k:k + 1])
+                        y = (y_list[run][k].clone().detach() + y_list[run][k+1].clone().detach()) / ynorm
 
-                            if is_N2:
-                                loss = (pred1 + pred2 - y).norm(2) / 2 + model.W.norm(1) * train_config.coeff_L1 + func_edge.norm(2) + func_phi.norm(2)
-                            else:
-                                loss = (pred1 + pred2 - y).norm(2) / 2 + func_edge.norm(2) + func_phi.norm(2)
+                        if is_N2:
+                            loss = (pred1 + pred2 - y).norm(2) / 2 + model.W.norm(1) * train_config.coeff_L1 + func_edge.norm(2) + func_phi.norm(2)
+                        else:
+                            loss = (pred1 + pred2 - y).norm(2) / 2 + func_edge.norm(2) + func_phi.norm(2)
 
-                        case 3:
-                            x = x_list[run][k].clone().detach()
-                            dataset = data.Data(x=x, edge_index=model.edges)
-                            pred1 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
-                            x_ = x.clone().detach()
-                            x_[:, 6:7] += pred1 * delta_t
-                            dataset = data.Data(x=x_, edge_index=model.edges)
-                            pred2 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
-                            x_ = x.clone().detach()
-                            x_[:, 6:7] += (pred1+pred2) * delta_t
-                            dataset = data.Data(x=x_, edge_index=model.edges)
-                            pred3 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                    case 3:
+                        x = x_list[run][k].clone().detach()
+                        dataset = data.Data(x=x, edge_index=model.edges)
+                        pred1 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                        x_ = x.clone().detach()
+                        x_[:, 6:7] += pred1 * delta_t
+                        dataset = data.Data(x=x_, edge_index=model.edges)
+                        pred2 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                        x_ = x.clone().detach()
+                        x_[:, 6:7] += (pred1+pred2) * delta_t
+                        dataset = data.Data(x=x_, edge_index=model.edges)
+                        pred3 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
 
-                            y1 = y_list[run][k].clone().detach()/ ynorm
-                            y2 = y_list[run][k+1].clone().detach()/ ynorm
-                            y3 = y_list[run][k+2].clone().detach()/ ynorm
+                        y1 = y_list[run][k].clone().detach()/ ynorm
+                        y2 = y_list[run][k+1].clone().detach()/ ynorm
+                        y3 = y_list[run][k+2].clone().detach()/ ynorm
 
-                            if is_N2:
-                                loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_f.norm(2)
-                            else:
-                                loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)
+                        if is_N2:
+                            loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_f.norm(2)
+                        else:
+                            loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)
 
-                        case 5:
+                    case 5:
 
-                            x = x_list[run][k].clone().detach()
-                            dataset = data.Data(x=x, edge_index=model.edges)
-                            pred1 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
-                            x_ = x.clone().detach()
-                            x_[:, 6:7] += pred1 * delta_t
-                            dataset = data.Data(x=x_, edge_index=model.edges)
-                            pred2 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
-                            x_ = x.clone().detach()
-                            x_[:, 6:7] += (pred1+pred2) * delta_t
-                            dataset = data.Data(x=x_, edge_index=model.edges)
-                            pred3 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
-                            x_ = x.clone().detach()
-                            x_[:, 6:7] += (pred1+pred2+pred3) * delta_t
-                            dataset = data.Data(x=x_, edge_index=model.edges)
-                            pred4 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
-                            x_ = x.clone().detach()
-                            x_[:, 6:7] += (pred1+pred2+pred3+pred4) * delta_t
-                            dataset = data.Data(x=x_, edge_index=model.edges)
-                            pred5 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                        x = x_list[run][k].clone().detach()
+                        dataset = data.Data(x=x, edge_index=model.edges)
+                        pred1 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                        x_ = x.clone().detach()
+                        x_[:, 6:7] += pred1 * delta_t
+                        dataset = data.Data(x=x_, edge_index=model.edges)
+                        pred2 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                        x_ = x.clone().detach()
+                        x_[:, 6:7] += (pred1+pred2) * delta_t
+                        dataset = data.Data(x=x_, edge_index=model.edges)
+                        pred3 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                        x_ = x.clone().detach()
+                        x_[:, 6:7] += (pred1+pred2+pred3) * delta_t
+                        dataset = data.Data(x=x_, edge_index=model.edges)
+                        pred4 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                        x_ = x.clone().detach()
+                        x_[:, 6:7] += (pred1+pred2+pred3+pred4) * delta_t
+                        dataset = data.Data(x=x_, edge_index=model.edges)
+                        pred5 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
 
-                            y1 = y_list[run][k].clone().detach()/ ynorm
-                            y2 = y_list[run][k+1].clone().detach()/ ynorm
-                            y3 = y_list[run][k+2].clone().detach()/ ynorm
-                            y4 = y_list[run][k+3].clone().detach()/ ynorm
-                            y5 = y_list[run][k+4].clone().detach()/ ynorm
+                        y1 = y_list[run][k].clone().detach()/ ynorm
+                        y2 = y_list[run][k+1].clone().detach()/ ynorm
+                        y3 = y_list[run][k+2].clone().detach()/ ynorm
+                        y4 = y_list[run][k+3].clone().detach()/ ynorm
+                        y5 = y_list[run][k+4].clone().detach()/ ynorm
 
-                            if is_N2:
-                                loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_f.norm(2)
-                            else:
-                                loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2)
+                        if is_N2:
+                            loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_f.norm(2)
+                        else:
+                            loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2)
 
-                loss.backward()
-                optimizer.step()
+            loss.backward()
+            optimizer.step()
 
-                total_loss += loss.item()
+            total_loss += loss.item()
 
-                visualize_embedding = True
-                if visualize_embedding & (((epoch < 30 ) & (N%(Niter//100) == 0)) | (N==0)):
-                    plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, index_particles, n_particles, n_particle_types, type_list, cmap, device)
-                    torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+            visualize_embedding = True
+            if visualize_embedding & (((epoch < 30 ) & (N%(Niter//100) == 0)) | (N==0)):
+                plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, index_particles, n_particles, n_particle_types, type_list, cmap, device)
+                torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
-            print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
-            logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
-            torch.save({'model_state_dict': model.state_dict(),
-                        'optimizer_state_dict': optimizer.state_dict()},
-                       os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
-            list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
-            torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
+        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
+        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
+        torch.save({'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict()},
+                   os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
+        list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
+        torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
 
 
@@ -2281,14 +2280,6 @@ def data_train_signal(config, config_file, erase, device):
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
         plt.close()
-
-
-
-
-
-
-
-
 
 
 def data_train_agents(config, config_file, erase, device):

@@ -66,19 +66,28 @@ class Signal_Propagation4(pyg.nn.MessagePassing):
         particle_id = to_numpy(x[:, 0])
         embedding = self.a[1, particle_id, :]
 
-        in_features = torch.cat([u, embedding], dim=1)
+        # msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
+        # col = torch.cat((u, torch.ones_like(u), torch.ones_like(u), embedding), dim=1)
+        # T = self.W * self.mask
+        # msg = torch.zeros_like(u)
+        # for i in range(self.n_particles):
+        #     col[:,1:3] = self.a[1, i, :] * torch.ones((self.n_particles, 2), device=self.device)
+        #     msg[i] = torch.sum(T[i] * self.lin_edge(col).squeeze())
 
         msg = self.propagate(edge_index, u=u, embedding=embedding)
+        in_features = torch.cat([u, embedding], dim=1)
         pred = self.lin_phi(in_features) + msg
 
         return pred
 
     def message(self, edge_index_i, edge_index_j, u_j, embedding_i, embedding_j):
 
-        in_features = torch.cat([u_j, embedding_i, embedding_j], dim=1)
         T = self.W * self.mask
+        in_features = torch.cat([u_j, embedding_i, embedding_j], dim=1)
+        index_i = to_numpy(edge_index_i)
+        index_j = to_numpy(edge_index_i)
 
-        return T[to_numpy(edge_index_i),to_numpy(edge_index_j)][:,None]*self.lin_edge(in_features)
+        return T[index_i,index_j][:,None] * self.lin_edge(in_features)
 
     def update(self, aggr_out):
         return aggr_out

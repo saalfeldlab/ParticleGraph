@@ -3,7 +3,7 @@ import torch
 import umap
 from matplotlib.ticker import FormatStrFormatter
 from ParticleGraph.models import Interaction_Particle, Interaction_Planet, Interaction_Planet2, Interaction_Agent, Interaction_Cell, Interaction_Particle_Field, Signal_Propagation, \
-    Signal_Propagation2, Signal_Propagation3, Signal_Propagation4, Signal_Propagation5, Signal_Propagation6, Mesh_Laplacian, Mesh_RPS
+    Signal_Propagation2, Signal_Propagation3, Signal_Propagation4, Mesh_Laplacian, Mesh_RPS
 from ParticleGraph.utils import *
 
 from GNN_particles_Ntype import *
@@ -100,11 +100,11 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
     fig = plt.figure(figsize=(8, 8))
     rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
     for n in range(n_particles):
-        if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N3' in config.graph_model.signal_model_name) | ('PDE_N4' in config.graph_model.signal_model_name) | ('PDE_N5' in config.graph_model.signal_model_name):
+        if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N3' in config.graph_model.signal_model_name):
             in_features = rr[:, None]
-        elif 'PDE_N3' in config.graph_model.signal_model_name:
+        elif 'PDE_N4' in config.graph_model.signal_model_name:
             embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            in_features = torch.cat((rr[:, None], embedding_), dim=1)
+            in_features = torch.cat((rr[:, None], embedding_, embedding_), dim=1)
         else:
             in_features = rr[:, None]
 
@@ -140,7 +140,7 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
     plt.close()
 
     i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-    if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N3' in config.graph_model.signal_model_name) | ('PDE_N4' in config.graph_model.signal_model_name) | ('PDE_N5' in config.graph_model.signal_model_name) | ('PDE_N6' in config.graph_model.signal_model_name):
+    if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N3' in config.graph_model.signal_model_name) | ('PDE_N4' in config.graph_model.signal_model_name):
         A = model.W.clone().detach()
         A[i,i] = 0
     elif 'asymmetric' in config.simulation.adjacency_matrix:
@@ -149,6 +149,7 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
         A = torch.zeros(n_particles, n_particles, device=device, requires_grad=False, dtype=torch.float32)
         A[i, j] = model.vals
         A.T[i, j] = model.vals
+
     fig = plt.figure(figsize=(8, 8))
     ax = sns.heatmap(to_numpy(A),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046}, vmin=-1, vmax=1)
     plt.title('Random connectivity matrix',fontsize=12);
