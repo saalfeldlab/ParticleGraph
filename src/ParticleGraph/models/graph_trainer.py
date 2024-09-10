@@ -1874,6 +1874,8 @@ def data_train_signal(config, config_file, erase, device):
     cmap = CustomColorMap(config=config)
     n_runs = train_config.n_runs
     is_N2 = 'signal_N2' in dataset_name
+    replace_with_cluster = 'replace' in train_config.sparsity
+    sparsity_freq = train_config.sparsity_freq
 
     l_dir, log_dir, logger = create_log_dir(config, config_file,erase)
     print(f'Graph files N: {n_runs}')
@@ -1896,9 +1898,9 @@ def data_train_signal(config, config_file, erase, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_9_graphs_8_0.pt"
-    # state_dict = torch.load(net,map_location=device)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    net = f"./log/try_{config_file}/models/best_model_with_9_graphs_5_0.pt"
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -1970,9 +1972,8 @@ def data_train_signal(config, config_file, erase, device):
 
     list_loss = []
     time.sleep(2)
-    for epoch in range(n_epochs + 1):
+    for epoch in range(4, n_epochs + 1):
 
-        old_batch_size = batch_size
         batch_size = get_batch_size(epoch)
         logger.info(f'batch_size: {batch_size}')
 
@@ -1982,156 +1983,159 @@ def data_train_signal(config, config_file, erase, device):
         print(f'Niter = {Niter}')
         logger.info(f'Niter = {Niter}')
 
-        for N in trange(Niter):
+        if epoch>4:
+            for N in trange(Niter):
 
-            run = 1 + np.random.randint(n_runs - 1)
-            k = np.random.randint(n_frames - 6)
+                run = 1 + np.random.randint(n_runs - 1)
+                k = np.random.randint(n_frames - 6)
 
-            optimizer.zero_grad()
+                optimizer.zero_grad()
 
-            for batch in range(batch_size):
+                for batch in range(batch_size):
 
-                if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N5' in config.graph_model.signal_model_name):
-                    in_features = torch.zeros((n_particles, 1), device=device)
-                    func_phi = model.lin_phi(in_features.float())
-                    func_edge = model.lin_edge(in_features.float())
-                elif 'PDE_N3' in config.graph_model.signal_model_name:
-                    in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :]), dim=1)
-                    func_phi = model.lin_phi(in_features.float())
-                    in_features = torch.zeros((n_particles, 1), device=device)
-                    func_edge = model.lin_edge(in_features.float())
-                    u = x_list[run][k].clone().detach()
-                    u = u[:,6:7]
-                    diff = torch.relu(model.lin_edge(u) - model.lin_edge(u+0.1)).norm(2)
-                elif 'PDE_N4' in config.graph_model.signal_model_name:
-                    in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1,:]), dim=1)
-                    in_features = in_features[:,0:3]
-                    func_phi = model.lin_phi(in_features.float())
-                    in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :], model.a[1, :]), dim=1)
-                    func_edge = model.lin_edge(in_features.float())
-                    if epoch==0:
+                    if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N5' in config.graph_model.signal_model_name):
+                        in_features = torch.zeros((n_particles, 1), device=device)
+                        func_phi = model.lin_phi(in_features.float())
+                        func_edge = model.lin_edge(in_features.float())
+                    elif 'PDE_N3' in config.graph_model.signal_model_name:
+                        in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :]), dim=1)
+                        func_phi = model.lin_phi(in_features.float())
+                        in_features = torch.zeros((n_particles, 1), device=device)
+                        func_edge = model.lin_edge(in_features.float())
                         u = x_list[run][k].clone().detach()
                         u = u[:,6:7]
-                        embedding_ = model.a[1, :, :]
-                        in_features = torch.cat((u, embedding_,embedding_), dim=1)
-                        in_features_ = torch.cat((u+0.1, embedding_,embedding_), dim=1)
-                        diff = torch.relu(model.lin_edge(in_features.float()) - model.lin_edge(in_features_.float())).norm(2)
-                else:
-                    func_edge = model.lin_edge(torch.zeros(1, device=device))
-                    in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :]), dim=1)
-                    func_phi = model.lin_phi(in_features.float())
+                        diff = torch.relu(model.lin_edge(u) - model.lin_edge(u+0.1)).norm(2)
+                    elif 'PDE_N4' in config.graph_model.signal_model_name:
+                        in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1,:]), dim=1)
+                        in_features = in_features[:,0:3]
+                        func_phi = model.lin_phi(in_features.float())
+                        in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :], model.a[1, :]), dim=1)
+                        func_edge = model.lin_edge(in_features.float())
+                        if epoch==0:
+                            u = x_list[run][k].clone().detach()
+                            u = u[:,6:7]
+                            embedding_ = model.a[1, :, :]
+                            in_features = torch.cat((u, embedding_,embedding_), dim=1)
+                            in_features_ = torch.cat((u+0.1, embedding_,embedding_), dim=1)
+                            diff = torch.relu(model.lin_edge(in_features.float()) - model.lin_edge(in_features_.float())).norm(2)
+                    else:
+                        func_edge = model.lin_edge(torch.zeros(1, device=device))
+                        in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :]), dim=1)
+                        func_phi = model.lin_phi(in_features.float())
 
-                match recursive_loop:
+                    match recursive_loop:
 
-                    case 1:
-                        x = x_list[run][k].clone().detach()
-                        dataset = data.Data(x=x, edge_index=model.edges)
-                        pred = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
-                        y = y_list[run][k].clone().detach()
-                        y = y / ynorm
+                        case 1:
+                            x = x_list[run][k].clone().detach()
+                            dataset = data.Data(x=x, edge_index=model.edges)
+                            pred = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                            y = y_list[run][k].clone().detach()
+                            y = y / ynorm
 
-                        if is_N2:
-                            loss = (pred - y).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 10 * (epoch==0)
-                        else:
-                            loss = (pred - y).norm(2) + func_phi.norm(2) + func_edge.norm(2)
+                            if is_N2:
+                                loss = (pred - y).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 10 * (epoch==0)
+                            else:
+                                loss = (pred - y).norm(2) + func_phi.norm(2) + func_edge.norm(2)
 
-                    case 2:
-                        x = x_list[run][k].clone().detach()
-                        dataset = data.Data(x=x, edge_index=model.edges)
-                        pred1 = model(dataset, data_id = run, excitation=excitation[:, k:k + 1])
-                        x_ = x.clone().detach()
-                        x_[:, 6:7] += pred1 * delta_t
-                        dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred2 = model(dataset, data_id = run, excitation=excitation[:, k:k + 1])
-                        y = (y_list[run][k].clone().detach() + y_list[run][k+1].clone().detach()) / ynorm
+                        case 2:
+                            x = x_list[run][k].clone().detach()
+                            dataset = data.Data(x=x, edge_index=model.edges)
+                            pred1 = model(dataset, data_id = run, excitation=excitation[:, k:k + 1])
+                            x_ = x.clone().detach()
+                            x_[:, 6:7] += pred1 * delta_t
+                            dataset = data.Data(x=x_, edge_index=model.edges)
+                            pred2 = model(dataset, data_id = run, excitation=excitation[:, k:k + 1])
+                            y = (y_list[run][k].clone().detach() + y_list[run][k+1].clone().detach()) / ynorm
 
-                        if is_N2:
-                            loss = (pred1 + pred2 - y).norm(2) / 2 + model.W.norm(1) * train_config.coeff_L1 + func_edge.norm(2) + func_phi.norm(2)
-                        else:
-                            loss = (pred1 + pred2 - y).norm(2) / 2 + func_edge.norm(2) + func_phi.norm(2)
+                            if is_N2:
+                                loss = (pred1 + pred2 - y).norm(2) / 2 + model.W.norm(1) * train_config.coeff_L1 + func_edge.norm(2) + func_phi.norm(2)
+                            else:
+                                loss = (pred1 + pred2 - y).norm(2) / 2 + func_edge.norm(2) + func_phi.norm(2)
 
-                    case 3:
-                        x = x_list[run][k].clone().detach()
-                        dataset = data.Data(x=x, edge_index=model.edges)
-                        pred1 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
-                        x_ = x.clone().detach()
-                        x_[:, 6:7] += pred1 * delta_t
-                        dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred2 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
-                        x_ = x.clone().detach()
-                        x_[:, 6:7] += (pred1+pred2) * delta_t
-                        dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred3 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                        case 3:
+                            x = x_list[run][k].clone().detach()
+                            dataset = data.Data(x=x, edge_index=model.edges)
+                            pred1 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                            x_ = x.clone().detach()
+                            x_[:, 6:7] += pred1 * delta_t
+                            dataset = data.Data(x=x_, edge_index=model.edges)
+                            pred2 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                            x_ = x.clone().detach()
+                            x_[:, 6:7] += (pred1+pred2) * delta_t
+                            dataset = data.Data(x=x_, edge_index=model.edges)
+                            pred3 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
 
-                        y1 = y_list[run][k].clone().detach()/ ynorm
-                        y2 = y_list[run][k+1].clone().detach()/ ynorm
-                        y3 = y_list[run][k+2].clone().detach()/ ynorm
+                            y1 = y_list[run][k].clone().detach()/ ynorm
+                            y2 = y_list[run][k+1].clone().detach()/ ynorm
+                            y3 = y_list[run][k+2].clone().detach()/ ynorm
 
-                        if is_N2:
-                            loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_f.norm(2)
-                        else:
-                            loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)
+                            if is_N2:
+                                loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_f.norm(2)
+                            else:
+                                loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)
 
-                    case 5:
+                        case 5:
 
-                        x = x_list[run][k].clone().detach()
-                        dataset = data.Data(x=x, edge_index=model.edges)
-                        pred1 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
-                        x_ = x.clone().detach()
-                        x_[:, 6:7] += pred1 * delta_t
-                        dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred2 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
-                        x_ = x.clone().detach()
-                        x_[:, 6:7] += (pred1+pred2) * delta_t
-                        dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred3 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
-                        x_ = x.clone().detach()
-                        x_[:, 6:7] += (pred1+pred2+pred3) * delta_t
-                        dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred4 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
-                        x_ = x.clone().detach()
-                        x_[:, 6:7] += (pred1+pred2+pred3+pred4) * delta_t
-                        dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred5 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                            x = x_list[run][k].clone().detach()
+                            dataset = data.Data(x=x, edge_index=model.edges)
+                            pred1 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                            x_ = x.clone().detach()
+                            x_[:, 6:7] += pred1 * delta_t
+                            dataset = data.Data(x=x_, edge_index=model.edges)
+                            pred2 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                            x_ = x.clone().detach()
+                            x_[:, 6:7] += (pred1+pred2) * delta_t
+                            dataset = data.Data(x=x_, edge_index=model.edges)
+                            pred3 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                            x_ = x.clone().detach()
+                            x_[:, 6:7] += (pred1+pred2+pred3) * delta_t
+                            dataset = data.Data(x=x_, edge_index=model.edges)
+                            pred4 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                            x_ = x.clone().detach()
+                            x_[:, 6:7] += (pred1+pred2+pred3+pred4) * delta_t
+                            dataset = data.Data(x=x_, edge_index=model.edges)
+                            pred5 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
 
-                        y1 = y_list[run][k].clone().detach()/ ynorm
-                        y2 = y_list[run][k+1].clone().detach()/ ynorm
-                        y3 = y_list[run][k+2].clone().detach()/ ynorm
-                        y4 = y_list[run][k+3].clone().detach()/ ynorm
-                        y5 = y_list[run][k+4].clone().detach()/ ynorm
+                            y1 = y_list[run][k].clone().detach()/ ynorm
+                            y2 = y_list[run][k+1].clone().detach()/ ynorm
+                            y3 = y_list[run][k+2].clone().detach()/ ynorm
+                            y4 = y_list[run][k+3].clone().detach()/ ynorm
+                            y5 = y_list[run][k+4].clone().detach()/ ynorm
 
-                        if is_N2:
-                            loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_f.norm(2)
-                        else:
-                            loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2)
+                            if is_N2:
+                                loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_f.norm(2)
+                            else:
+                                loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2)
 
-            loss.backward()
-            optimizer.step()
+                loss.backward()
+                optimizer.step()
 
-            total_loss += loss.item()
+                total_loss += loss.item()
 
-            visualize_embedding = True
-            if visualize_embedding & (((epoch < 30 ) & (N%(Niter//100) == 0)) | (N==0)):
-                plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, index_particles, n_particles, n_particle_types, type_list, cmap, device)
-                torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+                visualize_embedding = True
+                if visualize_embedding & (((epoch < 30 ) & (N%(Niter//100) == 0)) | (N==0)):
+                    plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, index_particles, n_particles, n_particle_types, type_list, cmap, device)
+                    torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
-        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
-        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
-        torch.save({'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict()},
-                   os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
-        list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
-        torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
+            print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
+            logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
+            torch.save({'model_state_dict': model.state_dict(),
+                        'optimizer_state_dict': optimizer.state_dict()},
+                       os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
+            list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
+            torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
-        fig = plt.figure(figsize=(20, 4))
 
-        ax = fig.add_subplot(1, 5, 1)
+
+        fig = plt.figure(figsize=(20, 8))
+
+        ax = fig.add_subplot(2, 5, 1)
         plt.plot(list_loss, color='k')
         plt.xlim([0, n_epochs])
         plt.ylabel('Loss', fontsize=12)
         plt.xlabel('Epochs', fontsize=12)
 
-        ax = fig.add_subplot(1, 5, 2)
+        ax = fig.add_subplot(2, 5, 2)
         embedding = get_embedding(model.a, 1)
         for n in range(n_particle_types):
             plt.scatter(embedding[index_particles[n], 0],
@@ -2150,20 +2154,20 @@ def data_train_signal(config, config_file, erase, device):
             A[i,j] = model.vals
             A.T[i,j] = model.vals
 
-        ax = fig.add_subplot(1, 5, 3)
+        ax = fig.add_subplot(2, 5, 3)
         ax = sns.heatmap(to_numpy(adjacency),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046}, vmin=-0.001, vmax=0.001)
         # ax.invert_yaxis()
         plt.title('True connectivity matrix',fontsize=12);
         plt.xticks([0,n_particles-1],[1,n_particles],fontsize=8)
         plt.yticks([0,n_particles-1],[1,n_particles],fontsize=8)
-        ax = fig.add_subplot(1, 5, 4)
+        ax = fig.add_subplot(2, 5, 4)
         ax = sns.heatmap(to_numpy(A),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046}, vmin=-1, vmax=1)
         # ax.invert_yaxis()
         plt.title('Learned connectivity matrix',fontsize=12);
         plt.xticks([0,n_particles-1],[1,n_particles],fontsize=8)
         plt.yticks([0,n_particles-1],[1,n_particles],fontsize=8 )
 
-        ax = fig.add_subplot(1, 5, 5)
+        ax = fig.add_subplot(2, 5, 5)
         gt_weight = to_numpy(adjacency)
         pred_weight = to_numpy(A)
         plt.scatter(gt_weight, pred_weight, s=0.1,c='k',alpha=0.01)
@@ -2171,16 +2175,120 @@ def data_train_signal(config, config_file, erase, device):
         plt.ylabel('learned weight', fontsize=12)
         plt.title('comparison')
 
+        ax = fig.add_subplot(2, 5, 6)
+
+        func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
+                                                            model_MLP=model.lin_phi, model_a=model.a,
+                                                            n_nodes=0,
+                                                            dataset_number=1,
+                                                            n_particles=n_particles, ynorm=ynorm,
+                                                            type_list=to_numpy(x[:, 1 + 2 * dimension]),
+                                                            cmap=cmap, dimension=dimension, device=device)
+
+        labels, n_clusters, new_labels = sparsify_cluster(train_config.cluster_method, proj_interaction, embedding,
+                                                          train_config.cluster_distance_threshold, type_list,
+                                                          n_particle_types, embedding_cluster)
+
+        accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
+        print(f'accuracy: {np.round(accuracy, 3)}   n_clusters: {n_clusters}')
+        logger.info(f'accuracy: {np.round(accuracy, 3)}    n_clusters: {n_clusters}')
+
+        ax = fig.add_subplot(2, 5, 7)
+        for n in np.unique(new_labels):
+            pos = np.array(np.argwhere(new_labels == n).squeeze().astype(int))
+            if pos.size > 0:
+                plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], s=5)
+        plt.xlabel('proj 0', fontsize=12)
+        plt.ylabel('proj 1', fontsize=12)
+        plt.text(0, 1.1, f'accuracy: {np.round(accuracy, 3)},  {n_clusters} clusters', ha='left', va='top',
+                 transform=ax.transAxes, fontsize=10)
+
+        ax = fig.add_subplot(2, 5, 8)
+        model_a_ = model.a[1].clone().detach()
+        for n in range(n_clusters):
+            pos = np.argwhere(labels == n).squeeze().astype(int)
+            pos = np.array(pos)
+            if pos.size > 0:
+                median_center = model_a_[pos, :]
+                median_center = torch.median(median_center, dim=0).values
+                plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='r', alpha=0.25)
+                model_a_[pos, :] = median_center
+                plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=10, c='k')
+
+        plt.xlabel('ai0', fontsize=12)
+        plt.ylabel('ai1', fontsize=12)
+        plt.xticks(fontsize=10.0)
+        plt.yticks(fontsize=10.0)
+
+        if (replace_with_cluster) & (epoch % sparsity_freq == sparsity_freq - 1) & (epoch < n_epochs - sparsity_freq):
+            # Constrain embedding domain
+            with torch.no_grad():
+                model.a[1] = model_a_.clone().detach()
+            print(f'regul_embedding: replaced')
+            logger.info(f'regul_embedding: replaced')
+
+            # Constrain function domain
+            if train_config.sparsity == 'replace_embedding_function':
+
+                logger.info(f'replace_embedding_function')
+                y_func_list = func_list * 0
+
+                ax = fig.add_subplot(2, 5, 9)
+                for n in np.unique(new_labels):
+                    pos = np.argwhere(new_labels == n)
+                    pos = pos.squeeze()
+                    if pos.size > 0:
+                        target_func = torch.median(func_list[pos, :], dim=0).values.squeeze()
+                        y_func_list[pos] = target_func
+                    plt.plot(to_numpy(target_func) * to_numpy(ynorm), linewidth=2, alpha=1)
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+
+                lr_embedding = 1E-12
+                optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                for sub_epochs in range(20):
+                    rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
+                    pred = []
+                    optimizer.zero_grad()
+                    for n in range(n_particles):
+                        embedding_ = model.a[1, n, :].clone().detach() * torch.ones((1000, model_config.embedding_dim), device=device)
+                        in_features = get_in_features(rr, embedding_, config.graph_model.signal_model_name, config.simulation.max_radius)
+                        pred.append(model.lin_phi(in_features.float()))
+                    pred = torch.stack(pred)
+                    loss = (pred[:, :, 0] - y_func_list.clone().detach()).norm(2)
+                    logger.info(f'    loss: {np.round(loss.item() / n_particles, 3)}')
+                    loss.backward()
+                    optimizer.step()
+
+            if train_config.fix_cluster_embedding:
+                lr_embedding = 1E-12
+                optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                logger.info(f'Learning rates: {lr}, {lr_embedding}')
+        else:
+            if epoch > n_epochs - sparsity_freq:
+                lr_embedding = train_config.learning_rate_embedding_end
+                lr = train_config.learning_rate_end
+                optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                logger.info(f'Learning rates: {lr}, {lr_embedding}')
+            else:
+                lr_embedding = train_config.learning_rate_embedding_start
+                lr = train_config.learning_rate_start
+                optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                logger.info(f'Learning rates: {lr}, {lr_embedding}')
+
+
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
         plt.close()
 
-        plt.figure(figsize=(3,3))
-        ax = sns.heatmap(to_numpy(A),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046}, vmin=-0.01, vmax=0.01)
-        ax.invert_yaxis()
-        plt.title('Random connectivity matrix',fontsize=12);
-        plt.xticks([0,n_particles-1],[1,n_particles],fontsize=10)
-        plt.yticks([0,n_particles-1],[1,n_particles],fontsize=10)
+
+
+
+
+
+
+
 
 
 def data_train_agents(config, config_file, erase, device):

@@ -72,8 +72,13 @@ def get_in_features(rr, embedding_, config_model, max_radius):
         case 'PDE_E':
             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                      rr[:, None] / max_radius, embedding_, embedding_), dim=1)
-        case 'PDE_N' | 'PDE_N2':
+        case 'PDE_N2' | 'PDE_N5':
+            in_features = rr[:, None]
+        case 'PDE_N3' :
             in_features = torch.cat((rr[:, None], embedding_), dim=1)
+        case 'PDE_N4':
+            in_features = torch.cat((rr[:, None], embedding_, embedding_), dim=1)
+
 
     return in_features
 
@@ -798,6 +803,8 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
             rr = torch.tensor(np.logspace(7, 9, 1000)).to(device)
         elif config_model == 'PDE_E':
             rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
+        elif 'PDE_N3' in config_model:
+            rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
         elif 'PDE_N' in config_model:
             rr = torch.tensor(np.linspace(0, 0.9, 1000)).to(device)
         else:

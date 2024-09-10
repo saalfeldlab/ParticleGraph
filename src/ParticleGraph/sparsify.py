@@ -76,6 +76,7 @@ def sparsify_cluster(cluster_method, proj_interaction, embedding, cluster_distan
         case 'distance_both':
             new_projection = np.concatenate((proj_interaction, embedding), axis=-1)
             labels, n_clusters = embedding_cluster.get(new_projection, 'distance', thresh=cluster_distance_threshold)
+
     label_list = []
     for n in range(n_particle_types):
         pos = torch.argwhere(type_list == n)
@@ -93,6 +94,7 @@ def sparsify_cluster(cluster_method, proj_interaction, embedding, cluster_distan
         print(len(pos))
         if len(pos) > 0:
             ax.scatter(embedding[pos, 0], embedding[pos, 1], s=5)
+    plt.close()
 
     new_labels = np.ones_like(labels) * n_particle_types
     for n in range(n_particle_types):
@@ -101,10 +103,9 @@ def sparsify_cluster(cluster_method, proj_interaction, embedding, cluster_distan
     computation_time = time.time() - start_time
     print(f"Clustering computation time is {computation_time} seconds.")
 
-
     fig,ax = fig_init()
     ax.scatter(proj_interaction[:, 0], proj_interaction[:, 1], c=new_labels, s=5, cmap='tab20')
-    # plt.close()
+    plt.close()
 
     return labels, n_clusters, new_labels
 

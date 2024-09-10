@@ -47,10 +47,10 @@ training:
     small_init_batch_size: False
     n_runs: 10
     large_range: False
-    sparsity: 'none'
+    sparsity: 'replace_embedding_function'
     data_augmentation: False
     data_augmentation_loop: 500
-    cluster_method: 'distance_plot'
+    cluster_method: 'kmeans_auto_embedding'
     fix_cluster_embedding: True
     device: 'auto'
     seed: 42
