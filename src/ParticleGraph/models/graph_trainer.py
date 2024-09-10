@@ -2030,7 +2030,7 @@ def data_train_signal(config, config_file, erase, device):
                         y = y / ynorm
 
                         if is_N2:
-                            loss = (pred - y).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 1E4
+                            loss = (pred - y).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2) + func_edge.norm(2) # + diff * 1E4
                         else:
                             loss = (pred - y).norm(2) + func_phi.norm(2) + func_edge.norm(2)
 
