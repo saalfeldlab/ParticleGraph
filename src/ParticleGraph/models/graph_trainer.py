@@ -1969,7 +1969,7 @@ def data_train_signal(config, config_file, erase, device):
     print(f'plot every {Niter // 100} iterations')
 
     list_loss = []
-    time.sleep(1)
+    time.sleep(2)
     for epoch in range(n_epochs + 1):
 
         old_batch_size = batch_size
@@ -2009,12 +2009,13 @@ def data_train_signal(config, config_file, erase, device):
                     func_phi = model.lin_phi(in_features.float())
                     in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :], model.a[1, :]), dim=1)
                     func_edge = model.lin_edge(in_features.float())
-                    u = x_list[run][k].clone().detach()
-                    u = u[:,6:7]
-                    embedding_ = model.a[1, :, :]
-                    in_features = torch.cat((u, embedding_,embedding_), dim=1)
-                    in_features_ = torch.cat((u+0.1, embedding_,embedding_), dim=1)
-                    diff = torch.relu(model.lin_edge(in_features.float()) - model.lin_edge(in_features_.float())).norm(2)
+                    if epoch==0:
+                        u = x_list[run][k].clone().detach()
+                        u = u[:,6:7]
+                        embedding_ = model.a[1, :, :]
+                        in_features = torch.cat((u, embedding_,embedding_), dim=1)
+                        in_features_ = torch.cat((u+0.1, embedding_,embedding_), dim=1)
+                        diff = torch.relu(model.lin_edge(in_features.float()) - model.lin_edge(in_features_.float())).norm(2)
                 else:
                     func_edge = model.lin_edge(torch.zeros(1, device=device))
                     in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :]), dim=1)
@@ -2030,7 +2031,7 @@ def data_train_signal(config, config_file, erase, device):
                         y = y / ynorm
 
                         if is_N2:
-                            loss = (pred - y).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2) + func_edge.norm(2) # + diff * 1E4
+                            loss = (pred - y).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 10 * (epoch==0)
                         else:
                             loss = (pred - y).norm(2) + func_phi.norm(2) + func_edge.norm(2)
 
