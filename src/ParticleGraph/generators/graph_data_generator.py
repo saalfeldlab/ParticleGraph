@@ -1689,7 +1689,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
     files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Fig/*')
     for f in files:
         os.remove(f)
-    copyfile(os.path.realpath(__file__), os.path.join(folder, 'generation_code.py'))
 
     model_p_p, bc_pos, bc_dpos = choose_model(config=config, device=device)
     model_f_p = model_p_p
@@ -1916,7 +1915,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                 if 'color' in style:
 
                     # matplotlib.use("Qt5Agg")
-                    matplotlib.rcParams['savefig.pad_inches'] = 0
                     fig = plt.figure(figsize=(12, 12))
                     ax = fig.add_subplot(1, 1, 1)
                     # ax.xaxis.get_major_formatter()._usetex = False
@@ -1957,8 +1955,6 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     plt.tight_layout()
                     plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=170.7)
                     plt.close()
-
-                    matplotlib.rcParams['savefig.pad_inches'] = 0
 
                     if model_config.prediction == '2nd_derivative':
                         V0_ = y0  * delta_t
