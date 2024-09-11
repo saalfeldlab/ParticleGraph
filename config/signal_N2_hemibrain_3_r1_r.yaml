@@ -21,13 +21,13 @@ simulation:
     start_frame: 0 # -1000
 
 graph_model:
-    signal_model_name: 'PDE_N4'
+    signal_model_name: 'PDE_N3'
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
-    input_size: 5
+    input_size: 1
     output_size: 1
-    hidden_dim: 32
+    hidden_dim: 64
     n_mp_layers: 3
     input_size_update: 3
     n_layers_update: 3
@@ -43,12 +43,12 @@ plotting:
 training:
     n_epochs: 10
     recursive_loop: 1
-    batch_size: 32
+    batch_size: 16
     small_init_batch_size: False
     n_runs: 10
     large_range: False
-    sparsity: 'none'
-    sparsity_freq: 3
+    sparsity: 'replace_embedding_function'
+    sparsity_freq: 2
     data_augmentation: False
     data_augmentation_loop: 500
     cluster_method: 'kmeans_auto_embedding'

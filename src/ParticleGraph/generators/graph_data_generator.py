@@ -505,7 +505,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, phi=torch.tanh, device=device)
     else:
         model, bc_pos, bc_dpos = choose_model(config=config, device=device)
-    
 
 
     for run in range(config.training.n_runs):
@@ -558,8 +557,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                                    H1.clone().detach(), A1.clone().detach()), 1)
-
-
 
         # pos = nx.spring_layout(G, weight='weight', seed=42, k=1)
         # for k,p in pos.items():

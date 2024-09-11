@@ -1,5 +1,5 @@
 description: 'Hemibrain'
-dataset: 'signal_N2_hemibrain_3'
+dataset: 'signal_N2_hemibrain_4'
 
 simulation:
     connectivity_file: ''
@@ -14,20 +14,20 @@ simulation:
     n_particles: 2964
     n_particle_types: 2
     n_interactions: 2
-    n_frames: 10000
+    n_frames: 1000
     delta_t: 0.01
     dpos_init:  0
     boundary: 'no'
     start_frame: 0 # -1000
 
 graph_model:
-    signal_model_name: 'PDE_N4'
+    signal_model_name: 'PDE_N3'
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
-    input_size: 5
+    input_size: 1
     output_size: 1
-    hidden_dim: 32
+    hidden_dim: 64
     n_mp_layers: 3
     input_size_update: 3
     n_layers_update: 3
@@ -43,15 +43,14 @@ plotting:
 training:
     n_epochs: 10
     recursive_loop: 1
-    batch_size: 32
+    batch_size: 16
     small_init_batch_size: False
     n_runs: 10
     large_range: False
     sparsity: 'none'
-    sparsity_freq: 3
     data_augmentation: False
     data_augmentation_loop: 500
-    cluster_method: 'kmeans_auto_embedding'
+    cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'
     seed: 42

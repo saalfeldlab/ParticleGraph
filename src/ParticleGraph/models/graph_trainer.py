@@ -1967,7 +1967,7 @@ def data_train_signal(config, config_file, erase, device):
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-    Niter = n_frames * data_augmentation_loop // batch_size
+    Niter = int(n_frames * data_augmentation_loop // batch_size * n_runs / 10)
     print(f'plot every {Niter // 100} iterations')
 
     list_loss = []
@@ -1979,10 +1979,9 @@ def data_train_signal(config, config_file, erase, device):
 
         total_loss = 0
 
-        Niter = n_frames * data_augmentation_loop // batch_size
+        Niter = int(n_frames * data_augmentation_loop // batch_size * n_runs / 10)
         print(f'Niter = {Niter}')
         logger.info(f'Niter = {Niter}')
-
 
         for N in trange(Niter):
 

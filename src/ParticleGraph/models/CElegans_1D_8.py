@@ -124,24 +124,31 @@ class CElegans_Laplacian(nn.Module):
         self.lin_phi = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                            hidden_size=self.hidden_dim, device=self.device)
 
-        self.a = nn.Parameter(torch.tensor(np.ones((int(self.n_datasets), 2)), device=self.device, requires_grad=True, dtype=torch.float32))
+
         self.alpha = nn.Parameter(torch.tensor(np.ones((int(self.n_datasets),1)), device=self.device,requires_grad=True, dtype=torch.float32))
-        self.alpha_ = nn.Parameter(torch.tensor(np.ones((int(self.n_datasets), 1)), device=self.device, requires_grad=True, dtype=torch.float32))
+        self.alpha_ = nn.Parameter(torch.tensor(np.ones((int(self.n_datasets), 99)), device=self.device, requires_grad=True, dtype=torch.float32))
+
+        self.a = nn.Parameter(torch.tensor(np.ones((int(self.n_datasets), 1)), device=self.device, requires_grad=True, dtype=torch.float32))
+        self.b = nn.Parameter(torch.tensor(np.ones((int(self.n_datasets), 1)), device=self.device, requires_grad=True, dtype=torch.float32))
+        self.a_ = nn.Parameter(torch.tensor(np.ones((int(self.n_datasets), 99)), device=self.device, requires_grad=True, dtype=torch.float32))
+        self.b_ = nn.Parameter(torch.tensor(np.ones((int(self.n_datasets), 99)), device=self.device, requires_grad=True, dtype=torch.float32))
 
 
     def forward(self, x, data_id, frame):
 
-        # u = x[:,0:1]
-        # du = x[:,1:2]
-        # laplacian_u = x[:,2:3]
+        u = x[:,0:1]
+        du = x[:,1:2]
+        laplacian_u = x[:,2:3]
+        a = self.a_[data_id, :]
+        b = self.b_[data_id, :]
 
         embedding = self.a[data_id, :].repeat(x.shape[0],1)
-        alpha = self.alpha[data_id, :]
+        alpha = self.alpha_[data_id, :]
 
-        frame = torch.tensor(frame, dtype=torch.float32, device=self.device)
-        in_features = torch.cat((x[:,0:2], embedding),1) #, frame.repeat(99,1)), 1)
+        # frame = torch.tensor(frame, dtype=torch.float32, device=self.device)
+        # in_features = torch.cat((x[:,0:2], embedding),1) #, frame.repeat(99,1)), 1)
 
-        pred = 0 * alpha * x[:,2:3] + self.lin_phi(in_features)
+        pred = alpha * laplacian_u.squeeze() + a * u.squeeze() + b * du.squeeze()
 
         return pred
 
@@ -205,16 +212,16 @@ if __name__ == '__main__':
         flag_gd = False
 
         loss = 0
-        batch_size = 64
+        batch_size = 32
         for batch in range(batch_size):
 
             k = 0 # np.random.randint(0, n_datasset)
-            n = np.random.randint(1, n_length[k]-1)
+            n = np.random.randint(10, n_length[k]-10)
 
             u = torch.cat((y[k,n][:,None], dy[k,n][:,None], Laplace_y[k,n][:,None]), 1)
 
-            pred = model(u, k) #, n/n_length[k])
-            target = dy[k,n]
+            pred = model(u, k, n/n_length[k])
+            target = ddy[k,n+1]
 
             l = (pred - target).norm(2)
 
@@ -229,49 +236,51 @@ if __name__ == '__main__':
         if epoch%1000 == 0:
             print(f"Epoch {epoch}, Loss {loss.item()/batch_size}")
             torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
-                       f"/groups/saalfeld/home/allierc/signaling/Celegans/6/models/model_{epoch}.pt")
+                       f"/groups/saalfeld/home/allierc/signaling/Celegans/8/models/model_{epoch}.pt")
 
             target_list=[]
             pred_list=[]
-            k = 2
-            for n in range(1, n_length[k]-1,50):
+            k = 0
+            for n in range(100, n_length[k]-100,50):
                 u = torch.cat((y[k,n][:,None], dy[k,n][:,None], Laplace_y[k,n][:,None]), 1)
-                pred = model(u, k) #, n/n_length[k])
-                target = dy[k, n]
+                pred = model(u, k, n/n_length[k])
+                target = ddy[k, n+1]
                 target_list.append(target)
                 pred_list.append(pred)
             target = torch.stack(target_list)
             pred = torch.stack(pred_list)
             fig = plt.figure(figsize=(8, 8))
-            plt.scatter(to_numpy(target),to_numpy(pred), c='k', s=1, alpha=0.01)
-            plt.savefig(f"/groups/saalfeld/home/allierc/signaling/Celegans/6/tmp_training/scatter/output_{epoch}.png", dpi=100)
+            plt.scatter(to_numpy(target),to_numpy(pred), c='k', s=1, alpha=0.05)
+            # plt.xlim([-1,1])
+            # plt.ylim([-1,1])
+            plt.savefig(f"/groups/saalfeld/home/allierc/signaling/Celegans/8/tmp_training/scatter/output_{epoch}.png", dpi=100)
             plt.close()
 
-            fig = plt.figure(figsize=(8, 8))
-            rr = torch.tensor(np.linspace(-20, 20, 1000), dtype=torch.float32, device=device)
-            for d in range(config['n_datasets'] ):
-                embedding_ = model.a[d, :] * torch.ones((1000, 2), device=device)
-                # frame = torch.tensor(0.5, dtype=torch.float32, device=device) * torch.ones((1000, 1), device=device)
-                in_features = torch.cat((rr[:,None], torch.zeros_like(rr[:,None]), embedding_), 1)
-                func = model.lin_phi(in_features)
-                plt.plot(to_numpy(rr), to_numpy(func))
-            plt.tight_layout()
-            plt.savefig(f"/groups/saalfeld/home/allierc/signaling/Celegans/6/tmp_training/function/output_u_{epoch}.png", dpi=100)
-            plt.close()
+            # fig = plt.figure(figsize=(8, 8))
+            # rr = torch.tensor(np.linspace(-20, 20, 1000), dtype=torch.float32, device=device)
+            # for d in range(config['n_datasets'] ):
+            #     embedding_ = model.a[d, :] * torch.ones((1000, 2), device=device)
+            #     # frame = torch.tensor(0.5, dtype=torch.float32, device=device) * torch.ones((1000, 1), device=device)
+            #     in_features = torch.cat((rr[:,None], torch.zeros_like(rr[:,None]), embedding_), 1)
+            #     func = model.lin_phi(in_features)
+            #     plt.plot(to_numpy(rr), to_numpy(func))
+            # plt.tight_layout()
+            # plt.savefig(f"/groups/saalfeld/home/allierc/signaling/Celegans/8/tmp_training/function/output_u_{epoch}.png", dpi=100)
+            # plt.close()
 
-            fig = plt.figure(figsize=(8, 8))
-            plt.plot(to_numpy(model.alpha),'.',c='k', markersize=10)
-            plt.tight_layout()
-            plt.savefig(f"/groups/saalfeld/home/allierc/signaling/Celegans/6/tmp_training/embedding/alpha_{epoch}.png", dpi=100)
-            plt.close()
+            # fig = plt.figure(figsize=(8, 8))
+            # plt.plot(to_numpy(model.alpha),'.',c='k', markersize=10)
+            # plt.tight_layout()
+            # plt.savefig(f"/groups/saalfeld/home/allierc/signaling/Celegans/8/tmp_training/embedding/alpha_{epoch}.png", dpi=100)
+            # plt.close()
 
-            fig = plt.figure(figsize=(8, 8))
-            embedding_ = model.a
-            for d in range(config['n_datasets']):
-                plt.scatter(to_numpy(embedding_[d,0:1]), to_numpy(embedding_[d,1:2]), s=100)
-            plt.tight_layout()
-            plt.savefig(f"/groups/saalfeld/home/allierc/signaling/Celegans/6/tmp_training/embedding/embedding_{epoch}.png", dpi=100)
-            plt.close()
+            # fig = plt.figure(figsize=(8, 8))
+            # embedding_ = model.a
+            # for d in range(config['n_datasets']):
+            #     plt.scatter(to_numpy(embedding_[d,0:1]), to_numpy(embedding_[d,1:2]), s=100)
+            # plt.tight_layout()
+            # plt.savefig(f"/groups/saalfeld/home/allierc/signaling/Celegans/8/tmp_training/embedding/embedding_{epoch}.png", dpi=100)
+            # plt.close()
 
 
 
