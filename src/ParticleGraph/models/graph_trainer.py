@@ -3,18 +3,26 @@ import torch
 import seaborn as sns
 import torch.nn.functional as F
 import random
-from torch_geometric.data import Data, DataLoader
+
+import torch_geometric.data as data
+from torch_geometric.loader import DataLoader
+from sklearn import metrics
+from sklearn.neighbors import NearestNeighbors
+from geomloss import SamplesLoss
+
+from scipy.optimize import curve_fit
+from matplotlib import rc
+from matplotlib.ticker import FuncFormatter
+from prettytable import PrettyTable
 
 from ParticleGraph.models.utils import *
 from ParticleGraph.models.Siren_Network import *
 from ParticleGraph.models.Ghost_Particles import *
-from geomloss import SamplesLoss
+
 from ParticleGraph.sparsify import EmbeddingCluster, sparsify_cluster, sparsify_cluster_state
 
-
 from ParticleGraph.data_loaders import load_agent_data
-from sklearn.neighbors import NearestNeighbors
-from scipy.ndimage import median_filter
+
 from ParticleGraph.generators.cell_utils import *
 
 
