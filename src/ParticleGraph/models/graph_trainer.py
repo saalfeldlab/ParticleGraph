@@ -1007,7 +1007,6 @@ def data_train_mesh(config, config_file, erase, device):
         list_loss.append(total_loss / (N + 1) / n_nodes / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
-        # matplotlib.use("Qt5Agg")
         fig = plt.figure(figsize=(22, 4))
 
         ax = fig.add_subplot(1, 5, 1)
@@ -1528,7 +1527,6 @@ def data_train_particle_field(config, config_file, erase, device):
             torch.save({'model_state_dict': ghosts_particles.state_dict(),
                         'optimizer_state_dict': optimizer_ghost_particles.state_dict()}, os.path.join(log_dir, 'models', f'best_ghost_particles_with_{n_runs - 1}_graphs_{epoch}.pt'))
 
-        # matplotlib.use("Qt5Agg")
         fig = plt.figure(figsize=(22, 4))
         # white background
         # plt.style.use('classic')
@@ -2625,7 +2623,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     # plt.axis('off')
             elif model_config.signal_model_name == 'PDE_N':
 
-                matplotlib.rcParams['savefig.pad_inches'] = 0
                 fig = plt.figure(figsize=(12, 12))
                 ax = fig.add_subplot(1, 1, 1)
                 ax.xaxis.set_major_locator(plt.MaxNLocator(3))
