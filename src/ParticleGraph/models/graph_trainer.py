@@ -3,6 +3,7 @@ import torch
 import seaborn as sns
 import torch.nn.functional as F
 import random
+from torch_geometric.data import Data, DataLoader
 
 from ParticleGraph.models.utils import *
 from ParticleGraph.models.Siren_Network import *

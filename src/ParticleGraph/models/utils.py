@@ -253,7 +253,6 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
     train_config = config.training
     model_config = config.graph_model
     do_tracking = train_config.do_tracking
-    matplotlib.rcParams['savefig.pad_inches'] = 0
 
     if model_config.mesh_model_name == 'WaveMesh':
         fig = plt.figure(figsize=(8, 8))
