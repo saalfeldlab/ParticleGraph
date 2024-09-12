@@ -12,6 +12,8 @@ from matplotlib.collections import PatchCollection
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import seaborn as sns
 from fa2_modified import ForceAtlas2
+import scipy
+
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
@@ -581,7 +583,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
                 if 'color' in style:
 
-                    matplotlib.rcParams['savefig.pad_inches'] = 0
                     fig = plt.figure(figsize=(13, 10))
                     if 'conn' in config.simulation.connectivity_mask:
                         plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=15, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-5,vmax=5)
@@ -1583,8 +1584,6 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
                 if 'color' in style:
 
                     # matplotlib.use("Qt5Agg")
-
-                    matplotlib.rcParams['savefig.pad_inches'] = 0
                     fig = plt.figure(figsize=(12, 12))
                     ax = fig.add_subplot(1, 1, 1)
                     ax.tick_params(axis='both', which='major', pad=15)

@@ -15,13 +15,14 @@ if __name__ == '__main__':
     #                'arbitrary_64', 'arbitrary_3_field_video_bison_quad', 'arbitrary_16', 'arbitrary_16_noise_0_3',
     #                'arbitrary_16_noise_0_4', 'arbitrary_16_noise_0_5', 'arbitrary_3_dropout_30', 'arbitrary_3_dropout_10',
     #                'arbitrary_3_dropout_10', 'arbitrary_3_dropout_10_no_ghost',
+    #                'arbitrary_3_field_boats', 'gravity_16', 'gravity_continuous',
+    #                'Coulomb_3_256', 'gravity_16_noise_0_4', 'Coulomb_3_noise_0_4', 'Coulomb_3_noise_0_3',
+    #                'gravity_16_noise_0_3', 'gravity_16_dropout_10', 'gravity_16_dropout_30',
+    #                'Coulomb_3_dropout_10_no_ghost', 'Coulomb_3_dropout_10', 'boids_16_256', 'boids_32_256',
+    #                'boids_64_256', 'boids_16_noise_0_3', 'boids_16_noise_0_4', 'boids_16_dropout_10',
+    #                'boids_16_dropout_10_no_ghost', 'wave_slit_ter', 'wave_boat_ter', 'RD_RPS',
 
-    config_list = ['arbitrary_3_field_boats', 'gravity_16', 'gravity_continuous',
-                   'Coulomb_3_256', 'gravity_16_noise_0_4', 'Coulomb_3_noise_0_4', 'Coulomb_3_noise_0_3',
-                   'gravity_16_noise_0_3', 'gravity_16_dropout_10', 'gravity_16_dropout_30',
-                   'Coulomb_3_dropout_10_no_ghost', 'Coulomb_3_dropout_10', 'boids_16_256', 'boids_32_256',
-                   'boids_64_256', 'boids_16_noise_0_3', 'boids_16_noise_0_4', 'boids_16_dropout_10',
-                   'boids_16_dropout_10_no_ghost', 'wave_slit_ter', 'wave_boat_ter', 'RD_RPS', 'signal_N_100_2_a']
+    config_list = ['signal_N_100_2_a']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
