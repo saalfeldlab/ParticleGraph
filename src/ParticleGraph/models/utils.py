@@ -14,6 +14,7 @@ import time
 import tqdm
 import seaborn as sns
 from tifffile import imsave
+from ParticleGraph.utils import choose_boundary_values
 
 def linear_model(x, a, b):
     return a * x + b
