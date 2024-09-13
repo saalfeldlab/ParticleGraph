@@ -12,6 +12,7 @@ from scipy.stats import pearsonr
 from scipy.spatial import Voronoi, voronoi_plot_2d
 from scipy.ndimage import median_filter
 from tqdm import trange
+from sklearn import metrics
 
 from ParticleGraph.generators.graph_data_generator import data_generate
 from ParticleGraph.config import ParticleGraphConfig
