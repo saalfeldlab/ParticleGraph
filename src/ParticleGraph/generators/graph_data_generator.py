@@ -10,6 +10,7 @@ from scipy.spatial import Voronoi, voronoi_plot_2d
 from matplotlib.patches import Polygon
 from matplotlib.collections import PatchCollection
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
+from matplotlib import rc
 import seaborn as sns
 from fa2_modified import ForceAtlas2
 import scipy
