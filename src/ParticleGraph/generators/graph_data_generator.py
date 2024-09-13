@@ -114,15 +114,6 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
 
         # initialize particle and graph states
         X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
-        if has_adjacency_matrix:
-            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
-            adj_t = adjacency > 0
-            edge_index = adj_t.nonzero().t().contiguous()
-            dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
-            vis = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-            pos = nx.spring_layout(vis, weight='weight', seed=42, k=1)
-            for k,v in pos.items():
-                X1[k,:] = torch.tensor([v[0],v[1]], device=device)
 
         time.sleep(0.5)
         for it in trange(simulation_config.start_frame, n_frames + 1):
