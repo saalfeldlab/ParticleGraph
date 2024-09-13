@@ -21,6 +21,7 @@ from ParticleGraph.sparsify import *
 from ParticleGraph.models.utils import *
 from ParticleGraph.models.MLP import *
 from ParticleGraph.utils import *
+from ParticleGraph.models import data_test
 
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
