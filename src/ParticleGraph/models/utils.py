@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 import torch
 import umap
 from matplotlib.ticker import FormatStrFormatter
-from ParticleGraph.models import Interaction_Particle, Interaction_Particle_Field, Signal_Propagation, Mesh_Laplacian, Mesh_RPS
-from ParticleGraph.utils import *
+# from ParticleGraph.models import Interaction_Particle, Interaction_Particle_Field, Signal_Propagation, Mesh_Laplacian, Mesh_RPS
+# from ParticleGraph.utils import *
 
 import matplotlib as mpl
 import networkx as nx

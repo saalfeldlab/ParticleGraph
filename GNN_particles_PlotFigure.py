@@ -12,12 +12,13 @@ from scipy.stats import pearsonr
 from scipy.spatial import Voronoi, voronoi_plot_2d
 from scipy.ndimage import median_filter
 
+from ParticleGraph.generators.graph_data_generator import data_generate
+from ParticleGraph.config import ParticleGraphConfig
 from ParticleGraph.fitting_models import *
-from ParticleGraph.utils import set_size
 from ParticleGraph.sparsify import *
 from ParticleGraph.models.utils import *
 from ParticleGraph.models.MLP import *
-from ParticleGraph.utils import to_numpy, CustomColorMap
+from ParticleGraph.utils import *
 
 os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
@@ -4623,7 +4624,7 @@ if __name__ == '__main__':
     except:
         pass
 
-    f_list = ['supp15']
+    f_list = ['supp1']
     for f in f_list:
         config_list,epoch_list = get_figures(f)
 

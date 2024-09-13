@@ -13,6 +13,8 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import seaborn as sns
 from fa2_modified import ForceAtlas2
 import scipy
+from ParticleGraph.utils import *
+from ParticleGraph.models.MLP import *
 
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
