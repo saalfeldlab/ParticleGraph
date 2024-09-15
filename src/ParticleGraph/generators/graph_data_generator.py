@@ -131,15 +131,11 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
             index_particles = get_index_particles(x, n_particle_types, dimension)  # can be different from frame to frame
 
             # compute connectivity rule
-            if has_adjacency_matrix:
-                adj_t = adjacency > 0
-                edge_index = adj_t.nonzero().t().contiguous()
-                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
-            else:
-                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                edge_index = adj_t.nonzero().t().contiguous()
-                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=[])
+
+            distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+            adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
+            edge_index = adj_t.nonzero().t().contiguous()
+            dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, field=[])
 
             # model prediction
             with torch.no_grad():
@@ -552,6 +548,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         # pos = nx.spring_layout(G, weight='weight', seed=42, k=1)
         # for k,p in pos.items():
         #     X1[k,:] = torch.tensor([v[0],v[1]], device=device)
+        
         time.sleep(0.5)
         for it in trange(simulation_config.start_frame, n_frames + 1):
 
