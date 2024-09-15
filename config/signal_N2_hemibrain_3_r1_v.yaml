@@ -1,5 +1,5 @@
 description: 'Hemibrain'
-dataset: 'signal_N2_hemibrain_3'
+dataset: 'signal_N2_hemibrain_5'
 
 simulation:
     connectivity_file: ''
