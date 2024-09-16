@@ -262,17 +262,16 @@ def create_log_dir(config=[], config_file=[], erase=True):
     l_dir = os.path.join('.', 'log')
     log_dir = os.path.join(l_dir, 'try_{}'.format(config_file))
     print('log_dir: {}'.format(log_dir))
+    os.makedirs(log_dir, exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'models'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'results'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'tmp_training/particle'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'tmp_training/field'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'tmp_training/function'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'tmp_training/embedding'), exist_ok=True)
+    if config.training.n_ghosts > 0:
+        os.makedirs(os.path.join(log_dir, 'tmp_training/ghost'), exist_ok=True)
     if erase:
-        os.makedirs(log_dir, exist_ok=True)
-        os.makedirs(os.path.join(log_dir, 'models'), exist_ok=True)
-        os.makedirs(os.path.join(log_dir, 'results'), exist_ok=True)
-        os.makedirs(os.path.join(log_dir, 'tmp_training/particle'), exist_ok=True)
-        os.makedirs(os.path.join(log_dir, 'tmp_training/field'), exist_ok=True)
-        os.makedirs(os.path.join(log_dir, 'tmp_training/function'), exist_ok=True)
-        os.makedirs(os.path.join(log_dir, 'tmp_training/embedding'), exist_ok=True)
-        if config.training.n_ghosts > 0:
-            os.makedirs(os.path.join(log_dir, 'tmp_training/ghost'), exist_ok=True)
-
         files = glob.glob(f"{log_dir}/results/*")
         for f in files:
             os.remove(f)
