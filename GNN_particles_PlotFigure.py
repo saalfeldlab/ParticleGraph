@@ -4006,7 +4006,7 @@ def plot_signal2(config_file, epoch_list, log_dir, logger, cc, device):
     files = glob.glob(f"{log_dir}/models/*.pt")
     files.sort(key=os.path.getmtime)
 
-    net = './log/try_signal_N2_hemibrain_3_r1_a/models/best_model_with_9_graphs_9_0.pt'
+    net = f'{log_dir}/models/best_model_with_9_graphs_20.pt'
     model, bc_pos, bc_dpos = choose_training_model(config, device)
     state_dict = torch.load(net, map_location=device)
     model.load_state_dict(state_dict['model_state_dict'])
@@ -4502,7 +4502,7 @@ def data_plot(config, config_file, epoch_list, device):
             plot_RD_RPS(config_file=config_file, epoch_list=epoch_list, log_dir=log_dir, logger=logger, cc='viridis',
                            device=device)
 
-    if 'PDE_N2' in config.graph_model.signal_model_name:
+    if ('PDE_N2' in config.graph_model.signal_model_name) or ('PDE_N3' in config.graph_model.signal_model_name):
         plot_signal2(config_file, epoch_list, log_dir, logger, 'viridis', device)
     elif 'PDE_N' in config.graph_model.signal_model_name:
         plot_signal(config_file, epoch_list, log_dir, logger, 'viridis', device)
@@ -4760,9 +4760,9 @@ if __name__ == '__main__':
     except:
         pass
 
-    f_list = ['supp1']
-    for f in f_list:
-        config_list,epoch_list = get_figures(f)
+    # f_list = ['supp1']
+    # for f in f_list:
+    #     config_list,epoch_list = get_figures(f)
 
 
 
@@ -4773,11 +4773,11 @@ if __name__ == '__main__':
     # config_list = ['signal_N_100_2_a']
     # config_list = ['boids_division_model_f2']
     # config_list = ["agents_e"]
-    # config_list = ["signal_N2_hemibrain_3_r1_a"]
-    #
-    # for config_file in config_list:
-    #     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-    #     data_plot(config=config, config_file=config_file, epoch_list=['40_0'], device=device)
+    config_list = ["signal_N2_hemibrain_3_r1_t"]
+
+    for config_file in config_list:
+        config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+        data_plot(config=config, config_file=config_file, epoch_list=['20_0'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

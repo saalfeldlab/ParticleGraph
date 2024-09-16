@@ -2,7 +2,7 @@ description: 'Hemibrain'
 dataset: 'signal_N2_hemibrain_3'
 
 simulation:
-    connectivity_file: ''
+    connectivity_file: '/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_signal_N2_hemibrain_3/adjacency_asym.pt'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
     connectivity_mask: 'conn-eb-fb-pb-no.tif'
