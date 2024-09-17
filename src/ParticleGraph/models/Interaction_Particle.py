@@ -135,7 +135,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
         match self.model:
             case 'PDE_A'|'PDE_ParticleField_A':
                 in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
-            case 'PDE_A_bis':
+            case 'PDE_A_asym':
                 in_features = torch.cat((delta_pos, r[:, None], embedding_i, embedding_j), dim=-1)
             case 'PDE_B' | 'PDE_B_bis' | 'PDE_B_mass':
                 in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
@@ -161,7 +161,7 @@ class Interaction_Particle(pyg.nn.MessagePassing):
 
     def psi(self, r, p1, p2):
 
-        if (self.model == 'PDE_A') | (self.model =='PDE_A_bis') | (self.model=='PDE_ParticleField_A'):
+        if (self.model == 'PDE_A') | (self.model =='PDE_A_asym') | (self.model=='PDE_ParticleField_A'):
             return r * (p1[0] * torch.exp(-torch.abs(r) ** (2 * p1[1]) / (2 * self.sigma ** 2)) - p1[2] * torch.exp(-torch.abs(r) ** (2 * p1[3]) / (2 * self.sigma ** 2)))
         if self.model == 'PDE_B':
             cohesion = p1[0] * 0.5E-5 * r

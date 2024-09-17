@@ -48,7 +48,7 @@ def get_in_features(rr, embedding_, config_model, max_radius):
         case 'PDE_ParticleField_A':
             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                      rr[:, None] / max_radius, embedding_), dim=1)
-        case 'PDE_A_bis':
+        case 'PDE_A_asym':
             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                      rr[:, None] / max_radius, embedding_, embedding_), dim=1)
         case 'PDE_B' | 'PDE_Cell_B':
@@ -412,7 +412,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
-            case 'PDE_A'| 'PDE_A_bis' | 'PDE_ParticleField_A' | 'PDE_E':
+            case 'PDE_A'| 'PDE_A_asym' | 'PDE_ParticleField_A' | 'PDE_E':
                 fig = plt.figure(figsize=(12, 12))
                 if axis:
                     ax = fig.add_subplot(1, 1, 1)
@@ -438,7 +438,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                     if (model_config.particle_model_name == 'PDE_A'):
                         in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                                  rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
-                    elif (model_config.particle_model_name == 'PDE_A_bis'):
+                    elif (model_config.particle_model_name == 'PDE_A_asym'):
                         in_features = torch.cat((rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                                  rr[:, None] / simulation_config.max_radius, embedding_, embedding_), dim=1)
                     elif (model_config.particle_model_name == 'PDE_B'):
@@ -839,7 +839,7 @@ def choose_training_model(model_config, device):
             model = Interaction_Particle_Field(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos,
                                           dimension=dimension)
             model.edges = []
-        case 'PDE_A' | 'PDE_A_bis' | 'PDE_B' | 'PDE_B_mass' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G':
+        case 'PDE_A' | 'PDE_A_asym' | 'PDE_B' | 'PDE_B_mass' | 'PDE_B_bis' | 'PDE_E' | 'PDE_G':
             model = Interaction_Particle(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
     model_name = model_config.graph_model.mesh_model_name

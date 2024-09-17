@@ -1154,7 +1154,7 @@ def data_train_mesh(config, config_file, erase, device):
                                         in_features = torch.cat(
                                             (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                              rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
-                                    case 'PDE_A_bis':
+                                    case 'PDE_A_asym':
                                         in_features = torch.cat(
                                             (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                              rr[:, None] / simulation_config.max_radius, embedding_, embedding_),

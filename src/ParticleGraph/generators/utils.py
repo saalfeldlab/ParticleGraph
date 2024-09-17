@@ -9,7 +9,7 @@ from torch_geometric.utils import get_mesh_laplacian
 from tqdm import trange
 
 from ParticleGraph.data_loaders import load_solar_system
-from ParticleGraph.generators import PDE_A, PDE_B, PDE_E, PDE_G, PDE_N, PDE_Z, RD_RPS, PDE_Laplacian
+from ParticleGraph.generators import PDE_A, PDE_A_asym, PDE_B, PDE_E, PDE_G, PDE_N, PDE_Z, RD_RPS, PDE_Laplacian
 from ParticleGraph.utils import choose_boundary_values
 from ParticleGraph.utils import to_numpy
 
@@ -62,6 +62,17 @@ def choose_model(config=[], W=[], phi=[], device=[]):
             sigma = config.simulation.sigma
             p = p if n_particle_types == 1 else torch.squeeze(p)
             model = PDE_A(aggr_type=aggr_type, p=torch.squeeze(p), sigma=sigma, bc_dpos=bc_dpos, dimension=dimension)
+        case 'PDE_A_asym':
+            p = torch.ones(n_particle_types, n_particle_types, 4, device=device) + torch.randn(n_particle_types, n_particle_types, 4, device=device)
+            if params[0] != [-1]:
+                for n in range(n_particle_types):
+                    for m in range(n_particle_types):
+                        p[n,m] = torch.tensor(params[n*3+m])
+            else:
+                print(p)
+            sigma = config.simulation.sigma
+            p = p if n_particle_types == 1 else torch.squeeze(p)
+            model = PDE_A_asym(aggr_type=aggr_type, p=torch.squeeze(p), sigma=sigma, bc_dpos=bc_dpos)
         case 'PDE_B' | 'PDE_ParticleField_B' | 'PDE_Cell_B' | 'PDE_Cell_B_area':
             p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
             if params[0] != [-1]:

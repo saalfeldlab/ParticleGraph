@@ -23,7 +23,7 @@ simulation:
   boundary: 'periodic'
 
 graph_model:
-  particle_model_name: 'PDE_A_bis'
+  particle_model_name: 'PDE_A_asym'
   mesh_model_name: ''
   prediction: 'first_derivative'
   input_size: 7
