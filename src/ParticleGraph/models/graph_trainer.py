@@ -1945,6 +1945,15 @@ def data_train_signal(config, config_file, erase, device):
         index_particles.append(index.squeeze())
     type_list = get_type_list(x, dimension)
 
+    fig = plt.figure(figsize=(16, 8))
+    for k in range(n_particle_types):
+        pos = index_particles[k]
+        plt.scatter(to_numpy(x[pos, 2]), to_numpy(x[pos, 1]), s=10)
+    plt.xticks([])
+    plt.yticks([])
+    plt.tight_layout()
+
+
 
     if 'mat' in simulation_config.connectivity_file:
         mat = scipy.io.loadmat(simulation_config.connectivity_file)
