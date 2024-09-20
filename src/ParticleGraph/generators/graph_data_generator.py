@@ -15,6 +15,8 @@ import tifffile
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import seaborn as sns
 from fa2_modified import ForceAtlas2
+import zarr
+import xarray as xr
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
@@ -372,6 +374,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     cmap = CustomColorMap(config=config)
     dataset_name = config.dataset
     is_N2 = 'signal_N2' in dataset_name
+    has_zarr = 'zarr' in simulation_config.connectivity_file
 
     torch.random.fork_rng(devices=device)
     torch.random.manual_seed(training_config.seed)
@@ -408,6 +411,40 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         adj_t = adjacency > 0
         edge_index = adj_t.nonzero().t().contiguous()
         edge_attr_adjacency = adjacency[adj_t]
+
+    elif has_zarr:
+        print('loading zarr ...')
+        dataset = xr.open_zarr(simulation_config.connectivity_file)
+        trained_weights = dataset["trained"]  # alpha * sign * N
+        print(f'weights {trained_weights.shape}')
+        untrained_weights = dataset["untrained"]  # sign * N
+        values = trained_weights[0:n_particles,0:n_particles]
+        values = np.array(values)
+        values = values / np.max(values)
+        adjacency = torch.tensor(values, dtype=torch.float32, device=device)
+        torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt')
+        values=[]
+
+        adj_t = torch.abs(adjacency) > 0
+        edge_index = adj_t.nonzero().t().contiguous()
+        edge_attr_adjacency = adjacency[adj_t]
+
+        # Initial conditions
+        X_ = torch.zeros((n_particles, n_frames), device=device)
+        Xinit = torch.rand(n_particles, )  # Initial conditions
+        X_[:, 0] = Xinit
+
+        torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt')
+
+        plt.figure(figsize=(8, 8))
+        ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
+                         vmin=-0.01, vmax=0.01)
+        plt.title('True connectivity matrix', fontsize=12);
+        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+        plt.tight_layout()
+        torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency.tif')
+        plt.close()
 
     elif is_N2:
         adjacency = constructRandomMatrices(n_neurons=n_particles, density=1.0, connectivity_mask=f"./graphs_data/{config.simulation.connectivity_mask}" ,device=device)

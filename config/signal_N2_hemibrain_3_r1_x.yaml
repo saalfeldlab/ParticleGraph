@@ -1,5 +1,5 @@
 description: 'Hemibrain'
-dataset: 'signal_N2_hemibrain_6'
+dataset: 'signal_N2_hemibrain_7'
 
 simulation:
     connectivity_file: '/groups/saalfeld/home/allierc/signaling/Janne/model_0092_000_weights.zarr'
@@ -11,7 +11,7 @@ simulation:
     tau: 1.0
     min_radius: 1.0
     max_radius: 1.0E6
-    n_particles: 11856
+    n_particles: 23712
     n_particle_types: 2
     n_interactions: 2
     n_frames: 10000
