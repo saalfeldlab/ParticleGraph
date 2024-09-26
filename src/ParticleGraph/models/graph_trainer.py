@@ -49,7 +49,7 @@ def data_train(config, config_file, erase, device):
     elif has_mesh:
         data_train_mesh(config, config_file, erase, device)
     elif has_signal:
-        data_train_signal(config, config_file, erase, device)
+        data_train_synaptic(config, config_file, erase, device)
     elif do_tracking & has_cell_division:
         data_train_cell(config, config_file, erase, device)
     elif do_tracking:
@@ -1847,7 +1847,7 @@ def data_train_particle_field(config, config_file, erase, device):
                 logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
 
-def data_train_signal(config, config_file, erase, device):
+def data_train_synaptic(config, config_file, erase, device):
 
     simulation_config = config.simulation
     train_config = config.training
