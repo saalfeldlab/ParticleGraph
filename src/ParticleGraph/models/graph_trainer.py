@@ -1953,8 +1953,6 @@ def data_train_signal(config, config_file, erase, device):
     plt.yticks([])
     plt.tight_layout()
 
-
-
     if 'mat' in simulation_config.connectivity_file:
         mat = scipy.io.loadmat(simulation_config.connectivity_file)
         adjacency = torch.tensor(mat['A'], device=device)

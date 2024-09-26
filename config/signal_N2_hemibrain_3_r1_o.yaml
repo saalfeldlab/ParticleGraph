@@ -2,10 +2,9 @@ description: 'Hemibrain'
 dataset: 'signal_N2_hemibrain_4'
 
 simulation:
-    connectivity_file: ''
+    connectivity_file: 'conn-eb-fb-pb-no.tif'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
-    connectivity_mask: 'conn-eb-fb-pb-no.tif'
     params: [[10.0,1.0],[10.0,2.0]]
     phi: 'tanh'
     tau: 1.0
