@@ -446,8 +446,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency.tif')
         plt.close()
 
-    elif is_N2:
-        adjacency = constructRandomMatrices(n_neurons=n_particles, density=1.0, connectivity_mask=f"./graphs_data/{config.simulation.connectivity_mask}" ,device=device)
+    elif 'tiff' in simulation_config.connectivity_file:
+        adjacency = constructRandomMatrices(n_neurons=n_particles, density=1.0, connectivity_mask=f"./graphs_data/{simulation_config.connectivity_file}" ,device=device)
         adjacency_ = adjacency.t().clone().detach()
         adj_t = torch.abs(adjacency_) > 0
         edge_index = adj_t.nonzero().t().contiguous()
@@ -2065,5 +2065,41 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             torch.save(edge_p_p_list, f'graphs_data/graphs_{dataset_name}/edge_p_p_list{run}.pt')
             torch.save(edge_f_p_list, f'graphs_data/graphs_{dataset_name}/edge_f_p_list{run}.pt')
             torch.save(model_p_p.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
+
+
+def data_generate_synaptic_fired(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,
+                           ratio=1, scenario='none', device=None, bSave=True):
+
+
+    # Created by Eugene M. Izhikevich, February 25, 2003
+    # Excitatory neurons    Inhibitory neurons
+    Ne = 800
+    Ni = 200
+    re = np.random.rand(Ne)
+    ri = np.random.rand(Ni)
+    a = np.concatenate((0.02 * np.ones(Ne), 0.02 + 0.08 * ri))
+    b = np.concatenate((0.2 * np.ones(Ne), 0.25 - 0.05 * ri))
+    c = np.concatenate((-65 + 15 * re**2, -65 * np.ones(Ni)))
+    d = np.concatenate((8 - 6 * re**2, 2 * np.ones(Ni)))
+    S = np.concatenate((0.5 * np.random.rand(Ne + Ni, Ne), -np.random.rand(Ne + Ni, Ni)), axis=1)
+
+    v = -65 * np.ones(Ne + Ni)  # Initial values of v
+    u = b * v  # Initial values of u
+    firings = []  # spike timings
+
+    for t in range(1000):  # simulation of 1000 ms
+        I = np.concatenate((5 * np.random.randn(Ne), 2 * np.random.randn(Ni)))  # thalamic input
+        fired = np.where(v >= 30)[0]  # indices of spikes
+        firings.extend([(t, neuron) for neuron in fired])
+        v[fired] = c[fired]
+        u[fired] += d[fired]
+        I += np.sum(S[:, fired], axis=1)
+        v += 0.5 * (0.04 * v**2 + 5 * v + 140 - u + I)  # step 0.5 ms
+        v += 0.5 * (0.04 * v**2 + 5 * v + 140 - u + I)  # for numerical stability
+        u += a * (b * v - u)
+
+    firings = np.array(firings)
+    plt.plot(firings[:, 0], firings[:, 1], '.')
+    plt.show()
 
 
