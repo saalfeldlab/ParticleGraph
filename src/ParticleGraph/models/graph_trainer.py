@@ -1847,24 +1847,24 @@ def data_train_particle_field(config, config_file, erase, device):
                 logger.info(f'Learning rates: {lr}, {lr_embedding}')
 def data_train_potential_energy(config, config_file, erase, device):
 
-	model = SIREN(in_features=1, out_features=1, hidden_features=256, hidden_layers=3)
-	optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
-	criterion = nn.MSELoss()
+    model = SIREN(in_features=1, out_features=1, hidden_features=256, hidden_layers=3)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
+    criterion = nn.MSELoss()
 
-	# Training loop
-	for epoch in range(10000):
-	    x = torch.linspace(-10, 10, 1000).unsqueeze(1)
-	    U_pred = model(x)
-	    F_pred = -torch.autograd.grad(U_pred.sum(), x, create_graph=True)[0]
-	    F_true = 2 * x + 2
+    # Training loop
+    for epoch in range(10000):
+        x = torch.linspace(-10, 10, 1000).unsqueeze(1)
+        U_pred = model(x)
+        F_pred = -torch.autograd.grad(U_pred.sum(), x, create_graph=True)[0]
+        F_true = 2 * x + 2
 
-	    loss = criterion(F_pred, F_true)
-	    optimizer.zero_grad()
-	    loss.backward()
-	    optimizer.step()
+        loss = criterion(F_pred, F_true)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
-	    if epoch % 1000 == 0:
-		print(f'Epoch {epoch}, Loss: {loss.item()}')
+        if epoch % 1000 == 0:
+            print(f'Epoch {epoch}, Loss: {loss.item()}')
 
 def data_train_synaptic(config, config_file, erase, device):
 
