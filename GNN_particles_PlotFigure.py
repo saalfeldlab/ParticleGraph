@@ -5,7 +5,7 @@ from torch_geometric.nn import MessagePassing
 import torch_geometric.utils as pyg_utils
 import imageio
 from matplotlib import rc
-from ParticleGraph.fitting_models import *
+
 from ParticleGraph.utils import set_size
 from scipy.ndimage import median_filter
 
@@ -14,6 +14,8 @@ os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 # from data_loaders import *
 
 from GNN_particles_Ntype import *
+
+from ParticleGraph.fitting_models import *
 from ParticleGraph.sparsify import *
 from ParticleGraph.models.utils import *
 from ParticleGraph.models.MLP import *

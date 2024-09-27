@@ -16,7 +16,10 @@ from ParticleGraph.models.Gumbel import gumbel_softmax_sample, gumbel_softmax
 from ParticleGraph.data_loaders import load_agent_data
 from sklearn.neighbors import NearestNeighbors
 from scipy.ndimage import median_filter
+from scipy.optimize import curve_fit
+
 from ParticleGraph.generators.cell_utils import *
+from ParticleGraph.fitting_models import linear_model
 
 
 def data_train(config, config_file, erase, device):
@@ -1845,6 +1848,8 @@ def data_train_particle_field(config, config_file, erase, device):
                 lr = train_config.learning_rate_start
                 optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
                 logger.info(f'Learning rates: {lr}, {lr_embedding}')
+
+
 def data_train_potential_energy(config, config_file, erase, device):
 
     model = SIREN(in_features=1, out_features=1, hidden_features=256, hidden_layers=3)
@@ -1865,6 +1870,7 @@ def data_train_potential_energy(config, config_file, erase, device):
 
         if epoch % 1000 == 0:
             print(f'Epoch {epoch}, Loss: {loss.item()}')
+
 
 def data_train_synaptic(config, config_file, erase, device):
 
@@ -1917,9 +1923,9 @@ def data_train_synaptic(config, config_file, erase, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_9_graphs_20_0.pt"
-    # state_dict = torch.load(net,map_location=device)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    net = f"./log/try_{config_file}/models/best_model_with_9_graphs_20_0.pt"
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -1981,7 +1987,7 @@ def data_train_synaptic(config, config_file, erase, device):
         adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt', map_location=device)
         if is_N2:
             adjacency_ = adjacency.t().clone().detach()
-            adj_t = torch.abs(adjacency_) >= 0
+            adj_t = torch.abs(adjacency_) > 0
             edge_index = adj_t.nonzero().t().contiguous()
         else:
             adj_t = torch.abs(adjacency) > 0
@@ -1995,6 +2001,15 @@ def data_train_synaptic(config, config_file, erase, device):
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     Niter = int(n_frames * data_augmentation_loop // batch_size * n_runs / 10)
     print(f'plot every {Niter // 100} iterations')
+
+
+    threshold_mask = torch.std(model.W) * 0.1
+    pos = torch.argwhere(torch.abs(model.W) > threshold_mask)
+    print(f'{np.round(len(pos)/(model.W.shape[0]**2)*100,2)}% remaining weights')
+    model.mask = model.mask * (torch.abs(model.W) > threshold_mask)
+    edge_index = model.mask.nonzero().t().contiguous()
+
+
 
     list_loss = []
     time.sleep(2)
@@ -2149,8 +2164,6 @@ def data_train_synaptic(config, config_file, erase, device):
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
-
-
         fig = plt.figure(figsize=(20, 8))
 
         ax = fig.add_subplot(2, 5, 1)
@@ -2169,8 +2182,7 @@ def data_train_synaptic(config, config_file, erase, device):
 
         i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
         if is_N2:
-            A = model.W.clone().detach()
-            A[i,i] = 0
+            A = model.W.clone().detach() * model.mask.clone().detach()
         elif 'asymmetric' in config.simulation.adjacency_matrix:
             A = model.vals
         else:
@@ -2181,15 +2193,15 @@ def data_train_synaptic(config, config_file, erase, device):
         ax = fig.add_subplot(2, 5, 3)
         ax = sns.heatmap(to_numpy(adjacency),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046}, vmin=-0.001, vmax=0.001)
         # ax.invert_yaxis()
-        plt.title('True connectivity matrix',fontsize=12);
+        plt.title('True connectivity matrix',fontsize=12)
         plt.xticks([0,n_particles-1],[1,n_particles],fontsize=8)
         plt.yticks([0,n_particles-1],[1,n_particles],fontsize=8)
         ax = fig.add_subplot(2, 5, 4)
         ax = sns.heatmap(to_numpy(A),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046}, vmin=-1, vmax=1)
         # ax.invert_yaxis()
-        plt.title('Learned connectivity matrix',fontsize=12);
+        plt.title('Learned connectivity matrix',fontsize=12)
         plt.xticks([0,n_particles-1],[1,n_particles],fontsize=8)
-        plt.yticks([0,n_particles-1],[1,n_particles],fontsize=8 )
+        plt.yticks([0,n_particles-1],[1,n_particles],fontsize=8)
 
         ax = fig.add_subplot(2, 5, 5)
         gt_weight = to_numpy(adjacency)
@@ -2198,6 +2210,23 @@ def data_train_synaptic(config, config_file, erase, device):
         plt.xlabel('true weight', fontsize=12)
         plt.ylabel('learned weight', fontsize=12)
         plt.title('comparison')
+
+        x_data = gt_weight.flatten()
+        y_data = pred_weight.flatten()
+        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+        residuals = y_data - linear_model(x_data, *lin_fit)
+        ss_res = np.sum(residuals ** 2)
+        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot)
+        print(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
+
+        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+        residuals = y_data - linear_model(x_data, *lin_fit)
+        ss_res = np.sum(residuals ** 2)
+        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot)
+        print(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
+        plt.text(-1, 100, f'R^2: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}', fontsize=10)
 
         ax = fig.add_subplot(2, 5, 6)
 
@@ -2243,6 +2272,9 @@ def data_train_synaptic(config, config_file, erase, device):
         plt.ylabel('ai1', fontsize=12)
         plt.xticks(fontsize=10.0)
         plt.yticks(fontsize=10.0)
+
+        ax = fig.add_subplot(2, 5, 9)
+        plt.hist(np.abs(to_numpy(A)),bins = 100)
 
         if (replace_with_cluster) & (epoch % sparsity_freq == sparsity_freq - 1) & (epoch < n_epochs - sparsity_freq):
             # Constrain embedding domain
