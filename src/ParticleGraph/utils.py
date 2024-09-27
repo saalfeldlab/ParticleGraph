@@ -268,6 +268,7 @@ def create_log_dir(config=[], config_file=[], erase=True):
         os.makedirs(os.path.join(log_dir, 'results'), exist_ok=True)
         os.makedirs(os.path.join(log_dir, 'tmp_training/particle'), exist_ok=True)
         os.makedirs(os.path.join(log_dir, 'tmp_training/field'), exist_ok=True)
+        os.makedirs(os.path.join(log_dir, 'tmp_training/matrix'), exist_ok=True)
         os.makedirs(os.path.join(log_dir, 'tmp_training/function'), exist_ok=True)
         os.makedirs(os.path.join(log_dir, 'tmp_training/function/lin_phi'), exist_ok=True)
         os.makedirs(os.path.join(log_dir, 'tmp_training/function/lin_edge'), exist_ok=True)
@@ -282,6 +283,9 @@ def create_log_dir(config=[], config_file=[], erase=True):
         for f in files:
             os.remove(f)
         files = glob.glob(f"{log_dir}/tmp_training/field/*")
+        for f in files:
+            os.remove(f)
+        files = glob.glob(f"{log_dir}/tmp_training/matrix/*")
         for f in files:
             os.remove(f)
         files = glob.glob(f"{log_dir}/tmp_training/function/*")

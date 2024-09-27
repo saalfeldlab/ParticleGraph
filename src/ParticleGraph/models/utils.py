@@ -82,7 +82,32 @@ def get_in_features(rr, embedding_, config_model, max_radius):
 
     return in_features
 
-def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, index_particles, n_particles, n_particle_types, type_list, cmap, device):
+def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, index_particles, n_particles, n_particle_types, type_list, cmap, has_siren, has_siren_time, model_exc, n_frames, device):
+
+    if has_siren:
+        frame_list = [n_frames // 4, 2 * n_frames // 4, 2 * n_frames // 4, n_frames - 1]
+
+    for frame in frame_list:
+
+        if has_siren_time:
+            with torch.no_grad():
+                tmp = model_exc(time=frame / n_frames) ** 2
+        else:
+            with torch.no_grad():
+                tmp = model_exc() ** 2
+        tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
+        tmp = to_numpy(torch.sqrt(tmp))
+        if has_siren_time:
+            tmp = np.rot90(tmp, k=1)
+        fig_ = plt.figure(figsize=(12, 12))
+        axf = fig_.add_subplot(1, 1, 1)
+        plt.imshow(tmp, cmap='grey')
+        plt.xticks([])
+        plt.yticks([])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/field/{epoch}_{N}_{frame}.tif", dpi=170.7)
+        plt.close()
+
 
     fig = plt.figure(figsize=(8, 8))
     embedding = get_embedding(model.a, 1)
@@ -155,8 +180,10 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
     plt.title('Random connectivity matrix',fontsize=12);
     plt.xticks([0,n_particles-1],[1,n_particles],fontsize=8)
     plt.yticks([0,n_particles-1],[1,n_particles],fontsize=8)
-    plt.savefig(f"./{log_dir}/tmp_training/field/{dataset_name}_{epoch}_{N}.tif", dpi=87)
+    plt.savefig(f"./{log_dir}/tmp_training/matrix/{dataset_name}_{epoch}_{N}.tif", dpi=87)
     plt.close()
+
+
 
     # imsave(f"./{log_dir}/tmp_training/field/adjacency_{dataset_name}__{epoch}_{N}.tif", to_numpy(A))
 

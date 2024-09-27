@@ -92,15 +92,13 @@ class GraphModelConfig(BaseModel):
     hidden_dim_nnr: int = 128
     output_size_nnr: int = 1
 
-
-    field_method: Literal['none', 'tensor', 'Siren_wo_time', 'Siren_with_time'] = 'tensor'
-
     division_predictor_input_size: int = 3
     division_predictor_hidden_dim: int = 64
     division_predictor_n_layers: int = 3
     division_predictor_output_size: int = 1
 
     field_type: str = 'tensor'
+    excitation_type: Literal['none', 'tensor', 'siren_wo_time', 'siren_with_time'] = 'none'
 
 
     # def get_instance(self, **kwargs):

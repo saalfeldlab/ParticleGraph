@@ -1901,6 +1901,8 @@ def data_train_synaptic(config, config_file, erase, device):
     is_N2 = 'signal_N2' in dataset_name
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
+    has_siren = 'siren' in model_config.excitation_type
+    has_siren_time = 'siren_with_time' in model_config.excitation_type
 
     l_dir, log_dir, logger = create_log_dir(config, config_file,erase)
     print(f'Graph files N: {n_runs}')
@@ -1995,7 +1997,7 @@ def data_train_synaptic(config, config_file, erase, device):
             adj_t = torch.abs(adjacency) > 0
             edge_index = adj_t.nonzero().t().contiguous()
             adj_t = []
-    excitation = torch.ones((n_particles, n_frames + 1), device=device) * 0
+    excitation = torch.ones((n_particles, 1), device=device) * 0
     model.edges = edge_index.clone().detach()
     logger.info(f'edge_index.shape {edge_index.shape} ')
 
@@ -2010,6 +2012,27 @@ def data_train_synaptic(config, config_file, erase, device):
     # print(f'{np.round(len(pos)/(model.W.shape[0]**2)*100,2)}% remaining weights')
     # model.mask = model.mask * (torch.abs(model.W) > threshold_mask)
     # edge_index = model.mask.nonzero().t().contiguous()
+
+
+    if has_siren:
+        im = imread(f"graphs_data/{simulation_config.excitation_value_map}")
+        image_width = im.shape[1]
+        if has_siren_time:
+            model_exc = Siren_Network(image_width=image_width, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
+                                        hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.)
+        else:
+            model_exc = Siren_Network(image_width=image_width, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
+                                        hidden_layers=3, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.)
+        model_exc.to(device=device)
+        model_exc.train()
+        optimizer_exc = torch.optim.Adam(lr=1e-5, params=model_exc.parameters())
+
+        # net = f"./log/try_{config_file}/models/best_model_f_with_1_graphs_20.pt"
+        # state_dict = torch.load(net, map_location=device)
+        # model_f.load_state_dict(state_dict['model_state_dict'])
+    else:
+        model_exc=[]
+
 
     list_loss = []
     time.sleep(2)
@@ -2028,6 +2051,15 @@ def data_train_synaptic(config, config_file, erase, device):
 
             run = 1 + np.random.randint(n_runs - 1)
             k = np.random.randint(n_frames - 6)
+
+            if has_siren:
+                excitation = model_exc(time=k / n_frames) ** 2
+                excitation = excitation.flatten()
+                excitation = excitation[0:n_particles]
+                excitation = excitation[:,None]
+
+            if has_siren:
+                optimizer_exc.zero_grad()
 
             optimizer.zero_grad()
 
@@ -2067,7 +2099,7 @@ def data_train_synaptic(config, config_file, erase, device):
                     case 1:
                         x = x_list[run][k].clone().detach()
                         dataset = data.Data(x=x, edge_index=model.edges)
-                        pred = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                        pred = model(dataset, data_id=run, excitation=excitation)
                         y = y_list[run][k].clone().detach()
                         y = y / ynorm
 
@@ -2149,11 +2181,14 @@ def data_train_synaptic(config, config_file, erase, device):
             loss.backward()
             optimizer.step()
 
+            if has_siren:
+                optimizer_exc.step()
+
             total_loss += loss.item()
 
             visualize_embedding = True
-            if visualize_embedding & (((epoch < 30 ) & (N%(Niter//100) == 0)) | (N==0)):
-                plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, index_particles, n_particles, n_particle_types, type_list, cmap, device)
+            if visualize_embedding & (((epoch < 30 ) & (N%(Niter//50) == 0)) | (N==0)):
+                plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, index_particles, n_particles, n_particle_types, type_list, cmap, has_siren, has_siren_time, model_exc, n_frames, device)
                 torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
