@@ -1,6 +1,6 @@
 import time
 from shutil import copyfile
-
+import argparse
 import networkx as nx
 import scipy.io
 import torch
@@ -29,10 +29,26 @@ from ParticleGraph.utils import *
 
 if __name__ == '__main__':
 
+    parser = argparse.ArgumentParser(description="ParticleGraph")
+
+    parser.add_argument(
+        'config',
+        type=str,
+        nargs='?',
+        default='arbitrary_3',
+        help='the name of config file'
+    )
+
+    args = parser.parse_args()
+
+    config_file = args.config
+
     try:
         matplotlib.use("Qt5Agg")
     except:
         pass
+
+    config_list = [config_file]
 
     # config_list = ["arbitrary_3_cell_sequence_d_bis"]
     # config_list = ["arbitrary_3_cell_sequence_d_a"]
@@ -52,13 +68,13 @@ if __name__ == '__main__':
     # config_list = ["MDCK_FN_PB-Kleb_JF585"]
 
     # config_list = ['signal_N2_hemibrain_3_r1_u']
-    config_list = ['signal_N2_hemibrain_3_r1_v']
+    # config_list = ['signal_N2_hemibrain_3_r1_v']
 
     for config_file in config_list:
 
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         device = set_device(config.training.device)
         print(f'device {device}')
-        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=False, bSave=True, step=config.simulation.n_frames // 100)
-        # data_train(config, config_file, True, device)
+        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=False, bSave=True, step=config.simulation.n_frames // 100)
+        data_train(config, config_file, True, device)
         # data_test(config=config, config_file=config_file, visualize=True, style='color', verbose=False, best_model='1', run=0, step=25, test_simulation=True, sample_embedding=False, device=device)    # config.simulation.n_frames // 7

@@ -652,17 +652,16 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
                     matplotlib.rcParams['savefig.pad_inches'] = 0
                     fig = plt.figure(figsize=(16, 8))
-                    pos = torch.argwhere(T1==0)
-                    if 'conn' in config.simulation.connectivity_mask:
-                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=40, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-5,vmax=5)
-                        plt.colorbar()
-                        plt.xlim([-5000, 5000])
-                        plt.ylim([-2500, 2500])
-                    else:
-                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=20, c=to_numpy(H1[:, 0]), cmap='viridis')
-                        plt.colorbar()
-                        plt.xlim([-np.std(positions[:, 0]) / 31, np.std(positions[:, 0]) ])
-                        plt.ylim([-np.std(positions[:, 1]) / 3, np.std(positions[:, 1]) ])
+
+                    plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=40, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-5,vmax=5)
+                    plt.colorbar()
+                    plt.xlim([-5000, 5000])
+                    plt.ylim([-2500, 2500])
+
+                    # plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=20, c=to_numpy(H1[:, 0]), cmap='viridis')
+                    # plt.colorbar()
+                    # plt.xlim([-np.std(positions[:, 0]) / 31, np.std(positions[:, 0]) ])
+                    # plt.ylim([-np.std(positions[:, 1]) / 3, np.std(positions[:, 1]) ])
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()

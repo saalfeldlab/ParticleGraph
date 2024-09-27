@@ -1,10 +1,10 @@
-description: 'Hemibrain + excitation video bisons excitation values up to 1.57'
-dataset: 'signal_N2_hemibrain_3_bison_1'
+description: 'Hemibrain + excitation video bisons excitation values up to 0.157'
+dataset: 'signal_N2_hemibrain_3_bison_10'
 
 simulation:
     connectivity_file: 'conn-eb-fb-pb-no.tif'
     adjacency_matrix: ''
-    excitation_value_map: 'video_bisons_60_1.tif'
+    excitation_value_map: 'video_bisons_60_10.tif'
     excitation: 'video'
     connectivity_init: [0,0.1]
     params: [[10.0,1.0],[10.0,2.0]]
