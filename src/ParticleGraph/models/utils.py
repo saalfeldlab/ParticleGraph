@@ -85,7 +85,7 @@ def get_in_features(rr, embedding_, config_model, max_radius):
 def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, index_particles, n_particles, n_particle_types, type_list, cmap, has_siren, has_siren_time, model_exc, n_frames, device):
 
     if has_siren:
-        frame_list = [n_frames // 4, 2 * n_frames // 4, 2 * n_frames // 4, n_frames - 1]
+        frame_list = [n_frames // 4, 2 * n_frames // 4, 3 * n_frames // 4, n_frames - 1]
 
     for frame in frame_list:
 
@@ -275,7 +275,7 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dat
     fig = plt.figure(figsize=(12, 12))
     if has_siren:
         if has_siren_time:
-            frame_list = [n_frames//4, 2*n_frames//4, 2*n_frames//4, n_frames-1]
+            frame_list = [n_frames//4, 2*n_frames//4, 3*n_frames//4, n_frames-1]
         else:
             frame_list = [0]
 
