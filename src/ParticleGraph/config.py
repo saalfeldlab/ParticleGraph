@@ -15,6 +15,7 @@ class SimulationConfig(BaseModel):
     dimension: int = 2
     connectivity_file: str = ''
     connectivity_init: list[float] =[-1]
+    excitation_value_map: Optional[str] = None
     excitation: str='none'
     adjacency_matrix: str = ''
     phi: str = 'tanh'

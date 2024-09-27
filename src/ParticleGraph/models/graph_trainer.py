@@ -1923,9 +1923,9 @@ def data_train_synaptic(config, config_file, erase, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    net = f"./log/try_{config_file}/models/best_model_with_9_graphs_20_0.pt"
-    state_dict = torch.load(net,map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
+    # net = f"./log/try_{config_file}/models/best_model_with_9_graphs_20_0.pt"
+    # state_dict = torch.load(net,map_location=device)
+    # model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -1989,9 +1989,12 @@ def data_train_synaptic(config, config_file, erase, device):
             adjacency_ = adjacency.t().clone().detach()
             adj_t = torch.abs(adjacency_) > 0
             edge_index = adj_t.nonzero().t().contiguous()
+            adjacency_ = []
+            adj_t = []
         else:
             adj_t = torch.abs(adjacency) > 0
             edge_index = adj_t.nonzero().t().contiguous()
+            adj_t = []
     excitation = torch.ones((n_particles, n_frames + 1), device=device) * 0
     model.edges = edge_index.clone().detach()
     logger.info(f'edge_index.shape {edge_index.shape} ')
@@ -2002,14 +2005,11 @@ def data_train_synaptic(config, config_file, erase, device):
     Niter = int(n_frames * data_augmentation_loop // batch_size * n_runs / 10)
     print(f'plot every {Niter // 100} iterations')
 
-
-    threshold_mask = torch.std(model.W) * 0.1
-    pos = torch.argwhere(torch.abs(model.W) > threshold_mask)
-    print(f'{np.round(len(pos)/(model.W.shape[0]**2)*100,2)}% remaining weights')
-    model.mask = model.mask * (torch.abs(model.W) > threshold_mask)
-    edge_index = model.mask.nonzero().t().contiguous()
-
-
+    # threshold_mask = torch.std(model.W) * 0.1
+    # pos = torch.argwhere(torch.abs(model.W) > threshold_mask)
+    # print(f'{np.round(len(pos)/(model.W.shape[0]**2)*100,2)}% remaining weights')
+    # model.mask = model.mask * (torch.abs(model.W) > threshold_mask)
+    # edge_index = model.mask.nonzero().t().contiguous()
 
     list_loss = []
     time.sleep(2)

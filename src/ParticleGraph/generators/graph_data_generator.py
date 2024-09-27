@@ -371,10 +371,10 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     delta_t = simulation_config.delta_t
     n_frames = simulation_config.n_frames
     has_particle_dropout = training_config.particle_dropout > 0
-    cmap = CustomColorMap(config=config)
     dataset_name = config.dataset
     is_N2 = 'signal_N2' in dataset_name
     has_zarr = 'zarr' in simulation_config.connectivity_file
+    excitation = simulation_config.excitation
 
     torch.random.fork_rng(devices=device)
     torch.random.manual_seed(training_config.seed)
@@ -446,7 +446,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency.tif')
         plt.close()
 
-    elif 'tiff' in simulation_config.connectivity_file:
+    elif 'tif' in simulation_config.connectivity_file:
         adjacency = constructRandomMatrices(n_neurons=n_particles, density=1.0, connectivity_mask=f"./graphs_data/{simulation_config.connectivity_file}" ,device=device)
         adjacency_ = adjacency.t().clone().detach()
         adj_t = torch.abs(adjacency_) > 0
@@ -522,6 +522,17 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             case 'sine':
                 excitation = torch.sin(torch.arange(n_frames+1, device=device)/100) * 2
                 excitation = excitation.repeat(n_particles, 1)
+            case 'video':
+                im = imread(f"graphs_data/{simulation_config.excitation_value_map}")
+                excitation_video = np.zeros((im.shape[0], n_particles))
+                excitation_nframes = im.shape[0]
+                for it in range(im.shape[0]):
+                    im_ = im[it].squeeze()
+                    im_ = np.rot90(im_, 3)
+                    im_ = im_.flatten()
+                    excitation_video[it] = im_[0:n_particles] / 10
+                excitation_video = torch.tensor(excitation_video, dtype=torch.float32, device=device)
+
         match config.simulation.phi:
             case 'tanh':
                 model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, phi=torch.tanh, device=device)
@@ -606,7 +617,10 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             # model prediction
             with torch.no_grad():
                 if is_N2:
-                    y, s_tanhu, msg = model(dataset, return_all=True, excitation=excitation[:, it])
+                    if config.simulation.excitation == 'video':
+                        y, s_tanhu, msg = model(dataset, return_all=True, excitation=excitation_video[it//(n_frames//excitation_nframes+1)])
+                    else:
+                        y, s_tanhu, msg = model(dataset, return_all=True, excitation=excitation[:, it])
                 else:
                     y, s_tanhu, msg = model(dataset, return_all=True)
 

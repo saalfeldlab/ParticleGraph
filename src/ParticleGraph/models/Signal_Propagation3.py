@@ -68,7 +68,7 @@ class Signal_Propagation3(pyg.nn.MessagePassing):
 
         in_features = torch.cat([u, embedding], dim=1)
 
-        msg = self.propagate(edge_index, u=u, embedding=embedding)
+        # msg = self.propagate(edge_index, u=u, embedding=embedding)
         msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
         pred = self.lin_phi(in_features) + msg
 
