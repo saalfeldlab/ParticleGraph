@@ -2053,7 +2053,7 @@ def data_train_synaptic(config, config_file, erase, device):
             run = 1 + np.random.randint(n_runs - 1)
             k = np.random.randint(n_frames - 6)
 
-            if has_siren & (epoch>n_no_siren):
+            if has_siren & (epoch>n_no_siren) & (k > n_frames//2):
                 excitation = model_exc(time=k / n_frames) ** 2
 
                 # tmp = excitation.clone().detach()
@@ -2067,8 +2067,8 @@ def data_train_synaptic(config, config_file, erase, device):
                 excitation = excitation[0:n_particles]
                 excitation = excitation[:,None]
                 optimizer_exc.zero_grad()
-
-
+            else:
+                excitation = torch.zeros((n_particles, 1), device=device)
 
             optimizer.zero_grad()
 
@@ -2199,7 +2199,7 @@ def data_train_synaptic(config, config_file, erase, device):
             loss.backward()
             optimizer.step()
 
-            if has_siren & (epoch>n_no_siren):
+            if has_siren & (epoch>n_no_siren) & (k > n_frames//2):
                 optimizer_exc.step()
 
             total_loss += loss.item()

@@ -399,6 +399,10 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Viz/*')
     for f in files:
         os.remove(f)
+    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Exc/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Exc/*')
+    for f in files:
+        os.remove(f)
 
     particle_dropout_mask = np.arange(n_particles)
     if has_particle_dropout:
@@ -523,9 +527,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 excitation = torch.ones((n_particles, n_frames+1), device=device) * 0
             case 'constant':
                 excitation = torch.ones((n_particles, n_frames+1), device=device) * 0.5
-            case 'sine':
-                excitation = torch.sin(torch.arange(n_frames+1, device=device)/100) * 2
-                excitation = excitation.repeat(n_particles, 1)
             case 'video':
                 im = imread(f"graphs_data/{simulation_config.excitation_value_map}")
                 excitation_video = np.zeros((im.shape[0], n_particles))
@@ -620,10 +621,16 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             # model prediction
             with torch.no_grad():
                 if is_N2:
-                    if config.simulation.excitation == 'video':
-                        y, s_tanhu, msg = model(dataset, return_all=True, excitation=excitation_video[it//(n_frames//excitation_nframes+1)])
+                    if (config.simulation.excitation == 'video') & (it > n_frames//2):
+                        excitation = excitation_video[it//(n_frames//excitation_nframes+1)]
+                        y, s_tanhu, msg = model(dataset, return_all=True, excitation=excitation)
+                    elif (config.simulation.excitation == 'sine') & (it > n_frames//2):
+                        excitation = 5 * torch.sin(torch.tensor(it/50,dtype=torch.float32, device=device))
+                        excitation = excitation.repeat(n_particles, 1)
+                        y, s_tanhu, msg = model(dataset, return_all=True, excitation=excitation.squeeze())
                     else:
-                        y, s_tanhu, msg = model(dataset, return_all=True, excitation=excitation[:, it])
+                        excitation = torch.zeros((n_particles, 1), device=device)
+                        y, s_tanhu, msg = model(dataset, return_all=True, excitation=excitation.squeeze())
                 else:
                     y, s_tanhu, msg = model(dataset, return_all=True)
 
@@ -679,7 +686,24 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     tmp = np.rot90(tmp, k=1)
                     plt.imshow(tmp, cmap='grey',vmin=-10,vmax=10)
                     plt.colorbar()
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
                     plt.savefig(f"graphs_data/graphs_{dataset_name}/Viz/Viz_{run}_{10000 + it}.tif", dpi=70)
+                    plt.close()
+
+                    fig = plt.figure(figsize=(8, 8))
+                    tmp = excitation[:,None].clone().detach()
+                    tmp = torch.cat((tmp, torch.zeros((3025-n_particles, 1), device=device)), dim=0)
+                    tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
+                    tmp = to_numpy(tmp)
+                    tmp = np.rot90(tmp, k=1)
+                    plt.imshow(tmp, cmap='grey',vmin=0,vmax=1)
+                    plt.colorbar()
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Exc/Exc_{run}_{10000 + it}.tif", dpi=70)
                     plt.close()
 
 
