@@ -144,6 +144,8 @@ class TrainingConfig(BaseModel):
     learning_rate_embedding_start: float = 0.001
     learning_rate_embedding_end: float = 0.001
 
+    learning_rate_NNR: float = 0.0001
+
     coeff_L1: float = 0
     coeff_loss1: float = 1
     coeff_loss2: float = 1

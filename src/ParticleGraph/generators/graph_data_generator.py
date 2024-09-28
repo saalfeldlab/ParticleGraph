@@ -395,6 +395,10 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Fig/*')
     for f in files:
         os.remove(f)
+    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Viz/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Viz/*')
+    for f in files:
+        os.remove(f)
 
     particle_dropout_mask = np.arange(n_particles)
     if has_particle_dropout:
@@ -541,7 +545,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     else:
         model, bc_pos, bc_dpos = choose_model(config=config, device=device)
 
-
     for run in range(config.training.n_runs):
 
         X = torch.zeros((n_particles, n_frames + 1), device=device)
@@ -665,6 +668,20 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{10000 + it}.tif", dpi=70)
+                    plt.close()
+
+                    fig = plt.figure(figsize=(8, 8))
+                    tmp = y.clone().detach()
+                    tmp = torch.cat((tmp, torch.zeros((3025-n_particles, 1), device=device)), dim=0)
+                    tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
+                    tmp = to_numpy(tmp)
+                    tmp = np.rot90(tmp, k=1)
+                    plt.imshow(tmp, cmap='grey',vmin=-10,vmax=10)
+                    plt.colorbar()
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Viz/Viz_{run}_{10000 + it}.tif", dpi=70)
+                    plt.close()
+
 
                     # ax = fig.add_subplot(2, 2, 2)
                     # plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=60, c=to_numpy(H1[:, 1]), cmap='viridis', vmin=-2.5, vmax=2.5)
@@ -692,8 +709,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     # plt.title('g.msg')
 
 
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{10000 + it}.tif", dpi=70)
-                    plt.close()
+
 
         if (is_N2) & (run==0):
             plt.figure(figsize=(10, 3))
@@ -1720,7 +1736,6 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
         if bSave:
             torch.save(x_mesh_list, f'graphs_data/graphs_{dataset_name}/x_mesh_list_{run}.pt')
             torch.save(y_mesh_list, f'graphs_data/graphs_{dataset_name}/y_mesh_list_{run}.pt')
-
 
 
 def data_generate_particle_field(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,

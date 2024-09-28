@@ -2026,7 +2026,7 @@ def data_train_synaptic(config, config_file, erase, device):
                                         hidden_layers=3, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.)
         model_exc.to(device=device)
         model_exc.train()
-        optimizer_exc = torch.optim.Adam(lr=1e-4, params=model_exc.parameters())
+        optimizer_exc = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_exc.parameters())
 
         # net = f"./log/try_{config_file}/models/best_model_exc_with_9_graphs_20.pt"
         # state_dict = torch.load(net, map_location=device)
@@ -2055,10 +2055,20 @@ def data_train_synaptic(config, config_file, erase, device):
 
             if has_siren & (epoch>n_no_siren):
                 excitation = model_exc(time=k / n_frames) ** 2
-                excitation = excitation.flatten()
+
+                # tmp = excitation.clone().detach()
+                # tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
+                # tmp = to_numpy(tmp)
+                # tmp = np.rot90(tmp, k=1)
+                # fig = plt.figure(figsize=(12, 12))
+                # plt.imshow(tmp, cmap='grey')
+                # plt.colorbar()
+
                 excitation = excitation[0:n_particles]
                 excitation = excitation[:,None]
                 optimizer_exc.zero_grad()
+
+
 
             optimizer.zero_grad()
 
@@ -2101,6 +2111,15 @@ def data_train_synaptic(config, config_file, erase, device):
                         pred = model(dataset, data_id=run, excitation=excitation)
                         y = y_list[run][k].clone().detach()
                         y = y / ynorm
+
+                        # tmp = y.clone().detach()
+                        # tmp = torch.cat((tmp, torch.zeros((3025-n_particles, 1), device=device)), dim=0)
+                        # tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
+                        # tmp = to_numpy(tmp)
+                        # tmp = np.rot90(tmp, k=1)
+                        # fig = plt.figure(figsize=(12, 12))
+                        # plt.imshow(tmp, cmap='grey')
+                        # plt.colorbar()
 
                         if is_N2:
                             loss = (pred - y).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 10 * (epoch==0)
