@@ -649,7 +649,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             A1 = A1 + 1
 
             # output plots
-            if visualize & (run <= run_vizualized + 5) & (it % step == 0) & (it >= 0):
+            if visualize & (run ==0) & (it % step == 0) & (it >= 0):
 
                 if 'color' in style:
 

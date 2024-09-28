@@ -1,10 +1,10 @@
-description: 'Hemibrain + excitation video bisons excitation values up to 1.57 learned with siren'
-dataset: 'signal_N2_hemibrain_3_bison_1'
+description: 'Hemibrain + excitation video bisons excitation values up to 0.157 learned with siren'
+dataset: 'signal_N2_hemibrain_3_bison_10'
 
 simulation:
     connectivity_file: 'conn-eb-fb-pb-no.tif'
     adjacency_matrix: ''
-    excitation_value_map: 'video_bisons_60_1.tif'
+    excitation_value_map: 'video_bisons_60_10.tif'
     excitation: 'video'
     connectivity_init: [0,0.1]
     params: [[10.0,1.0],[10.0,2.0]]
@@ -45,7 +45,7 @@ plotting:
 training:
     n_epochs: 20
     recursive_loop: 1
-    batch_size: 16
+    batch_size: 1
     small_init_batch_size: False
     n_runs: 10
     large_range: False
@@ -59,7 +59,4 @@ training:
     seed: 42
     coeff_L1: 1.0E-5
     n_no_siren: 0
-    learning_rate_NNR: 1.0E-4
-
-
-
+    learning_rate_NNR: 1.0E-7
