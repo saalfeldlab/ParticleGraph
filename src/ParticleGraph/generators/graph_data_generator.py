@@ -530,7 +530,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     im_ = im[it].squeeze()
                     im_ = np.rot90(im_, 3)
                     im_ = im_.flatten()
-                    excitation_video[it] = im_[0:n_particles] / 10
+                    excitation_video[it] = im_[0:n_particles]
                 excitation_video = torch.tensor(excitation_video, dtype=torch.float32, device=device)
 
         match config.simulation.phi:

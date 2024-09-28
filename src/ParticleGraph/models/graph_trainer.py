@@ -1903,6 +1903,7 @@ def data_train_synaptic(config, config_file, erase, device):
     sparsity_freq = train_config.sparsity_freq
     has_siren = 'siren' in model_config.excitation_type
     has_siren_time = 'siren_with_time' in model_config.excitation_type
+    n_no_siren = train_config.n_no_siren -1
 
     l_dir, log_dir, logger = create_log_dir(config, config_file,erase)
     print(f'Graph files N: {n_runs}')
@@ -2025,11 +2026,11 @@ def data_train_synaptic(config, config_file, erase, device):
                                         hidden_layers=3, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.)
         model_exc.to(device=device)
         model_exc.train()
-        optimizer_exc = torch.optim.Adam(lr=1e-5, params=model_exc.parameters())
+        optimizer_exc = torch.optim.Adam(lr=1e-4, params=model_exc.parameters())
 
-        # net = f"./log/try_{config_file}/models/best_model_f_with_1_graphs_20.pt"
+        # net = f"./log/try_{config_file}/models/best_model_exc_with_9_graphs_20.pt"
         # state_dict = torch.load(net, map_location=device)
-        # model_f.load_state_dict(state_dict['model_state_dict'])
+        # model_exc.load_state_dict(state_dict['model_state_dict'])
     else:
         model_exc=[]
 
@@ -2052,13 +2053,11 @@ def data_train_synaptic(config, config_file, erase, device):
             run = 1 + np.random.randint(n_runs - 1)
             k = np.random.randint(n_frames - 6)
 
-            if has_siren:
+            if has_siren & (epoch>n_no_siren):
                 excitation = model_exc(time=k / n_frames) ** 2
                 excitation = excitation.flatten()
                 excitation = excitation[0:n_particles]
                 excitation = excitation[:,None]
-
-            if has_siren:
                 optimizer_exc.zero_grad()
 
             optimizer.zero_grad()
@@ -2111,7 +2110,7 @@ def data_train_synaptic(config, config_file, erase, device):
                     case 2:
                         x = x_list[run][k].clone().detach()
                         dataset = data.Data(x=x, edge_index=model.edges)
-                        pred1 = model(dataset, data_id = run, excitation=excitation[:, k:k + 1])
+                        pred1 = model(dataset, data_id = run, excitation=excitation)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += pred1 * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
@@ -2126,15 +2125,15 @@ def data_train_synaptic(config, config_file, erase, device):
                     case 3:
                         x = x_list[run][k].clone().detach()
                         dataset = data.Data(x=x, edge_index=model.edges)
-                        pred1 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                        pred1 = model(dataset, data_id=run, excitation=excitation)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += pred1 * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred2 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                        pred2 = model(dataset, data_id=run, excitation=excitation)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += (pred1+pred2) * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred3 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                        pred3 = model(dataset, data_id=run, excitation=excitation)
 
                         y1 = y_list[run][k].clone().detach()/ ynorm
                         y2 = y_list[run][k+1].clone().detach()/ ynorm
@@ -2149,23 +2148,23 @@ def data_train_synaptic(config, config_file, erase, device):
 
                         x = x_list[run][k].clone().detach()
                         dataset = data.Data(x=x, edge_index=model.edges)
-                        pred1 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                        pred1 = model(dataset, data_id=run, excitation=excitation)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += pred1 * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred2 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                        pred2 = model(dataset, data_id=run, excitation=excitation)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += (pred1+pred2) * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred3 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                        pred3 = model(dataset, data_id=run, excitation=excitation)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += (pred1+pred2+pred3) * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred4 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                        pred4 = model(dataset, data_id=run, excitation=excitation)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += (pred1+pred2+pred3+pred4) * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred5 = model(dataset, data_id=run, excitation=excitation[:, k:k+1])
+                        pred5 = model(dataset, data_id=run, excitation=excitation)
 
                         y1 = y_list[run][k].clone().detach()/ ynorm
                         y2 = y_list[run][k+1].clone().detach()/ ynorm
@@ -2181,7 +2180,7 @@ def data_train_synaptic(config, config_file, erase, device):
             loss.backward()
             optimizer.step()
 
-            if has_siren:
+            if has_siren & (epoch>n_no_siren):
                 optimizer_exc.step()
 
             total_loss += loss.item()
@@ -2196,6 +2195,9 @@ def data_train_synaptic(config, config_file, erase, device):
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()},
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
+        torch.save({'model_state_dict': model_exc.state_dict(),
+                    'optimizer_state_dict': optimizer_exc.state_dict()},
+                   os.path.join(log_dir, 'models', f'best_model_exc_with_{n_runs - 1}_graphs_{epoch}.pt'))
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 

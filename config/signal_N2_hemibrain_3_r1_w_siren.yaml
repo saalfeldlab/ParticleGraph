@@ -58,3 +58,4 @@ training:
     device: 'auto'
     seed: 42
     coeff_L1: 1.0E-5
+    n_no_siren: 0

@@ -84,29 +84,30 @@ def get_in_features(rr, embedding_, config_model, max_radius):
 
 def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, index_particles, n_particles, n_particle_types, type_list, cmap, has_siren, has_siren_time, model_exc, n_frames, device):
 
-    if has_siren:
+    if has_siren & (epoch>config.training.n_no_siren - 1):
         frame_list = [n_frames // 4, 2 * n_frames // 4, 3 * n_frames // 4, n_frames - 1]
 
-    for frame in frame_list:
+        for frame in frame_list:
 
-        if has_siren_time:
-            with torch.no_grad():
-                tmp = model_exc(time=frame / n_frames) ** 2
-        else:
-            with torch.no_grad():
-                tmp = model_exc() ** 2
-        tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
-        tmp = to_numpy(torch.sqrt(tmp))
-        if has_siren_time:
-            tmp = np.rot90(tmp, k=1)
-        fig_ = plt.figure(figsize=(12, 12))
-        axf = fig_.add_subplot(1, 1, 1)
-        plt.imshow(tmp, cmap='grey')
-        plt.xticks([])
-        plt.yticks([])
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/field/{epoch}_{N}_{frame}.tif", dpi=170.7)
-        plt.close()
+            if has_siren_time:
+                with torch.no_grad():
+                    tmp = model_exc(time=frame / n_frames) ** 2
+            else:
+                with torch.no_grad():
+                    tmp = model_exc() ** 2
+            tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
+            tmp = to_numpy(tmp)
+            print(tmp.shape)
+            if has_siren_time:
+                tmp = np.rot90(tmp, k=1)
+            fig_ = plt.figure(figsize=(12, 12))
+            axf = fig_.add_subplot(1, 1, 1)
+            plt.imshow(tmp, cmap='grey', vmin=0, vmax=0.5)
+            plt.xticks([])
+            plt.yticks([])
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/tmp_training/field/{epoch}_{N}_{frame}.tif", dpi=170.7)
+            plt.close()
 
 
     fig = plt.figure(figsize=(8, 8))

@@ -135,6 +135,7 @@ class TrainingConfig(BaseModel):
     n_ghosts: int = 0
     ghost_method: Literal['none', 'tensor', 'MLP'] = 'none'
     ghost_logvar: float = -12
+    n_no_siren: int = 0
 
     fix_cluster_embedding: bool = False
     loss_weight: bool = False

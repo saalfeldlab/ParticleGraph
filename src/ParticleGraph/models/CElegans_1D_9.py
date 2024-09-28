@@ -148,7 +148,7 @@ class CElegans_Laplacian(nn.Module):
         # frame = torch.tensor(frame, dtype=torch.float32, device=self.device)
         # in_features = torch.cat((x[:,0:2], embedding),1) #, frame.repeat(99,1)), 1)
 
-        pred = alpha * laplacian_u.squeeze() + a * u.squeeze() + b * du.squeeze()
+        pred = 0 * alpha * laplacian_u.squeeze() + a * u.squeeze() + b * du.squeeze()
 
         return pred
 
@@ -167,7 +167,14 @@ if __name__ == '__main__':
     path = '/groups/saalfeld/home/allierc/signaling/Celegans/Celegans_data'
     width = 99
     n_datasset = 12
-    try = 9
+    run = 9
+    os.makedirs(f'/groups/saalfeld/home/allierc/signaling/Celegans/{run}', exist_ok=True)
+    os.makedirs(f'/groups/saalfeld/home/allierc/signaling/Celegans/{run}/models', exist_ok=True)
+    os.makedirs(f'/groups/saalfeld/home/allierc/signaling/Celegans/{run}/tmp_training', exist_ok=True)
+    os.makedirs(f'/groups/saalfeld/home/allierc/signaling/Celegans/{run}/tmp_training/embedding', exist_ok=True)
+    os.makedirs(f'/groups/saalfeld/home/allierc/signaling/Celegans/{run}/tmp_training/function', exist_ok=True)
+    os.makedirs(f'/groups/saalfeld/home/allierc/signaling/Celegans/{run}/tmp_training/scatter', exist_ok=True)
+
 
     y=[]
     n_length = {}
@@ -239,7 +246,7 @@ if __name__ == '__main__':
         if epoch%1000 == 0:
             print(f"Epoch {epoch}, Loss {loss.item()/batch_size}")
             torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()},
-                       f"/groups/saalfeld/home/allierc/signaling/Celegans/8/models/model_{epoch}.pt")
+                       f"/groups/saalfeld/home/allierc/signaling/Celegans/{run}/models/model_{epoch}.pt")
 
             target_list=[]
             pred_list=[]
@@ -256,7 +263,7 @@ if __name__ == '__main__':
             plt.scatter(to_numpy(target),to_numpy(pred), c='k', s=1, alpha=0.05)
             # plt.xlim([-1,1])
             # plt.ylim([-1,1])
-            plt.savefig(f"/groups/saalfeld/home/allierc/signaling/Celegans/8/tmp_training/scatter/output_{epoch}.png", dpi=100)
+            plt.savefig(f"/groups/saalfeld/home/allierc/signaling/Celegans/{run}/tmp_training/scatter/output_{epoch}.png", dpi=100)
             plt.close()
 
             # fig = plt.figure(figsize=(8, 8))
