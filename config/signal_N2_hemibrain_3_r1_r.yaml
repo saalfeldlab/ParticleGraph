@@ -1,4 +1,4 @@
-description: 'Hemibrain'
+description: 'Hemibrain learning rate 1e-5'
 dataset: 'signal_N2_hemibrain_3'
 
 simulation:
@@ -40,18 +40,20 @@ plotting:
     arrow_length: 1
 
 training:
-    n_epochs: 10
+    n_epochs: 20
     recursive_loop: 1
     batch_size: 16
     small_init_batch_size: False
     n_runs: 10
     large_range: False
     sparsity: 'replace_embedding_function'
-    sparsity_freq: 2
+    sparsity_freq: 4
     data_augmentation: False
     data_augmentation_loop: 500
-    cluster_method: 'kmeans_auto_embedding'
+    cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'
     seed: 42
     coeff_L1: 1.0E-5
+    learning_rate_start: 1.0E-5
+    learning_rate_embedding_start: 1.0E-5

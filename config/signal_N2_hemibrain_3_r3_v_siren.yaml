@@ -1,4 +1,4 @@
-description: 'Hemibrain + excitation video bisons excitation values up to 1.57 learned with siren'
+description: 'Hemibrain + excitation video bisons excitation with siren recursive loop 3'
 dataset: 'signal_N2_hemibrain_3_bison_1'
 
 simulation:
@@ -43,7 +43,7 @@ plotting:
     arrow_length: 1
 
 training:
-    n_epochs: 20
+    n_epochs: 5
     recursive_loop: 3
     batch_size: 16
     small_init_batch_size: False
