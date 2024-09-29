@@ -1926,7 +1926,8 @@ def data_train_synaptic(config, config_file, erase, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_9_graphs_20_0.pt"
+
+    # net = f"/groups/saalfeld/home/allierc/Py/ParticleGraph/log/try_signal_N2_hemibrain_3_r1_u/models/best_model_with_9_graphs_25_0.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
 
@@ -2031,6 +2032,13 @@ def data_train_synaptic(config, config_file, erase, device):
         # net = f"./log/try_{config_file}/models/best_model_exc_with_9_graphs_20.pt"
         # state_dict = torch.load(net, map_location=device)
         # model_exc.load_state_dict(state_dict['model_state_dict'])
+
+        lr_embedding = 1E-5
+        lr = 1E-5
+        optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+        logger.info(f'Learning rates: {lr}, {lr_embedding}')
+        print(f'Has_siren, learning rates: {lr}, {lr_embedding}')
+
     else:
         model_exc=[]
 
@@ -2052,8 +2060,11 @@ def data_train_synaptic(config, config_file, erase, device):
 
             run = 1 + np.random.randint(n_runs - 1)
             k = np.random.randint(n_frames - 6)
+            excitation = torch.zeros((n_particles, 1), device=device)
 
-            if has_siren & (epoch>n_no_siren) & (k > n_frames//2):
+            if has_siren:
+
+                k = np.random.randint(n_frames - 6)
                 excitation = model_exc(time=k / n_frames) ** 2
 
                 # tmp = excitation.clone().detach()
@@ -2065,10 +2076,7 @@ def data_train_synaptic(config, config_file, erase, device):
                 # plt.colorbar()
 
                 excitation = excitation[0:n_particles]
-                excitation = excitation[:,None]
                 optimizer_exc.zero_grad()
-            else:
-                excitation = torch.zeros((n_particles, 1), device=device)
 
             optimizer.zero_grad()
 
@@ -2133,13 +2141,14 @@ def data_train_synaptic(config, config_file, erase, device):
                         x_ = x.clone().detach()
                         x_[:, 6:7] += pred1 * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred2 = model(dataset, data_id = run, excitation=excitation[:, k:k + 1])
-                        y = (y_list[run][k].clone().detach() + y_list[run][k+1].clone().detach()) / ynorm
+                        pred2 = model(dataset, data_id = run, excitation=excitation)
+                        y1 = y_list[run][k].clone().detach() / ynorm
+                        y2 = y_list[run][k + 1].clone().detach() / ynorm
 
                         if is_N2:
-                            loss = (pred1 + pred2 - y).norm(2) / 2 + model.W.norm(1) * train_config.coeff_L1 + func_edge.norm(2) + func_phi.norm(2)
+                            loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 10 * (epoch==0)
                         else:
-                            loss = (pred1 + pred2 - y).norm(2) / 2 + func_edge.norm(2) + func_phi.norm(2)
+                            loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + func_edge.norm(2) + func_phi.norm(2)
 
                     case 3:
                         x = x_list[run][k].clone().detach()
@@ -2159,7 +2168,7 @@ def data_train_synaptic(config, config_file, erase, device):
                         y3 = y_list[run][k+2].clone().detach()/ ynorm
 
                         if is_N2:
-                            loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_f.norm(2)
+                            loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 10 * (epoch==0)
                         else:
                             loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)
 
@@ -2199,7 +2208,7 @@ def data_train_synaptic(config, config_file, erase, device):
             loss.backward()
             optimizer.step()
 
-            if has_siren & (epoch>n_no_siren) & (k > n_frames//2):
+            if has_siren:
                 optimizer_exc.step()
 
             total_loss += loss.item()

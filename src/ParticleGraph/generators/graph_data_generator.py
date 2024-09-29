@@ -412,7 +412,19 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         inv_particle_dropout_mask = draw[cut:]
         x_removed_list = []
 
-    if 'mat' in simulation_config.connectivity_file:
+    if 'adjacency_asym.pt' in simulation_config.connectivity_file:
+        adjacency = torch.load(simulation_config.connectivity_file, map_location=device)
+        adj_t = torch.abs(adjacency) > 0
+        edge_index = adj_t.nonzero().t().contiguous()
+        edge_attr_adjacency = adjacency[adj_t]
+        torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt')
+
+        # Initial conditions
+        X_ = torch.zeros((n_particles, n_frames), device=device)
+        Xinit = torch.rand(n_particles, )  # Initial conditions
+        X_[:, 0] = Xinit
+
+    elif 'mat' in simulation_config.connectivity_file:
         mat = scipy.io.loadmat(simulation_config.connectivity_file)
         adjacency = torch.tensor(mat['A'], device=device)
 
@@ -621,16 +633,18 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             # model prediction
             with torch.no_grad():
                 if is_N2:
-                    if (config.simulation.excitation == 'video') & (it > n_frames//2):
+                    if (config.simulation.excitation == 'video'):
                         excitation = excitation_video[it//(n_frames//excitation_nframes+1)]
                         y, s_tanhu, msg = model(dataset, return_all=True, excitation=excitation)
-                    elif (config.simulation.excitation == 'sine') & (it > n_frames//2):
+                    elif (config.simulation.excitation == 'sine'):
                         excitation = 5 * torch.sin(torch.tensor(it/50,dtype=torch.float32, device=device))
                         excitation = excitation.repeat(n_particles, 1)
-                        y, s_tanhu, msg = model(dataset, return_all=True, excitation=excitation.squeeze())
+                        excitation = excitation.squeeze()
+                        y, s_tanhu, msg = model(dataset, return_all=True, excitation=excitation)
                     else:
                         excitation = torch.zeros((n_particles, 1), device=device)
-                        y, s_tanhu, msg = model(dataset, return_all=True, excitation=excitation.squeeze())
+                        excitation = excitation.squeeze()
+                        y, s_tanhu, msg = model(dataset, return_all=True, excitation=excitation)
                 else:
                     y, s_tanhu, msg = model(dataset, return_all=True)
 
@@ -698,7 +712,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
                     tmp = to_numpy(tmp)
                     tmp = np.rot90(tmp, k=1)
-                    plt.imshow(tmp, cmap='grey',vmin=0,vmax=1)
+                    plt.imshow(tmp, cmap='grey',vmin=-5,vmax=5)
                     plt.colorbar()
                     plt.xticks([])
                     plt.yticks([])

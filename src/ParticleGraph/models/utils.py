@@ -84,7 +84,7 @@ def get_in_features(rr, embedding_, config_model, max_radius):
 
 def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, index_particles, n_particles, n_particle_types, type_list, cmap, has_siren, has_siren_time, model_exc, n_frames, device):
 
-    if has_siren & (epoch>config.training.n_no_siren - 1):
+    if has_siren:
         frame_list = [n_frames // 1.97, n_frames // 1.5, n_frames // 1.2, n_frames - 1]
 
         for frame in frame_list:

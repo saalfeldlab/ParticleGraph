@@ -1,8 +1,8 @@
-description: 'Hemibrain + excitation video bisons excitation values up to 0.157'
+description: 'Hemibrain + excitation video bisons excitation values up to 0.157 learned with siren after epoch 20'
 dataset: 'signal_N2_hemibrain_3_bison_10'
 
 simulation:
-    connectivity_file: 'conn-eb-fb-pb-no.tif'
+    connectivity_file: '/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_signal_N2_hemibrain_3/adjacency_asym.pt'
     adjacency_matrix: ''
     excitation_value_map: 'video_bisons_60_10.tif'
     excitation: 'video'
@@ -36,14 +36,15 @@ graph_model:
     aggr_type: 'add'
     embedding_dim: 2
     update_type: 'none'
+    excitation_type: 'siren_with_time'
 
 plotting:
     colormap: 'tab10'
     arrow_length: 1
 
 training:
-    n_epochs: 30
-    recursive_loop: 1
+    n_epochs: 20
+    recursive_loop: 3
     batch_size: 16
     small_init_batch_size: False
     n_runs: 10
@@ -57,3 +58,5 @@ training:
     device: 'auto'
     seed: 42
     coeff_L1: 1.0E-5
+    n_no_siren: 25
+    learning_rate_NNR: 1.0E-4
