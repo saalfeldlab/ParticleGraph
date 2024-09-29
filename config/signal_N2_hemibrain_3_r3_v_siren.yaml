@@ -59,7 +59,7 @@ training:
     seed: 42
     coeff_L1: 1.0E-5
     n_no_siren: 0
-    learning_rate_NNR: 1.0E-4
+    learning_rate_NNR: 1.0E-5
 
 
 

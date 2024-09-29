@@ -44,7 +44,7 @@ plotting:
 
 training:
     n_epochs: 20
-    recursive_loop: 2
+    recursive_loop: 1
     batch_size: 16
     small_init_batch_size: False
     n_runs: 10
@@ -59,4 +59,4 @@ training:
     seed: 42
     coeff_L1: 1.0E-5
     n_no_siren: 25
-    learning_rate_NNR: 1.0E-5
+    learning_rate_NNR: 1.0E-4
