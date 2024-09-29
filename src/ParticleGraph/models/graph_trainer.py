@@ -1927,9 +1927,9 @@ def data_train_synaptic(config, config_file, erase, device):
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
-    # net = f"/groups/saalfeld/home/allierc/Py/ParticleGraph/log/try_signal_N2_hemibrain_3_r1_u/models/best_model_with_9_graphs_25_0.pt"
-    # state_dict = torch.load(net,map_location=device)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    net = f"/groups/saalfeld/home/allierc/Py/ParticleGraph/log/try_signal_N2_hemibrain_3_r1_u/models/best_model_with_9_graphs_25_0.pt"
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -2003,19 +2003,6 @@ def data_train_synaptic(config, config_file, erase, device):
     model.edges = edge_index.clone().detach()
     logger.info(f'edge_index.shape {edge_index.shape} ')
 
-    print("Start training ...")
-    print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-    logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
-    Niter = int(n_frames * data_augmentation_loop // batch_size * n_runs / 10)
-    print(f'plot every {Niter // 100} iterations')
-
-    # threshold_mask = torch.std(model.W) * 0.1
-    # pos = torch.argwhere(torch.abs(model.W) > threshold_mask)
-    # print(f'{np.round(len(pos)/(model.W.shape[0]**2)*100,2)}% remaining weights')
-    # model.mask = model.mask * (torch.abs(model.W) > threshold_mask)
-    # edge_index = model.mask.nonzero().t().contiguous()
-
-
     if has_siren:
         im = imread(f"graphs_data/{simulation_config.excitation_value_map}")
         image_width = im.shape[1]
@@ -2037,10 +2024,25 @@ def data_train_synaptic(config, config_file, erase, device):
         lr = 1E-5
         optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
         logger.info(f'Learning rates: {lr}, {lr_embedding}')
-        print(f'Has_siren, learning rates: {lr}, {lr_embedding}')
+        print(f'has_siren, learning rates: {lr}, {lr_embedding}')
 
     else:
         model_exc=[]
+
+    print("Start training ...")
+    print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
+    logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
+    Niter = int(n_frames * data_augmentation_loop // batch_size * n_runs / 10)
+    print(f'plot every {Niter // 100} iterations')
+
+    # threshold_mask = torch.std(model.W) * 0.1
+    # pos = torch.argwhere(torch.abs(model.W) > threshold_mask)
+    # print(f'{np.round(len(pos)/(model.W.shape[0]**2)*100,2)}% remaining weights')
+    # model.mask = model.mask * (torch.abs(model.W) > threshold_mask)
+    # edge_index = model.mask.nonzero().t().contiguous()
+
+
+
 
 
     list_loss = []
@@ -2120,6 +2122,10 @@ def data_train_synaptic(config, config_file, erase, device):
                         y = y_list[run][k].clone().detach()
                         y = y / ynorm
 
+                        # tmp = excitation.clone().detach()[:,None]
+                        # tmp = pred1.clone().detach()
+                        # tmp = y_list[run][k].clone().detach() / ynorm
+                        # tmp = excitation.clone().detach()[:,None] + pred.clone().detach()
                         # tmp = y.clone().detach()
                         # tmp = torch.cat((tmp, torch.zeros((3025-n_particles, 1), device=device)), dim=0)
                         # tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))

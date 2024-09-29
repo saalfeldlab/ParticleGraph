@@ -47,7 +47,7 @@ training:
     recursive_loop: 2
     batch_size: 16
     small_init_batch_size: False
-    n_runs: 2
+    n_runs: 10
     large_range: False
     sparsity: 'replace_embedding_function'
     sparsity_freq: 4
