@@ -1927,9 +1927,9 @@ def data_train_synaptic(config, config_file, erase, device):
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
-    net = f"/groups/saalfeld/home/allierc/Py/ParticleGraph/log/try_signal_N2_hemibrain_3_r1_u/models/best_model_with_9_graphs_25_0.pt"
-    state_dict = torch.load(net,map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
+    # net = f"/groups/saalfeld/home/allierc/Py/ParticleGraph/log/try_signal_N2_hemibrain_3_r1_u/models/best_model_with_9_graphs_25_0.pt"
+    # state_dict = torch.load(net,map_location=device)
+    # model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
