@@ -2020,8 +2020,6 @@ def data_train_synaptic(config, config_file, erase, device):
         # state_dict = torch.load(net, map_location=device)
         # model_exc.load_state_dict(state_dict['model_state_dict'])
 
-        lr_embedding = 1E-5
-        lr = 1E-5
         optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
         logger.info(f'Learning rates: {lr}, {lr_embedding}')
         print(f'has_siren, learning rates: {lr}, {lr_embedding}')
@@ -2040,10 +2038,6 @@ def data_train_synaptic(config, config_file, erase, device):
     # print(f'{np.round(len(pos)/(model.W.shape[0]**2)*100,2)}% remaining weights')
     # model.mask = model.mask * (torch.abs(model.W) > threshold_mask)
     # edge_index = model.mask.nonzero().t().contiguous()
-
-
-
-
 
     list_loss = []
     time.sleep(2)
@@ -2080,7 +2074,9 @@ def data_train_synaptic(config, config_file, erase, device):
                 excitation = excitation[0:n_particles]
                 optimizer_exc.zero_grad()
 
-            optimizer.zero_grad()
+            else:
+
+                optimizer.zero_grad()
 
             for batch in range(batch_size):
 
@@ -2210,12 +2206,12 @@ def data_train_synaptic(config, config_file, erase, device):
                             loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_f.norm(2)
                         else:
                             loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2)
-
             loss.backward()
-            optimizer.step()
 
             if has_siren:
                 optimizer_exc.step()
+            else:
+                optimizer.step()
 
             total_loss += loss.item()
 
