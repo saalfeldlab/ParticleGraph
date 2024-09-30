@@ -2,6 +2,7 @@ description: 'Whole body imaging of zebrafish 80k cells 2k time points'
 dataset: 'signal_N2_WBI'
 
 simulation:
+    dimension: 3
     fluo_path: '/groups/saalfeld/home/allierc/signaling/WBI/df_xtn_denoised_labelled_musclebrainreplaced_norm.h5'
     connectivity_file: ''
     adjacency_matrix: ''
@@ -9,8 +10,8 @@ simulation:
     params: [[10.0,1.0],[10.0,2.0]]
     phi: 'tanh'
     tau: 1.0
-    min_radius: 1.0
-    max_radius: 1.0E6
+    min_radius: 0.0
+    max_radius: 100
     n_particles: 86407
     n_particle_types: 2
     n_interactions: 2
