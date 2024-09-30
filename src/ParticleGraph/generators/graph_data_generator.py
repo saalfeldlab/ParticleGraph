@@ -577,47 +577,47 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
         x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
 
-        if 'hemibrain' in dataset_name:
 
-            if os.path.isfile(f'./graphs_data/X1.pt'):
-                X1 = torch.load(f'./graphs_data/X1.pt', map_location=device)
 
-            else:
-                dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
-                G = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-                forceatlas2 = ForceAtlas2(
-                    # Behavior alternatives
-                    outboundAttractionDistribution=True,  # Dissuade hubs
-                    linLogMode=False,  # NOT IMPLEMENTED
-                    adjustSizes=False,  # Prevent overlap (NOT IMPLEMENTED)
-                    edgeWeightInfluence=1.0,
+        if os.path.isfile(f'./graphs_data/graphs_{dataset_name}/X1.pt'):
+            X1 = torch.load(f'./graphs_data/graphs_{dataset_name}/X1.pt', map_location=device)
 
-                    # Performance
-                    jitterTolerance=1.0,  # Tolerance
-                    barnesHutOptimize=True,
-                    barnesHutTheta=1.2,
-                    multiThreaded=False,  # NOT IMPLEMENTED
+        else:
+            dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
+            G = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
+            forceatlas2 = ForceAtlas2(
+                # Behavior alternatives
+                outboundAttractionDistribution=True,  # Dissuade hubs
+                linLogMode=False,  # NOT IMPLEMENTED
+                adjustSizes=False,  # Prevent overlap (NOT IMPLEMENTED)
+                edgeWeightInfluence=1.0,
 
-                    # Tuning
-                    scalingRatio=2.0,
-                    strongGravityMode=False,
-                    gravity=1.0,
+                # Performance
+                jitterTolerance=1.0,  # Tolerance
+                barnesHutOptimize=True,
+                barnesHutTheta=1.2,
+                multiThreaded=False,  # NOT IMPLEMENTED
 
-                    # Log
-                    verbose=True)
-                positions = forceatlas2.forceatlas2_networkx_layout(G, pos=None, iterations=500)
-                positions = np.array(list(positions.values()))
-                X1 = torch.tensor(positions, dtype=torch.float32, device=device)
-                X1 = X1 - torch.mean(X1, 0)
+                # Tuning
+                scalingRatio=2.0,
+                strongGravityMode=False,
+                gravity=1.0,
 
-                torch.save(X1, f'./graphs_data/X1.pt')
+                # Log
+                verbose=True)
+            positions = forceatlas2.forceatlas2_networkx_layout(G, pos=None, iterations=500)
+            positions = np.array(list(positions.values()))
+            X1 = torch.tensor(positions, dtype=torch.float32, device=device)
+            X1 = X1 - torch.mean(X1, 0)
 
-                x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
-                                       H1.clone().detach(), A1.clone().detach()), 1)
+            torch.save(X1, f'./graphs_data/graphs_{dataset_name}/X1.pt')
 
-                # pos = nx.spring_layout(G, weight='weight', seed=42, k=1)
-                # for k,p in pos.items():
-                #     X1[k,:] = torch.tensor([v[0],v[1]], device=device)
+            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
+                                   H1.clone().detach(), A1.clone().detach()), 1)
+
+            # pos = nx.spring_layout(G, weight='weight', seed=42, k=1)
+            # for k,p in pos.items():
+            #     X1[k,:] = torch.tensor([v[0],v[1]], device=device)
         
         time.sleep(0.5)
         for it in trange(simulation_config.start_frame, n_frames + 1):
@@ -681,7 +681,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 if 'color' in style:
 
                     matplotlib.rcParams['savefig.pad_inches'] = 0
-
 
                     if 'hemibrain' in dataset_name:
                         fig = plt.figure(figsize=(16, 8))
