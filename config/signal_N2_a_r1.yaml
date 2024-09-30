@@ -34,6 +34,8 @@ graph_model:
     aggr_type: 'add'
     embedding_dim: 2
     update_type: 'none'
+    sparsity: 'replace_embedding_function'
+    sparsity_freq: 4
 
 plotting:
     colormap: 'tab10'

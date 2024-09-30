@@ -403,6 +403,10 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Exc/*')
     for f in files:
         os.remove(f)
+    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Signal/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Signal/*')
+    for f in files:
+        os.remove(f)
 
     particle_dropout_mask = np.arange(n_particles)
     if has_particle_dropout:
@@ -449,10 +453,10 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         edge_index = adj_t.nonzero().t().contiguous()
         edge_attr_adjacency = adjacency[adj_t]
 
-        # Initial conditions
-        X_ = torch.zeros((n_particles, n_frames), device=device)
-        Xinit = torch.rand(n_particles, )  # Initial conditions
-        X_[:, 0] = Xinit
+        # # Initial conditions
+        # X_ = torch.zeros((n_particles, n_frames), device=device)
+        # Xinit = torch.rand(n_particles, )  # Initial conditions
+        # X_[:, 0] = Xinit
 
         torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt')
 
@@ -476,10 +480,10 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         n_particles = adjacency.shape[0]
         config.simulation.n_particles = n_particles
 
-        # Initial conditions
-        X_ = torch.zeros((n_particles, n_frames), device=device)
-        Xinit = torch.rand(n_particles, )  # Initial conditions
-        X_[:, 0] = Xinit
+        # # Initial conditions
+        # X_ = torch.zeros((n_particles, n_frames), device=device)
+        # Xinit = torch.rand(n_particles, )  # Initial conditions
+        # X_[:, 0] = Xinit
 
         torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt')
 
@@ -568,8 +572,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         # initialize particle and graph states
         X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
 
-        if (is_N2) & (run == 0):
-            H1[:,0] = X_[:, 0].clone().detach()
+        # if (is_N2) & (run == 0):
+        #     H1[:,0] = X_[:, 0].clone().detach()
 
         x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
 
@@ -718,6 +722,20 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     plt.yticks([])
                     plt.tight_layout()
                     plt.savefig(f"graphs_data/graphs_{dataset_name}/Exc/Exc_{run}_{10000 + it}.tif", dpi=70)
+                    plt.close()
+
+                    fig = plt.figure(figsize=(8, 8))
+                    tmp = H1[:, 0:1].clone().detach()
+                    tmp = torch.cat((tmp, torch.zeros((3025-n_particles, 1), device=device)), dim=0)
+                    tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
+                    tmp = to_numpy(tmp)
+                    tmp = np.rot90(tmp, k=1)
+                    plt.imshow(tmp, cmap='grey',vmin=-5,vmax=5)
+                    plt.colorbar()
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Signal/Signal_{run}_{10000 + it}.tif", dpi=70)
                     plt.close()
 
 
