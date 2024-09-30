@@ -678,6 +678,10 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             # output plots
             if visualize & (run ==0) & (it % step == 0) & (it >= 0):
 
+                if 'latex' in style:
+                    plt.rcParams['text.usetex'] = True
+                    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+
                 if 'color' in style:
 
                     matplotlib.rcParams['savefig.pad_inches'] = 0
@@ -688,14 +692,19 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                         plt.colorbar()
                         plt.xlim([-5000, 5000])
                         plt.ylim([-2500, 2500])
+                        plt.xticks([])
+                        plt.yticks([])
                     else:
                         fig = plt.figure(figsize=(8, 8))
-                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=20, c=to_numpy(H1[:, 0]), cmap='viridis')
-                        plt.colorbar()
-                        plt.xlim([-np.std(positions[:, 0]) / 3, np.std(positions[:, 0])/3 ])
-                        plt.ylim([-np.std(positions[:, 1]) / 3, np.std(positions[:, 1])/3 ])
-                    plt.xticks([])
-                    plt.yticks([])
+                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=80, c=to_numpy(H1[:, 0]), cmap='viridis')
+                        # plt.colorbar()
+                        plt.xlim([-1750, 1750])
+                        plt.ylim([-1750, 1750])
+                    if 'latex' in style:
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
+                        plt.xticks(fontsize=18.0)
+                        plt.yticks(fontsize=18.0)
                     plt.tight_layout()
                     plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{10000 + it}.tif", dpi=70)
                     plt.close()

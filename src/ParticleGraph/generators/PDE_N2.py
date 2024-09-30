@@ -112,7 +112,7 @@ class PDE_N2(pyg.nn.MessagePassing):
 
         u = x[:, 6:7]
 
-        msg_ = self.propagate(edge_index, u=u, edge_attr=edge_attr)
+        # msg_ = self.propagate(edge_index, u=u, edge_attr=edge_attr)
         msg = torch.matmul(self.W, self.phi(u))
 
         du = -u + s * self.phi(u) + g * msg + excitation[:,None]
