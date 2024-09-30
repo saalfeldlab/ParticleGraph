@@ -17,6 +17,8 @@ import seaborn as sns
 from fa2_modified import ForceAtlas2
 import zarr
 import xarray as xr
+import pandas as pd
+import tables
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
@@ -26,6 +28,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
     has_mesh = (config.graph_model.mesh_model_name != '')
     has_cell_divsion = config.simulation.has_cell_division
     has_fluo = config.simulation.has_fluo
+    has_WBI = 'WBI' in config.dataset
     dataset_name = config.dataset
     print('')
     print(f'dataset_name: {dataset_name}')
@@ -47,10 +50,15 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
             data_generate_cell(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
                                         alpha=0.2, ratio=ratio,
                                         scenario=scenario, device=device, bSave=bSave)
+    elif has_WBI:
+        data_generate_WBI(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
+                                        alpha=0.2, ratio=ratio,
+                                        scenario=scenario, device=device, bSave=bSave)
     elif has_signal:
         data_generate_synaptic(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
                                         alpha=0.2, ratio=ratio,
                                         scenario=scenario, device=device, bSave=bSave)
+
     else:
         data_generate_particle(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
                                         alpha=0.2, ratio=ratio,
@@ -496,28 +504,15 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency.tif')
         plt.close()
 
-    else:
-        mat = scipy.io.loadmat('./graphs_data/Brain.mat')
-        first_adjacency = torch.tensor(mat['A'], device=device)
-        fig = plt.figure(figsize=(12, 12))
-        plt.imshow(to_numpy(first_adjacency>0.01), cmap='viridis')
-        plt.colorbar()
-        plt.close()
+    elif 'random' in simulation_config.connectivity_file:
 
-        adjacency = config.simulation.connectivity_init[1] * torch.randn((n_particles, n_particles), dtype=torch.float32, device=device)
+        adjacency = torch.randn((n_particles, n_particles), dtype=torch.float32, device=device)
         torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt')
 
         i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-        adjacency[i,j] = adjacency[j,i]
+        # adjacency[i,j] = adjacency[j,i]
         adjacency[i, i] = 0
-
-        # i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-        # bl = adjacency[j,i]
-        # pos = torch.argwhere(bl>0)
-        # val = bl[pos]
-        # indexes = torch.randperm(val.shape[0])
-        # bl[pos] = val[indexes]
-        # adjacency[j,i] = bl
+        adjacency = adjacency / torch.max(adjacency)
 
         adj_t = torch.abs(adjacency) > 0
         edge_index = adj_t.nonzero().t().contiguous()
@@ -694,9 +689,52 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                         plt.ylim([-2500, 2500])
                         plt.xticks([])
                         plt.yticks([])
+
+                        fig = plt.figure(figsize=(8, 8))
+                        tmp = y.clone().detach()
+                        tmp = torch.cat((tmp, torch.zeros((3025 - n_particles, 1), device=device)), dim=0)
+                        tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
+                        tmp = to_numpy(tmp)
+                        tmp = np.rot90(tmp, k=1)
+                        plt.imshow(tmp, cmap='grey', vmin=-10, vmax=10)
+                        plt.colorbar()
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Viz/Viz_{run}_{10000 + it}.tif", dpi=70)
+                        plt.close()
+
+                        fig = plt.figure(figsize=(8, 8))
+                        tmp = excitation[:, None].clone().detach()
+                        tmp = torch.cat((tmp, torch.zeros((3025 - n_particles, 1), device=device)), dim=0)
+                        tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
+                        tmp = to_numpy(tmp)
+                        tmp = np.rot90(tmp, k=1)
+                        plt.imshow(tmp, cmap='grey', vmin=-5, vmax=5)
+                        plt.colorbar()
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Exc/Exc_{run}_{10000 + it}.tif", dpi=70)
+                        plt.close()
+
+                        fig = plt.figure(figsize=(8, 8))
+                        tmp = H1[:, 0:1].clone().detach()
+                        tmp = torch.cat((tmp, torch.zeros((3025 - n_particles, 1), device=device)), dim=0)
+                        tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
+                        tmp = to_numpy(tmp)
+                        tmp = np.rot90(tmp, k=1)
+                        plt.imshow(tmp, cmap='grey', vmin=-5, vmax=5)
+                        plt.colorbar()
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Signal/Signal_{run}_{10000 + it}.tif", dpi=70)
+                        plt.close()
+
                     else:
                         fig = plt.figure(figsize=(8, 8))
-                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=80, c=to_numpy(H1[:, 0]), cmap='viridis')
+                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=80, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-100,vmax=100)
                         # plt.colorbar()
                         plt.xlim([-1750, 1750])
                         plt.ylim([-1750, 1750])
@@ -709,47 +747,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{10000 + it}.tif", dpi=70)
                     plt.close()
 
-                    fig = plt.figure(figsize=(8, 8))
-                    tmp = y.clone().detach()
-                    tmp = torch.cat((tmp, torch.zeros((3025-n_particles, 1), device=device)), dim=0)
-                    tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
-                    tmp = to_numpy(tmp)
-                    tmp = np.rot90(tmp, k=1)
-                    plt.imshow(tmp, cmap='grey',vmin=-10,vmax=10)
-                    plt.colorbar()
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Viz/Viz_{run}_{10000 + it}.tif", dpi=70)
-                    plt.close()
 
-                    fig = plt.figure(figsize=(8, 8))
-                    tmp = excitation[:,None].clone().detach()
-                    tmp = torch.cat((tmp, torch.zeros((3025-n_particles, 1), device=device)), dim=0)
-                    tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
-                    tmp = to_numpy(tmp)
-                    tmp = np.rot90(tmp, k=1)
-                    plt.imshow(tmp, cmap='grey',vmin=-5,vmax=5)
-                    plt.colorbar()
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Exc/Exc_{run}_{10000 + it}.tif", dpi=70)
-                    plt.close()
 
-                    fig = plt.figure(figsize=(8, 8))
-                    tmp = H1[:, 0:1].clone().detach()
-                    tmp = torch.cat((tmp, torch.zeros((3025-n_particles, 1), device=device)), dim=0)
-                    tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
-                    tmp = to_numpy(tmp)
-                    tmp = np.rot90(tmp, k=1)
-                    plt.imshow(tmp, cmap='grey',vmin=-5,vmax=5)
-                    plt.colorbar()
-                    plt.xticks([])
-                    plt.yticks([])
-                    plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Signal/Signal_{run}_{10000 + it}.tif", dpi=70)
-                    plt.close()
 
 
                     # ax = fig.add_subplot(2, 2, 2)
@@ -817,6 +816,367 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     #     handler.close()
     #     logger.removeHandler(handler)
 
+
+
+def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,
+                           ratio=1, scenario='none', device=None, bSave=True):
+    simulation_config = config.simulation
+    training_config = config.training
+    model_config = config.graph_model
+
+    torch.random.fork_rng(devices=device)
+    torch.random.manual_seed(42)
+
+    print(f'Generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+
+    n_particle_types = simulation_config.n_particle_types
+    n_particles = simulation_config.n_particles
+    delta_t = simulation_config.delta_t
+    n_frames = simulation_config.n_frames
+    has_particle_dropout = training_config.particle_dropout > 0
+    dataset_name = config.dataset
+    is_N2 = 'signal_N2' in dataset_name
+    has_zarr = 'zarr' in simulation_config.connectivity_file
+    excitation = simulation_config.excitation
+
+    torch.random.fork_rng(devices=device)
+    torch.random.manual_seed(training_config.seed)
+
+
+    print(f'Generating from data ...')
+    filename = simulation_config.fluo_path
+    dff = pd.read_hdf(filename, key="data")
+
+
+
+
+    folder = f'./graphs_data/graphs_{dataset_name}/'
+    if erase:
+        files = glob.glob(f"{folder}/*")
+        for f in files:
+            if (f[-3:] != 'Fig') & (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (
+                    f != 'model_config.json') & (f != 'generation_code.py'):
+                os.remove(f)
+    os.makedirs(folder, exist_ok=True)
+    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Fig/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Fig/*')
+    for f in files:
+        os.remove(f)
+    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Viz/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Viz/*')
+    for f in files:
+        os.remove(f)
+    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Exc/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Exc/*')
+    for f in files:
+        os.remove(f)
+    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Signal/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Signal/*')
+    for f in files:
+        os.remove(f)
+
+    # adjacency = torch.ones((n_particles, n_particles), dtype=torch.float32, device=device)
+    # torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt')
+    # i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+    # # adjacency[i,j] = adjacency[j,i]
+    # adjacency[i, i] = 0
+    # adjacency = adjacency / torch.max(adjacency)
+    # adj_t = torch.abs(adjacency) > 0
+    # edge_index = adj_t.nonzero().t().contiguous()
+    # edge_attr_adjacency = adjacency[adj_t]
+    # edge_attr_adjacency_ = to_numpy(edge_attr_adjacency)
+    #
+    # fig = plt.figure(figsize=(12, 6))
+    # ax = fig.add_subplot(1, 2, 1)
+    # plt.imshow(to_numpy(adjacency), cmap='viridis')
+    # plt.text(0, -10,
+    #          f'weight {np.round(np.mean(edge_attr_adjacency_), 6)}+/-{np.round(np.std(edge_attr_adjacency_), 6)}')
+    #
+    # ax = fig.add_subplot(1, 2, 2)
+    # plt.imshow(to_numpy(adjacency) > 0.01, cmap='viridis')
+    # plt.text(0, -10, f'{edge_index.shape[1]} edges')
+    # plt.tight_layout()
+    # plt.savefig(f"graphs_data/graphs_{dataset_name}/adjacency.tif", dpi=70)
+    # plt.close()
+
+    # create GNN
+    if is_N2:
+        match config.simulation.excitation:
+            case 'none':
+                excitation = torch.ones((n_particles, n_frames + 1), device=device) * 0
+            case 'constant':
+                excitation = torch.ones((n_particles, n_frames + 1), device=device) * 0.5
+            case 'video':
+                im = imread(f"graphs_data/{simulation_config.excitation_value_map}")
+                excitation_video = np.zeros((im.shape[0], n_particles))
+                excitation_nframes = im.shape[0]
+                for it in range(im.shape[0]):
+                    im_ = im[it].squeeze()
+                    im_ = np.rot90(im_, 3)
+                    im_ = im_.flatten()
+                    excitation_video[it] = im_[0:n_particles]
+                excitation_video = torch.tensor(excitation_video, dtype=torch.float32, device=device)
+
+        match config.simulation.phi:
+            case 'tanh':
+                model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, phi=torch.tanh, device=device)
+            case _:
+                model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, phi=torch.tanh, device=device)
+    else:
+        model, bc_pos, bc_dpos = choose_model(config=config, device=device)
+
+    for run in range(config.training.n_runs):
+
+        X = torch.zeros((n_particles, n_frames + 1), device=device)
+
+        x_list = []
+        y_list = []
+
+        # initialize particle and graph states
+        X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
+
+        # if (is_N2) & (run == 0):
+        #     H1[:,0] = X_[:, 0].clone().detach()
+
+        x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
+                               H1.clone().detach(), A1.clone().detach()), 1)
+
+        if os.path.isfile(f'./graphs_data/graphs_{dataset_name}/X1.pt'):
+            X1 = torch.load(f'./graphs_data/graphs_{dataset_name}/X1.pt', map_location=device)
+
+        else:
+            dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
+            G = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
+            forceatlas2 = ForceAtlas2(
+                # Behavior alternatives
+                outboundAttractionDistribution=True,  # Dissuade hubs
+                linLogMode=False,  # NOT IMPLEMENTED
+                adjustSizes=False,  # Prevent overlap (NOT IMPLEMENTED)
+                edgeWeightInfluence=1.0,
+
+                # Performance
+                jitterTolerance=1.0,  # Tolerance
+                barnesHutOptimize=True,
+                barnesHutTheta=1.2,
+                multiThreaded=False,  # NOT IMPLEMENTED
+
+                # Tuning
+                scalingRatio=2.0,
+                strongGravityMode=False,
+                gravity=1.0,
+
+                # Log
+                verbose=True)
+            positions = forceatlas2.forceatlas2_networkx_layout(G, pos=None, iterations=500)
+            positions = np.array(list(positions.values()))
+            X1 = torch.tensor(positions, dtype=torch.float32, device=device)
+            X1 = X1 - torch.mean(X1, 0)
+
+            torch.save(X1, f'./graphs_data/graphs_{dataset_name}/X1.pt')
+
+            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
+                                   H1.clone().detach(), A1.clone().detach()), 1)
+
+            # pos = nx.spring_layout(G, weight='weight', seed=42, k=1)
+            # for k,p in pos.items():
+            #     X1[k,:] = torch.tensor([v[0],v[1]], device=device)
+
+        time.sleep(0.5)
+        for it in trange(simulation_config.start_frame, n_frames + 1):
+
+            # calculate type change
+            if simulation_config.state_type == 'sequence':
+                sample = torch.rand((len(T1), 1), device=device)
+                sample = (sample < (1 / config.simulation.state_params[0])) * torch.randint(0, n_particle_types,
+                                                                                            (len(T1), 1), device=device)
+                T1 = (T1 + sample) % n_particle_types
+
+            x = torch.concatenate(
+                (N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
+                 H1.clone().detach(), A1.clone().detach()), 1)
+
+            X[:, it] = H1[:, 0].clone().detach()
+
+            dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
+
+            # model prediction
+            with torch.no_grad():
+                if is_N2:
+                    if (config.simulation.excitation == 'video'):
+                        excitation = excitation_video[it // (n_frames // excitation_nframes + 1)]
+                        y, s_tanhu, msg = model(dataset, return_all=True, excitation=excitation)
+                    elif (config.simulation.excitation == 'sine'):
+                        excitation = 5 * torch.sin(torch.tensor(it / 50, dtype=torch.float32, device=device))
+                        excitation = excitation.repeat(n_particles, 1)
+                        excitation = excitation.squeeze()
+                        y, s_tanhu, msg = model(dataset, return_all=True, excitation=excitation)
+                    else:
+                        excitation = torch.zeros((n_particles, 1), device=device)
+                        excitation = excitation.squeeze()
+                        y, s_tanhu, msg = model(dataset, return_all=True, excitation=excitation)
+                else:
+                    y, s_tanhu, msg = model(dataset, return_all=True)
+
+            # append list
+            if (it >= 0) & bSave:
+                if has_particle_dropout:
+                    x_ = x[particle_dropout_mask].clone().detach()
+                    x_[:, 0] = torch.arange(len(x_), device=device)
+                    x_list.append(x_)
+                    x_ = x[inv_particle_dropout_mask].clone().detach()
+                    x_[:, 0] = torch.arange(len(x_), device=device)
+                    x_removed_list.append(x[inv_particle_dropout_mask].clone().detach())
+                    y_list.append(y[particle_dropout_mask].clone().detach())
+                else:
+                    x_list.append(x.clone().detach())
+                    y_list.append(y.clone().detach())
+
+            # Particle update
+            if it >= 0:
+                H1[:, 1] = y.squeeze()
+                H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
+
+            A1 = A1 + 1
+
+            # output plots
+            if visualize & (run == 0) & (it % step == 0) & (it >= 0):
+
+                if 'latex' in style:
+                    plt.rcParams['text.usetex'] = True
+                    rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+
+                if 'color' in style:
+
+                    matplotlib.rcParams['savefig.pad_inches'] = 0
+
+                    if 'hemibrain' in dataset_name:
+                        fig = plt.figure(figsize=(16, 8))
+                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=40, c=to_numpy(H1[:, 0]), cmap='viridis',
+                                    vmin=-5, vmax=5)
+                        plt.colorbar()
+                        plt.xlim([-5000, 5000])
+                        plt.ylim([-2500, 2500])
+                        plt.xticks([])
+                        plt.yticks([])
+
+                        fig = plt.figure(figsize=(8, 8))
+                        tmp = y.clone().detach()
+                        tmp = torch.cat((tmp, torch.zeros((3025 - n_particles, 1), device=device)), dim=0)
+                        tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
+                        tmp = to_numpy(tmp)
+                        tmp = np.rot90(tmp, k=1)
+                        plt.imshow(tmp, cmap='grey', vmin=-10, vmax=10)
+                        plt.colorbar()
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Viz/Viz_{run}_{10000 + it}.tif", dpi=70)
+                        plt.close()
+
+                        fig = plt.figure(figsize=(8, 8))
+                        tmp = excitation[:, None].clone().detach()
+                        tmp = torch.cat((tmp, torch.zeros((3025 - n_particles, 1), device=device)), dim=0)
+                        tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
+                        tmp = to_numpy(tmp)
+                        tmp = np.rot90(tmp, k=1)
+                        plt.imshow(tmp, cmap='grey', vmin=-5, vmax=5)
+                        plt.colorbar()
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Exc/Exc_{run}_{10000 + it}.tif", dpi=70)
+                        plt.close()
+
+                        fig = plt.figure(figsize=(8, 8))
+                        tmp = H1[:, 0:1].clone().detach()
+                        tmp = torch.cat((tmp, torch.zeros((3025 - n_particles, 1), device=device)), dim=0)
+                        tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
+                        tmp = to_numpy(tmp)
+                        tmp = np.rot90(tmp, k=1)
+                        plt.imshow(tmp, cmap='grey', vmin=-5, vmax=5)
+                        plt.colorbar()
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Signal/Signal_{run}_{10000 + it}.tif", dpi=70)
+                        plt.close()
+
+                    else:
+                        fig = plt.figure(figsize=(8, 8))
+                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=80, c=to_numpy(H1[:, 0]), cmap='viridis',
+                                    vmin=-100, vmax=100)
+                        # plt.colorbar()
+                        plt.xlim([-1750, 1750])
+                        plt.ylim([-1750, 1750])
+                    if 'latex' in style:
+                        plt.xlabel(r'$x$', fontsize=78)
+                        plt.ylabel(r'$y$', fontsize=78)
+                        plt.xticks(fontsize=18.0)
+                        plt.yticks(fontsize=18.0)
+                    plt.tight_layout()
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{10000 + it}.tif", dpi=70)
+                    plt.close()
+
+                    # ax = fig.add_subplot(2, 2, 2)
+                    # plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=60, c=to_numpy(H1[:, 1]), cmap='viridis', vmin=-2.5, vmax=2.5)
+                    # plt.colorbar()
+                    # plt.xlim([-1.2, 1.2])
+                    # plt.ylim([-1.2, 1.2])
+                    # plt.xticks([])
+                    # plt.yticks([])
+                    # plt.title('du')
+                    # ax = fig.add_subplot(2, 2, 3)
+                    # plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=60, c=to_numpy(s_tanhu), cmap='viridis', vmin=-2.5, vmax=2.5)
+                    # plt.colorbar()
+                    # plt.xlim([-1.2, 1.2])
+                    # plt.ylim([-1.2, 1.2])
+                    # plt.xticks([])
+                    # plt.yticks([])
+                    # plt.title('s.tanh(u)')
+                    # ax = fig.add_subplot(2, 2, 4)
+                    # plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=60, c=to_numpy(msg), cmap='viridis', vmin=-2.5, vmax=2.5)
+                    # plt.colorbar()
+                    # plt.xlim([-1.2, 1.2])
+                    # plt.ylim([-1.2, 1.2])
+                    # plt.xticks([])
+                    # plt.yticks([])
+                    # plt.title('g.msg')
+
+        if (is_N2) & (run == 0):
+            plt.figure(figsize=(10, 3))
+            plt.subplot(121)
+            ax = sns.heatmap(to_numpy(X), center=0, cbar_kws={'fraction': 0.046})
+            ax.invert_yaxis()
+            plt.title('Firing rate', fontsize=12)
+            plt.ylabel('Units', fontsize=12)
+            plt.xlabel('Time', fontsize=12)
+            plt.xticks([])
+            plt.yticks([0, 999], [1, 1000], fontsize=12)
+
+            plt.subplot(122)
+            plt.title('Firing rate samples', fontsize=12)
+            for i in range(50):
+                plt.plot(to_numpy(X[i, :]), linewidth=1)
+            plt.xlabel('Time', fontsize=12)
+            plt.ylabel('Normalized activity', fontsize=12)
+            plt.xticks([])
+            plt.yticks(fontsize=12)
+            plt.tight_layout()
+            plt.savefig(f'graphs_data/graphs_{dataset_name}/activity.png', dpi=300)
+            plt.close()
+
+        if bSave:
+            torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
+            if has_particle_dropout:
+                torch.save(x_removed_list, f'graphs_data/graphs_{dataset_name}/x_removed_list_{run}.pt')
+                np.save(f'graphs_data/graphs_{dataset_name}/particle_dropout_mask.npy', particle_dropout_mask)
+                np.save(f'graphs_data/graphs_{dataset_name}/inv_particle_dropout_mask.npy', inv_particle_dropout_mask)
+            torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
+            torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
+
+    # for handler in logger.handlers[:]:
+    #     handler.close()
+    #     logger.removeHandler(handler)
 
 
 def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,

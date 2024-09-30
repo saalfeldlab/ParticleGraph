@@ -2,10 +2,10 @@ description: 'Gravity model with 16 different particle types'
 dataset: 'signal_N2_a'
 
 simulation:
-    connectivity_file: ''
+    connectivity_file: 'random'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
-    params: [[2.0,1.0],[4.0,2.0]]
+    params: [[10.0,1.0],[10.0,2.0]]
     phi: 'tanh'
     tau: 1.0
     min_radius: 1.0
@@ -54,3 +54,5 @@ training:
     device: 'auto'
     sparsity: 'replace_embedding_function'
     sparsity_freq: 4
+    learning_rate_start: 1.0E-4
+    learning_rate_embedding_start: 1.0E-4

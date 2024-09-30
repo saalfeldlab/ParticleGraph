@@ -50,28 +50,7 @@ if __name__ == '__main__':
 
     config_list = [config_file]
 
-    # config_list = ["arbitrary_3_cell_sequence_d_bis"]
-    # config_list = ["arbitrary_3_cell_sequence_d_a"]
-    # config_list = ["arbitrary_3_cell_sequence_f"]
-    # config_list = ["arbitrary_3_cell_sequence_d_3"]
-
-    # config_list = ["arbitrary_3_cell"]
-    # config_list = ["arbitrary_3_cell_tracking"]
-    # config_list = ["boids_division_tracking_A"]
-    # config_list = ["boids_division_tracking_B"]
-    # config_list = ["boids_division_tracking_ctrl"]
-    # config_list = ['boids_division_model_2_tracking']
-
-    # config_list = ["boids_division_tracking_A", "boids_division_tracking_B"]
-
-    # config_list = ["gland_SMG2-processed"]
-    # config_list = ["MDCK_FN_PB-Kleb_JF585"]
-    # config_list = ['signal_N2_hemibrain_3_r1_r']
-    # config_list = ['signal_N2_a_r1']
-
-    config_list = ['signal_N2_a_r1']
-
-
+    config_list = ['signal_N2_WBI']
 
 
     for config_file in config_list:
@@ -79,6 +58,6 @@ if __name__ == '__main__':
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         device = set_device(config.training.device)
         print(f'device {device}')
-        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='latex color', alpha=1, erase=False, bSave=True, step=10) #config.simulation.n_frames // 100)
-        data_train(config, config_file, True, device)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='latex color', alpha=1, erase=False, bSave=True, step=10) #config.simulation.n_frames // 100)
+        # data_train(config, config_file, True, device)
         # data_test(config=config, config_file=config_file, visualize=True, style='color', verbose=False, best_model='1', run=0, step=25, test_simulation=True, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
