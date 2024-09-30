@@ -62,23 +62,21 @@ class WBI_Communication(pyg.nn.MessagePassing):
         self.data_id = data_id
         x, edge_index = data.x, data.edge_index
 
-        u = data.x[:, 6:7]
-        particle_id = to_numpy(x[:, 0])
-        embedding = self.a[1, particle_id, :]
+        u = data.x[:, 6:7]    # Ca2 signal
+        particle_id = to_numpy(x[:, 0])   # cell id
+        embedding = self.a[1, particle_id, :]   # latent vectors dim 2
+
+        msg = self.propagate(edge_index, u=u, embedding=embedding)   #calculate all messages, dimension N_cell * 1
 
         in_features = torch.cat([u, embedding], dim=1)
-
-        # msg = self.propagate(edge_index, u=u, embedding=embedding)
-        msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
-        pred = self.lin_phi(in_features) + msg + excitation
+        pred = self.lin_phi(in_features) + msg + excitation   # final update
 
         return pred
 
-    def message(self, edge_index_i, edge_index_j, u_j, embedding_i, embedding_j):
+    def message(self, edge_index_i, edge_index_j, u_i, u_j, embedding_i, embedding_j):
 
-        # in_features = torch.cat([u_j, embedding_i], dim=1)
-        T = self.W * self.mask
-        return T[to_numpy(edge_index_i),to_numpy(edge_index_j)][:,None] * self.lin_edge(u_j)
+        in_features = torch.cat([u_i, u_j, u_i - u_j, embedding_i], dim=1)
+        return self.lin_edge(in_features)
 
     def update(self, aggr_out):
         return aggr_out

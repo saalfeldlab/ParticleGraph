@@ -19,7 +19,8 @@ from .Ghost_Particles import Ghost_Particles
 from .graph_trainer import *
 from .utils import get_embedding, get_embedding_time_series, choose_training_model, constant_batch_size, increasing_batch_size, set_trainable_parameters, set_trainable_division_parameters, plot_training
 from .Gumbel import sample_gumbel, gumbel_softmax_sample, gumbel_softmax
+from .WBI_Communication import WBI_Communication
 
 __all__ = [graph_trainer, Interaction_Agent, Interaction_Particle, Interaction_Cell, Cell_Area, Interaction_Planet, Interaction_Planet2, Interaction_Particle_Field, Siren_Network, Signal_Propagation,
            Signal_Propagation2, Signal_Propagation3,  Signal_Propagation4, Mesh_RPS, Mesh_RPS_bis, Mesh_Laplacian, Division_Predictor, Ghost_Particles, get_embedding, get_embedding_time_series, choose_training_model, constant_batch_size,
-           increasing_batch_size, set_trainable_parameters, set_trainable_division_parameters, plot_training, sample_gumbel, gumbel_softmax_sample, gumbel_softmax]
+           increasing_batch_size, set_trainable_parameters, set_trainable_division_parameters, plot_training, sample_gumbel, gumbel_softmax_sample, gumbel_softmax, WBI_Communication]

@@ -826,19 +826,19 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
 
     print(f'Generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
 
-    n_particle_types = simulation_config.n_particle_types
+    dimension = simulation_config.dimension
+    min_radius = simulation_config.min_radius
+    max_radius = simulation_config.max_radius
+
     n_particles = simulation_config.n_particles
     delta_t = simulation_config.delta_t
     n_frames = simulation_config.n_frames
     has_particle_dropout = training_config.particle_dropout > 0
     dataset_name = config.dataset
     is_N2 = 'signal_N2' in dataset_name
-    has_zarr = 'zarr' in simulation_config.connectivity_file
-    excitation = simulation_config.excitation
 
     torch.random.fork_rng(devices=device)
     torch.random.manual_seed(training_config.seed)
-
 
     folder = f'./graphs_data/graphs_{dataset_name}/'
     if erase:
@@ -867,7 +867,8 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
 
     print(f'Loading data ...')
     filename = simulation_config.fluo_path
-    dff = pd.read_hdf(filename, key="data").values
+    dff = pd.read_hdf(filename, key="data")
+    dff = dff.ffill().bfill().values
 
     if os.path.isfile(f'./graphs_data/graphs_{dataset_name}/X1.pt'):
         X1 = torch.load(f'./graphs_data/graphs_{dataset_name}/X1.pt', map_location=device)
@@ -876,6 +877,23 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
         X1 = X1.T
         X1 = torch.tensor(X1, dtype=torch.float32, device=device)
         torch.save(X1, f'./graphs_data/graphs_{dataset_name}/X1.pt')
+    print('Data loaded ...')
+
+
+    if os.path.isfile(f'./graphs_data/graphs_{dataset_name}/edge_index.pt'):
+        print('Load local connectivity ...')
+        edge_index = torch.load(f'./graphs_data/graphs_{dataset_name}/edge_index.pt', map_location=device)
+        print('Local connectivity loaded ...')
+    else:
+        print('Calculate local connectivity ...')
+        pos = to_numpy(X1)
+        distance = np.sum((pos[:, None, :] - pos[None, :, :]) ** 2, axis=2)
+        distance = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
+        edge_index = np.array(distance.nonzero())
+        edge_index = torch.tensor(edge_index, dtype=torch.int64, device=device)
+        torch.save(edge_index, f'./graphs_data/graphs_{dataset_name}/edge_index.pt')
+        print('Local connectivity calculated ...')
+
 
 
     # adjacency = torch.ones((n_particles, n_particles), dtype=torch.float32, device=device)
@@ -953,15 +971,27 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
 
                     matplotlib.rcParams['savefig.pad_inches'] = 0
 
+                    # pos = torch.argwhere(edge_index[0, :] == 40000)
+                    # pos = to_numpy(pos.squeeze())
+                    # pos = edge_index[1, pos]
+                    # pos=to_numpy(pos)
+
                     fig = plt.figure(figsize=(16, 8))
-                    plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 2]), s=10, c=to_numpy(H1[:, 0]), cmap='viridis',
-                                vmin=-2.5, vmax=2.5)
+                    plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 2]), s=10, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-2.5, vmax=2.5)
                     plt.colorbar()
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
                     plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{10000 + it}.tif", dpi=70)
                     plt.close()
+
+        if bSave:
+            torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
+            if has_particle_dropout:
+                torch.save(x_removed_list, f'graphs_data/graphs_{dataset_name}/x_removed_list_{run}.pt')
+                np.save(f'graphs_data/graphs_{dataset_name}/particle_dropout_mask.npy', particle_dropout_mask)
+                np.save(f'graphs_data/graphs_{dataset_name}/inv_particle_dropout_mask.npy', inv_particle_dropout_mask)
+            torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
 
 
 
@@ -988,14 +1018,7 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
             plt.savefig(f'graphs_data/graphs_{dataset_name}/activity.png', dpi=300)
             plt.close()
 
-        if bSave:
-            torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
-            if has_particle_dropout:
-                torch.save(x_removed_list, f'graphs_data/graphs_{dataset_name}/x_removed_list_{run}.pt')
-                np.save(f'graphs_data/graphs_{dataset_name}/particle_dropout_mask.npy', particle_dropout_mask)
-                np.save(f'graphs_data/graphs_{dataset_name}/inv_particle_dropout_mask.npy', inv_particle_dropout_mask)
-            torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
-            torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
+
 
     # for handler in logger.handlers[:]:
     #     handler.close()
