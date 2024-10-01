@@ -11,7 +11,7 @@ from matplotlib import rc
 from ParticleGraph.utils import set_size
 from scipy.ndimage import median_filter
 
-os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
+# os.environ["PATH"] += os.pathsep + '/usr/local/texlive/2023/bin/x86_64-linux'
 
 # from data_loaders import *
 
@@ -3974,12 +3974,18 @@ def plot_signal2(config_file, epoch_list, log_dir, logger, cc, device):
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
 
+    simulation_config = config.simulation
+    train_config = config.training
+    model_config = config.graph_model
+
     n_frames = config.simulation.n_frames
     n_runs = config.training.n_runs
     n_particle_types = config.simulation.n_particle_types
     delta_t = config.simulation.delta_t
     cmap = CustomColorMap(config=config)
     dimension = config.simulation.dimension
+    has_siren = 'siren' in config.graph_model.excitation_type
+    has_siren_time = 'siren_with_time' in config.graph_model.excitation_type
 
     embedding_cluster = EmbeddingCluster(config)
 
@@ -4010,48 +4016,93 @@ def plot_signal2(config_file, epoch_list, log_dir, logger, cc, device):
     files = glob.glob(f"{log_dir}/models/*.pt")
     files.sort(key=os.path.getmtime)
 
-    net = f'{log_dir}/models/best_model_with_9_graphs_20.pt'
-    model, bc_pos, bc_dpos = choose_training_model(config, device)
-    state_dict = torch.load(net, map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
-    model.edges = edge_index
-    print(f'net: {net}')
+    for epoch in epoch_list:
 
-    i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-    A = model.W.clone().detach()
-    A[i, i] = 0
-    A=A/100
+        net = f'{log_dir}/models/best_model_with_9_graphs_{epoch}.pt'
+        model, bc_pos, bc_dpos = choose_training_model(config, device)
+        state_dict = torch.load(net, map_location=device)
+        model.load_state_dict(state_dict['model_state_dict'])
+        model.edges = edge_index
+        print(f'net: {net}')
 
-    fig = plt.figure(figsize=(8, 8))
-    gt_weight = to_numpy(adjacency)
-    pred_weight = to_numpy(A)
-    plt.scatter(gt_weight, pred_weight, s=0.1, c='k', alpha=0.1)
-    plt.xlabel(r'true $W_{ij}$', fontsize=24)
-    plt.ylabel(r'learned $W_{ij}$', fontsize=24)
-    plt.xlim([-0.25,0.25])
-    plt.ylim([-0.25,0.25])
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/comparison.tif", dpi=87)
-    plt.close()
+        i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+        A = model.W.clone().detach()
+        A[i, i] = 0
+        A=A/100
 
-    fig = plt.figure(figsize=(8, 8))
-    ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.01, vmax=0.01)
-    plt.title(r'learned $W_{ij}$', fontsize=24);
-    plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
-    plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
-    plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/learned_matrix.tif", dpi=87)
-    plt.close()
+        fig = plt.figure(figsize=(8, 8))
+        gt_weight = to_numpy(adjacency)
+        pred_weight = to_numpy(A)
+        plt.scatter(gt_weight, pred_weight, s=0.1, c='k', alpha=0.1)
+        plt.xlabel(r'true $W_{ij}$', fontsize=24)
+        plt.ylabel(r'learned $W_{ij}$', fontsize=24)
+        plt.xlim([-0.25,0.25])
+        plt.ylim([-0.25,0.25])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/comparison_{epoch}.tif", dpi=87)
+        plt.close()
 
-    fig = plt.figure(figsize=(8, 8))
-    ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.01, vmax=0.01)
-    plt.title(r'true $W_{ij}$', fontsize=24);
-    plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
-    plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
-    plt.savefig(f"./{log_dir}/results/true_matrix.tif", dpi=87)
-    plt.tight_layout()
+        fig = plt.figure(figsize=(8, 8))
+        ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.01, vmax=0.01)
+        plt.title(r'learned $W_{ij}$', fontsize=24);
+        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/learned_matrix_{epoch}.tif", dpi=87)
+        plt.close()
+
+        fig = plt.figure(figsize=(8, 8))
+        ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.01, vmax=0.01)
+        plt.title(r'true $W_{ij}$', fontsize=24);
+        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+        plt.savefig(f"./{log_dir}/results/true_matrix.tif", dpi=87)
+        plt.tight_layout()
+
+    if has_siren_time:
+
+        os.makedirs(f'./{log_dir}/results/NNR/', exist_ok=True)
+
+        im = imread(f"graphs_data/{simulation_config.excitation_value_map}")
+        image_width = im.shape[1]
+        if has_siren_time:
+            model_exc = Siren_Network(image_width=image_width, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
+                                        hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.)
+        else:
+            model_exc = Siren_Network(image_width=image_width, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
+                                        hidden_layers=3, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.)
+        model_exc.to(device=device)
+
+        net = f'{log_dir}/models/best_model_exc_with_9_graphs_{epoch}.pt'
+        state_dict = torch.load(net,map_location=device)
+        model_exc.load_state_dict(state_dict['model_state_dict'])
+
+        for k in trange(0,im.shape[0]):
+
+            fig = plt.figure(figsize=(16, 8))
+            plt.subplot(1, 2, 1)
+            plt.imshow(im[k], cmap='gray',vmin=0,vmax=2)
+            plt.xticks([])
+            plt.yticks([])
+            plt.title('true excitation',fontsize=18)
+            plt.subplot(1, 2, 2)
+            excitation = model_exc(time=k / im.shape[0]) ** 2
+            tmp = excitation.clone().detach()
+            tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
+            tmp = to_numpy(tmp)
+            tmp = np.rot90(tmp, k=1)
+            plt.imshow(tmp, cmap='grey',vmin=0,vmax=2)
+            plt.xticks([])
+            plt.yticks([])
+            plt.title('learned excitation',fontsize=18)
+            plt.tight_layout()
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/NNR/NNR_{10000 + k}.tif", dpi=70)
+            plt.close()
 
 
+
+    files = []
 
     for epoch, net in enumerate (files):
 
@@ -4777,11 +4828,11 @@ if __name__ == '__main__':
     # config_list = ['signal_N_100_2_a']
     # config_list = ['boids_division_model_f2']
     # config_list = ["agents_e"]
-    config_list = ["signal_N2_hemibrain_3_r1_t"]
+    config_list = ["signal_N2_hemibrain_3_r2_v_siren"]
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['20_0'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['3'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

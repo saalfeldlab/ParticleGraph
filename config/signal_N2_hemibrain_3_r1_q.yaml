@@ -1,4 +1,4 @@
-description: 'Hemibrain learning rate 1e-4'
+description: 'Hemibrain test learning rate 1e-4 instead of 1e-3'
 dataset: 'signal_N2_hemibrain_3'
 
 simulation:

@@ -1,9 +1,9 @@
-description: 'Hemibrain learning rate 1e-5'
+description: 'Hemibrain test learning rate 1e-5 instead of 1e-3'
 dataset: 'signal_N2_hemibrain_3'
 
 simulation:
     connectivity_file: 'conn-eb-fb-pb-no.tif'
-    adjacency_matrix: ''
+    adjacency_matrix: 'sparse 20'
     connectivity_init: [0,0.1]
     params: [[10.0,1.0],[10.0,2.0]]
     phi: 'tanh'

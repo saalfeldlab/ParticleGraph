@@ -1,4 +1,4 @@
-description: 'Gravity model with 16 different particle types'
+description: 'synaptic network random matrix with recursive loop'
 dataset: 'signal_N2_a'
 
 simulation:

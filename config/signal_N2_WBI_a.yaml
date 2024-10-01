@@ -1,27 +1,32 @@
-description: 'Gravity model with 16 different particle types'
-dataset: 'signal_N_100_2_asym'
+description: 'Whole body imaging of zebrafish 80k cells 2k time points, repeat of previous training'
+dataset: 'signal_N2_WBI'
 
 simulation:
-    connectivity_file: 'graphs_data/adjacency_asym.pt'
-    adjacency_matrix: 'asymmetric'
-    params: [[0.1,0.2],[0.2,0.4]]
-    min_radius: 1.0
-    max_radius: 1.0E6
-    n_particles: 998
+    dimension: 3
+    fluo_path: '/groups/saalfeld/home/allierc/signaling/WBI/df_xtn_denoised_labelled_musclebrainreplaced_norm.h5'
+    connectivity_file: ''
+    adjacency_matrix: ''
+    connectivity_init: [0,0.1]
+    params: [[10.0,1.0],[10.0,2.0]]
+    phi: 'tanh'
+    tau: 1.0
+    min_radius: 0.0
+    max_radius: 100
+    n_particles: 86407
     n_particle_types: 2
     n_interactions: 2
-    n_frames: 1000
-    delta_t: 5.0E-3
+    n_frames: 1598
+    delta_t: 1
     dpos_init:  0
     boundary: 'no'
     start_frame: 0 # -1000
 
 graph_model:
-    signal_model_name: 'PDE_N'
+    signal_model_name: 'PDE_WBI'
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
-    input_size: 1
+    input_size: 5
     output_size: 1
     hidden_dim: 64
     n_mp_layers: 3
@@ -38,19 +43,17 @@ plotting:
 
 training:
     n_epochs: 20
-    recursive_loop: 2
+    recursive_loop: 1
     batch_size: 1
     small_init_batch_size: False
-    n_runs: 100
+    n_runs: 1
     large_range: False
-    learning_rate_start: 0.000001
-    learning_rate_end: 0.0000005
-    learning_rate_embedding_start: 0.0001
-    learning_rate_embedding_end: 0.0001
-    coeff_L1: 0.001
     sparsity: 'none'
+    sparsity_freq: 4
     data_augmentation: False
-    data_augmentation_loop: 100
+    data_augmentation_loop: 50
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'
+    seed: 42
+    coeff_L1: 1.0E-5

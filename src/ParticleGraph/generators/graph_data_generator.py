@@ -774,8 +774,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     # plt.title('g.msg')
 
 
-
-
         if (is_N2) & (run==0):
             plt.figure(figsize=(10, 3))
             plt.subplot(121)
