@@ -1,4 +1,6 @@
 
+from pysr import PySRRegressor
+
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FormatStrFormatter
 from torch_geometric.nn import MessagePassing

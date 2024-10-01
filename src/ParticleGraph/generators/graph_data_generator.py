@@ -870,6 +870,8 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
     dff = pd.read_hdf(filename, key="data")
     dff = dff.ffill().bfill().values
 
+    # X1 = pd.read_hdf(filename, key="coords").values
+
     if os.path.isfile(f'./graphs_data/graphs_{dataset_name}/X1.pt'):
         X1 = torch.load(f'./graphs_data/graphs_{dataset_name}/X1.pt', map_location=device)
     else:
@@ -977,7 +979,7 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
                     # pos=to_numpy(pos)
 
                     fig = plt.figure(figsize=(16, 8))
-                    plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 2]), s=10, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-2.5, vmax=2.5)
+                    plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 2]), s=20, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-2.5, vmax=2.5)
                     plt.colorbar()
                     plt.xticks([])
                     plt.yticks([])

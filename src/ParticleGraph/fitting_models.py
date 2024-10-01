@@ -1,4 +1,5 @@
-from pysr import PySRRegressor
+
+
 import torch
 import numpy as np
 from scipy.optimize import curve_fit

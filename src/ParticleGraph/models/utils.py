@@ -2,8 +2,7 @@ import matplotlib.pyplot as plt
 import torch
 import umap
 from matplotlib.ticker import FormatStrFormatter
-from ParticleGraph.models import Interaction_Particle, Interaction_Planet, Interaction_Planet2, Interaction_Agent, Interaction_Cell, Interaction_Particle_Field, Signal_Propagation, \
-    Signal_Propagation2, Signal_Propagation3, Signal_Propagation4, Mesh_Laplacian, Mesh_RPS
+from ParticleGraph.models import *
 from ParticleGraph.utils import *
 
 from GNN_particles_Ntype import *
@@ -931,6 +930,8 @@ def choose_training_model(model_config, device):
             pos = np.argwhere(e[0, :] - e[1, :] != 0)
             e = e[:, pos]
             model.edges = torch.tensor(e, dtype=torch.long, device=device)
+        case 'PDE_Cell_A' | 'PDE_Cell_B' | 'PDE_Cell_B_area' | 'PDE_Cell_A_area':
+            model = Interaction_Cell(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
     model_name = model_config.graph_model.mesh_model_name
     match model_name:
         case 'DiffMesh':
@@ -965,7 +966,11 @@ def choose_training_model(model_config, device):
         case 'PDE_N6':
             model = Signal_Propagation6(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
-  
+        case 'PDE_WBI':
+            from ParticleGraph.models import WBI_Communication
+            model = WBI_Communication(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
+            model.edges = []
+
     if model==[]:
         raise ValueError(f'Unknown model {model_name}')
 

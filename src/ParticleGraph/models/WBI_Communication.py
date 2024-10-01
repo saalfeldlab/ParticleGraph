@@ -52,11 +52,6 @@ class WBI_Communication(pyg.nn.MessagePassing):
 
         self.a = nn.Parameter(torch.ones((self.n_dataset,int(self.n_particles), self.embedding_dim), device=self.device, requires_grad=True, dtype=torch.float32))
 
-        self.W = nn.Parameter(torch.randn((int(self.n_particles),int(self.n_particles)), device=self.device, requires_grad=True, dtype=torch.float32))
-
-        self.mask = torch.ones((int(self.n_particles),int(self.n_particles)), device=self.device, requires_grad=False, dtype=torch.float32)
-        self.mask.fill_diagonal_(0)
-
 
     def forward(self, data=[], data_id=[], return_all=False, excitation=[]):
         self.data_id = data_id
@@ -64,12 +59,12 @@ class WBI_Communication(pyg.nn.MessagePassing):
 
         u = data.x[:, 6:7]    # Ca2 signal
         particle_id = to_numpy(x[:, 0])   # cell id
-        embedding = self.a[1, particle_id, :]   # latent vectors dim 2
+        embedding = self.a[0, particle_id, :]   # latent vectors dim 2
 
         msg = self.propagate(edge_index, u=u, embedding=embedding)   #calculate all messages, dimension N_cell * 1
 
         in_features = torch.cat([u, embedding], dim=1)
-        pred = self.lin_phi(in_features) + msg + excitation   # final update
+        pred = self.lin_phi(in_features) + msg #  + excitation   # final update
 
         return pred
 

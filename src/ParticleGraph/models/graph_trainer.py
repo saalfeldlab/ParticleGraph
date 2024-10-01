@@ -2707,13 +2707,12 @@ def data_train_WBI(config, config_file, erase, device):
 
     torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
     time.sleep(0.5)
-    print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
-    logger.info(f'vnorm ynorm: {to_numpy(vnorm)} {to_numpy(ynorm)}')
+    logger.info(f'ynorm: {to_numpy(ynorm)}')
 
     x = []
     y = []
 
-    print('Create models ...')
+    print('Create GNN model ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
     # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0_0.pt"
     # print(f'Loading existing model {net}...')
@@ -2744,13 +2743,10 @@ def data_train_WBI(config, config_file, erase, device):
     print(f'N particles: {n_particles} {len(torch.unique(type_list))} types')
     logger.info(f'N particles:  {n_particles} {len(torch.unique(type_list))} types')
 
-    if has_ghost:
-        ghosts_particles = Ghost_Particles(config, n_particles, vnorm, device)
-        optimizer_ghost_particles = torch.optim.Adam([ghosts_particles.ghost_pos], lr=1E-4)
-        mask_ghost = np.concatenate((np.ones(n_particles), np.zeros(config.training.n_ghosts)))
-        mask_ghost = np.tile(mask_ghost, batch_size)
-        mask_ghost = np.argwhere(mask_ghost == 1)
-        mask_ghost = mask_ghost[:, 0].astype(int)
+    print('Load local connectivity ...')
+    edges = torch.load(f'./graphs_data/graphs_{dataset_name}/edge_index.pt', map_location=device)
+    print('Local connectivity loaded ...')
+
 
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
@@ -2772,14 +2768,9 @@ def data_train_WBI(config, config_file, erase, device):
         total_loss = 0
         Niter = n_frames * data_augmentation_loop // batch_size
 
+        for N in trange(Niter):
 
-        for N in range(Niter):
-
-            phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
-            cos_phi = torch.cos(phi)
-            sin_phi = torch.sin(phi)
-
-            run = 1 + np.random.randint(n_runs - 1)
+            run = 0
 
             dataset_batch = []
             for batch in range(batch_size):
@@ -2788,22 +2779,6 @@ def data_train_WBI(config, config_file, erase, device):
 
                 x = x_list[run][k].clone().detach()
 
-                if has_ghost:
-                    x_ghost = ghosts_particles.get_pos(dataset_id=run, frame=k, bc_pos=bc_pos)
-                    if ghosts_particles.boids:
-                        distance = torch.sum(bc_dpos(x_ghost[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                        dist_np = to_numpy(distance)
-                        ind_np = torch.min(distance,axis=1)[1]
-                        x_ghost[:,3:5] = x[ind_np, 3:5].clone().detach()
-                    x = torch.cat((x, x_ghost), 0)
-
-                    with torch.no_grad():
-                        model.a[run,n_particles:n_particles+n_ghosts] = model.a[run,ghosts_particles.embedding_index].clone().detach()   # sample ghost embedding
-
-                distance = torch.sum(bc_dpos(x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
-                adj_t = ((distance < max_radius ** 2) & (distance > min_radius ** 2)).float() * 1
-                t = torch.Tensor([max_radius ** 2])
-                edges = adj_t.nonzero().t().contiguous()
                 dataset = data.Data(x=x[:, :], edge_index=edges)
                 dataset_batch.append(dataset)
 
@@ -2819,33 +2794,32 @@ def data_train_WBI(config, config_file, erase, device):
                     y[:, 0] = new_x
                     y[:, 1] = new_y
                 if batch == 0:
-                    y_batch = y[:, 0:2]
+                    y_batch = y[:, 0:1]
                 else:
-                    y_batch = torch.cat((y_batch, y[:, 0:2]), dim=0)
+                    y_batch = torch.cat((y_batch, y[:, 0:1]), dim=0)
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
             optimizer.zero_grad()
-            if has_ghost:
-                optimizer_ghost_particles.zero_grad()
 
             for batch in batch_loader:
-                pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi)
+                pred = model(batch, data_id=run)
 
-            if has_ghost:
-                loss = ((pred[mask_ghost] - y_batch)).norm(2)
-            else:
-                loss = (pred - y_batch).norm(2)
+            loss = (pred - y_batch).norm(2)
 
             loss.backward()
             optimizer.step()
 
             visualize_embedding = True
             if visualize_embedding & (((epoch < 30 ) & (N%(Niter//50) == 0)) | (N==0)):
-                plot_training(config=config, dataset_name=dataset_name, log_dir=log_dir,
-                              epoch=epoch, N=N, x=x, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
-                              index_particles=index_particles, n_particles=n_particles,
-                              n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
-                torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+                embedding = get_embedding(model.a, 0)
+                plt.scatter(embedding[:, 0], embedding[:, 1], s=1, c='k')
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=87)
+                plt.close()
+
+                # torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
             if has_ghost:
                 optimizer_ghost_particles.step()
