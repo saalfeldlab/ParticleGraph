@@ -64,7 +64,7 @@ training:
   batch_size: 1
   small_init_batch_size: False
   sub_batches: 4
-  n_runs: 1
+  n_runs: 2
   noise_level: 0
   sparsity: 'replace_embedding'
   cluster_method: 'distance_plot'

@@ -1051,7 +1051,7 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
 def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,
                        ratio=1, scenario='none', device=None, bSave=True):
     torch.random.fork_rng(devices=device)
-    torch.random.manual_seed(42)
+    torch.random.manual_seed(config.training.seed)
 
     simulation_config = config.simulation
     training_config = config.training
@@ -1666,22 +1666,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 man_track = np.int16(man_track)
                 np.savetxt(f'graphs_data/graphs_{dataset_name}/man_track.txt', man_track, fmt="%d", delimiter=" ",
                            newline="\n")
-
-    if bSave:
-        run = run + 1
-
-        torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
-        torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
-        torch.save(T1_list, f'graphs_data/graphs_{dataset_name}/T1_list_{run}.pt')
-        np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}', *edge_p_p_list)
-        if has_inert_model:
-            np.savez(f'graphs_data/graphs_{dataset_name}/vertices_pos_list_{run}', *vertices_pos_list)
-
-        torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
-        torch.save(CL1, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
-        torch.save(cell_death_rate, f'graphs_data/graphs_{dataset_name}/cell_death_rate.pt')
-        torch.save(DR1, f'graphs_data/graphs_{dataset_name}/cell_death_rate_distrib.pt')
-        torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
 
     for handler in logger.handlers[:]:
         handler.close()
