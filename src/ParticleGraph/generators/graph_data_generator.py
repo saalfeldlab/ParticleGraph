@@ -933,7 +933,7 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
         y_list = []
 
         # initialize particle and graph states
-        X1_, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
+        X1_, V1, T1_, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
 
         # if (is_N2) & (run == 0):
         #     H1[:,0] = X_[:, 0].clone().detach()
@@ -999,6 +999,18 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
 
 
         if (is_N2) & (run == 0):
+
+            fig = plt.figure(figsize=(16, 8))
+            plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 2]), s=10, c=to_numpy(T1[:, 0]), cmap='tab20', vmin=0,
+                        vmax=255)
+            plt.colorbar()
+            plt.xticks([])
+            plt.yticks([])
+            plt.tight_layout()
+            plt.savefig(f'graphs_data/graphs_{dataset_name}/type.png', dpi=300)
+            plt.close()
+
+
             plt.figure(figsize=(10, 3))
             plt.subplot(121)
             ax = sns.heatmap(to_numpy(X), center=0, cbar_kws={'fraction': 0.046})

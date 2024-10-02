@@ -69,7 +69,7 @@ if __name__ == '__main__':
     # config_list = ['signal_N2_hemibrain_3_r1_r']
     # config_list = ['signal_N2_a_r1']
 
-    config_list = ['signal_N2_WBI_small_a']
+    config_list = ['signal_N2_WBI_a','signal_N2_WBI_small_a']
 
 
     for config_file in config_list:
