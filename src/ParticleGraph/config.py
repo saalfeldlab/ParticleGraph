@@ -62,6 +62,7 @@ class SimulationConfig(BaseModel):
     start_frame: int = 0
     final_cell_mass: list[float] = [-1]
     mc_slope: list[float] = [-1]
+    kill_cell_leaving: bool = False
     has_fluo: bool = False
     fluo_path: str = ''
     fluo_method: str = 'padding'

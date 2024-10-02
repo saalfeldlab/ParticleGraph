@@ -1093,7 +1093,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
     logger.setLevel(logging.INFO)
     logger.info(config)
 
-    kill_cell_leaving = False
+    kill_cell_leaving = simulation_config.kill_cell_leaving
 
     for run in range(config.training.n_runs):
 
@@ -1718,7 +1718,7 @@ def data_generate_cell_from_fluo (config, visualize=True, run_vizualized=0, styl
     logger.setLevel(logging.INFO)
     logger.info(config)
 
-    kill_cell_leaving = False
+    kill_cell_leaving = simulation_config.kill_cell_leaving
 
     for run in range(config.training.n_runs-1):
 
