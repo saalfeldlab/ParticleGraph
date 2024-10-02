@@ -866,17 +866,22 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
     print(f'Loading data ...')
     filename = simulation_config.fluo_path
     dff = pd.read_hdf(filename, key="data")
+
+
+    if 'subdata' in simulation_config.fluo_path:
+        X1 = pd.read_hdf(filename, key="coords").values
+    if 'df_xtn_denoised_labelled_musclebrainreplaced_norm' in simulation_config.fluo_path:
+        X1 = h5.File('/groups/saalfeld/home/allierc/signaling/WBI/crops.h5', "r")["coords"][:]
+
+    T1 = dff.columns.get_level_values("cluster_id").values
+    T1 = T1[:, None]
     dff = dff.ffill().bfill().values
 
-    # X1 = pd.read_hdf(filename, key="coords").values
-
-    if os.path.isfile(f'./graphs_data/graphs_{dataset_name}/X1.pt'):
-        X1 = torch.load(f'./graphs_data/graphs_{dataset_name}/X1.pt', map_location=device)
-    else:
-        X1 = h5.File('/groups/saalfeld/home/allierc/signaling/WBI/crops.h5', "r")["coords"][:]
-        X1 = X1.T
-        X1 = torch.tensor(X1, dtype=torch.float32, device=device)
-        torch.save(X1, f'./graphs_data/graphs_{dataset_name}/X1.pt')
+    X1 = X1.T
+    X1 = torch.tensor(X1, dtype=torch.float32, device=device)
+    torch.save(X1, f'./graphs_data/graphs_{dataset_name}/X1.pt')
+    T1 = torch.tensor(T1, dtype=torch.float32, device=device)
+    torch.save(T1, f'./graphs_data/graphs_{dataset_name}/T1.pt')
     print('Data loaded ...')
 
 
@@ -893,8 +898,6 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
         edge_index = torch.tensor(edge_index, dtype=torch.int64, device=device)
         torch.save(edge_index, f'./graphs_data/graphs_{dataset_name}/edge_index.pt')
         print('Local connectivity calculated ...')
-
-
 
     # adjacency = torch.ones((n_particles, n_particles), dtype=torch.float32, device=device)
     # torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt')

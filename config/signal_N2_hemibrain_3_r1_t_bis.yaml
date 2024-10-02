@@ -1,32 +1,30 @@
-description: 'Whole body imaging of zebrafish 80k cells 2k time points'
-dataset: 'signal_N2_WBI'
+description: 'Hemibrain'
+dataset: 'signal_N2_hemibrain_3'
 
 simulation:
-    dimension: 3
-    fluo_path: '/groups/saalfeld/home/allierc/signaling/WBI/df_xtn_denoised_labelled_musclebrainreplaced_norm.h5'
-    connectivity_file: ''
+    connectivity_file: 'conn-eb-fb-pb-no.tif'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
     params: [[10.0,1.0],[10.0,2.0]]
     phi: 'tanh'
     tau: 1.0
-    min_radius: 0.0
-    max_radius: 100
-    n_particles: 86407
+    min_radius: 1.0
+    max_radius: 1.0E6
+    n_particles: 2964
     n_particle_types: 2
     n_interactions: 2
-    n_frames: 1598
-    delta_t: 1
+    n_frames: 10000
+    delta_t: 0.01
     dpos_init:  0
     boundary: 'no'
     start_frame: 0 # -1000
 
 graph_model:
-    signal_model_name: 'PDE_WBI'
+    signal_model_name: 'PDE_N3'
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
-    input_size: 5
+    input_size: 1
     output_size: 1
     hidden_dim: 64
     n_mp_layers: 3
@@ -44,14 +42,14 @@ plotting:
 training:
     n_epochs: 20
     recursive_loop: 1
-    batch_size: 1
+    batch_size: 16
     small_init_batch_size: False
-    n_runs: 1
+    n_runs: 10
     large_range: False
-    sparsity: 'none'
+    sparsity: 'replace_embedding_function'
     sparsity_freq: 4
     data_augmentation: False
-    data_augmentation_loop: 50
+    data_augmentation_loop: 500
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'
