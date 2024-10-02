@@ -3340,8 +3340,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.yticks([])
 
             plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{it}.tif", dpi=80) #170.7)
-            # plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{10000+it}.tif", dpi=42.675)
+            num = f"{it:06}"
+            plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{num}.tif", dpi=80) #170.7)
             plt.close()
 
             if has_ghost:

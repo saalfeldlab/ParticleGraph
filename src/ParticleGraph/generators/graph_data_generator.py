@@ -295,7 +295,8 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                             plt.xticks([])
                             plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{10000 + it}.tif", dpi=70)
+                        num = f"{it:06}"
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=70)
                         plt.close()
 
                     elif (model_config.particle_model_name == 'PDE_A') & (dimension == 3):
@@ -351,7 +352,6 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
 
                         num = f"{it:06}"
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80) # 170.7)
-                        # plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{10000+it}.tif", dpi=42.675)
                         plt.close()
 
         if bSave:
@@ -706,7 +706,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Viz/Viz_{run}_{10000 + it}.tif", dpi=70)
+                        num = f"{it:06}"
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Viz/Viz_{run}_{num}.tif", dpi=70)
                         plt.close()
 
                         fig = plt.figure(figsize=(8, 8))
@@ -720,7 +721,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Exc/Exc_{run}_{10000 + it}.tif", dpi=70)
+                        num = f"{it:06}"
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Exc/Exc_{run}_{num}.tif", dpi=70)
                         plt.close()
 
                         fig = plt.figure(figsize=(8, 8))
@@ -734,7 +736,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                         plt.xticks([])
                         plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Signal/Signal_{run}_{10000 + it}.tif", dpi=70)
+                        num = f"{it:06}"
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Signal/Signal_{run}_{num}.tif", dpi=70)
                         plt.close()
                     else:
                         fig = plt.figure(figsize=(8, 8))
@@ -748,7 +751,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                         plt.xticks(fontsize=18.0)
                         plt.yticks(fontsize=18.0)
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{10000 + it}.tif", dpi=70)
+                    num = f"{it:06}"
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=70)
                     plt.close()
 
                     # ax = fig.add_subplot(2, 2, 2)
@@ -988,7 +992,9 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{10000 + it}.tif", dpi=70)
+
+                    num = f"{it:06}"
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=70)
                     plt.close()
 
         if bSave:
@@ -2018,8 +2024,9 @@ def data_generate_mesh(config, visualize=True, run_vizualized=0, style='color', 
                         plt.yticks([])
 
                     plt.tight_layout()
-                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{it}.tif", dpi=170.7)
-                    # plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{10000+it}.tif", dpi=42.675)
+
+                    num = f"{it:06}"
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=170.7)
                     plt.close()
 
         if bSave:
