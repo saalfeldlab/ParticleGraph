@@ -11,7 +11,7 @@ from matplotlib.ticker import FormatStrFormatter
 from skimage.metrics import structural_similarity as ssim
 from torch_geometric.data import Data
 from torchvision.transforms import CenterCrop
-
+import gc
 
 def to_numpy(tensor: torch.Tensor) -> np.ndarray:
     """
@@ -395,3 +395,30 @@ def reparameterize(mu, logvar):
     std = torch.exp(0.5*logvar)
     eps = torch.randn_like(std)
     return eps.mul(std).add_(mu)
+
+
+def check_and_clear_memory(
+        device: str = None,
+        iteration_number: int = None,
+        every_n_iterations: int = 100,
+        memory_percentage_threshold: float = 0.6
+):
+    """
+    Check the memory usage of a GPU and clear the cache every n iterations or if it exceeds a certain threshold.
+    :param device: The device to check the memory usage for.
+    :param iteration_number: The current iteration number.
+    :param every_n_iterations: Clear the cache every n iterations.
+    :param memory_percentage_threshold: Percentage of memory usage that triggers a clearing.
+    """
+
+    if device and 'cuda' in device:
+        logger = logging.getLogger(__name__)
+
+        if (iteration_number % (10 * every_n_iterations) == 0):
+            logger.debug(f"Total allocated memory: {torch.cuda.memory_allocated(device) / 1024 ** 3:.2f} GB")
+            logger.debug(f"Total reserved memory:  {torch.cuda.memory_reserved(device) / 1024 ** 3:.2f} GB")
+
+        if (iteration_number % every_n_iterations == 0) or torch.cuda.memory_allocated(device) > memory_percentage_threshold * torch.cuda.get_device_properties(device).total_memory:
+            logger.debug("Memory usage is high. Calling garbage collector and clearing cache.")
+            gc.collect()
+            torch.cuda.empty_cache()

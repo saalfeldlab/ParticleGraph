@@ -59,11 +59,12 @@ plotting:
   ylim: [-1.0E-4,1.0E-4]
 
 training:
+  seed: 14
   n_epochs: 10
   batch_size: 1
   small_init_batch_size: False
   sub_batches: 4
-  n_runs: 2
+  n_runs: 1
   noise_level: 0
   sparsity: 'replace_embedding'
   cluster_method: 'distance_plot'

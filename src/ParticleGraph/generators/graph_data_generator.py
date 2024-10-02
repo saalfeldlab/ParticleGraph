@@ -325,6 +325,8 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                                         alpha=0.75)
                             plt.plot(x[inv_particle_dropout_mask, 2].detach().cpu().numpy(),
                                      x[inv_particle_dropout_mask, 1].detach().cpu().numpy(), '+', color='w')
+
+
                         plt.xlim([0, 1])
                         plt.ylim([0, 1])
                         if 'PDE_G' in model_config.particle_model_name:
@@ -346,7 +348,9 @@ def data_generate_particle(config, visualize=True, run_vizualized=0, style='colo
                             plt.xticks([])
                             plt.yticks([])
                         plt.tight_layout()
-                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{it}.tif", dpi=80) # 170.7)
+
+                        num = f"{it:06}"
+                        plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=80) # 170.7)
                         # plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{10000+it}.tif", dpi=42.675)
                         plt.close()
 
@@ -732,13 +736,12 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                         plt.tight_layout()
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/Signal/Signal_{run}_{10000 + it}.tif", dpi=70)
                         plt.close()
-
                     else:
                         fig = plt.figure(figsize=(8, 8))
                         plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=80, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-100,vmax=100)
                         # plt.colorbar()
-                        plt.xlim([-1750, 1750])
-                        plt.ylim([-1750, 1750])
+                        # plt.xlim([-1750, 1750])
+                        # plt.ylim([-1750, 1750])
                     if 'latex' in style:
                         plt.xlabel(r'$x$', fontsize=78)
                         plt.ylabel(r'$y$', fontsize=78)
@@ -1010,7 +1013,6 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
             plt.savefig(f'graphs_data/graphs_{dataset_name}/type.png', dpi=300)
             plt.close()
 
-
             plt.figure(figsize=(10, 3))
             plt.subplot(121)
             ax = sns.heatmap(to_numpy(X), center=0, cbar_kws={'fraction': 0.046})
@@ -1087,7 +1089,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
     kill_cell_leaving = False
 
-    for run in range(config.training.n_runs-1):
+    for run in range(config.training.n_runs):
 
         torch.cuda.empty_cache()
 
@@ -1489,8 +1491,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         else:
                             plt.scatter(to_numpy(X1[dead_cell[:, 0].squeeze(), 0]),
                                         to_numpy(X1[dead_cell[:, 0].squeeze(), 1]), s=2, color='k', alpha=0.5)
-                    plt.xlim([0, 1])
-                    plt.ylim([0, 1])
                     if 'latex' in style:
                         plt.xlabel(r'$x$', fontsize=78)
                         plt.ylabel(r'$y$', fontsize=78)
@@ -1505,9 +1505,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         plt.text(0, 1.05,
                                  f'frame {it}, {int(n_particles_alive)} alive particles ({int(n_particles_dead)} dead), {edge_index.shape[1]} edges  ',
                                  ha='left', va='top', transform=ax.transAxes, fontsize=16)
-                    else:
-                        plt.xticks([])
-                        plt.yticks([])
 
                     if 'cell_id' in style:
                         for i, txt in enumerate(to_numpy(N1.squeeze())):
@@ -1517,11 +1514,13 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                             else:
                                 plt.text(to_numpy(X1[i, 0]), to_numpy(X1[i, 1]), 1 + int(to_numpy(N1[i])),
                                      fontsize=8)  # (txt, (to_numpy(X1[i, 0]), to_numpy(X1[i, 1]), 0), fontsize=8)
-
+                    plt.xlim([-0.05, 1.05])
+                    plt.ylim([-0.05, 1.05])
+                    plt.xticks([])
+                    plt.yticks([])
                     plt.tight_layout()
 
                     num = f"{it:06}"
-
                     plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif",
                                 dpi=85.35)
                     plt.close()
@@ -1547,7 +1546,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         # sns.kdeplot(to_numpy(AR1[pos].squeeze()), fill=True, color=cmap.color(n), alpha=0.5)
                         # plt.hist(to_numpy(AR1[pos].squeeze()), bins=100, alpha=0.5)
                 plt.tight_layout()
-                plt.savefig(f"graphs_data/graphs_{dataset_name}/gen_{run}.jpg", dpi=170.7)
+                plt.savefig(f"graphs_data/graphs_{dataset_name}/gen_{run}.jpg", dpi=80)
                 plt.close()
 
 
