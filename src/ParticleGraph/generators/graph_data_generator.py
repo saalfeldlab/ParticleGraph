@@ -1520,8 +1520,8 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                             else:
                                 plt.text(to_numpy(X1[i, 0]), to_numpy(X1[i, 1]), 1 + int(to_numpy(N1[i])),
                                      fontsize=8)  # (txt, (to_numpy(X1[i, 0]), to_numpy(X1[i, 1]), 0), fontsize=8)
-                    plt.xlim([-0.05, 1.05])
-                    plt.ylim([-0.05, 1.05])
+                    plt.xlim([0, 1])
+                    plt.ylim([0, 1])
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()

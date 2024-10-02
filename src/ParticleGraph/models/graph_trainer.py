@@ -182,6 +182,8 @@ def data_train_particles(config, config_file, erase, device):
     Niter = n_frames * data_augmentation_loop // batch_size
     print(f'plot every {Niter // 50} iterations')
 
+    check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
+
     list_loss = []
     time.sleep(1)
     for epoch in range(n_epochs + 1):
@@ -270,6 +272,9 @@ def data_train_particles(config, config_file, erase, device):
                               index_particles=index_particles, n_particles=n_particles,
                               n_particle_types=n_particle_types, ynorm=ynorm, cmap=cmap, axis=True, device=device)
                 torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+
+            check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 50,
+                                   memory_percentage_threshold=0.6)
 
             if has_ghost:
                 optimizer_ghost_particles.step()
@@ -617,7 +622,6 @@ def data_train_cell(config, config_file, erase, device):
     data_augmentation = train_config.data_augmentation
     data_augmentation_loop = train_config.data_augmentation_loop
     target_batch_size = train_config.batch_size
-    do_sparsity = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
     if train_config.small_init_batch_size:
         get_batch_size = increasing_batch_size(target_batch_size)
@@ -742,6 +746,8 @@ def data_train_cell(config, config_file, erase, device):
     Niter = n_frames * data_augmentation_loop // batch_size
     print(f'plot every {Niter // 20} iterations')
 
+    check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
+
     list_loss = []
     time.sleep(1)
     for epoch in range(2, n_epochs + 1):
@@ -836,10 +842,9 @@ def data_train_cell(config, config_file, erase, device):
                               epoch=epoch, N=N, model=model, n_particle_types=n_particle_types, type_list=T1_list[1], ynorm=ynorm, cmap=cmap, device=device)
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
-                t, r, a = get_gpu_memory_map(device)
-                logger.info(f"GPU memory: total {t} reserved {r} allocated {a}")
 
-
+            check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 20,
+                                   memory_percentage_threshold=0.6)
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
@@ -849,7 +854,7 @@ def data_train_cell(config, config_file, erase, device):
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
-        if (do_sparsity) and (epoch == 2):
+        if 'replace' in train_config.sparsity:
 
             fig, ax = fig_init()
             func_list, true_type_list, short_model_a_list, proj_interaction = analyze_edge_function_state(rr=[],

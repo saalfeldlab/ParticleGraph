@@ -4519,8 +4519,8 @@ def data_plot(config, config_file, epoch_list, device):
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/loss_{config_file}.tif", dpi=170.7)
         plt.close()
-        print('final loss {:.3e}'.format(loss[-1]))
-        logger.info('final loss {:.3e}'.format(loss[-1]))
+        # print('final loss {:.3e}'.format(loss[-1]))
+        # logger.info('final loss {:.3e}'.format(loss[-1]))
 
     match config.graph_model.particle_model_name:
         case 'PDE_Agents_A' | 'PDE_Agents_B':
@@ -4828,11 +4828,11 @@ if __name__ == '__main__':
     # config_list = ['signal_N_100_2_a']
     # config_list = ['boids_division_model_f2']
     # config_list = ["agents_e"]
-    config_list = ["signal_N2_hemibrain_3_r2_v_siren"]
+    config_list = ["signal_N2_hemibrain_3_r1_t_bis"]
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['3'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['2_0'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
