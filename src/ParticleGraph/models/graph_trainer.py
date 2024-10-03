@@ -2063,7 +2063,7 @@ def data_train_synaptic(config, config_file, erase, device):
         print(f'Niter = {Niter}')
         logger.info(f'Niter = {Niter}')
 
-        for N in trange(Niter):
+        for N in range(Niter):
 
             run = 1 + np.random.randint(n_runs - 1)
             k = np.random.randint(n_frames - 6)

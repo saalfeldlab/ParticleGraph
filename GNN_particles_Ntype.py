@@ -68,7 +68,7 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N2_hemibrain_3_r1_t_ter']
 
-    config_list = ['signal_N2_i_r1','signal_N2_j_r1','signal_N2_k_r1', 'signal_N2_l_r1']
+    # config_list = ['signal_N2_i_r1','signal_N2_j_r1','signal_N2_k_r1', 'signal_N2_l_r1']
     # config_list = ['signal_N2_WBI_small_a']
 
 
@@ -77,6 +77,6 @@ if __name__ == '__main__':
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         device = set_device(config.training.device)
         # print(f'device {device}')
-        data_generate(config, device=device, visualize=False, run_vizualized=0, style='color inv cell_id', alpha=1, erase=False, bSave=True, step=1) #config.simulation.n_frames // 100)
-        # data_train(config, config_file, True, device)
+        # data_generate(config, device=device, visualize=False, run_vizualized=0, style='color inv cell_id', alpha=1, erase=False, bSave=True, step=1) #config.simulation.n_frames // 100)
+        data_train(config, config_file, True, device)
         # data_test(config=config, config_file=config_file, visualize=True, style='color', verbose=False, best_model='1', run=0, step=25, test_simulation=True, sample_embedding=False, device=device)    # config.simulation.n_frames // 7

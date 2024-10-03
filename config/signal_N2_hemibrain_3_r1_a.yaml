@@ -20,7 +20,7 @@ simulation:
     start_frame: 0 # -1000
 
 graph_model:
-    signal_model_name: 'PDE_N2'
+    signal_model_name: 'PDE_N3'
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
@@ -40,13 +40,14 @@ plotting:
     arrow_length: 1
 
 training:
-    n_epochs: 10
+    n_epochs: 20
     recursive_loop: 1
     batch_size: 16
     small_init_batch_size: False
     n_runs: 10
     large_range: False
-    sparsity: 'none'
+    sparsity: 'replace_embedding_function'
+    sparsity_freq: 4
     data_augmentation: False
     data_augmentation_loop: 500
     cluster_method: 'distance_plot'
