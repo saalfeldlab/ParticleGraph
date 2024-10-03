@@ -31,6 +31,7 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
     has_fluo = config.simulation.has_fluo
     has_WBI = 'WBI' in config.dataset
     dataset_name = config.dataset
+
     print('')
     print(f'dataset_name: {dataset_name}')
 
@@ -512,7 +513,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     elif 'random' in simulation_config.connectivity_file:
 
         adjacency = torch.randn((n_particles, n_particles), dtype=torch.float32, device=device)
-        torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt')
 
         i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
         adjacency[i, i] = 0
@@ -522,6 +522,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             adjacency[mask] = 0
 
         adjacency = adjacency / torch.max(adjacency)
+
+        torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt')
 
         adj_t = torch.abs(adjacency) > 0
         edge_index = adj_t.nonzero().t().contiguous()
@@ -902,12 +904,16 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
         print('Local connectivity loaded ...')
     else:
         print('Calculate local connectivity ...')
-        pos = to_numpy(X1)
-        distance = np.sum((pos[:, None, :] - pos[None, :, :]) ** 2, axis=2)
-        distance = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
-        edge_index = np.array(distance.nonzero())
-        edge_index = torch.tensor(edge_index, dtype=torch.int64, device=device)
-        torch.save(edge_index, f'./graphs_data/graphs_{dataset_name}/edge_index.pt')
+
+        if config.simulation.connectivity_type == 'distance':
+
+            pos = to_numpy(X1)
+            distance = np.sum((pos[:, None, :] - pos[None, :, :]) ** 2, axis=2)
+            distance = ((distance < max_radius ** 2) & (distance > min_radius ** 2)) * 1.0
+            edge_index = np.array(distance.nonzero())
+            edge_index = torch.tensor(edge_index, dtype=torch.int64, device=device)
+            torch.save(edge_index, f'./graphs_data/graphs_{dataset_name}/edge_index.pt')
+
         print('Local connectivity calculated ...')
 
     # adjacency = torch.ones((n_particles, n_particles), dtype=torch.float32, device=device)
