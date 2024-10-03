@@ -597,7 +597,7 @@ def plot_training_cell_tracking(config, id_list, dataset_name, log_dir, epoch, N
     plt.xticks(fontsize=32.0)
     plt.yticks(fontsize=32.0)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif",dpi=87)
+    plt.savefig(f"./{log_dir}/tmp_training/function/lin_phi/{dataset_name}_{epoch}_{N}.tif",dpi=87)
     plt.close()
 
 def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, n_particle_types, type_list, ynorm, cmap, device):

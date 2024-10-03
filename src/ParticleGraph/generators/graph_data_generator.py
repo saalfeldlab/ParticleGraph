@@ -515,8 +515,12 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt')
 
         i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-        # adjacency[i,j] = adjacency[j,i]
         adjacency[i, i] = 0
+
+        if simulation_config.connectivity_filling_factor != 1:
+            mask = torch.rand(adjacency.shape) >  simulation_config.connectivity_filling_factor
+            adjacency[mask] = 0
+
         adjacency = adjacency / torch.max(adjacency)
 
         adj_t = torch.abs(adjacency) > 0
