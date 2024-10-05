@@ -1143,6 +1143,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         12 DR1 cell death rate dim=1
         13 MC1 mass coefficient of the cell (relation between velocity and mass)
         14 AR1 area of the cell
+        15 P1 cell perimeter
         '''
 
         if run == 0:
@@ -1207,7 +1208,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     man_track[to_numpy(N1[pos]).astype(int), 2] = it - 1
                 n_particles_alive = torch.sum(H1[:, 0])
                 n_particles_dead = n_particles - n_particles_alive
-
 
             if (it > 0) & (has_cell_division):
 
