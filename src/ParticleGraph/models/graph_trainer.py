@@ -198,7 +198,6 @@ def data_train_particle(config, config_file, erase, device):
         total_loss = 0
         Niter = n_frames * data_augmentation_loop // batch_size
 
-
         for N in range(Niter):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
@@ -706,7 +705,6 @@ def data_train_cell(config, config_file, erase, device):
             n_particles_max += len(type)
         config.simulation.n_particles_max = n_particles_max
 
-
     x = []
     y = []
 
@@ -796,6 +794,7 @@ def data_train_cell(config, config_file, erase, device):
 
             for i, batch in enumerate(batch_loader):
                 pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=True, frame=frame_list[i])
+
             if data_augmentation:
                 new_x = cos_phi * pred[:, 0] - sin_phi * pred[:, 1]
                 new_y = sin_phi * pred[:, 0] + cos_phi * pred[:, 1]

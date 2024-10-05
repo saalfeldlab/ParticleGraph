@@ -269,7 +269,7 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dat
             plt.ylim([-1E-4, 1E-4])
 
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/function/{model_name}_{dataset_name}_function_{epoch}_{N}.tif", dpi=170.7)
+    plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/{model_name}_{dataset_name}_function_{epoch}_{N}.tif", dpi=170.7)
     plt.close()
 
     fig = plt.figure(figsize=(12, 12))
@@ -399,7 +399,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 # plt.xlim([-10, 4])
                 # plt.ylim([-10, 4])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/function/func_{dataset_name}_{epoch}_{N}.tif", dpi=87)
+                plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/func_{dataset_name}_{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
             case 'PDE_B' | 'PDE_ParticleField_B':
@@ -438,7 +438,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 plt.xticks(fontsize=32.0)
                 plt.yticks(fontsize=32.0)
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_function_{epoch}_{N}.tif",dpi=170.7)
+                plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/{dataset_name}_function_{epoch}_{N}.tif",dpi=170.7)
                 plt.close()
 
             case 'PDE_G':
@@ -472,7 +472,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 plt.xlim([0, 0.02])
                 plt.ylim([0, 0.5E6])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
+                plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
             case 'PDE_A'| 'PDE_A_bis' | 'PDE_ParticleField_A' | 'PDE_E':
@@ -528,7 +528,7 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 if not (do_tracking):
                     plt.ylim(config.plotting.ylim)
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
+                plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
 def plot_training_cell_tracking(config, id_list, dataset_name, log_dir, epoch, N, model, n_particle_types, type_list, ynorm, cmap, device):
@@ -597,7 +597,7 @@ def plot_training_cell_tracking(config, id_list, dataset_name, log_dir, epoch, N
     plt.xticks(fontsize=32.0)
     plt.yticks(fontsize=32.0)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/function/lin_phi/{dataset_name}_{epoch}_{N}.tif",dpi=87)
+    plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/{dataset_name}_{epoch}_{N}.tif",dpi=87)
     plt.close()
 
 def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, n_particle_types, type_list, ynorm, cmap, device):
@@ -665,7 +665,7 @@ def plot_training_cell(config, dataset_name, log_dir, epoch, N, model, n_particl
     plt.xticks(fontsize=32.0)
     plt.yticks(fontsize=32.0)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/tmp_training/function/{dataset_name}_{epoch}_{N}.tif",dpi=87)
+    plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/{dataset_name}_{epoch}_{N}.tif",dpi=87)
     plt.close()
 
 def analyze_edge_function_tracking(rr=[], vizualize=False, config=None, model_MLP=[], model_a=None, n_particles=None, ynorm=None, indexes=None, type_list=None, cmap=None, dimension=2, embedding_type=0, device=None):

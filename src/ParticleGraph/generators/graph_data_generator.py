@@ -1396,20 +1396,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             else:
                 y_voronoi = bc_dpos(X1 - first_X1) / delta_t * simulation_config.cell_inert_model_coeff
 
-            if (it) % 100 == 0:
-                t, r, a = get_gpu_memory_map(device)
-                logger.info(f"GPU memory: total {t} reserved {r} allocated {a}")
-                logger.info(f'{x.shape[0]} particles,  {edge_index.shape[1]} edges, max_radius: {np.round(max_radius, 3)}')
-                memory_usage_x_list=0
-                memory_usage_edge_list=0
-                for n in range(len(x_list)):
-                    memory_usage_x_list += x_list[n].element_size() * x_list[n].nelement()
-                    memory_usage_edge_list += edge_p_p_list[n].nbytes
-                logger.info(f'memory usage x_list: {memory_usage_x_list/1E6} MB, memory usage edge_list: {memory_usage_edge_list/1E6} MB')
-                print(f"GPU memory: total {t} reserved {r} allocated {a}")
-                print(f'{x.shape[0]} particles,  {edge_index.shape[1]} edges, max_radius: {np.round(max_radius, 3)}')
-                print(f'memory usage x_list: {memory_usage_x_list/1E6} MB, memory usage edge_list: {memory_usage_edge_list/1E6} MB')
-
             # append list
             if (it >= 0):
                 x_list.append(x)
