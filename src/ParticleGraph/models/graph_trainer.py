@@ -68,10 +68,10 @@ def data_train(config, config_file, erase, device):
     elif 'PDE_GS' in config.graph_model.particle_model_name:
         data_solar_system(config, config_file, erase, device)
     else:
-        data_train_particles(config, config_file, erase, device)
+        data_train_particle(config, config_file, erase, device)
 
 
-def data_train_particles(config, config_file, erase, device):
+def data_train_particle(config, config_file, erase, device):
 
     simulation_config = config.simulation
     train_config = config.training
