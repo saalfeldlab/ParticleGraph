@@ -102,7 +102,7 @@ class Interaction_Cell(pyg.nn.MessagePassing):
             particle_id = x[:, -1][:, None]
             if self.use_hot_encoding:
                 # embedding = self.cc.clone().detach() + torch.matmul(self.a[to_numpy(particle_id), :], self.basis.clone().detach()).squeeze()
-                embedding = torch.matmul(torch.sigmoid((self.a[to_numpy(particle_id), :]-0.5)*2), self.b.clone().detach()).squeeze()
+                embedding = torch.matmul(torch.sigmoid((self.a[to_numpy(particle_id), :]-0.5)*10), self.b.clone().detach()).squeeze()
             else:
                 embedding = self.a[to_numpy(particle_id), :].squeeze()
         else:

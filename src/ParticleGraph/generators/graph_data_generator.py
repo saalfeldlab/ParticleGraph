@@ -1350,7 +1350,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 result = distance.min(dim=1)
                 index = result.indices
                 cc = cc[index]
-                # tri = tri[index]
 
                 voronoi_area = get_voronoi_areas(cc, vertices_per_cell, device)
                 perimeter = get_voronoi_perimeters(cc, vertices_per_cell, device)
@@ -1358,8 +1357,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 P1 = perimeter[:,None].clone().detach()
 
                 loss = simulation_config.coeff_area * (target_areas - voronoi_area).norm(2)
-                if simulation_config.coeff_perimeter>0:
-                    loss += simulation_config.coeff_perimeter * torch.sum(perimeter**2)
+                loss += simulation_config.coeff_perimeter * torch.sum(perimeter**2)
 
                 loss.backward()
                 optimizer.step()

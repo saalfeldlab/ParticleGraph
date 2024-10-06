@@ -562,7 +562,7 @@ def plot_training_cell_tracking(config, id_list, dataset_name, log_dir, epoch, N
     for k in range(1,len(type_list), 10):
         for n in range(1,len(type_list[k]),10):
                 if model.use_hot_encoding:
-                    embedding_ = torch.matmul(torch.sigmoid((model.a[to_numpy(id_list[k][n]).astype(int)] - 0.5) * 2), model.b.clone().detach()).squeeze()
+                    embedding_ = torch.matmul(torch.sigmoid((model.a[to_numpy(id_list[k][n]).astype(int)] - 0.5) * 10), model.b.clone().detach()).squeeze()
                 else:
                     embedding_ = model.a[to_numpy(id_list[k][n]).astype(int)]
                 embedding_ = embedding_ * torch.ones((1000, model_config.embedding_dim), device=device)
@@ -739,7 +739,6 @@ def analyze_edge_function_tracking(rr=[], vizualize=False, config=None, model_ML
 def analyze_edge_function_state(rr=[], config=None, model=None, id_list=None, type_list=None, cmap=None, ynorm=None, visualize=False, device=None):
 
     max_radius = config.simulation.max_radius
-    state_hot_encoding = config.training.state_hot_encoding
 
     if config.graph_model.particle_model_name != '':
         config_model = config.graph_model.particle_model_name
@@ -756,7 +755,7 @@ def analyze_edge_function_state(rr=[], config=None, model=None, id_list=None, ty
         for n in range(1,len(type_list[k]),10):
                 short_model_a_list.append(model.a[to_numpy(id_list[k][n]).astype(int)])
                 if config.training.use_hot_encoding:
-                    embedding_ = torch.matmul(torch.sigmoid((model.a[to_numpy(id_list[k][n]).astype(int)] - 0.5) * 2), model.b.clone().detach()).squeeze()
+                    embedding_ = torch.matmul(torch.sigmoid((model.a[to_numpy(id_list[k][n]).astype(int)] - 0.5) * 10), model.b.clone().detach()).squeeze()
                 else:
                     embedding_ = model.a[to_numpy(id_list[k][n]).astype(int)]
                 embedding_ = embedding_ * torch.ones((1000, config.simulation.dimension), device=device)

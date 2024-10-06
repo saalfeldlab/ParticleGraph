@@ -621,6 +621,7 @@ def data_train_cell(config, config_file, erase, device):
     data_augmentation = train_config.data_augmentation
     data_augmentation_loop = train_config.data_augmentation_loop
     target_batch_size = train_config.batch_size
+    replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
     if train_config.small_init_batch_size:
         get_batch_size = increasing_batch_size(target_batch_size)
@@ -710,9 +711,9 @@ def data_train_cell(config, config_file, erase, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0.pt"
-    state_dict = torch.load(net,map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
+    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0.pt"
+    # state_dict = torch.load(net,map_location=device)
+    # model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -852,51 +853,63 @@ def data_train_cell(config, config_file, erase, device):
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
-        if 'replace' in train_config.sparsity:
 
-            fig, ax = fig_init()
-            func_list, true_type_list, short_model_a_list, proj_interaction = analyze_edge_function_state(rr=[],
-                                                                                                          config=config,
-                                                                                                          model=model,
-                                                                                                          id_list=id_list,
-                                                                                                          type_list=type_list,
-                                                                                                          ynorm=ynorm,
-                                                                                                          cmap=cmap,
-                                                                                                          visualize=True,
-                                                                                                          device=device)
+        func_list, true_type_list, short_model_a_list, proj_interaction = analyze_edge_function_state(rr=[],
+                                                                                                      config=config,
+                                                                                                      model=model,
+                                                                                                      id_list=id_list,
+                                                                                                      type_list=type_list,
+                                                                                                      ynorm=ynorm,
+                                                                                                      cmap=cmap,
+                                                                                                      visualize=False,
+                                                                                                      device=device)
 
-            embedding = proj_interaction
-            labels, n_clusters, new_labels = sparsify_cluster_state(config.training.cluster_method,
-                                                                    proj_interaction, embedding,
-                                                                    config.training.cluster_distance_threshold,
-                                                                    true_type_list,
-                                                                    n_particle_types, embedding_cluster)
+        embedding = proj_interaction
+        labels, n_clusters, new_labels = sparsify_cluster_state(config.training.cluster_method,
+                                                                proj_interaction, embedding,
+                                                                config.training.cluster_distance_threshold,
+                                                                true_type_list,
+                                                                n_particle_types, embedding_cluster)
 
-            median_center_list = []
-            for n in range(n_clusters):
-                pos = np.argwhere(new_labels == n).squeeze().astype(int)
-                pos = np.array(pos)
-                if pos.size > 0:
-                    median_center = short_model_a_list[pos, :]
-                    plt.scatter(to_numpy(short_model_a_list[pos, 0]), to_numpy(short_model_a_list[pos, 1]))
-                    median_center = torch.mean(median_center, dim=0)
-                    plt.scatter(to_numpy(median_center[0]), to_numpy(median_center[1]), s=100, color='black')
-                    median_center_list.append(median_center)
-            median_center_list = torch.stack(median_center_list)
-            median_center_list = median_center_list.to(dtype=torch.float32)
+        median_center_list = []
+        for n in range(n_clusters):
+            pos = np.argwhere(new_labels == n).squeeze().astype(int)
+            pos = np.array(pos)
+            if pos.size > 0:
+                median_center = short_model_a_list[pos, :]
+                median_center = torch.mean(median_center, dim=0)
+                median_center_list.append(median_center)
+        median_center_list = torch.stack(median_center_list)
+        median_center_list = median_center_list.to(dtype=torch.float32)
 
-            distance = torch.sum((model.a[:, None, :] - median_center_list[None, :, :]) ** 2, dim=2)
-            result = distance.min(dim=1)
-            min_index = result.indices
+        distance = torch.sum((model.a[:, None, :] - median_center_list[None, :, :]) ** 2, dim=2)
+        result = distance.min(dim=1)
+        min_index = result.indices
+        new_labels = to_numpy(min_index).astype(int)
 
-            new_labels = to_numpy(min_index).astype(int)
+        type_stack = torch.stack(x_list[1])[:, :, 5]
+        type_stack = torch.reshape(type_stack, ((n_frames + 1) * n_particles, 1))
+        accuracy = metrics.accuracy_score(to_numpy(type_stack.squeeze()), new_labels)
 
-            type_stack = torch.stack(x_list[1])[:, :, 5]
-            type_stack = torch.reshape(type_stack, ((n_frames + 1) * n_particles, 1))
-            accuracy = metrics.accuracy_score(to_numpy(type_stack.squeeze()), new_labels)
+        logger.info(f'accuracy {accuracy:0.2f} n_clusters {n_clusters}')
+        print(f'accuracy {accuracy:0.2f} n_clusters {n_clusters}')
 
-            logger.info(f'accuracy {accuracy:0.2f} n_clusters {n_clusters}')
-            print(f'accuracy {accuracy:0.2f} n_clusters {n_clusters}')
+        if (replace_with_cluster) & (epoch % sparsity_freq == sparsity_freq - 1) & (epoch < n_epochs - sparsity_freq):
+            # Constrain embedding domain
+            hot_vectors = F.one_hot(torch.tensor(new_labels), n_clusters).float()
+            hot_vectors = hot_vectors.to(device)
+            embedding = to_numpy(torch.matmul(hot_vectors, median_center_list))
+            model.a = nn.Parameter(torch.tensor(embedding, dtype=torch.float32, requires_grad=True, device=device))
+            print(f'regul_embedding: replaced')
+            logger.info(f'regul_embedding: replaced')
+
+        lr_embedding = train_config.learning_rate_embedding_start
+        lr = train_config.learning_rate_start
+        optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+        logger.info(f'Learning rates: {lr}, {lr_embedding}')
+
+
+        if False:
 
             y_func_list = []
             fig, ax = fig_init()
@@ -918,8 +931,6 @@ def data_train_cell(config, config_file, erase, device):
             #     model_b.append(b)
             # model_b = np.array(model_b)
             # model.b = nn.Parameter(torch.tensor(model_b, dtype=torch.float32, requires_grad=True, device=device))
-
-            config.training.use_hot_encoding = True
 
             median_center_list = to_numpy(median_center_list)
             model.b = nn.Parameter(torch.tensor(median_center_list, dtype=torch.float32, requires_grad=False, device=device))
@@ -962,7 +973,7 @@ def data_train_cell(config, config_file, erase, device):
             fig, ax = fig_init()
             for n in range(sub_loops):
                 c = model.b[index_list[n]]
-                c = c + 0.1 * torch.randn_like(c, device=device)
+                c = c + 0.5 * torch.randn_like(c, device=device)
                 embedding_ = c * torch.ones((1000,  model.b.shape[1]), device=device)
                 in_features = torch.cat(
                     (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
@@ -974,37 +985,21 @@ def data_train_cell(config, config_file, erase, device):
 
             hot_vectors = F.one_hot(torch.tensor(new_labels), n_particle_types)
             hot_vectors = to_numpy(hot_vectors)
-            hot_vectors = hot_vectors + 0.1 * np.random.randn(hot_vectors.shape[0], hot_vectors.shape[1])
+            hot_vectors = hot_vectors # + 0.1 * np.random.randn(hot_vectors.shape[0], hot_vectors.shape[1])
             model.a = nn.Parameter(torch.tensor(hot_vectors, dtype=torch.float32, requires_grad=True, device=device))
-            embedding = torch.matmul(torch.sigmoid((model.a-0.5)*2), model.b)
+            embedding = torch.matmul(torch.sigmoid((model.a-0.5)*10), model.b)
             model.use_hot_encoding = True
 
             fig, ax = fig_init()
             for k in trange(3):
                 pos = np.argwhere(new_labels == k).squeeze().astype(int)
-                plt.scatter(to_numpy(embedding[pos, 0]), to_numpy(embedding[pos, 1]), s=1, alpha=0.01)
-            plt.scatter(to_numpy(model.b[:, 0]), to_numpy(model.b[:, 1]), s=100, c='k')
+                plt.scatter(to_numpy(embedding[pos, 0]), to_numpy(embedding[pos, 1]), s=20, alpha=0.01)
+            plt.scatter(to_numpy(model.b[:, 0]), to_numpy(model.b[:, 1]), s=20, c='k')
             plt.savefig(f"./{log_dir}/tmp_training/hot encoding.tif")
             plt.close()
 
-            sub_loops = 1000
-            index_list = np.random.randint(0, 3, sub_loops)
-            optimizer.zero_grad()
-            fig, ax = fig_init()
-            for n in trange(sub_loops):
-                c = model.b[index_list[n]]
-                c = c + 0.1 * torch.randn_like(c, device=device)
-                embedding_ = c * torch.ones((1000, model.b.shape[1]), device=device)
-                in_features = torch.cat(
-                    (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
-                     rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
-                pred_ = model.lin_edge(in_features.float())
-                plt.scatter(to_numpy(rr), to_numpy(pred_[:,0]), color=cmap.color(index_list[n]), linewidths=0.1, alpha=0.01)
-            plt.savefig(f"./{log_dir}/tmp_training/check re-trained MLP.tif")
-            plt.close()
-
-            lr = train_config.learning_rate_start / 10
-            lr_embedding = train_config.learning_rate_embedding_start / 100
+            lr = train_config.learning_rate_start / 1E3
+            lr_embedding = train_config.learning_rate_embedding_start
             optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
 
 
