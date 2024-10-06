@@ -543,7 +543,7 @@ def plot_training_cell_tracking(config, id_list, dataset_name, log_dir, epoch, N
             pos =torch.argwhere(type_list[k] == n)
             if len(pos) > 0:
                 if model.use_hot_encoding:
-                    embedding = to_numpy(model.cc + torch.matmul(model.a[to_numpy(id_list[k][pos]).astype(int), :], model.basis).squeeze())
+                    embedding = to_numpy(torch.matmul(torch.sigmoid((model.a[to_numpy(id_list[k][pos]).astype(int), :]-0.5)*2), model.b).squeeze())
                 else:
                     embedding = to_numpy(model.a[to_numpy(id_list[k][pos]).astype(int)].squeeze())
                 plt.scatter(embedding[:, 0], embedding[:, 1], s=1, color=cmap.color(n), alpha=0.5)
@@ -562,7 +562,7 @@ def plot_training_cell_tracking(config, id_list, dataset_name, log_dir, epoch, N
     for k in range(1,len(type_list), 10):
         for n in range(1,len(type_list[k]),10):
                 if model.use_hot_encoding:
-                    embedding_ = model.cc + torch.matmul(model.a[to_numpy(id_list[k][n]).astype(int), :], model.basis).squeeze()
+                    embedding_ = torch.matmul(torch.sigmoid((model.a[to_numpy(id_list[k][n]).astype(int)] - 0.5) * 2), model.b.clone().detach()).squeeze()
                 else:
                     embedding_ = model.a[to_numpy(id_list[k][n]).astype(int)]
                 embedding_ = embedding_ * torch.ones((1000, model_config.embedding_dim), device=device)
@@ -756,7 +756,7 @@ def analyze_edge_function_state(rr=[], config=None, model=None, id_list=None, ty
         for n in range(1,len(type_list[k]),10):
                 short_model_a_list.append(model.a[to_numpy(id_list[k][n]).astype(int)])
                 if config.training.use_hot_encoding:
-                    embedding_ = model.cc + torch.matmul(model.a[to_numpy(id_list[k][n]).astype(int), :], model.basis).squeeze()
+                    embedding_ = torch.matmul(torch.sigmoid((model.a[to_numpy(id_list[k][n]).astype(int)] - 0.5) * 2), model.b.clone().detach()).squeeze()
                 else:
                     embedding_ = model.a[to_numpy(id_list[k][n]).astype(int)]
                 embedding_ = embedding_ * torch.ones((1000, config.simulation.dimension), device=device)

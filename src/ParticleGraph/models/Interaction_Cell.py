@@ -75,7 +75,7 @@ class Interaction_Cell(pyg.nn.MessagePassing):
         if self.use_hot_encoding:
             self.cc = nn.Parameter(torch.tensor(np.zeros((self.embedding_dim)), device=self.device, requires_grad=False, dtype=torch.float32))
             self.b = nn.Parameter(torch.tensor(np.zeros((self.n_particle_types, self.embedding_dim)), device=self.device, requires_grad=False, dtype=torch.float32))
-            self.basis = nn.Parameter(torch.tensor(np.zeros((self.n_particle_types, self.embedding_dim)), device=self.device, requires_grad=False, dtype=torch.float32))
+            # self.basis = nn.Parameter(torch.tensor(np.zeros((self.n_particle_types, self.embedding_dim)), device=self.device, requires_grad=False, dtype=torch.float32))
 
 
     def forward(self, data=[], data_id=[], training=[], vnorm=[], phi=[], has_field=False, frame=[]):
@@ -101,7 +101,8 @@ class Interaction_Cell(pyg.nn.MessagePassing):
         if self.do_tracking | self.has_state:
             particle_id = x[:, -1][:, None]
             if self.use_hot_encoding:
-                embedding = self.cc.clone().detach() + torch.matmul(self.a[to_numpy(particle_id), :], self.basis.clone().detach()).squeeze()
+                # embedding = self.cc.clone().detach() + torch.matmul(self.a[to_numpy(particle_id), :], self.basis.clone().detach()).squeeze()
+                embedding = torch.matmul(torch.sigmoid((self.a[to_numpy(particle_id), :]-0.5)*2), self.b.clone().detach()).squeeze()
             else:
                 embedding = self.a[to_numpy(particle_id), :].squeeze()
         else:

@@ -710,9 +710,9 @@ def data_train_cell(config, config_file, erase, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_2_6240.pt"
-    # state_dict = torch.load(net,map_location=device)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0.pt"
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -742,7 +742,7 @@ def data_train_cell(config, config_file, erase, device):
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
 
     Niter = n_frames * data_augmentation_loop // batch_size
-    print(f'plot every {Niter // 20} iterations')
+    print(f'plot every {Niter // 5} iterations')
 
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
 
@@ -827,7 +827,7 @@ def data_train_cell(config, config_file, erase, device):
             total_loss += loss.item()
 
             visualize_embedding = True
-            if visualize_embedding & (((epoch < 10 ) & (N%(Niter//20) == 0)) | (N==0)):
+            if visualize_embedding & (((epoch < 10 ) & (N%(Niter//5) == 0)) | (N==0)):
                 if do_tracking | has_state :
                     id_list = []
                     for k in range(n_frames + 1):
@@ -848,8 +848,7 @@ def data_train_cell(config, config_file, erase, device):
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         torch.save({'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict()},
-                   os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
+                    'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
@@ -896,7 +895,8 @@ def data_train_cell(config, config_file, erase, device):
             type_stack = torch.reshape(type_stack, ((n_frames + 1) * n_particles, 1))
             accuracy = metrics.accuracy_score(to_numpy(type_stack.squeeze()), new_labels)
 
-            print(accuracy)
+            logger.info(f'accuracy {accuracy:0.2f} n_clusters {n_clusters}')
+            print(f'accuracy {accuracy:0.2f} n_clusters {n_clusters}')
 
             y_func_list = []
             fig, ax = fig_init()
@@ -957,14 +957,13 @@ def data_train_cell(config, config_file, erase, device):
                 optimizer.step()
 
             sub_loops = 1000
-            index_list = np.random.randint(0, 3, sub_loops)
+            index_list = np.random.randint(0, n_clusters, sub_loops)
             optimizer.zero_grad()
             fig, ax = fig_init()
             for n in range(sub_loops):
-                index = np.random.randint(0, 3)
                 c = model.b[index_list[n]]
                 c = c + 0.1 * torch.randn_like(c, device=device)
-                embedding_ = c * torch.ones((1000, model_config.embedding_dim), device=device)
+                embedding_ = c * torch.ones((1000,  model.b.shape[1]), device=device)
                 in_features = torch.cat(
                     (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                      rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
@@ -973,31 +972,15 @@ def data_train_cell(config, config_file, erase, device):
             plt.savefig(f"./{log_dir}/tmp_training/re-trained MLP.tif")
             plt.close()
 
-            A = model.b[0, :].T
-            B = model.b[1, :].T
-            C = model.b[2, :].T
-            # Compute circumcenters (cc)
-            a = A - C
-            b = B - C
-            cc = cross2(sq2(a) * b - sq2(b) * a, a, b) / (2 * ncross2(a, b)) + C
-            cc = cc.t()
-            cc = to_numpy(cc)
-
-            model.cc = nn.Parameter(torch.tensor(cc, dtype=torch.float32, requires_grad=False, device=device))
-            basis = to_numpy(model.b - model.cc)
-            model.basis = nn.Parameter(torch.tensor(basis, dtype=torch.float32, requires_grad=False, device=device))
-
             hot_vectors = F.one_hot(torch.tensor(new_labels), n_particle_types)
             hot_vectors = to_numpy(hot_vectors)
             hot_vectors = hot_vectors + 0.15 * np.random.randn(hot_vectors.shape[0], hot_vectors.shape[1])
             model.a = nn.Parameter(torch.tensor(hot_vectors, dtype=torch.float32, requires_grad=True, device=device))
-            embedding = model.cc + torch.matmul(model.a, model.basis)
+            embedding = torch.matmul(torch.sigmoid((model.a-0.5)*2), model.b)
             model.use_hot_encoding = True
 
             fig, ax = fig_init()
-            plt.scatter(cc[0], cc[1], s=100, c='k')
-            plt.text(cc[0] + 0.05, cc[1], 'circumcenter')
-            for k in range(3):
+            for k in trange(3):
                 pos = np.argwhere(new_labels == k).squeeze().astype(int)
                 plt.scatter(to_numpy(embedding[pos, 0]), to_numpy(embedding[pos, 1]), s=1, alpha=0.01)
             plt.scatter(to_numpy(model.b[:, 0]), to_numpy(model.b[:, 1]), s=100, c='k')
@@ -1008,7 +991,7 @@ def data_train_cell(config, config_file, erase, device):
             index_list = np.random.randint(0, 3, sub_loops)
             optimizer.zero_grad()
             fig, ax = fig_init()
-            for n in range(sub_loops):
+            for n in trange(sub_loops):
                 c = model.b[index_list[n]]
                 c = c + 0.1 * torch.randn_like(c, device=device)
                 embedding_ = c * torch.ones((1000, model.b.shape[1]), device=device)
