@@ -50,7 +50,7 @@ if __name__ == '__main__':
 
     config_list = [config_file]
 
-    # config_list = ["arbitrary_3_cell_sequence"]
+    config_list = ["arbitrary_3_cell_sequence"]
     # config_list = ["arbitrary_3_cell_tracking"]
 
     # config_list = ["boids_division_tracking_ctrl"]

@@ -710,7 +710,7 @@ def data_train_cell(config, config_file, erase, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_1.pt"
+    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_2_6240.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
 
@@ -748,7 +748,7 @@ def data_train_cell(config, config_file, erase, device):
 
     list_loss = []
     time.sleep(1)
-    for epoch in range(2, n_epochs + 1):
+    for epoch in range(0, n_epochs + 1):
 
         batch_size = get_batch_size(epoch)
         logger.info(f'batch_size: {batch_size}')
@@ -872,6 +872,7 @@ def data_train_cell(config, config_file, erase, device):
                                                                     config.training.cluster_distance_threshold,
                                                                     true_type_list,
                                                                     n_particle_types, embedding_cluster)
+
             median_center_list = []
             for n in range(n_clusters):
                 pos = np.argwhere(new_labels == n).squeeze().astype(int)
@@ -936,7 +937,7 @@ def data_train_cell(config, config_file, erase, device):
                     index = np.random.randint(0, 3)
                     c = model.b[index_list[n]]
                     c = c + 0.1 * torch.randn_like(c, device=device)
-                    embedding_ = c * torch.ones((1000, model_config.embedding_dim), device=device)
+                    embedding_ = c * torch.ones((1000, model.b.shape[1]), device=device)
                     match model_config.particle_model_name:
                         case 'PDE_ParticleField_A' | 'PDE_A' | 'PDE_Cell_A':
                             in_features = torch.cat(
@@ -1008,10 +1009,9 @@ def data_train_cell(config, config_file, erase, device):
             optimizer.zero_grad()
             fig, ax = fig_init()
             for n in range(sub_loops):
-                index = np.random.randint(0, 3)
                 c = model.b[index_list[n]]
                 c = c + 0.1 * torch.randn_like(c, device=device)
-                embedding_ = c * torch.ones((1000, model_config.embedding_dim), device=device)
+                embedding_ = c * torch.ones((1000, model.b.shape[1]), device=device)
                 in_features = torch.cat(
                     (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                      rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
