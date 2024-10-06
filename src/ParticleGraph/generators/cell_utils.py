@@ -38,19 +38,14 @@ def init_cell_range(config, device, scenario="None"):
     else:
         cell_death_rate = torch.zeros((n_particles, 1), device=device)
 
-    if config.simulation.mc_slope != [-1]:
-        mc_slope = torch.tensor(config.simulation.mc_slope, device=device)
-    else:
-        mc_slope = torch.clamp(torch.randn(n_particle_types, 1, device=device) * 30, min=-30, max=30).flatten()
-
     if config.simulation.cell_area != [-1]:
         cell_area = torch.tensor(config.simulation.cell_area, device=device)
     else:
         cell_area = torch.clamp(torch.abs(torch.ones(n_particle_types, 1, device=device) * 0.0015 + torch.randn(n_particle_types, 1, device=device) * 0.0010), min=0.0005, max=0.0025).squeeze()
 
-    return cycle_length, final_cell_mass, cell_death_rate, mc_slope, cell_area
+    return cycle_length, final_cell_mass, cell_death_rate, cell_area
 
-def init_cells(config, cycle_length, final_cell_mass, cell_death_rate, mc_slope, cell_area, bc_pos, bc_dpos, dimension, device):
+def init_cells(config, cycle_length, final_cell_mass, cell_death_rate, cell_area, bc_pos, bc_dpos, dimension, device):
     simulation_config = config.simulation
     n_particles = simulation_config.n_particles
     n_particle_types = simulation_config.n_particle_types
@@ -108,9 +103,6 @@ def init_cells(config, cycle_length, final_cell_mass, cell_death_rate, mc_slope,
                 torch.ones(n_particles, device=device) + 0.05 * torch.randn(n_particles, device=device))
     cycle_length_distrib = cycle_length_distrib[:, None]
 
-    mc_slope_distrib = mc_slope[to_numpy(
-        type), None]  # * (torch.ones(n_particles, device=device) + 0.05 * torch.randn(n_particles, device=device))
-
     cell_age = torch.rand(n_particles, device=device)
     cell_age = cell_age * cycle_length[to_numpy(type)].squeeze()
     cell_age = cell_age[:, None]
@@ -133,7 +125,7 @@ def init_cells(config, cycle_length, final_cell_mass, cell_death_rate, mc_slope,
 
     perimeter = torch.zeros((n_particles,1), device=device)
 
-    return particle_id, pos, dpos, type, status, cell_age, cell_stage, cell_mass_distrib, growth_rate_distrib, cycle_length_distrib, cell_death_rate_distrib, mc_slope_distrib, cell_area_distrib, perimeter
+    return particle_id, pos, dpos, type, status, cell_age, cell_stage, cell_mass_distrib, growth_rate_distrib, cycle_length_distrib, cell_death_rate_distrib, cell_area_distrib, perimeter
 
 def get_cells_from_fluo(config, dimension, files, frame, slice, device):
     simulation_config = config.simulation

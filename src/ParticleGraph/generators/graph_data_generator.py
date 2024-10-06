@@ -1128,7 +1128,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         cycle_length
         final_cell_mass
         cell_death_rate
-        mc_slope: scalar used in the function set_mass_coeff
 
         INITIALIZE PER CELL VALUES
         0 N1 cell index dim=1
@@ -1141,16 +1140,15 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         10 M1 cell_mass_distrib mass dim=1 (per node)
         11 R1 cell growth rate dim=1
         12 DR1 cell death rate dim=1
-        13 MC1 mass coefficient of the cell (relation between velocity and mass)
-        14 AR1 area of the cell
-        15 P1 cell perimeter
+        13 AR1 area of the cell
+        14 P1 cell perimeter
         '''
 
         if run == 0:
-            cycle_length, final_cell_mass, cell_death_rate, mc_slope, cell_area = init_cell_range(config, device=device)
+            cycle_length, final_cell_mass, cell_death_rate, cell_area = init_cell_range(config, device=device)
 
-        N1, X1, V1, T1, H1, A1, S1, M1, R1, CL1, DR1, MC1, AR1, P1 = init_cells(config, cycle_length, final_cell_mass,
-                                                                            cell_death_rate, mc_slope, cell_area, bc_pos, bc_dpos, dimension,
+        N1, X1, V1, T1, H1, A1, S1, M1, R1, CL1, DR1, AR1, P1 = init_cells(config, cycle_length, final_cell_mass,
+                                                                            cell_death_rate, cell_area, bc_pos, bc_dpos, dimension,
                                                                             device=device)
 
         coeff = 0
@@ -1173,8 +1171,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         logger.info(to_numpy(cell_death_rate))
         logger.info("cell final mass")
         logger.info(to_numpy(final_cell_mass))
-        logger.info('mass coefficient ranges')
-        logger.info(mc_slope)
         logger.info('interaction parameters')
         logger.info(to_numpy(model.p))
 
@@ -1259,7 +1255,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                                      cycle_length[to_numpy(T1[pos, 0]), None] * var[:, None]), dim=0)
                     DR1 = torch.cat((DR1, cell_death_rate[to_numpy(T1[pos, 0]), None] * nd[:, None],
                                      cell_death_rate[to_numpy(T1[pos, 0]), None] * nd[:, None]), dim=0)
-                    MC1 = torch.cat((MC1, mc_slope[to_numpy(T1[pos, 0]), None], mc_slope[to_numpy(T1[pos, 0]), None]), dim=0)
                     AR1 = torch.cat((AR1, AR1[pos, :], AR1[pos, :]), dim=0)
                     P1 = torch.cat((P1, P1[pos, :], P1[pos, :]), dim=0)
                     R1 = M1 / (2 * CL1)
@@ -1400,9 +1395,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             if (it >= 0):
                 x_list.append(x)
                 y_list.append(y + y_voronoi)
-
-            # get mass_coeff
-            # mass_coeff = set_mass_coeff(mc_slope_distrib, cell_mass[to_numpy(T1[:, 0])], M1, device)
 
             # cell update
             if model_config.prediction == '2nd_derivative':
@@ -1738,7 +1730,6 @@ def data_generate_cell_from_fluo (config, visualize=True, run_vizualized=0, styl
         cycle_length
         final_cell_mass
         cell_death_rate
-        mc_slope: scalar used in the function set_mass_coeff
 
         INITIALIZE PER CELL VALUES
         0 N1 cell index dim=1
@@ -1751,8 +1742,8 @@ def data_generate_cell_from_fluo (config, visualize=True, run_vizualized=0, styl
         10 M1 cell_mass_distrib mass dim=1 (per node)
         11 R1 cell growth rate dim=1
         12 DR1 cell death rate dim=1
-        13 MC1 mass coefficient of the cell (relation between velocity and mass)
-        14 AR1 area of the cell
+        13 AR1 area of the cell
+        14 P1 cell perimeter
         '''
 
         path = simulation_config.fluo_path

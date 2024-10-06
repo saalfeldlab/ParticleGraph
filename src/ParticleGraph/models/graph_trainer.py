@@ -974,7 +974,7 @@ def data_train_cell(config, config_file, erase, device):
 
             hot_vectors = F.one_hot(torch.tensor(new_labels), n_particle_types)
             hot_vectors = to_numpy(hot_vectors)
-            hot_vectors = hot_vectors + 0.15 * np.random.randn(hot_vectors.shape[0], hot_vectors.shape[1])
+            hot_vectors = hot_vectors + 0.1 * np.random.randn(hot_vectors.shape[0], hot_vectors.shape[1])
             model.a = nn.Parameter(torch.tensor(hot_vectors, dtype=torch.float32, requires_grad=True, device=device))
             embedding = torch.matmul(torch.sigmoid((model.a-0.5)*2), model.b)
             model.use_hot_encoding = True
