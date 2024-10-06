@@ -900,7 +900,6 @@ def data_train_cell(config, config_file, erase, device):
             hot_vectors = hot_vectors.to(device)
             embedding = to_numpy(torch.matmul(hot_vectors, median_center_list))
             model.a = nn.Parameter(torch.tensor(embedding, dtype=torch.float32, requires_grad=True, device=device))
-            print(f'regul_embedding: replaced')
             logger.info(f'regul_embedding: replaced')
 
         lr_embedding = train_config.learning_rate_embedding_start
@@ -1912,8 +1911,7 @@ def data_train_synaptic(config, config_file, erase, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-
-    # net = f"/groups/saalfeld/home/allierc/Py/ParticleGraph/log/try_signal_N2_hemibrain_3_r1_u/models/best_model_with_9_graphs_25_0.pt"
+    # net = f"/groups/saalfeld/home/allierc/Py/ParticleGraph/log/try_signal_N2_g_r1/models/best_model_with_9_graphs_20_0.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
 

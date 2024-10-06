@@ -137,7 +137,7 @@ def sparsify_cluster_state(cluster_method, proj_interaction, embedding, cluster_
             labels, n_clusters = embedding_cluster.get(new_projection, 'distance', thresh=cluster_distance_threshold)
 
     computation_time = time.time() - start_time
-    print(f"Clustering computation time is {computation_time} seconds.")
+    print(f"clustering computation time is {computation_time:0.2f} seconds.")
 
     label_list = []
     for n in range(n_particle_types):
