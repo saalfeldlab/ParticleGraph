@@ -1137,11 +1137,12 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         6,7 H1 cell status dim=2  H1[:,0] = cell alive flag, alive : 0 , death : 0 , H1[:,1] = cell division flag, dividing : 1
         8 A1 cell age dim=1
         9 S1 cell stage dim=1  0 = G1 , 1 = S, 2 = G2, 3 = M
-        10 M1 cell_mass_distrib mass dim=1 (per node)
+        10 M1 cell_mass dim=1 (per node)
         11 R1 cell growth rate dim=1
-        12 DR1 cell death rate dim=1
-        13 AR1 area of the cell
-        14 P1 cell perimeter
+        12 CL1 cell cycle length dim=1
+        13 DR1 cell death rate dim=1
+        14 AR1 area of the cell
+        15 P1 cell perimeter
         '''
 
         if run == 0:
@@ -1280,7 +1281,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             CL1 = CL1[alive]
             R1 = R1[alive]
             DR1 = DR1[alive]
-            MC1 = MC1[alive]
             AR1 = AR1[alive]
             P1 = P1[alive]
             target_areas = target_areas[alive]
@@ -1311,8 +1311,7 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                                    H1.clone().detach(), A1.clone().detach(), S1.clone().detach(), M1.clone().detach(),
-                                   R1.clone().detach(), DR1.clone().detach(), MC1.clone().detach(),
-                                   AR1.clone().detach(), P1.clone().detach(), ID1.clone().detach() ), 1)
+                                   R1.clone().detach(), DR1.clone().detach(), AR1.clone().detach(), P1.clone().detach(), ID1.clone().detach() ), 1)
 
             # calculate connectivity
             with torch.no_grad():
@@ -1739,11 +1738,12 @@ def data_generate_cell_from_fluo (config, visualize=True, run_vizualized=0, styl
         6,7 H1 cell status dim=2  H1[:,0] = cell alive flag, alive : 0 , death : 0 , H1[:,1] = cell division flag, dividing : 1
         8 A1 cell age dim=1
         9 S1 cell stage dim=1  0 = G1 , 1 = S, 2 = G2, 3 = M
-        10 M1 cell_mass_distrib mass dim=1 (per node)
+        10 M1 cell_mass dim=1 (per node)
         11 R1 cell growth rate dim=1
-        12 DR1 cell death rate dim=1
-        13 AR1 area of the cell
-        14 P1 cell perimeter
+        12 CL1 cell cycle length dim=1
+        13 DR1 cell death rate dim=1
+        14 AR1 area of the cell
+        15 P1 cell perimeter
         '''
 
         path = simulation_config.fluo_path
