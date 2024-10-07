@@ -793,7 +793,7 @@ def data_train_cell(config, config_file, erase, device):
             optimizer.zero_grad()
 
             for i, batch in enumerate(batch_loader):
-                pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=True)
+                pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=False)
 
             if data_augmentation:
                 new_x = cos_phi * pred[:, 0] - sin_phi * pred[:, 1]
@@ -1088,11 +1088,7 @@ def data_train_mouse_city(config, config_file, erase, device):
 
     print('Update variables ...')
     # update variable if particle_dropout, cell_division, etc ...
-    x = x_list[1][n_frames - 1].clone().detach()
-    n_particles = len(T1_list[1])
-    config.simulation.n_particles = n_particles
-    print(f'N particles: {config.simulation.n_particles} to {len(T1_list[1])} ')
-    logger.info(f'N particles: {config.simulation.n_particles} to {len(T1_list[1])} ')
+    x = x_list[0][n_frames - 1].clone().detach()
 
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
@@ -1134,21 +1130,21 @@ def data_train_mouse_city(config, config_file, erase, device):
                 dataset = data.Data(x=x[:, :], edge_index=edges)
                 dataset_batch.append(dataset)
 
-                y = y_list[run][k].clone().detach()
-                if noise_level > 0:
-                    y = y * (1 + torch.randn_like(y) * noise_level)
-                y = y / ynorm
-                if batch == 0:
-                    y_batch = y[:, 0:2]
-                else:
-                    y_batch = torch.cat((y_batch, y[:, 0:2]), dim=0)
+                # y = y_list[run][k].clone().detach()
+                # if noise_level > 0:
+                #     y = y * (1 + torch.randn_like(y) * noise_level)
+                # y = y / ynorm
+                # if batch == 0:
+                #     y_batch = y[:, 0:2]
+                # else:
+                #     y_batch = torch.cat((y_batch, y[:, 0:2]), dim=0)
 
             batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
 
             optimizer.zero_grad()
 
             for i, batch in enumerate(batch_loader):
-                pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=True)
+                pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=False)
 
             if data_augmentation:
                 new_x = cos_phi * pred[:, 0] - sin_phi * pred[:, 1]

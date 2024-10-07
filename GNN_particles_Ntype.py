@@ -51,7 +51,7 @@ if __name__ == '__main__':
     config_list = [config_file]
 
     # config_list = ["boids_9_sequence_a"]
-    # config_list = ["arbitrary_3_cell_sequence_c"]
+    config_list = ["arbitrary_3_cell_sequence_c"]
 
     # config_list = ["boids_division_tracking_ctrl"]
     # config_list = ['boids_division_model_2_tracking']
@@ -68,7 +68,7 @@ if __name__ == '__main__':
 
     # config_list = ["arbitrary_3"]
 
-    config_list = ["mouse_city_a"]
+    # config_list = ["mouse_city_a"]
 
 
     for config_file in config_list:
@@ -77,5 +77,5 @@ if __name__ == '__main__':
         device = set_device(config.training.device)
         # print(f'device {device}')
         # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=1) #config.simulation.n_frames // 100)
-        data_train(config, config_file, True, device)
+        data_train(config, config_file, False, device)
         # data_test(config=config, config_file=config_file, visualize=True, style='color', verbose=False, best_model='1', run=0, step=25, test_simulation=True, sample_embedding=False, device=device)    # config.simulation.n_frames // 7

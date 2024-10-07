@@ -70,20 +70,6 @@ class Interaction_Mouse_Field(pyg.nn.MessagePassing):
             torch.tensor(np.ones((self.n_dataset, self.n_particles_max, self.embedding_dim)), device=self.device,
                          requires_grad=True, dtype=torch.float32))
 
-        if (model_config.field_type == 'tensor'):
-            self.field = nn.Parameter(
-                    torch.tensor(np.zeros((self.n_dataset, int(self.n_nodes), 1)), device=self.device, requires_grad=True, dtype=torch.float32))
-        elif (model_config.field_type == 'Siren_wo_time'):
-            self.field=[]
-            for n in range(self.n_dataset):
-                image_width = self.n_nodes_per_axis
-                self.field.append(Siren_Network(image_width=image_width, in_features=2, out_features=1, hidden_features=256, hidden_layers=8, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.))
-        elif (model_config.field_type == 'Siren_with_time'):
-            self.field = []
-            for n in range(self.n_dataset):
-                image_width = self.n_nodes_per_axis
-                self.field.append(Siren_Network(image_width=image_width, in_features=2, out_features=1, hidden_features=256, hidden_layers=8, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.))
-
         if self.update_type != 'none':
             self.lin_update = MLP(input_size=self.output_size + self.embedding_dim + 2, output_size=self.output_size,
                                   nlayers=self.n_layers_update, hidden_size=self.hidden_dim_update, device=self.device)
