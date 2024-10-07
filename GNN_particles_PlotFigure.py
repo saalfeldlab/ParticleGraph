@@ -393,17 +393,10 @@ def plot_embedding_func_cluster_tracking(model, config, config_file, embedding_c
 def plot_embedding_func_cluster_state(model, config, config_file, embedding_cluster, cmap, type_list, type_stack, id_list,
                                 n_particle_types, ynorm, epoch, log_dir, device):
 
-    n_frames = config.simulation.n_frames
-    n_particles = config.simulation.n_particles
-
     fig, ax = fig_init()
-    for k in range(0,len(type_list)):
-        for n in range(n_particle_types):
-            pos =torch.argwhere(type_list[k] == n)
-            if len(pos) > 0:
-                embedding = to_numpy(model.a[to_numpy(id_list[k][pos]).astype(int)].squeeze())
-                plt.scatter(embedding[:, 0], embedding[:, 1], s=0.1, color=cmap.color(n), alpha=0.1)
-
+    for n in range(n_particle_types):
+        pos = torch.argwhere(type_stack == n).squeeze()
+        plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=1, color=cmap.color(n), alpha=0.25)
     plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
     plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
     plt.tight_layout()
@@ -422,7 +415,7 @@ def plot_embedding_func_cluster_state(model, config, config_file, embedding_clus
     for n in range(n_particle_types):
         pos = np.argwhere(true_type_list == n).squeeze().astype(int)
         if len(pos)>0:
-            plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=10, alpha=0.25)
+            plt.scatter(proj_interaction[pos, 0], proj_interaction[pos, 1], color=cmap.color(n), s=100, alpha=0.25, edgecolors='none')
     plt.xlabel(r'UMAP 0', fontsize=78)
     plt.ylabel(r'UMAP 1', fontsize=78)
     plt.xlim([-0.2, 1.2])
@@ -1307,7 +1300,6 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, device):
         model.load_state_dict(state_dict['model_state_dict'])
         model.eval()
 
-        fig, ax = fig_init()
         accuracy, n_clusters, new_labels = plot_embedding_func_cluster_state(model, config, config_file, embedding_cluster,
                                                                        cmap, type_list, type_stack, id_list,
                                                                        n_particle_types, ynorm, epoch,
@@ -1358,7 +1350,7 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, device):
         plt.close()
 
 
-def plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, logger, device):
+def plot_cell_tracking(config_file, epoch_list, log_dir, logger, device):
 
     config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
     dataset_name = config.dataset
@@ -1379,18 +1371,21 @@ def plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, logger,
 
     x_list, y_list, vnorm, ynorm = load_training_data(dataset_name, n_runs, log_dir, device)
     logger.info("vnorm:{:.2e},  ynorm:{:.2e}".format(to_numpy(vnorm), to_numpy(ynorm)))
-    x = x_list[1][0].clone().detach()
-    index_particles = get_index_particles(x, n_particle_types, dimension)
-    type_list = get_type_list(x, dimension)
-    type_list_first = type_list.clone().detach()
 
-    index_l = []
-    index = 0
-    for k in range(n_frames):
-        new_index = torch.arange(index, index + n_particles)
-        index_l.append(new_index)
-        x_list[1][k][:, 0] = new_index
-        index += n_particles
+    type_stack = torch.stack(x_list[1])[:,:,5]
+    type_stack = torch.reshape(type_stack, ((n_frames + 1)* n_particles,1))
+
+    n_particles_max = 0
+    id_list = []
+    type_list=[]
+    for k in range(n_frames+1):
+        type = x_list[1][k][:, 5]
+        type_list.append(type)
+        ids = x_list[1][k][:, -1]
+        id_list.append(ids)
+        n_particles_max += len(type)
+    config.simulation.n_particles_max = n_particles_max
+    index_particles = get_index_particles(x_list[1][0], n_particle_types, dimension)
 
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
@@ -1399,16 +1394,6 @@ def plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, logger,
     tracking_errors_list_=[]
 
     for epoch in epoch_list:
-        print('')
-        logger.info('')
-        pos = epoch.find('_')
-        if pos>0:
-            epoch_ = epoch[0:pos]
-        else:
-            epoch_ = epoch
-        embedding_type = int(epoch_)%sequence_length
-        print(f'{epoch}, {epoch_}, {embedding_type}')
-        logger.info(f'{epoch}, {epoch_}, {embedding_type}')
 
         net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
         print(f'network: {net}')
@@ -1419,6 +1404,8 @@ def plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, logger,
         fig = plt.figure(figsize=(8, 8))
         tracking_index = 0
         tracking_index_list = []
+
+
         for k in trange(n_frames):
             x = x_list[1][k].clone().detach()
             distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
@@ -4502,7 +4489,9 @@ def data_plot(config, config_file, epoch_list, device):
         case 'PDE_Agents_A' | 'PDE_Agents_B':
             plot_agents(config_file, epoch_list, log_dir, logger, device)
         case 'PDE_Cell_A' | 'PDE_Cell_B':
-            if config.simulation.has_cell_state:
+            if config.training.do_tracking:
+                plot_cell_tracking(config_file, epoch_list, log_dir, logger, device)
+            else:
                 plot_cell_state(config_file, epoch_list, log_dir, logger, device)
         case 'PDE_A':
             if config.simulation.non_discrete_level>0:
@@ -4797,7 +4786,10 @@ if __name__ == '__main__':
 
 
 
-    config_list = ["arbitrary_3_cell_sequence_a","arbitrary_3_cell_sequence_b","arbitrary_3_cell_sequence_c"]
+    # config_list = ["arbitrary_3_cell_sequence_a","arbitrary_3_cell_sequence_b","arbitrary_3_cell_sequence_c"]
+
+    config_list = ["boids_9_sequence_a"]
+
     # # config_list = ['signal_N_100_2_d']
     # config_list = ['signal_N_100_2_a']
     # config_list = ['boids_division_model_f2']

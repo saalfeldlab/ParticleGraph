@@ -1,0 +1,66 @@
+description: 'Boids 3 different types, no division 9 boids 100000 frames'
+dataset: 'boids_9_sequence_c'
+
+simulation:
+  params: [[ 9.8237, 66.2481, 26.9855],
+        [49.5963, 14.6685, 40.3493],
+        [94.2043, 29.6404, 296.8243]]
+  cell_cycle_length: [250,250,250]
+  cell_death_rate: [0,0,0]
+
+  final_cell_mass: [4000,4000,4000]
+  cell_inert_model_coeff: 0.0
+  cell_active_model_coeff: 1.0
+  min_radius: 0.001
+  max_radius: 1.0
+  max_edges: 500000
+  n_particles: 9
+  has_cell_division: True
+  has_cell_death: True
+  n_particles_max: 9
+  n_particle_types: 3
+  n_interactions: 3
+  n_frames: 1000000
+  sigma: 0.005
+  delta_t: 0.01
+  dpos_init: 5.0E-4
+  boundary: 'periodic'
+  start_frame: 0
+  kill_cell_leaving: False
+  state_type: 'sequence'
+  state_params: [ 1000 ]
+
+graph_model:
+  particle_model_name: 'PDE_Cell_B'
+  mesh_model_name: ''
+  prediction: '2nd_derivative'
+  input_size: 9
+  output_size: 2
+  hidden_dim: 256
+  n_mp_layers: 5
+  aggr_type: 'mean'
+  embedding_dim: 2
+  update_type: 'none'
+
+plotting:
+  colormap: 'tab10'
+  arrow_length: 5
+  marker_size: 10
+  ylim: [-1.0E-4,1.0E-4]
+
+training:
+  seed: 14
+  n_epochs: 10
+  batch_size: 1
+  small_init_batch_size: False
+  sub_batches: 4
+  n_runs: 2
+  noise_level: 0
+  sparsity: 'none'
+  cluster_method: 'distance_plot'
+  data_augmentation: True
+  data_augmentation_loop: 2
+  fix_cluster_embedding: True
+  device: 'auto'
+  do_tracking: False
+

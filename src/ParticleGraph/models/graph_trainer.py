@@ -741,7 +741,7 @@ def data_train_cell(config, config_file, erase, device):
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
 
     Niter = n_frames * data_augmentation_loop // batch_size
-    print(f'plot every {Niter // 5} iterations')
+    print(f'plot every {Niter // 10} iterations')
 
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
 
@@ -824,13 +824,13 @@ def data_train_cell(config, config_file, erase, device):
             total_loss += loss.item()
 
             visualize_embedding = True
-            if visualize_embedding & (((epoch < 10 ) & (N%(Niter//5) == 0)) | (N==0)):
+            if visualize_embedding & (((epoch < 10 ) & (N%(Niter//10) == 0)) | (N==0)):
                 if do_tracking | has_state :
                     id_list = []
                     for k in range(n_frames + 1):
                         ids = x_list[1][k][:, -1]
                         id_list.append(ids)
-                    plot_training_cell_tracking(config=config, id_list=id_list, dataset_name=dataset_name, log_dir=log_dir,
+                    plot_training_cell_state(config=config, id_list=id_list, dataset_name=dataset_name, log_dir=log_dir,
                                        epoch=epoch, N=N, model=model, n_particle_types=n_particle_types,
                                        type_list=type_list, ynorm=ynorm, cmap=cmap, device=device)
                 else:

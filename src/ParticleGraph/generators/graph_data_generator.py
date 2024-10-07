@@ -1470,10 +1470,10 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         size = set_size(x, index_particles[n], 10) / 10
                         if 'inv' in style:
                             plt.scatter(to_numpy(X1[index_particles[n], 0]), 1-to_numpy(X1[index_particles[n], 1]),
-                                        s=size, color=cmap.color(n))
+                                        s=400, color=cmap.color(n))
                         else:
                             plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                                        s=size, color=cmap.color(n))
+                                        s=400, color=cmap.color(n))
                     dead_cell = np.argwhere(to_numpy(H1[:, 0]) == 0)
                     if len(dead_cell) > 0:
                         if 'inv' in style:

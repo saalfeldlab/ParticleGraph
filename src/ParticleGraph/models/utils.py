@@ -531,21 +531,23 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
-def plot_training_cell_tracking(config, id_list, dataset_name, log_dir, epoch, N, model, n_particle_types, type_list, ynorm, cmap, device):
+def plot_training_cell_state(config, id_list, dataset_name, log_dir, epoch, N, model, n_particle_types, type_list, ynorm, cmap, device):
 
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
 
     fig = plt.figure(figsize=(8, 8))
-    for k in range(1,len(type_list),len(type_list)//40):
+    for k in range(1,len(type_list),40):
         for n in range(n_particle_types):
-            pos =torch.argwhere(type_list[k] == n)
+            pos = torch.argwhere(type_list[k] == n)
             if len(pos) > 0:
                 if model.use_hot_encoding:
                     embedding = to_numpy(torch.matmul(torch.sigmoid((model.a[to_numpy(id_list[k][pos]).astype(int), :]-0.5)*2), model.b).squeeze())
                 else:
                     embedding = to_numpy(model.a[to_numpy(id_list[k][pos]).astype(int)].squeeze())
+                if embedding.ndim==1:
+                    embedding = embedding[None,:]
                 plt.scatter(embedding[:, 0], embedding[:, 1], s=1, color=cmap.color(n), alpha=0.5)
     plt.xticks([])
     plt.yticks([])
@@ -553,13 +555,12 @@ def plot_training_cell_tracking(config, id_list, dataset_name, log_dir, epoch, N
     plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=87)
     plt.close()
 
-
     max_radius = 0.04
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(1,1,1)
     rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
 
-    for k in range(1,len(type_list), 10):
+    for k in range(1,len(type_list), 40):
         for n in range(1,len(type_list[k]),10):
                 if model.use_hot_encoding:
                     embedding_ = torch.matmul(torch.sigmoid((model.a[to_numpy(id_list[k][n]).astype(int)] - 0.5) * 10), model.b.clone().detach()).squeeze()
