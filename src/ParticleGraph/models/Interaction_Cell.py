@@ -78,7 +78,7 @@ class Interaction_Cell(pyg.nn.MessagePassing):
             # self.basis = nn.Parameter(torch.tensor(np.zeros((self.n_particle_types, self.embedding_dim)), device=self.device, requires_grad=False, dtype=torch.float32))
 
 
-    def forward(self, data=[], data_id=[], training=[], vnorm=[], phi=[], has_field=False, frame=[]):
+    def forward(self, data=[], data_id=[], training=[], vnorm=[], phi=[], has_field=False):
 
         self.data_id = data_id
         self.vnorm = vnorm
@@ -146,7 +146,6 @@ class Interaction_Cell(pyg.nn.MessagePassing):
 
             case 'PDE_Cell_A_area':
                 in_features = torch.cat((delta_pos, r[:, None], area_i * 1E3, area_j * 1E3, embedding_i, embedding_j), dim=-1)
-
 
             case 'PDE_Cell_B':
                 in_features = torch.cat((delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],

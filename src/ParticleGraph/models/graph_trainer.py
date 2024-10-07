@@ -706,8 +706,6 @@ def data_train_cell(config, config_file, erase, device):
             n_particles_max += len(type)
         config.simulation.n_particles_max = n_particles_max
 
-    x = []
-    y = []
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
@@ -766,12 +764,10 @@ def data_train_cell(config, config_file, erase, device):
             run = 1 + np.random.randint(n_runs - 1)
 
             dataset_batch = []
-            frame_list = []
 
             for batch in range(batch_size):
 
                 k = np.random.randint(n_frames - 2)
-                frame_list.append(k)
 
                 x = x_list[run][k].clone().detach()
 
@@ -794,7 +790,7 @@ def data_train_cell(config, config_file, erase, device):
             optimizer.zero_grad()
 
             for i, batch in enumerate(batch_loader):
-                pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=True, frame=frame_list[i])
+                pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=True)
 
             if data_augmentation:
                 new_x = cos_phi * pred[:, 0] - sin_phi * pred[:, 1]
