@@ -30,12 +30,17 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
     has_cell_divsion = config.simulation.has_cell_division
     has_fluo = config.simulation.has_fluo
     has_WBI = 'WBI' in config.dataset
+    has_mouse_city = 'mouse_city' in config.dataset
     dataset_name = config.dataset
 
     print('')
     print(f'dataset_name: {dataset_name}')
 
-    if has_particle_field:
+    if has_mouse_city:
+        data_generate_mouse_city(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
+                                        alpha=0.2, ratio=ratio,
+                                        scenario=scenario, device=device, bSave=bSave)
+    elif has_particle_field:
         data_generate_particle_field(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=False, step=step,
                                      alpha=0.2, ratio=ratio,
                                      scenario='none', device=None, bSave=True)
@@ -824,6 +829,136 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     #     handler.close()
     #     logger.removeHandler(handler)
 
+
+
+def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,
+                           ratio=1, scenario='none', device=None, bSave=True):
+    simulation_config = config.simulation
+    training_config = config.training
+    model_config = config.graph_model
+
+    data_folder_name = config.data_folder_name
+
+    torch.random.fork_rng(devices=device)
+    torch.random.manual_seed(42)
+
+    print(f'Generating data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+
+    dimension = simulation_config.dimension
+    min_radius = simulation_config.min_radius
+    max_radius = simulation_config.max_radius
+
+    n_particles = simulation_config.n_particles
+    delta_t = simulation_config.delta_t
+    n_frames = simulation_config.n_frames
+    has_particle_dropout = training_config.particle_dropout > 0
+    dataset_name = config.dataset
+    run = 0
+
+    torch.random.fork_rng(devices=device)
+    torch.random.manual_seed(training_config.seed)
+
+    folder = f'./graphs_data/graphs_{dataset_name}/'
+    if erase:
+        files = glob.glob(f"{folder}/*")
+        for f in files:
+            if (f[-3:] != 'Fig') & (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (
+                    f != 'model_config.json') & (f != 'generation_code.py'):
+                os.remove(f)
+    os.makedirs(folder, exist_ok=True)
+    os.makedirs(f'./graphs_data/graphs_{dataset_name}/Fig/', exist_ok=True)
+    files = glob.glob(f'./graphs_data/graphs_{dataset_name}/Fig/*')
+    for f in files:
+        os.remove(f)
+
+    print(f'Loading data ...')
+    files = glob.glob(f'{data_folder_name}/*.txt')
+    files.sort(key=os.path.getmtime)
+
+    x_list = []
+    edge_f_p_list = []
+
+    X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
+
+    x_mesh = torch.concatenate(
+        (N1_mesh.clone().detach(), X1_mesh.clone().detach(),torch.zeros((len(X1_mesh),6),device=device)  ), 1)
+
+    torch.save(x_mesh, f'graphs_data/graphs_{dataset_name}/x_mesh.pt')
+
+    for it, f in enumerate(files):
+
+        if (it%100 == 0):
+            print(f'frame {it} ...')
+
+        data = pd.read_csv(f, sep=' ', header=None)
+        data = data.values
+
+
+        N1 = torch.arange(len(data), dtype=torch.float32, device=device)[:, None]
+        X1 = torch.tensor(data[:, 1:3], dtype=torch.float32, device=device)
+        X1[:, 1] = 1-X1[:, 1]
+        V1 = 0 * X1
+        T1 = torch.tensor(data[:, 0:1], dtype=torch.float32, device=device)
+        H1 = torch.tensor(data[:, 3:5], dtype=torch.float32, device=device)
+
+        if (it == simulation_config.start_frame):
+            ID1 = torch.arange(len(N1), device=device)[:, None]
+        else:
+            ID1 = torch.arange(int(ID1[-1] + 1), int(ID1[-1] + len(N1) + 1), device=device)[:, None]
+
+        x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
+                               H1.clone().detach(), ID1.clone().detach()), 1)
+
+        x_particle_field = torch.concatenate((x_mesh, x), dim=0)
+
+        # compute connectivity rules
+        distance = torch.sum((x[:, None, 1:dimension + 1] - x_mesh[None, :, 1:dimension + 1]) ** 2, dim=2)
+        adj_t = ((distance < 0.25 ** 2) & (distance > 0)).float() * 1
+        edge_index = adj_t.nonzero().t().contiguous()
+        edge_f_p_list.append(edge_index)
+
+        x_list.append(x)
+
+        # output plots
+        if visualize & (run == 0) & (it % step == 0) & (it < 5000):
+
+            if 'latex' in style:
+                plt.rcParams['text.usetex'] = True
+                rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+
+            if 'color' in style:
+
+                matplotlib.rcParams['savefig.pad_inches'] = 0
+
+                # pos = torch.argwhere(edge_index[0, :] == 40000)
+                # pos = to_numpy(pos.squeeze())
+                # pos = edge_index[1, pos]
+                # pos=to_numpy(pos)
+
+                fig = plt.figure(figsize=(8, 8))
+                plt.scatter(to_numpy(X1_mesh[:, 0]), to_numpy(X1_mesh[:, 1]), s=1, c='k', alpha=0.25)
+                plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=2000, c='k',alpha=0.7)
+                pos_connect = to_numpy(edge_index[1,:]).astype(int)
+                plt.scatter(to_numpy(X1_mesh[pos_connect, 0]), to_numpy(X1_mesh[pos_connect, 1]), s=100, c='r',alpha=0.1)
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+
+                num = f"{it:06}"
+                plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=35)
+                plt.close()
+
+    torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
+
+    torch.save(edge_f_p_list, f'graphs_data/graphs_{dataset_name}/edge_f_p_list{run}.pt')
+
+
+
+
+
+    # for handler in logger.handlers[:]:
+    #     handler.close()
+    #     logger.removeHandler(handler)
 
 
 def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,

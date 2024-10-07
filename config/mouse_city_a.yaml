@@ -1,7 +1,9 @@
 description: 'mouse_city trial1_active_1'
 dataset: 'mouse_city_a'
+data_folder_name: '/groups/saalfeld/home/allierc/signaling/MouseCity/trial1_active_1/labels'
 
 simulation:
+  params: [[-1]]
   min_radius: 0
   max_radius: 0.075
   n_particles: 6
@@ -13,6 +15,12 @@ simulation:
   has_cell_state: True
   state_type: 'sequence'
   state_params: [ 250 ]
+  n_nodes: 400
+  n_node_types: 1
+  diffusion_coefficients: [ [ 0 ] ]
+  pos_rate: [ [ 0 ] ]
+  neg_rate: [ [ 0 ] ]
+  node_value_map: 'pattern_Null.tif'
 
 graph_model:
   particle_model_name: 'PDE_Cell_A'
