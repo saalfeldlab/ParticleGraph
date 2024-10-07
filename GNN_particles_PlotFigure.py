@@ -1336,8 +1336,13 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, device):
         learned_time_series = np.reshape(new_labels, (n_frames + 1, n_particles))
         GT_time_series = np.reshape(to_numpy(type_stack), (n_frames + 1, n_particles))
 
+        c_map = ['#1f77b4', '#ff7f0e', '#2ca02c']
+        cm = matplotlib.colors.ListedColormap(c_map)
+
+        selected = np.concatenate((np.arange(0,80),np.arange(1600,1680),np.arange(3200,3280)),axis=0)
+
         fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
-        plt.imshow(np.rot90(GT_time_series[:,0:80]), aspect='auto', cmap='tab10',vmin=0, vmax=2)
+        plt.imshow(np.rot90(GT_time_series[:,selected.astype(int)]), aspect='auto', cmap=cm,vmin=0, vmax=2)
         plt.xlabel('frame', fontsize=78)
         plt.ylabel('cell_id', fontsize=78)
         plt.tight_layout()
@@ -1345,36 +1350,12 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, device):
         plt.close()
 
         fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
-        plt.imshow(np.rot90(learned_time_series[:,0:80]), aspect='auto', cmap='tab10',vmin=0, vmax=2)
+        plt.imshow(np.rot90(learned_time_series[:,selected.astype(int)]), aspect='auto', cmap=cm,vmin=0, vmax=2)
         plt.xlabel('frame', fontsize=78)
         plt.ylabel('cell_id', fontsize=78)
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/learned_kinograph_{config_file}.tif", dpi=170.7)
         plt.close()
-
-        fig = plt.figure(figsize=(10, 10))
-
-        GT = GT_time_series
-        time_series = learned_time_series
-
-        new_time_series = 0 * time_series
-        accuracy_list = []
-        for k in trange(n_particles):
-            input = time_series[:,k]
-            output = median_filter(input, size=5, mode='nearest')
-            new_time_series[:,k] = output
-            accuracy = metrics.accuracy_score(GT[:,k], output)
-            accuracy_list.append(accuracy)
-
-        accuracy = np.array(accuracy_list)
-        print(f'accuracy: {np.mean(accuracy)} +/- {np.std(accuracy)}')
-
-        fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
-        plt.imshow(np.rot90(new_time_series), aspect='auto', cmap='tab10',vmin=0, vmax=2)
-        plt.xlabel('frame', fontsize=78)
-        plt.ylabel('cell_id', fontsize=78)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/filtered_learned_kinograph_{config_file}.tif", dpi=170.7)
 
 
 def plot_attraction_repulsion_tracking(config_file, epoch_list, log_dir, logger, device):
@@ -4816,7 +4797,7 @@ if __name__ == '__main__':
 
 
 
-    config_list = ["arbitrary_3_cell_sequence_a"]
+    config_list = ["arbitrary_3_cell_sequence_a","arbitrary_3_cell_sequence_b","arbitrary_3_cell_sequence_c"]
     # # config_list = ['signal_N_100_2_d']
     # config_list = ['signal_N_100_2_a']
     # config_list = ['boids_division_model_f2']
