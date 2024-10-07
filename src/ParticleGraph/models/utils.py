@@ -785,8 +785,8 @@ def analyze_edge_function_state(rr=[], config=None, model=None, id_list=None, ty
                     plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),color=cmap.color(int(type_list[k][n])), linewidth=2, alpha=0.25)
 
     if visualize:
-        plt.xlabel('Distance [a.u]')
-        plt.ylabel('MLP [a.u]')
+        plt.xlabel('Distance [a.u]', fontsize=78)
+        plt.ylabel('MLP [a.u]', fontsize=78)
         plt.tight_layout()
 
     func_list = torch.stack(func_list)

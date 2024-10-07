@@ -402,12 +402,12 @@ def plot_embedding_func_cluster_state(model, config, config_file, embedding_clus
             pos =torch.argwhere(type_list[k] == n)
             if len(pos) > 0:
                 embedding = to_numpy(model.a[to_numpy(id_list[k][pos]).astype(int)].squeeze())
-                plt.scatter(embedding[:, 0], embedding[:, 1], s=1, color=cmap.color(n), alpha=1)
+                plt.scatter(embedding[:, 0], embedding[:, 1], s=0.1, color=cmap.color(n), alpha=0.1)
 
     plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
     plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
     plt.tight_layout()
-    plt.savefig(f"./{log_dir}/results/first_embedding_{config_file}_{epoch}.tif", dpi=170.7)
+    plt.savefig(f"./{log_dir}/results/embedding_{config_file}_{epoch}.tif", dpi=170.7)
     plt.close()
 
     fig, ax = fig_init()
@@ -415,7 +415,8 @@ def plot_embedding_func_cluster_state(model, config, config_file, embedding_clus
                                                         model=model,
                                                         id_list=id_list, type_list=type_list, ynorm=ynorm,
                                                         cmap=cmap, visualize=True, device=device)
-    np.save(f"./{log_dir}/results/function_{config_file}_{epoch}.npy", proj_interaction)
+    plt.savefig(f"./{log_dir}/results/function_{config_file}_{epoch}.tif", dpi=170.7)
+    plt.close()
 
     fig, ax = fig_init()
     for n in range(n_particle_types):
@@ -430,7 +431,6 @@ def plot_embedding_func_cluster_state(model, config, config_file, embedding_clus
     plt.savefig(f"./{log_dir}/results/UMAP_{config_file}_{epoch}.tif", dpi=170.7)
     plt.close()
 
-    np.save(f"./{log_dir}/results/UMAP_{config_file}_{epoch}.npy", proj_interaction)
 
     embedding = proj_interaction
     labels, n_clusters, new_labels = sparsify_cluster_state(config.training.cluster_method, proj_interaction, embedding,
@@ -445,9 +445,13 @@ def plot_embedding_func_cluster_state(model, config, config_file, embedding_clus
     plt.xlim([-0.2, 1.2])
     plt.ylim([-0.2, 1.2])
     plt.tight_layout()
+    plt.close()
 
     accuracy = metrics.accuracy_score(true_type_list, new_labels)
 
+    # calculate type for all nodes
+
+    fig, ax = fig_init()
     median_center_list = []
     for n in range(n_clusters):
         pos = np.argwhere(new_labels == n).squeeze().astype(int)
@@ -460,13 +464,11 @@ def plot_embedding_func_cluster_state(model, config, config_file, embedding_clus
             median_center_list.append(median_center)
     median_center_list = torch.stack(median_center_list)
     median_center_list = median_center_list.to(dtype=torch.float32)
-
+    plt.close()
     distance = torch.sum((model.a[:, None, :] - median_center_list[None, :, :]) ** 2, dim=2)
     result = distance.min(dim=1)
     min_index = result.indices
-
     new_labels = to_numpy(min_index).astype(int)
-
     accuracy = metrics.accuracy_score(to_numpy(type_stack.squeeze()), new_labels)
 
     return accuracy, n_clusters, new_labels
@@ -1295,7 +1297,6 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, device):
         n_particles_max += len(type)
     config.simulation.n_particles_max = n_particles_max
 
-    config.training.use_hot_encoding = True
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
     for epoch in epoch_list:
@@ -1306,21 +1307,15 @@ def plot_cell_state(config_file, epoch_list, log_dir, logger, device):
         model.load_state_dict(state_dict['model_state_dict'])
         model.eval()
 
-        fig = plt.figure(figsize=(10, 10))
-        plt.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), c=to_numpy(type_stack), s=1, cmap='tab10')
-
-        fig = plt.figure(figsize=(10, 10))
-        ax = fig.add_subplot(1, 1, 1, projection='3d')
-        ax.scatter(to_numpy(model.a[:, 0]), to_numpy(model.a[:, 1]), to_numpy(model.a[:, 2]), c=to_numpy(type_stack), s=1, cmap='tab20')
-
+        fig, ax = fig_init()
         accuracy, n_clusters, new_labels = plot_embedding_func_cluster_state(model, config, config_file, embedding_cluster,
                                                                        cmap, type_list, type_stack, id_list,
                                                                        n_particle_types, ynorm, epoch,
                                                                        log_dir, device)
 
 
-        print(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
-        logger.info(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+        print(f'result accuracy: {accuracy:0.3f}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+        logger.info(f'result accuracy: {accuracy:0.3f}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
         fig, ax = fig_init()
         plots = []
@@ -4821,18 +4816,16 @@ if __name__ == '__main__':
 
 
 
-
-    # config_list = ["arbitrary_3_cell_sequence_d_bis"]
-    # config_list = ["arbitrary_3_cell_sequence_f"]
+    config_list = ["arbitrary_3_cell_sequence_a"]
     # # config_list = ['signal_N_100_2_d']
     # config_list = ['signal_N_100_2_a']
     # config_list = ['boids_division_model_f2']
     # config_list = ["agents_e"]
-    config_list = ["signal_N2_hemibrain_3_r1_t_bis"]
+    # config_list = ["signal_N2_hemibrain_3_r1_t_bis"]
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['2_0'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['10_0'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
