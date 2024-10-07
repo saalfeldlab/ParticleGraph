@@ -42,6 +42,7 @@ def data_train(config, config_file, erase, device):
     do_tracking = config.training.do_tracking
     has_state = (config.simulation.state_type != 'discrete')
     has_WBI = 'WBI' in config.dataset
+    has_mouse_city = 'mouse_city' in config.dataset
 
     dataset_name = config.dataset
     print('')
@@ -49,6 +50,8 @@ def data_train(config, config_file, erase, device):
 
     if 'Agents' in config.graph_model.particle_model_name:
         data_train_agents(config, config_file, device)
+    elif has_mouse_city:
+        data_train_mouse_city(config, config_file, erase, device)
     elif has_WBI:
         data_train_WBI(config, config_file, erase, device)
     elif has_particle_field:
@@ -705,6 +708,361 @@ def data_train_cell(config, config_file, erase, device):
             id_list.append(ids)
             n_particles_max += len(type)
         config.simulation.n_particles_max = n_particles_max
+
+
+    print('Create models ...')
+    model, bc_pos, bc_dpos = choose_training_model(config, device)
+    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0.pt"
+    # state_dict = torch.load(net,map_location=device)
+    # model.load_state_dict(state_dict['model_state_dict'])
+
+    lr = train_config.learning_rate_start
+    lr_embedding = train_config.learning_rate_embedding_start
+    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+    logger.info(f"Total Trainable Params: {n_total_params}")
+    logger.info(f'Learning rates: {lr}, {lr_embedding}')
+    model.train()
+
+    net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs.pt"
+    print(f'network: {net}')
+    print(f'initial batch_size: {batch_size}')
+    print('')
+    logger.info(f'network: {net}')
+    logger.info(f'N epochs: {n_epochs}')
+    logger.info(f'initial batch_size: {batch_size}')
+
+    print('Update variables ...')
+    # update variable if particle_dropout, cell_division, etc ...
+    x = x_list[1][n_frames - 1].clone().detach()
+    n_particles = len(T1_list[1])
+    config.simulation.n_particles = n_particles
+    print(f'N particles: {config.simulation.n_particles} to {len(T1_list[1])} ')
+    logger.info(f'N particles: {config.simulation.n_particles} to {len(T1_list[1])} ')
+
+    print("Start training ...")
+    print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
+    logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
+
+    Niter = n_frames * data_augmentation_loop // batch_size
+    print(f'plot every {Niter // 10} iterations')
+
+    check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
+
+    list_loss = []
+    time.sleep(1)
+    for epoch in range(0, n_epochs + 1):
+
+        batch_size = get_batch_size(epoch)
+        logger.info(f'batch_size: {batch_size}')
+
+        total_loss = 0
+        Niter = n_frames * data_augmentation_loop // batch_size
+
+        for N in trange(Niter):
+
+            phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
+            cos_phi = torch.cos(phi)
+            sin_phi = torch.sin(phi)
+
+            run = 1 + np.random.randint(n_runs - 1)
+
+            dataset_batch = []
+
+            for batch in range(batch_size):
+
+                k = np.random.randint(n_frames - 2)
+
+                x = x_list[run][k].clone().detach()
+
+                edges = edge_p_p_list[run][f'arr_{k}']
+                edges = torch.tensor(edges, dtype=torch.int64, device=device)
+                dataset = data.Data(x=x[:, :], edge_index=edges)
+                dataset_batch.append(dataset)
+
+                y = y_list[run][k].clone().detach()
+                if noise_level > 0:
+                    y = y * (1 + torch.randn_like(y) * noise_level)
+                y = y / ynorm
+                if batch == 0:
+                    y_batch = y[:, 0:2]
+                else:
+                    y_batch = torch.cat((y_batch, y[:, 0:2]), dim=0)
+
+            batch_loader = DataLoader(dataset_batch, batch_size=batch_size, shuffle=False)
+
+            optimizer.zero_grad()
+
+            for i, batch in enumerate(batch_loader):
+                pred = model(batch, data_id=run, training=True, vnorm=vnorm, phi=phi, has_field=True)
+
+            if data_augmentation:
+                new_x = cos_phi * pred[:, 0] - sin_phi * pred[:, 1]
+                new_y = sin_phi * pred[:, 0] + cos_phi * pred[:, 1]
+                pred[:, 0] = new_x
+                pred[:, 1] = new_y
+
+            if do_tracking:
+                x_next = x_list[run][k+1]
+                x_pos_next = x_next[:,1:3].clone().detach()
+                if model_config.prediction == '2nd_derivative':
+                    x_pos_pred = (x[:, 1:3] + delta_t * (x[:, 3:5] + delta_t * pred * ynorm))
+                else:
+                    x_pos_pred = (x[:,1:3] + delta_t * pred * ynorm)
+                distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
+                result = distance.min(dim=1)
+                min_value = result.values
+                pos_pre = min_value
+                indices = result.indices
+                pos = torch.argwhere(min_value < 0.5E-5)
+                if model_config.prediction == '2nd_derivative':
+                    loss = torch.sum(pos_pre[pos])*1E8
+                else:
+                    loss = torch.sum(pos_pre)*1E5
+            else:
+                loss = (pred - y_batch).norm(2) # + model.a.norm(1) * 1E-3
+
+            loss.backward()
+            optimizer.step()
+
+            total_loss += loss.item()
+
+            visualize_embedding = True
+            if visualize_embedding & (((epoch < 10 ) & (N%(Niter//10) == 0)) | (N==0)):
+                if do_tracking | has_state :
+                    id_list = []
+                    for k in range(n_frames + 1):
+                        ids = x_list[1][k][:, -1]
+                        id_list.append(ids)
+                    plot_training_cell_state(config=config, id_list=id_list, dataset_name=dataset_name, log_dir=log_dir,
+                                       epoch=epoch, N=N, model=model, n_particle_types=n_particle_types,
+                                       type_list=type_list, ynorm=ynorm, cmap=cmap, device=device)
+                else:
+                    plot_training_cell(config=config, dataset_name=dataset_name, log_dir=log_dir,
+                              epoch=epoch, N=N, model=model, n_particle_types=n_particle_types, type_list=T1_list[1], ynorm=ynorm, cmap=cmap, device=device)
+                torch.save({'model_state_dict': model.state_dict(),
+                            'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+
+            check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 20,
+                                   memory_percentage_threshold=0.6)
+
+        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
+        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
+        torch.save({'model_state_dict': model.state_dict(),
+                    'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
+        list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
+        torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
+
+
+        func_list, true_type_list, short_model_a_list, proj_interaction = analyze_edge_function_state(rr=[],
+                                                                                                      config=config,
+                                                                                                      model=model,
+                                                                                                      id_list=id_list,
+                                                                                                      type_list=type_list,
+                                                                                                      ynorm=ynorm,
+                                                                                                      cmap=cmap,
+                                                                                                      visualize=False,
+                                                                                                      device=device)
+
+        embedding = proj_interaction
+        labels, n_clusters, new_labels = sparsify_cluster_state(config.training.cluster_method,
+                                                                proj_interaction, embedding,
+                                                                config.training.cluster_distance_threshold,
+                                                                true_type_list,
+                                                                n_particle_types, embedding_cluster)
+
+        median_center_list = []
+        for n in range(n_clusters):
+            pos = np.argwhere(new_labels == n).squeeze().astype(int)
+            pos = np.array(pos)
+            if pos.size > 0:
+                median_center = short_model_a_list[pos, :]
+                median_center = torch.mean(median_center, dim=0)
+                median_center_list.append(median_center)
+        median_center_list = torch.stack(median_center_list)
+        median_center_list = median_center_list.to(dtype=torch.float32)
+
+        distance = torch.sum((model.a[:, None, :] - median_center_list[None, :, :]) ** 2, dim=2)
+        result = distance.min(dim=1)
+        min_index = result.indices
+        new_labels = to_numpy(min_index).astype(int)
+
+        type_stack = torch.stack(x_list[1])[:, :, 5]
+        type_stack = torch.reshape(type_stack, ((n_frames + 1) * n_particles, 1))
+        accuracy = metrics.accuracy_score(to_numpy(type_stack.squeeze()), new_labels)
+
+        logger.info(f'accuracy {accuracy:0.2f} n_clusters {n_clusters}')
+        print(f'accuracy {accuracy:0.2f} n_clusters {n_clusters}')
+
+        if (replace_with_cluster) & (epoch % sparsity_freq == sparsity_freq - 1) & (epoch < n_epochs - sparsity_freq):
+            # Constrain embedding domain
+            hot_vectors = F.one_hot(torch.tensor(new_labels), n_clusters).float()
+            hot_vectors = hot_vectors.to(device)
+            embedding = to_numpy(torch.matmul(hot_vectors, median_center_list))
+            model.a = nn.Parameter(torch.tensor(embedding, dtype=torch.float32, requires_grad=True, device=device))
+            logger.info(f'regul_embedding: replaced')
+
+        lr_embedding = train_config.learning_rate_embedding_start
+        lr = train_config.learning_rate_start
+        optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+        logger.info(f'Learning rates: {lr}, {lr_embedding}')
+
+
+        if False:
+
+            y_func_list = []
+            fig, ax = fig_init()
+            for n in np.unique(true_type_list):
+                pos = np.argwhere(true_type_list == n)
+                pos = pos.squeeze()
+                if pos.size > 0:
+                    target_func = torch.median(func_list[pos, :], dim=0).values.squeeze()
+                    y_func_list.append(target_func)
+                plt.plot(to_numpy(target_func) * to_numpy(ynorm), linewidth=8, alpha=1)
+            plt.xticks([])
+            plt.yticks([])
+            plt.tight_layout()
+            y_func_list = torch.stack(y_func_list)
+
+            # model_b = []
+            # for k in range(n_clusters):
+            #     b = [np.cos(k * 2 * np.pi / n_clusters), np.sin(k * 2 * np.pi / 3)]
+            #     model_b.append(b)
+            # model_b = np.array(model_b)
+            # model.b = nn.Parameter(torch.tensor(model_b, dtype=torch.float32, requires_grad=True, device=device))
+
+            median_center_list = to_numpy(median_center_list)
+            model.b = nn.Parameter(torch.tensor(median_center_list, dtype=torch.float32, requires_grad=False, device=device))
+
+            lr_embedding = 1E-12
+            lr = 5E-2
+            optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+            sub_loops = 100
+            for loop in trange(1000):
+                rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+                pred = []
+                index_list = np.random.randint(0, 3, sub_loops)
+                optimizer.zero_grad()
+                for n in range(sub_loops):
+                    index = np.random.randint(0, 3)
+                    c = model.b[index_list[n]]
+                    c = c + 0.1 * torch.randn_like(c, device=device)
+                    embedding_ = c * torch.ones((1000, model.b.shape[1]), device=device)
+                    match model_config.particle_model_name:
+                        case 'PDE_ParticleField_A' | 'PDE_A' | 'PDE_Cell_A':
+                            in_features = torch.cat(
+                                (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                 rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
+                        case 'PDE_ParticleField_B' | 'PDE_B' | 'PDE_Cell_B':
+                            in_features = torch.cat(
+                                (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                 rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                                 0 * rr[:, None],
+                                 0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                    pred_ = model.lin_edge(in_features.float())
+                    pred.append(pred_)
+                pred = torch.stack(pred)
+                loss = (pred[:, :, 0] - y_func_list[index_list].clone().detach()).norm(2)
+                loss.backward()
+                optimizer.step()
+
+            sub_loops = 1000
+            index_list = np.random.randint(0, n_clusters, sub_loops)
+            optimizer.zero_grad()
+            fig, ax = fig_init()
+            for n in range(sub_loops):
+                c = model.b[index_list[n]]
+                c = c + 0.5 * torch.randn_like(c, device=device)
+                embedding_ = c * torch.ones((1000,  model.b.shape[1]), device=device)
+                in_features = torch.cat(
+                    (rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
+                     rr[:, None] / simulation_config.max_radius, embedding_), dim=1)
+                pred_ = model.lin_edge(in_features.float())
+                plt.scatter(to_numpy(rr), to_numpy(pred_[:,0]), color=cmap.color(index_list[n]), linewidths=0.1, alpha=0.01)
+            plt.savefig(f"./{log_dir}/tmp_training/re-trained MLP.tif")
+            plt.close()
+
+            hot_vectors = F.one_hot(torch.tensor(new_labels), n_particle_types)
+            hot_vectors = to_numpy(hot_vectors)
+            hot_vectors = hot_vectors # + 0.1 * np.random.randn(hot_vectors.shape[0], hot_vectors.shape[1])
+            model.a = nn.Parameter(torch.tensor(hot_vectors, dtype=torch.float32, requires_grad=True, device=device))
+            embedding = torch.matmul(torch.sigmoid((model.a-0.5)*10), model.b)
+            model.use_hot_encoding = True
+
+            fig, ax = fig_init()
+            for k in trange(3):
+                pos = np.argwhere(new_labels == k).squeeze().astype(int)
+                plt.scatter(to_numpy(embedding[pos, 0]), to_numpy(embedding[pos, 1]), s=20, alpha=0.01)
+            plt.scatter(to_numpy(model.b[:, 0]), to_numpy(model.b[:, 1]), s=20, c='k')
+            plt.savefig(f"./{log_dir}/tmp_training/hot encoding.tif")
+            plt.close()
+
+            lr = train_config.learning_rate_start / 1E3
+            lr_embedding = train_config.learning_rate_embedding_start
+            optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+
+
+def data_train_mouse_city(config, config_file, erase, device):
+
+    simulation_config = config.simulation
+    train_config = config.training
+    model_config = config.graph_model
+
+    print(f'Training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+
+    dimension = simulation_config.dimension
+    n_epochs = train_config.n_epochs
+    n_particle_types = simulation_config.n_particle_types
+    delta_t = simulation_config.delta_t
+    noise_level = train_config.noise_level
+    dataset_name = config.dataset
+    n_frames = simulation_config.n_frames
+    data_augmentation = train_config.data_augmentation
+    data_augmentation_loop = train_config.data_augmentation_loop
+    target_batch_size = train_config.batch_size
+    replace_with_cluster = 'replace' in train_config.sparsity
+    sparsity_freq = train_config.sparsity_freq
+    if train_config.small_init_batch_size:
+        get_batch_size = increasing_batch_size(target_batch_size)
+    else:
+        get_batch_size = constant_batch_size(target_batch_size)
+    batch_size = get_batch_size(0)
+    cmap = CustomColorMap(config=config)  # create colormap for given model_config
+    embedding_cluster = EmbeddingCluster(config)
+    n_runs = train_config.n_runs
+    has_inert_model = simulation_config.cell_inert_model_coeff > 0
+    do_tracking = train_config.do_tracking
+    has_state = (simulation_config.state_type != 'discrete')
+    max_radius = simulation_config.max_radius
+
+    l_dir, log_dir, logger = create_log_dir(config, config_file,erase)
+    print(f'Graph files N: {n_runs}')
+    logger.info(f'Graph files N: {n_runs}')
+    time.sleep(0.5)
+
+    x_list = []
+    x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device)
+    x_list.append(x)
+
+    vnorm = torch.ones(1, dtype=torch.float32, device=device)
+    ynorm = torch.ones(1, dtype=torch.float32, device=device)
+    torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
+    torch.save(ynorm, os.path.join(log_dir, 'ynorm.pt'))
+    time.sleep(0.5)
+    print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
+    logger.info(f'vnorm ynorm: {to_numpy(vnorm)} {to_numpy(ynorm)}')
+
+    if do_tracking | has_state:
+        n_particles_max = 0
+        id_list = []
+        type_list = []
+        for k in range(n_frames):
+            type = x_list[0][k][:, 5]
+            type_list.append(type)
+            ids = x_list[0][k][:, -1]
+            id_list.append(ids)
+            n_particles_max += len(type)
+        config.simulation.n_particles_max = n_particles_max
+    np.save(os.path.join(log_dir, 'n_particles_max.npy'), n_particles_max)
 
 
     print('Create models ...')

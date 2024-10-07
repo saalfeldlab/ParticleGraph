@@ -8,7 +8,7 @@ from ParticleGraph.utils import to_numpy
 from ParticleGraph.models import Siren_Network
 
 
-class Interaction_Particle_Field(pyg.nn.MessagePassing):
+class Interaction_Mouse_Field(pyg.nn.MessagePassing):
     """Interaction Network as proposed in this paper:
     https://proceedings.neurips.cc/paper/2016/hash/3147da8ab4a0437c15ef51a5cc7f2dc4-Abstract.html"""
 
@@ -29,7 +29,7 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
 
     def __init__(self, config, device, aggr_type=None, bc_dpos=None, dimension=2):
 
-        super(Interaction_Particle_Field, self).__init__(aggr=aggr_type)  # "Add" aggregation.
+        super(Interaction_Mouse_Field, self).__init__(aggr=aggr_type)  # "Add" aggregation.
 
         simulation_config = config.simulation
         model_config = config.graph_model
@@ -57,6 +57,7 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         self.bc_dpos = bc_dpos
         self.n_ghosts = int(train_config.n_ghosts)
         self.dimension = dimension
+        self.n_particles_max = simulation_config.n_particles_max
 
         if train_config.large_range:
             self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
@@ -65,14 +66,9 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
             self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                                 hidden_size=self.hidden_dim, device=self.device)
 
-        if simulation_config.has_cell_division :
-            self.a = nn.Parameter(
-                torch.tensor(np.ones((self.n_dataset, 20500, 2)), device=self.device,
-                             requires_grad=True, dtype=torch.float32))
-        else:
-            self.a = nn.Parameter(
-                torch.tensor(np.ones((self.n_dataset, int(self.n_particles) + self.n_ghosts, self.embedding_dim)), device=self.device,
-                             requires_grad=True, dtype=torch.float32))
+        self.a = nn.Parameter(
+            torch.tensor(np.ones((self.n_dataset, self.n_particles_max, self.embedding_dim)), device=self.device,
+                         requires_grad=True, dtype=torch.float32))
 
         if (model_config.field_type == 'tensor'):
             self.field = nn.Parameter(
@@ -87,8 +83,6 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
             for n in range(self.n_dataset):
                 image_width = self.n_nodes_per_axis
                 self.field.append(Siren_Network(image_width=image_width, in_features=2, out_features=1, hidden_features=256, hidden_layers=8, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.))
-
-
 
         if self.update_type != 'none':
             self.lin_update = MLP(input_size=self.output_size + self.embedding_dim + 2, output_size=self.output_size,
@@ -117,10 +111,6 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
         particle_id = x[:, 0:1]
 
         pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id, field=field)
-
-        if self.update_type == 'linear':
-            embedding = self.a[self.data_id, particle_id, :]
-            pred = self.lin_update(torch.cat((pred, x[:, 3:5], embedding), dim=-1))
 
         return pred
 
@@ -152,16 +142,10 @@ class Interaction_Particle_Field(pyg.nn.MessagePassing):
 
 
         embedding_i = self.a[self.data_id, to_numpy(particle_id_i), :].squeeze()
-        # embedding_j = self.a[self.data_id, to_numpy(particle_id_j), :].squeeze()
 
-        match self.model:
 
-            case 'PDE_ParticleField_A':
-                    in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
-            case 'PDE_ParticleField_B':
-                    in_features = torch.cat(
-                        (delta_pos, r[:, None], dpos_x_i[:, None], dpos_y_i[:, None], dpos_x_j[:, None],
-                         dpos_y_j[:, None], embedding_i), dim=-1)
+
+        in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
 
         out = self.lin_edge(in_features) * field_j
 

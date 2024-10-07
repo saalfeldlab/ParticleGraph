@@ -9,7 +9,7 @@ simulation:
   n_particles: 6
   n_particles_max: 0
   n_particle_types: 6
-  n_frames: 250
+  n_frames: 36018
   delta_t: 1
   boundary: 'no'
   has_cell_state: True
@@ -23,7 +23,7 @@ simulation:
   node_value_map: 'pattern_Null.tif'
 
 graph_model:
-  particle_model_name: 'PDE_Cell_A'
+  particle_model_name: 'PDE_M'
   mesh_model_name: ''
   prediction: 'first_derivative'
   input_size: 5
@@ -33,6 +33,7 @@ graph_model:
   aggr_type: 'mean'
   embedding_dim: 2
   update_type: 'none'
+  field_type: 'siren_with_time'
 
 plotting:
   colormap: 'tab10'
@@ -43,8 +44,8 @@ training:
   n_epochs: 20
   batch_size: 1
   small_init_batch_size: True
-  n_runs: 2
-  sparsity: 'replace_embedding_function'
+  n_runs: 1
+  sparsity: 'none'
   sparsity_freq: 4
   cluster_method: 'kmeans_auto_plot'
   data_augmentation: False

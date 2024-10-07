@@ -895,11 +895,15 @@ def choose_training_model(model_config, device):
     dimension = model_config.simulation.dimension
     do_tracking = model_config.training.do_tracking
 
+
     bc_pos, bc_dpos = choose_boundary_values(model_config.simulation.boundary)
 
     model=[]
     model_name = model_config.graph_model.particle_model_name
     match model_name:
+        case 'PDE_M':
+            model = Interaction_Mouse_Field(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos,
+                                     dimension=dimension)
         case 'PDE_Cell_A' | 'PDE_Cell_B' | 'PDE_Cell_B_area' | 'PDE_Cell_A_area':
             model = Interaction_Cell(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos, dimension=dimension)
             model.edges = []
