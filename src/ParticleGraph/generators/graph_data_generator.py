@@ -877,6 +877,7 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
 
     x_list = []
     edge_f_p_list = []
+    edge_p_p_list = []
 
     X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
 
@@ -912,10 +913,16 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
         x_particle_field = torch.concatenate((x_mesh, x), dim=0)
 
         # compute connectivity rules
-        distance = torch.sum((x[:, None, 1:dimension + 1] - x_mesh[None, :, 1:dimension + 1]) ** 2, dim=2)
-        adj_t = ((distance < 0.25 ** 2) & (distance > 0)).float() * 1
+        edge_index = torch.sum((x[:, None, 1:dimension + 1] - x_mesh[None, :, 1:dimension + 1]) ** 2, dim=2)
+        adj_t = ((edge_index < 0.25 ** 2) & (edge_index > 0)).float() * 1
         edge_index = adj_t.nonzero().t().contiguous()
-        edge_f_p_list.append(edge_index)
+        edge_f_p_list.append(to_numpy(edge_index))
+
+        # compute connectivity rules
+        edge_index = torch.sum((x[:, None, 1:dimension + 1] - x[None, :, 1:dimension + 1]) ** 2, dim=2)
+        edge_index = ((edge_index < max_radius ** 2) & (edge_index > min_radius ** 2)).float() * 1
+        edge_index = edge_index.nonzero().t().contiguous()
+        edge_p_p_list.append(to_numpy(edge_index))
 
         x_list.append(x)
 
@@ -949,8 +956,8 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
                 plt.close()
 
     torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
-
-    torch.save(edge_f_p_list, f'graphs_data/graphs_{dataset_name}/edge_f_p_list{run}.pt')
+    np.savez(f'graphs_data/graphs_{dataset_name}/edge_f_p_list_{run}', *edge_f_p_list)
+    np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}', *edge_p_p_list)
 
 
 

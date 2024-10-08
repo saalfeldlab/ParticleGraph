@@ -3988,22 +3988,72 @@ def plot_signal2(config_file, epoch_list, log_dir, logger, cc, device):
         model.edges = edge_index
         print(f'net: {net}')
 
-        i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-        A = model.W.clone().detach()
-        A[i, i] = 0
-        A=A/100
+        fig, ax = fig_init()
+        rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
+        func_list = []
+        for n in trange(0,n_particles,n_particles//100):
+            in_features = rr[:, None]
+            with torch.no_grad():
+                func = model.lin_edge(in_features.float())
+            func_list.append(func)
+            plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
+                     linewidth=2, alpha=0.25)
+        func_list = torch.stack(func_list)
+        plt.xlabel(r'$u$', fontsize=78)
+        plt.ylabel(r'Learned $f(u)$', fontsize=78)
+        # plt.ylim([-0.05,0.15])
+        plt.xlim([-5,5])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/raw_f_u_{config_file}_{epoch}.tif", dpi=170.7)
+        plt.close()
 
-        fig = plt.figure(figsize=(8, 8))
+        correction = 1 / torch.mean(torch.mean(func_list[:,900:1000], dim=0))
+        print(f'correction: {correction:0.2f}')
+
+        fig, ax = fig_init()
+        rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
+        func_list = []
+        for n in trange(0,n_particles,n_particles//100):
+            in_features = rr[:, None]
+            with torch.no_grad():
+                func = model.lin_edge(in_features.float()) * correction
+            func_list.append(func)
+            plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
+                     linewidth=2, alpha=0.25)
+        func_list = torch.stack(func_list)
+        plt.xlabel(r'$u$', fontsize=78)
+        plt.ylabel(r'Learned $f(u)$', fontsize=78)
+        plt.ylim([-1.1,1.1])
+        plt.xlim([-5,5])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/reconstructed_f_u_{config_file}_{epoch}.tif", dpi=170.7)
+        plt.close()
+
+        i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+        A = model.W.clone().detach() / correction
+        A[i, i] = 0
+
+        fig, ax = fig_init()
         gt_weight = to_numpy(adjacency)
         pred_weight = to_numpy(A)
-        plt.scatter(gt_weight, pred_weight, s=0.1, c='k', alpha=0.1)
-        plt.xlabel(r'true $W_{ij}$', fontsize=24)
-        plt.ylabel(r'learned $W_{ij}$', fontsize=24)
-        plt.xlim([-0.25,0.25])
-        plt.ylim([-0.25,0.25])
+        plt.scatter(gt_weight, pred_weight, s=0.1, c='k', alpha=1)
+        plt.xlabel(r'true $W_{ij}$', fontsize=78)
+        plt.ylabel(r'learned $W_{ij}$', fontsize=78)
+        plt.xlim([-1,1])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/comparison_{epoch}.tif", dpi=87)
         plt.close()
+
+        x_data = np.reshape(gt_weight, (n_particles * n_particles))
+        y_data =  np.reshape(pred_weight, (n_particles * n_particles))
+        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+        residuals = y_data - linear_model(x_data, *lin_fit)
+        ss_res = np.sum(residuals ** 2)
+        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot)
+        print(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
+        logger.info(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
+
 
         fig = plt.figure(figsize=(8, 8))
         ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.01, vmax=0.01)
@@ -4787,18 +4837,13 @@ if __name__ == '__main__':
 
 
     # config_list = ["arbitrary_3_cell_sequence_a","arbitrary_3_cell_sequence_b","arbitrary_3_cell_sequence_c"]
+    # config_list = ["boids_9_sequence_a"]
 
-    config_list = ["boids_9_sequence_a"]
-
-    # # config_list = ['signal_N_100_2_d']
-    # config_list = ['signal_N_100_2_a']
-    # config_list = ['boids_division_model_f2']
-    # config_list = ["agents_e"]
-    # config_list = ["signal_N2_hemibrain_3_r1_t_bis"]
+    config_list = ['signal_N2_i_r1']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['10_0'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['20_0'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

@@ -97,8 +97,8 @@ class Interaction_Cell(pyg.nn.MessagePassing):
             field = torch.ones_like(x[:,6:7])
         pos = x[:, 1:self.dimension+1]
         d_pos = x[:, self.dimension+1:1+2*self.dimension]
-
         area = x[:, 14:15]
+
         if self.do_tracking | self.has_state:
             particle_id = x[:, -1][:, None]
             if self.use_hot_encoding:

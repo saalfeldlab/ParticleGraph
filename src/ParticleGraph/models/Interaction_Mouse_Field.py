@@ -67,7 +67,7 @@ class Interaction_Mouse_Field(pyg.nn.MessagePassing):
                                 hidden_size=self.hidden_dim, device=self.device)
 
         self.a = nn.Parameter(
-            torch.tensor(np.ones((self.n_dataset, self.n_particles_max, self.embedding_dim)), device=self.device,
+            torch.tensor(np.ones((self.n_particles_max, self.embedding_dim)), device=self.device,
                          requires_grad=True, dtype=torch.float32))
 
         if self.update_type != 'none':
@@ -94,13 +94,14 @@ class Interaction_Mouse_Field(pyg.nn.MessagePassing):
         else:
             field = torch.ones_like(x[:,6:7])
 
-        particle_id = x[:, 0:1]
+        particle_id = x[:, -1][:, None]
+        embedding = self.a[to_numpy(particle_id), :].squeeze()
 
-        pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id, field=field)
+        pred = self.propagate(edge_index, pos=pos, d_pos=d_pos, particle_id=particle_id,  embedding=embedding, field=field)
 
         return pred
 
-    def message(self, pos_i, pos_j, d_pos_i, d_pos_j, particle_id_i, particle_id_j, field_j):
+    def message(self, pos_i, pos_j, d_pos_i, d_pos_j, particle_id_i, particle_id_j, embedding_i, embedding_j, field_j):
         # squared distance
         r = torch.sqrt(torch.sum(self.bc_dpos(pos_j - pos_i) ** 2, dim=1)) / self.max_radius
         delta_pos = self.bc_dpos(pos_j - pos_i) / self.max_radius
@@ -125,11 +126,6 @@ class Interaction_Mouse_Field(pyg.nn.MessagePassing):
             new_dpos_y_j = -self.sin_phi * dpos_x_j + self.cos_phi * dpos_y_j
             dpos_x_j = new_dpos_x_j
             dpos_y_j = new_dpos_y_j
-
-
-        embedding_i = self.a[self.data_id, to_numpy(particle_id_i), :].squeeze()
-
-
 
         in_features = torch.cat((delta_pos, r[:, None], embedding_i), dim=-1)
 

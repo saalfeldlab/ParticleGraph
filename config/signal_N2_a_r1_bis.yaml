@@ -1,11 +1,10 @@
-description: 'synaptic network random matrix no recursive loop filling 50%'
-dataset: 'signal_N2_l'
+description: 'synaptic network random matrix no recursive loop'
+dataset: 'signal_N2_a_bis'
 
 simulation:
     connectivity_file: 'random'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
-    connectivity_filling_factor: 0.50
     params: [[10.0,1.0],[10.0,2.0]]
     phi: 'tanh'
     tau: 1.0
@@ -58,4 +57,3 @@ training:
     sparsity_freq: 4
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4
-    coeff_L1: 1.0E-5

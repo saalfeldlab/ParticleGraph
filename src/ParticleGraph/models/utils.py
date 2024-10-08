@@ -137,7 +137,6 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
             func = model.lin_edge(in_features.float())
         if (n % 2 == 0):
             plt.plot(to_numpy(rr), to_numpy(func),2, color=cmap.color(to_numpy(type_list)[n].astype(int)), linewidth=2, alpha=0.25)
-    plt.ylim([-0.25,0.25])
     plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/func_{epoch}_{N}.tif", dpi=87)
     plt.close()
 
@@ -531,41 +530,58 @@ def plot_training (config, dataset_name, log_dir, epoch, N, x, index_particles, 
                 plt.savefig(f"./{log_dir}/tmp_training/function/lin_edge/{dataset_name}_function_{epoch}_{N}.tif", dpi=87)
                 plt.close()
 
-def plot_training_cell_state(config, id_list, dataset_name, log_dir, epoch, N, model, n_particle_types, type_list, ynorm, cmap, device):
+def plot_training_mouse(config, id_list, dataset_name, log_dir, epoch, N, model, n_particle_types, type_stack, ynorm, cmap, device):
 
     simulation_config = config.simulation
     train_config = config.training
     model_config = config.graph_model
 
-    fig = plt.figure(figsize=(8, 8))
-    for k in range(1,len(type_list),40):
-        for n in range(n_particle_types):
-            pos = torch.argwhere(type_list[k] == n)
-            if len(pos) > 0:
-                if model.use_hot_encoding:
-                    embedding = to_numpy(torch.matmul(torch.sigmoid((model.a[to_numpy(id_list[k][pos]).astype(int), :]-0.5)*2), model.b).squeeze())
-                else:
-                    embedding = to_numpy(model.a[to_numpy(id_list[k][pos]).astype(int)].squeeze())
-                if embedding.ndim==1:
-                    embedding = embedding[None,:]
-                plt.scatter(embedding[:, 0], embedding[:, 1], s=1, color=cmap.color(n), alpha=0.5)
+    fig, ax = fig_init()
+    for n in range(n_particle_types):
+        pos = torch.argwhere(type_stack == n).squeeze()
+        if len(pos) > 0:
+            plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=1, color=cmap.color(n), alpha=0.25)
     plt.xticks([])
     plt.yticks([])
     plt.tight_layout()
     plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=87)
     plt.close()
 
-    max_radius = 0.04
+def plot_training_state(config, id_list, dataset_name, log_dir, epoch, N, model, n_particle_types, type_list, type_stack, ynorm, cmap, device):
+
+    simulation_config = config.simulation
+    train_config = config.training
+    model_config = config.graph_model
+
+    fig, ax = fig_init()
+    for n in range(n_particle_types):
+        pos = torch.argwhere(type_stack == n).squeeze()
+        if len(pos) > 0:
+            plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=0.1, color=cmap.color(n), alpha=0.1)
+    plt.xticks([])
+    plt.yticks([])
+    plt.tight_layout()
+    plt.savefig(f"./{log_dir}/tmp_training/embedding/{dataset_name}_{epoch}_{N}.tif", dpi=87)
+    plt.close()
+
+    max_radius = 0.1
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(1,1,1)
     rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
 
-    for k in range(1,len(type_list), 40):
-        for n in range(1,len(type_list[k]),10):
-                if model.use_hot_encoding:
-                    embedding_ = torch.matmul(torch.sigmoid((model.a[to_numpy(id_list[k][n]).astype(int)] - 0.5) * 10), model.b.clone().detach()).squeeze()
-                else:
-                    embedding_ = model.a[to_numpy(id_list[k][n]).astype(int)]
+    if len(type_list) > 1E5:
+        nk = len(type_list) // 1000
+    else:
+        nk = 40
+
+    if len(type_list[0])>1000:
+        nn =  10
+    else:
+        nn = 1
+
+    for k in range(1,len(type_list), nk):
+        for n in range(1,len(type_list[k]), nn):
+                embedding_ = model.a[to_numpy(id_list[k][n]).astype(int)]
                 embedding_ = embedding_ * torch.ones((1000, model_config.embedding_dim), device=device)
 
                 match model_config.particle_model_name:
@@ -590,6 +606,8 @@ def plot_training_cell_state(config, id_list, dataset_name, log_dir, epoch, N, m
                 type = to_numpy(type_list[k][n])
                 plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
                              color=cmap.color(int(type)), linewidth=2,alpha=0.1)
+
+
     ax.xaxis.set_major_locator(plt.MaxNLocator(3))
     ax.yaxis.set_major_locator(plt.MaxNLocator(5))
     ax.xaxis.set_major_formatter(FormatStrFormatter('%.2f'))
