@@ -2370,7 +2370,7 @@ def data_train_synaptic(config, config_file, erase, device):
         print(f'Niter = {Niter}')
         logger.info(f'Niter = {Niter}')
 
-        for N in range(Niter):
+        for N in trange(Niter):
 
             run = 1 + np.random.randint(n_runs - 1)
             k = np.random.randint(n_frames - 6)
@@ -2547,7 +2547,7 @@ def data_train_synaptic(config, config_file, erase, device):
 
             total_loss += loss.item()
 
-            visualize_embedding = False
+            visualize_embedding = True
             if visualize_embedding & (((epoch < 30 ) & (N%(Niter//50) == 0)) | (N==0)):
                 plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, index_particles, n_particles, n_particle_types, type_list, cmap, has_siren, has_siren_time, model_exc, n_frames, device)
                 torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))

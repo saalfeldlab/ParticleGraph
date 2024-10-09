@@ -592,7 +592,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
         if os.path.isfile(f'./graphs_data/graphs_{dataset_name}/X1.pt'):
             X1 = torch.load(f'./graphs_data/graphs_{dataset_name}/X1.pt', map_location=device)
-
         else:
             dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
             G = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
@@ -833,6 +832,11 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
 def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,
                            ratio=1, scenario='none', device=None, bSave=True):
+
+    # sudo mkdir /nearline/
+    # sudo mount -o rw,hard,bg,nolock,nfsvers=4.1,sec=krb5 nearline4.hhmi.org:/nearline/ /nearline/
+
+
     simulation_config = config.simulation
     training_config = config.training
     model_config = config.graph_model

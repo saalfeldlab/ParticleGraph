@@ -4839,11 +4839,11 @@ if __name__ == '__main__':
     # config_list = ["arbitrary_3_cell_sequence_a","arbitrary_3_cell_sequence_b","arbitrary_3_cell_sequence_c"]
     # config_list = ["boids_9_sequence_a"]
 
-    config_list = ['signal_N2_i_r1']
+    config_list = ['signal_N2_a_r1']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['20_0'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['1_0'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

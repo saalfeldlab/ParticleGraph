@@ -6,7 +6,7 @@ simulation:
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
     connectivity_filling_factor: 0.20
-    params: [[10.0,1.0],[10.0,2.0]]
+    params: [[10.0,1.0,1.0],[10.0,2.0,1.0]]
     phi: 'tanh'
     tau: 1.0
     min_radius: 1.0
