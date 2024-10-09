@@ -109,13 +109,14 @@ class PDE_N2(pyg.nn.MessagePassing):
         parameters = self.p[particle_type]
         g = parameters[:, 0:1]
         s = parameters[:, 1:2]
+        c = parameters[:, 2:3]
 
         u = x[:, 6:7]
 
         # msg_ = self.propagate(edge_index, u=u, edge_attr=edge_attr)
         msg = torch.matmul(self.W, self.phi(u))
 
-        du = -u + s * self.phi(u) + g * msg + excitation[:,None]
+        du = -c * u + s * self.phi(u) + g * msg + excitation[:,None]
 
         if return_all:
             return du, s * self.phi(u), g * msg

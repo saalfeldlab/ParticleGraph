@@ -63,7 +63,7 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N2_hemibrain_3_r1_t_ter']
 
-    # config_list = ['signal_N2_b_r1']
+    # config_list = ['signal_N2_n_r1']
 
     # config_list = ['signal_N2_WBI_small_a']
 

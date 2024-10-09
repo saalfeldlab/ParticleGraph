@@ -141,7 +141,7 @@ def choose_model(config=[], W=[], phi=[], device=[]):
                     p[n] = torch.tensor(params[n])
             model = PDE_N(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
         case 'PDE_N2' | 'PDE_N3' | 'PDE_N4':
-            p = torch.rand(n_particle_types, 2, device=device) * 100  # comprised between 10 and 50
+            p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
             if params[0] != [-1]:
                 for n in range(n_particle_types):
                     p[n] = torch.tensor(params[n])
