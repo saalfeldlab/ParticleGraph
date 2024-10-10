@@ -1073,7 +1073,7 @@ def data_train_mouse_city(config, config_file, erase, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0.pt"
+    # net = f"./log/try_{config_file}/models/best_model_with_0_graphs_20.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
 
@@ -1102,6 +1102,16 @@ def data_train_mouse_city(config, config_file, erase, device):
     list_loss = []
     time.sleep(1)
     for epoch in range(0, n_epochs + 1):
+
+
+        if epoch <10:
+            lr_embedding = 1E-12
+            lr = train_config.learning_rate_start
+        else:
+            lr_embedding = train_config.learning_rate_embedding_start
+            lr = train_config.learning_rate_start
+        optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+        logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
         total_loss = 0
         Niter = n_frames * data_augmentation_loop

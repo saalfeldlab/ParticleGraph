@@ -1,5 +1,5 @@
-description: 'synaptic network random matrix no recursive loop 16 types'
-dataset: 'signal_N2_n'
+description: 'synaptic network random matrix no recursive loop 32 types'
+dataset: 'signal_N2_o'
 
 simulation:
     connectivity_file: 'random'
@@ -18,8 +18,8 @@ simulation:
     min_radius: 1.0
     max_radius: 1.0E6
     n_particles: 1000
-    n_particle_types: 16
-    n_interactions: 16
+    n_particle_types: 32
+    n_interactions: 32
     n_frames: 10000
     delta_t: 0.01
     dpos_init:  0
@@ -44,7 +44,7 @@ graph_model:
 
 
 plotting:
-    colormap: 'tab10'
+    colormap: 'tab20'
     arrow_length: 1
 
 training:

@@ -3971,10 +3971,48 @@ def plot_signal2(config_file, epoch_list, log_dir, logger, cc, device):
     print(f'N particles: {n_particles}')
     config.simulation.n_particles = n_particles
 
+
+    activity = torch.stack(x_list[0])
+    activity = activity[:, :, 6:7].squeeze()
+    activity = activity.t()
+
+    plt.figure(figsize=(15, 10))
+    ax = sns.heatmap(to_numpy(activity), center=0, cbar_kws={'fraction': 0.046})
+    ax.invert_yaxis()
+    plt.ylabel('Neurons', fontsize=64)
+    plt.xlabel('Time', fontsize=64)
+    plt.xticks([0,10000],fontsize=24)
+    plt.yticks([0, 999], [1, 1000], fontsize=24)
+    plt.tight_layout()
+    plt.savefig(f'./{log_dir}/results/kinogrpah.png', dpi=300)
+    plt.close()
+
+    plt.figure(figsize=(15, 10))
+    for i in range(25):
+        plt.plot(to_numpy(activity[i, :]), linewidth=2)
+    plt.xlabel('Time', fontsize=64)
+    plt.ylabel('Firing rate', fontsize=64)
+    plt.xticks([0,10000],fontsize=24)
+    plt.yticks(fontsize=24)
+    plt.tight_layout()
+    plt.savefig(f'./{log_dir}/results/firing rate.png', dpi=300)
+    plt.close()
+
+
     adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt', map_location=device)
     adjacency_ = adjacency.t().clone().detach()
     adj_t = torch.abs(adjacency_) > 0
     edge_index = adj_t.nonzero().t().contiguous()
+
+    plt.figure(figsize=(10, 10))
+    ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-1, vmax=1)
+    cbar = ax.collections[0].colorbar
+    cbar.ax.tick_params(labelsize=48)
+    plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+    plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+    plt.title(r'true $W_{ij}$', fontsize=78)
+    plt.tight_layout()
+    plt.savefig(f'./{log_dir}/results/true connectivity.png', dpi=300)
 
     files = glob.glob(f"{log_dir}/models/*.pt")
     files.sort(key=os.path.getmtime)
@@ -3989,6 +4027,16 @@ def plot_signal2(config_file, epoch_list, log_dir, logger, cc, device):
         print(f'net: {net}')
 
         fig, ax = fig_init()
+        embedding = get_embedding(model.a, 1)
+        for n in range(n_particle_types):
+            plt.scatter(embedding[index_particles[n], 0],
+                        embedding[index_particles[n], 1], color=cmap.color(n), s=200, alpha=0.1)
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/all_embedding_{config_file}_{epoch}.tif", dpi=170.7)
+
+        fig, ax = fig_init()
         rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
         func_list = []
         for n in trange(0,n_particles,n_particles//100):
@@ -3999,12 +4047,12 @@ def plot_signal2(config_file, epoch_list, log_dir, logger, cc, device):
             plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
                      linewidth=2, alpha=0.25)
         func_list = torch.stack(func_list)
-        plt.xlabel(r'$u$', fontsize=78)
-        plt.ylabel(r'Learned $f(u)$', fontsize=78)
+        plt.xlabel(r'$x$', fontsize=78)
+        plt.ylabel(r'Learned $f(x)$', fontsize=78)
         # plt.ylim([-0.05,0.15])
         plt.xlim([-5,5])
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/raw_f_u_{config_file}_{epoch}.tif", dpi=170.7)
+        plt.savefig(f"./{log_dir}/results/raw_f_x_{config_file}_{epoch}.tif", dpi=170.7)
         plt.close()
 
         correction = 1 / torch.mean(torch.mean(func_list[:,900:1000], dim=0))
@@ -4019,15 +4067,26 @@ def plot_signal2(config_file, epoch_list, log_dir, logger, cc, device):
                 func = model.lin_edge(in_features.float()) * correction
             func_list.append(func)
             plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
-                     linewidth=2, alpha=0.25)
+                     linewidth=4, alpha=0.25)
         func_list = torch.stack(func_list)
-        plt.xlabel(r'$u$', fontsize=78)
-        plt.ylabel(r'Learned $f(u)$', fontsize=78)
+        plt.xlabel(r'$x$', fontsize=78)
+        plt.ylabel(r'Learned $f(x)$', fontsize=78)
         plt.ylim([-1.1,1.1])
         plt.xlim([-5,5])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/reconstructed_f_u_{config_file}_{epoch}.tif", dpi=170.7)
         plt.close()
+
+        fig, ax = fig_init()
+        func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
+                                                            model_MLP=model.lin_phi, model_a=model.a,
+                                                            n_nodes=0,
+                                                            dataset_number=1,
+                                                            n_particles=n_particles, ynorm=ynorm,
+                                                            type_list=to_numpy(x[:, 1 + 2 * dimension]),
+                                                            cmap=cmap, dimension=dimension, device=device)
+        plt.savefig(f'./{log_dir}/results/learned phi.png', dpi=300)
+
 
         i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
         A = model.W.clone().detach() / correction
@@ -4036,7 +4095,7 @@ def plot_signal2(config_file, epoch_list, log_dir, logger, cc, device):
         fig, ax = fig_init()
         gt_weight = to_numpy(adjacency)
         pred_weight = to_numpy(A)
-        plt.scatter(gt_weight, pred_weight, s=0.1, c='k', alpha=1)
+        plt.scatter(gt_weight, pred_weight / 10, s=0.1, c='k', alpha=1)
         plt.xlabel(r'true $W_{ij}$', fontsize=78)
         plt.ylabel(r'learned $W_{ij}$', fontsize=78)
         plt.xlim([-1,1])
@@ -4054,23 +4113,23 @@ def plot_signal2(config_file, epoch_list, log_dir, logger, cc, device):
         print(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
         logger.info(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
 
+        second_correction = lin_fit[0]
+        print(f'second_correction: {second_correction:0.2f}')
 
-        fig = plt.figure(figsize=(8, 8))
-        ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.01, vmax=0.01)
-        plt.title(r'learned $W_{ij}$', fontsize=24);
-        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
-        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+        plt.figure(figsize=(10, 10))
+        plt.title(r'learned $W_{ij}$', fontsize=78)
+        ax = sns.heatmap(to_numpy(A)/second_correction, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-1,
+                         vmax=1)
+        cbar = ax.collections[0].colorbar
+        # here set the labelsize by 20
+        cbar.ax.tick_params(labelsize=48)
+        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/learned_matrix_{epoch}.tif", dpi=87)
-        plt.close()
+        plt.savefig(f'./{log_dir}/results/learned connectivity.png', dpi=300)
 
-        fig = plt.figure(figsize=(8, 8))
-        ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.01, vmax=0.01)
-        plt.title(r'true $W_{ij}$', fontsize=24);
-        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
-        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
-        plt.savefig(f"./{log_dir}/results/true_matrix.tif", dpi=87)
-        plt.tight_layout()
+
+
 
     if has_siren_time:
 
@@ -4839,11 +4898,11 @@ if __name__ == '__main__':
     # config_list = ["arbitrary_3_cell_sequence_a","arbitrary_3_cell_sequence_b","arbitrary_3_cell_sequence_c"]
     # config_list = ["boids_9_sequence_a"]
 
-    config_list = ['signal_N2_a_r1']
+    config_list = ['signal_N2_a_r1','signal_N2_m_r1']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['1_0'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['20_0'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

@@ -63,13 +63,13 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N2_hemibrain_3_r1_t_ter']
 
-    # config_list = ['signal_N2_n_r1']
+    # config_list = ['signal_N2_o_r1']
 
     # config_list = ['signal_N2_WBI_small_a']
 
     # config_list = ["arbitrary_3"]
 
-    # config_list = ["mouse_city_a"]
+    # config_list = ["mouse_city_b"]
 
 
     for config_file in config_list:

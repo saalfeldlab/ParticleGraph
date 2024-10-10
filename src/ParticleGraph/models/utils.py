@@ -871,7 +871,7 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
         func = func[:, 0]
         func_list.append(func)
         if ((n % 5 == 0) | (config.graph_model.particle_model_name=='PDE_GS') | ('PDE_N' in config_model)) & vizualize:
-            plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),2, color=cmap.color(type_list[n].astype(int)), linewidth=2, alpha=0.25)
+            plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),2, color=cmap.color(type_list[n].astype(int)), linewidth=4, alpha=0.25)
 
     func_list = torch.stack(func_list)
     func_list_ = to_numpy(func_list)
@@ -899,8 +899,8 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
             plt.xlim([1E-3, 0.2])
         if config.graph_model.particle_model_name == 'PDE_E':
             plt.xlim([0, 0.05])
-        plt.xlabel('Distance [a.u]')
-        plt.ylabel('MLP [a.u]')
+        plt.xlabel(r'$x$', fontsize=64)
+        plt.ylabel(r'$\Phi(x)$', fontsize=64)
         plt.tight_layout()
 
     return func_list, proj_interaction
