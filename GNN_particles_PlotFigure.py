@@ -3973,7 +3973,15 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
 
     activity = torch.stack(x_list[0])
     activity = activity[:, :, 6:7].squeeze()
+    distrib = to_numpy(activity.flatten())
     activity = activity.t()
+
+    plt.figure(figsize=(15, 10))
+    plt.hist(distrib, bins=100, color='k',alpha=0.5)
+    plt.savefig(f'./{log_dir}/results/distribution.png', dpi=300)
+    plt.close()
+    print(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
+    logger.info(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
 
     plt.figure(figsize=(15, 10))
     ax = sns.heatmap(to_numpy(activity), center=0, cbar_kws={'fraction': 0.046})
@@ -4010,7 +4018,12 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
     plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
     plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
     # plt.title(r'true $W_{ij}$', fontsize=78)
+    plt.subplot(2,2,1)
+    ax = sns.heatmap(to_numpy(adjacency[0:20,0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-1, vmax=1)
+    plt.xticks([])
+    plt.yticks([])
     plt.tight_layout()
+
     plt.savefig(f'./{log_dir}/results/true connectivity.png', dpi=300)
 
     files = glob.glob(f"{log_dir}/models/*.pt")
@@ -4018,7 +4031,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
 
     for epoch in epoch_list:
 
-        net = f'{log_dir}/models/best_model_with_9_graphs_{epoch}.pt'
+        net = f'{log_dir}/models/best_model_with_{n_runs-1}_graphs_{epoch}.pt'
         model, bc_pos, bc_dpos = choose_training_model(config, device)
         state_dict = torch.load(net, map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
@@ -4090,7 +4103,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                 func = model.lin_phi(in_features.float())
             func = func[:, 0]
             func_list.append(func)
-            plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm), color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.25)
+            plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm), color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
 
         func_list = torch.stack(func_list)
         func_list_ = to_numpy(func_list)
@@ -4125,13 +4138,22 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
         plt.close()
 
         config.training.cluster_distance_threshold = 0.01
+
         config.training.cluster_method = 'distance_plot'
         labels, n_clusters, new_labels = sparsify_cluster(config.training.cluster_method, proj_interaction, embedding,
                                                           config.training.cluster_distance_threshold, type_list,
                                                           n_particle_types, embedding_cluster)
         accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-        print(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
-        logger.info(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+        print(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}  ')
+        logger.info(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method} ')
+
+        config.training.cluster_method = 'kmeans_auto_embedding'
+        labels, n_clusters, new_labels = sparsify_cluster(config.training.cluster_method, proj_interaction, embedding,
+                                                          config.training.cluster_distance_threshold, type_list,
+                                                          n_particle_types, embedding_cluster)
+        accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
+        print(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}  ')
+        logger.info(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method} ')
 
 
         i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
@@ -4171,10 +4193,12 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
         cbar.ax.tick_params(labelsize=48)
         plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
         plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+        plt.subplot(2, 2, 1)
+        ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-1, vmax=1)
+        plt.xticks([])
+        plt.yticks([])
         plt.tight_layout()
         plt.savefig(f'./{log_dir}/results/learned connectivity.png', dpi=300)
-
-
 
 
     if has_siren_time:
@@ -4944,11 +4968,15 @@ if __name__ == '__main__':
     # config_list = ["arbitrary_3_cell_sequence_a","arbitrary_3_cell_sequence_b","arbitrary_3_cell_sequence_c"]
     # config_list = ["boids_9_sequence_a"]
 
-    config_list = ['signal_N2_n_r1']
+    # config_list = ['signal_N2_a_r1','signal_N2_c_r1','signal_N2_d_r1','signal_N2_e_r1','signal_N2_f_r1',
+    #                'signal_N2_i_r1','signal_N2_j_r1','signal_N2_k_r1','signal_N2_l_r1','signal_N2_m_r1','signal_N2_n_r1']
+
+    config_list = ['signal_N2_a_r1']
+
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['16_0'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

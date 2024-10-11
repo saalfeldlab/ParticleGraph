@@ -394,6 +394,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     is_N2 = 'signal_N2' in dataset_name
     has_zarr = 'zarr' in simulation_config.connectivity_file
     excitation = simulation_config.excitation
+    noise_level = training_config.noise_level
 
     torch.random.fork_rng(devices=device)
     torch.random.manual_seed(training_config.seed)
@@ -407,7 +408,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     if erase:
         files = glob.glob(f"{folder}/*")
         for f in files:
-            if (f[-3:] != 'Fig') & (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (f != 'generation_code.py'):
+            if (not('Signal' in f)) & (not('Viz' in f)) & (not('Exc' in f)) & (f[-3:] != 'Fig') & (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (f != 'generation_code.py'):
                 os.remove(f)
     os.makedirs(folder, exist_ok=True)
     os.makedirs(f'./graphs_data/graphs_{dataset_name}/Fig/', exist_ok=True)
@@ -680,6 +681,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             if it>=0:
                 H1[:, 1] = y.squeeze()
                 H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
+                if noise_level > 0:
+                    H1[:, 0] = H1[:, 0] + torch.randn(n_particles, device=device) * noise_level
 
             A1 = A1 + 1
 
