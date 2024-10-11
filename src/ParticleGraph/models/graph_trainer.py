@@ -2216,16 +2216,14 @@ def data_train_synaptic(config, config_file, erase, device):
     else:
         get_batch_size = constant_batch_size(target_batch_size)
     batch_size = get_batch_size(0)
-    cmap = CustomColorMap(config=config)  # create colormap for given model_config
     embedding_cluster = EmbeddingCluster(config)
     cmap = CustomColorMap(config=config)
     n_runs = train_config.n_runs
-    is_N2 = 'signal_N2' in dataset_name
+    is_N2 = ('PDE_N2' in model_config.signal_model_name) | ('PDE_N3' in model_config.signal_model_name)
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
     has_siren = 'siren' in model_config.excitation_type
     has_siren_time = 'siren_with_time' in model_config.excitation_type
-    n_no_siren = train_config.n_no_siren -1
 
     l_dir, log_dir, logger = create_log_dir(config, config_file,erase)
     print(f'Graph files N: {n_runs}')
@@ -2320,14 +2318,6 @@ def data_train_synaptic(config, config_file, erase, device):
             adj_t = torch.abs(adjacency) > 0
             edge_index = adj_t.nonzero().t().contiguous()
             adj_t = []
-    excitation = torch.ones((n_particles, 1), device=device) * 0
-    model.edges = edge_index.clone().detach()
-    logger.info(f'edge_index.shape {edge_index.shape} ')
-
-    gene_model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, phi=torch.tanh, device=device)
-    adj_t = torch.abs(adjacency) > 0
-    edge_index = adj_t.nonzero().t().contiguous()
-    edge_attr_adjacency = adjacency[adj_t]
 
     if has_siren:
         im = imread(f"graphs_data/{simulation_config.excitation_value_map}")
@@ -2359,12 +2349,6 @@ def data_train_synaptic(config, config_file, erase, device):
     Niter = int(n_frames * data_augmentation_loop // batch_size * n_runs / 10)
     print(f'plot every {Niter // 100} iterations')
 
-    # threshold_mask = torch.std(model.W) * 0.1
-    # pos = torch.argwhere(torch.abs(model.W) > threshold_mask)
-    # print(f'{np.round(len(pos)/(model.W.shape[0]**2)*100,2)}% remaining weights')
-    # model.mask = model.mask * (torch.abs(model.W) > threshold_mask)
-    # edge_index = model.mask.nonzero().t().contiguous()
-
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
 
     list_loss = []
@@ -2380,12 +2364,12 @@ def data_train_synaptic(config, config_file, erase, device):
         print(f'Niter = {Niter}')
         logger.info(f'Niter = {Niter}')
 
-        for N in trange(Niter):
+        excitation = torch.zeros((n_particles, 1), device=device)
+
+        for N in range(Niter):
 
             run = 1 + np.random.randint(n_runs - 1)
             k = np.random.randint(n_frames - 6)
-
-            excitation = torch.zeros((n_particles, 1), device=device)
 
             if has_siren:
 
@@ -2421,22 +2405,6 @@ def data_train_synaptic(config, config_file, erase, device):
                     u = x_list[run][k].clone().detach()
                     u = u[:,6:7]
                     diff = torch.relu(model.lin_edge(u) - model.lin_edge(u+0.1)).norm(2)
-
-                    # fig = plt.figure(figsize=(12, 12))
-                    # plt.scatter(to_numpy(u), to_numpy(model.lin_edge(u)), s=1)
-
-                elif 'PDE_N4' in config.graph_model.signal_model_name:
-                    in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1,:]), dim=1)
-                    func_phi = model.lin_phi(in_features.float())
-                    in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :], model.a[1, :]), dim=1)
-                    func_edge = model.lin_edge(in_features.float())
-                    if epoch==0:
-                        u = x_list[run][k].clone().detach()
-                        u = u[:,6:7]
-                        embedding_ = model.a[1, :, :]
-                        in_features = torch.cat((u, embedding_,embedding_), dim=1)
-                        in_features_ = torch.cat((u+0.1, embedding_,embedding_), dim=1)
-                        diff = torch.relu(model.lin_edge(in_features.float()) - model.lin_edge(in_features_.float())).norm(2)
                 else:
                     func_edge = model.lin_edge(torch.zeros(1, device=device))
                     in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :]), dim=1)
@@ -2451,32 +2419,11 @@ def data_train_synaptic(config, config_file, erase, device):
                         y = y_list[run][k].clone().detach()
                         y = y / ynorm
 
-                        # dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
-                        # excitation = torch.zeros((n_particles, 1), device=device)
-                        # excitation = excitation.squeeze()
-                        # y_bis, s_tanhu, msg = gene_model(dataset, return_all=True, excitation=excitation)
-                        # fig = plt.figure(figsize=(12, 12))
-                        # plt.scatter(to_numpy(y), to_numpy(pred), s=1)
-                        # fig = plt.figure(figsize=(12, 12))
-                        # plt.scatter(to_numpy(y), to_numpy(y_bis), s=1)
-
-                        # tmp = excitation.clone().detach()[:,None]
-                        # tmp = pred1.clone().detach()
-                        # tmp = y_list[run][k].clone().detach() / ynorm
-                        # tmp = excitation.clone().detach()[:,None] + pred.clone().detach()
-                        # tmp = y.clone().detach()
-                        # tmp = torch.cat((tmp, torch.zeros((3025-n_particles, 1), device=device)), dim=0)
-                        # tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
-                        # tmp = to_numpy(tmp)
-                        # tmp = np.rot90(tmp, k=1)
-                        # fig = plt.figure(figsize=(12, 12))
-                        # plt.imshow(tmp, cmap='grey')
-                        # plt.colorbar()
-
                         if is_N2:
                             loss = (pred - y).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 10 * (epoch==0)
                         else:
                             loss = (pred - y).norm(2) + func_phi.norm(2) + func_edge.norm(2)
+
 
                     case 2:
                         x = x_list[run][k].clone().detach()

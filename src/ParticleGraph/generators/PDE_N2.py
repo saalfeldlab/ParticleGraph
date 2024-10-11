@@ -25,6 +25,20 @@ def constructRandomMatrices(n_neurons=1000, density=1.0, connectivity_mask=[], d
         polarity = (np.random.rand(W.shape[0],W.shape[1])>0.5)*2-1
         W = W  / np.max(W)
         W = W * polarity
+
+        weights = W.flatten()
+        pos = np.argwhere(weights != 0)
+        weights = weights[pos]
+        # plt.figure(figsize=(10, 10))
+        # plt.hist(weights, bins=1000, color='k', alpha=0.5)
+        # plt.ylabel(r'counts', fontsize=64)
+        # plt.xlabel(r'$W$', fontsize=64)
+        # plt.yticks(fontsize=24)
+        # plt.xticks(fontsize=24)
+        # plt.xlim([0, 100])
+        # plt.tight_layout()
+
+
     else:
         mask = (imread(connectivity_mask)>0.1)*1.0
         plt.imshow(mask,vmin=0,vmax=1)

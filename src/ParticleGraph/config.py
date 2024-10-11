@@ -18,6 +18,9 @@ class SimulationConfig(BaseModel):
     connectivity_filling_factor: float = 1
     connectivity_type : Literal['none', 'distance', 'voronoi', 'k_nearest'] = 'distance'
     connectivity_parameter: float = 1.0
+    connectivity_distribution: str = 'Gaussian'
+    connectivity_distribution_params: float = 1
+
     excitation_value_map: Optional[str] = None
     excitation: str='none'
     adjacency_matrix: str = ''

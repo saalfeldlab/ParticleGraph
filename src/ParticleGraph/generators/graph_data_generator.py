@@ -391,7 +391,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     n_frames = simulation_config.n_frames
     has_particle_dropout = training_config.particle_dropout > 0
     dataset_name = config.dataset
-    is_N2 = 'signal_N2' in dataset_name
+    is_N2 = ('PDE_N2' in model_config.signal_model_name) | ('PDE_N3' in model_config.signal_model_name)
     has_zarr = 'zarr' in simulation_config.connectivity_file
     excitation = simulation_config.excitation
     noise_level = training_config.noise_level
@@ -408,7 +408,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     if erase:
         files = glob.glob(f"{folder}/*")
         for f in files:
-            if (not('Signal' in f)) & (not('Viz' in f)) & (not('Exc' in f)) & (f[-3:] != 'Fig') & (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (f != 'generation_code.py'):
+            if  (not('X1.pt' in f)) & (not('Signal' in f)) & (not('Viz' in f)) & (not('Exc' in f)) & (f[-3:] != 'Fig') & (f[-14:] != 'generated_data') & (f != 'p.pt') & (f != 'cycle_length.pt') & (f != 'model_config.json') & (f != 'generation_code.py'):
                 os.remove(f)
     os.makedirs(folder, exist_ok=True)
     os.makedirs(f'./graphs_data/graphs_{dataset_name}/Fig/', exist_ok=True)
@@ -508,7 +508,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt')
 
         plt.figure(figsize=(8, 8))
-        ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.01, vmax=0.01)
+        ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-1, vmax=1)
         plt.title('True connectivity matrix', fontsize=12);
         plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
         plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
@@ -518,18 +518,57 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
     elif 'random' in simulation_config.connectivity_file:
 
-        adjacency = torch.randn((n_particles, n_particles), dtype=torch.float32, device=device)
+
+        if simulation_config.connectivity_distribution == 'Gaussian':
+            adjacency = torch.randn((n_particles, n_particles), dtype=torch.float32, device=device)
+            adjacency = adjacency / np.sqrt(n_particles)
+        elif simulation_config.connectivity_distribution == 'Lorentz':
+
+            n_particles = 8000
+            s = np.random.standard_cauchy(n_particles**2)
+            s = s[(s > -25) & (s < 25)]
+            if n_particles == 1000:# truncate distribution so it plots well
+                s = s / n_particles**0.7
+            elif n_particles == 2000:
+                s = s / n_particles**0.675
+            elif n_particles == 4000:
+                s = s / n_particles**0.67
+            elif n_particles == 8000:
+                s = s / n_particles**0.66
+            print(f"1/sqrt(N)  {1/np.sqrt(n_particles)}    std {np.std(s)}")
+            plt.hist(s, bins=100)
+            plt.show()
+
+
+            adjacency = torch.tensor(adjacency, dtype=torch.float32, device=device)
+            adjacency = torch.reshape(adjacency, (n_particles, n_particles))
+
+        elif simulation_config.connectivity_distribution == 'uniform':
+            adjacency = torch.rand((n_particles, n_particles), dtype=torch.float32, device=device)
+            adjacency = adjacency - 0.5
 
         i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
         adjacency[i, i] = 0
-
         if simulation_config.connectivity_filling_factor != 1:
             mask = torch.rand(adjacency.shape) >  simulation_config.connectivity_filling_factor
             adjacency[mask] = 0
 
-        adjacency = adjacency / torch.max(adjacency)
 
         torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt')
+
+        weights = to_numpy(adjacency.flatten())
+        pos = np.argwhere(weights != 0)
+        weights = weights[pos]
+        plt.figure(figsize=(10, 10))
+        plt.hist(weights, bins=1000, color='k', alpha=0.5)
+        plt.ylabel(r'counts', fontsize=64)
+        plt.xlabel(r'$W$', fontsize=64)
+        plt.yticks(fontsize=12)
+        plt.xticks(fontsize=12)
+        plt.xlim([-0.1, 0.1])
+        plt.tight_layout()
+        plt.savefig(f"graphs_data/graphs_{dataset_name}/W_distribution.tif", dpi=70)
+        plt.close()
 
         adj_t = torch.abs(adjacency) > 0
         edge_index = adj_t.nonzero().t().contiguous()
@@ -552,7 +591,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     if is_N2:
         match config.simulation.excitation:
             case 'none':
-                excitation = torch.ones((n_particles, n_frames+1), device=device) * 0
+                excitation = torch.zeros((n_particles, n_frames+1), device=device)
             case 'constant':
                 excitation = torch.ones((n_particles, n_frames+1), device=device) * 0.5
             case 'video':
@@ -793,6 +832,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
 
         if (is_N2) & (run==0):
+
             plt.figure(figsize=(10, 3))
             plt.subplot(121)
             ax = sns.heatmap(to_numpy(X), center=0, cbar_kws={'fraction': 0.046})
@@ -814,6 +854,15 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             plt.tight_layout()
             plt.savefig(f'graphs_data/graphs_{dataset_name}/activity.png', dpi=300)
             plt.close()
+
+            plt.figure(figsize=(8, 8))
+            plt.hist(to_numpy(X.flatten()), bins=100, color='k', alpha=0.5)
+            plt.ylabel(r'counts', fontsize=64)
+            plt.xlabel(r'$x$', fontsize=64)
+            plt.xticks(fontsize=24)
+            plt.yticks(fontsize=24)
+            plt.tight_layout()
+            plt.savefig(f'graphs_data/graphs_{dataset_name}/signal_distribution.png', dpi=300)
 
 
         if bSave:

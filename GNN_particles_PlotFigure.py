@@ -3976,9 +3976,15 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
     distrib = to_numpy(activity.flatten())
     activity = activity.t()
 
-    plt.figure(figsize=(15, 10))
+    fig_init()
     plt.hist(distrib, bins=100, color='k',alpha=0.5)
-    plt.savefig(f'./{log_dir}/results/distribution.png', dpi=300)
+    plt.ylabel(r'counts', fontsize=64)
+    plt.xlabel(r'$x$', fontsize=64)
+    plt.xticks(fontsize=24)
+    plt.yticks(fontsize=24)
+    plt.tight_layout()
+    plt.savefig(f'./{log_dir}/results/signal_distribution.png', dpi=300)
+
     plt.close()
     print(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
     logger.info(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
@@ -4010,6 +4016,21 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
     adjacency_ = adjacency.t().clone().detach()
     adj_t = torch.abs(adjacency_) > 0
     edge_index = adj_t.nonzero().t().contiguous()
+
+    weights = to_numpy(adjacency.flatten())
+    pos = np.argwhere(weights != 0)
+    weights = weights[pos]
+    fig_init()
+    plt.hist(weights, bins=1000, color='k',alpha=0.5)
+    plt.ylabel(r'counts', fontsize=64)
+    plt.xlabel(r'$W$', fontsize=64)
+    plt.yticks(fontsize=24)
+    plt.xticks(fontsize=24)
+    plt.xlim([-0.1, 0.1])
+    plt.tight_layout()
+    plt.savefig(f'./{log_dir}/results/weights_distribution.png', dpi=300)
+    plt.close()
+
 
     plt.figure(figsize=(10, 10))
     ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-1, vmax=1)
@@ -4972,6 +4993,7 @@ if __name__ == '__main__':
     #                'signal_N2_i_r1','signal_N2_j_r1','signal_N2_k_r1','signal_N2_l_r1','signal_N2_m_r1','signal_N2_n_r1']
 
     config_list = ['signal_N2_a_r1']
+    # config_list = ['signal_hemibrain_3_r1_b']
 
 
     for config_file in config_list:

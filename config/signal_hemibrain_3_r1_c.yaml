@@ -1,8 +1,8 @@
-description: 'synaptic network random matrix no recursive loop noise_0_1'
-dataset: 'signal_N2_a_noise_0_1'
+description: 'Hemibrain'
+dataset: 'signal_hemibrain_3_b'
 
 simulation:
-    connectivity_file: 'random'
+    connectivity_file: 'conn-eb-fb-pb-no.tif'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
     params: [[10.0,1.0,1.0],[10.0,2.0,1.0]]
@@ -10,7 +10,7 @@ simulation:
     tau: 1.0
     min_radius: 1.0
     max_radius: 1.0E6
-    n_particles: 1000
+    n_particles: 2964
     n_particle_types: 2
     n_interactions: 2
     n_frames: 10000
@@ -35,7 +35,6 @@ graph_model:
     embedding_dim: 2
     update_type: 'none'
 
-
 plotting:
     colormap: 'tab10'
     arrow_length: 1
@@ -43,18 +42,16 @@ plotting:
 training:
     n_epochs: 20
     recursive_loop: 1
-    batch_size: 1
+    batch_size: 16
     small_init_batch_size: False
     n_runs: 10
     large_range: False
-    sparsity: 'none'
+    sparsity: 'replace_embedding_function'
+    sparsity_freq: 4
     data_augmentation: False
-    data_augmentation_loop: 100
+    data_augmentation_loop: 500
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'
-    sparsity: 'replace_embedding_function'
-    sparsity_freq: 4
-    learning_rate_start: 1.0E-4
-    learning_rate_embedding_start: 1.0E-4
-    noise_level: 6
+    seed: 42
+    coeff_L1: 1.0E-5
