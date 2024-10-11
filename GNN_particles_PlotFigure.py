@@ -4992,8 +4992,8 @@ if __name__ == '__main__':
     # config_list = ['signal_N2_a_r1','signal_N2_c_r1','signal_N2_d_r1','signal_N2_e_r1','signal_N2_f_r1',
     #                'signal_N2_i_r1','signal_N2_j_r1','signal_N2_k_r1','signal_N2_l_r1','signal_N2_m_r1','signal_N2_n_r1']
 
-    config_list = ['signal_N2_a_r1']
-    # config_list = ['signal_hemibrain_3_r1_b']
+    # config_list = ['signal_N2_a_r1']
+    config_list = ['signal_N2_a_r1_Lorentz_a']
 
 
     for config_file in config_list:

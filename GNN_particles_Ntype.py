@@ -61,8 +61,8 @@ if __name__ == '__main__':
     # config_list = ["gland_SMG2-processed"]
     # config_list = ["MDCK_FN_PB-Kleb_JF585"]
 
-    # config_list = ['signal_N2_a_r1_Gaussian_a']
-    config_list = ['signal_N2_a_r1_Lorentz_a']
+    config_list = ['signal_N2_a_r1_Gaussian_b','signal_N2_a_r1_Gaussian_c']
+    # config_list = ['signal_N2_a_r1_Lorentz_k','signal_N2_a_r1_Lorentz_l','signal_N2_a_r1_Lorentz_m']
     # config_list = ['signal_hemibrain_3_r1_a']
 
     # config_list = ['signal_N2_WBI_small_a']

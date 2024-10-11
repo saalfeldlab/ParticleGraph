@@ -466,12 +466,15 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         if simulation_config.connectivity_distribution == 'Gaussian':
             adjacency = torch.randn((n_particles, n_particles), dtype=torch.float32, device=device)
             adjacency = adjacency / np.sqrt(n_particles)
+
+            print(f"1/sqrt(N)  {1/np.sqrt(n_particles)}    std {np.std(adjacency)}")
+
         elif simulation_config.connectivity_distribution == 'Lorentz':
 
-            n_particles = 8000
             s = np.random.standard_cauchy(n_particles**2)
-            s = s[(s > -25) & (s < 25)]
-            if n_particles == 1000:# truncate distribution so it plots well
+            s[(s < -25) | (s > 25)] = 0
+
+            if n_particles == 1000:
                 s = s / n_particles**0.7
             elif n_particles == 2000:
                 s = s / n_particles**0.675
