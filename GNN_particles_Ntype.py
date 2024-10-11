@@ -61,8 +61,9 @@ if __name__ == '__main__':
     # config_list = ["gland_SMG2-processed"]
     # config_list = ["MDCK_FN_PB-Kleb_JF585"]
 
-    config_list = ['signal_N2_a_r1_Gaussian_a']
-    # config_list = ['signal_N2_a_r1_Lorentz_a']
+    # config_list = ['signal_N2_a_r1_Gaussian_a']
+    config_list = ['signal_N2_a_r1_Lorentz_a']
+    # config_list = ['signal_hemibrain_3_r1_a']
 
     # config_list = ['signal_N2_WBI_small_a']
 
@@ -76,6 +77,6 @@ if __name__ == '__main__':
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         device = set_device(config.training.device)
         print(f'device {device}')
-        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 100)
-        data_train(config, config_file, True, device)
+        data_generate(config, device=device, visualize=True, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 100)
+        # data_train(config, config_file, True, device)
         # data_test(config=config, config_file=config_file, visualize=True, style='color', verbose=False, best_model='1', run=0, step=25, test_simulation=True, sample_embedding=False, device=device)    # config.simulation.n_frames // 7

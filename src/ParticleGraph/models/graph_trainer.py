@@ -2219,7 +2219,7 @@ def data_train_synaptic(config, config_file, erase, device):
     embedding_cluster = EmbeddingCluster(config)
     cmap = CustomColorMap(config=config)
     n_runs = train_config.n_runs
-    is_N2 = ('PDE_N2' in model_config.signal_model_name) | ('PDE_N3' in model_config.signal_model_name)
+    is_V2 = ('PDE_N2' in model_config.signal_model_name) | ('PDE_N3' in model_config.signal_model_name)
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
     has_siren = 'siren' in model_config.excitation_type
@@ -2293,32 +2293,6 @@ def data_train_synaptic(config, config_file, erase, device):
         index_particles.append(index.squeeze())
     type_list = get_type_list(x, dimension)
 
-    fig = plt.figure(figsize=(16, 8))
-    for k in range(n_particle_types):
-        pos = index_particles[k]
-        plt.scatter(to_numpy(x[pos, 2]), to_numpy(x[pos, 1]), s=10)
-    plt.xticks([])
-    plt.yticks([])
-    plt.tight_layout()
-
-    if 'mat' in simulation_config.connectivity_file:
-        mat = scipy.io.loadmat(simulation_config.connectivity_file)
-        adjacency = torch.tensor(mat['A'], device=device)
-        adj_t = adjacency > 0
-        edge_index = adj_t.nonzero().t().contiguous()
-    else:
-        adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt', map_location=device)
-        if is_N2:
-            adjacency_ = adjacency.t().clone().detach()
-            adj_t = torch.abs(adjacency_) > 0
-            edge_index = adj_t.nonzero().t().contiguous()
-            adjacency_ = []
-            adj_t = []
-        else:
-            adj_t = torch.abs(adjacency) > 0
-            edge_index = adj_t.nonzero().t().contiguous()
-            adj_t = []
-
     if has_siren:
         im = imread(f"graphs_data/{simulation_config.excitation_value_map}")
         image_width = im.shape[1]
@@ -2343,6 +2317,9 @@ def data_train_synaptic(config, config_file, erase, device):
     else:
         model_exc=[]
 
+    model.edges = torch.load(f'./graphs_data/graphs_{dataset_name}/edge_index.pt', map_location=device)
+    adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency.pt', map_location=device)
+
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
@@ -2366,7 +2343,7 @@ def data_train_synaptic(config, config_file, erase, device):
 
         excitation = torch.zeros((n_particles, 1), device=device)
 
-        for N in range(Niter):
+        for N in trange(Niter):
 
             run = 1 + np.random.randint(n_runs - 1)
             k = np.random.randint(n_frames - 6)
@@ -2419,7 +2396,7 @@ def data_train_synaptic(config, config_file, erase, device):
                         y = y_list[run][k].clone().detach()
                         y = y / ynorm
 
-                        if is_N2:
+                        if is_V2:
                             loss = (pred - y).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 10 * (epoch==0)
                         else:
                             loss = (pred - y).norm(2) + func_phi.norm(2) + func_edge.norm(2)
@@ -2436,7 +2413,7 @@ def data_train_synaptic(config, config_file, erase, device):
                         y1 = y_list[run][k].clone().detach() / ynorm
                         y2 = y_list[run][k + 1].clone().detach() / ynorm
 
-                        if is_N2:
+                        if is_V2:
                             loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 10 * (epoch==0)
                         else:
                             loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + func_edge.norm(2) + func_phi.norm(2)
@@ -2458,7 +2435,7 @@ def data_train_synaptic(config, config_file, erase, device):
                         y2 = y_list[run][k+1].clone().detach()/ ynorm
                         y3 = y_list[run][k+2].clone().detach()/ ynorm
 
-                        if is_N2:
+                        if is_V2:
                             loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 10 * (epoch==0)
                         else:
                             loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)
@@ -2491,7 +2468,7 @@ def data_train_synaptic(config, config_file, erase, device):
                         y4 = y_list[run][k+3].clone().detach()/ ynorm
                         y5 = y_list[run][k+4].clone().detach()/ ynorm
 
-                        if is_N2:
+                        if is_V2:
                             loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_f.norm(2)
                         else:
                             loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2)
@@ -2541,7 +2518,7 @@ def data_train_synaptic(config, config_file, erase, device):
         plt.ylabel('Embedding 1', fontsize=12)
 
         i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-        if is_N2:
+        if is_V2:
             A = model.W.clone().detach() * model.mask.clone().detach()
         elif 'asymmetric' in config.simulation.adjacency_matrix:
             A = model.vals

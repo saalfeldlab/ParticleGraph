@@ -391,7 +391,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     n_frames = simulation_config.n_frames
     has_particle_dropout = training_config.particle_dropout > 0
     dataset_name = config.dataset
-    is_N2 = ('PDE_N2' in model_config.signal_model_name) | ('PDE_N3' in model_config.signal_model_name)
+    is_V2 = ('PDE_N2' in model_config.signal_model_name) | ('PDE_N3' in model_config.signal_model_name)
     has_zarr = 'zarr' in simulation_config.connectivity_file
     excitation = simulation_config.excitation
     noise_level = training_config.noise_level
@@ -436,25 +436,13 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         inv_particle_dropout_mask = draw[cut:]
         x_removed_list = []
 
-    if 'adjacency_asym.pt' in simulation_config.connectivity_file:
-        adjacency = torch.load(simulation_config.connectivity_file, map_location=device)
-        adj_t = torch.abs(adjacency) > 0
-        edge_index = adj_t.nonzero().t().contiguous()
-        edge_attr_adjacency = adjacency[adj_t]
-        torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt')
+    if 'adjacency.pt' in simulation_config.connectivity_file:
 
-        # Initial conditions
-        X_ = torch.zeros((n_particles, n_frames), device=device)
-        Xinit = torch.rand(n_particles, )  # Initial conditions
-        X_[:, 0] = Xinit
+        adjacency = torch.load(simulation_config.connectivity_file, map_location=device)
 
     elif 'mat' in simulation_config.connectivity_file:
         mat = scipy.io.loadmat(simulation_config.connectivity_file)
         adjacency = torch.tensor(mat['A'], device=device)
-
-        adj_t = adjacency > 0
-        edge_index = adj_t.nonzero().t().contiguous()
-        edge_attr_adjacency = adjacency[adj_t]
 
     elif has_zarr:
         print('loading zarr ...')
@@ -466,58 +454,14 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         values = np.array(values)
         values = values / np.max(values)
         adjacency = torch.tensor(values, dtype=torch.float32, device=device)
-        torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt')
         values=[]
-
-        adj_t = torch.abs(adjacency) > 0
-        edge_index = adj_t.nonzero().t().contiguous()
-        edge_attr_adjacency = adjacency[adj_t]
-
-        # # Initial conditions
-        # X_ = torch.zeros((n_particles, n_frames), device=device)
-        # Xinit = torch.rand(n_particles, )  # Initial conditions
-        # X_[:, 0] = Xinit
-
-        torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt')
-
-        plt.figure(figsize=(8, 8))
-        ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
-                         vmin=-0.01, vmax=0.01)
-        plt.title('True connectivity matrix', fontsize=12);
-        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
-        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
-        plt.tight_layout()
-        torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency.tif')
-        plt.close()
 
     elif 'tif' in simulation_config.connectivity_file:
         adjacency = constructRandomMatrices(n_neurons=n_particles, density=1.0, connectivity_mask=f"./graphs_data/{simulation_config.connectivity_file}" ,device=device)
-        adjacency_ = adjacency.t().clone().detach()
-        adj_t = torch.abs(adjacency_) > 0
-        edge_index = adj_t.nonzero().t().contiguous()
-        edge_attr_adjacency = adjacency_[adj_t]
-
         n_particles = adjacency.shape[0]
         config.simulation.n_particles = n_particles
 
-        # # Initial conditions
-        # X_ = torch.zeros((n_particles, n_frames), device=device)
-        # Xinit = torch.rand(n_particles, )  # Initial conditions
-        # X_[:, 0] = Xinit
-
-        torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt')
-
-        plt.figure(figsize=(8, 8))
-        ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-1, vmax=1)
-        plt.title('True connectivity matrix', fontsize=12);
-        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
-        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
-        plt.tight_layout()
-        torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency.tif')
-        plt.close()
-
     elif 'random' in simulation_config.connectivity_file:
-
 
         if simulation_config.connectivity_distribution == 'Gaussian':
             adjacency = torch.randn((n_particles, n_particles), dtype=torch.float32, device=device)
@@ -536,11 +480,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             elif n_particles == 8000:
                 s = s / n_particles**0.66
             print(f"1/sqrt(N)  {1/np.sqrt(n_particles)}    std {np.std(s)}")
-            plt.hist(s, bins=100)
-            plt.show()
 
-
-            adjacency = torch.tensor(adjacency, dtype=torch.float32, device=device)
+            adjacency = torch.tensor(s, dtype=torch.float32, device=device)
             adjacency = torch.reshape(adjacency, (n_particles, n_particles))
 
         elif simulation_config.connectivity_distribution == 'uniform':
@@ -549,46 +490,36 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
         i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
         adjacency[i, i] = 0
+
         if simulation_config.connectivity_filling_factor != 1:
             mask = torch.rand(adjacency.shape) >  simulation_config.connectivity_filling_factor
             adjacency[mask] = 0
 
+    adj_t = torch.abs(adjacency) > 0
+    edge_index = adj_t.nonzero().t().contiguous()
+    edge_attr_adjacency = adjacency[adj_t]
 
-        torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt')
+    torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency.pt')
+    torch.save(edge_index, f'./graphs_data/graphs_{dataset_name}/edge_index.pt')
 
-        weights = to_numpy(adjacency.flatten())
-        pos = np.argwhere(weights != 0)
-        weights = weights[pos]
-        plt.figure(figsize=(10, 10))
-        plt.hist(weights, bins=1000, color='k', alpha=0.5)
-        plt.ylabel(r'counts', fontsize=64)
-        plt.xlabel(r'$W$', fontsize=64)
-        plt.yticks(fontsize=12)
-        plt.xticks(fontsize=12)
-        plt.xlim([-0.1, 0.1])
-        plt.tight_layout()
-        plt.savefig(f"graphs_data/graphs_{dataset_name}/W_distribution.tif", dpi=70)
-        plt.close()
+    edge_attr_adjacency_ = to_numpy(edge_attr_adjacency)
 
-        adj_t = torch.abs(adjacency) > 0
-        edge_index = adj_t.nonzero().t().contiguous()
-        edge_attr_adjacency = adjacency[adj_t]
-        edge_attr_adjacency_ = to_numpy(edge_attr_adjacency)
-
-        fig = plt.figure(figsize=(12, 6))
-        ax = fig.add_subplot(1, 2, 1)
-        plt.imshow(to_numpy(adjacency), cmap='viridis')
-        plt.text (0,-10,f'weight {np.round(np.mean(edge_attr_adjacency_),6)}+/-{np.round(np.std(edge_attr_adjacency_),6)}')
-
-        ax = fig.add_subplot(1, 2, 2)
-        plt.imshow(to_numpy(adjacency)>0.01, cmap='viridis')
-        plt.text (0,-10,f'{edge_index.shape[1]} edges')
-        plt.tight_layout()
-        plt.savefig(f"graphs_data/graphs_{dataset_name}/adjacency.tif", dpi=70)
-        plt.close()
+    weights = to_numpy(adjacency.flatten())
+    pos = np.argwhere(weights != 0)
+    weights = weights[pos]
+    plt.figure(figsize=(10, 10))
+    plt.hist(weights, bins=1000, color='k', alpha=0.5)
+    plt.ylabel(r'counts', fontsize=64)
+    plt.xlabel(r'$W$', fontsize=64)
+    plt.yticks(fontsize=12)
+    plt.xticks(fontsize=12)
+    plt.xlim([-0.1, 0.1])
+    plt.tight_layout()
+    plt.savefig(f"graphs_data/graphs_{dataset_name}/W_distribution.tif", dpi=70)
+    plt.close()
 
     # create GNN
-    if is_N2:
+    if is_V2:
         match config.simulation.excitation:
             case 'none':
                 excitation = torch.zeros((n_particles, n_frames+1), device=device)
@@ -623,7 +554,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         # initialize particle and graph states
         X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
 
-        # if (is_N2) & (run == 0):
+        # if (is_V2) & (run == 0):
         #     H1[:,0] = X_[:, 0].clone().detach()
 
         x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
@@ -686,19 +617,17 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
             # model prediction
             with torch.no_grad():
-                if is_N2:
+                if is_V2:
                     if (config.simulation.excitation == 'video'):
                         excitation = excitation_video[it//(n_frames//excitation_nframes+1)]
-                        y, s_tanhu, msg = model(dataset, return_all=True, excitation=excitation)
                     elif (config.simulation.excitation == 'sine'):
                         excitation = 5 * torch.sin(torch.tensor(it/50,dtype=torch.float32, device=device))
                         excitation = excitation.repeat(n_particles, 1)
                         excitation = excitation.squeeze()
-                        y, s_tanhu, msg = model(dataset, return_all=True, excitation=excitation)
                     else:
                         excitation = torch.zeros((n_particles, 1), device=device)
                         excitation = excitation.squeeze()
-                        y, s_tanhu, msg = model(dataset, return_all=True, excitation=excitation)
+                    y, s_tanhu, msg = model(dataset, return_all=True, excitation=excitation)
                 else:
                     y, s_tanhu, msg = model(dataset, return_all=True)
 
@@ -831,7 +760,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     # plt.title('g.msg')
 
 
-        if (is_N2) & (run==0):
+        if (is_V2) & (run==0):
 
             plt.figure(figsize=(10, 3))
             plt.subplot(121)
@@ -1042,7 +971,7 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
     n_frames = simulation_config.n_frames
     has_particle_dropout = training_config.particle_dropout > 0
     dataset_name = config.dataset
-    is_N2 = 'signal_N2' in dataset_name
+    is_V2 = 'signal_N2' in dataset_name
 
     torch.random.fork_rng(devices=device)
     torch.random.manual_seed(training_config.seed)
@@ -1112,30 +1041,6 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
 
         print('Local connectivity calculated ...')
 
-    # adjacency = torch.ones((n_particles, n_particles), dtype=torch.float32, device=device)
-    # torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt')
-    # i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-    # # adjacency[i,j] = adjacency[j,i]
-    # adjacency[i, i] = 0
-    # adjacency = adjacency / torch.max(adjacency)
-    # adj_t = torch.abs(adjacency) > 0
-    # edge_index = adj_t.nonzero().t().contiguous()
-    # edge_attr_adjacency = adjacency[adj_t]
-    # edge_attr_adjacency_ = to_numpy(edge_attr_adjacency)
-    #
-    # fig = plt.figure(figsize=(12, 6))
-    # ax = fig.add_subplot(1, 2, 1)
-    # plt.imshow(to_numpy(adjacency), cmap='viridis')
-    # plt.text(0, -10,
-    #          f'weight {np.round(np.mean(edge_attr_adjacency_), 6)}+/-{np.round(np.std(edge_attr_adjacency_), 6)}')
-    #
-    # ax = fig.add_subplot(1, 2, 2)
-    # plt.imshow(to_numpy(adjacency) > 0.01, cmap='viridis')
-    # plt.text(0, -10, f'{edge_index.shape[1]} edges')
-    # plt.tight_layout()
-    # plt.savefig(f"graphs_data/graphs_{dataset_name}/adjacency.tif", dpi=70)
-    # plt.close()
-
     # create GNN
 
     for run in range(config.training.n_runs):
@@ -1148,7 +1053,7 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
         # initialize particle and graph states
         X1_, V1, T1_, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
 
-        # if (is_N2) & (run == 0):
+        # if (is_V2) & (run == 0):
         #     H1[:,0] = X_[:, 0].clone().detach()
 
         x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
@@ -1213,7 +1118,7 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
 
 
 
-        if (is_N2) & (run == 0):
+        if (is_V2) & (run == 0):
 
             fig = plt.figure(figsize=(16, 8))
             plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 2]), s=10, c=to_numpy(T1[:, 0]), cmap='tab20', vmin=0,

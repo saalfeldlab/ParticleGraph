@@ -4012,7 +4012,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
     plt.close()
 
 
-    adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency_asym.pt', map_location=device)
+    adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency.pt', map_location=device)
     adjacency_ = adjacency.t().clone().detach()
     adj_t = torch.abs(adjacency_) > 0
     edge_index = adj_t.nonzero().t().contiguous()
