@@ -466,8 +466,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         if simulation_config.connectivity_distribution == 'Gaussian':
             adjacency = torch.randn((n_particles, n_particles), dtype=torch.float32, device=device)
             adjacency = adjacency / np.sqrt(n_particles)
-
-            print(f"1/sqrt(N)  {1/np.sqrt(n_particles)}    std {np.std(adjacency)}")
+            print(f"1/sqrt(N)  {1/np.sqrt(n_particles)}    std {torch.std(adjacency.flatten())}")
 
         elif simulation_config.connectivity_distribution == 'Lorentz':
 

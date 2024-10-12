@@ -4033,14 +4033,14 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
 
 
     plt.figure(figsize=(10, 10))
-    ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-1, vmax=1)
+    ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.1, vmax=0.1)
     cbar = ax.collections[0].colorbar
     cbar.ax.tick_params(labelsize=48)
     plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
     plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
     # plt.title(r'true $W_{ij}$', fontsize=78)
     plt.subplot(2,2,1)
-    ax = sns.heatmap(to_numpy(adjacency[0:20,0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-1, vmax=1)
+    ax = sns.heatmap(to_numpy(adjacency[0:20,0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
     plt.xticks([])
     plt.yticks([])
     plt.tight_layout()
@@ -4187,7 +4187,8 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
         plt.scatter(gt_weight, pred_weight / 10, s=1, c='k', alpha=1)
         plt.xlabel(r'true $W_{ij}$', fontsize=78)
         plt.ylabel(r'learned $W_{ij}$', fontsize=78)
-        plt.xlim([-1,1])
+        plt.xlim([-0.2,0.2])
+        plt.ylim([-0.2,0.2])
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/results/comparison_{epoch}.tif", dpi=87)
         plt.close()
@@ -4207,15 +4208,14 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
 
         plt.figure(figsize=(10, 10))
         # plt.title(r'learned $W_{ij}$', fontsize=78)
-        ax = sns.heatmap(to_numpy(A)/second_correction, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-1,
-                         vmax=1)
+        ax = sns.heatmap(to_numpy(A)/second_correction, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.1,vmax=0.1)
         cbar = ax.collections[0].colorbar
         # here set the labelsize by 20
         cbar.ax.tick_params(labelsize=48)
         plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
         plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
         plt.subplot(2, 2, 1)
-        ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-1, vmax=1)
+        ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
         plt.xticks([])
         plt.yticks([])
         plt.tight_layout()
@@ -4998,7 +4998,7 @@ if __name__ == '__main__':
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['3_200000'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

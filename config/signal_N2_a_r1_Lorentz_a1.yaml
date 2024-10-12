@@ -1,11 +1,11 @@
-description: 'synaptic network random matrix no recursive loop   1000 neurons 4 types Gaussian std 0.03  LR5E-3'
-dataset: 'signal_N2_Gaussian_a'
+description: 'synaptic network random matrix no recursive loop    1000 neurons 4 types lorentz std 0.03   LR5E-3'
+dataset: 'signal_N2_Lorentz_a'
 
 simulation:
     connectivity_file: 'random'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
-    connectivity_distribution: 'Gaussian'
+    connectivity_distribution: 'Lorentz'
     params: [[10.0,1.0,1.0],[10.0,2.0,1.0],[10.0,1.0,2.0],[10.0,2.0,2.0]]
     phi: 'tanh'
     tau: 1.0

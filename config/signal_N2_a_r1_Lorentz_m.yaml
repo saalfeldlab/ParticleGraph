@@ -50,7 +50,7 @@ training:
     large_range: False
     sparsity: 'none'
     data_augmentation: False
-    data_augmentation_loop: 100
+    data_augmentation_loop: 200
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'
