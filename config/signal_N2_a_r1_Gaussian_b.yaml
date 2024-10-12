@@ -45,7 +45,7 @@ graph_model:
 
 
 plotting:
-    colormap: 'tab10'
+    colormap: 'tab20'
     arrow_length: 1
 
 training:

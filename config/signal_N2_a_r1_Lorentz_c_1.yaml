@@ -1,26 +1,19 @@
-description: 'synaptic network random matrix no recursive loop    1000 neurons 32 types lorentz std 0.03'
-dataset: 'signal_N2_Lorentz_b'
+description: 'synaptic network random matrix no recursive loop    8000 neurons 4 types lorentz std 0.01'
+dataset: 'signal_N2_Lorentz_c'
 
 simulation:
     connectivity_file: 'random'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
     connectivity_distribution: 'Lorentz'
-    params: [[10.0,1.0,1.0],[10.0,2.0,1.0],[10.0,3.0,1.0],[10.0,4.0,1.0],
-             [10.0,1.0,2.0],[10.0,2.0,2.0],[10.0,3.0,2.0],[10.0,4.0,2.0],
-             [ 10.0,1.0,3.0 ],[ 10.0,2.0,3.0 ],[ 10.0,3.0,3.0 ],[ 10.0,4.0,3.0 ],
-             [ 10.0,1.0,4.0 ],[ 10.0,2.0,4.0 ],[ 10.0,3.0,4.0 ],[ 10.0,4.0,4.0 ],
-              [ 10.0,5.0,1.0 ],[ 10.0,6.0,1.0 ],[ 10.0,7.0,1.0 ],[ 10.0,8.0,1.0 ],
-              [ 10.0,5.0,2.0 ],[ 10.0,6.0,2.0 ],[ 10.0,7.0,2.0 ],[ 10.0,8.0,2.0 ],
-              [ 10.0,5.0,3.0 ],[ 10.0,6.0,3.0 ],[ 10.0,7.0,3.0 ],[ 10.0,8.0,3.0 ],
-              [ 10.0,5.0,4.0 ],[ 10.0,6.0,4.0 ],[ 10.0,7.0,4.0 ],[ 10.0,8.0,4.0 ] ]
+    params: [[10.0,1.0,1.0],[10.0,2.0,1.0],[10.0,1.0,2.0],[10.0,2.0,2.0]]
     phi: 'tanh'
     tau: 1.0
     min_radius: 1.0
     max_radius: 1.0E6
-    n_particles: 1000
-    n_particle_types: 32
-    n_interactions: 32
+    n_particles: 8000
+    n_particle_types: 4
+    n_interactions: 4
     n_frames: 10000
     delta_t: 0.01
     dpos_init:  0
@@ -45,14 +38,14 @@ graph_model:
 
 
 plotting:
-    colormap: 'tab20'
+    colormap: 'tab10'
     arrow_length: 1
 
 training:
     n_epochs: 20
     recursive_loop: 1
-    batch_size: 1
-    small_init_batch_size: False
+    batch_size: 16
+    small_init_batch_size: True
     n_runs: 10
     large_range: False
     sparsity: 'none'
