@@ -499,6 +499,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
     adj_t = torch.abs(adjacency) > 0
     edge_index = adj_t.nonzero().t().contiguous()
+    edge_index[[0, 1]] = edge_index[[1, 0]]
     edge_attr_adjacency = adjacency[adj_t]
 
     torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency.pt')

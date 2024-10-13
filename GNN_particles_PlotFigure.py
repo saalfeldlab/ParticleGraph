@@ -4993,12 +4993,12 @@ if __name__ == '__main__':
     #                'signal_N2_i_r1','signal_N2_j_r1','signal_N2_k_r1','signal_N2_l_r1','signal_N2_m_r1','signal_N2_n_r1']
 
     # config_list = ['signal_N2_a_r1']
-    config_list = ['signal_N2_a_r1_Lorentz_a']
+    config_list = ['signal_N2_a_r1_Gaussian_a']
 
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['12'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['15'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
