@@ -1,18 +1,20 @@
-description: 'synaptic network random matrix no recursive loop'
-dataset: 'signal_N2_e'
+description: 'synaptic network random matrix no recursive loop    1000 neurons 4 types lorentz std 0.03  5% filling factor coeff_L1: 1.0E-5   coeff_anneal_L1: 1.0E-2'
+dataset: 'signal_N2_Lorentz_h'
 
 simulation:
     connectivity_file: 'random'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
-    params: [[10.0,1.0,1.0],[10.0,2.0,1.0]]
+    connectivity_filling_factor: 0.05
+    connectivity_distribution: 'Lorentz'
+    params: [[10.0,1.0,1.0],[10.0,2.0,1.0],[10.0,1.0,2.0],[10.0,2.0,2.0]]
     phi: 'tanh'
     tau: 1.0
     min_radius: 1.0
     max_radius: 1.0E6
-    n_particles: 2000
-    n_particle_types: 2
-    n_interactions: 2
+    n_particles: 1000
+    n_particle_types: 4
+    n_interactions: 4
     n_frames: 10000
     delta_t: 0.01
     dpos_init:  0
@@ -41,10 +43,10 @@ plotting:
     arrow_length: 1
 
 training:
-    n_epochs: 20
+    n_epochs: 24
     recursive_loop: 1
     batch_size: 1
-    small_init_batch_size: False
+    small_init_batch_size: True
     n_runs: 10
     large_range: False
     sparsity: 'none'
@@ -57,3 +59,5 @@ training:
     sparsity_freq: 4
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4
+    coeff_L1: 1.0E-5
+    coeff_anneal_L1: 1.0E-2

@@ -2246,7 +2246,7 @@ def data_train_synaptic(config, config_file, erase, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_1_0.pt"
+    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_20.pt"
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
 
@@ -2331,6 +2331,11 @@ def data_train_synaptic(config, config_file, erase, device):
     list_loss = []
     time.sleep(2)
     for epoch in range(n_epochs + 1):
+
+        if (epoch==20) & (train_config.coeff_anneal_L1>0):
+            train_config.coeff_L1 = train_config.coeff_anneal_L1
+            logger.info(f'coeff_L1: {train_config.coeff_L1}')
+
 
         batch_size = get_batch_size(epoch)
         logger.info(f'batch_size: {batch_size}')
@@ -2675,6 +2680,9 @@ def data_train_synaptic(config, config_file, erase, device):
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
         plt.close()
+
+
+
 
 
 def data_train_agents(config, config_file, erase, device):
