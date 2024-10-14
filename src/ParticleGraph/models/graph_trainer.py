@@ -2738,19 +2738,6 @@ def data_train_synaptic2(config, config_file, erase, device):
 
     model.train()
 
-    table = PrettyTable(["Modules", "Parameters"])
-    n_total_params = 0
-    for name, parameter in model.named_parameters():
-        if not parameter.requires_grad:
-            continue
-        param = parameter.numel()
-        table.add_row([name, param])
-        n_total_params += param
-    print(table)
-    print(f"Total Trainable Params: {n_total_params}")
-    logger.info(f"Total Trainable Params: {n_total_params}")
-    logger.info(f'Learning rates: {lr}, {lr_embedding}')
-
     net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs.pt"
     print(f'network: {net}')
     print(f'initial batch_size: {batch_size}')
@@ -2787,7 +2774,6 @@ def data_train_synaptic2(config, config_file, erase, device):
         optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
         logger.info(f'Learning rates: {lr}, {lr_embedding}')
         print(f'has_siren, learning rates: {lr}, {lr_embedding}')
-
     else:
         model_exc=[]
 
@@ -2804,11 +2790,7 @@ def data_train_synaptic2(config, config_file, erase, device):
 
     list_loss = []
     time.sleep(2)
-    for epoch in range(14, n_epochs + 1):
-
-        if (epoch==20) & (train_config.coeff_anneal_L1>0):
-            train_config.coeff_L1 = train_config.coeff_anneal_L1
-            logger.info(f'coeff_L1: {train_config.coeff_L1}')
+    for epoch in range(n_epochs + 1):
 
         batch_size = get_batch_size(epoch)
         logger.info(f'batch_size: {batch_size}')
@@ -2821,7 +2803,7 @@ def data_train_synaptic2(config, config_file, erase, device):
 
         excitation = torch.zeros((n_particles, 1), device=device)
 
-        for N in trange(Niter):
+        for N in trange(100): # Niter):
 
             run = np.random.randint(n_runs)
             k = np.random.randint(n_frames - 5)
@@ -2841,17 +2823,16 @@ def data_train_synaptic2(config, config_file, erase, device):
                 excitation = excitation[0:n_particles]
                 optimizer_exc.zero_grad()
 
-            else:
-                optimizer.zero_grad()
+            optimizer.zero_grad()
 
             for batch in range(batch_size):
 
-                in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :]), dim=1)
+                in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a), dim=1)
                 func_phi = model.lin_phi(in_features.float())
                 in_features = torch.zeros((n_particles, 1), device=device)
                 func_edge = model.lin_edge(in_features.float())
                 x = torch.tensor(x_list[run][k], device=device)
-                diff = torch.relu(model.lin_edge(x[:,6:7]) - model.lin_edge(x[:,6:7]u+0.1)).norm(2)
+                diff = torch.relu(model.lin_edge(x[:,6:7]) - model.lin_edge(x[:,6:7]+0.1)).norm(2)
 
                 match recursive_loop:
 
@@ -2957,7 +2938,7 @@ def data_train_synaptic2(config, config_file, erase, device):
         ax = fig.add_subplot(2, 5, 2)
         for n in range(n_particle_types):
             pos = torch.argwhere(type_list == n).squeeze()
-            plt.scatter(to_numpy(model.a[1, pos, 0]), to_numpy(model.a[1, pos, 1]), s=0.1, color=cmap.color(n))
+            plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=0.1, color=cmap.color(n))
         plt.xlabel('Embedding 0', fontsize=12)
         plt.ylabel('Embedding 1', fontsize=12)
 
@@ -3005,7 +2986,7 @@ def data_train_synaptic2(config, config_file, erase, device):
 
         ax = fig.add_subplot(2, 5, 6)
 
-        embedding = get_embedding(model.a, 1)
+        embedding = to_numpy(model.a.squeeze())
         func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
                                                             model_MLP=model.lin_phi, model_a=model.a,
                                                             n_nodes=0,
@@ -3033,7 +3014,7 @@ def data_train_synaptic2(config, config_file, erase, device):
                  transform=ax.transAxes, fontsize=10)
 
         ax = fig.add_subplot(2, 5, 8)
-        model_a_ = model.a[1].clone().detach()
+        model_a_ = model.a.clone().detach()
         for n in range(n_clusters):
             pos = np.argwhere(labels == n).squeeze().astype(int)
             pos = np.array(pos)
@@ -3108,7 +3089,9 @@ def data_train_synaptic2(config, config_file, erase, device):
                 lr = train_config.learning_rate_start
                 optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
                 logger.info(f'Learning rates: {lr}, {lr_embedding}')
-
+        if (epoch==20) & (train_config.coeff_anneal_L1>0):
+            train_config.coeff_L1 = train_config.coeff_anneal_L1
+            logger.info(f'coeff_L1: {train_config.coeff_L1}')
 
         plt.tight_layout()
         plt.tight_layout()

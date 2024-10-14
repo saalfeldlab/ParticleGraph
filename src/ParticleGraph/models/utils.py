@@ -71,9 +71,7 @@ def get_in_features(rr, embedding_, config_model, max_radius):
         case 'PDE_E':
             in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
                                      rr[:, None] / max_radius, embedding_, embedding_), dim=1)
-        case 'PDE_N2' | 'PDE_N5':
-            in_features = rr[:, None]
-        case 'PDE_N3' :
+        case 'PDE_N2' | 'PDE_N3' :
             in_features = torch.cat((rr[:, None], embedding_), dim=1)
         case 'PDE_N4':
             in_features = torch.cat((rr[:, None], embedding_, embedding_), dim=1)
@@ -111,7 +109,10 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
     fig = plt.figure(figsize=(8, 8))
     for n in range(n_particle_types):
         pos=torch.argwhere(type_list==n).squeeze()
-        plt.scatter(to_numpy(model.a[1,pos, 0]), to_numpy(model.a[1,pos, 1]), s=20, color=cmap.color(n))
+        if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N3' in config.graph_model.signal_model_name):
+            plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=20, color=cmap.color(n))
+        else:
+            plt.scatter(to_numpy(model.a[1,pos, 0]), to_numpy(model.a[1,pos, 1]), s=20, color=cmap.color(n))
     plt.xticks([])
     plt.yticks([])
     plt.tight_layout()
@@ -139,8 +140,9 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
     fig = plt.figure(figsize=(8, 8))
     rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
     for n in range(n_particles):
-        if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N5' in config.graph_model.signal_model_name):
-            in_features = rr[:, None]
+        if ('PDE_N2' in config.graph_model.signal_model_name):
+            embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+            in_features = torch.cat((rr[:, None], embedding_), dim=1)
         elif 'PDE_N3' in config.graph_model.signal_model_name:
             embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             in_features = torch.cat((rr[:, None], embedding_), dim=1)
@@ -177,10 +179,6 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
     plt.yticks([0,n_particles-1],[1,n_particles],fontsize=8)
     plt.savefig(f"./{log_dir}/tmp_training/matrix/{dataset_name}_{epoch}_{N}.tif", dpi=87)
     plt.close()
-
-
-
-    # imsave(f"./{log_dir}/tmp_training/field/adjacency_{dataset_name}__{epoch}_{N}.tif", to_numpy(A))
 
 def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dataset_name, n_frames, model_name, log_dir, epoch, N, x, x_mesh, model_field, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 
@@ -857,6 +855,8 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
     for n in range(n_particles):
         if config.training.do_tracking:
             embedding_ = model_a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+        elif ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N3' in config.graph_model.signal_model_name):
+            embedding_ = model_a[n_nodes + n, :] * torch.ones((1000, config.graph_model.embedding_dim),device=device)
         else:
             embedding_ = model_a[dataset_number, n_nodes+n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
 
