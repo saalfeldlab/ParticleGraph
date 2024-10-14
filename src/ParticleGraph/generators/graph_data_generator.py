@@ -557,9 +557,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         # initialize particle and graph states
         X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
 
-        # if (is_V2) & (run == 0):
-        #     H1[:,0] = X_[:, 0].clone().detach()
-
         x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
 
         if os.path.isfile(f'./graphs_data/graphs_{dataset_name}/X1.pt'):

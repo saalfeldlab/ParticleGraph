@@ -59,8 +59,8 @@ def data_train(config, config_file, erase, device):
     elif has_mesh:
         data_train_mesh(config, config_file, erase, device)
     elif has_signal:
-        if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N3' in config.graph_model.signal_model_name):
-            data_train_synaptic2(config, config_file, erase, device)
+        if 'PDE_N3' in config.graph_model.signal_model_name:
+            data_train_synaptic3(config, config_file, erase, device)
         else:
             data_train_synaptic(config, config_file, erase, device)
     elif do_tracking & has_cell_division:
@@ -2674,7 +2674,7 @@ def data_train_synaptic(config, config_file, erase, device):
         plt.close()
 
 
-def data_train_synaptic2(config, config_file, erase, device):
+def data_train_synaptic3(config, config_file, erase, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -2764,13 +2764,6 @@ def data_train_synaptic2(config, config_file, erase, device):
     print(f'N particles: {n_particles}')
     logger.info(f'N particles: {n_particles}')
     config.simulation.n_particles = n_particles
-    index_particles = []
-    for n in range(n_particle_types):
-        if dimension == 2:
-            index = np.argwhere(x[:, 5].detach().cpu().numpy() == n)
-        else:
-            index = np.argwhere(x[:, 7].detach().cpu().numpy() == n)
-        index_particles.append(index.squeeze())
     type_list = get_type_list(x, dimension)
 
     if has_siren:
@@ -2834,7 +2827,6 @@ def data_train_synaptic2(config, config_file, erase, device):
             k = np.random.randint(n_frames - 6)
 
             if has_siren:
-
                 k = np.random.randint(n_frames - 6)
                 excitation = model_exc(time=k / n_frames) ** 2
 
@@ -2850,7 +2842,6 @@ def data_train_synaptic2(config, config_file, erase, device):
                 optimizer_exc.zero_grad()
 
             else:
-
                 optimizer.zero_grad()
 
             for batch in range(batch_size):
@@ -2956,7 +2947,7 @@ def data_train_synaptic2(config, config_file, erase, device):
 
             visualize_embedding = True
             if visualize_embedding & (((epoch < 30 ) & (N%(Niter//50) == 0)) | (N==0)):
-                plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, index_particles, n_particles, n_particle_types, type_list, cmap, has_siren, has_siren_time, model_exc, n_frames, device)
+                plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, n_particles, n_particle_types, type_list, cmap, has_siren, has_siren_time, model_exc, n_frames, device)
                 torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
             check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 50,
@@ -2983,10 +2974,9 @@ def data_train_synaptic2(config, config_file, erase, device):
         plt.xlabel('Epochs', fontsize=12)
 
         ax = fig.add_subplot(2, 5, 2)
-        embedding = get_embedding(model.a, 1)
         for n in range(n_particle_types):
-            plt.scatter(embedding[index_particles[n], 0],
-                        embedding[index_particles[n], 1], color=cmap.color(n), s=0.1)
+            pos = torch.argwhere(type_list == n).squeeze()
+            plt.scatter(to_numpy(model.a[1, pos, 0]), to_numpy(model.a[1, pos, 1]), s=0.1, color=cmap.color(n))
         plt.xlabel('Embedding 0', fontsize=12)
         plt.ylabel('Embedding 1', fontsize=12)
 
@@ -3034,6 +3024,7 @@ def data_train_synaptic2(config, config_file, erase, device):
 
         ax = fig.add_subplot(2, 5, 6)
 
+        embedding = get_embedding(model.a, 1)
         func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
                                                             model_MLP=model.lin_phi, model_a=model.a,
                                                             n_nodes=0,

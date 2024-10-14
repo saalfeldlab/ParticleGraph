@@ -81,7 +81,7 @@ def get_in_features(rr, embedding_, config_model, max_radius):
 
     return in_features
 
-def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, index_particles, n_particles, n_particle_types, type_list, cmap, has_siren, has_siren_time, model_exc, n_frames, device):
+def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, n_particles, n_particle_types, type_list, cmap, has_siren, has_siren_time, model_exc, n_frames, device):
 
     if has_siren:
         frame_list = [n_frames // 4, n_frames // 2, 3*n_frames // 4, n_frames - 1]
@@ -109,12 +109,9 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
             plt.close()
 
     fig = plt.figure(figsize=(8, 8))
-    embedding = get_embedding(model.a, 1)
     for n in range(n_particle_types):
-        if 'PDE_N5' in config.graph_model.signal_model_name:
-            plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 3], s=20)
-        else:
-            plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=20)
+        pos=torch.argwhere(type_list==n).squeeze()
+        plt.scatter(to_numpy(model.a[1,pos, 0]), to_numpy(model.a[1,pos, 1]), s=20, color=cmap.color(n))
     plt.xticks([])
     plt.yticks([])
     plt.tight_layout()
