@@ -47,10 +47,10 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                             hidden_size=self.hidden_dim, device=self.device)
 
-        self.lin_phi = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
-                            hidden_size=self.hidden_dim, device=self.device)
+        self.lin_phi = MLP(input_size=self.input_size_update, output_size=self.output_size, nlayers=self.n_layers_update,
+                            hidden_size=self.hidden_dim_update, device=self.device)
 
-        self.a = nn.Parameter(torch.ones((self.n_dataset,int(self.n_particles), self.embedding_dim), device=self.device, requires_grad=True, dtype=torch.float32))
+        self.a = nn.Parameter(torch.ones((int(self.n_particles), self.embedding_dim), device=self.device, requires_grad=True, dtype=torch.float32))
 
         self.W = nn.Parameter(torch.randn((int(self.n_particles),int(self.n_particles)), device=self.device, requires_grad=True, dtype=torch.float32))
 
@@ -64,18 +64,21 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
         u = data.x[:, 6:7]
         particle_id = to_numpy(x[:, 0])
-        embedding = self.a[1, particle_id, :]
+        embedding = self.a[particle_id, :]
 
-        # msg = self.propagate(edge_index, u=u)
+        in_features = torch.cat([u, embedding], dim=1)
+
+        # msg = self.propagate(edge_index, u=u, embedding=embedding)
         msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
-
-        pred = -u + embedding[:,1:2] * self.lin_phi(u) + embedding[:,0:1] * msg + excitation
+        pred = self.lin_phi(in_features) + msg + excitation
 
         return pred
 
-    def message(self, edge_index_i, edge_index_j, u_j):
+    def message(self, edge_index_i, edge_index_j, u_j, embedding_i, embedding_j):
 
-        return self.W[to_numpy(edge_index_i),to_numpy(edge_index_j)] * self.lin_phi(u_j)
+        # in_features = torch.cat([u_j, embedding_i], dim=1)
+        T = self.W * self.mask
+        return T[to_numpy(edge_index_i),to_numpy(edge_index_j)][:,None] * self.lin_edge(u_j)
 
     def update(self, aggr_out):
         return aggr_out
