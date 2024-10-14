@@ -2792,6 +2792,12 @@ def data_train_synaptic2(config, config_file, erase, device):
     time.sleep(2)
     for epoch in range(n_epochs + 1):
 
+        if (epoch==0):
+            coeff_L1 = train_config.first_coeff_L1
+        else:
+            coeff_L1 = train_config.coeff_L1
+        logger.info(f'coeff_L1: {coeff_L1}')
+
         batch_size = get_batch_size(epoch)
         logger.info(f'batch_size: {batch_size}')
 
@@ -2803,7 +2809,7 @@ def data_train_synaptic2(config, config_file, erase, device):
 
         excitation = torch.zeros((n_particles, 1), device=device)
 
-        for N in trange(100): # Niter):
+        for N in trange(Niter):
 
             run = np.random.randint(n_runs)
             k = np.random.randint(n_frames - 5)
@@ -2840,7 +2846,7 @@ def data_train_synaptic2(config, config_file, erase, device):
                         dataset = data.Data(x=x, edge_index=model.edges)
                         pred = model(dataset, data_id=run, excitation=excitation)
                         y = torch.tensor(y_list[run][k],device=device) / ynorm
-                        loss = (pred - y).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 10 * (epoch==0)
+                        loss = (pred - y).norm(2) + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 10 * (epoch==0)
 
                     case 2:
                         dataset = data.Data(x=x, edge_index=model.edges)
@@ -2851,7 +2857,7 @@ def data_train_synaptic2(config, config_file, erase, device):
                         pred2 = model(dataset, data_id = run, excitation=excitation)
                         y1 = torch.tensor(y_list[run][k],device=device) / ynorm
                         y2 = torch.tensor(y_list[run][k+1],device=device) / ynorm
-                        loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 10 * (epoch==0)
+                        loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 10 * (epoch==0)
 
                     case 3:
                         dataset = data.Data(x=x, edge_index=model.edges)
@@ -2868,7 +2874,7 @@ def data_train_synaptic2(config, config_file, erase, device):
                         y1 = torch.tensor(y_list[run][k],device=device) / ynorm
                         y2 = torch.tensor(y_list[run][k+1],device=device) / ynorm
                         y3 = torch.tensor(y_list[run][k+2],device=device) / ynorm
-                        loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 10 * (epoch==0)
+                        loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2) + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 10 * (epoch==0)
 
                     case 5:
                         dataset = data.Data(x=x, edge_index=model.edges)
@@ -2896,7 +2902,7 @@ def data_train_synaptic2(config, config_file, erase, device):
                         y4 = y_list[run][k+3].clone().detach()/ ynorm
                         y5 = y_list[run][k+4].clone().detach()/ ynorm
 
-                        loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_f.norm(2)
+                        loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2) + model.W.norm(1) * coeff_L1 + func_f.norm(2)
 
             loss.backward()
 
@@ -3090,8 +3096,8 @@ def data_train_synaptic2(config, config_file, erase, device):
                 optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
                 logger.info(f'Learning rates: {lr}, {lr_embedding}')
         if (epoch==20) & (train_config.coeff_anneal_L1>0):
-            train_config.coeff_L1 = train_config.coeff_anneal_L1
-            logger.info(f'coeff_L1: {train_config.coeff_L1}')
+            coeff_L1 = train_config.coeff_anneal_L1
+            logger.info(f'coeff_L1: {coeff_L1}')
 
         plt.tight_layout()
         plt.tight_layout()
