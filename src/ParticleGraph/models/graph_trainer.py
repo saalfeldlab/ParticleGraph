@@ -2714,8 +2714,8 @@ def data_train_synaptic2(config, config_file, erase, device):
     x_list = []
     y_list = []
     for run in trange(n_runs):
-        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
-        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
+        x = np.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy')
+        y = np.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy')
         x_list.append(x)
         y_list.append(y)
     vnorm = torch.tensor(1.0, device=device)
@@ -2760,7 +2760,6 @@ def data_train_synaptic2(config, config_file, erase, device):
     logger.info(f'initial batch_size: {batch_size}')
 
     print('Update variables ...')
-    # update variable if particle_dropout, cell_division, etc ...
     x = x_list[1][n_frames - 1]
     n_particles = x.shape[0]
     print(f'N particles: {n_particles}')
@@ -2805,7 +2804,7 @@ def data_train_synaptic2(config, config_file, erase, device):
 
     list_loss = []
     time.sleep(2)
-    for epoch in range(n_epochs + 1):
+    for epoch in range(14, n_epochs + 1):
 
         if (epoch==20) & (train_config.coeff_anneal_L1>0):
             train_config.coeff_L1 = train_config.coeff_anneal_L1
@@ -2825,7 +2824,7 @@ def data_train_synaptic2(config, config_file, erase, device):
         for N in trange(Niter):
 
             run = np.random.randint(n_runs)
-            k = np.random.randint(n_frames - 6)
+            k = np.random.randint(n_frames - 5)
 
             if has_siren:
                 k = np.random.randint(n_frames - 6)
@@ -2847,22 +2846,19 @@ def data_train_synaptic2(config, config_file, erase, device):
 
             for batch in range(batch_size):
 
-                x = torch.tensor(x_list[run][k], device=device)
-                in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a), dim=1)
+                in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a[1, :]), dim=1)
                 func_phi = model.lin_phi(in_features.float())
                 in_features = torch.zeros((n_particles, 1), device=device)
                 func_edge = model.lin_edge(in_features.float())
-                u = x[:,6:7]
-                diff = torch.relu(model.lin_edge(u) - model.lin_edge(u+0.1)).norm(2)
-
+                x = torch.tensor(x_list[run][k], device=device)
+                diff = torch.relu(model.lin_edge(x[:,6:7]) - model.lin_edge(x[:,6:7]u+0.1)).norm(2)
 
                 match recursive_loop:
 
                     case 1:
                         dataset = data.Data(x=x, edge_index=model.edges)
                         pred = model(dataset, data_id=run, excitation=excitation)
-                        y = torch.tensor(y_list[run][k], device=device)
-                        y = y / ynorm
+                        y = torch.tensor(y_list[run][k],device=device) / ynorm
                         loss = (pred - y).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 10 * (epoch==0)
 
                     case 2:
@@ -2872,10 +2868,9 @@ def data_train_synaptic2(config, config_file, erase, device):
                         x_[:, 6:7] += pred1 * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
                         pred2 = model(dataset, data_id = run, excitation=excitation)
-                        y1 = y_list[run][k].clone().detach() / ynorm
-                        y2 = y_list[run][k + 1].clone().detach() / ynorm
+                        y1 = torch.tensor(y_list[run][k],device=device) / ynorm
+                        y2 = torch.tensor(y_list[run][k+1],device=device) / ynorm
                         loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 10 * (epoch==0)
-
 
                     case 3:
                         dataset = data.Data(x=x, edge_index=model.edges)
@@ -2889,9 +2884,9 @@ def data_train_synaptic2(config, config_file, erase, device):
                         dataset = data.Data(x=x_, edge_index=model.edges)
                         pred3 = model(dataset, data_id=run, excitation=excitation)
 
-                        y1 = y_list[run][k].clone().detach()/ ynorm
-                        y2 = y_list[run][k+1].clone().detach()/ ynorm
-                        y3 = y_list[run][k+2].clone().detach()/ ynorm
+                        y1 = torch.tensor(y_list[run][k],device=device) / ynorm
+                        y2 = torch.tensor(y_list[run][k+1],device=device) / ynorm
+                        y3 = torch.tensor(y_list[run][k+2],device=device) / ynorm
                         loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 10 * (epoch==0)
 
                     case 5:
@@ -3159,8 +3154,8 @@ def data_train_synaptic3(config, config_file, erase, device):
     x_list = []
     y_list = []
     for run in trange(n_runs):
-        x = np.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy')
-        y = np.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy')
+        x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
+        y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(x)
         y_list.append(y)
     vnorm = torch.tensor(1.0, device=device)
@@ -3173,9 +3168,9 @@ def data_train_synaptic3(config, config_file, erase, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_9_graphs_14_0.pt"
-    # state_dict = torch.load(net,map_location=device)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    net = f"./log/try_{config_file}/models/best_model_with_9_graphs_14_0.pt"
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -3205,6 +3200,7 @@ def data_train_synaptic3(config, config_file, erase, device):
     logger.info(f'initial batch_size: {batch_size}')
 
     print('Update variables ...')
+    # update variable if particle_dropout, cell_division, etc ...
     x = x_list[1][n_frames - 1].clone().detach()
     n_particles = x.shape[0]
     print(f'N particles: {n_particles}')
@@ -3319,8 +3315,6 @@ def data_train_synaptic3(config, config_file, erase, device):
                         y = y / ynorm
                         loss = (pred - y).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 10 * (epoch==0)
 
-
-
                     case 2:
                         x = x_list[run][k].clone().detach()
                         dataset = data.Data(x=x, edge_index=model.edges)
@@ -3332,7 +3326,6 @@ def data_train_synaptic3(config, config_file, erase, device):
                         y1 = y_list[run][k].clone().detach() / ynorm
                         y2 = y_list[run][k + 1].clone().detach() / ynorm
                         loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 10 * (epoch==0)
-
 
                     case 3:
                         x = x_list[run][k].clone().detach()
@@ -3353,7 +3346,6 @@ def data_train_synaptic3(config, config_file, erase, device):
                         loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 10 * (epoch==0)
 
                     case 5:
-
                         x = x_list[run][k].clone().detach()
                         dataset = data.Data(x=x, edge_index=model.edges)
                         pred1 = model(dataset, data_id=run, excitation=excitation)
@@ -3579,7 +3571,6 @@ def data_train_synaptic3(config, config_file, erase, device):
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
         plt.close()
-
 
 
 def data_train_agents(config, config_file, erase, device):
