@@ -1,4 +1,4 @@
-description: 'synaptic network random matrix no recursive loop    8000 neurons 4 types lorentz std 0.01 factor coeff_L1: 1.0E-5 coeff_anneal_L1: 1.0E-3'
+description: 'synaptic network random matrix no recursive loop    8000 neurons 4 types lorentz std 0.01   batch_size 16'
 dataset: 'signal_N2_Lorentz_c'
 
 simulation:
@@ -42,7 +42,7 @@ plotting:
     arrow_length: 1
 
 training:
-    n_epochs: 24
+    n_epochs: 20
     recursive_loop: 1
     batch_size: 16
     small_init_batch_size: True
@@ -58,5 +58,3 @@ training:
     sparsity_freq: 4
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4
-    coeff_L1: 5.0E-5
-    coeff_anneal_L1: 1.0E-3

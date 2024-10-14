@@ -108,7 +108,6 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
             plt.savefig(f"./{log_dir}/tmp_training/field/{epoch}_{N}_{frame}.tif", dpi=170.7)
             plt.close()
 
-
     fig = plt.figure(figsize=(8, 8))
     embedding = get_embedding(model.a, 1)
     for n in range(n_particle_types):

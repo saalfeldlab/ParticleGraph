@@ -1,5 +1,5 @@
-description: 'synaptic network random matrix no recursive loop  noise 7.4'
-dataset: 'signal_N2_Lorentz_g'
+description: 'synaptic network random matrix no recursive loop    8000 neurons 4 types lorentz std 0.01 factor coeff_L1: 5.0E-5 then 0 after epoch 14'
+dataset: 'signal_N2_Lorentz_c'
 
 simulation:
     connectivity_file: 'random'
@@ -11,7 +11,7 @@ simulation:
     tau: 1.0
     min_radius: 1.0
     max_radius: 1.0E6
-    n_particles: 1000
+    n_particles: 8000
     n_particle_types: 4
     n_interactions: 4
     n_frames: 10000
@@ -42,10 +42,10 @@ plotting:
     arrow_length: 1
 
 training:
-    n_epochs: 20
+    n_epochs: 30
     recursive_loop: 1
     batch_size: 1
-    small_init_batch_size: False
+    small_init_batch_size: True
     n_runs: 10
     large_range: False
     sparsity: 'none'
@@ -58,4 +58,4 @@ training:
     sparsity_freq: 4
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4
-    noise_level: 3.66
+

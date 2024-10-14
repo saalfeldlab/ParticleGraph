@@ -1,5 +1,5 @@
 description: 'synaptic network random matrix no recursive loop  noise 1.4'
-dataset: 'signal_N2_Lorentz_e'
+dataset: 'signal_N2_Lorentz_SNR02'
 
 simulation:
     connectivity_file: 'random'
