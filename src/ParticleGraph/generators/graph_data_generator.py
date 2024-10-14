@@ -796,11 +796,14 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
         if bSave:
             torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
+            np.save(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy', to_numpy(torch.stack(x_list)))
+
             if has_particle_dropout:
                 torch.save(x_removed_list, f'graphs_data/graphs_{dataset_name}/x_removed_list_{run}.pt')
                 np.save(f'graphs_data/graphs_{dataset_name}/particle_dropout_mask.npy', particle_dropout_mask)
                 np.save(f'graphs_data/graphs_{dataset_name}/inv_particle_dropout_mask.npy', inv_particle_dropout_mask)
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
+            np.save(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy', to_numpy(torch.stack(y_list)))
             torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
 
     # for handler in logger.handlers[:]:
