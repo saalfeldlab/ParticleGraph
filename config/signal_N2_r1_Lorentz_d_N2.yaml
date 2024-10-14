@@ -58,6 +58,6 @@ training:
     sparsity_freq: 4
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4
-    first_coeff_L1: 1.0E-5
+    first_coeff_L1: 5.0E-5
     coeff_L1: 0
 

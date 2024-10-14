@@ -70,7 +70,7 @@ if __name__ == '__main__':
 
     # config_list = ['signal_N2_WBI_small_a']
 
-    # config_list = ["arbitrary_3"]
+    config_list = ["arbitrary_3"]
 
     # config_list = ["mouse_city_b"]
 

@@ -206,7 +206,7 @@ def data_train_particle(config, config_file, erase, device):
         total_loss = 0
         Niter = n_frames * data_augmentation_loop // batch_size
 
-        for N in range(Niter):
+        for N in trange(Niter):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -273,7 +273,7 @@ def data_train_particle(config, config_file, erase, device):
             optimizer.step()
 
             visualize_embedding = True
-            if visualize_embedding & (((epoch < 30 ) & (N%(Niter//50) == 0)) | (N==0)):
+            if visualize_embedding & (((epoch < 30 ) & (N%(Niter//50) == 0)) | ((epoch==0 ) & (N%4 == 0)) | (N==0)):
                 plot_training(config=config, dataset_name=dataset_name, log_dir=log_dir,
                               epoch=epoch, N=N, x=x, model=model, n_nodes=0, n_node_types=0, index_nodes=0, dataset_num=1,
                               index_particles=index_particles, n_particles=n_particles,
@@ -291,8 +291,7 @@ def data_train_particle(config, config_file, erase, device):
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         torch.save({'model_state_dict': model.state_dict(),
-                    'optimizer_state_dict': optimizer.state_dict()},
-                   os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
+                    'optimizer_state_dict': optimizer.state_dict()},os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{ epoch}.pt'))
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
@@ -2809,7 +2808,7 @@ def data_train_synaptic2(config, config_file, erase, device):
 
         excitation = torch.zeros((n_particles, 1), device=device)
 
-        for N in trange(Niter):
+        for N in range(Niter):
 
             run = np.random.randint(n_runs)
             k = np.random.randint(n_frames - 5)
