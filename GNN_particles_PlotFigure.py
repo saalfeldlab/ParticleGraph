@@ -1185,14 +1185,14 @@ def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
 
         def sort_key(filename):
             # Extract the numeric parts using regular expressions
-            if filename.split('_')[-2]=='graphs':
+            if filename.split('_')[-2] == 'graphs':
                 return 0
             else:
                 return 1E7 * int(filename.split('_')[-2]) + int(filename.split('_')[-1][:-3])
 
         files.sort(key=sort_key)
 
-        for file_id in trange(0,len(files)):
+        for file_id in trange(0,len(files),20):
             epoch = files[file_id].split('graphs')[1][1:-3]
             net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
             state_dict = torch.load(net, map_location=device)
@@ -1204,15 +1204,20 @@ def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
             fig, ax = fig_init()
             embedding = get_embedding(model.a, 1)
             # embedding = (embedding-np.min(embedding))/(np.max(embedding)-np.min(embedding))
-            for n in range(n_particle_types):
+            for n in range(n_particle_types-1,-1,-1):
                 pos = torch.argwhere(type_list == n)
                 pos = to_numpy(pos)
                 if len(pos) > 0:
                     plt.scatter(embedding[pos, 0], embedding[pos, 1], c=cmap.color(n), s=100, alpha=0.1)
             plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
             plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
-            plt.xlim([0.5, 1.5])
-            plt.ylim([0.5, 1.5])
+            match config.dataset:
+                case 'arbitrary_3':
+                    plt.xlim([0.5, 1.5])
+                    plt.ylim([0.5, 1.5])
+                case 'arbitrary_16':
+                    plt.xlim([-0.5, 2])
+                    plt.ylim([-0.5, 2])
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=80)
             plt.close()
@@ -1235,17 +1240,14 @@ def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
             plt.xlim([0, max_radius])
             plt.ylim(config.plotting.ylim)
             plt.tight_layout()
+            match config.dataset:
+                case 'arbitrary_3':
+                    plt.ylim([-0.04, 0.03])
+                case 'arbitrary_16':
+                    plt.ylim([-0.1, 0.1])
+            plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/function_{epoch}.tif", dpi=80)
             plt.close()
-
-
-
-
-
-
-
-
-
 
 
 
@@ -4025,7 +4027,394 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
 
     x_list = []
     y_list = []
-    for run in trange(2):
+    for run in trange(1):
+        x = np.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy')
+        y = np.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy')
+        x_list.append(x)
+        y_list.append(y)
+    vnorm = torch.load(os.path.join(log_dir, 'vnorm.pt'))
+    ynorm = torch.load(os.path.join(log_dir, 'ynorm.pt'))
+    print(f'vnorm: {to_numpy(vnorm)}, ynorm: {to_numpy(ynorm)}')
+
+    print('Update variables ...')
+    x = x_list[0][n_frames - 1]
+    n_particles = x.shape[0]
+    print(f'N particles: {n_particles}')
+    logger.info(f'N particles: {n_particles}')
+    config.simulation.n_particles = n_particles
+    type_list = torch.tensor(x[:, 1 + 2 * dimension:2 + 2 * dimension], device=device)
+
+    activity = torch.tensor(x_list[0],device=device)
+    activity = activity[:, :, 6:7].squeeze()
+    distrib = to_numpy(activity.flatten())
+    activity = activity.t()
+
+    fig_init()
+    plt.hist(distrib, bins=100, color='k',alpha=0.5)
+    plt.ylabel(r'counts', fontsize=64)
+    plt.xlabel(r'$x$', fontsize=64)
+    plt.xticks(fontsize=24)
+    plt.yticks(fontsize=24)
+    plt.tight_layout()
+    plt.savefig(f'./{log_dir}/results/signal_distribution.png', dpi=300)
+
+    plt.close()
+    print(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
+    logger.info(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
+
+    plt.figure(figsize=(15, 10))
+    ax = sns.heatmap(to_numpy(activity), center=0, cbar_kws={'fraction': 0.046})
+    ax.invert_yaxis()
+    plt.ylabel('Neurons', fontsize=64)
+    plt.xlabel('Time', fontsize=64)
+    plt.xticks([0,10000],fontsize=24)
+    plt.yticks([0, 999], [1, 1000], fontsize=24)
+    plt.tight_layout()
+    plt.savefig(f'./{log_dir}/results/kinograph.png', dpi=300)
+    plt.close()
+
+    plt.figure(figsize=(15, 10))
+    for i in range(25):
+        plt.plot(to_numpy(activity[i, :]), linewidth=2)
+    plt.xlabel('Time', fontsize=64)
+    plt.ylabel('Firing rate', fontsize=64)
+    plt.xticks([0,10000],fontsize=24)
+    plt.yticks(fontsize=24)
+    plt.tight_layout()
+    plt.savefig(f'./{log_dir}/results/firing rate.png', dpi=300)
+    plt.close()
+
+
+    adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency.pt', map_location=device)
+    adjacency_ = adjacency.t().clone().detach()
+    adj_t = torch.abs(adjacency_) > 0
+    edge_index = adj_t.nonzero().t().contiguous()
+
+    weights = to_numpy(adjacency.flatten())
+    pos = np.argwhere(weights != 0)
+    weights = weights[pos]
+    fig_init()
+    plt.hist(weights, bins=1000, color='k',alpha=0.5)
+    plt.ylabel(r'counts', fontsize=64)
+    plt.xlabel(r'$W$', fontsize=64)
+    plt.yticks(fontsize=24)
+    plt.xticks(fontsize=24)
+    plt.xlim([-0.1, 0.1])
+    plt.tight_layout()
+    plt.savefig(f'./{log_dir}/results/weights_distribution.png', dpi=300)
+    plt.close()
+
+
+    plt.figure(figsize=(10, 10))
+    ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.1, vmax=0.1)
+    cbar = ax.collections[0].colorbar
+    cbar.ax.tick_params(labelsize=48)
+    plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+    plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+    # plt.title(r'true $W_{ij}$', fontsize=78)
+    plt.subplot(2,2,1)
+    ax = sns.heatmap(to_numpy(adjacency[0:20,0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
+    plt.xticks([])
+    plt.yticks([])
+    plt.tight_layout()
+
+    plt.savefig(f'./{log_dir}/results/true connectivity.png', dpi=300)
+
+    files = glob.glob(f"{log_dir}/models/*.pt")
+    files.sort(key=os.path.getmtime)
+
+    for epoch in epoch_list:
+
+        net = f'{log_dir}/models/best_model_with_{n_runs-1}_graphs_{epoch}.pt'
+        model, bc_pos, bc_dpos = choose_training_model(config, device)
+        state_dict = torch.load(net, map_location=device)
+        model.load_state_dict(state_dict['model_state_dict'])
+        model.edges = edge_index
+        print(f'net: {net}')
+
+        fig, ax = fig_init()
+        for n in range(n_particle_types):
+            pos = torch.argwhere(type_list == n).squeeze()
+            plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=0.1, color=cmap.color(n))
+        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
+        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/all_embedding_{config_file}_{epoch}.tif", dpi=170.7)
+
+        fig, ax = fig_init()
+        rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
+        func_list = []
+        for n in trange(0,n_particles,n_particles//100):
+            in_features = rr[:, None]
+            with torch.no_grad():
+                func = model.lin_edge(in_features.float())
+            func_list.append(func)
+            plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
+                     linewidth=2, alpha=0.25)
+        func_list = torch.stack(func_list)
+        plt.xlabel(r'$x$', fontsize=78)
+        plt.ylabel(r'Learned $f(x)$', fontsize=78)
+        # plt.ylim([-0.05,0.15])
+        plt.xlim([-5,5])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/raw_f_x_{config_file}_{epoch}.tif", dpi=170.7)
+        plt.close()
+
+        correction = 1 / torch.mean(torch.mean(func_list[:,900:1000], dim=0))
+        print(f'correction: {correction:0.2f}')
+
+        fig, ax = fig_init()
+        rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
+        # plt.plot(to_numpy(rr), to_numpy(torch.tanh(rr)), linewidth = 20, alpha = 1, label=r'true')
+        in_features = rr[:, None]
+        with torch.no_grad():
+            func = model.lin_edge(in_features.float()) * correction
+        plt.plot(to_numpy(rr), to_numpy(func), color='k', linewidth=8, label=r'learned')
+        plt.xlabel(r'$x$', fontsize=78)
+        plt.ylabel(r'Learned $f(x)$', fontsize=78)
+        plt.ylim([-1.1,1.1])
+        plt.xlim([-5,5])
+        # plt.legend(fontsize=32.0, loc='upper left')
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/reconstructed_f_x_{config_file}_{epoch}.tif", dpi=170.7)
+        plt.close()
+
+        print('interaction functions ...')
+        fig, ax = fig_init()
+        func_list = []
+        config_model = config.graph_model.signal_model_name
+        # for n in range(n_particle_types):
+        #     s = config.simulation.params[n][1]
+        #     c = config.simulation.params[n][2]
+        #     func = -c * rr + s * torch.tanh(rr)
+        #     plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm), linewidth=20, alpha=1)
+
+        for n in trange(n_particles):
+            embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+            in_features = torch.cat((rr[:, None], embedding_), dim=1)
+            with torch.no_grad():
+                func = model.lin_phi(in_features.float())
+            func = func[:, 0]
+            func_list.append(func)
+            plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm), color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
+
+        func_list = torch.stack(func_list)
+        func_list_ = to_numpy(func_list)
+        plt.xlabel(r'$x$', fontsize=78)
+        plt.ylabel(r'Learned $\phi(x)$', fontsize=78)
+        plt.tight_layout()
+        plt.savefig(f'./{log_dir}/results/learned phi.png', dpi=300)
+
+        print('UMAP reduction ...')
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore')
+            trans = umap.UMAP(n_neighbors=50, n_components=2, transform_queue_size=0,
+                              random_state=config.training.seed).fit(func_list_)
+            proj_interaction = trans.transform(func_list_)
+
+
+        proj_interaction = (proj_interaction - np.min(proj_interaction)) / (
+                np.max(proj_interaction) - np.min(proj_interaction) + 1e-10)
+        fig, ax = fig_init()
+        for n in trange(n_particle_types):
+            pos = torch.argwhere(type_list == n)
+            pos = to_numpy(pos)
+            if len(pos) > 0:
+                plt.scatter(proj_interaction[pos, 0],
+                            proj_interaction[pos, 1], s=200, alpha=0.1)
+        plt.xlabel(r'UMAP 0', fontsize=78)
+        plt.ylabel(r'UMAP 1', fontsize=78)
+        plt.xlim([-0.2, 1.2])
+        plt.ylim([-0.2, 1.2])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/UMAP_{config_file}_{epoch}.tif", dpi=170.7)
+        plt.close()
+
+        config.training.cluster_distance_threshold = 0.01
+
+        config.training.cluster_method = 'distance_plot'
+        embedding = to_numpy(model.a.squeeze())
+        labels, n_clusters, new_labels = sparsify_cluster(config.training.cluster_method, proj_interaction, embedding,
+                                                          config.training.cluster_distance_threshold, type_list,
+                                                          n_particle_types, embedding_cluster)
+        accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
+        print(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}  ')
+        logger.info(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method} ')
+
+        config.training.cluster_method = 'kmeans_auto_embedding'
+        labels, n_clusters, new_labels = sparsify_cluster(config.training.cluster_method, proj_interaction, embedding,
+                                                          config.training.cluster_distance_threshold, type_list,
+                                                          n_particle_types, embedding_cluster)
+        accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
+        print(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}  ')
+        logger.info(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method} ')
+
+
+        i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+        A = model.W.clone().detach() / correction
+        A[i, i] = 0
+
+        fig, ax = fig_init()
+        gt_weight = to_numpy(adjacency)
+        pred_weight = to_numpy(A)
+        plt.scatter(gt_weight, pred_weight / 10, s=1, c='k', alpha=1)
+        plt.xlabel(r'true $W_{ij}$', fontsize=78)
+        plt.ylabel(r'learned $W_{ij}$', fontsize=78)
+        if n_particles == 8000:
+            plt.xlim([-0.05,0.05])
+            plt.ylim([-0.05,0.05])
+        else:
+            plt.xlim([-0.2,0.2])
+            plt.ylim([-0.2,0.2])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/comparison_{epoch}.tif", dpi=87)
+        plt.close()
+
+        x_data = np.reshape(gt_weight, (n_particles * n_particles))
+        y_data =  np.reshape(pred_weight, (n_particles * n_particles))
+        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+        residuals = y_data - linear_model(x_data, *lin_fit)
+        ss_res = np.sum(residuals ** 2)
+        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+        r_squared = 1 - (ss_res / ss_tot)
+        print(f'R^2$: {r_squared:0.4f}  slope: {np.round(lin_fit[0], 4)}')
+        logger.info(f'R^2$: {np.round(r_squared, 4)}  slope: {np.round(lin_fit[0], 4)}')
+
+        second_correction = lin_fit[0]
+        print(f'second_correction: {second_correction:0.2f}')
+
+        plt.figure(figsize=(10, 10))
+        # plt.title(r'learned $W_{ij}$', fontsize=78)
+        ax = sns.heatmap(to_numpy(A)/second_correction, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.1,vmax=0.1)
+        cbar = ax.collections[0].colorbar
+        # here set the labelsize by 20
+        cbar.ax.tick_params(labelsize=48)
+        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+        plt.subplot(2, 2, 1)
+        ax = sns.heatmap(to_numpy(A[0:20, 0:20]/second_correction), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
+        plt.xticks([])
+        plt.yticks([])
+        plt.tight_layout()
+        plt.savefig(f'./{log_dir}/results/learned connectivity.png', dpi=300)
+        plt.close()
+
+
+    if has_siren_time:
+
+        os.makedirs(f'./{log_dir}/results/NNR/', exist_ok=True)
+
+        im = imread(f"graphs_data/{simulation_config.excitation_value_map}")
+        image_width = im.shape[1]
+        if has_siren_time:
+            model_exc = Siren_Network(image_width=image_width, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
+                                        hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.)
+        else:
+            model_exc = Siren_Network(image_width=image_width, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
+                                        hidden_layers=3, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.)
+        model_exc.to(device=device)
+
+        net = f'{log_dir}/models/best_model_exc_with_9_graphs_{epoch}.pt'
+        state_dict = torch.load(net,map_location=device)
+        model_exc.load_state_dict(state_dict['model_state_dict'])
+
+        for k in trange(0,im.shape[0]):
+
+            fig = plt.figure(figsize=(16, 8))
+            plt.subplot(1, 2, 1)
+            plt.imshow(im[k], cmap='gray',vmin=0,vmax=2)
+            plt.xticks([])
+            plt.yticks([])
+            plt.title('true excitation',fontsize=18)
+            plt.subplot(1, 2, 2)
+            excitation = model_exc(time=k / im.shape[0]) ** 2
+            tmp = excitation.clone().detach()
+            tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
+            tmp = to_numpy(tmp)
+            tmp = np.rot90(tmp, k=1)
+            plt.imshow(tmp, cmap='grey',vmin=0,vmax=2)
+            plt.xticks([])
+            plt.yticks([])
+            plt.title('learned excitation',fontsize=18)
+            plt.tight_layout()
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/NNR/NNR_{10000 + k}.tif", dpi=70)
+            plt.close()
+
+
+
+    files = []
+
+    for epoch, net in enumerate (files):
+
+        if (epoch%5 == 0) & (not('_0.pt' in net)):
+
+            # net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt"
+            model, bc_pos, bc_dpos = choose_training_model(config, device)
+            state_dict = torch.load(net, map_location=device)
+            model.load_state_dict(state_dict['model_state_dict'])
+            model.edges = edge_index
+            print(f'net: {net}')
+
+            fig = plt.figure(figsize=(8, 8))
+            rr = torch.tensor(np.linspace(-5, 5, 10000)).to(device)
+            in_features =rr[:, None]
+            with torch.no_grad():
+                func = model.lin_phi(in_features.float())
+            plt.plot(to_numpy(rr), to_numpy(func), c='k', linewidth=2)
+            plt.xlabel(r'$x$', fontsize=48)
+            plt.ylabel(r'$\phi(x)$', fontsize=48)
+            plt.ylim([-0.5, 0.5])
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/function/func_{epoch}.tif", dpi=87)
+            plt.close()
+
+            fig = plt.figure(figsize=(8, 8))
+            embedding = get_embedding(model.a, 1)
+            for n in range(n_particle_types):
+                plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=10)
+            plt.xlabel(r'$a_0$', fontsize=48)
+            plt.ylabel(r'$a_1$', fontsize=48)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/embedding/embedding_{epoch}.tif", dpi=87)
+            plt.close()
+
+            i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+            A = model.W.clone().detach()
+            A[i, i] = 0
+            fig = plt.figure(figsize=(8, 8))
+            ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-1,vmax=1)
+            plt.title(r'$W_{ij}$', fontsize=48);
+            plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+            plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/matrix/matrix_{epoch}.tif", dpi=87)
+            plt.close()
+
+
+def plot_synaptic3(config_file, epoch_list, log_dir, logger, cc, device):
+    # Load parameters from config file
+    config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
+    dataset_name = config.dataset
+
+    simulation_config = config.simulation
+    train_config = config.training
+    model_config = config.graph_model
+
+    n_frames = config.simulation.n_frames
+    n_runs = config.training.n_runs
+    n_particle_types = config.simulation.n_particle_types
+    delta_t = config.simulation.delta_t
+    cmap = CustomColorMap(config=config)
+    dimension = config.simulation.dimension
+    has_siren = 'siren' in config.graph_model.excitation_type
+    has_siren_time = 'siren_with_time' in config.graph_model.excitation_type
+
+    embedding_cluster = EmbeddingCluster(config)
+
+    x_list = []
+    y_list = []
+    for run in trange(1):
         x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device)
         y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
         x_list.append(x)
@@ -4793,8 +5182,10 @@ def data_plot(config, config_file, epoch_list, device):
             plot_RD_RPS(config_file=config_file, epoch_list=epoch_list, log_dir=log_dir, logger=logger, cc='viridis',
                            device=device)
 
-    if ('PDE_N2' in config.graph_model.signal_model_name) or ('PDE_N3' in config.graph_model.signal_model_name):
+    if ('PDE_N2' in config.graph_model.signal_model_name):
         plot_synaptic2(config_file, epoch_list, log_dir, logger, 'viridis', device)
+    elif('PDE_N3' in config.graph_model.signal_model_name):
+        plot_synaptic3(config_file, epoch_list, log_dir, logger, 'viridis', device)
     elif 'PDE_N' in config.graph_model.signal_model_name:
         plot_synaptic(config_file, epoch_list, log_dir, logger, 'viridis', device)
 
@@ -5069,12 +5460,14 @@ if __name__ == '__main__':
     #                'signal_N2_r1_Lorentz_f','signal_N2_r1_Lorentz_g','signal_N2_r1_Lorentz_i','signal_N2_r1_Lorentz_j',
     #                'signal_N2_r1_Lorentz_m']
 
-    config_list = ['arbitrary_3']
+    # config_list = ['arbitrary_16']
+    config_list = ['signal_N2_r1_Lorentz_d_N2']
+    # config_list = ['signal_N2_r1_Lorentz_l ']
 
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['all'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['2_1040000'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

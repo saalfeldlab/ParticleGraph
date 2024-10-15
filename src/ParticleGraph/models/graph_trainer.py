@@ -3156,9 +3156,9 @@ def data_train_synaptic3(config, config_file, erase, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    net = f"./log/try_{config_file}/models/best_model_with_9_graphs_14_0.pt"
-    state_dict = torch.load(net,map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
+    # net = f"./log/try_{config_file}/models/best_model_with_9_graphs_14_0.pt"
+    # state_dict = torch.load(net,map_location=device)
+    # model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -3233,7 +3233,7 @@ def data_train_synaptic3(config, config_file, erase, device):
 
     list_loss = []
     time.sleep(2)
-    for epoch in range(14, n_epochs + 1):
+    for epoch in range(n_epochs + 1):
 
         if (epoch==20) & (train_config.coeff_anneal_L1>0):
             train_config.coeff_L1 = train_config.coeff_anneal_L1

@@ -64,13 +64,13 @@ if __name__ == '__main__':
     # config_list = ['signal_N2_a_r1_Gaussian_t']
     # config_list = ['signal_N2_a_r1_Lorentz_k','signal_N2_a_r1_Lorentz_l','signal_N2_a_r1_Lorentz_m']
 
-    # config_list = ['signal_N2_r1_Lorentz_d_N2']
+    # config_list = ['signal_N2_r1_Lorentz_o']
 
     # config_list = ['signal_hemibrain_3_r1_a']
 
     # config_list = ['signal_N2_WBI_small_a']
 
-    config_list = ["arbitrary_3"]
+    # config_list = ["arbitrary_3"]
 
     # config_list = ["mouse_city_b"]
 
