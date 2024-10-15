@@ -895,8 +895,8 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
             plt.xlim([1E-3, 0.2])
         if config.graph_model.particle_model_name == 'PDE_E':
             plt.xlim([0, 0.05])
-        plt.xlabel(r'$x$', fontsize=64)
-        plt.ylabel(r'$\Phi(x)$', fontsize=64)
+        # plt.xlabel(r'$x$', fontsize=64)
+        # plt.ylabel(r'$\Phi(x)$', fontsize=64)
         plt.tight_layout()
 
     return func_list, proj_interaction

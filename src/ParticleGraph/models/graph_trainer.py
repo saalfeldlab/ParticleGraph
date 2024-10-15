@@ -147,7 +147,7 @@ def data_train_particle(config, config_file, erase, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_0_0.pt"
+    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_4_24500.pt"
     # print(f'Loading existing model {net}...')
     # state_dict = torch.load(net,map_location=device)
     # model.load_state_dict(state_dict['model_state_dict'])
@@ -308,6 +308,7 @@ def data_train_particle(config, config_file, erase, device):
 
         if (simulation_config.n_interactions < 100):
 
+            ax = fig.add_subplot(1, 5, 2)
             embedding = get_embedding(model.a, 1)
             for n in range(n_particle_types):
                 plt.scatter(embedding[index_particles[n], 0],
@@ -405,6 +406,14 @@ def data_train_particle(config, config_file, erase, device):
                                          rr[:, None] / simulation_config.max_radius, 0 * rr[:, None],
                                          0 * rr[:, None],
                                          0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                                case 'PDE_G':
+                                    in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                             rr[:, None] / max_radius, 0 * rr[:, None],
+                                                             0 * rr[:, None],
+                                                             0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                                case 'PDE_E':
+                                    in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                                             rr[:, None] / max_radius, embedding_, embedding_), dim=1)
                             pred.append(model.lin_edge(in_features.float()))
                         pred = torch.stack(pred)
                         loss = (pred[:, :, 0] - y_func_list.clone().detach()).norm(2)

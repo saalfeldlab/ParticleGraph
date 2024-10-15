@@ -5,6 +5,7 @@ simulation:
     connectivity_file: 'random'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
+    connectivity_filling_factor: 0.20
     connectivity_distribution: 'Lorentz'
     params: [[10.0,1.0,1.0],[10.0,2.0,1.0],[10.0,1.0,2.0],[10.0,2.0,2.0]]
     phi: 'tanh'
@@ -14,7 +15,7 @@ simulation:
     n_particles: 16000
     n_particle_types: 4
     n_interactions: 4
-    n_frames: 100000
+    n_frames: 50000
     delta_t: 0.01
     dpos_init:  0
     boundary: 'no'
@@ -46,7 +47,7 @@ training:
     recursive_loop: 1
     batch_size: 1
     small_init_batch_size: False
-    n_runs: 10
+    n_runs: 20
     large_range: False
     sparsity: 'none'
     data_augmentation: False
