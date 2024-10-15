@@ -4224,82 +4224,11 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
     distrib = to_numpy(activity.flatten())
     activity = activity.t()
 
-    fig_init()
-    plt.hist(distrib, bins=100, color='k',alpha=0.5)
-    plt.ylabel(r'counts', fontsize=64)
-    plt.xlabel(r'$x$', fontsize=64)
-    plt.xticks(fontsize=24)
-    plt.yticks(fontsize=24)
-    plt.tight_layout()
-    plt.savefig(f'./{log_dir}/results/signal_distribution.png', dpi=300)
-
-    plt.close()
-    print(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
-    logger.info(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
-
-    plt.figure(figsize=(15, 10))
-    ax = sns.heatmap(to_numpy(activity), center=0, cbar_kws={'fraction': 0.046})
-    ax.invert_yaxis()
-    plt.ylabel('Neurons', fontsize=64)
-    plt.xlabel('Time', fontsize=64)
-    plt.xticks([0,10000],fontsize=24)
-    plt.yticks([0, 999], [1, 1000], fontsize=24)
-    plt.tight_layout()
-    plt.savefig(f'./{log_dir}/results/kinograph.png', dpi=300)
-    plt.close()
-
-    plt.figure(figsize=(15, 10))
-    for i in range(25):
-        plt.plot(to_numpy(activity[i, :]), linewidth=2)
-    plt.xlabel('Time', fontsize=64)
-    plt.ylabel('Firing rate', fontsize=64)
-    plt.xticks([0,10000],fontsize=24)
-    plt.yticks(fontsize=24)
-    plt.tight_layout()
-    plt.savefig(f'./{log_dir}/results/firing rate.png', dpi=300)
-    plt.close()
-
-
-    adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency.pt', map_location=device)
-    adjacency_ = adjacency.t().clone().detach()
-    adj_t = torch.abs(adjacency_) > 0
-    edge_index = adj_t.nonzero().t().contiguous()
-
-    weights = to_numpy(adjacency.flatten())
-    pos = np.argwhere(weights != 0)
-    weights = weights[pos]
-    fig_init()
-    plt.hist(weights, bins=1000, color='k',alpha=0.5)
-    plt.ylabel(r'counts', fontsize=64)
-    plt.xlabel(r'$W$', fontsize=64)
-    plt.yticks(fontsize=24)
-    plt.xticks(fontsize=24)
-    plt.xlim([-0.1, 0.1])
-    plt.tight_layout()
-    plt.savefig(f'./{log_dir}/results/weights_distribution.png', dpi=300)
-    plt.close()
-
-
-    plt.figure(figsize=(10, 10))
-    ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.1, vmax=0.1)
-    cbar = ax.collections[0].colorbar
-    cbar.ax.tick_params(labelsize=48)
-    plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
-    plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
-    # plt.title(r'true $W_{ij}$', fontsize=78)
-    plt.subplot(2,2,1)
-    ax = sns.heatmap(to_numpy(adjacency[0:20,0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
-    plt.xticks([])
-    plt.yticks([])
-    plt.tight_layout()
-
-    plt.savefig(f'./{log_dir}/results/true connectivity.png', dpi=300)
-
-    files = glob.glob(f"{log_dir}/models/*.pt")
-    files.sort(key=os.path.getmtime)
-
 
     if epoch_list[0] == 'all':
+
+        files = glob.glob(f"{log_dir}/models/*.pt")
+        files.sort(key=os.path.getmtime)
 
         model, bc_pos, bc_dpos = choose_training_model(config, device)
 
@@ -4339,7 +4268,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                 plt.style.use('dark_background')
 
                 fig, ax = fig_init()
-                for n in range(n_particle_types):
+                for n in range(n_particle_types-1,-1,-1):
                     pos = torch.argwhere(type_list == n).squeeze()
                     plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=100, color=cmap.color(n), alpha=0.5)
                 plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
@@ -4401,9 +4330,78 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/phi_{epoch}.tif", dpi=80)
                 plt.close()
-
-
     else:
+
+        fig_init()
+        plt.hist(distrib, bins=100, color='k', alpha=0.5)
+        plt.ylabel(r'counts', fontsize=64)
+        plt.xlabel(r'$x$', fontsize=64)
+        plt.xticks(fontsize=24)
+        plt.yticks(fontsize=24)
+        plt.tight_layout()
+        plt.savefig(f'./{log_dir}/results/signal_distribution.png', dpi=300)
+
+        plt.close()
+        print(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
+        logger.info(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
+
+        plt.figure(figsize=(15, 10))
+        ax = sns.heatmap(to_numpy(activity), center=0, cbar_kws={'fraction': 0.046})
+        ax.invert_yaxis()
+        plt.ylabel('Neurons', fontsize=64)
+        plt.xlabel('Time', fontsize=64)
+        plt.xticks([0, 10000], fontsize=24)
+        plt.yticks([0, 999], [1, 1000], fontsize=24)
+        plt.tight_layout()
+        plt.savefig(f'./{log_dir}/results/kinograph.png', dpi=300)
+        plt.close()
+
+        plt.figure(figsize=(15, 10))
+        for i in range(25):
+            plt.plot(to_numpy(activity[i, :]), linewidth=2)
+        plt.xlabel('Time', fontsize=64)
+        plt.ylabel('Firing rate', fontsize=64)
+        plt.xticks([0, 10000], fontsize=24)
+        plt.yticks(fontsize=24)
+        plt.tight_layout()
+        plt.savefig(f'./{log_dir}/results/firing rate.png', dpi=300)
+        plt.close()
+
+        adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency.pt', map_location=device)
+        adjacency_ = adjacency.t().clone().detach()
+        adj_t = torch.abs(adjacency_) > 0
+        edge_index = adj_t.nonzero().t().contiguous()
+
+        weights = to_numpy(adjacency.flatten())
+        pos = np.argwhere(weights != 0)
+        weights = weights[pos]
+        fig_init()
+        plt.hist(weights, bins=1000, color='k', alpha=0.5)
+        plt.ylabel(r'counts', fontsize=64)
+        plt.xlabel(r'$W$', fontsize=64)
+        plt.yticks(fontsize=24)
+        plt.xticks(fontsize=24)
+        plt.xlim([-0.1, 0.1])
+        plt.tight_layout()
+        plt.savefig(f'./{log_dir}/results/weights_distribution.png', dpi=300)
+        plt.close()
+
+        plt.figure(figsize=(10, 10))
+        ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046},
+                         vmin=-0.1, vmax=0.1)
+        cbar = ax.collections[0].colorbar
+        cbar.ax.tick_params(labelsize=48)
+        plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+        plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+        # plt.title(r'true $W_{ij}$', fontsize=78)
+        plt.subplot(2, 2, 1)
+        ax = sns.heatmap(to_numpy(adjacency[0:20, 0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1,
+                         vmax=0.1)
+        plt.xticks([])
+        plt.yticks([])
+        plt.tight_layout()
+
+        plt.savefig(f'./{log_dir}/results/true connectivity.png', dpi=300)
 
         for epoch in epoch_list:
 
