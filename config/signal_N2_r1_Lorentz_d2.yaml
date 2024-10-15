@@ -1,5 +1,5 @@
-description: 'synaptic network random matrix no recursive loop    8000 neurons 4 types lorentz std 0.01'
-dataset: 'signal_N2_Lorentz_c'
+description: 'synaptic network random matrix no recursive loop  batch_size 8  8000 neurons 4 types  40000 frames lorentz std 0.01 factor coeff_L1: 1E-5 then 0'
+dataset: 'signal_N2_Lorentz_d_N2'
 
 simulation:
     connectivity_file: 'random'
@@ -14,14 +14,14 @@ simulation:
     n_particles: 8000
     n_particle_types: 4
     n_interactions: 4
-    n_frames: 10000
+    n_frames: 40000
     delta_t: 0.01
     dpos_init:  0
     boundary: 'no'
     start_frame: 0 # -1000
 
 graph_model:
-    signal_model_name: 'PDE_N3'
+    signal_model_name: 'PDE_N2'
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
@@ -42,10 +42,10 @@ plotting:
     arrow_length: 1
 
 training:
-    n_epochs: 20
+    n_epochs: 30
     recursive_loop: 1
-    batch_size: 1
-    small_init_batch_size: False
+    batch_size: 8
+    small_init_batch_size: True
     n_runs: 10
     large_range: False
     sparsity: 'none'
@@ -58,3 +58,6 @@ training:
     sparsity_freq: 4
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4
+    first_coeff_L1: 5.0E-5
+    coeff_L1: 0
+
