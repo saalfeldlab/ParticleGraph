@@ -481,6 +481,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 s = s / n_particles**0.67
             elif n_particles == 8000:
                 s = s / n_particles**0.66
+            elif n_particles > 8000:
+                s = s / n_particles**0.5
             print(f"1/sqrt(N)  {1/np.sqrt(n_particles)}    std {np.std(s)}")
 
             adjacency = torch.tensor(s, dtype=torch.float32, device=device)
@@ -559,44 +561,46 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
         x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
 
-        if os.path.isfile(f'./graphs_data/graphs_{dataset_name}/X1.pt'):
-            X1 = torch.load(f'./graphs_data/graphs_{dataset_name}/X1.pt', map_location=device)
-        else:
-            dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
-            G = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
-            forceatlas2 = ForceAtlas2(
-                # Behavior alternatives
-                outboundAttractionDistribution=True,  # Dissuade hubs
-                linLogMode=False,  # NOT IMPLEMENTED
-                adjustSizes=False,  # Prevent overlap (NOT IMPLEMENTED)
-                edgeWeightInfluence=1.0,
+        # if os.path.isfile(f'./graphs_data/graphs_{dataset_name}/X1.pt'):
+        #     X1 = torch.load(f'./graphs_data/graphs_{dataset_name}/X1.pt', map_location=device)
+        # else:
+        #     dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
+        #     G = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
+        #     forceatlas2 = ForceAtlas2(
+        #         # Behavior alternatives
+        #         outboundAttractionDistribution=True,  # Dissuade hubs
+        #         linLogMode=False,  # NOT IMPLEMENTED
+        #         adjustSizes=False,  # Prevent overlap (NOT IMPLEMENTED)
+        #         edgeWeightInfluence=1.0,
+        #
+        #         # Performance
+        #         jitterTolerance=1.0,  # Tolerance
+        #         barnesHutOptimize=True,
+        #         barnesHutTheta=1.2,
+        #         multiThreaded=False,  # NOT IMPLEMENTED
+        #
+        #         # Tuning
+        #         scalingRatio=2.0,
+        #         strongGravityMode=False,
+        #         gravity=1.0,
+        #
+        #         # Log
+        #         verbose=True)
+        #     positions = forceatlas2.forceatlas2_networkx_layout(G, pos=None, iterations=500)
+        #     positions = np.array(list(positions.values()))
+        #     X1 = torch.tensor(positions, dtype=torch.float32, device=device)
+        #     X1 = X1 - torch.mean(X1, 0)
+        #
+        #     torch.save(X1, f'./graphs_data/graphs_{dataset_name}/X1.pt')
+        #
+        #     x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
+        #                            H1.clone().detach(), A1.clone().detach()), 1)
+        #
+        #     # pos = nx.spring_layout(G, weight='weight', seed=42, k=1)
+        #     # for k,p in pos.items():
+        #     #     X1[k,:] = torch.tensor([v[0],v[1]], device=device)
 
-                # Performance
-                jitterTolerance=1.0,  # Tolerance
-                barnesHutOptimize=True,
-                barnesHutTheta=1.2,
-                multiThreaded=False,  # NOT IMPLEMENTED
-
-                # Tuning
-                scalingRatio=2.0,
-                strongGravityMode=False,
-                gravity=1.0,
-
-                # Log
-                verbose=True)
-            positions = forceatlas2.forceatlas2_networkx_layout(G, pos=None, iterations=500)
-            positions = np.array(list(positions.values()))
-            X1 = torch.tensor(positions, dtype=torch.float32, device=device)
-            X1 = X1 - torch.mean(X1, 0)
-
-            torch.save(X1, f'./graphs_data/graphs_{dataset_name}/X1.pt')
-
-            x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
-                                   H1.clone().detach(), A1.clone().detach()), 1)
-
-            # pos = nx.spring_layout(G, weight='weight', seed=42, k=1)
-            # for k,p in pos.items():
-            #     X1[k,:] = torch.tensor([v[0],v[1]], device=device)
+        check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
         
         time.sleep(0.5)
         for it in trange(simulation_config.start_frame, n_frames + 1):
@@ -642,8 +646,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     x_removed_list.append(x[inv_particle_dropout_mask].clone().detach())
                     y_list.append(y[particle_dropout_mask].clone().detach())
                 else:
-                    x_list.append(x.clone().detach())
-                    y_list.append(y.clone().detach())
+                    x_list.append(to_numpy(x))
+                    y_list.append(to_numpy(y))
 
             # Particle update
             if it>=0:
@@ -653,6 +657,9 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     H1[:, 0] = H1[:, 0] + torch.randn(n_particles, device=device) * noise_level
 
             A1 = A1 + 1
+
+            check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1,
+                                   memory_percentage_threshold=0.6)
 
             # output plots
             if visualize & (run ==0) & (it % step == 0) & (it >= 0):
@@ -795,15 +802,16 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
 
         if bSave:
-            torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
-            np.save(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy', to_numpy(torch.stack(x_list)))
-
+            x_list = np.array(x_list)
+            y_list = np.array(y_list)
+            # torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
+            np.save(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy', x_list)
             if has_particle_dropout:
                 torch.save(x_removed_list, f'graphs_data/graphs_{dataset_name}/x_removed_list_{run}.pt')
                 np.save(f'graphs_data/graphs_{dataset_name}/particle_dropout_mask.npy', particle_dropout_mask)
                 np.save(f'graphs_data/graphs_{dataset_name}/inv_particle_dropout_mask.npy', inv_particle_dropout_mask)
-            torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
-            np.save(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy', to_numpy(torch.stack(y_list)))
+            # torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
+            np.save(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy', y_list)
             torch.save(model.p, f'graphs_data/graphs_{dataset_name}/model_p.pt')
 
     # for handler in logger.handlers[:]:

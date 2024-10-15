@@ -1192,7 +1192,7 @@ def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
 
         files.sort(key=sort_key)
 
-        for file_id in trange(0,len(files),20):
+        for file_id in trange(8000,len(files),20):
             epoch = files[file_id].split('graphs')[1][1:-3]
             net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
             state_dict = torch.load(net, map_location=device)
@@ -5460,14 +5460,14 @@ if __name__ == '__main__':
     #                'signal_N2_r1_Lorentz_f','signal_N2_r1_Lorentz_g','signal_N2_r1_Lorentz_i','signal_N2_r1_Lorentz_j',
     #                'signal_N2_r1_Lorentz_m']
 
-    # config_list = ['arbitrary_16']
-    config_list = ['signal_N2_r1_Lorentz_d_N2']
+    config_list = ['arbitrary_16']
+    # config_list = ['signal_N2_r1_Lorentz_d_N2']
     # config_list = ['signal_N2_r1_Lorentz_l ']
 
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['2_1040000'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['all'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

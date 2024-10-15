@@ -1,4 +1,4 @@
-description: 'synaptic network random matrix no recursive loop    10000 neurons 4 types lorentz std 0.03   10 frames'
+description: 'synaptic network random matrix no recursive loop    16000 neurons 4 types lorentz std 0.03   100 000 frames'
 dataset: 'signal_N2_Lorentz_o'
 
 simulation:
@@ -11,10 +11,10 @@ simulation:
     tau: 1.0
     min_radius: 1.0
     max_radius: 1.0E6
-    n_particles: 10000
+    n_particles: 16000
     n_particle_types: 4
     n_interactions: 4
-    n_frames: 1000
+    n_frames: 100000
     delta_t: 0.01
     dpos_init:  0
     boundary: 'no'
@@ -46,7 +46,7 @@ training:
     recursive_loop: 1
     batch_size: 1
     small_init_batch_size: False
-    n_runs: 2
+    n_runs: 10
     large_range: False
     sparsity: 'none'
     data_augmentation: False
@@ -58,3 +58,5 @@ training:
     sparsity_freq: 4
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4
+    first_coeff_L1: 5.0E-5
+    coeff_L1: 0

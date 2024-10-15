@@ -2808,7 +2808,7 @@ def data_train_synaptic2(config, config_file, erase, device):
 
         excitation = torch.zeros((n_particles, 1), device=device)
 
-        for N in range(Niter):
+        for N in trange(Niter):
 
             run = np.random.randint(n_runs)
             k = np.random.randint(n_frames - 5)
