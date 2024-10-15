@@ -1205,63 +1205,61 @@ def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
 
         for file_id_ in trange(0,len(file_id_list)):
             file_id = file_id_list[file_id_]
-            # epoch = files[file_id].split('graphs')[1][1:-3]
-            net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
-            state_dict = torch.load(net, map_location=device)
-            model.load_state_dict(state_dict['model_state_dict'])
-            model.eval()
+            if sort_key(files[file_id]) % 1E7 != 0:
+                epoch = files[file_id].split('graphs')[1][1:-3]
+                net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
+                state_dict = torch.load(net, map_location=device)
+                model.load_state_dict(state_dict['model_state_dict'])
+                model.eval()
 
-            plt.style.use('dark_background')
+                plt.style.use('dark_background')
 
-            fig, ax = fig_init()
-            embedding = get_embedding(model.a, 1)
-            # embedding = (embedding-np.min(embedding))/(np.max(embedding)-np.min(embedding))
-            for n in range(n_particle_types-1,-1,-1):
-                pos = torch.argwhere(type_list == n)
-                pos = to_numpy(pos)
-                if len(pos) > 0:
-                    plt.scatter(embedding[pos, 0], embedding[pos, 1], c=cmap.color(n), s=100, alpha=0.1)
-            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
-            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
-            match config.dataset:
-                case 'arbitrary_3':
-                    plt.xlim([0.5, 1.5])
-                    plt.ylim([0.5, 1.5])
-                case 'arbitrary_16':
-                    plt.xlim([-0.5, 2])
-                    plt.ylim([-0.5, 2])
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=80)
-            plt.close()
-
-
-            fig, ax = fig_init()
-            rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
-            for n in range(int(n_particles * (1 - config.training.particle_dropout))):
-                embedding_ = model.a[1,n] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                         rr[:, None] / max_radius, embedding_), dim=1)
-                with torch.no_grad():
-                    func = model.lin_edge(in_features.float())
-                    func = func[:, 0]
-                plt.plot(to_numpy(rr),
-                         to_numpy(func) * to_numpy(ynorm),
-                         color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
-            plt.xlabel(r'$d_{ij}$', fontsize=78)
-            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
-            plt.xlim([0, max_radius])
-            plt.ylim(config.plotting.ylim)
-            plt.tight_layout()
-            match config.dataset:
-                case 'arbitrary_3':
-                    plt.ylim([-0.04, 0.03])
-                case 'arbitrary_16':
-                    plt.ylim([-0.1, 0.1])
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/function_{epoch}.tif", dpi=80)
-            plt.close()
+                fig, ax = fig_init()
+                embedding = get_embedding(model.a, 1)
+                for n in range(n_particle_types-1,-1,-1):
+                    pos = torch.argwhere(type_list == n)
+                    pos = to_numpy(pos)
+                    if len(pos) > 0:
+                        plt.scatter(embedding[pos, 0], embedding[pos, 1], c=cmap.color(n), s=100, alpha=0.1)
+                plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
+                plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+                match config.dataset:
+                    case 'arbitrary_3':
+                        plt.xlim([0.5, 1.5])
+                        plt.ylim([0.5, 1.5])
+                    case 'arbitrary_16':
+                        plt.xlim([-0.5, 2])
+                        plt.ylim([-0.5, 2])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=80)
+                plt.close()
 
 
+                fig, ax = fig_init()
+                rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+                for n in range(int(n_particles * (1 - config.training.particle_dropout))):
+                    embedding_ = model.a[1,n] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                    in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                             rr[:, None] / max_radius, embedding_), dim=1)
+                    with torch.no_grad():
+                        func = model.lin_edge(in_features.float())
+                        func = func[:, 0]
+                    plt.plot(to_numpy(rr),
+                             to_numpy(func) * to_numpy(ynorm),
+                             color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
+                plt.xlabel(r'$d_{ij}$', fontsize=78)
+                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+                plt.xlim([0, max_radius])
+                plt.ylim(config.plotting.ylim)
+                plt.tight_layout()
+                match config.dataset:
+                    case 'arbitrary_3':
+                        plt.ylim([-0.04, 0.03])
+                    case 'arbitrary_16':
+                        plt.ylim([-0.1, 0.1])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/function_{epoch}.tif", dpi=80)
+                plt.close()
 
     else:
         for epoch in epoch_list:
@@ -1906,59 +1904,60 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
 
         for file_id_ in trange(0,len(file_id_list)):
             file_id = file_id_list[file_id_]
-            epoch = files[file_id].split('graphs')[1][1:-3]
-            net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
-            state_dict = torch.load(net, map_location=device)
-            model.load_state_dict(state_dict['model_state_dict'])
-            model.eval()
+            if sort_key(files[file_id]) % 1E7 != 0:
+                epoch = files[file_id].split('graphs')[1][1:-3]
+                net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
+                state_dict = torch.load(net, map_location=device)
+                model.load_state_dict(state_dict['model_state_dict'])
+                model.eval()
 
-            plt.style.use('dark_background')
+                plt.style.use('dark_background')
 
-            fig, ax = fig_init()
-            embedding = get_embedding(model.a, 1)
-            # embedding = (embedding-np.min(embedding))/(np.max(embedding)-np.min(embedding))
-            for n in range(n_particle_types-1,-1,-1):
-                pos = torch.argwhere(type_list == n)
-                pos = to_numpy(pos)
-                if len(pos) > 0:
-                    plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=100, alpha=0.1)
-            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
-            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
-            match config.dataset:
-                case 'gravity_16':
-                    plt.xlim([0.4, 1.4])
-                    plt.ylim([0.4, 1.4])
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=80)
-            plt.close()
+                fig, ax = fig_init()
+                embedding = get_embedding(model.a, 1)
+                # embedding = (embedding-np.min(embedding))/(np.max(embedding)-np.min(embedding))
+                for n in range(n_particle_types-1,-1,-1):
+                    pos = torch.argwhere(type_list == n)
+                    pos = to_numpy(pos)
+                    if len(pos) > 0:
+                        plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=100, alpha=0.1)
+                plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
+                plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+                match config.dataset:
+                    case 'gravity_16':
+                        plt.xlim([0.4, 1.4])
+                        plt.ylim([0.4, 1.4])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=80)
+                plt.close()
 
 
-            fig, ax = fig_init()
-            rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
-            for n in range(int(n_particles * (1 - config.training.particle_dropout))):
-                embedding_ = model.a[1,n] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                         rr[:, None] / max_radius, 0 * rr[:, None],
-                                         0 * rr[:, None],
-                                         0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-                with torch.no_grad():
-                    func = model.lin_edge(in_features.float())
-                    func = func[:, 0]
-                plt.plot(to_numpy(rr),
-                         to_numpy(func) * to_numpy(ynorm),
-                         color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
-            plt.xlabel(r'$d_{ij}$', fontsize=78)
-            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
-            plt.xlim([0, max_radius])
-            plt.ylim(config.plotting.ylim)
-            plt.tight_layout()
-            match config.dataset:
-                case 'gravity_16':
-                    plt.xlim([0, 0.02])
-                    plt.ylim([0, 0.5E6])
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/function_{epoch}.tif", dpi=80)
-            plt.close()
+                fig, ax = fig_init()
+                rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+                for n in range(int(n_particles * (1 - config.training.particle_dropout))):
+                    embedding_ = model.a[1,n] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                    in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                             rr[:, None] / max_radius, 0 * rr[:, None],
+                                             0 * rr[:, None],
+                                             0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                    with torch.no_grad():
+                        func = model.lin_edge(in_features.float())
+                        func = func[:, 0]
+                    plt.plot(to_numpy(rr),
+                             to_numpy(func) * to_numpy(ynorm),
+                             color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
+                plt.xlabel(r'$d_{ij}$', fontsize=78)
+                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+                plt.xlim([0, max_radius])
+                plt.ylim(config.plotting.ylim)
+                plt.tight_layout()
+                match config.dataset:
+                    case 'gravity_16':
+                        plt.xlim([0, 0.02])
+                        plt.ylim([0, 0.5E6])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/function_{epoch}.tif", dpi=80)
+                plt.close()
 
     else:
 
@@ -2736,57 +2735,56 @@ def plot_boids(config_file, epoch_list, log_dir, logger, device):
 
         for file_id_ in trange(0, len(file_id_list)):
             file_id = file_id_list[file_id_]
-            epoch = files[file_id].split('graphs')[1][1:-3]
-            net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
-            state_dict = torch.load(net, map_location=device)
-            model.load_state_dict(state_dict['model_state_dict'])
-            model.eval()
+            if sort_key(files[file_id]) % 1E7 != 0:
+                epoch = files[file_id].split('graphs')[1][1:-3]
+                net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
+                state_dict = torch.load(net, map_location=device)
+                model.load_state_dict(state_dict['model_state_dict'])
+                model.eval()
 
-            plt.style.use('dark_background')
+                plt.style.use('dark_background')
 
-            fig, ax = fig_init()
-            embedding = get_embedding(model.a, 1)
-            # embedding = (embedding-np.min(embedding))/(np.max(embedding)-np.min(embedding))
-            for n in range(n_particle_types - 1, -1, -1):
-                pos = torch.argwhere(type_list == n)
-                pos = to_numpy(pos)
-                if len(pos) > 0:
-                    plt.scatter(embedding[pos, 0], embedding[pos, 1], c=cmap.color(n), s=100, alpha=0.1)
-            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
-            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
-            match config.dataset:
-                case 'boids_16_256':
-                    plt.xlim([-1.5, 2])
-                    plt.ylim([-1.5, 2])
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=80)
-            plt.close()
+                fig, ax = fig_init()
+                embedding = get_embedding(model.a, 1)
+                # embedding = (embedding-np.min(embedding))/(np.max(embedding)-np.min(embedding))
+                for n in range(n_particle_types - 1, -1, -1):
+                    pos = torch.argwhere(type_list == n)
+                    pos = to_numpy(pos)
+                    if len(pos) > 0:
+                        plt.scatter(embedding[pos, 0], embedding[pos, 1], c=cmap.color(n), s=100, alpha=0.1)
+                plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
+                plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+                match config.dataset:
+                    case 'boids_16_256':
+                        plt.xlim([-1.5, 2])
+                        plt.ylim([-1.5, 2])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=80)
+                plt.close()
 
-            fig, ax = fig_init()
-            rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
-            x = x_list[0][-1].clone().detach()
-            for n in np.arange(len(x)):
-                embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                         torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
-                                         0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
-                with torch.no_grad():
-                    func = model.lin_edge(in_features.float())
-                func = func[:, 0]
-                type = to_numpy(x[n, 5]).astype(int)
-                if type < n_particle_types:
-                    if (n % 10 == 0):
-                        plt.plot(to_numpy(rr),
-                                 to_numpy(func) * to_numpy(ynorm) * 1E4,
-                                 color=cmap.color(type), linewidth=4, alpha=0.25)
-            plt.ylim([-1, 1])
-            plt.xlabel(r'$d_{ij}$', fontsize=78)
-            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/function_{epoch}.tif", dpi=80)
-            plt.close()
-
-
+                fig, ax = fig_init()
+                rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
+                x = x_list[0][-1].clone().detach()
+                for n in np.arange(len(x)):
+                    embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                    in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                             torch.abs(rr[:, None]) / max_radius, 0 * rr[:, None], 0 * rr[:, None],
+                                             0 * rr[:, None], 0 * rr[:, None], embedding_), dim=1)
+                    with torch.no_grad():
+                        func = model.lin_edge(in_features.float())
+                    func = func[:, 0]
+                    type = to_numpy(x[n, 5]).astype(int)
+                    if type < n_particle_types:
+                        if (n % 10 == 0):
+                            plt.plot(to_numpy(rr),
+                                     to_numpy(func) * to_numpy(ynorm) * 1E4,
+                                     color=cmap.color(type), linewidth=4, alpha=0.25)
+                plt.ylim([-1, 1])
+                plt.xlabel(r'$d_{ij}$', fontsize=78)
+                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/function_{epoch}.tif", dpi=80)
+                plt.close()
 
     else:
         for epoch in epoch_list:
@@ -4330,80 +4328,79 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
 
         for file_id_ in trange(0, len(file_id_list)):
             file_id = file_id_list[file_id_]
-            epoch = files[file_id].split('graphs')[1][1:-3]
 
-            print(epoch)
+            if sort_key(files[file_id]) % 1E7 != 0:
+                epoch = files[file_id].split('graphs')[1][1:-3]
+                net = f"./log/try_{config_file}/models/best_model_with_9_graphs_{epoch}.pt"
+                state_dict = torch.load(net, map_location=device)
+                model.load_state_dict(state_dict['model_state_dict'])
+                model.eval()
 
-            net = f"./log/try_{config_file}/models/best_model_with_9_graphs_{epoch}.pt"
-            state_dict = torch.load(net, map_location=device)
-            model.load_state_dict(state_dict['model_state_dict'])
-            model.eval()
+                plt.style.use('dark_background')
 
-            plt.style.use('dark_background')
+                fig, ax = fig_init()
+                for n in range(n_particle_types):
+                    pos = torch.argwhere(type_list == n).squeeze()
+                    plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=100, color=cmap.color(n), alpha=0.5)
+                plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
+                plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+                plt.xlim([0, 2])
+                plt.ylim([0, 2])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=80)
+                plt.close()
 
-            fig, ax = fig_init()
-            for n in range(n_particle_types):
-                pos = torch.argwhere(type_list == n).squeeze()
-                plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=100, color=cmap.color(n), alpha=0.5)
-            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
-            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
-            plt.xlim([0, 2])
-            plt.ylim([0, 2])
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=80)
-            plt.close()
+                correction = torch.load(f'{log_dir}/correction.pt',map_location=device)
+                second_correction = np.load(f'{log_dir}/second_correction.npy')
 
-            correction = torch.load(f'{log_dir}/correction.pt',map_location=device)
-            second_correction = np.load(f'{log_dir}/second_correction.npy')
+                i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+                A = model.W.clone().detach() / correction
+                A[i, i] = 0
 
-            i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-            A = model.W.clone().detach() / correction
-            A[i, i] = 0
+                fig, ax = fig_init()
+                ax = sns.heatmap(to_numpy(A)/second_correction, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.1,vmax=0.1)
+                cbar = ax.collections[0].colorbar
+                cbar.ax.tick_params(labelsize=48)
+                plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+                plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+                plt.subplot(2, 2, 1)
+                ax = sns.heatmap(to_numpy(A[0:20, 0:20])/second_correction, cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/W_{epoch}.tif", dpi=80)
+                plt.close()
 
-            fig, ax = fig_init()
-            ax = sns.heatmap(to_numpy(A)/second_correction, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.1,vmax=0.1)
-            cbar = ax.collections[0].colorbar
-            cbar.ax.tick_params(labelsize=48)
-            plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
-            plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
-            plt.subplot(2, 2, 1)
-            ax = sns.heatmap(to_numpy(A[0:20, 0:20])/second_correction, cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
-            plt.xticks([])
-            plt.yticks([])
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/W_{epoch}.tif", dpi=80)
-            plt.close()
-
-            fig, ax = fig_init()
-            rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
-            in_features = rr[:, None]
-            with torch.no_grad():
-                func = model.lin_edge(in_features.float()) * correction
-            plt.plot(to_numpy(rr), to_numpy(func), color='w', linewidth=8, label=r'learned')
-            plt.xlabel(r'$x$', fontsize=78)
-            plt.ylabel(r'Learned $f(x)$', fontsize=78)
-            plt.ylim([-1.1,1.1])
-            plt.xlim([-5,5])
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/f_{epoch}.tif", dpi=80)
-            plt.close()
-
-
-            fig, ax = fig_init()
-            func_list = []
-            config_model = config.graph_model.signal_model_name
-            for n in trange(n_particles):
-                embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-                in_features = torch.cat((rr[:, None], embedding_), dim=1)
+                fig, ax = fig_init()
+                rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
+                in_features = rr[:, None]
                 with torch.no_grad():
-                    func = model.lin_phi(in_features.float())
-                func = func[:, 0]
-                plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm), color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
-            plt.xlabel(r'$x$', fontsize=78)
-            plt.ylabel(r'Learned $\phi(x)$', fontsize=78)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/phi_{epoch}.tif", dpi=80)
-            plt.close()
+                    func = model.lin_edge(in_features.float()) * correction
+                plt.plot(to_numpy(rr), to_numpy(func), color='w', linewidth=8, label=r'learned')
+                plt.xlabel(r'$x$', fontsize=78)
+                plt.ylabel(r'Learned $f(x)$', fontsize=78)
+                plt.ylim([-1.1,1.1])
+                plt.xlim([-5,5])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/f_{epoch}.tif", dpi=80)
+                plt.close()
+
+
+                fig, ax = fig_init()
+                func_list = []
+                config_model = config.graph_model.signal_model_name
+                for n in range(n_particles):
+                    embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                    in_features = torch.cat((rr[:, None], embedding_), dim=1)
+                    with torch.no_grad():
+                        func = model.lin_phi(in_features.float())
+                    func = func[:, 0]
+                    plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm), color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
+                plt.xlabel(r'$x$', fontsize=78)
+                plt.ylabel(r'Learned $\phi(x)$', fontsize=78)
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/phi_{epoch}.tif", dpi=80)
+                plt.close()
 
 
     else:
