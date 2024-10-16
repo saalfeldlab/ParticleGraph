@@ -2746,9 +2746,9 @@ def data_train_synaptic2(config, config_file, erase, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_9_graphs_14_0.pt"
-    # state_dict = torch.load(net,map_location=device)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    net = f"./log/try_{config_file}/models/best_model_with_9_graphs_3.pt"
+    state_dict = torch.load(net,map_location=device)
+    model.load_state_dict(state_dict['model_state_dict'])
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -2808,7 +2808,7 @@ def data_train_synaptic2(config, config_file, erase, device):
 
     list_loss = []
     time.sleep(2)
-    for epoch in range(n_epochs + 1):
+    for epoch in range(4, n_epochs + 1):
 
         if (epoch==0):
             coeff_L1 = train_config.first_coeff_L1
@@ -3041,13 +3041,17 @@ def data_train_synaptic2(config, config_file, erase, device):
         model_a_ = model.a.clone().detach()
         for n in range(n_clusters):
             pos = np.argwhere(labels == n).squeeze().astype(int)
-            pos = np.array(pos)
-            if pos.size > 0:
-                median_center = model_a_[pos, :]
-                median_center = torch.median(median_center, dim=0).values
-                plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='r', alpha=0.25)
-                model_a_[pos, :] = median_center
-                plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=10, c='k')
+            try:
+                if pos.size > 0:
+                    pos = np.array(pos)
+                    median_center = model_a_[pos, :]
+                    median_center = torch.median(median_center, dim=0).values
+                    plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='r', alpha=0.25)
+                    model_a_[pos, :] = median_center
+                    plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=10, c='k')
+            except:
+                logger.info(f'pb with line 3044 pos:{pos} n:{n}')
+                pass
 
         plt.xlabel('ai0', fontsize=12)
         plt.ylabel('ai1', fontsize=12)

@@ -1,5 +1,5 @@
 description: 'synaptic network random matrix no recursive loop    8000 neurons 4 types lorentz std 0.01 factor coeff_L1: 1E-5 then 0'
-dataset: 'signal_N2_Lorentz_c_N2'
+dataset: 'signal_N2_Lorentz_c'
 
 simulation:
     connectivity_file: 'random'
