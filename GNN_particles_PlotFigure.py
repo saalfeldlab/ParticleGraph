@@ -1231,7 +1231,7 @@ def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
                         plt.xlim([-0.5, 2])
                         plt.ylim([-0.5, 2])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=80)
+                plt.savefig(f"./{log_dir}/results/all/embedding_{epoch}.tif", dpi=80)
                 plt.close()
 
 
@@ -1258,7 +1258,7 @@ def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
                     case 'arbitrary_16':
                         plt.ylim([-0.1, 0.1])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/function_{epoch}.tif", dpi=80)
+                plt.savefig(f"./{log_dir}/results/all/function_{epoch}.tif", dpi=80)
                 plt.close()
 
     else:
@@ -1928,7 +1928,7 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
                         plt.xlim([0.4, 1.4])
                         plt.ylim([0.4, 1.4])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=80)
+                plt.savefig(f"./{log_dir}/results/all/embedding_{epoch}.tif", dpi=80)
                 plt.close()
 
 
@@ -1956,7 +1956,7 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
                         plt.xlim([0, 0.02])
                         plt.ylim([0, 0.5E6])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/function_{epoch}.tif", dpi=80)
+                plt.savefig(f"./{log_dir}/results/all/function_{epoch}.tif", dpi=80)
                 plt.close()
 
     else:
@@ -4276,7 +4276,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                 plt.xlim([0, 2])
                 plt.ylim([0, 2])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=80)
+                plt.savefig(f"./{log_dir}/results/all/embedding_{epoch}.tif", dpi=80)
                 plt.close()
 
                 correction = torch.load(f'{log_dir}/correction.pt',map_location=device)
@@ -4297,7 +4297,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/W_{epoch}.tif", dpi=80)
+                plt.savefig(f"./{log_dir}/results/all/W_{epoch}.tif", dpi=80)
                 plt.close()
 
                 fig, ax = fig_init()
@@ -4311,7 +4311,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                 plt.ylim([-1.1,1.1])
                 plt.xlim([-5,5])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/f_{epoch}.tif", dpi=80)
+                plt.savefig(f"./{log_dir}/results/all/f_{epoch}.tif", dpi=80)
                 plt.close()
 
 
@@ -4329,7 +4329,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                 plt.ylabel(r'Learned $\phi(x)$', fontsize=78)
                 plt.tight_layout()
                 plt.ylim([-10,10])
-                plt.savefig(f"./{log_dir}/results/phi_{epoch}.tif", dpi=80)
+                plt.savefig(f"./{log_dir}/results/all/phi_{epoch}.tif", dpi=80)
                 plt.close()
     else:
 
@@ -4745,8 +4745,8 @@ def plot_synaptic3(config_file, epoch_list, log_dir, logger, cc, device):
                 flag = False
             file_id += 1
 
-        file_id_list0 = np.arange(0, file_id, file_id // 90)
-        file_id_list1 = np.arange(file_id, len(files), (len(files) - file_id) // 90)
+        file_id_list0 = np.arange(0, file_id, file_id // 50)
+        file_id_list1 = np.arange(file_id, len(files), (len(files) - file_id) // 150)
         file_id_list = np.concatenate((file_id_list0, file_id_list1))
 
 
@@ -4772,7 +4772,7 @@ def plot_synaptic3(config_file, epoch_list, log_dir, logger, cc, device):
                 plt.xlim([-2, 6])
                 plt.ylim([-2, 6])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=80)
+                plt.savefig(f"./{log_dir}/results/all/embedding_{epoch}.tif", dpi=80)
                 plt.close()
 
                 correction = torch.load(f'{log_dir}/correction.pt',map_location=device)
@@ -4793,7 +4793,7 @@ def plot_synaptic3(config_file, epoch_list, log_dir, logger, cc, device):
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/W_{epoch}.tif", dpi=80)
+                plt.savefig(f"./{log_dir}/results/all/W_{epoch}.tif", dpi=80)
                 plt.close()
 
                 fig, ax = fig_init()
@@ -4807,7 +4807,7 @@ def plot_synaptic3(config_file, epoch_list, log_dir, logger, cc, device):
                 plt.ylim([-1.1,1.1])
                 plt.xlim([-5,5])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/f_{epoch}.tif", dpi=80)
+                plt.savefig(f"./{log_dir}/results/all/f_{epoch}.tif", dpi=80)
                 plt.close()
 
 
@@ -4825,7 +4825,7 @@ def plot_synaptic3(config_file, epoch_list, log_dir, logger, cc, device):
                 plt.ylabel(r'Learned $\phi(x)$', fontsize=78)
                 plt.tight_layout()
                 plt.ylim([-16,16])
-                plt.savefig(f"./{log_dir}/results/phi_{epoch}.tif", dpi=80)
+                plt.savefig(f"./{log_dir}/results/all/phi_{epoch}.tif", dpi=80)
                 plt.close()
     else:
 
@@ -5515,6 +5515,10 @@ def data_plot(config, config_file, epoch_list, device):
     logger.setLevel(logging.INFO)
 
     os.makedirs(os.path.join(log_dir, 'results'), exist_ok=True)
+    os.makedirs(os.path.join(log_dir, 'results/all'), exist_ok=True)
+    files = glob.glob(f"{log_dir}/results/all/*")
+    for f in files:
+        os.remove(f)
 
     if config.training.sparsity != 'none':
         print(
@@ -5858,7 +5862,8 @@ if __name__ == '__main__':
     # config_list = ['gravity_16']
     # config_list = ['boids_16_256']
     # config_list = ['signal_N2_r1_Lorentz_d_N2']
-    config_list = ['signal_N2_r1_Lorentz_a_N2','signal_N3_r1_Lorentz_b']
+    # config_list = ['signal_N2_r1_Lorentz_a_N2','signal_N3_r1_Lorentz_b']
+    config_list = ['signal_N3_r1_Lorentz_b']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
