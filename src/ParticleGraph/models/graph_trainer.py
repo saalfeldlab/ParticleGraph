@@ -4089,8 +4089,14 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     else:
         x_list = []
         y_list = []
-        x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device))
-        y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device))
+        if 'PDE_N2' in model_config.signal_model_name:
+            x = np.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy')
+            y = np.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy')
+            x_list.append(torch.tensor(x,device=device))
+            y_list.append(torch.tensor(y,device=device))
+        else:
+            x_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt', map_location=device))
+            y_list.append(torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device))
         ynorm = torch.load(f'./log/try_{config_file}/ynorm.pt', map_location=device).to(device)
         vnorm = torch.load(f'./log/try_{config_file}/vnorm.pt', map_location=device).to(device)
         x = x_list[0][0].clone().detach()
@@ -4160,16 +4166,17 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
         # plt.scatter(x_, y_, s=2, c=to_numpy(mask_mesh))
     if has_adjacency_matrix:
-        # mat = scipy.io.loadmat(simulation_config.connectivity_file)
-        # adjacency = torch.tensor(mat['A'], device=device)
-        # adj_t = adjacency > 0
-        # edge_index = adj_t.nonzero().t().contiguous()
-        # edge_attr_adjacency = adjacency[adj_t]
-
-        adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency.pt', map_location=device)
-        adjacency_ = adjacency.t().clone().detach()
-        adj_t = torch.abs(adjacency_) > 0
-        edge_index = adj_t.nonzero().t().contiguous()
+        if model_config.signal_model_name == 'PDE_N':
+            mat = scipy.io.loadmat(simulation_config.connectivity_file)
+            adjacency = torch.tensor(mat['A'], device=device)
+            adj_t = adjacency > 0
+            edge_index = adj_t.nonzero().t().contiguous()
+            edge_attr_adjacency = adjacency[adj_t]
+        else:
+            adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency.pt', map_location=device)
+            adjacency_ = adjacency.t().clone().detach()
+            adj_t = torch.abs(adjacency_) > 0
+            edge_index = adj_t.nonzero().t().contiguous()
 
     if verbose:
         print(f'Test data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
