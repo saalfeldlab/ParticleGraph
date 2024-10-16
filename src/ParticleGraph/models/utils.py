@@ -180,7 +180,7 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
     plt.savefig(f"./{log_dir}/tmp_training/matrix/{dataset_name}_{epoch}_{N}.tif", dpi=87)
     plt.close()
 
-def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dataset_name, n_frames, model_name, log_dir, epoch, N, x, x_mesh, model_field, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
+def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dataset_name, n_frames, model_name, log_dir, epoch, N, x, x_mesh, index_particles, n_particles, n_particle_types, model, n_nodes, n_node_types, index_nodes, dataset_num, ynorm, cmap, axis, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -293,14 +293,14 @@ def plot_training_particle_field(config, has_siren, has_siren_time, model_f, dat
             plt.savefig(f"./{log_dir}/tmp_training/field/{model_name}_{epoch}_{N}_{frame}.tif", dpi=170.7)
             plt.close()
 
-    else:
-        im = to_numpy(model_field[dataset_num])
-        im = np.reshape(im, (n_nodes_per_axis, n_nodes_per_axis))
-        plt.imshow(im)
-        plt.gca().invert_yaxis()
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/field/{model_name}_{dataset_name}_field_{epoch}_{N}.tif", dpi=87)
-        plt.close()
+    # else:
+    #     im = to_numpy(model_field[dataset_num])
+    #     im = np.reshape(im, (n_nodes_per_axis, n_nodes_per_axis))
+    #     plt.imshow(im)
+    #     plt.gca().invert_yaxis()
+    #     plt.tight_layout()
+    #     plt.savefig(f"./{log_dir}/tmp_training/field/{model_name}_{dataset_name}_field_{epoch}_{N}.tif", dpi=87)
+    #     plt.close()
 
     # im = np.flipud(im)
     # io.imsave(f"./{log_dir}/tmp_training/field_pic_{dataset_name}_{epoch}_{N}.tif", im)

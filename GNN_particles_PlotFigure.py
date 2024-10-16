@@ -4328,6 +4328,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                 plt.xlabel(r'$x$', fontsize=78)
                 plt.ylabel(r'Learned $\phi(x)$', fontsize=78)
                 plt.tight_layout()
+                plt.ylim([-10,10])
                 plt.savefig(f"./{log_dir}/results/phi_{epoch}.tif", dpi=80)
                 plt.close()
     else:
@@ -4719,250 +4720,361 @@ def plot_synaptic3(config_file, epoch_list, log_dir, logger, cc, device):
     distrib = to_numpy(activity.flatten())
     activity = activity.t()
 
-    fig_init()
-    plt.hist(distrib, bins=100, color='k',alpha=0.5)
-    plt.ylabel(r'counts', fontsize=64)
-    plt.xlabel(r'$x$', fontsize=64)
-    plt.xticks(fontsize=24)
-    plt.yticks(fontsize=24)
-    plt.tight_layout()
-    plt.savefig(f'./{log_dir}/results/signal_distribution.png', dpi=300)
+    if epoch_list[0] == 'all':
 
-    plt.close()
-    print(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
-    logger.info(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
+        files = glob.glob(f"{log_dir}/models/*.pt")
+        files.sort(key=os.path.getmtime)
 
-    plt.figure(figsize=(15, 10))
-    ax = sns.heatmap(to_numpy(activity), center=0, cbar_kws={'fraction': 0.046})
-    ax.invert_yaxis()
-    plt.ylabel('Neurons', fontsize=64)
-    plt.xlabel('Time', fontsize=64)
-    plt.xticks([0,10000],fontsize=24)
-    plt.yticks([0, 999], [1, 1000], fontsize=24)
-    plt.tight_layout()
-    plt.savefig(f'./{log_dir}/results/kinograph.png', dpi=300)
-    plt.close()
-
-    plt.figure(figsize=(15, 10))
-    for i in range(25):
-        plt.plot(to_numpy(activity[i, :]), linewidth=2)
-    plt.xlabel('Time', fontsize=64)
-    plt.ylabel('Firing rate', fontsize=64)
-    plt.xticks([0,10000],fontsize=24)
-    plt.yticks(fontsize=24)
-    plt.tight_layout()
-    plt.savefig(f'./{log_dir}/results/firing rate.png', dpi=300)
-    plt.close()
-
-
-    adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency.pt', map_location=device)
-    adjacency_ = adjacency.t().clone().detach()
-    adj_t = torch.abs(adjacency_) > 0
-    edge_index = adj_t.nonzero().t().contiguous()
-
-    weights = to_numpy(adjacency.flatten())
-    pos = np.argwhere(weights != 0)
-    weights = weights[pos]
-    fig_init()
-    plt.hist(weights, bins=1000, color='k',alpha=0.5)
-    plt.ylabel(r'counts', fontsize=64)
-    plt.xlabel(r'$W$', fontsize=64)
-    plt.yticks(fontsize=24)
-    plt.xticks(fontsize=24)
-    plt.xlim([-0.1, 0.1])
-    plt.tight_layout()
-    plt.savefig(f'./{log_dir}/results/weights_distribution.png', dpi=300)
-    plt.close()
-
-
-    plt.figure(figsize=(10, 10))
-    ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.1, vmax=0.1)
-    cbar = ax.collections[0].colorbar
-    cbar.ax.tick_params(labelsize=48)
-    plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
-    plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
-    # plt.title(r'true $W_{ij}$', fontsize=78)
-    plt.subplot(2,2,1)
-    ax = sns.heatmap(to_numpy(adjacency[0:20,0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
-    plt.xticks([])
-    plt.yticks([])
-    plt.tight_layout()
-
-    plt.savefig(f'./{log_dir}/results/true connectivity.png', dpi=300)
-
-    files = glob.glob(f"{log_dir}/models/*.pt")
-    files.sort(key=os.path.getmtime)
-
-    for epoch in epoch_list:
-
-        net = f'{log_dir}/models/best_model_with_{n_runs-1}_graphs_{epoch}.pt'
         model, bc_pos, bc_dpos = choose_training_model(config, device)
-        state_dict = torch.load(net, map_location=device)
-        model.load_state_dict(state_dict['model_state_dict'])
-        model.edges = edge_index
-        print(f'net: {net}')
 
-        fig, ax = fig_init()
-        embedding = get_embedding(model.a, 1)
-        for n in range(n_particle_types):
-            plt.scatter(embedding[index_particles[n], 0],
-                        embedding[index_particles[n], 1], color=cmap.color(n), s=200, alpha=0.1)
-        plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
-        plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/all_embedding_{config_file}_{epoch}.tif", dpi=170.7)
+        files = glob.glob(f"./log/try_{config_file}/models/best_model_with_9_graphs_*.pt")
 
-        fig, ax = fig_init()
-        rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
-        func_list = []
-        for n in trange(0,n_particles,n_particles//100):
-            in_features = rr[:, None]
-            with torch.no_grad():
-                func = model.lin_edge(in_features.float())
-            func_list.append(func)
-            plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
-                     linewidth=2, alpha=0.25)
-        func_list = torch.stack(func_list)
-        plt.xlabel(r'$x$', fontsize=78)
-        plt.ylabel(r'Learned $f(x)$', fontsize=78)
-        # plt.ylim([-0.05,0.15])
-        plt.xlim([-5,5])
+        def sort_key(filename):
+            # Extract the numeric parts using regular expressions
+            if filename.split('_')[-2] == 'graphs':
+                return 0
+            else:
+                return 1E7 * int(filename.split('_')[-2]) + int(filename.split('_')[-1][:-3])
+
+        files.sort(key=sort_key)
+
+        flag = True
+        file_id = 0
+        while (flag):
+            if sort_key(files[file_id]) // 1E7 == 2:
+                flag = False
+            file_id += 1
+
+        file_id_list0 = np.arange(0, file_id, file_id // 90)
+        file_id_list1 = np.arange(file_id, len(files), (len(files) - file_id) // 90)
+        file_id_list = np.concatenate((file_id_list0, file_id_list1))
+
+
+        for file_id_ in trange(0, len(file_id_list)):
+            file_id = file_id_list[file_id_]
+
+            if sort_key(files[file_id]) % 1E7 != 0:
+                epoch = files[file_id].split('graphs')[1][1:-3]
+                net = f"./log/try_{config_file}/models/best_model_with_9_graphs_{epoch}.pt"
+                state_dict = torch.load(net, map_location=device)
+                model.load_state_dict(state_dict['model_state_dict'])
+                model.eval()
+
+                plt.style.use('dark_background')
+
+                fig, ax = fig_init()
+                embedding = get_embedding(model.a, 1)
+                for n in range(n_particle_types):
+                    plt.scatter(embedding[index_particles[n], 0],
+                                embedding[index_particles[n], 1], color=cmap.color(n), s=200, alpha=0.1)
+                plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
+                plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+                plt.xlim([-2, 6])
+                plt.ylim([-2, 6])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=80)
+                plt.close()
+
+                correction = torch.load(f'{log_dir}/correction.pt',map_location=device)
+                second_correction = np.load(f'{log_dir}/second_correction.npy')
+
+                i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+                A = model.W.clone().detach() / correction
+                A[i, i] = 0
+
+                fig, ax = fig_init()
+                ax = sns.heatmap(to_numpy(A)/second_correction, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.1,vmax=0.1)
+                cbar = ax.collections[0].colorbar
+                cbar.ax.tick_params(labelsize=48)
+                plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+                plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+                plt.subplot(2, 2, 1)
+                ax = sns.heatmap(to_numpy(A[0:20, 0:20])/second_correction, cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/W_{epoch}.tif", dpi=80)
+                plt.close()
+
+                fig, ax = fig_init()
+                rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
+                in_features = rr[:, None]
+                with torch.no_grad():
+                    func = model.lin_edge(in_features.float()) * correction
+                plt.plot(to_numpy(rr), to_numpy(func), color='w', linewidth=8, label=r'learned')
+                plt.xlabel(r'$x$', fontsize=78)
+                plt.ylabel(r'Learned $f(x)$', fontsize=78)
+                plt.ylim([-1.1,1.1])
+                plt.xlim([-5,5])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/f_{epoch}.tif", dpi=80)
+                plt.close()
+
+
+                fig, ax = fig_init()
+                func_list = []
+                config_model = config.graph_model.signal_model_name
+                for n in range(n_particles):
+                    embedding_ = model.a[1,n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                    in_features = torch.cat((rr[:, None], embedding_), dim=1)
+                    with torch.no_grad():
+                        func = model.lin_phi(in_features.float())
+                    func = func[:, 0]
+                    plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm), color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
+                plt.xlabel(r'$x$', fontsize=78)
+                plt.ylabel(r'Learned $\phi(x)$', fontsize=78)
+                plt.tight_layout()
+                plt.ylim([-16,16])
+                plt.savefig(f"./{log_dir}/results/phi_{epoch}.tif", dpi=80)
+                plt.close()
+    else:
+
+        fig_init()
+        plt.hist(distrib, bins=100, color='k',alpha=0.5)
+        plt.ylabel(r'counts', fontsize=64)
+        plt.xlabel(r'$x$', fontsize=64)
+        plt.xticks(fontsize=24)
+        plt.yticks(fontsize=24)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/raw_f_x_{config_file}_{epoch}.tif", dpi=170.7)
+        plt.savefig(f'./{log_dir}/results/signal_distribution.png', dpi=300)
+
+        plt.close()
+        print(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
+        logger.info(f'mean: {np.mean(distrib):0.2f}  std: {np.std(distrib):0.2f}')
+
+        plt.figure(figsize=(15, 10))
+        ax = sns.heatmap(to_numpy(activity), center=0, cbar_kws={'fraction': 0.046})
+        ax.invert_yaxis()
+        plt.ylabel('Neurons', fontsize=64)
+        plt.xlabel('Time', fontsize=64)
+        plt.xticks([0,10000],fontsize=24)
+        plt.yticks([0, 999], [1, 1000], fontsize=24)
+        plt.tight_layout()
+        plt.savefig(f'./{log_dir}/results/kinograph.png', dpi=300)
         plt.close()
 
-        correction = 1 / torch.mean(torch.mean(func_list[:,900:1000], dim=0))
-        print(f'correction: {correction:0.2f}')
-
-        fig, ax = fig_init()
-        rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
-        # plt.plot(to_numpy(rr), to_numpy(torch.tanh(rr)), linewidth = 20, alpha = 1, label=r'true')
-        in_features = rr[:, None]
-        with torch.no_grad():
-            func = model.lin_edge(in_features.float()) * correction
-        plt.plot(to_numpy(rr), to_numpy(func), color='k', linewidth=8, label=r'learned')
-        plt.xlabel(r'$x$', fontsize=78)
-        plt.ylabel(r'Learned $f(x)$', fontsize=78)
-        plt.ylim([-1.1,1.1])
-        plt.xlim([-5,5])
-        # plt.legend(fontsize=32.0, loc='upper left')
+        plt.figure(figsize=(15, 10))
+        for i in range(25):
+            plt.plot(to_numpy(activity[i, :]), linewidth=2)
+        plt.xlabel('Time', fontsize=64)
+        plt.ylabel('Firing rate', fontsize=64)
+        plt.xticks([0,10000],fontsize=24)
+        plt.yticks(fontsize=24)
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/reconstructed_f_x_{config_file}_{epoch}.tif", dpi=170.7)
+        plt.savefig(f'./{log_dir}/results/firing rate.png', dpi=300)
         plt.close()
 
-        print('interaction functions ...')
-        fig, ax = fig_init()
-        func_list = []
-        config_model = config.graph_model.signal_model_name
-        # for n in range(n_particle_types):
-        #     s = config.simulation.params[n][1]
-        #     c = config.simulation.params[n][2]
-        #     func = -c * rr + s * torch.tanh(rr)
-        #     plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm), linewidth=20, alpha=1)
 
-        for n in trange(n_particles):
-            embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            in_features = torch.cat((rr[:, None], embedding_), dim=1)
-            with torch.no_grad():
-                func = model.lin_phi(in_features.float())
-            func = func[:, 0]
-            func_list.append(func)
-            plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm), color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
+        adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency.pt', map_location=device)
+        adjacency_ = adjacency.t().clone().detach()
+        adj_t = torch.abs(adjacency_) > 0
+        edge_index = adj_t.nonzero().t().contiguous()
 
-        func_list = torch.stack(func_list)
-        func_list_ = to_numpy(func_list)
-        plt.xlabel(r'$x$', fontsize=78)
-        plt.ylabel(r'Learned $\phi(x)$', fontsize=78)
+        weights = to_numpy(adjacency.flatten())
+        pos = np.argwhere(weights != 0)
+        weights = weights[pos]
+        fig_init()
+        plt.hist(weights, bins=1000, color='k',alpha=0.5)
+        plt.ylabel(r'counts', fontsize=64)
+        plt.xlabel(r'$W$', fontsize=64)
+        plt.yticks(fontsize=24)
+        plt.xticks(fontsize=24)
+        plt.xlim([-0.1, 0.1])
         plt.tight_layout()
-        plt.savefig(f'./{log_dir}/results/learned phi.png', dpi=300)
-
-        print('UMAP reduction ...')
-        with warnings.catch_warnings():
-            warnings.simplefilter('ignore')
-            trans = umap.UMAP(n_neighbors=50, n_components=2, transform_queue_size=0,
-                              random_state=config.training.seed).fit(func_list_)
-            proj_interaction = trans.transform(func_list_)
-
-
-        proj_interaction = (proj_interaction - np.min(proj_interaction)) / (
-                np.max(proj_interaction) - np.min(proj_interaction) + 1e-10)
-        fig, ax = fig_init()
-        for n in trange(n_particle_types):
-            pos = torch.argwhere(type_list == n)
-            pos = to_numpy(pos)
-            if len(pos) > 0:
-                plt.scatter(proj_interaction[pos, 0],
-                            proj_interaction[pos, 1], s=200, alpha=0.1)
-        plt.xlabel(r'UMAP 0', fontsize=78)
-        plt.ylabel(r'UMAP 1', fontsize=78)
-        plt.xlim([-0.2, 1.2])
-        plt.ylim([-0.2, 1.2])
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/UMAP_{config_file}_{epoch}.tif", dpi=170.7)
+        plt.savefig(f'./{log_dir}/results/weights_distribution.png', dpi=300)
         plt.close()
 
-        config.training.cluster_distance_threshold = 0.01
-
-        config.training.cluster_method = 'distance_plot'
-        labels, n_clusters, new_labels = sparsify_cluster(config.training.cluster_method, proj_interaction, embedding,
-                                                          config.training.cluster_distance_threshold, type_list,
-                                                          n_particle_types, embedding_cluster)
-        accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-        print(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}  ')
-        logger.info(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method} ')
-
-        config.training.cluster_method = 'kmeans_auto_embedding'
-        labels, n_clusters, new_labels = sparsify_cluster(config.training.cluster_method, proj_interaction, embedding,
-                                                          config.training.cluster_distance_threshold, type_list,
-                                                          n_particle_types, embedding_cluster)
-        accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
-        print(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}  ')
-        logger.info(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method} ')
-
-
-        i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-        A = model.W.clone().detach() / correction
-        A[i, i] = 0
-
-        fig, ax = fig_init()
-        gt_weight = to_numpy(adjacency)
-        pred_weight = to_numpy(A)
-        plt.scatter(gt_weight, pred_weight / 10, s=1, c='k', alpha=1)
-        plt.xlabel(r'true $W_{ij}$', fontsize=78)
-        plt.ylabel(r'learned $W_{ij}$', fontsize=78)
-        plt.xlim([-0.2,0.2])
-        plt.ylim([-0.2,0.2])
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/comparison_{epoch}.tif", dpi=87)
-        plt.close()
-
-        x_data = np.reshape(gt_weight, (n_particles * n_particles))
-        y_data =  np.reshape(pred_weight, (n_particles * n_particles))
-        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-        residuals = y_data - linear_model(x_data, *lin_fit)
-        ss_res = np.sum(residuals ** 2)
-        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-        r_squared = 1 - (ss_res / ss_tot)
-        print(f'R^2$: {r_squared:0.4f}  slope: {np.round(lin_fit[0], 4)}')
-        logger.info(f'R^2$: {np.round(r_squared, 4)}  slope: {np.round(lin_fit[0], 4)}')
-
-        second_correction = lin_fit[0]
-        print(f'second_correction: {second_correction:0.2f}')
 
         plt.figure(figsize=(10, 10))
-        # plt.title(r'learned $W_{ij}$', fontsize=78)
-        ax = sns.heatmap(to_numpy(A)/second_correction, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.1,vmax=0.1)
+        ax = sns.heatmap(to_numpy(adjacency), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.1, vmax=0.1)
         cbar = ax.collections[0].colorbar
-        # here set the labelsize by 20
         cbar.ax.tick_params(labelsize=48)
         plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
         plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
-        plt.subplot(2, 2, 1)
-        ax = sns.heatmap(to_numpy(A[0:20, 0:20]/second_correction), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
+        # plt.title(r'true $W_{ij}$', fontsize=78)
+        plt.subplot(2,2,1)
+        ax = sns.heatmap(to_numpy(adjacency[0:20,0:20]), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
         plt.xticks([])
         plt.yticks([])
         plt.tight_layout()
-        plt.savefig(f'./{log_dir}/results/learned connectivity.png', dpi=300)
+
+        plt.savefig(f'./{log_dir}/results/true connectivity.png', dpi=300)
+
+        files = glob.glob(f"{log_dir}/models/*.pt")
+        files.sort(key=os.path.getmtime)
+
+        for epoch in epoch_list:
+
+            net = f'{log_dir}/models/best_model_with_{n_runs-1}_graphs_{epoch}.pt'
+            model, bc_pos, bc_dpos = choose_training_model(config, device)
+            state_dict = torch.load(net, map_location=device)
+            model.load_state_dict(state_dict['model_state_dict'])
+            model.edges = edge_index
+            print(f'net: {net}')
+
+            fig, ax = fig_init()
+            embedding = get_embedding(model.a, 1)
+            for n in range(n_particle_types):
+                plt.scatter(embedding[index_particles[n], 0],
+                            embedding[index_particles[n], 1], color=cmap.color(n), s=200, alpha=0.1)
+            plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
+            plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/all_embedding_{config_file}_{epoch}.tif", dpi=170.7)
+
+            fig, ax = fig_init()
+            rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
+            func_list = []
+            for n in trange(0,n_particles,n_particles//100):
+                in_features = rr[:, None]
+                with torch.no_grad():
+                    func = model.lin_edge(in_features.float())
+                func_list.append(func)
+                plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
+                         linewidth=2, alpha=0.25)
+            func_list = torch.stack(func_list)
+            plt.xlabel(r'$x$', fontsize=78)
+            plt.ylabel(r'Learned $f(x)$', fontsize=78)
+            # plt.ylim([-0.05,0.15])
+            plt.xlim([-5,5])
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/raw_f_x_{config_file}_{epoch}.tif", dpi=170.7)
+            plt.close()
+
+            correction = 1 / torch.mean(torch.mean(func_list[:,900:1000], dim=0))
+            print(f'correction: {correction:0.2f}')
+            torch.save(correction, f'{log_dir}/correction.pt')
+
+            fig, ax = fig_init()
+            rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
+            # plt.plot(to_numpy(rr), to_numpy(torch.tanh(rr)), linewidth = 20, alpha = 1, label=r'true')
+            in_features = rr[:, None]
+            with torch.no_grad():
+                func = model.lin_edge(in_features.float()) * correction
+            plt.plot(to_numpy(rr), to_numpy(func), color='k', linewidth=8, label=r'learned')
+            plt.xlabel(r'$x$', fontsize=78)
+            plt.ylabel(r'Learned $f(x)$', fontsize=78)
+            plt.ylim([-1.1,1.1])
+            plt.xlim([-5,5])
+            # plt.legend(fontsize=32.0, loc='upper left')
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/reconstructed_f_x_{config_file}_{epoch}.tif", dpi=170.7)
+            plt.close()
+
+            print('interaction functions ...')
+            fig, ax = fig_init()
+            func_list = []
+            config_model = config.graph_model.signal_model_name
+            # for n in range(n_particle_types):
+            #     s = config.simulation.params[n][1]
+            #     c = config.simulation.params[n][2]
+            #     func = -c * rr + s * torch.tanh(rr)
+            #     plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm), linewidth=20, alpha=1)
+
+            for n in trange(n_particles):
+                embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                in_features = torch.cat((rr[:, None], embedding_), dim=1)
+                with torch.no_grad():
+                    func = model.lin_phi(in_features.float())
+                func = func[:, 0]
+                func_list.append(func)
+                plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm), color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
+
+            func_list = torch.stack(func_list)
+            func_list_ = to_numpy(func_list)
+            plt.xlabel(r'$x$', fontsize=78)
+            plt.ylabel(r'Learned $\phi(x)$', fontsize=78)
+            plt.tight_layout()
+            plt.savefig(f'./{log_dir}/results/learned phi.png', dpi=300)
+
+            print('UMAP reduction ...')
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore')
+                trans = umap.UMAP(n_neighbors=50, n_components=2, transform_queue_size=0,
+                                  random_state=config.training.seed).fit(func_list_)
+                proj_interaction = trans.transform(func_list_)
+
+
+            proj_interaction = (proj_interaction - np.min(proj_interaction)) / (
+                    np.max(proj_interaction) - np.min(proj_interaction) + 1e-10)
+            fig, ax = fig_init()
+            for n in trange(n_particle_types):
+                pos = torch.argwhere(type_list == n)
+                pos = to_numpy(pos)
+                if len(pos) > 0:
+                    plt.scatter(proj_interaction[pos, 0],
+                                proj_interaction[pos, 1], s=200, alpha=0.1)
+            plt.xlabel(r'UMAP 0', fontsize=78)
+            plt.ylabel(r'UMAP 1', fontsize=78)
+            plt.xlim([-0.2, 1.2])
+            plt.ylim([-0.2, 1.2])
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/UMAP_{config_file}_{epoch}.tif", dpi=170.7)
+            plt.close()
+
+            config.training.cluster_distance_threshold = 0.01
+
+            config.training.cluster_method = 'distance_plot'
+            labels, n_clusters, new_labels = sparsify_cluster(config.training.cluster_method, proj_interaction, embedding,
+                                                              config.training.cluster_distance_threshold, type_list,
+                                                              n_particle_types, embedding_cluster)
+            accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
+            print(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}  ')
+            logger.info(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method} ')
+
+            config.training.cluster_method = 'kmeans_auto_embedding'
+            labels, n_clusters, new_labels = sparsify_cluster(config.training.cluster_method, proj_interaction, embedding,
+                                                              config.training.cluster_distance_threshold, type_list,
+                                                              n_particle_types, embedding_cluster)
+            accuracy = metrics.accuracy_score(to_numpy(type_list), new_labels)
+            print(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}  ')
+            logger.info(f'accuracy: {accuracy:0.4f}   n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method} ')
+
+
+            i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
+            A = model.W.clone().detach() / correction
+            A[i, i] = 0
+
+            fig, ax = fig_init()
+            gt_weight = to_numpy(adjacency)
+            pred_weight = to_numpy(A)
+            plt.scatter(gt_weight, pred_weight / 10, s=1, c='k', alpha=1)
+            plt.xlabel(r'true $W_{ij}$', fontsize=78)
+            plt.ylabel(r'learned $W_{ij}$', fontsize=78)
+            plt.xlim([-0.2,0.2])
+            plt.ylim([-0.2,0.2])
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/comparison_{epoch}.tif", dpi=87)
+            plt.close()
+
+            x_data = np.reshape(gt_weight, (n_particles * n_particles))
+            y_data =  np.reshape(pred_weight, (n_particles * n_particles))
+            lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
+            residuals = y_data - linear_model(x_data, *lin_fit)
+            ss_res = np.sum(residuals ** 2)
+            ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+            r_squared = 1 - (ss_res / ss_tot)
+            print(f'R^2$: {r_squared:0.4f}  slope: {np.round(lin_fit[0], 4)}')
+            logger.info(f'R^2$: {np.round(r_squared, 4)}  slope: {np.round(lin_fit[0], 4)}')
+
+            second_correction = lin_fit[0]
+            print(f'second_correction: {second_correction:0.2f}')
+            np.save(f'{log_dir}/second_correction.npy', second_correction)
+
+            plt.figure(figsize=(10, 10))
+            # plt.title(r'learned $W_{ij}$', fontsize=78)
+            ax = sns.heatmap(to_numpy(A)/second_correction, center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-0.1,vmax=0.1)
+            cbar = ax.collections[0].colorbar
+            # here set the labelsize by 20
+            cbar.ax.tick_params(labelsize=48)
+            plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+            plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=48)
+            plt.subplot(2, 2, 1)
+            ax = sns.heatmap(to_numpy(A[0:20, 0:20]/second_correction), cbar=False, center=0, square=True, cmap='bwr', vmin=-0.1, vmax=0.1)
+            plt.xticks([])
+            plt.yticks([])
+            plt.tight_layout()
+            plt.savefig(f'./{log_dir}/results/learned connectivity.png', dpi=300)
 
 
     if has_siren_time:
@@ -5746,8 +5858,7 @@ if __name__ == '__main__':
     # config_list = ['gravity_16']
     # config_list = ['boids_16_256']
     # config_list = ['signal_N2_r1_Lorentz_d_N2']
-    config_list = ['signal_N2_r1_Lorentz_a_N2']
-
+    config_list = ['signal_N2_r1_Lorentz_a_N2','signal_N3_r1_Lorentz_b']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
@@ -5755,7 +5866,6 @@ if __name__ == '__main__':
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
-
 
 
 
