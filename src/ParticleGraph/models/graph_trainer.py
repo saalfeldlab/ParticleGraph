@@ -4407,23 +4407,32 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     # plt.axis('off')
             elif 'PDE_N' in model_config.signal_model_name:
 
+                plt.close()
+
+                plt.style.use('dark_background')
                 matplotlib.rcParams['savefig.pad_inches'] = 0
-                fig = plt.figure(figsize=(12, 12))
-                ax = fig.add_subplot(1, 1, 1)
-                ax.xaxis.set_major_locator(plt.MaxNLocator(3))
-                ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-                ax.xaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                ax.yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
-                plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=200, c=to_numpy(x[:, 6]), cmap='viridis', vmin=0,
-                            vmax=3)
-                plt.xlim([-1.2, 1.2])
-                plt.ylim([-1.2, 1.2])
-                # plt.xlabel('x', fontsize=48)
-                # plt.ylabel('y', fontsize=48)
-                plt.xticks(fontsize=48.0)
-                plt.yticks(fontsize=48.0)
-                ax.tick_params(axis='both', which='major', pad=15)
-                plt.text(0, 1.1, f'   ', ha='left', va='top', transform=ax.transAxes, fontsize=48)
+
+                fig = plt.figure(figsize=(16, 4.8))
+                plt.subplot(1, 4, 1)
+                plt.title('original')
+                plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=20, c=to_numpy(x0[:, 6]), cmap='viridis', vmin=-10,vmax=10)
+                plt.xticks([])
+                plt.yticks([])
+                plt.subplot(1, 4, 2)
+                plt.title('predicted')
+                plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=20, c=to_numpy(x[:, 6]), cmap='viridis', vmin=-10, vmax=10)
+                plt.xticks([])
+                plt.yticks([])
+                plt.subplot(1, 4, 3)
+                plt.title('residual')
+                plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=20, c=to_numpy(x[:, 6] - x0[:, 6]), cmap='viridis', vmin=-10, vmax=10)
+                plt.xticks([])
+                plt.yticks([])
+                plt.subplot(1, 4, 4)
+                plt.plot(rmserr_list, c='w')
+                plt.xlim([0,1000])
+                plt.ylim([0,5])
+
                 plt.tight_layout()
             elif do_tracking:
                 plt.scatter(to_numpy(x0[:, 2]), to_numpy(x0[:, 1]), s=20, c='k')
@@ -4514,7 +4523,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             plt.tight_layout()
             num = f"{it:06}"
-            plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{num}.tif", dpi=80) #170.7)
+            plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{num}.tif", dpi=170.7)
             plt.close()
 
             if has_ghost:

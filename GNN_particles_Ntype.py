@@ -82,4 +82,4 @@ if __name__ == '__main__':
         print(f'device {device}')
         # data_generate(config, device=device, visualize=False, run_vizualized=0, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 100)
         # data_train(config, config_file, True, device)
-        data_test(config=config, config_file=config_file, visualize=True, style='color', verbose=False, best_model='20', run=0, step=25, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
+        data_test(config=config, config_file=config_file, visualize=True, style='color', verbose=False, best_model='20', run=0, step=5, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7

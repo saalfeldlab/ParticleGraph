@@ -727,7 +727,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                         plt.close()
                     else:
                         fig = plt.figure(figsize=(8, 8))
-                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=80, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-100,vmax=100)
+                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=80, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-10,vmax=10)
                         # plt.colorbar()
                         # plt.xlim([-1750, 1750])
                         # plt.ylim([-1750, 1750])
