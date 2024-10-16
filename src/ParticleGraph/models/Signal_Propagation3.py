@@ -58,7 +58,7 @@ class Signal_Propagation3(pyg.nn.MessagePassing):
         self.mask.fill_diagonal_(0)
 
 
-    def forward(self, data=[], data_id=[], return_all=False, excitation=[]):
+    def forward(self, data=[], data_id=[], return_all=False, excitation=None):
         self.data_id = data_id
         x, edge_index = data.x, data.edge_index
 
@@ -70,7 +70,10 @@ class Signal_Propagation3(pyg.nn.MessagePassing):
 
         # msg = self.propagate(edge_index, u=u, embedding=embedding)
         msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
-        pred = self.lin_phi(in_features) + msg + excitation
+        if excitation == None:
+            pred = self.lin_phi(in_features) + msg
+        else:
+            pred = self.lin_phi(in_features) + msg + excitation
 
         return pred
 

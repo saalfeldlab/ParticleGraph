@@ -4160,11 +4160,16 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
         # plt.scatter(x_, y_, s=2, c=to_numpy(mask_mesh))
     if has_adjacency_matrix:
-        mat = scipy.io.loadmat(simulation_config.connectivity_file)
-        adjacency = torch.tensor(mat['A'], device=device)
-        adj_t = adjacency > 0
+        # mat = scipy.io.loadmat(simulation_config.connectivity_file)
+        # adjacency = torch.tensor(mat['A'], device=device)
+        # adj_t = adjacency > 0
+        # edge_index = adj_t.nonzero().t().contiguous()
+        # edge_attr_adjacency = adjacency[adj_t]
+
+        adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency.pt', map_location=device)
+        adjacency_ = adjacency.t().clone().detach()
+        adj_t = torch.abs(adjacency_) > 0
         edge_index = adj_t.nonzero().t().contiguous()
-        edge_attr_adjacency = adjacency[adj_t]
 
     if verbose:
         print(f'Test data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
@@ -4237,7 +4242,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         x0 = x_list[0][it].clone().detach()
         y0 = y_list[0][it].clone().detach()
 
-        if model_config.signal_model_name == 'PDE_N':
+        if 'PDE_N' in model_config.signal_model_name:
             rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 6:7] - x0[:, 6:7]) ** 2, axis=1)))
         elif model_config.mesh_model_name == 'WaveMesh':
             rmserr = torch.sqrt(torch.mean((x[mask_mesh.squeeze(), 6:7] - x0[mask_mesh.squeeze(), 6:7]) ** 2))
@@ -4346,7 +4351,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 x[:, dimension + 1:2*dimension+1] = x[:, dimension + 1:2*dimension+1] + y  # speed update
             else:
                 y = y * vnorm
-                if model_config.signal_model_name == 'PDE_N':
+                if 'PDE_N' in model_config.signal_model_name:
                     x[:, 6:7] += y * delta_t    # signal update
                 else:
                     x[:, dimension + 1:2*dimension+1] = y
@@ -4400,7 +4405,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     # plt.xticks([])
                     # plt.yticks([])
                     # plt.axis('off')
-            elif model_config.signal_model_name == 'PDE_N':
+            elif 'PDE_N' in model_config.signal_model_name:
 
                 matplotlib.rcParams['savefig.pad_inches'] = 0
                 fig = plt.figure(figsize=(12, 12))
@@ -4457,7 +4462,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             if 'no_ticks' in style:
                 plt.xticks([])
                 plt.yticks([])
-            if not(('RD_RPS_Mesh' in model_config.mesh_model_name)|(model_config.signal_model_name == 'PDE_N')):
+            if not(('RD_RPS_Mesh' in model_config.mesh_model_name)|('PDE_N' in model_config.signal_model_name)):
                 plt.xlim([0, 1])
                 plt.ylim([0, 1])
             if 'PDE_G' in model_config.particle_model_name:
@@ -4597,7 +4602,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         print(h.shape)
         print('average u {:.3e}+/-{:.3e}'.format(np.mean(h), np.std(h)))
 
-    elif model_config.signal_model_name != 'PDE_N':
+    elif not ('PDE_N' in model_config.signal_model_name):
 
         r = [np.mean(rmserr_list), np.std(rmserr_list), np.mean(geomloss_list), np.std(geomloss_list)]
         print('average rollout Sinkhorn div. {:.3e}+/-{:.3e}'.format(np.mean(geomloss_list), np.std(geomloss_list)))
