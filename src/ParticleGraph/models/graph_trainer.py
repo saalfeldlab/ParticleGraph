@@ -1824,10 +1824,15 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # print('Loading existing model ...')
-    # net = f"./log/try_{config_file}/models/best_model_with_1_graphs_5.pt"
-    # state_dict = torch.load(net,map_location=device)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    if best_model!=None:
+        net = f"./log/try_{config_file}/models/best_model_with_{n_runs-1}_graphs_{best_model}.pt"
+        state_dict = torch.load(net,map_location=device)
+        model.load_state_dict(state_dict['model_state_dict'])
+        start_epoch=int(best_model.split('_')[0])
+        print(f'best_model: {best_model}  start_epoch: {start_epoch}')
+        logger.info(f'best_model: {best_model}  start_epoch: {start_epoch}')
+    else:
+        start_epoch=0
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -2268,9 +2273,15 @@ def data_train_synaptic(config, config_file, erase, best_model, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    net = f"./log/try_{config_file}/models/best_model_with_1_graphs_14.pt"
-    state_dict = torch.load(net,map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
+    if best_model!=None:
+        net = f"./log/try_{config_file}/models/best_model_with_{n_runs-1}_graphs_{best_model}.pt"
+        state_dict = torch.load(net,map_location=device)
+        model.load_state_dict(state_dict['model_state_dict'])
+        start_epoch=int(best_model.split('_')[0])
+        print(f'best_model: {best_model}  start_epoch: {start_epoch}')
+        logger.info(f'best_model: {best_model}  start_epoch: {start_epoch}')
+    else:
+        start_epoch=0
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -2751,7 +2762,9 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
         net = f"./log/try_{config_file}/models/best_model_with_{n_runs-1}_graphs_{best_model}.pt"
         state_dict = torch.load(net,map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
-        start_epoch=int(best_model.split('_')[-1])
+        start_epoch=int(best_model.split('_')[0])
+        print(f'best_model: {best_model}  start_epoch: {start_epoch}')
+        logger.info(f'best_model: {best_model}  start_epoch: {start_epoch}')
     else:
         start_epoch=0
 
@@ -3184,9 +3197,15 @@ def data_train_synaptic3(config, config_file, erase, best_model, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    # net = f"./log/try_{config_file}/models/best_model_with_9_graphs_14_0.pt"
-    # state_dict = torch.load(net,map_location=device)
-    # model.load_state_dict(state_dict['model_state_dict'])
+    if best_model!=None:
+        net = f"./log/try_{config_file}/models/best_model_with_{n_runs-1}_graphs_{best_model}.pt"
+        state_dict = torch.load(net,map_location=device)
+        model.load_state_dict(state_dict['model_state_dict'])
+        start_epoch=int(best_model.split('_')[0])
+        print(f'best_model: {best_model}  start_epoch: {start_epoch}')
+        logger.info(f'best_model: {best_model}  start_epoch: {start_epoch}')
+    else:
+        start_epoch=0
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start

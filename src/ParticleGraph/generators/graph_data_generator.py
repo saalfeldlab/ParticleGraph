@@ -1300,16 +1300,11 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             # calculate cell death and cell division
 
             if has_cell_death:
-                # cell death
                 sample = torch.rand(len(X1), device=device)
                 if kill_cell_leaving:
-                    H1[X1[:,0]<0] = 0
-                    H1[X1[:,0]>1] = 0
-                    H1[X1[:,1]<0] = 0
-                    H1[X1[:,1]>1] = 0
-                H1[sample.squeeze() < DR1.squeeze() / 5E4, 0] = 0
-                # removal if too small
-                pos = torch.argwhere((AR1.squeeze()<2E-4) & (A1.squeeze() > 25))
+                    pos = torch.argwhere(((AR1.squeeze()<2E-4) & (A1.squeeze() > 25)) | (sample.squeeze() < DR1.squeeze() / 5E4) | (X1[:, 0] < 0) | (X1[:, 0] > 1) | (X1[:, 1] < 0) | (X1[:, 1] > 1))
+                else:
+                    pos = torch.argwhere(((AR1.squeeze()<2E-4) & (A1.squeeze() > 25)) | (sample.squeeze() < DR1.squeeze() / 5E4) )
                 if len(pos) > 0:
                     H1[pos,0]=0
                     man_track[to_numpy(N1[pos]).astype(int), 2] = it - 1
@@ -1748,17 +1743,11 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             end=-1
             for i in range(len(x_list)):
                 if torch.argwhere(x_list[i][:, 0] == track_id-1).shape[0] > 0:
-                    print(i)
                     if start ==-1:
                         start = i
                     end = i
-
-            if (int(start)!=int(man_track[n, 1])) | (int(end)!=int(man_track[n, 2])):
-                print(
-                    f' *cell_id {n}  track_id-1 {int(track_id-1)}    x_list {int(start)} {int(end)}  man_track {int(man_track[n, 1])} {int(man_track[n, 2])}')
-            else:
-                print(
-                    f'cell_id {n}  track_id-1 {int(track_id-1)}    x_list {int(start)} {int(end)}  man_track {int(man_track[n, 1])} {int(man_track[n, 2])}')
+            if (int(start)!=int(man_track[n, 1])) | ((int(end)!=int(man_track[n, 2])) & (int(end)!=n_frames)):
+                print(f'pb *cell_id {n}  track_id-1 {int(track_id-1)}    x_list {int(start)} {int(end)}  man_track {int(man_track[n, 1])} {int(man_track[n, 2])}')
 
 
         if bSave:

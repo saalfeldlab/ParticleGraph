@@ -31,55 +31,39 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description="ParticleGraph")
 
-    parser.add_argument(
-        'config',
-        type=str,
-        nargs='?',
-        default='arbitrary_3',
-        help='the name of config file'
-    )
+    parser.add_argument('-o', '--option', nargs='+', help='Option that takes multiple values')
 
     args = parser.parse_args()
 
-    config_file = args.config
+    # Use the argument
+    if args.option:
+        print(f"Options: {args.option}")
 
     try:
         matplotlib.use("Qt5Agg")
     except:
         pass
 
-    config_list = [config_file]
-
-    # config_list = ["boids_9_sequence_c"]
-    # config_list = ["arbitrary_3_cell_sequence_c"]
-
-    # config_list = ["boids_division_tracking_ctrl"]
-    # config_list = ['boids_division_model_2_tracking']
-
-    # config_list = ["boids_division_tracking_A"] #,"boids_division_tracking_B"]
-
-    # config_list = ["gland_SMG2-processed"]
-    # config_list = ["MDCK_FN_PB-Kleb_JF585"]
-
-    # config_list = ['signal_N2_a_r1_Gaussian_t']
-    # config_list = ['signal_N2_a_r1_Lorentz_k','signal_N2_a_r1_Lorentz_l','signal_N2_a_r1_Lorentz_m']
-
-    config_list = ['signal_N2_r1_Lorentz_d']
-
-    # config_list = ['signal_N2_hemibrain_r1_a']
-
-    # config_list = ['signal_N2_WBI_small_a']
-
-    # config_list = ["gravity_16"]
-
-    # config_list = ["mouse_city_b"]
-
+    if args.option!=None:
+        action = args.option[0]
+        config_list = [args.option[1]]
+        if len(args.option) > 2:
+            best_model = args.option[2]
+        else:
+            best_model = None
+    else:
+        action = 'generate'
+        best_model = None
+        config_list = ["boids_division_tracking_A", "boids_division_tracking_B"]
 
     for config_file in config_list:
 
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
         device = set_device(config.training.device)
         print(f'device {device}')
-        # data_generate(config, device=device, visualize=True, run_vizualized=0, style='color cell_id', alpha=1, erase=True, bSave=True, step=1) #config.simulation.n_frames // 100)
-        data_train(config=config, config_file=config_file, erase=False, best_model='4_0', device=device)
-        # data_test(config=config, config_file=config_file, visualize=True, style='color', verbose=False, best_model='4_680000', run=0, step=5, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
+        if 'generate' in action:
+            data_generate(config, device=device, visualize=True, run_vizualized=0, style='color cell_id', alpha=1, erase=True, bSave=True, step=1) #config.simulation.n_frames // 100)
+        if 'train' in action:
+            data_train(config=config, config_file=config_file, erase=False, best_model=best_model, device=device)
+        if 'test' in action:
+            data_test(config=config, config_file=config_file, visualize=True, style='color', verbose=False, best_model='4_680000', run=0, step=5, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
