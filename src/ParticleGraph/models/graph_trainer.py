@@ -22,7 +22,7 @@ from ParticleGraph.generators.cell_utils import *
 from ParticleGraph.fitting_models import linear_model
 
 
-def data_train(config, config_file, erase, device):
+def data_train(config=None, config_file=None, erase=False, best_model=None, device=None):
 
     # plt.rcParams['text.usetex'] = True
     # rc('font', **{'family': 'serif', 'serif': ['Palatino']})
@@ -49,37 +49,37 @@ def data_train(config, config_file, erase, device):
     print(f'dataset_name: {dataset_name}')
 
     if 'Agents' in config.graph_model.particle_model_name:
-        data_train_agents(config, config_file, device)
+        data_train_agents(config, config_file, best_model, device)
     elif has_mouse_city:
-        data_train_mouse_city(config, config_file, erase, device)
+        data_train_mouse_city(config, config_file, erase, best_model, device)
     elif has_WBI:
-        data_train_WBI(config, config_file, erase, device)
+        data_train_WBI(config, config_file, erase, best_model, device)
     elif has_particle_field:
-        data_train_particle_field(config, config_file, erase, device)
+        data_train_particle_field(config, config_file, erase, best_model, device)
     elif has_mesh:
-        data_train_mesh(config, config_file, erase, device)
+        data_train_mesh(config, config_file, erase, best_model, device)
     elif has_signal:
         if 'PDE_N2' in config.graph_model.signal_model_name:
-            data_train_synaptic2(config, config_file, erase, device)
+            data_train_synaptic2(config, config_file, erase, best_model, device)
         elif 'PDE_N3' in config.graph_model.signal_model_name:
-            data_train_synaptic3(config, config_file, erase, device)
+            data_train_synaptic3(config, config_file, erase, best_model, device)
         else:
-            data_train_synaptic(config, config_file, erase, device)
+            data_train_synaptic(config, config_file, erase, best_model, device)
     elif do_tracking & has_cell_division:
-        data_train_cell(config, config_file, erase, device)
+        data_train_cell(config, config_file, erase, best_model, device)
     elif do_tracking:
-        data_train_tracking(config, config_file, erase, device)
+        data_train_tracking(config, config_file, erase, best_model, device)
     elif has_cell_division:
-        data_train_cell(config, config_file, erase, device)
+        data_train_cell(config, config_file, erase, best_model, device)
     elif has_state:
-        data_train_particles_with_states(config, config_file, erase, device)
+        data_train_particles_with_states(config, config_file, erase, best_model, device)
     elif 'PDE_GS' in config.graph_model.particle_model_name:
-        data_solar_system(config, config_file, erase, device)
+        data_solar_system(config, config_file, erase, best_model, device)
     else:
-        data_train_particle(config, config_file, erase, device)
+        data_train_particle(config, config_file, erase, best_model, device)
 
 
-def data_train_particle(config, config_file, erase, device):
+def data_train_particle(config, config_file, erase, best_model, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -445,7 +445,7 @@ def data_train_particle(config, config_file, erase, device):
         plt.close()
 
 
-def data_solar_system(config, config_file, erase, device):
+def data_solar_system(config, config_file, erase, best_model, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -622,7 +622,7 @@ def data_solar_system(config, config_file, erase, device):
         plt.close()
 
 
-def data_train_cell(config, config_file, erase, device):
+def data_train_cell(config, config_file, erase, best_model, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -1021,7 +1021,7 @@ def data_train_cell(config, config_file, erase, device):
             optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
 
 
-def data_train_mouse_city(config, config_file, erase, device):
+def data_train_mouse_city(config, config_file, erase, best_model, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -1355,7 +1355,7 @@ def data_train_mouse_city(config, config_file, erase, device):
             optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
 
 
-def data_train_mesh(config, config_file, erase, device):
+def data_train_mesh(config, config_file, erase, best_model, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -1719,7 +1719,7 @@ def data_train_mesh(config, config_file, erase, device):
         plt.close()
 
 
-def data_train_particle_field(config, config_file, erase, device):
+def data_train_particle_field(config, config_file, erase, best_model, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -2195,7 +2195,7 @@ def data_train_particle_field(config, config_file, erase, device):
                 logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
 
-def data_train_potential_energy(config, config_file, erase, device):
+def data_train_potential_energy(config, config_file, erase, best_model, device):
 
     model = SIREN(in_features=1, out_features=1, hidden_features=256, hidden_layers=3)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
@@ -2217,7 +2217,7 @@ def data_train_potential_energy(config, config_file, erase, device):
             print(f'Epoch {epoch}, Loss: {loss.item()}')
 
 
-def data_train_synaptic(config, config_file, erase, device):
+def data_train_synaptic(config, config_file, erase, best_model, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -2694,7 +2694,7 @@ def data_train_synaptic(config, config_file, erase, device):
         plt.close()
 
 
-def data_train_synaptic2(config, config_file, erase, device):
+def data_train_synaptic2(config, config_file, erase, best_model, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -2746,9 +2746,14 @@ def data_train_synaptic2(config, config_file, erase, device):
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
-    net = f"./log/try_{config_file}/models/best_model_with_9_graphs_3.pt"
-    state_dict = torch.load(net,map_location=device)
-    model.load_state_dict(state_dict['model_state_dict'])
+
+    if best_model!=None:
+        net = f"./log/try_{config_file}/models/best_model_with_{n_runs-1}_graphs_{best_model}.pt"
+        state_dict = torch.load(net,map_location=device)
+        model.load_state_dict(state_dict['model_state_dict'])
+        start_epoch=int(best_model.split('_')[-1])
+    else:
+        start_epoch=0
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -2808,7 +2813,7 @@ def data_train_synaptic2(config, config_file, erase, device):
 
     list_loss = []
     time.sleep(2)
-    for epoch in range(4, n_epochs + 1):
+    for epoch in range(start_epoch, n_epochs + 1):
 
         if (epoch==0):
             coeff_L1 = train_config.first_coeff_L1
@@ -3127,7 +3132,7 @@ def data_train_synaptic2(config, config_file, erase, device):
         plt.close()
 
 
-def data_train_synaptic3(config, config_file, erase, device):
+def data_train_synaptic3(config, config_file, erase, best_model, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -3584,7 +3589,7 @@ def data_train_synaptic3(config, config_file, erase, device):
         plt.close()
 
 
-def data_train_agents(config, config_file, erase, device):
+def data_train_agents(config, config_file, erase, best_model, device):
 
     simulation_config = config.simulation
     train_config = config.training
@@ -3821,7 +3826,7 @@ def data_train_agents(config, config_file, erase, device):
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
 
-def data_train_WBI(config, config_file, erase, device):
+def data_train_WBI(config, config_file, erase, best_model, device):
 
     simulation_config = config.simulation
     train_config = config.training

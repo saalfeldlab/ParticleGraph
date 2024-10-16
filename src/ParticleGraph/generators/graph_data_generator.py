@@ -1739,6 +1739,28 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{num}.tif", dpi=85.35)
                         plt.close()
 
+
+        # check consistency between man_track and x_list[0]
+
+        for n in range(man_track.shape[0]):
+            track_id = man_track[n, 0]
+            start=-1
+            end=-1
+            for i in range(len(x_list)):
+                if torch.argwhere(x_list[i][:, 0] == track_id-1).shape[0] > 0:
+                    print(i)
+                    if start ==-1:
+                        start = i
+                    end = i
+
+            if (int(start)!=int(man_track[n, 1])) | (int(end)!=int(man_track[n, 2])):
+                print(
+                    f' *cell_id {n}  track_id-1 {int(track_id-1)}    x_list {int(start)} {int(end)}  man_track {int(man_track[n, 1])} {int(man_track[n, 2])}')
+            else:
+                print(
+                    f'cell_id {n}  track_id-1 {int(track_id-1)}    x_list {int(start)} {int(end)}  man_track {int(man_track[n, 1])} {int(man_track[n, 2])}')
+
+
         if bSave:
             torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
