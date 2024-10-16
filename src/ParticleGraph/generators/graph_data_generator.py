@@ -561,8 +561,9 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
         x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
 
-        # if os.path.isfile(f'./graphs_data/graphs_{dataset_name}/X1.pt'):
-        #     X1 = torch.load(f'./graphs_data/graphs_{dataset_name}/X1.pt', map_location=device)
+        if os.path.isfile(f'./graphs_data/graphs_{dataset_name}/X1.pt'):
+            X1 = torch.load(f'./graphs_data/graphs_{dataset_name}/X1.pt', map_location=device)
+
         # else:
         #     dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
         #     G = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
@@ -657,9 +658,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     H1[:, 0] = H1[:, 0] + torch.randn(n_particles, device=device) * noise_level
 
             A1 = A1 + 1
-
-            check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1,
-                                   memory_percentage_threshold=0.6)
 
             # output plots
             if visualize & (run ==0) & (it % step == 0) & (it >= 0):
