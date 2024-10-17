@@ -2823,6 +2823,9 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     model.edges = torch.load(f'./graphs_data/graphs_{dataset_name}/edge_index.pt', map_location=device)
     adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency.pt', map_location=device)
 
+    if simulation_config.connectivity_mask:
+        model.mask = model.mask * (adjacency>0)*1.0
+
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
@@ -2991,9 +2994,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
         plt.xlabel('Embedding 0', fontsize=12)
         plt.ylabel('Embedding 1', fontsize=12)
 
-        i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
         A = model.W.clone().detach() * model.mask.clone().detach()
-        A[i,i] = 0
 
         ax = fig.add_subplot(2, 5, 3)
         ax = sns.heatmap(to_numpy(adjacency),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046}, vmin=-0.001, vmax=0.001)

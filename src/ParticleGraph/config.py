@@ -20,6 +20,7 @@ class SimulationConfig(BaseModel):
     connectivity_parameter: float = 1.0
     connectivity_distribution: str = 'Gaussian'
     connectivity_distribution_params: float = 1
+    connectivity_mask: bool = False
 
     excitation_value_map: Optional[str] = None
     excitation: str='none'
