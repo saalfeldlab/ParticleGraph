@@ -2852,7 +2852,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
 
         excitation = torch.zeros((n_particles, 1), device=device)
 
-        for N in trange(2): #(Niter):
+        for N in trange(Niter):
 
             run = np.random.randint(n_runs)
             k = np.random.randint(n_frames - 5)
@@ -2956,7 +2956,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
 
             total_loss += loss.item()
 
-            visualize_embedding = False
+            visualize_embedding = True
             if visualize_embedding & (((epoch < 30 ) & (N%(Niter//50) == 0)) | (N==0)):
                 plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, n_particles, n_particle_types, type_list, cmap, has_siren, has_siren_time, model_exc, n_frames, device)
                 torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
@@ -3008,6 +3008,8 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
         plt.xticks([0,n_particles-1],[1,n_particles],fontsize=8)
         plt.yticks([0,n_particles-1],[1,n_particles],fontsize=8)
 
+        plt.tight_layout()
+
         ax = fig.add_subplot(2, 5, 5)
         gt_weight = to_numpy(adjacency)
         pred_weight = to_numpy(A)
@@ -3025,16 +3027,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
         r_squared = 1 - (ss_res / ss_tot)
         print(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
 
-        lin_fit, lin_fitv = curve_fit(linear_model, x_data, y_data)
-        residuals = y_data - linear_model(x_data, *lin_fit)
-        ss_res = np.sum(residuals ** 2)
-        ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-        r_squared = 1 - (ss_res / ss_tot)
-        print(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
-        plt.text(-1, 100, f'R^2: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}', fontsize=10)
-
         ax = fig.add_subplot(2, 5, 6)
-
         embedding = to_numpy(model.a.squeeze())
         func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
                                                             model_MLP=model.lin_phi, model_a=model.a,
@@ -3113,7 +3106,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
                     pred = []
                     optimizer.zero_grad()
                     for n in range(n_particles):
-                        embedding_ = model.a[1, n, :].clone().detach() * torch.ones((1000, model_config.embedding_dim), device=device)
+                        embedding_ = model.a[n, :].clone().detach() * torch.ones((1000, model_config.embedding_dim), device=device)
                         in_features = get_in_features(rr, embedding_, config.graph_model.signal_model_name, config.simulation.max_radius)
                         pred.append(model.lin_phi(in_features.float()))
                     pred = torch.stack(pred)
@@ -3142,7 +3135,6 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
             coeff_L1 = train_config.coeff_anneal_L1
             logger.info(f'coeff_L1: {coeff_L1}')
 
-        plt.tight_layout()
         plt.tight_layout()
         plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
         plt.close()

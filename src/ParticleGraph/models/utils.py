@@ -843,6 +843,8 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
             rr = torch.tensor(np.logspace(7, 9, 1000)).to(device)
         elif config_model == 'PDE_E':
             rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
+        elif 'PDE_N2' in config_model:
+            rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
         elif 'PDE_N3' in config_model:
             rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
         elif 'PDE_N' in config_model:
@@ -872,6 +874,18 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
     func_list = torch.stack(func_list)
     func_list_ = to_numpy(func_list)
 
+    if vizualize:
+        if config.graph_model.particle_model_name == 'PDE_GS':
+            plt.xscale('log')
+            plt.yscale('log')
+        if config.graph_model.particle_model_name == 'PDE_G':
+            plt.xscale('log')
+            plt.yscale('log')
+            plt.xlim([1E-3, 0.2])
+        if config.graph_model.particle_model_name == 'PDE_E':
+            plt.xlim([0, 0.05])
+        plt.tight_layout()
+
     print('UMAP reduction ...')
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
@@ -885,19 +899,7 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
             proj_interaction = trans.transform(func_list_)
     print('done ...')
 
-    if vizualize:
-        if config.graph_model.particle_model_name == 'PDE_GS':
-            plt.xscale('log')
-            plt.yscale('log')
-        if config.graph_model.particle_model_name == 'PDE_G':
-            plt.xscale('log')
-            plt.yscale('log')
-            plt.xlim([1E-3, 0.2])
-        if config.graph_model.particle_model_name == 'PDE_E':
-            plt.xlim([0, 0.05])
-        # plt.xlabel(r'$x$', fontsize=64)
-        # plt.ylabel(r'$\Phi(x)$', fontsize=64)
-        plt.tight_layout()
+
 
     return func_list, proj_interaction
 
