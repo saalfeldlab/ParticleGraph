@@ -2825,6 +2825,9 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
 
     if simulation_config.connectivity_mask:
         model.mask = model.mask * (adjacency>0)*1.0
+        if simulation_config.connectivity_filling_factor>0:
+            supp = (torch.rand(adjacency.shape,device=device) < simulation_config.connectivity_filling_factor)*1.0
+            model.mask = torch.max(model.mask,supp)
 
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
