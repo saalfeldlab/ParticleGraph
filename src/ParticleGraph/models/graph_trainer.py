@@ -426,8 +426,11 @@ def data_train_particle(config, config_file, erase, best_model, device):
 
                 if train_config.fix_cluster_embedding:
                     lr_embedding = 1E-12
-                    optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-                    logger.info(f'Learning rates: {lr}, {lr_embedding}')
+                else:
+                    lr_embedding = train_config.learning_rate_embedding_start
+                optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+                logger.info(f'Learning rates: {lr}, {lr_embedding}')
+
             else:
                 if epoch > n_epochs - sparsity_freq:
                     lr_embedding = train_config.learning_rate_embedding_end
@@ -2184,8 +2187,10 @@ def data_train_particle_field(config, config_file, erase, best_model, device):
 
             if train_config.fix_cluster_embedding:
                 lr_embedding = 1E-12
-                optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-                logger.info(f'Learning rates: {lr}, {lr_embedding}')
+            else:
+                lr_embedding = train_config.learning_rate_embedding_start
+            optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+            logger.info(f'Learning rates: {lr}, {lr_embedding}')
 
         else:
             if epoch > n_epochs - sparsity_freq:
@@ -2684,8 +2689,10 @@ def data_train_synaptic(config, config_file, erase, best_model, device):
 
             if train_config.fix_cluster_embedding:
                 lr_embedding = 1E-12
-                optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-                logger.info(f'Learning rates: {lr}, {lr_embedding}')
+            else:
+                lr_embedding = train_config.learning_rate_embedding_start
+            optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+            logger.info(f'Learning rates: {lr}, {lr_embedding}')
         else:
             if epoch > n_epochs - sparsity_freq:
                 lr_embedding = train_config.learning_rate_embedding_end
@@ -2845,7 +2852,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
 
         excitation = torch.zeros((n_particles, 1), device=device)
 
-        for N in trange(Niter):
+        for N in trange(2): #(Niter):
 
             run = np.random.randint(n_runs)
             k = np.random.randint(n_frames - 5)
@@ -2949,7 +2956,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
 
             total_loss += loss.item()
 
-            visualize_embedding = True
+            visualize_embedding = False
             if visualize_embedding & (((epoch < 30 ) & (N%(Niter//50) == 0)) | (N==0)):
                 plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, n_particles, n_particle_types, type_list, cmap, has_siren, has_siren_time, model_exc, n_frames, device)
                 torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
@@ -3059,18 +3066,13 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
         model_a_ = model.a.clone().detach()
         for n in range(n_clusters):
             pos = np.argwhere(labels == n).squeeze().astype(int)
-            try:
-                if pos.size > 0:
-                    pos = np.array(pos)
-                    median_center = model_a_[pos, :]
-                    median_center = torch.median(median_center, dim=0).values
-                    plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='r', alpha=0.25)
-                    model_a_[pos, :] = median_center
-                    plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=10, c='k')
-            except:
-                logger.info(f'pb with line 3044 pos:{pos} n:{n}')
-                pass
-
+            if pos.size > 0:
+                pos = np.array(pos)
+                median_center = model_a_[pos, :]
+                median_center = torch.median(median_center, dim=0).values
+                plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=1, c='r', alpha=0.25)
+                model_a_[pos, :] = median_center
+                plt.scatter(to_numpy(model_a_[pos, 0]), to_numpy(model_a_[pos, 1]), s=10, c='k')
         plt.xlabel('ai0', fontsize=12)
         plt.ylabel('ai1', fontsize=12)
         plt.xticks(fontsize=10.0)
@@ -3081,8 +3083,8 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
 
         if (replace_with_cluster) & (epoch % sparsity_freq == sparsity_freq - 1) & (epoch < n_epochs - sparsity_freq):
             # Constrain embedding domain
-            with torch.no_grad():
-                model.a[1] = model_a_.clone().detach()
+
+            model.a.values = model_a_.clone().detach()
             print(f'regul_embedding: replaced')
             logger.info(f'regul_embedding: replaced')
 
@@ -3119,11 +3121,12 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
                     logger.info(f'    loss: {np.round(loss.item() / n_particles, 3)}')
                     loss.backward()
                     optimizer.step()
-
             if train_config.fix_cluster_embedding:
                 lr_embedding = 1E-12
-                optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-                logger.info(f'Learning rates: {lr}, {lr_embedding}')
+            else:
+                lr_embedding = train_config.learning_rate_embedding_start
+            optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+            logger.info(f'Learning rates: {lr}, {lr_embedding}')
         else:
             if epoch > n_epochs - sparsity_freq:
                 lr_embedding = train_config.learning_rate_embedding_end
@@ -3587,8 +3590,10 @@ def data_train_synaptic3(config, config_file, erase, best_model, device):
 
             if train_config.fix_cluster_embedding:
                 lr_embedding = 1E-12
-                optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-                logger.info(f'Learning rates: {lr}, {lr_embedding}')
+            else:
+                lr_embedding = train_config.learning_rate_embedding_start
+            optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
+            logger.info(f'Learning rates: {lr}, {lr_embedding}')
         else:
             if epoch > n_epochs - sparsity_freq:
                 lr_embedding = train_config.learning_rate_embedding_end
