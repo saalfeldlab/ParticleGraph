@@ -1181,6 +1181,11 @@ def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
 
     if epoch_list[0] == 'all':
 
+        plt.rcParams['text.usetex'] = False
+        plt.rc('font', family='sans-serif')
+        plt.rc('text', usetex=False)
+        matplotlib.rcParams['savefig.pad_inches'] = 0
+
         files = glob.glob(f"./log/try_{config_file}/models/best_model_with_1_graphs_*.pt")
 
         def sort_key(filename):
@@ -1199,8 +1204,8 @@ def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
                 flag = False
             file_id += 1
 
-        file_id_list0 = np.arange(0,file_id,file_id//200)
-        file_id_list1 = np.arange(file_id, len(files), (len(files)-file_id) // 200)
+        file_id_list0 = np.arange(0,file_id,file_id//100)
+        file_id_list1 = np.arange(file_id, len(files), (len(files)-file_id) // 100)
         file_id_list = np.concatenate((file_id_list0, file_id_list1))
 
         for file_id_ in trange(0,len(file_id_list)):
@@ -1215,14 +1220,16 @@ def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
                 plt.style.use('dark_background')
 
                 fig, ax = fig_init()
+                params = {'mathtext.default': 'regular'}
+                plt.rcParams.update(params)
                 embedding = get_embedding(model.a, 1)
                 for n in range(n_particle_types-1,-1,-1):
                     pos = torch.argwhere(type_list == n)
                     pos = to_numpy(pos)
                     if len(pos) > 0:
-                        plt.scatter(embedding[pos, 0], embedding[pos, 1], c=cmap.color(n), s=100, alpha=0.1)
-                plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
-                plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+                        plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=100, alpha=0.1)
+                plt.xlabel(r'$a_{i0}$', fontsize=78)
+                plt.ylabel(r'$a_{i1}$', fontsize=78)
                 match config.dataset:
                     case 'arbitrary_3':
                         plt.xlim([0.5, 1.5])
@@ -1247,8 +1254,8 @@ def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
                     plt.plot(to_numpy(rr),
                              to_numpy(func) * to_numpy(ynorm),
                              color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
-                plt.xlabel(r'$d_{ij}$', fontsize=78)
-                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+                plt.xlabel('$d_{ij}$', fontsize=78)
+                plt.ylabel('$f(a_i, d_{ij})$', fontsize=78)
                 plt.xlim([0, max_radius])
                 plt.ylim(config.plotting.ylim)
                 plt.tight_layout()
@@ -1879,6 +1886,12 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
 
     if epoch_list[0] == 'all':
 
+        plt.rcParams['text.usetex'] = False
+        plt.rc('font', family='sans-serif')
+        plt.rc('text', usetex=False)
+        matplotlib.rcParams['savefig.pad_inches'] = 0
+
+
         files = glob.glob(f"./log/try_{config_file}/models/best_model_with_1_graphs_*.pt")
 
         def sort_key(filename):
@@ -1921,8 +1934,8 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
                     pos = to_numpy(pos)
                     if len(pos) > 0:
                         plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=100, alpha=0.1)
-                plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
-                plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+                plt.xlabel(r'$a_{i0}$', fontsize=78)
+                plt.ylabel(r'$a_{i1}$', fontsize=78)
                 match config.dataset:
                     case 'gravity_16':
                         plt.xlim([0.4, 1.4])
@@ -1946,8 +1959,8 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
                     plt.plot(to_numpy(rr),
                              to_numpy(func) * to_numpy(ynorm),
                              color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
-                plt.xlabel(r'$d_{ij}$', fontsize=78)
-                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+                plt.xlabel('$d_{ij}$', fontsize=78)
+                plt.ylabel('$f(a_i, d_{ij})$', fontsize=78)
                 plt.xlim([0, max_radius])
                 plt.ylim(config.plotting.ylim)
                 plt.tight_layout()
@@ -2711,6 +2724,11 @@ def plot_boids(config_file, epoch_list, log_dir, logger, device):
 
         model, bc_pos, bc_dpos = choose_training_model(config, device)
 
+        plt.rcParams['text.usetex'] = False
+        plt.rc('font', family='sans-serif')
+        plt.rc('text', usetex=False)
+        matplotlib.rcParams['savefig.pad_inches'] = 0
+
         files = glob.glob(f"./log/try_{config_file}/models/best_model_with_1_graphs_*.pt")
 
         def sort_key(filename):
@@ -2752,8 +2770,8 @@ def plot_boids(config_file, epoch_list, log_dir, logger, device):
                     pos = to_numpy(pos)
                     if len(pos) > 0:
                         plt.scatter(embedding[pos, 0], embedding[pos, 1], c=cmap.color(n), s=100, alpha=0.1)
-                plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
-                plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+                plt.xlabel(r'$a_{i0}$', fontsize=78)
+                plt.ylabel(r'$a_{i1}$', fontsize=78)
                 match config.dataset:
                     case 'boids_16_256':
                         plt.xlim([-1.5, 2])
@@ -2780,8 +2798,8 @@ def plot_boids(config_file, epoch_list, log_dir, logger, device):
                                      to_numpy(func) * to_numpy(ynorm) * 1E4,
                                      color=cmap.color(type), linewidth=4, alpha=0.25)
                 plt.ylim([-1, 1])
-                plt.xlabel(r'$d_{ij}$', fontsize=78)
-                plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+                plt.xlabel('$d_{ij}$', fontsize=78)
+                plt.ylabel('$f(a_i, d_{ij})$', fontsize=78)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/function_{epoch}.tif", dpi=80)
                 plt.close()
@@ -4232,6 +4250,11 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
 
         model, bc_pos, bc_dpos = choose_training_model(config, device)
 
+        plt.rcParams['text.usetex'] = False
+        plt.rc('font', family='sans-serif')
+        plt.rc('text', usetex=False)
+        matplotlib.rcParams['savefig.pad_inches'] = 0
+
         files = glob.glob(f"./log/try_{config_file}/models/best_model_with_9_graphs_*.pt")
 
         def sort_key(filename):
@@ -4254,7 +4277,6 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
         file_id_list1 = np.arange(file_id, len(files), (len(files) - file_id) // 90)
         file_id_list = np.concatenate((file_id_list0, file_id_list1))
 
-
         for file_id_ in trange(0, len(file_id_list)):
             file_id = file_id_list[file_id_]
 
@@ -4271,8 +4293,8 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                 for n in range(n_particle_types-1,-1,-1):
                     pos = torch.argwhere(type_list == n).squeeze()
                     plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=100, color=cmap.color(n), alpha=0.5)
-                plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
-                plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
+                plt.xlabel(r'$a_{i0}$', fontsize=78)
+                plt.ylabel(r'$a_{i1}$', fontsize=78)
                 plt.xlim([0, 2])
                 plt.ylim([0, 2])
                 plt.tight_layout()
@@ -4306,8 +4328,8 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                 with torch.no_grad():
                     func = model.lin_edge(in_features.float()) * correction
                 plt.plot(to_numpy(rr), to_numpy(func), color='w', linewidth=8, label=r'learned')
-                plt.xlabel(r'$x$', fontsize=78)
-                plt.ylabel(r'Learned $f(x)$', fontsize=78)
+                plt.xlabel('x', fontsize=78)
+                plt.ylabel('learned f(x)', fontsize=78)
                 plt.ylim([-1.1,1.1])
                 plt.xlim([-5,5])
                 plt.tight_layout()
@@ -4325,8 +4347,8 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                         func = model.lin_phi(in_features.float())
                     func = func[:, 0]
                     plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm), color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
-                plt.xlabel(r'$x$', fontsize=78)
-                plt.ylabel(r'Learned $\phi(x)$', fontsize=78)
+                plt.xlabel('x', fontsize=78)
+                plt.ylabel(r'learned $\phi(x)$', fontsize=78)
                 plt.tight_layout()
                 plt.ylim([-10,10])
                 plt.savefig(f"./{log_dir}/results/all/phi_{epoch}.tif", dpi=80)
@@ -5847,7 +5869,7 @@ if __name__ == '__main__':
 
 
 
-    # config_list = ["arbitrary_3_cell_sequence_a","arbitrary_3_cell_sequence_b","arbitrary_3_cell_sequence_c"]
+    # config_list = [_cell_sequence_a","arbitrary_3_cell_sequence_b","arbitrary_3_cell_sequence_c"]
     # config_list = ["boids_9_sequence_a"]
 
     # config_list = ['signal_N2_a_r1','signal_N2_c_r1','signal_N2_d_r1','signal_N2_e_r1','signal_N2_f_r1',
@@ -5861,9 +5883,9 @@ if __name__ == '__main__':
 
     # config_list = ['gravity_16']
     # config_list = ['boids_16_256']
-    # config_list = ['signal_N2_r1_Lorentz_d_N2']
+    config_list = ['arbitrary_3']
     # config_list = ['signal_N2_r1_Lorentz_a_N2','signal_N3_r1_Lorentz_b']
-    config_list = ['signal_N3_r1_Lorentz_b']
+    # config_list = ['signal_N3_r1_Lorentz_b']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
