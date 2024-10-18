@@ -29,6 +29,11 @@ from ParticleGraph.utils import *
 
 if __name__ == '__main__':
 
+    try:
+        matplotlib.use("Qt5Agg")
+    except:
+        pass
+
     parser = argparse.ArgumentParser(description="ParticleGraph")
 
     parser.add_argument('-o', '--option', nargs='+', help='Option that takes multiple values')
@@ -38,12 +43,6 @@ if __name__ == '__main__':
     # Use the argument
     if args.option:
         print(f"Options: {args.option}")
-
-    try:
-        matplotlib.use("Qt5Agg")
-    except:
-        pass
-
     if args.option!=None:
         action = args.option[0]
         config_list = [args.option[1]]
@@ -52,9 +51,9 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'train'
+        action = 'generate'
         best_model = None
-        config_list = ["boids_division_tracking_A"]
+        config_list = ["signal_N2_r1_Lorentz_a"]
 
     for config_file in config_list:
 
@@ -64,6 +63,6 @@ if __name__ == '__main__':
         if 'generate' in action:
             data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 100)
         if 'train' in action:
-            data_train(config=config, config_file=config_file, erase=True, best_model=best_model, device=device)
+            data_train(config=config, config_file=config_file, erase=False, best_model=best_model, device=device)
         if 'test' in action:
             data_test(config=config, config_file=config_file, visualize=True, style='color', verbose=False, best_model='4_680000', run=0, step=5, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7

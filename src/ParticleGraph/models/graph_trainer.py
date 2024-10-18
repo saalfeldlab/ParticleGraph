@@ -737,6 +737,7 @@ def data_train_cell(config, config_file, erase, best_model, device):
             n_particles_max += len(type)
             x_list[1][k][:, 3:5] = 0
         config.simulation.n_particles_max = n_particles_max
+        Initial_node_id = id_list
 
 
     print('Create models ...')
@@ -770,9 +771,9 @@ def data_train_cell(config, config_file, erase, best_model, device):
     # update variable if particle_dropout, cell_division, etc ...
     x = x_list[1][n_frames - 1].clone().detach()
     n_particles = len(T1_list[1])
-    config.simulation.n_particles = n_particles
     print(f'N particles: {config.simulation.n_particles} to {len(T1_list[1])} ')
     logger.info(f'N particles: {config.simulation.n_particles} to {len(T1_list[1])} ')
+    config.simulation.n_particles = n_particles
 
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
@@ -863,17 +864,17 @@ def data_train_cell(config, config_file, erase, best_model, device):
 
             visualize_embedding = True
             if visualize_embedding & (((epoch < 10 ) & (N%(Niter//10) == 0)) | (N==0)):
-                # if do_tracking | has_state :
-                #     id_list = []
-                #     for k in range(n_frames + 1):
-                #         ids = x_list[1][k][:, -1]
-                #         id_list.append(ids)
-                #     plot_training_state(config=config, id_list=id_list, dataset_name=dataset_name, log_dir=log_dir,
-                #                        epoch=epoch, N=N, model=model, n_particle_types=n_particle_types,
-                #                        type_list=type_list, type_stack=type_stack, ynorm=ynorm, cmap=cmap, device=device)
-                # else:
-                #     plot_training_cell(config=config, dataset_name=dataset_name, log_dir=log_dir,
-                #               epoch=epoch, N=N, model=model, n_particle_types=n_particle_types, type_list=T1_list[1], ynorm=ynorm, cmap=cmap, device=device)
+                if do_tracking | has_state :
+                    id_list = []
+                    for k in range(n_frames + 1):
+                        ids = x_list[1][k][:, -1]
+                        id_list.append(ids)
+                    plot_training_state(config=config, id_list=id_list, dataset_name=dataset_name, log_dir=log_dir,
+                                       epoch=epoch, N=N, model=model, n_particle_types=n_particle_types,
+                                       type_list=type_list, type_stack=type_stack, ynorm=ynorm, cmap=cmap, device=device)
+                else:
+                    plot_training_cell(config=config, dataset_name=dataset_name, log_dir=log_dir,
+                              epoch=epoch, N=N, model=model, n_particle_types=n_particle_types, type_list=T1_list[1], ynorm=ynorm, cmap=cmap, device=device)
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
@@ -887,34 +888,30 @@ def data_train_cell(config, config_file, erase, best_model, device):
         list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
-        fig = plt.figure(figsize=(22, 4))
-
-        ax = fig.add_subplot(1, 5, 1)
-        id_list = []
-        for k in trange(0,n_frames + 1):
+        id_list_ = []
+        for k in range(0,n_frames + 1):
             ids = x_list[1][k][:, -1]
             if k == 0:
-                id_list = ids
+                id_list_ = ids
             else:
-                id_list = torch.cat((id_list, ids), 0)
-            if k % 10 == 0:
-                for n in range(n_particle_types):
-                    pos = torch.argwhere(type_list[k] == n)
-                    if len(pos)>0:
-                        plt.scatter(to_numpy(model.a[to_numpy(ids[pos]), 0]), to_numpy(model.a[to_numpy(ids[pos]), 1]), s=5, c=cmap.color(n), alpha=0.5)
+                id_list_ = torch.cat((id_list_, ids), 0)
 
-        print(f'N tracks: {len(torch.unique(id_list))}')
-        logger.info(f'N tracks: {len(torch.unique(id_list))}')
-
-
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
-        plt.close()
+        print(f'N tracks: {len(torch.unique(id_list_))}')
+        logger.info(f'N tracks: {len(torch.unique(id_list_))}')
 
         tracking_index_list = []
 
+        if epoch == 0:
+           distance_threshold = 1E-3
+        elif epoch == 1:
+           distance_threshold = 1E-3
+        else:
+           distance_threshold = 1E-4
+
+        
         for k in trange(n_frames):
             x = x_list[1][k].clone().detach()
+            x_list[1][k+1][:,-1] = Initial_node_id[k+1]
 
             edges = edge_p_p_list[1][f'arr_{k}']
             edges = torch.tensor(edges, dtype=torch.int64, device=device)
@@ -937,38 +934,45 @@ def data_train_cell(config, config_file, erase, best_model, device):
             next_cell_id = to_numpy(x_next[min_index,0])
 
             tracking_distance = torch.sqrt(min_distance_value)
+            
+            bVisu=True
 
-            fig = plt.figure(figsize=(8, 8))
-            plt.scatter(to_numpy(x[:, 1]),to_numpy(x[:, 2]),s=10, c='k')
-            pos = torch.argwhere(tracking_distance < 1E-4)
-            if len(pos)>0:                   # reduce dimension of latent space, the connected cell inherit the cell_id from the previous frame
-                plt.scatter(to_numpy(x_pos_pred[pos, 0]), to_numpy(x_pos_pred[pos, 1]), s=10, c='g', alpha=0.5)
+            if bVisu:
+                fig = plt.figure(figsize=(8, 8))
+                plt.scatter(to_numpy(x[:, 1]),to_numpy(x[:, 2]),s=10, c='k')
+            pos = torch.argwhere(tracking_distance < distance_threshold)
+            if len(pos)>0:       # reduce dimension of latent space, the connected cell inherit the cell_id from the previous frame
+                if bVisu:
+                    plt.scatter(to_numpy(x_pos_pred[pos, 0]), to_numpy(x_pos_pred[pos, 1]), s=10, c='g', alpha=0.5)
 
                 list_first = np.arange(len(x))[to_numpy(pos).astype(int)].squeeze()
                 list_next = to_numpy(min_index[to_numpy(pos).astype(int)]).squeeze()
-                list = np.concatenate((list_first, list_next), axis=1)
+                list = np.concatenate((list_first[:,None], list_next[:,None]), axis=1)
+
+                node_id_first = to_numpy(x_list[1][k][list_first, -1])
+                node_id_next = to_numpy(x_list[1][k + 1][list_next, -1])
 
                 with torch.no_grad():
-                    model.a[to_numpy(x_list[1][k + 1][list_next, -1])] = model.a[to_numpy(x_list[1][k][list_first, -1])].clone().detach()
+                    model.a[node_id_next] = model.a[node_id_first].clone().detach()
 
                 x_list[1][k + 1][list_next, -1] = x_list[1][k][list_first, -1].clone().detach()
                 if (model_config.prediction == '2nd_derivative'):
-                    new_velocity = (x_list[1][k + 1][list_next, 1:3].clone().detach() - x_list[1][k + 1][list_first, 1:3].clone().detach()) / delta_t
+                    new_velocity = (x_list[1][k + 1][list_next, 1:3].clone().detach() - x_list[1][k][list_first, 1:3].clone().detach()) / delta_t
                     x_list[1][k + 1][list_next, 3:5] = new_velocity.clone().detach()
-
-
-            pos = torch.argwhere(tracking_distance >= 1E-4)
-            if len(pos)>0:
-                plt.scatter(to_numpy(x_pos_pred[pos, 0]), to_numpy(x_pos_pred[pos, 1]), s=10, c='r', alpha=0.5)
-
+                    
             tracking_index_list.append(np.sum((first_cell_id==next_cell_id)*1.0) / len(x) * 100)
-            for n in range(len(x)):
-                plt.text(to_numpy(x[n, 1])+0.005, to_numpy(x[n, 2])-0.005, str(int(to_numpy(x_list[1][k][n,-1]))), fontsize=6)
-            plt.xlim([-0.2,1.2])
-            plt.ylim([-0.2,1.2])
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_recons/tracking_{epoch}_{k}.tif")
-            plt.close()
+
+            if bVisu:
+                pos = torch.argwhere(tracking_distance >= distance_threshold)
+                if len(pos)>0:
+                    plt.scatter(to_numpy(x_pos_pred[pos, 0]), to_numpy(x_pos_pred[pos, 1]), s=10, c='r', alpha=0.5)
+                for n in range(len(x)):
+                    plt.text(to_numpy(x[n, 1])+0.005, to_numpy(x[n, 2])-0.005, str(int(to_numpy(x_list[1][k][n,-1]))), fontsize=6)
+                plt.xlim([-0.2,1.2])
+                plt.ylim([-0.2,1.2])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_recons/tracking_{epoch}_{k}.tif")
+                plt.close()
 
             # fig = plt.figure(figsize=(8, 8))
             # plt.scatter(to_numpy(x[:, 1]),to_numpy(x[:, 2]),s=10,c='k')
@@ -977,34 +981,42 @@ def data_train_cell(config, config_file, erase, best_model, device):
             # plt.scatter(to_numpy(x[pos, 1]),to_numpy(x[pos, 2]),s=10,c='r',alpha=1)
             # plt.scatter(to_numpy(x_pos_pred[pos, 0]),to_numpy(x_pos_pred[pos, 1]),s=10,c='r',alpha=0.5)
 
-        fig = plt.figure(figsize=(8, 8))
+        fig = plt.figure(figsize=(22, 4))
+
+        ax = fig.add_subplot(1, 5, 1)
         id_list = []
-        for k in trange(0,n_frames + 1):
+        id_list_ = []
+        for k in range(0,n_frames + 1):
             ids = x_list[1][k][:, -1]
+            id_list.append(ids)
             if k == 0:
-                id_list = ids
+                id_list_ = ids
             else:
-                id_list = torch.cat((id_list, ids), 0)
+                id_list_ = torch.cat((id_list_, ids), 0)
             if k % 10 == 0:
                 for n in range(n_particle_types):
                     pos = torch.argwhere(type_list[k] == n)
                     if len(pos)>0:
-                        plt.scatter(to_numpy(model.a[to_numpy(ids[pos]), 0]), to_numpy(model.a[to_numpy(ids[pos]), 1]), s=5, c=cmap.color(n), alpha=0.5)
+                        plt.scatter(to_numpy(model.a[to_numpy(ids[pos]), 0]), to_numpy(model.a[to_numpy(ids[pos]), 1]), s=5, color=cmap.color(n), alpha=0.5)
 
-        print(f'N tracks: {len(torch.unique(id_list))}')
-        logger.info(f'N tracks: {len(torch.unique(id_list))}')
+        print(f'N tracks: {len(torch.unique(id_list_))}')
+        logger.info(f'N tracks: {len(torch.unique(id_list_))}')
 
-        # ax = fig.add_subplot(1, 5, 3)
-        # func_list, true_type_list, short_model_a_list, proj_interaction = analyze_edge_function_state(rr=[],
-        #                                                                                               config=config,
-        #                                                                                               model=model,
-        #                                                                                               id_list=id_list,
-        #                                                                                               type_list=type_list,
-        #                                                                                               ynorm=ynorm,
-        #                                                                                               cmap=cmap,
-        #                                                                                               visualize=False,
-        #                                                                                               device=device)
-        #
+        ax = fig.add_subplot(1, 5, 2)
+        func_list, true_type_list, short_model_a_list, proj_interaction = analyze_edge_function_state(rr=[],
+                                                                                                      config=config,
+                                                                                                      model=model,
+                                                                                                      id_list=id_list,
+                                                                                                      type_list=type_list,
+                                                                                                      ynorm=ynorm,
+                                                                                                      cmap=cmap,
+                                                                                                      visualize=True,
+                                                                                                      device=device)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
+        plt.close()
+
+
         # embedding = proj_interaction
         # labels, n_clusters, new_labels = sparsify_cluster_state(config.training.cluster_method,
         #                                                         proj_interaction, embedding,

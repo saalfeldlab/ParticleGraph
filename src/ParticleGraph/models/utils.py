@@ -551,7 +551,7 @@ def plot_training_state(config, id_list, dataset_name, log_dir, epoch, N, model,
     for n in range(n_particle_types):
         pos = torch.argwhere(type_stack == n).squeeze()
         if len(pos) > 0:
-            plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=0.1, color=cmap.color(n), alpha=0.1)
+            plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=10, color=cmap.color(n), alpha=0.5, edgecolor='none')
     plt.xticks([])
     plt.yticks([])
     plt.tight_layout()
@@ -561,13 +561,16 @@ def plot_training_state(config, id_list, dataset_name, log_dir, epoch, N, model,
     max_radius = 0.1
     fig = plt.figure(figsize=(12, 12))
     ax = fig.add_subplot(1,1,1)
-    rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+
+    if model_config.particle_model_name == 'PDE_Cell_B':
+        rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
+    else:
+        rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
 
     if len(type_list) > 1E5:
         nk = len(type_list) // 1000
     else:
         nk = 40
-
     if len(type_list[0])>1000:
         nn =  10
     else:
@@ -599,8 +602,7 @@ def plot_training_state(config, id_list, dataset_name, log_dir, epoch, N, model,
                 func = func[:, 0]
                 type = to_numpy(type_list[k][n])
                 plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),
-                             color=cmap.color(int(type)), linewidth=2,alpha=0.1)
-
+                             color=cmap.color(int(type)), linewidth=2,alpha=0.5)
 
     ax.xaxis.set_major_locator(plt.MaxNLocator(3))
     ax.yaxis.set_major_locator(plt.MaxNLocator(5))
@@ -796,11 +798,6 @@ def analyze_edge_function_state(rr=[], config=None, model=None, id_list=None, ty
                 true_type_list.append(type_list[k][n])
                 if visualize:
                     plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm),color=cmap.color(int(type_list[k][n])), linewidth=2, alpha=0.25)
-
-    if visualize:
-        plt.xlabel('Distance [a.u]', fontsize=78)
-        plt.ylabel('MLP [a.u]', fontsize=78)
-        plt.tight_layout()
 
     func_list = torch.stack(func_list)
     func_list_ = to_numpy(func_list)

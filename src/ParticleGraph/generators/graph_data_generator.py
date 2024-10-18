@@ -651,11 +651,10 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     y_list.append(to_numpy(y))
 
             # Particle update
-            if it>=0:
-                H1[:, 1] = y.squeeze()
-                H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
-                if noise_level > 0:
-                    H1[:, 0] = H1[:, 0] + torch.randn(n_particles, device=device) * noise_level
+            H1[:, 1] = y.squeeze()
+            H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
+            if noise_level > 0:
+                H1[:, 0] = H1[:, 0] + torch.randn(n_particles, device=device) * noise_level
 
             A1 = A1 + 1
 
