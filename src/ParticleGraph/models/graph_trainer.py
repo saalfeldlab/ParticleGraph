@@ -735,6 +735,7 @@ def data_train_cell(config, config_file, erase, best_model, device):
             ids = x_list[1][k][:, -1]
             id_list.append(ids)
             n_particles_max += len(type)
+            x_list[1][k][:, 3:5] = 0
         config.simulation.n_particles_max = n_particles_max
 
 
@@ -932,29 +933,39 @@ def data_train_cell(config, config_file, erase, best_model, device):
             min_distance_value = result.values
             min_index = result.indices
 
-            true_index = to_numpy(x[:,0])
-            reconstructed_index = to_numpy(x_next[min_index,0])
-
-            # plt.scatter(true_index, reconstructed_index, s=5, color='k', alpha=0.05)
+            first_cell_id = to_numpy(x[:,0])
+            next_cell_id = to_numpy(x_next[min_index,0])
 
             tracking_distance = torch.sqrt(min_distance_value)
 
             fig = plt.figure(figsize=(8, 8))
-            plt.scatter(to_numpy(x[:, 1]),to_numpy(x[:, 2]),s=10, c=to_numpy(min_distance_value*1E6), cmap='viridis', vmin = 0, vmax=1)
+            plt.scatter(to_numpy(x[:, 1]),to_numpy(x[:, 2]),s=10, c='k')
             pos = torch.argwhere(tracking_distance < 1E-4)
-            if len(pos)>0:
-                x_list[1][k + 1][min_index[to_numpy(pos).astype(int)], -1] = x_list[1][k][to_numpy(pos).astype(int), -1].clone().detach()
+            if len(pos)>0:                   # reduce dimension of latent space, the connected cell inherit the cell_id from the previous frame
                 plt.scatter(to_numpy(x_pos_pred[pos, 0]), to_numpy(x_pos_pred[pos, 1]), s=10, c='g', alpha=0.5)
-                # reduce dimension of latent space, the connected cell inherit the cell_id from the previous frame
+
+                list_first = np.arange(len(x))[to_numpy(pos).astype(int)].squeeze()
+                list_next = to_numpy(min_index[to_numpy(pos).astype(int)]).squeeze()
+                list = np.concatenate((list_first, list_next), axis=1)
+
+                with torch.no_grad():
+                    model.a[to_numpy(x_list[1][k + 1][list_next, -1])] = model.a[to_numpy(x_list[1][k][list_first, -1])].clone().detach()
+
+                x_list[1][k + 1][list_next, -1] = x_list[1][k][list_first, -1].clone().detach()
+                if (model_config.prediction == '2nd_derivative'):
+                    new_velocity = (x_list[1][k + 1][list_next, 1:3].clone().detach() - x_list[1][k + 1][list_first, 1:3].clone().detach()) / delta_t
+                    x_list[1][k + 1][list_next, 3:5] = new_velocity.clone().detach()
+
+
             pos = torch.argwhere(tracking_distance >= 1E-4)
             if len(pos)>0:
                 plt.scatter(to_numpy(x_pos_pred[pos, 0]), to_numpy(x_pos_pred[pos, 1]), s=10, c='r', alpha=0.5)
 
-            tracking_index_list.append(np.sum((true_index==reconstructed_index)*1.0) / len(x) * 100)
+            tracking_index_list.append(np.sum((first_cell_id==next_cell_id)*1.0) / len(x) * 100)
             for n in range(len(x)):
                 plt.text(to_numpy(x[n, 1])+0.005, to_numpy(x[n, 2])-0.005, str(int(to_numpy(x_list[1][k][n,-1]))), fontsize=6)
-            plt.xlim([0,1])
-            plt.ylim([0,1])
+            plt.xlim([-0.2,1.2])
+            plt.ylim([-0.2,1.2])
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/tmp_recons/tracking_{epoch}_{k}.tif")
             plt.close()
@@ -962,7 +973,7 @@ def data_train_cell(config, config_file, erase, best_model, device):
             # fig = plt.figure(figsize=(8, 8))
             # plt.scatter(to_numpy(x[:, 1]),to_numpy(x[:, 2]),s=10,c='k')
             # plt.scatter(to_numpy(x_pos_next[:, 0]),to_numpy(x_pos_next[:, 1]),s=10,c='k',alpha=0.5)
-            # pos = np.argwhere(true_index!=reconstructed_index)
+            # pos = np.argwhere(first_cell_id!=next_cell_id)
             # plt.scatter(to_numpy(x[pos, 1]),to_numpy(x[pos, 2]),s=10,c='r',alpha=1)
             # plt.scatter(to_numpy(x_pos_pred[pos, 0]),to_numpy(x_pos_pred[pos, 1]),s=10,c='r',alpha=0.5)
 
@@ -4054,10 +4065,10 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
     n_sub_population = n_particles // n_particle_types
 
-    first_index_particles = []
+    first_cell_id_particles = []
     for n in range(n_particle_types):
         index = np.arange(n_particles * n // n_particle_types, n_particles * (n + 1) // n_particle_types)
-        first_index_particles.append(index)
+        first_cell_id_particles.append(index)
 
     if only_mesh:
         vnorm = torch.tensor(1.0, device=device)
@@ -4135,7 +4146,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             torch.tensor(np.ones((int(n_particles), model.embedding_dim)),device=device,requires_grad=False, dtype=torch.float32))
         for n in range(n_particles):
             t = to_numpy(x[n,5]).astype(int)
-            index = first_index_particles[t][np.random.randint(n_sub_population)]
+            index = first_cell_id_particles[t][np.random.randint(n_sub_population)]
             with torch.no_grad():
                 model_a_[n] = first_embedding[index].clone().detach()
         model.a = nn.Parameter(

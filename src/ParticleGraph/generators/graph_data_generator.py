@@ -1621,28 +1621,28 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                     plt.close()
 
 
-                fig = plt.figure(figsize=(12, 12))
-                ax = fig.add_subplot(2, 2, 1)
-                plt.plot(current_loss)
-                plt.xlabel('N')
-                plt.ylabel('Current_loss')
-                ax = fig.add_subplot(2, 2, 2)
-                plt.plot(x_len_list, edges_len_list)
-                plt.xlabel('Number of particles')
-                plt.ylabel('Number of edges')
-                ax = fig.add_subplot(2, 2, 3)
-                plt.plot(x_len_list)
-                plt.xlabel('Number of particles')
-                plt.xlabel('Frame')
-                ax = fig.add_subplot(2, 2, 4)
-                for n in range(n_particle_types):
-                    pos = torch.argwhere((T1.squeeze() == n) & (H1[:, 0].squeeze() == 1))
-                    # if pos.shape[0] > 1:
-                        # sns.kdeplot(to_numpy(AR1[pos].squeeze()), fill=True, color=cmap.color(n), alpha=0.5)
-                        # plt.hist(to_numpy(AR1[pos].squeeze()), bins=100, alpha=0.5)
-                plt.tight_layout()
-                plt.savefig(f"graphs_data/graphs_{dataset_name}/gen_{run}.jpg", dpi=80)
-                plt.close()
+                # fig = plt.figure(figsize=(12, 12))
+                # ax = fig.add_subplot(2, 2, 1)
+                # plt.plot(current_loss)
+                # plt.xlabel('N')
+                # plt.ylabel('Current_loss')
+                # ax = fig.add_subplot(2, 2, 2)
+                # plt.plot(x_len_list, edges_len_list)
+                # plt.xlabel('Number of particles')
+                # plt.ylabel('Number of edges')
+                # ax = fig.add_subplot(2, 2, 3)
+                # plt.plot(x_len_list)
+                # plt.xlabel('Number of particles')
+                # plt.xlabel('Frame')
+                # ax = fig.add_subplot(2, 2, 4)
+                # for n in range(n_particle_types):
+                #     pos = torch.argwhere((T1.squeeze() == n) & (H1[:, 0].squeeze() == 1))
+                #     # if pos.shape[0] > 1:
+                #         # sns.kdeplot(to_numpy(AR1[pos].squeeze()), fill=True, color=cmap.color(n), alpha=0.5)
+                #         # plt.hist(to_numpy(AR1[pos].squeeze()), bins=100, alpha=0.5)
+                # plt.tight_layout()
+                # plt.savefig(f"graphs_data/graphs_{dataset_name}/gen_{run}.jpg", dpi=80)
+                # plt.close()
 
 
                 if 'voronoi' in style:

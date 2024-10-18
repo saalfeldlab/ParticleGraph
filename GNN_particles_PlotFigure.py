@@ -1512,18 +1512,18 @@ def plot_cell_tracking(config_file, epoch_list, log_dir, logger, device):
             min_distance_value = result.values
             min_index = result.indices
 
-            true_index = to_numpy(x[:,0])
-            reconstructed_index = to_numpy(x_next[min_index,0])
+            first_cell_id = to_numpy(x[:,0])
+            next_cell_id = to_numpy(x_next[min_index,0])
 
             for n in range(n_particle_types):
-                plt.scatter(true_index[index_particles[n]], reconstructed_index[index_particles[n]], s=10, color=cmap.color(n), alpha=0.05)
+                plt.scatter(first_cell_id[index_particles[n]], next_cell_id[index_particles[n]], s=10, color=cmap.color(n), alpha=0.05)
 
-            tracking_index += np.sum((true_index==reconstructed_index)*1.0) / n_particles * 100
-            tracking_index_list.append(np.sum((true_index==reconstructed_index)*1.0) / n_particles * 100)
+            tracking_index += np.sum((first_cell_id==next_cell_id)*1.0) / n_particles * 100
+            tracking_index_list.append(np.sum((first_cell_id==next_cell_id)*1.0) / n_particles * 100)
             x_list[1][k + 1][min_index, 0:1] = x_list[1][k][:, 0:1].clone().detach()
 
             fig = plt.figure(figsize=(8, 8))
-            pos = np.argwhere(true_index==reconstructed_index)
+            pos = np.argwhere(first_cell_id==next_cell_id)
             plt.scatter(to_numpy(x[pos, 1]),to_numpy(x[pos, 2]),s=10,c='k')
             plt.scatter(to_numpy(x_pos_next[pos, 0]),to_numpy(x_pos_next[pos, 1]),s=10,c='k',alpha=0.5)
             plt.scatter(to_numpy(x_pos_pred[pos, 0]),to_numpy(x_pos_pred[pos, 1]),s=10,c='g',alpha=0.5)
@@ -1531,7 +1531,7 @@ def plot_cell_tracking(config_file, epoch_list, log_dir, logger, device):
             good_tracking_distance = torch.sqrt(min_distance_value[pos.astype(int)])
 
             fig = plt.figure(figsize=(8, 8))
-            pos = np.argwhere(true_index!=reconstructed_index)
+            pos = np.argwhere(first_cell_id!=next_cell_id)
             plt.scatter(to_numpy(x[pos, 1]),to_numpy(x[pos, 2]),s=10,c='k')
             plt.scatter(to_numpy(x_pos_next[pos, 0]),to_numpy(x_pos_next[pos, 1]),s=10,c='k',alpha=0.5)
             plt.scatter(to_numpy(x_pos_pred[pos, 0]),to_numpy(x_pos_pred[pos, 1]),s=10,c='r',alpha=1)

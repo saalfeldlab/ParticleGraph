@@ -52,9 +52,9 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'generate_train'
-        best_model = ''
-        config_list = ["boids_division_tracking_a"]
+        action = 'train'
+        best_model = None
+        config_list = ["boids_division_tracking_A"]
 
     for config_file in config_list:
 
