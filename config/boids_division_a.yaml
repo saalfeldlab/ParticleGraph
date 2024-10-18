@@ -1,5 +1,5 @@
 description: 'Boids 16 different types, division'
-dataset: 'boids_division_tracking_A'
+dataset: 'boids_division_a'
 
 simulation:
   params: [[42.031494,  19.948257,  89.53507  ],
@@ -27,19 +27,19 @@ simulation:
   min_radius: 0.001
   max_radius: 0.04
   max_edges: 500000
-  n_particles: 96
+  n_particles: 512
   has_cell_division: True
   has_cell_death: True
-  n_particles_max: 1000
+  n_particles_max: 10000
   n_particle_types: 16
   n_interactions: 16
-  n_frames: 500
+  n_frames: 1500
   sigma: 0.005
   delta_t: 1
-  dpos_init: 5.0E-4
+  dpos_init: 1.0E-4
   boundary: 'periodic'
   start_frame: 0
-  kill_cell_leaving: True
+  kill_cell_leaving: False
 
 graph_model:
   particle_model_name: 'PDE_Cell_B'
@@ -60,7 +60,7 @@ plotting:
   ylim: [-1.0E-4,1.0E-4]
 
 training:
-  seed: 14
+  seed: 12
   n_epochs: 10
   batch_size: 1
   small_init_batch_size: False
@@ -70,8 +70,9 @@ training:
   sparsity: 'none'
   cluster_method: 'distance_plot'
   data_augmentation: True
-  data_augmentation_loop: 200
+  data_augmentation_loop: 500
   fix_cluster_embedding: True
   device: 'auto'
-  do_tracking: True
+  do_tracking: False
+
 

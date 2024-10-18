@@ -120,21 +120,14 @@ def choose_boundary_values(bc_name):
     def periodic(x):
         return torch.remainder(x, 1.0)  # in [0, 1)
 
-    def periodic_special(x):
-        return torch.remainder(x, 1.0) + (x > 10) * 10  # to discard dead cells set at x=10
-
     def shifted_periodic(x):
         return torch.remainder(x - 0.5, 1.0) - 0.5  # in [-0.5, 0.5)
 
-    def shifted_periodic_special(x):
-        return torch.remainder(x - 0.5, 1.0) - 0.5 + (x > 10) * 10  # to discard dead cells set at x=10
 
     match bc_name:
         case 'no':
             return identity, identity
         case 'periodic':
-            return periodic, shifted_periodic
-        case 'periodic_special':
             return periodic, shifted_periodic
         case _:
             raise ValueError(f'Unknown boundary condition {bc_name}')
@@ -278,7 +271,8 @@ def create_log_dir(config=[], config_file=[], erase=True):
 
         files = glob.glob(f"{log_dir}/results/*")
         for f in files:
-            os.remove(f)
+            if not('all' in f):
+                os.remove(f)
         files = glob.glob(f"{log_dir}/tmp_training/particle/*")
         for f in files:
             os.remove(f)

@@ -1572,13 +1572,12 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                         pos = torch.argwhere((T1.squeeze() == n) & (H1[:, 0].squeeze() == 1))
                         pos = to_numpy(pos[:, 0].squeeze()).astype(int)
                         index_particles.append(pos)
-                        size = set_size(x, index_particles[n], 10) / 10
                         if 'inv' in style:
                             plt.scatter(to_numpy(X1[index_particles[n], 0]), 1-to_numpy(X1[index_particles[n], 1]),
                                         s=400, color=cmap.color(n))
                         else:
                             plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                                        s=400, color=cmap.color(n))
+                                        s=40, color=cmap.color(n))
                     dead_cell = np.argwhere(to_numpy(H1[:, 0]) == 0)
                     if len(dead_cell) > 0:
                         if 'inv' in style:
@@ -1757,7 +1756,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}', *edge_p_p_list)
             if has_inert_model:
                 np.savez(f'graphs_data/graphs_{dataset_name}/vertices_pos_list_{run}', *vertices_pos_list)
-
             torch.save(cycle_length, f'graphs_data/graphs_{dataset_name}/cycle_length.pt')
             torch.save(CL1, f'graphs_data/graphs_{dataset_name}/cycle_length_distrib.pt')
             torch.save(cell_death_rate, f'graphs_data/graphs_{dataset_name}/cell_death_rate.pt')

@@ -1235,8 +1235,8 @@ def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
                         plt.xlim([0.5, 1.5])
                         plt.ylim([0.5, 1.5])
                     case 'arbitrary_16':
-                        plt.xlim([-0.5, 2])
-                        plt.ylim([-0.5, 2])
+                        plt.xlim([-2.5, 2.5])
+                        plt.ylim([-2.5, 2.5])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all/embedding_{epoch}.tif", dpi=80)
                 plt.close()
@@ -1462,9 +1462,6 @@ def plot_cell_tracking(config_file, epoch_list, log_dir, logger, device):
     x_list, y_list, vnorm, ynorm = load_training_data(dataset_name, n_runs, log_dir, device)
     logger.info("vnorm:{:.2e},  ynorm:{:.2e}".format(to_numpy(vnorm), to_numpy(ynorm)))
 
-    type_stack = torch.stack(x_list[1])[:,:,5]
-    type_stack = torch.reshape(type_stack, ((n_frames + 1)* n_particles,1))
-
     n_particles_max = 0
     id_list = []
     type_list=[]
@@ -1495,7 +1492,6 @@ def plot_cell_tracking(config_file, epoch_list, log_dir, logger, device):
         tracking_index = 0
         tracking_index_list = []
 
-
         for k in trange(n_frames):
             x = x_list[1][k].clone().detach()
             distance = torch.sum(bc_dpos(x[:, None, 1:3] - x[None, :, 1:3]) ** 2, dim=2)
@@ -1506,22 +1502,41 @@ def plot_cell_tracking(config_file, epoch_list, log_dir, logger, device):
             pred = model(dataset, training=True, vnorm=vnorm, phi=torch.zeros(1, device=device))
 
             x_next = x_list[1][k + 1]
-            x_next = x_next[:, 1:3].clone().detach()
-            x_pred = (x[:, 1:3] + delta_t * pred)
-
-            distance = torch.sum(bc_dpos(x_pred[:, None, :] - x_next[None, :, :]) ** 2, dim=2)
+            x_pos_next = x_next[:, 1:3].clone().detach()
+            if config.graph_model.prediction == '2nd_derivative':
+                x_pos_pred = (x[:, 1:3] + delta_t * (x[:, 3:5] + delta_t * pred * ynorm))
+            else:
+                x_pos_pred = (x[:, 1:3] + delta_t * pred * ynorm)
+            distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
             result = distance.min(dim=1)
-            min_value = result.values
+            min_distance_value = result.values
             min_index = result.indices
 
-            true_index = np.arange(len(min_index))
-            reconstructed_index = to_numpy(min_index)
-            for n in range(n_particle_types):
-                plt.scatter(true_index[index_particles[n]], reconstructed_index[index_particles[n]], s=1, color=cmap.color(n), alpha=0.05)
+            true_index = to_numpy(x[:,0])
+            reconstructed_index = to_numpy(x_next[min_index,0])
 
-            tracking_index += np.sum((to_numpy(min_index) - np.arange(len(min_index)) == 0)) / n_frames / n_particles * 100
-            tracking_index_list.append(np.sum((to_numpy(min_index) - np.arange(len(min_index)) == 0)))
+            for n in range(n_particle_types):
+                plt.scatter(true_index[index_particles[n]], reconstructed_index[index_particles[n]], s=10, color=cmap.color(n), alpha=0.05)
+
+            tracking_index += np.sum((true_index==reconstructed_index)*1.0) / n_particles * 100
+            tracking_index_list.append(np.sum((true_index==reconstructed_index)*1.0) / n_particles * 100)
             x_list[1][k + 1][min_index, 0:1] = x_list[1][k][:, 0:1].clone().detach()
+
+            fig = plt.figure(figsize=(8, 8))
+            pos = np.argwhere(true_index==reconstructed_index)
+            plt.scatter(to_numpy(x[pos, 1]),to_numpy(x[pos, 2]),s=10,c='k')
+            plt.scatter(to_numpy(x_pos_next[pos, 0]),to_numpy(x_pos_next[pos, 1]),s=10,c='k',alpha=0.5)
+            plt.scatter(to_numpy(x_pos_pred[pos, 0]),to_numpy(x_pos_pred[pos, 1]),s=10,c='g',alpha=0.5)
+
+            good_tracking_distance = torch.sqrt(min_distance_value[pos.astype(int)])
+
+            fig = plt.figure(figsize=(8, 8))
+            pos = np.argwhere(true_index!=reconstructed_index)
+            plt.scatter(to_numpy(x[pos, 1]),to_numpy(x[pos, 2]),s=10,c='k')
+            plt.scatter(to_numpy(x_pos_next[pos, 0]),to_numpy(x_pos_next[pos, 1]),s=10,c='k',alpha=0.5)
+            plt.scatter(to_numpy(x_pos_pred[pos, 0]),to_numpy(x_pos_pred[pos, 1]),s=10,c='r',alpha=1)
+
+            bad_tracking_distance = torch.sqrt(min_distance_value[pos.astype(int)])
 
         x_ = torch.stack(x_list[1])
         x_ = torch.reshape(x_, (x_.shape[0] * x_.shape[1], x_.shape[2]))
@@ -1910,10 +1925,10 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
                 flag = False
             file_id += 1
 
-        # file_id_list0 = np.arange(0,file_id,file_id//200)
-        # file_id_list1 = np.arange(file_id, len(files), (len(files)-file_id) // 200)
-        # file_id_list = np.concatenate((file_id_list0, file_id_list1))
-        file_id_list = np.arange(0, file_id, file_id // 200)
+        file_id_list0 = np.arange(0,file_id,file_id//100)
+        file_id_list1 = np.arange(file_id, len(files), (len(files)-file_id) // 100)
+        file_id_list = np.concatenate((file_id_list0, file_id_list1))
+
 
         for file_id_ in trange(0,len(file_id_list)):
             file_id = file_id_list[file_id_]
@@ -1928,7 +1943,6 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
 
                 fig, ax = fig_init()
                 embedding = get_embedding(model.a, 1)
-                # embedding = (embedding-np.min(embedding))/(np.max(embedding)-np.min(embedding))
                 for n in range(n_particle_types-1,-1,-1):
                     pos = torch.argwhere(type_list == n)
                     pos = to_numpy(pos)
@@ -1938,8 +1952,17 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
                 plt.ylabel(r'$a_{i1}$', fontsize=78)
                 match config.dataset:
                     case 'gravity_16':
-                        plt.xlim([0.4, 1.4])
-                        plt.ylim([0.4, 1.4])
+                        fig, ax = fig_init()
+                        embedding = get_embedding(model.a, 1)
+                        for n in range(n_particle_types - 1, -1, -1):
+                            pos = torch.argwhere(type_list == n)
+                            pos = to_numpy(pos)
+                            if len(pos) > 0:
+                                plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=100, alpha=0.1)
+                        plt.xlabel(r'$a_{i0}$', fontsize=78)
+                        plt.ylabel(r'$a_{i1}$', fontsize=78)
+                        plt.ylim([0, 3])
+                        plt.xlim([-1, 2])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all/embedding_{epoch}.tif", dpi=80)
                 plt.close()
@@ -1968,6 +1991,7 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
                     case 'gravity_16':
                         plt.xlim([0, 0.02])
                         plt.ylim([0, 0.5E6])
+                        plt.yticks([])
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all/function_{epoch}.tif", dpi=80)
                 plt.close()
@@ -2747,8 +2771,8 @@ def plot_boids(config_file, epoch_list, log_dir, logger, device):
                 flag = False
             file_id += 1
 
-        file_id_list0 = np.arange(0, file_id, file_id // 200)
-        file_id_list1 = np.arange(file_id, len(files), (len(files) - file_id) // 200)
+        file_id_list0 = np.arange(0, file_id, file_id // 150)
+        file_id_list1 = np.arange(file_id, len(files), (len(files) - file_id) // 50)
         file_id_list = np.concatenate((file_id_list0, file_id_list1))
 
         for file_id_ in trange(0, len(file_id_list)):
@@ -2775,9 +2799,9 @@ def plot_boids(config_file, epoch_list, log_dir, logger, device):
                 match config.dataset:
                     case 'boids_16_256':
                         plt.xlim([-1.5, 2])
-                        plt.ylim([-1.5, 2])
+                        plt.ylim([-1.5, 3])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/embedding_{epoch}.tif", dpi=80)
+                plt.savefig(f"./{log_dir}/results/all/embedding_{epoch}.tif", dpi=80)
                 plt.close()
 
                 fig, ax = fig_init()
@@ -2801,7 +2825,7 @@ def plot_boids(config_file, epoch_list, log_dir, logger, device):
                 plt.xlabel('$d_{ij}$', fontsize=78)
                 plt.ylabel('$f(a_i, d_{ij})$', fontsize=78)
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/function_{epoch}.tif", dpi=80)
+                plt.savefig(f"./{log_dir}/results/all/function_{epoch}.tif", dpi=80)
                 plt.close()
 
     else:
@@ -5883,13 +5907,13 @@ if __name__ == '__main__':
 
     # config_list = ['gravity_16']
     # config_list = ['boids_16_256']
-    config_list = ['arbitrary_3']
+    config_list = ['boids_division_tracking_A']
     # config_list = ['signal_N2_r1_Lorentz_a_N2','signal_N3_r1_Lorentz_b']
     # config_list = ['signal_N3_r1_Lorentz_b']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['all'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['0'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
