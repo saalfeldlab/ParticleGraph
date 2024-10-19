@@ -53,7 +53,7 @@ if __name__ == '__main__':
     else:
         action = 'train'
         best_model = None
-        config_list = ["signal_N2_r1_Lorentz_j"]
+        config_list = ["signal_N2_r1_Lorentz_i"]
 
     for config_file in config_list:
 

@@ -1,13 +1,12 @@
-description: 'synaptic network random matrix no recursive loop    1000 neurons 4 types lorentz std 0.03   10% filling factor coeff_L1: 1.0E-5'
-dataset: 'signal_N2_Lorentz_i'
+description: 'synaptic network random matrix no recursive loop    1000 neurons 4 types phi neuron dependent lorentz std 0.03'
+dataset: 'signal_N2_Lorentz_k'
 
 simulation:
     connectivity_file: 'random'
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
     connectivity_distribution: 'Lorentz'
-    connectivity_filling_factor: 0.10
-    params: [[10.0,1.0,1.0],[10.0,2.0,1.0],[10.0,1.0,2.0],[10.0,2.0,2.0]]
+    params: [[10.0,1.0,1.0,1.0],[10.0,2.0,1.0,2.0],[10.0,1.0,2.0,4.0],[10.0,2.0,2.0,8.0]]
     phi: 'tanh'
     tau: 1.0
     min_radius: 1.0
@@ -22,11 +21,11 @@ simulation:
     start_frame: -1000
 
 graph_model:
-    signal_model_name: 'PDE_N2'
+    signal_model_name: 'PDE_N4'
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
-    input_size: 1
+    input_size: 3
     output_size: 1
     hidden_dim: 64
     n_mp_layers: 3
@@ -55,8 +54,7 @@ training:
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'
-    sparsity: 'replace_embedding_function'
+    sparsity: 'replace_embedding'
     sparsity_freq: 4
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4
-    coeff_L1: 1.0E-5

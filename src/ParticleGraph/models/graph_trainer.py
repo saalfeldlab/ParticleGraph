@@ -2835,6 +2835,9 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     Niter = int(n_frames * data_augmentation_loop // batch_size * n_runs / 10)
+
+    Niter = 200
+
     print(f'plot every {Niter // 100} iterations')
 
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
@@ -2886,16 +2889,17 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
 
                 in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a), dim=1)
                 func_phi = model.lin_phi(in_features.float())
+                x = torch.tensor(x_list[run][k], device=device)
                 if model_config.signal_model_name == 'PDE_N4':
                     in_features = torch.zeros((n_particles, dimension+1), device=device)
                     func_edge = model.lin_edge(in_features.float())
+                    in_features = torch.cat((x[:, 6:7], model.a), dim=1)
+                    in_features_next = torch.cat((x[:, 6:7] + 0.1, model.a), dim=1)
+                    diff = torch.relu(model.lin_edge(in_features) - model.lin_edge(in_features_next)).norm(2)
                 else:
                     in_features = torch.zeros((n_particles, 1), device=device)
                     func_edge = model.lin_edge(in_features.float())
-                x = torch.tensor(x_list[run][k], device=device)
-                in_features = torch.cat((x[:,6:7], model.a), dim=1)
-                in_features_next = torch.cat((x[:, 6:7]+0.1, model.a), dim=1)
-                diff = torch.relu(model.lin_edge(in_features) - model.lin_edge(in_features_next)).norm(2)
+                    diff = torch.relu(model.lin_edge(x[:, 6:7]) - model.lin_edge(x[:, 6:7] + 0.1)).norm(2)
 
                 match recursive_loop:
 

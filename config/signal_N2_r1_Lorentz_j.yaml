@@ -6,7 +6,7 @@ simulation:
     adjacency_matrix: ''
     connectivity_init: [0,0.1]
     connectivity_distribution: 'Lorentz'
-    params: [[10.0,1.0,1.0,1.0],[10.0,2.0,1.0,2],[10.0,1.0,2.0,4],[10.0,2.0,2.0,8]]
+    params: [[10.0,1.0,1.0,1.0],[10.0,1.0,1.0,2.0],[10.0,1.0,1.0,4.0],[10.0,1.0,1.0,8.0]]
     phi: 'tanh'
     tau: 1.0
     min_radius: 1.0
@@ -46,7 +46,7 @@ training:
     recursive_loop: 1
     batch_size: 1
     small_init_batch_size: False
-    n_runs: 2
+    n_runs: 10
     large_range: False
     sparsity: 'none'
     data_augmentation: False
@@ -54,7 +54,7 @@ training:
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'
-    sparsity: 'replace_embedding_function'
+    sparsity: 'replace_embedding'
     sparsity_freq: 4
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4
