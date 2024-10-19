@@ -43,6 +43,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.input_size_update = model_config.input_size_update
         self.bc_dpos = bc_dpos
         self.adjacency_matrix = simulation_config.adjacency_matrix
+        self.model = model_config.signal_model_name
 
         self.lin_edge = MLP(input_size=self.input_size, output_size=self.output_size, nlayers=self.n_layers,
                             hidden_size=self.hidden_dim, device=self.device)
@@ -68,8 +69,11 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
         in_features = torch.cat([u, embedding], dim=1)
 
-        # msg = self.propagate(edge_index, u=u, embedding=embedding)
-        msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
+        if self.model=='PDE_N4':
+            msg = self.propagate(edge_index, u=u, embedding=embedding)
+        else:
+            msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
+
         if excitation == None:
             pred = self.lin_phi(in_features) + msg
         else:
@@ -79,9 +83,15 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
     def message(self, edge_index_i, edge_index_j, u_j, embedding_i, embedding_j):
 
-        # in_features = torch.cat([u_j, embedding_i], dim=1)
+        in_features = torch.cat([u_j, embedding_i], dim=1)
         T = self.W * self.mask
-        return T[to_numpy(edge_index_i),to_numpy(edge_index_j)][:,None] * self.lin_edge(u_j)
+
+        # pos = torch.argwhere(edge_index_i==6)
+        # print(to_numpy(T[to_numpy(edge_index_i[pos]),to_numpy(edge_index_j[pos])].t()))
+        # mul = torch.sum(T[to_numpy(edge_index_i[pos]),to_numpy(edge_index_j[pos])][:,None] * self.lin_edge(u_j[pos]))
+        # print(to_numpy(mul))
+
+        return T[to_numpy(edge_index_i),to_numpy(edge_index_j)][:,None] * self.lin_edge(in_features)
 
     def update(self, aggr_out):
         return aggr_out

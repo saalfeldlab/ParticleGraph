@@ -51,9 +51,9 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'generate'
+        action = 'train'
         best_model = None
-        config_list = ["signal_N2_r1_Lorentz_a"]
+        config_list = ["signal_N2_r1_Lorentz_j"]
 
     for config_file in config_list:
 
@@ -63,6 +63,6 @@ if __name__ == '__main__':
         if 'generate' in action:
             data_generate(config, device=device, visualize=True, run_vizualized=1, style='color', alpha=1, erase=True, bSave=True, step=config.simulation.n_frames // 100)
         if 'train' in action:
-            data_train(config=config, config_file=config_file, erase=False, best_model=best_model, device=device)
+            data_train(config=config, config_file=config_file, erase=True, best_model=best_model, device=device)
         if 'test' in action:
             data_test(config=config, config_file=config_file, visualize=True, style='color', verbose=False, best_model='4_680000', run=0, step=5, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7

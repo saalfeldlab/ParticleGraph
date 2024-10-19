@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 # matplotlib.use("Qt5Agg")
 from tifffile import imread
-from ParticleGraph.generators import PDE_A, PDE_B, PDE_B_bis, PDE_B_mass, PDE_E, PDE_G, PDE_GS, PDE_N, PDE_N2, constructRandomMatrices, runNetworkSimulation, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, PDE_Laplacian, PDE_O
+from ParticleGraph.generators import PDE_A, PDE_B, PDE_B_bis, PDE_B_mass, PDE_E, PDE_G, PDE_GS, PDE_N, PDE_N2, PDE_N4, PDE_Z, RD_Gray_Scott, RD_FitzHugh_Nagumo, RD_RPS, PDE_Laplacian, PDE_O
 from ParticleGraph.utils import choose_boundary_values
 from ParticleGraph.data_loaders import load_solar_system
 from time import sleep
@@ -140,12 +140,18 @@ def choose_model(config=[], W=[], phi=[], device=[]):
                 for n in range(n_particle_types):
                     p[n] = torch.tensor(params[n])
             model = PDE_N(aggr_type=aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
-        case 'PDE_N2' | 'PDE_N3' | 'PDE_N4':
+        case 'PDE_N2' | 'PDE_N3':
             p = torch.rand(n_particle_types, 3, device=device) * 100  # comprised between 10 and 50
             if params[0] != [-1]:
                 for n in range(n_particle_types):
                     p[n] = torch.tensor(params[n])
             model = PDE_N2(aggr_type=aggr_type, p=torch.squeeze(p), W=W, phi=phi)
+        case 'PDE_N4':
+            p = torch.rand(n_particle_types, 4, device=device) * 100  # comprised between 10 and 50
+            if params[0] != [-1]:
+                for n in range(n_particle_types):
+                    p[n] = torch.tensor(params[n])
+            model = PDE_N4(aggr_type=aggr_type, p=torch.squeeze(p), W=W, phi=phi)
 
 
 

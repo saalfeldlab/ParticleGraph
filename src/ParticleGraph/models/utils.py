@@ -109,7 +109,7 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
     fig = plt.figure(figsize=(8, 8))
     for n in range(n_particle_types):
         pos=torch.argwhere(type_list==n).squeeze()
-        if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N3' in config.graph_model.signal_model_name):
+        if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N3' in config.graph_model.signal_model_name) | ('PDE_N4' in config.graph_model.signal_model_name):
             plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=20, color=cmap.color(n))
         else:
             plt.scatter(to_numpy(model.a[1,pos, 0]), to_numpy(model.a[1,pos, 1]), s=20, color=cmap.color(n))
@@ -125,8 +125,8 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
         if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N3' in config.graph_model.signal_model_name):
             in_features = rr[:, None]
         elif 'PDE_N4' in config.graph_model.signal_model_name:
-            embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            in_features = torch.cat((rr[:, None], embedding_, embedding_), dim=1)
+            embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+            in_features = torch.cat((rr[:, None], embedding_), dim=1)
         else:
             in_features = rr[:, None]
 
@@ -147,7 +147,7 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
             embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
             in_features = torch.cat((rr[:, None], embedding_), dim=1)
         elif 'PDE_N4' in config.graph_model.signal_model_name:
-            embedding_ = model.a[1, n, 0:2] * torch.ones((1000, 2), device=device)
+            embedding_ = model.a[n, 0:2] * torch.ones((1000, 2), device=device)
             in_features = torch.cat((rr[:, None], embedding_), dim=1)
         else:
             embedding_ = model.a[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
@@ -844,6 +844,8 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
             rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
         elif 'PDE_N3' in config_model:
             rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
+        elif 'PDE_N4' in config_model:
+            rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
         elif 'PDE_N' in config_model:
             rr = torch.tensor(np.linspace(0, 0.9, 1000)).to(device)
         else:
@@ -854,7 +856,7 @@ def analyze_edge_function(rr=[], vizualize=False, config=None, model_MLP=[], mod
     for n in range(n_particles):
         if config.training.do_tracking:
             embedding_ = model_a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-        elif ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N3' in config.graph_model.signal_model_name):
+        elif ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N3' in config.graph_model.signal_model_name) | ('PDE_N4' in config.graph_model.signal_model_name):
             embedding_ = model_a[n_nodes + n, :] * torch.ones((1000, config.graph_model.embedding_dim),device=device)
         else:
             embedding_ = model_a[dataset_number, n_nodes+n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
@@ -975,7 +977,7 @@ def choose_training_model(model_config, device):
             model = Signal_Propagation3(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
         case 'PDE_N4':
-            model = Signal_Propagation4(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
+            model = Signal_Propagation2(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)
             model.edges = []
         case 'PDE_N5':
             model = Signal_Propagation5(aggr_type=aggr_type, config=model_config, device=device, bc_dpos=bc_dpos)

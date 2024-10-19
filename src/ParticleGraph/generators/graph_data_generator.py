@@ -20,6 +20,7 @@ import xarray as xr
 import pandas as pd
 import tables
 import h5py as h5
+from torch_geometric.utils import dense_to_sparse
 
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
@@ -391,7 +392,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     n_frames = simulation_config.n_frames
     has_particle_dropout = training_config.particle_dropout > 0
     dataset_name = config.dataset
-    is_V2 = ('PDE_N2' in model_config.signal_model_name) | ('PDE_N3' in model_config.signal_model_name)
+    is_V2 = ('PDE_N2' in model_config.signal_model_name) | ('PDE_N3' in model_config.signal_model_name) | ('PDE_N4' in model_config.signal_model_name)
     has_zarr = 'zarr' in simulation_config.connectivity_file
     excitation = simulation_config.excitation
     noise_level = training_config.noise_level
@@ -499,15 +500,14 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             mask = torch.rand(adjacency.shape) >  simulation_config.connectivity_filling_factor
             adjacency[mask] = 0
 
-    adj_t = torch.abs(adjacency) > 0
-    edge_index = adj_t.nonzero().t().contiguous()
-    edge_index[[0, 1]] = edge_index[[1, 0]]
-    edge_attr_adjacency = adjacency[adj_t]
+    adj_matrix = torch.ones((n_particles)) - torch.eye(n_particles)
+    edge_index, edge_attr = dense_to_sparse(adj_matrix)
+    edge_index = edge_index.to(device=device)
 
     torch.save(adjacency, f'./graphs_data/graphs_{dataset_name}/adjacency.pt')
     torch.save(edge_index, f'./graphs_data/graphs_{dataset_name}/edge_index.pt')
 
-    edge_attr_adjacency_ = to_numpy(edge_attr_adjacency)
+    print(to_numpy(torch.sum(edge_index)))
 
     weights = to_numpy(adjacency.flatten())
     pos = np.argwhere(weights != 0)
@@ -618,7 +618,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
             X[:, it] = H1[:, 0].clone().detach()
 
-            dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
+            dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr)
 
             # model prediction
             with torch.no_grad():
@@ -764,7 +764,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     # plt.title('g.msg')
 
 
-        if (is_V2) & (run==0):
+        if (is_V2) & (run==10000):
 
             plt.figure(figsize=(10, 3))
             plt.subplot(121)
@@ -2511,6 +2511,4 @@ def data_generate_synaptic_fired(config, visualize=True, run_vizualized=0, style
 
     firings = np.array(firings)
     plt.plot(firings[:, 0], firings[:, 1], '.')
-    plt.show()
-
-
+    

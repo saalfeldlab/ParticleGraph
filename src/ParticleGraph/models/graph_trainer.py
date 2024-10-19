@@ -59,7 +59,7 @@ def data_train(config=None, config_file=None, erase=False, best_model=None, devi
     elif has_mesh:
         data_train_mesh(config, config_file, erase, best_model, device)
     elif has_signal:
-        if 'PDE_N2' in config.graph_model.signal_model_name:
+        if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N4' in config.graph_model.signal_model_name):
             data_train_synaptic2(config, config_file, erase, best_model, device)
         elif 'PDE_N3' in config.graph_model.signal_model_name:
             data_train_synaptic3(config, config_file, erase, best_model, device)
@@ -1023,8 +1023,6 @@ def data_train_cell(config, config_file, erase, best_model, device):
         #                                                         config.training.cluster_distance_threshold,
         #                                                         true_type_list,
         #                                                         n_particle_types, embedding_cluster)
-
-
 
 
 def data_train_mouse_city(config, config_file, erase, best_model, device):
@@ -2823,8 +2821,9 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     else:
         model_exc=[]
 
-    model.edges = torch.load(f'./graphs_data/graphs_{dataset_name}/edge_index.pt', map_location=device)
     adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency.pt', map_location=device)
+    model.edges = torch.load(f'./graphs_data/graphs_{dataset_name}/edge_index.pt', map_location=device)
+    print(to_numpy(torch.sum(model.edges)))
 
     if simulation_config.connectivity_mask:
         model.mask = model.mask * (adjacency!=0)*1.0
@@ -2887,10 +2886,16 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
 
                 in_features = torch.cat((torch.zeros((n_particles, 1), device=device), model.a), dim=1)
                 func_phi = model.lin_phi(in_features.float())
-                in_features = torch.zeros((n_particles, 1), device=device)
-                func_edge = model.lin_edge(in_features.float())
+                if model_config.signal_model_name == 'PDE_N4':
+                    in_features = torch.zeros((n_particles, dimension+1), device=device)
+                    func_edge = model.lin_edge(in_features.float())
+                else:
+                    in_features = torch.zeros((n_particles, 1), device=device)
+                    func_edge = model.lin_edge(in_features.float())
                 x = torch.tensor(x_list[run][k], device=device)
-                diff = torch.relu(model.lin_edge(x[:,6:7]) - model.lin_edge(x[:,6:7]+0.1)).norm(2)
+                in_features = torch.cat((x[:,6:7], model.a), dim=1)
+                in_features_next = torch.cat((x[:, 6:7]+0.1, model.a), dim=1)
+                diff = torch.relu(model.lin_edge(in_features) - model.lin_edge(in_features_next)).norm(2)
 
                 match recursive_loop:
 
