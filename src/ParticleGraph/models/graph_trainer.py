@@ -2836,8 +2836,6 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     Niter = int(n_frames * data_augmentation_loop // batch_size * n_runs / 10)
 
-    Niter = 200
-
     print(f'plot every {Niter // 100} iterations')
 
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
@@ -2863,7 +2861,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
 
         excitation = torch.zeros((n_particles, 1), device=device)
 
-        for N in trange(Niter):
+        for N in range(Niter):
 
             run = np.random.randint(n_runs)
             k = np.random.randint(n_frames - 5)
