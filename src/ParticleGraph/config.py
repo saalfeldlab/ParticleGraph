@@ -160,6 +160,7 @@ class TrainingConfig(BaseModel):
     coeff_loss1: float = 1
     coeff_loss2: float = 1
     coeff_loss3: float = 1
+    coeff_diff: float = 10
 
     noise_level: float = 0
     data_augmentation: bool = True

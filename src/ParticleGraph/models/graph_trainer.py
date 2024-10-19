@@ -2770,7 +2770,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
         net = f"./log/try_{config_file}/models/best_model_with_{n_runs-1}_graphs_{best_model}.pt"
         state_dict = torch.load(net,map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
-        start_epoch=int(best_model.split('_')[0])
+        start_epoch=int(best_model.split('_')[0]) + 1
         print(f'best_model: {best_model}  start_epoch: {start_epoch}')
         logger.info(f'best_model: {best_model}  start_epoch: {start_epoch}')
     else:
@@ -2846,8 +2846,10 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
 
         if (epoch==0):
             coeff_L1 = train_config.first_coeff_L1
+            coeff_diff = train_config.coeff_diff
         else:
             coeff_L1 = train_config.coeff_L1
+            coeff_diff = 0
         logger.info(f'coeff_L1: {coeff_L1}')
 
         batch_size = get_batch_size(epoch)
@@ -2861,7 +2863,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
 
         excitation = torch.zeros((n_particles, 1), device=device)
 
-        for N in range(Niter):
+        for N in trange(Niter):
 
             run = np.random.randint(n_runs)
             k = np.random.randint(n_frames - 5)
@@ -2905,7 +2907,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
                         dataset = data.Data(x=x, edge_index=model.edges)
                         pred = model(dataset, data_id=run, excitation=excitation)
                         y = torch.tensor(y_list[run][k],device=device) / ynorm
-                        loss = (pred - y).norm(2) + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 10 * (epoch==0)
+                        loss = (pred - y).norm(2) + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * coeff_diff
 
                     case 2:
                         dataset = data.Data(x=x, edge_index=model.edges)
@@ -2916,7 +2918,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
                         pred2 = model(dataset, data_id = run, excitation=excitation)
                         y1 = torch.tensor(y_list[run][k],device=device) / ynorm
                         y2 = torch.tensor(y_list[run][k+1],device=device) / ynorm
-                        loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 10 * (epoch==0)
+                        loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * coeff_diff
 
                     case 3:
                         dataset = data.Data(x=x, edge_index=model.edges)
@@ -2933,7 +2935,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
                         y1 = torch.tensor(y_list[run][k],device=device) / ynorm
                         y2 = torch.tensor(y_list[run][k+1],device=device) / ynorm
                         y3 = torch.tensor(y_list[run][k+2],device=device) / ynorm
-                        loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2) + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * 10 * (epoch==0)
+                        loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2) + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * coeff_diff
 
                     case 5:
                         dataset = data.Data(x=x, edge_index=model.edges)
@@ -3043,8 +3045,14 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
 
         ax = fig.add_subplot(2, 5, 6)
         embedding = to_numpy(model.a.squeeze())
+
+        if (model_config.signal_model_name == 'PDE_N4') | (model_config.signal_model_name == 'PDE_N5'):
+            model_MLP = model.lin_edge
+        else:
+            model_MLP = model.lin_phi
+
         func_list, proj_interaction = analyze_edge_function(rr=[], vizualize=True, config=config,
-                                                            model_MLP=model.lin_phi, model_a=model.a,
+                                                            model_MLP=model_MLP, model_a=model.a,
                                                             n_nodes=0,
                                                             dataset_number=1,
                                                             n_particles=n_particles, ynorm=ynorm,
@@ -3085,8 +3093,8 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
         plt.xticks(fontsize=10.0)
         plt.yticks(fontsize=10.0)
 
-        ax = fig.add_subplot(2, 5, 9)
-        plt.hist(np.abs(to_numpy(A)),bins = 100)
+        # ax = fig.add_subplot(2, 5, 9)
+        # plt.hist(np.abs(to_numpy(A)),bins = 100)
 
         if (replace_with_cluster) & (epoch % sparsity_freq == sparsity_freq - 1) & (epoch < n_epochs - sparsity_freq):
             # Constrain embedding domain

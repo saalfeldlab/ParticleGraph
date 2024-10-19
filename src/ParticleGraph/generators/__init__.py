@@ -9,6 +9,7 @@ from .PDE_GS import PDE_GS
 from .PDE_N import PDE_N
 from .PDE_N2 import *
 from .PDE_N4 import *
+from .PDE_N5 import *
 from .PDE_O import PDE_O
 from .PDE_Z import PDE_Z
 from .RD_FitzHugh_Nagumo import RD_FitzHugh_Nagumo
@@ -18,4 +19,5 @@ from .graph_data_generator import *
 from .utils import choose_model, choose_mesh_model, init_particles, init_mesh
 from .cell_utils import *
 
-__all__ = [utils, cell_utils, graph_data_generator, PDE_Laplacian, PDE_A, PDE_B, PDE_B_bis, PDE_B_mass, PDE_E, PDE_G, PDE_GS, PDE_N, PDE_N2, PDE_N4, constructRandomMatrices, runNetworkSimulation, PDE_O, PDE_Z, RD_FitzHugh_Nagumo, RD_Gray_Scott, RD_RPS, choose_model, choose_mesh_model, init_particles, init_mesh]
+__all__ = [utils, cell_utils, graph_data_generator, PDE_Laplacian, PDE_A, PDE_B, PDE_B_bis, PDE_B_mass, PDE_E, PDE_G, PDE_GS,
+           PDE_N, PDE_N2, PDE_N4, PDE_N5, constructRandomMatrices, runNetworkSimulation, PDE_O, PDE_Z, RD_FitzHugh_Nagumo, RD_Gray_Scott, RD_RPS, choose_model, choose_mesh_model, init_particles, init_mesh]

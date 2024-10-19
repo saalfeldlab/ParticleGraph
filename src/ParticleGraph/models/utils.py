@@ -74,6 +74,8 @@ def get_in_features(rr, embedding_, config_model, max_radius):
         case 'PDE_N2' | 'PDE_N3' :
             in_features = torch.cat((rr[:, None], embedding_), dim=1)
         case 'PDE_N4':
+            in_features = torch.cat((rr[:, None], embedding_), dim=1)
+        case 'PDE_N5':
             in_features = torch.cat((rr[:, None], embedding_, embedding_), dim=1)
 
 

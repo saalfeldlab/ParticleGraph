@@ -392,7 +392,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     n_frames = simulation_config.n_frames
     has_particle_dropout = training_config.particle_dropout > 0
     dataset_name = config.dataset
-    is_V2 = ('PDE_N2' in model_config.signal_model_name) | ('PDE_N3' in model_config.signal_model_name) | ('PDE_N4' in model_config.signal_model_name)
+    is_V2 = ('PDE_N2' in model_config.signal_model_name) | ('PDE_N3' in model_config.signal_model_name) | ('PDE_N4' in model_config.signal_model_name) | ('PDE_N5' in model_config.signal_model_name)
     has_zarr = 'zarr' in simulation_config.connectivity_file
     excitation = simulation_config.excitation
     noise_level = training_config.noise_level
