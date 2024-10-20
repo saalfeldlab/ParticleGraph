@@ -157,7 +157,7 @@ def choose_model(config=[], W=[], phi=[], device=[]):
             if params[0] != [-1]:
                 for n in range(n_particle_types):
                     p[n] = torch.tensor(params[n])
-            model = PDE_N4(aggr_type=aggr_type, p=torch.squeeze(p), W=W, phi=phi)
+            model = PDE_N5(aggr_type=aggr_type, p=torch.squeeze(p), W=W, phi=phi)
 
 
 

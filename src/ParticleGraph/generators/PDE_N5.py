@@ -129,8 +129,8 @@ class PDE_N5(pyg.nn.MessagePassing):
 
         u = x[:, 6:7]
 
-        msg = self.propagate(edge_index, u=u, t=t)
-        msg_ = torch.matmul(self.W, self.phi(u))
+        msg = self.propagate(edge_index, u=u, t=t, l=l)
+        # msg_ = torch.matmul(self.W, self.phi(u))
 
         du = -c * u + s * self.phi(u) + g * msg + excitation[:,None]
 
@@ -139,10 +139,10 @@ class PDE_N5(pyg.nn.MessagePassing):
         else:
             return du
 
-    def message(self, edge_index_i, edge_index_j, u_j, t_i):
+    def message(self, edge_index_i, edge_index_j, u_j, t_i, l_j):
 
         T = self.W
-        return T[to_numpy(edge_index_i), to_numpy(edge_index_j)][:, None]  * self.phi(u_j/t_i)
+        return T[to_numpy(edge_index_i), to_numpy(edge_index_j)][:, None]  * (self.phi(u_j/t_i) - u_j*l_j/50)
 
 
     def psi(self, r, p):

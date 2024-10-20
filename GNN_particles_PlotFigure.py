@@ -1204,14 +1204,17 @@ def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
                 flag = False
             file_id += 1
 
-        file_id_list0 = np.arange(0,file_id,file_id//100)
-        file_id_list1 = np.arange(file_id, len(files), (len(files)-file_id) // 100)
-        file_id_list = np.concatenate((file_id_list0, file_id_list1))
+        file_id_list0 = np.arange(0,1200,20)
+        file_id_list1 = np.arange(1200,file_id,(file_id-40)//60)
+        file_id_list2 = np.arange(file_id, len(files), (len(files)-file_id) // 100)
+        file_id_list = np.concatenate((file_id_list0,file_id_list1, file_id_list2))
 
         for file_id_ in trange(0,len(file_id_list)):
             file_id = file_id_list[file_id_]
             if sort_key(files[file_id]) % 1E7 != 0:
                 epoch = files[file_id].split('graphs')[1][1:-3]
+                print(epoch)
+
                 net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
                 state_dict = torch.load(net, map_location=device)
                 model.load_state_dict(state_dict['model_state_dict'])
@@ -1219,7 +1222,7 @@ def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
 
                 plt.style.use('dark_background')
 
-                fig, ax = fig_init()
+                fig, ax = fig_init(fontsize=24)
                 params = {'mathtext.default': 'regular'}
                 plt.rcParams.update(params)
                 embedding = get_embedding(model.a, 1)
@@ -1228,8 +1231,8 @@ def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
                     pos = to_numpy(pos)
                     if len(pos) > 0:
                         plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=100, alpha=0.1)
-                plt.xlabel(r'$a_{i0}$', fontsize=78)
-                plt.ylabel(r'$a_{i1}$', fontsize=78)
+                plt.xlabel(r'$a_{i0}$', fontsize=48)
+                plt.ylabel(r'$a_{i1}$', fontsize=48)
                 match config.dataset:
                     case 'arbitrary_3':
                         plt.xlim([0.5, 1.5])
@@ -1242,7 +1245,7 @@ def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
                 plt.close()
 
 
-                fig, ax = fig_init()
+                fig, ax = fig_init(fontsize=24)
                 rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
                 for n in range(int(n_particles * (1 - config.training.particle_dropout))):
                     embedding_ = model.a[1,n] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
@@ -1254,8 +1257,8 @@ def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
                     plt.plot(to_numpy(rr),
                              to_numpy(func) * to_numpy(ynorm),
                              color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
-                plt.xlabel('$d_{ij}$', fontsize=78)
-                plt.ylabel('$f(a_i, d_{ij})$', fontsize=78)
+                plt.xlabel('$d_{ij}$', fontsize=48)
+                plt.ylabel('$f(a_i, d_{ij})$', fontsize=48)
                 plt.xlim([0, max_radius])
                 plt.ylim(config.plotting.ylim)
                 plt.tight_layout()
@@ -1925,9 +1928,10 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
                 flag = False
             file_id += 1
 
-        file_id_list0 = np.arange(0,file_id,file_id//100)
-        file_id_list1 = np.arange(file_id, len(files), (len(files)-file_id) // 100)
-        file_id_list = np.concatenate((file_id_list0, file_id_list1))
+        file_id_list0 = np.arange(0,60)
+        file_id_list1 = np.arange(40,file_id,(file_id-40)//60)
+        file_id_list2 = np.arange(file_id, len(files), (len(files)-file_id) // 100)
+        file_id_list = np.concatenate((file_id_list0,file_id_list1, file_id_list2))
 
 
         for file_id_ in trange(0,len(file_id_list)):
@@ -1941,26 +1945,17 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
 
                 plt.style.use('dark_background')
 
-                fig, ax = fig_init()
+                fig, ax = fig_init(fontsize=24)
                 embedding = get_embedding(model.a, 1)
                 for n in range(n_particle_types-1,-1,-1):
                     pos = torch.argwhere(type_list == n)
                     pos = to_numpy(pos)
                     if len(pos) > 0:
                         plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=100, alpha=0.1)
-                plt.xlabel(r'$a_{i0}$', fontsize=78)
-                plt.ylabel(r'$a_{i1}$', fontsize=78)
+                plt.xlabel(r'$a_{i0}$', fontsize=48)
+                plt.ylabel(r'$a_{i1}$', fontsize=48)
                 match config.dataset:
                     case 'gravity_16':
-                        fig, ax = fig_init()
-                        embedding = get_embedding(model.a, 1)
-                        for n in range(n_particle_types - 1, -1, -1):
-                            pos = torch.argwhere(type_list == n)
-                            pos = to_numpy(pos)
-                            if len(pos) > 0:
-                                plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=100, alpha=0.1)
-                        plt.xlabel(r'$a_{i0}$', fontsize=78)
-                        plt.ylabel(r'$a_{i1}$', fontsize=78)
                         plt.ylim([0, 3])
                         plt.xlim([-1, 2])
                 plt.tight_layout()
@@ -1968,7 +1963,7 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
                 plt.close()
 
 
-                fig, ax = fig_init()
+                fig, ax = fig_init(fontsize=24)
                 rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
                 for n in range(int(n_particles * (1 - config.training.particle_dropout))):
                     embedding_ = model.a[1,n] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
@@ -1982,11 +1977,10 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
                     plt.plot(to_numpy(rr),
                              to_numpy(func) * to_numpy(ynorm),
                              color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
-                plt.xlabel('$d_{ij}$', fontsize=78)
-                plt.ylabel('$f(a_i, d_{ij})$', fontsize=78)
+                plt.xlabel('$d_{ij}$', fontsize=48)
+                plt.ylabel('$f(a_i, d_{ij})$', fontsize=48)
                 plt.xlim([0, max_radius])
                 plt.ylim(config.plotting.ylim)
-                plt.tight_layout()
                 match config.dataset:
                     case 'gravity_16':
                         plt.xlim([0, 0.02])
@@ -2771,14 +2765,16 @@ def plot_boids(config_file, epoch_list, log_dir, logger, device):
                 flag = False
             file_id += 1
 
-        file_id_list0 = np.arange(0, file_id, file_id // 150)
-        file_id_list1 = np.arange(file_id, len(files), (len(files) - file_id) // 50)
-        file_id_list = np.concatenate((file_id_list0, file_id_list1))
+        file_id_list0 = np.arange(0,60)
+        file_id_list1 = np.arange(60,file_id,(file_id-60)//60)
+        file_id_list2 = np.arange(file_id, len(files), (len(files)-file_id) // 100)
+        file_id_list = np.concatenate((file_id_list0,file_id_list1, file_id_list2))
 
         for file_id_ in trange(0, len(file_id_list)):
             file_id = file_id_list[file_id_]
             if sort_key(files[file_id]) % 1E7 != 0:
                 epoch = files[file_id].split('graphs')[1][1:-3]
+                print(epoch)
                 net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
                 state_dict = torch.load(net, map_location=device)
                 model.load_state_dict(state_dict['model_state_dict'])
@@ -2786,7 +2782,7 @@ def plot_boids(config_file, epoch_list, log_dir, logger, device):
 
                 plt.style.use('dark_background')
 
-                fig, ax = fig_init()
+                fig, ax = fig_init(fontsize=24)
                 embedding = get_embedding(model.a, 1)
                 # embedding = (embedding-np.min(embedding))/(np.max(embedding)-np.min(embedding))
                 for n in range(n_particle_types - 1, -1, -1):
@@ -2794,8 +2790,8 @@ def plot_boids(config_file, epoch_list, log_dir, logger, device):
                     pos = to_numpy(pos)
                     if len(pos) > 0:
                         plt.scatter(embedding[pos, 0], embedding[pos, 1], c=cmap.color(n), s=100, alpha=0.1)
-                plt.xlabel(r'$a_{i0}$', fontsize=78)
-                plt.ylabel(r'$a_{i1}$', fontsize=78)
+                plt.xlabel(r'$a_{i0}$', fontsize=48)
+                plt.ylabel(r'$a_{i1}$', fontsize=48)
                 match config.dataset:
                     case 'boids_16_256':
                         plt.xlim([-1.5, 2])
@@ -2804,7 +2800,7 @@ def plot_boids(config_file, epoch_list, log_dir, logger, device):
                 plt.savefig(f"./{log_dir}/results/all/embedding_{epoch}.tif", dpi=80)
                 plt.close()
 
-                fig, ax = fig_init()
+                fig, ax = fig_init(fontsize=24)
                 rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
                 x = x_list[0][-1].clone().detach()
                 for n in np.arange(len(x)):
@@ -2822,8 +2818,8 @@ def plot_boids(config_file, epoch_list, log_dir, logger, device):
                                      to_numpy(func) * to_numpy(ynorm) * 1E4,
                                      color=cmap.color(type), linewidth=4, alpha=0.25)
                 plt.ylim([-1, 1])
-                plt.xlabel('$d_{ij}$', fontsize=78)
-                plt.ylabel('$f(a_i, d_{ij})$', fontsize=78)
+                plt.xlabel('$d_{ij}$', fontsize=48)
+                plt.ylabel('$f(a_i, d_{ij})$', fontsize=48)
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/all/function_{epoch}.tif", dpi=80)
                 plt.close()
@@ -4462,7 +4458,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
             fig, ax = fig_init()
             for n in range(n_particle_types):
                 pos = torch.argwhere(type_list == n).squeeze()
-                plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=0.1, color=cmap.color(n))
+                plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=10, color=cmap.color(n))
             plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
             plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
             plt.tight_layout()
@@ -4671,55 +4667,6 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
             plt.savefig(f"./{log_dir}/results/NNR/NNR_{10000 + k}.tif", dpi=70)
             plt.close()
 
-
-
-    files = []
-
-    for epoch, net in enumerate (files):
-
-        if (epoch%5 == 0) & (not('_0.pt' in net)):
-
-            # net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs_{epoch}.pt"
-            model, bc_pos, bc_dpos = choose_training_model(config, device)
-            state_dict = torch.load(net, map_location=device)
-            model.load_state_dict(state_dict['model_state_dict'])
-            model.edges = edge_index
-            print(f'net: {net}')
-
-            fig = plt.figure(figsize=(8, 8))
-            rr = torch.tensor(np.linspace(-5, 5, 10000)).to(device)
-            in_features =rr[:, None]
-            with torch.no_grad():
-                func = model.lin_phi(in_features.float())
-            plt.plot(to_numpy(rr), to_numpy(func), c='k', linewidth=2)
-            plt.xlabel(r'$x$', fontsize=48)
-            plt.ylabel(r'$\phi(x)$', fontsize=48)
-            plt.ylim([-0.5, 0.5])
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/function/func_{epoch}.tif", dpi=87)
-            plt.close()
-
-            fig = plt.figure(figsize=(8, 8))
-            embedding = get_embedding(model.a, 1)
-            for n in range(n_particle_types):
-                plt.scatter(embedding[index_particles[n], 0], embedding[index_particles[n], 1], s=10)
-            plt.xlabel(r'$a_0$', fontsize=48)
-            plt.ylabel(r'$a_1$', fontsize=48)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/embedding/embedding_{epoch}.tif", dpi=87)
-            plt.close()
-
-            i, j = torch.triu_indices(n_particles, n_particles, requires_grad=False, device=device)
-            A = model.W.clone().detach()
-            A[i, i] = 0
-            fig = plt.figure(figsize=(8, 8))
-            ax = sns.heatmap(to_numpy(A), center=0, square=True, cmap='bwr', cbar_kws={'fraction': 0.046}, vmin=-1,vmax=1)
-            plt.title(r'$W_{ij}$', fontsize=48);
-            plt.xticks([0, n_particles - 1], [1, n_particles], fontsize=8)
-            plt.yticks([0, n_particles - 1], [1, n_particles], fontsize=8)
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/matrix/matrix_{epoch}.tif", dpi=87)
-            plt.close()
 
 
 def plot_synaptic3(config_file, epoch_list, log_dir, logger, cc, device):
@@ -5899,7 +5846,7 @@ if __name__ == '__main__':
     # config_list = ['signal_N2_a_r1','signal_N2_c_r1','signal_N2_d_r1','signal_N2_e_r1','signal_N2_f_r1',
     #                'signal_N2_i_r1','signal_N2_j_r1','signal_N2_k_r1','signal_N2_l_r1','signal_N2_m_r1','signal_N2_n_r1']
 
-    # config_list = ['signal_N2_r1_Lorentz_c']
+    config_list = ['signal_N2_r1_Lorentz_a', 'signal_N2_r1_Lorentz_b']
 
     # config_list = ['signal_N2_r1_Lorentz_a','signal_N2_r1_Lorentz_b','signal_N2_r1_Lorentz_d','signal_N2_r1_Lorentz_e',
     #                'signal_N2_r1_Lorentz_f','signal_N2_r1_Lorentz_g','signal_N2_r1_Lorentz_i','signal_N2_r1_Lorentz_j',
@@ -5907,13 +5854,13 @@ if __name__ == '__main__':
 
     # config_list = ['gravity_16']
     # config_list = ['boids_16_256']
-    config_list = ['boids_division_tracking_A']
+    # config_list = ['arbitrary_16']
     # config_list = ['signal_N2_r1_Lorentz_a_N2','signal_N3_r1_Lorentz_b']
     # config_list = ['signal_N3_r1_Lorentz_b']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['0'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

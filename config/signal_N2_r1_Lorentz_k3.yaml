@@ -1,5 +1,5 @@
-description: 'synaptic network random matrix no recursive loop    1000 neurons 4 types phi neuron-neuron dependent lorentz std 0.03'
-dataset: 'signal_N2_Lorentz_l'
+description: 'synaptic network random matrix no recursive loop    1000 neurons 4 types phi neuron dependent lorentz std 0.03'
+dataset: 'signal_N2_Lorentz_k'
 
 simulation:
     connectivity_file: 'random'
@@ -21,11 +21,11 @@ simulation:
     start_frame: -1000
 
 graph_model:
-    signal_model_name: 'PDE_N5'
+    signal_model_name: 'PDE_N4'
     particle_model_name: ''
     mesh_model_name: ''
     prediction: 'first_derivative'
-    input_size: 5
+    input_size: 3
     output_size: 1
     hidden_dim: 64
     n_mp_layers: 3
@@ -51,10 +51,10 @@ training:
     sparsity: 'none'
     data_augmentation: False
     data_augmentation_loop: 100
-    cluster_method: 'distance_plot'
+    cluster_method: 'kmeans_auto_embedding'
     fix_cluster_embedding: True
     device: 'auto'
-    sparsity: 'replace_embedding'
+    sparsity: 'replace_embedding_function'
     sparsity_freq: 4
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4

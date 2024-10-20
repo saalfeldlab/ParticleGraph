@@ -316,7 +316,7 @@ def bundle_fields(data: Data, *names: str) -> torch.Tensor:
     return torch.concatenate(tensors, dim=-1)
 
 
-def fig_init(formatx='%.2f', formaty='%.2f'):
+def fig_init(fontsize=48, formatx='%.2f', formaty='%.2f'):
     # from matplotlib import rc, font_manager
     # from numpy import arange, cos, pi
     # from matplotlib.pyplot import figure, axes, plot, xlabel, ylabel, title, \
@@ -353,8 +353,8 @@ def fig_init(formatx='%.2f', formaty='%.2f'):
     ax.yaxis.set_major_locator(plt.MaxNLocator(3))
     ax.xaxis.set_major_formatter(FormatStrFormatter(formatx))
     ax.yaxis.set_major_formatter(FormatStrFormatter(formaty))
-    plt.xticks(fontsize=48.0)
-    plt.yticks(fontsize=48.0)
+    plt.xticks(fontsize=fontsize)
+    plt.yticks(fontsize=fontsize)
 
     return fig, ax
 

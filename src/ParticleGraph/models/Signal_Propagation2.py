@@ -69,7 +69,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
         in_features = torch.cat([u, embedding], dim=1)
 
-        if self.model=='PDE_N4':
+        if (self.model=='PDE_N4') | (self.model=='PDE_N5'):
             msg = self.propagate(edge_index, u=u, embedding=embedding)
         else:
             msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
@@ -83,7 +83,10 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
 
     def message(self, edge_index_i, edge_index_j, u_j, embedding_i, embedding_j):
 
-        in_features = torch.cat([u_j, embedding_i], dim=1)
+        if (self.model=='PDE_N4'):
+            in_features = torch.cat([u_j, embedding_i], dim=1)
+        elif (self.model=='PDE_N5'):
+            in_features = torch.cat([u_j, embedding_i, embedding_j], dim=1)
         T = self.W * self.mask
 
         # pos = torch.argwhere(edge_index_i==6)

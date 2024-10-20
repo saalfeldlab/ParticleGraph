@@ -1,4 +1,4 @@
-description: 'synaptic network random matrix no recursive loop    1000 neurons 4 types phi neuron-neuron dependent lorentz std 0.03'
+description: 'synaptic network random matrix coeff L1 +regul  1000 neurons 4 types phi neuron-neuron dependent lorentz std 0.03'
 dataset: 'signal_N2_Lorentz_l'
 
 simulation:
@@ -54,8 +54,9 @@ training:
     cluster_method: 'distance_plot'
     fix_cluster_embedding: True
     device: 'auto'
-    sparsity: 'replace_embedding'
+    sparsity: 'replace_embedding_function'
     sparsity_freq: 4
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4
     coeff_diff: 100
+    coeff_L1: 1.0E-5

@@ -59,7 +59,7 @@ def data_train(config=None, config_file=None, erase=False, best_model=None, devi
     elif has_mesh:
         data_train_mesh(config, config_file, erase, best_model, device)
     elif has_signal:
-        if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N4' in config.graph_model.signal_model_name):
+        if ('PDE_N2' in config.graph_model.signal_model_name) | ('PDE_N4' in config.graph_model.signal_model_name) | ('PDE_N5' in config.graph_model.signal_model_name):
             data_train_synaptic2(config, config_file, erase, best_model, device)
         elif 'PDE_N3' in config.graph_model.signal_model_name:
             data_train_synaptic3(config, config_file, erase, best_model, device)
@@ -2770,7 +2770,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
         net = f"./log/try_{config_file}/models/best_model_with_{n_runs-1}_graphs_{best_model}.pt"
         state_dict = torch.load(net,map_location=device)
         model.load_state_dict(state_dict['model_state_dict'])
-        start_epoch=int(best_model.split('_')[0]) + 1
+        start_epoch=int(best_model.split('_')[0])
         print(f'best_model: {best_model}  start_epoch: {start_epoch}')
         logger.info(f'best_model: {best_model}  start_epoch: {start_epoch}')
     else:
@@ -2895,6 +2895,12 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
                     func_edge = model.lin_edge(in_features.float())
                     in_features = torch.cat((x[:, 6:7], model.a), dim=1)
                     in_features_next = torch.cat((x[:, 6:7] + 0.1, model.a), dim=1)
+                    diff = torch.relu(model.lin_edge(in_features) - model.lin_edge(in_features_next)).norm(2)
+                elif model_config.signal_model_name == 'PDE_N5':
+                    in_features = torch.zeros((n_particles, 2*dimension+1), device=device)
+                    func_edge = model.lin_edge(in_features.float())
+                    in_features = torch.cat((x[:, 6:7], model.a, model.a), dim=1)
+                    in_features_next = torch.cat((x[:, 6:7] + 0.1, model.a, model.a), dim=1)
                     diff = torch.relu(model.lin_edge(in_features) - model.lin_edge(in_features_next)).norm(2)
                 else:
                     in_features = torch.zeros((n_particles, 1), device=device)
@@ -3042,6 +3048,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
         ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
         r_squared = 1 - (ss_res / ss_tot)
         print(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
+        logger.info(f'R^2$: {np.round(r_squared, 3)}  slope: {np.round(lin_fit[0], 2)}')
 
         ax = fig.add_subplot(2, 5, 6)
         embedding = to_numpy(model.a.squeeze())
@@ -3130,7 +3137,10 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
                     for n in range(n_particles):
                         embedding_ = model.a[n, :].clone().detach() * torch.ones((1000, model_config.embedding_dim), device=device)
                         in_features = get_in_features(rr, embedding_, config.graph_model.signal_model_name, config.simulation.max_radius)
-                        pred.append(model.lin_phi(in_features.float()))
+                        if (model_config.signal_model_name == 'PDE_N4'):
+                            pred.append(model.lin_edge(in_features.float()))
+                        else:
+                            pred.append(model.lin_phi(in_features.float()))
                     pred = torch.stack(pred)
                     loss = (pred[:, :, 0] - y_func_list.clone().detach()).norm(2)
                     logger.info(f'    loss: {np.round(loss.item() / n_particles, 3)}')
