@@ -4478,9 +4478,10 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                     in_features = rr[:, None]
                 with torch.no_grad():
                     func = model.lin_edge(in_features.float())
-                func_list.append(func)
-                plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
-                         linewidth=8 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
+                if ((n<250) & (model_config.signal_model_name == 'PDE_N4')) | (model_config.signal_model_name != 'PDE_N4'):
+                    func_list.append(func)
+                    plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
+                             linewidth=8 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
             func_list = torch.stack(func_list)
             plt.xlabel(r'$x$', fontsize=78)
             plt.ylabel(r'Learned $f(x)$', fontsize=78)
@@ -4494,8 +4495,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
             correction = 1 / torch.mean(torch.mean(func_list[:,900:1000], dim=0))
             print(f'correction: {correction:0.2f}')
             torch.save(correction, f'{log_dir}/correction.pt')
-            if model_config.signal_model_name == 'PDE_N4':
-                correction = 2.5
+
 
             fig, ax = fig_init()
             rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
@@ -4511,12 +4511,14 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                     func = model.lin_edge(in_features.float()) * correction
                 func_list.append(func)
                 plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
-                         linewidth=2, alpha=0.25)
+                         linewidth=8 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
             func_list = torch.stack(func_list)
             plt.xlabel(r'$x$', fontsize=78)
-            plt.ylabel(r'Learned $f(x)$', fontsize=78)
             if model_config.signal_model_name == 'PDE_N4':
                 plt.ylim([-1,1])
+                plt.ylabel(r'Learned $\psi_i(x)$', fontsize=78)
+            else:
+                plt.ylabel(r'Learned $\psi(x)$', fontsize=78)
             plt.xlim([-5,5])
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/reconstructed_f_x_{config_file}_{epoch}.tif", dpi=170.7)
@@ -4598,7 +4600,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
             fig, ax = fig_init()
             gt_weight = to_numpy(adjacency)
             pred_weight = to_numpy(A)
-            plt.scatter(gt_weight, pred_weight / 10, s=1, c='k', alpha=1)
+            plt.scatter(gt_weight, pred_weight / 10, s=1, c='k', alpha=0.1)
             plt.xlabel(r'true $W_{ij}$', fontsize=78)
             plt.ylabel(r'learned $W_{ij}$', fontsize=78)
             if n_particles == 8000:
