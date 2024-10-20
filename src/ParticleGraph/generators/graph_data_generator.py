@@ -599,7 +599,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         #
         #     # pos = nx.spring_layout(G, weight='weight', seed=42, k=1)
         #     # for k,p in pos.items():
-        #     #     X1[k,:] = torch.tensor([v[0],v[1]], device=device)
+        #     #     X1[k,:] = torch.tensor([p[0],p[1]], device=device)
 
         check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
         

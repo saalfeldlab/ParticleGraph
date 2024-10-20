@@ -79,7 +79,10 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         else:
             pred = self.lin_phi(in_features) + msg + excitation
 
-        return pred
+        if return_all:
+            return pred, msg
+        else:
+            return pred
 
     def message(self, edge_index_i, edge_index_j, u_j, embedding_i, embedding_j):
 

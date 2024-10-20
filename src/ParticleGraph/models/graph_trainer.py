@@ -20,7 +20,7 @@ from scipy.optimize import curve_fit
 
 from ParticleGraph.generators.cell_utils import *
 from ParticleGraph.fitting_models import linear_model
-
+from torch_geometric.utils import dense_to_sparse
 
 def data_train(config=None, config_file=None, erase=False, best_model=None, device=None):
 
@@ -4230,6 +4230,16 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             adjacency_ = adjacency.t().clone().detach()
             adj_t = torch.abs(adjacency_) > 0
             edge_index = adj_t.nonzero().t().contiguous()
+    if 'PDE_N' in model_config.signal_model_name:
+        adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency.pt', map_location=device)
+        edge_index = torch.load(f'./graphs_data/graphs_{dataset_name}/edge_index.pt', map_location=device)
+        edge_index_, edge_attr = dense_to_sparse(adjacency)
+        first_dataset = data.Data(x=x.clone().detach(), pos=x[:, 1:3].clone().detach(), edge_index=edge_index.clone().detach(), edge_attr=edge_attr.clone().detach())
+        G_first = to_networkx(first_dataset.clone().detach(), remove_self_loops=True, to_undirected=True)
+        first_positions = nx.spring_layout(G_first, weight='weight', seed=42, k=1)
+        X1_first = torch.zeros((n_particles, 2), device=device)
+        for node, pos in first_positions.items():
+            X1_first[node,:] = torch.tensor([pos[0],pos[1]], device=device)
 
     if verbose:
         print(f'Test data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
@@ -4421,6 +4431,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
         if (it % step == 0) & (it >= 0) & visualize:
 
+            num = f"{it:06}"
+
             if 'latex' in style:
                 plt.rcParams['text.usetex'] = True
                 rc('font', **{'family': 'serif', 'serif': ['Palatino']})
@@ -4469,31 +4481,81 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
                 plt.close()
 
+                y,msg  = y = model(dataset, data_id=1, return_all=True)
+
                 plt.style.use('dark_background')
                 matplotlib.rcParams['savefig.pad_inches'] = 0
 
-                fig = plt.figure(figsize=(16, 4.8))
-                plt.subplot(1, 4, 1)
-                plt.title('original')
-                plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=20, c=to_numpy(x0[:, 6]), cmap='viridis', vmin=-10,vmax=10)
+                plt.figure(figsize=(10, 10))
+                edge_colors = to_numpy(msg) / 10
+                edge_colors = np.minimum(1, edge_colors)
+                edge_colors = np.maximum(-1, edge_colors)
+                cmap = plt.cm.viridis
+                edge_colors = cmap((edge_colors+1)/2)
+                nx.draw(G_first, pos=first_positions, with_labels=False, edge_color=edge_colors, node_size=0, alpha=0.5)
+                plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=40, c=to_numpy(x0[:, 6]), cmap='viridis', vmin=-10,vmax=10, edgecolors='None',alpha=1)
                 plt.xticks([])
                 plt.yticks([])
-                plt.subplot(1, 4, 2)
-                plt.title('predicted')
-                plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=20, c=to_numpy(x[:, 6]), cmap='viridis', vmin=-10, vmax=10)
+                plt.xlim([-1.05,1.05])
+                plt.ylim([-1.05,1.05])
+                plt.savefig(f"./{log_dir}/tmp_recons/Edges_{config_file}_{num}.tif", dpi=170.7)
+                plt.close()
+                im = imread(f"./{log_dir}/tmp_recons/Edges_{config_file}_{num}.tif")
+                plt.figure(figsize=(10, 10))
+                plt.imshow(im)
                 plt.xticks([])
                 plt.yticks([])
-                plt.subplot(1, 4, 3)
-                plt.title('residual')
-                plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=20, c=to_numpy(x[:, 6] - x0[:, 6]), cmap='viridis', vmin=-10, vmax=10)
+                plt.subplot(3, 3, 1)
+                plt.imshow(im[800:1000, 800:1000, :])
                 plt.xticks([])
                 plt.yticks([])
-                plt.subplot(1, 4, 4)
-                plt.plot(rmserr_list, c='w')
-                plt.xlim([0,1000])
-                plt.ylim([0,5])
-
                 plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_recons/Edges_{config_file}_{num}.tif", dpi=170.7)
+                plt.close()
+
+                plt.figure(figsize=(10, 10))
+                plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=40, c=to_numpy(x0[:, 6]), cmap='viridis', vmin=-10,vmax=10, edgecolors='k',alpha=1)
+                plt.xticks([])
+                plt.yticks([])
+                plt.xlim([-1.05,1.05])
+                plt.ylim([-1.05,1.05])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=170.7)
+                plt.close()
+                im = imread(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif")
+                plt.figure(figsize=(10, 10))
+                plt.imshow(im)
+                plt.xticks([])
+                plt.yticks([])
+                plt.subplot(3, 3, 1)
+                plt.imshow(im[800:1000, 800:1000, :])
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=170.7)
+                plt.close()
+
+                # fig = plt.figure(figsize=(16, 4.8))
+                # plt.subplot(1, 4, 1)
+                # plt.title('original')
+                # plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=20, c=to_numpy(x0[:, 6]), cmap='viridis', vmin=-10,vmax=10)
+                # plt.xticks([])
+                # plt.yticks([])
+                # plt.subplot(1, 4, 2)
+                # plt.title('predicted')
+                # plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=20, c=to_numpy(x[:, 6]), cmap='viridis', vmin=-10, vmax=10)
+                # plt.xticks([])
+                # plt.yticks([])
+                # plt.subplot(1, 4, 3)
+                # plt.title('residual')
+                # plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=20, c=to_numpy(x[:, 6] - x0[:, 6]), cmap='viridis', vmin=-10, vmax=10)
+                # plt.xticks([])
+                # plt.yticks([])
+                # plt.subplot(1, 4, 4)
+                # plt.plot(rmserr_list, c='w')
+                # plt.xlim([0,1000])
+                # plt.ylim([0,5])
+
             elif do_tracking:
                 plt.scatter(to_numpy(x0[:, 2]), to_numpy(x0[:, 1]), s=20, c='k')
                 plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=20, c='r')
@@ -4514,77 +4576,80 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.scatter(x[index_particles[n], 2].detach().cpu().numpy(),
                                 x[index_particles[n], 1].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
 
-            if 'latex' in style:
-                plt.xlabel(r'$x$', fontsize=78)
-                plt.ylabel(r'$y$', fontsize=78)
-                plt.xticks(fontsize=48.0)
-                plt.yticks(fontsize=48.0)
-            if 'frame' in style:
-                plt.xlabel('x', fontsize=48)
-                plt.ylabel('y', fontsize=48)
-                plt.xticks(fontsize=48.0)
-                plt.yticks(fontsize=48.0)
-                plt.text(0, 1.1, f'   ', ha='left', va='top', transform=ax.transAxes, fontsize=48)
-                ax.tick_params(axis='both', which='major', pad=15)
-                # cbar = plt.colorbar(shrink=0.5)
-                # cbar.ax.tick_params(labelsize=32)
-            if 'no_ticks' in style:
-                plt.xticks([])
-                plt.yticks([])
-            if not(('RD_RPS_Mesh' in model_config.mesh_model_name)|('PDE_N' in model_config.signal_model_name)):
-                plt.xlim([0, 1])
-                plt.ylim([0, 1])
-            if 'PDE_G' in model_config.particle_model_name:
-                plt.xlim([-2, 2])
-                plt.ylim([-2, 2])
-            if 'PDE_GS' in model_config.particle_model_name:
 
-                object_list = ['sun', 'mercury', 'venus', 'earth', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune',
-                               'pluto', 'io',
-                               'europa', 'ganymede', 'callisto', 'mimas', 'enceladus', 'tethys', 'dione', 'rhea',
-                               'titan', 'hyperion', 'moon',
-                               'phobos', 'deimos', 'charon']
+            if not('PDE_N' in model_config.signal_model_name):
 
-                masses = torch.tensor([1.989e30,3.30e23, 4.87e24,5.97e24,6.42e23,1.90e27,5.68e26,8.68e25,1.02e26,1.31e22,8.93e22,4.80e22, 1.48e23,1.08e23,3.75e19,1.08e20,
-                6.18e20,1.10e21,2.31e21,1.35e23,5.62e18,7.35e22,1.07e16,1.48e15, 1.52e21], device=device)
+                if 'latex' in style:
+                    plt.xlabel(r'$x$', fontsize=78)
+                    plt.ylabel(r'$y$', fontsize=78)
+                    plt.xticks(fontsize=48.0)
+                    plt.yticks(fontsize=48.0)
+                if 'frame' in style:
+                    plt.xlabel('x', fontsize=48)
+                    plt.ylabel('y', fontsize=48)
+                    plt.xticks(fontsize=48.0)
+                    plt.yticks(fontsize=48.0)
+                    plt.text(0, 1.1, f'   ', ha='left', va='top', transform=ax.transAxes, fontsize=48)
+                    ax.tick_params(axis='both', which='major', pad=15)
+                    # cbar = plt.colorbar(shrink=0.5)
+                    # cbar.ax.tick_params(labelsize=32)
+                if 'no_ticks' in style:
+                    plt.xticks([])
+                    plt.yticks([])
+                if not(('RD_RPS_Mesh' in model_config.mesh_model_name)|('PDE_N' in model_config.signal_model_name)):
+                    plt.xlim([0, 1])
+                    plt.ylim([0, 1])
+                if 'PDE_G' in model_config.particle_model_name:
+                    plt.xlim([-2, 2])
+                    plt.ylim([-2, 2])
+                if 'PDE_GS' in model_config.particle_model_name:
 
-                pos = x[:,1:dimension + 1] # - x[0,1:dimension + 1]
-                distance = torch.sqrt(torch.sum(bc_dpos(pos[:, None, :] - pos[None, 0, :]) ** 2, dim=2))
-                unit_vector = pos / distance
+                    object_list = ['sun', 'mercury', 'venus', 'earth', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune',
+                                   'pluto', 'io',
+                                   'europa', 'ganymede', 'callisto', 'mimas', 'enceladus', 'tethys', 'dione', 'rhea',
+                                   'titan', 'hyperion', 'moon',
+                                   'phobos', 'deimos', 'charon']
 
-                if it == 0 :
+                    masses = torch.tensor([1.989e30,3.30e23, 4.87e24,5.97e24,6.42e23,1.90e27,5.68e26,8.68e25,1.02e26,1.31e22,8.93e22,4.80e22, 1.48e23,1.08e23,3.75e19,1.08e20,
+                    6.18e20,1.10e21,2.31e21,1.35e23,5.62e18,7.35e22,1.07e16,1.48e15, 1.52e21], device=device)
 
-                    log_coeff = torch.log(distance[1:])
-                    log_coeff_min = torch.min(log_coeff)
-                    log_coeff_max = torch.max(log_coeff)
-                    log_coeff_diff = log_coeff_max - log_coeff_min
-                    d_log = [log_coeff_min, log_coeff_max, log_coeff_diff]
+                    pos = x[:,1:dimension + 1] # - x[0,1:dimension + 1]
+                    distance = torch.sqrt(torch.sum(bc_dpos(pos[:, None, :] - pos[None, 0, :]) ** 2, dim=2))
+                    unit_vector = pos / distance
 
-                    log_coeff = torch.log(masses)
-                    log_coeff_min = torch.min(log_coeff)
-                    log_coeff_max = torch.max(log_coeff)
-                    log_coeff_diff = log_coeff_max - log_coeff_min
-                    m_log = [log_coeff_min, log_coeff_max, log_coeff_diff]
+                    if it == 0 :
 
-                    m_ = torch.log(masses) / m_log[2]
+                        log_coeff = torch.log(distance[1:])
+                        log_coeff_min = torch.min(log_coeff)
+                        log_coeff_max = torch.max(log_coeff)
+                        log_coeff_diff = log_coeff_max - log_coeff_min
+                        d_log = [log_coeff_min, log_coeff_max, log_coeff_diff]
 
-                distance_ = (torch.log(distance) - d_log[0]) / d_log[2]
-                pos = distance_ * unit_vector
-                pos = to_numpy(pos)
-                pos[0] = 0
+                        log_coeff = torch.log(masses)
+                        log_coeff_min = torch.min(log_coeff)
+                        log_coeff_max = torch.max(log_coeff)
+                        log_coeff_diff = log_coeff_max - log_coeff_min
+                        m_log = [log_coeff_min, log_coeff_max, log_coeff_diff]
 
-                for n in range(25):
-                    plt.scatter(pos[n,1], pos[n, 0], s=200 * to_numpy(m_[n]**3), color=cmap.color(n))
-                    # plt.text(pos[n,1], pos[n, 0], object_list[n], fontsize=8)
-                plt.xlim([-1.2, 1.2])
-                plt.ylim([-1.2, 1.2])
-                plt.xticks([])
-                plt.yticks([])
+                        m_ = torch.log(masses) / m_log[2]
 
-            plt.tight_layout()
-            num = f"{it:06}"
-            plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{num}.tif", dpi=170.7)
-            plt.close()
+                    distance_ = (torch.log(distance) - d_log[0]) / d_log[2]
+                    pos = distance_ * unit_vector
+                    pos = to_numpy(pos)
+                    pos[0] = 0
+
+                    for n in range(25):
+                        plt.scatter(pos[n,1], pos[n, 0], s=200 * to_numpy(m_[n]**3), color=cmap.color(n))
+                        # plt.text(pos[n,1], pos[n, 0], object_list[n], fontsize=8)
+                    plt.xlim([-1.2, 1.2])
+                    plt.ylim([-1.2, 1.2])
+                    plt.xticks([])
+                    plt.yticks([])
+
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{num}.tif", dpi=170.7)
+                plt.close()
+
 
             if has_ghost:
 

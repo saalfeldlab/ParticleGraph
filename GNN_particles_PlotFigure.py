@@ -5885,7 +5885,7 @@ if __name__ == '__main__':
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['7_360000'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['8_260000'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
