@@ -4235,6 +4235,8 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
     dimension = config.simulation.dimension
     has_siren = 'siren' in config.graph_model.excitation_type
     has_siren_time = 'siren_with_time' in config.graph_model.excitation_type
+    max_radius = config.simulation.max_radius
+
 
     embedding_cluster = EmbeddingCluster(config)
 
@@ -4458,7 +4460,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
             fig, ax = fig_init()
             for n in range(n_particle_types):
                 pos = torch.argwhere(type_list == n).squeeze()
-                plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=10, color=cmap.color(n))
+                plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=40, color=cmap.color(n))
             plt.xlabel(r'$\ensuremath{\mathbf{a}}_{i0}$', fontsize=78)
             plt.ylabel(r'$\ensuremath{\mathbf{a}}_{i1}$', fontsize=78)
             plt.tight_layout()
@@ -4466,18 +4468,24 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
 
             fig, ax = fig_init()
             rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
+
             func_list = []
             for n in trange(0,n_particles,n_particles//100):
-                in_features = rr[:, None]
+                if model_config.signal_model_name == 'PDE_N4':
+                    embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                    in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
+                else:
+                    in_features = rr[:, None]
                 with torch.no_grad():
                     func = model.lin_edge(in_features.float())
                 func_list.append(func)
                 plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
-                         linewidth=2, alpha=0.25)
+                         linewidth=8 // ( 1 + (n_particle_types>16)*1.0), alpha=0.25)
             func_list = torch.stack(func_list)
             plt.xlabel(r'$x$', fontsize=78)
             plt.ylabel(r'Learned $f(x)$', fontsize=78)
-            # plt.ylim([-0.05,0.15])
+            if model_config.signal_model_name == 'PDE_N4':
+                plt.ylim([-0.5,0.5])
             plt.xlim([-5,5])
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/raw_f_x_{config_file}_{epoch}.tif", dpi=170.7)
@@ -4486,20 +4494,30 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
             correction = 1 / torch.mean(torch.mean(func_list[:,900:1000], dim=0))
             print(f'correction: {correction:0.2f}')
             torch.save(correction, f'{log_dir}/correction.pt')
-
+            if model_config.signal_model_name == 'PDE_N4':
+                correction = 2.5
 
             fig, ax = fig_init()
             rr = torch.tensor(np.linspace(-5, 5, 1000)).to(device)
-            # plt.plot(to_numpy(rr), to_numpy(torch.tanh(rr)), linewidth = 20, alpha = 1, label=r'true')
-            in_features = rr[:, None]
-            with torch.no_grad():
-                func = model.lin_edge(in_features.float()) * correction
-            plt.plot(to_numpy(rr), to_numpy(func), color='k', linewidth=8, label=r'learned')
+
+            func_list = []
+            for n in trange(0,n_particles,n_particles//100):
+                if model_config.signal_model_name == 'PDE_N4':
+                    embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                    in_features = get_in_features(rr, embedding_, model_config.signal_model_name, max_radius)
+                else:
+                    in_features = rr[:, None]
+                with torch.no_grad():
+                    func = model.lin_edge(in_features.float()) * correction
+                func_list.append(func)
+                plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(to_numpy(type_list)[n].astype(int)),
+                         linewidth=2, alpha=0.25)
+            func_list = torch.stack(func_list)
             plt.xlabel(r'$x$', fontsize=78)
             plt.ylabel(r'Learned $f(x)$', fontsize=78)
-            plt.ylim([-1.1,1.1])
+            if model_config.signal_model_name == 'PDE_N4':
+                plt.ylim([-1,1])
             plt.xlim([-5,5])
-            # plt.legend(fontsize=32.0, loc='upper left')
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/reconstructed_f_x_{config_file}_{epoch}.tif", dpi=170.7)
             plt.close()
@@ -4507,13 +4525,11 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
             print('interaction functions ...')
             fig, ax = fig_init()
             func_list = []
-            config_model = config.graph_model.signal_model_name
             # for n in range(n_particle_types):
             #     s = config.simulation.params[n][1]
             #     c = config.simulation.params[n][2]
             #     func = -c * rr + s * torch.tanh(rr)
             #     plt.plot(to_numpy(rr), to_numpy(func) * to_numpy(ynorm), linewidth=20, alpha=1)
-
             for n in trange(n_particles):
                 embedding_ = model.a[n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
                 in_features = torch.cat((rr[:, None], embedding_), dim=1)
@@ -4526,7 +4542,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
             func_list = torch.stack(func_list)
             func_list_ = to_numpy(func_list)
             plt.xlabel(r'$x$', fontsize=78)
-            plt.ylabel(r'Learned $\phi(x)$', fontsize=78)
+            plt.ylabel(r'Learned $\phi_i(x)$', fontsize=78)
             plt.tight_layout()
             plt.savefig(f'./{log_dir}/results/learned phi.png', dpi=300)
 
@@ -5576,6 +5592,10 @@ def data_plot(config, config_file, epoch_list, device):
 
     if ('PDE_N2' in config.graph_model.signal_model_name):
         plot_synaptic2(config_file, epoch_list, log_dir, logger, 'viridis', device)
+    elif ('PDE_N4' in config.graph_model.signal_model_name):
+        plot_synaptic2(config_file, epoch_list, log_dir, logger, 'viridis', device)
+    elif ('PDE_N5' in config.graph_model.signal_model_name):
+        plot_synaptic2(config_file, epoch_list, log_dir, logger, 'viridis', device)
     elif('PDE_N3' in config.graph_model.signal_model_name):
         plot_synaptic3(config_file, epoch_list, log_dir, logger, 'viridis', device)
     elif 'PDE_N' in config.graph_model.signal_model_name:
@@ -5846,7 +5866,7 @@ if __name__ == '__main__':
     # config_list = ['signal_N2_a_r1','signal_N2_c_r1','signal_N2_d_r1','signal_N2_e_r1','signal_N2_f_r1',
     #                'signal_N2_i_r1','signal_N2_j_r1','signal_N2_k_r1','signal_N2_l_r1','signal_N2_m_r1','signal_N2_n_r1']
 
-    config_list = ['signal_N2_r1_Lorentz_a', 'signal_N2_r1_Lorentz_b']
+    config_list = ['signal_N2_r1_Lorentz_k3']
 
     # config_list = ['signal_N2_r1_Lorentz_a','signal_N2_r1_Lorentz_b','signal_N2_r1_Lorentz_d','signal_N2_r1_Lorentz_e',
     #                'signal_N2_r1_Lorentz_f','signal_N2_r1_Lorentz_g','signal_N2_r1_Lorentz_i','signal_N2_r1_Lorentz_j',
@@ -5860,7 +5880,7 @@ if __name__ == '__main__':
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['7_0'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
