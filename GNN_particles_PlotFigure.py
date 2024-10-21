@@ -4254,8 +4254,8 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
     print('Update variables ...')
     x = x_list[0][n_frames - 1]
     n_particles = x.shape[0]
-    print(f'N particles: {n_particles}')
-    logger.info(f'N particles: {n_particles}')
+    print(f'N neurons: {n_particles}')
+    logger.info(f'N neurons: {n_particles}')
     config.simulation.n_particles = n_particles
     type_list = torch.tensor(x[:, 1 + 2 * dimension:2 + 2 * dimension], device=device)
 
@@ -5376,7 +5376,7 @@ if __name__ == '__main__':
     # config_list = ['signal_N2_a_r1','signal_N2_c_r1','signal_N2_d_r1','signal_N2_e_r1','signal_N2_f_r1',
     #                'signal_N2_i_r1','signal_N2_j_r1','signal_N2_k_r1','signal_N2_l_r1','signal_N2_m_r1','signal_N2_n_r1']
 
-    config_list = ['signal_N2_r1_Lorentz_k3']
+    config_list = ['signal_N2_r1_Lorentz_d']
 
     # config_list = ['signal_N2_r1_Lorentz_a','signal_N2_r1_Lorentz_b','signal_N2_r1_Lorentz_d','signal_N2_r1_Lorentz_e',
     #                'signal_N2_r1_Lorentz_f','signal_N2_r1_Lorentz_g','signal_N2_r1_Lorentz_i','signal_N2_r1_Lorentz_j',
@@ -5390,7 +5390,7 @@ if __name__ == '__main__':
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['15_0'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['14_0'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

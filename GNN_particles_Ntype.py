@@ -51,9 +51,9 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'train'
-        best_model = '15_840000'
-        config_list = ["signal_N2_r1_Lorentz_l1"]
+        action = 'test'
+        best_model = '12'
+        config_list = ["signal_N2_r1_Lorentz_d"]
 
     for config_file in config_list:
 
@@ -66,3 +66,6 @@ if __name__ == '__main__':
             data_train(config=config, config_file=config_file, erase=True, best_model=best_model, device=device)
         if 'test' in action:
             data_test(config=config, config_file=config_file, visualize=True, style='color', verbose=False, best_model='20', run=0, step=25, test_simulation=False, sample_embedding=False, device=device)    # config.simulation.n_frames // 7
+
+
+# bsub -n 4 -gpu "num=1" -q gpu_h100 "python GNN_particles_Ntype.py -o train signal_N2_r1_Lorentz_l1 15_840000"
