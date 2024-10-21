@@ -1,4 +1,4 @@
-description: 'synaptic network random matrix coeff L1    1000 neurons 4 types phi neuron dependent lorentz std 0.03'
+description: 'synaptic network random matrix cluster embedding distance 0.2 1000 neurons 4 types phi neuron dependent lorentz std 0.03'
 dataset: 'signal_N2_Lorentz_k'
 
 simulation:
@@ -51,7 +51,8 @@ training:
     sparsity: 'none'
     data_augmentation: False
     data_augmentation_loop: 100
-    cluster_method: 'kmeans_auto_embedding'
+    cluster_method: 'distance_embedding'
+    cluster_distance_threshold: 0.2
     fix_cluster_embedding: True
     device: 'auto'
     sparsity: 'replace_embedding_function'
@@ -59,4 +60,3 @@ training:
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4
     coeff_diff: 100
-    coeff_L1: 1.0E-5
