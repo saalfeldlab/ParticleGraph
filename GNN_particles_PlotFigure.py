@@ -5370,7 +5370,7 @@ if __name__ == '__main__':
 
 
 
-    # config_list = [_cell_sequence_a","arbitrary_3_cell_sequence_b","arbitrary_3_cell_sequence_c"]
+    # config_list = ["cell_sequence_a","arbitrary_3_cell_sequence_b","arbitrary_3_cell_sequence_c"]
     # config_list = ["boids_9_sequence_a"]
 
     # config_list = ['signal_N2_a_r1','signal_N2_c_r1','signal_N2_d_r1','signal_N2_e_r1','signal_N2_f_r1',

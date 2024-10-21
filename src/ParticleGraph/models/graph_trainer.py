@@ -156,6 +156,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
         logger.info(f'best_model: {best_model}  start_epoch: {start_epoch}')
     else:
         start_epoch=0
+        net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs.pt"
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -164,7 +165,7 @@ def data_train_particle(config, config_file, erase, best_model, device):
     logger.info(f'Learning rates: {lr}, {lr_embedding}')
     model.train()
 
-    net = f"./log/try_{config_file}/models/best_model_with_{n_runs-1}_graphs.pt"
+
     print(f'network: {net}')
     print(f'initial batch_size: {batch_size}')
     print('')
@@ -751,6 +752,7 @@ def data_train_cell(config, config_file, erase, best_model, device):
         logger.info(f'best_model: {best_model}  start_epoch: {start_epoch}')
     else:
         start_epoch=0
+        net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs.pt"
 
     lr = train_config.learning_rate_start
     lr_embedding = train_config.learning_rate_embedding_start
@@ -759,7 +761,7 @@ def data_train_cell(config, config_file, erase, best_model, device):
     logger.info(f'Learning rates: {lr}, {lr_embedding}')
     model.train()
 
-    net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs.pt"
+
     print(f'network: {net}')
     print(f'initial batch_size: {batch_size}')
     print('')
@@ -896,90 +898,87 @@ def data_train_cell(config, config_file, erase, best_model, device):
             else:
                 id_list_ = torch.cat((id_list_, ids), 0)
 
-        print(f'N tracks: {len(torch.unique(id_list_))}')
-        logger.info(f'N tracks: {len(torch.unique(id_list_))}')
-
-        tracking_index_list = []
-
-        if epoch == 0:
-           distance_threshold = 1E-3
-        elif epoch == 1:
-           distance_threshold = 1E-3
-        else:
-           distance_threshold = 1E-4
-
-        
-        for k in trange(n_frames):
-            x = x_list[1][k].clone().detach()
-            x_list[1][k+1][:,-1] = Initial_node_id[k+1]
-
-            edges = edge_p_p_list[1][f'arr_{k}']
-            edges = torch.tensor(edges, dtype=torch.int64, device=device)
-            dataset = data.Data(x=x[:, :], edge_index=edges)
-
-            pred = model(dataset, training=True, vnorm=vnorm, phi=torch.zeros(1, device=device))
-
-            x_next = x_list[1][k + 1]
-            x_pos_next = x_next[:, 1:3].clone().detach()
-            if config.graph_model.prediction == '2nd_derivative':
-                x_pos_pred = (x[:, 1:3] + delta_t * (x[:, 3:5] + delta_t * pred * ynorm))
+        if do_tracking:
+            print(f'N tracks: {len(torch.unique(id_list_))}')
+            logger.info(f'N tracks: {len(torch.unique(id_list_))}')
+            tracking_index_list = []
+            if epoch == 0:
+               distance_threshold = 1E-3
+            elif epoch == 1:
+               distance_threshold = 1E-3
             else:
-                x_pos_pred = (x[:, 1:3] + delta_t * pred * ynorm)
-            distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
-            result = distance.min(dim=1)
-            min_distance_value = result.values
-            min_index = result.indices
+               distance_threshold = 1E-4
+            for k in trange(n_frames):
+                x = x_list[1][k].clone().detach()
+                x_list[1][k+1][:,-1] = Initial_node_id[k+1]
 
-            first_cell_id = to_numpy(x[:,0])
-            next_cell_id = to_numpy(x_next[min_index,0])
+                edges = edge_p_p_list[1][f'arr_{k}']
+                edges = torch.tensor(edges, dtype=torch.int64, device=device)
+                dataset = data.Data(x=x[:, :], edge_index=edges)
 
-            tracking_distance = torch.sqrt(min_distance_value)
-            
-            bVisu=True
+                pred = model(dataset, training=True, vnorm=vnorm, phi=torch.zeros(1, device=device))
 
-            if bVisu:
-                fig = plt.figure(figsize=(8, 8))
-                plt.scatter(to_numpy(x[:, 1]),to_numpy(x[:, 2]),s=10, c='k')
-            pos = torch.argwhere(tracking_distance < distance_threshold)
-            if len(pos)>0:       # reduce dimension of latent space, the connected cell inherit the cell_id from the previous frame
+                x_next = x_list[1][k + 1]
+                x_pos_next = x_next[:, 1:3].clone().detach()
+                if config.graph_model.prediction == '2nd_derivative':
+                    x_pos_pred = (x[:, 1:3] + delta_t * (x[:, 3:5] + delta_t * pred * ynorm))
+                else:
+                    x_pos_pred = (x[:, 1:3] + delta_t * pred * ynorm)
+                distance = torch.sum(bc_dpos(x_pos_pred[:, None, :] - x_pos_next[None, :, :]) ** 2, dim=2)
+                result = distance.min(dim=1)
+                min_distance_value = result.values
+                min_index = result.indices
+
+                first_cell_id = to_numpy(x[:,0])
+                next_cell_id = to_numpy(x_next[min_index,0])
+
+                tracking_distance = torch.sqrt(min_distance_value)
+
+                bVisu=False
+
                 if bVisu:
-                    plt.scatter(to_numpy(x_pos_pred[pos, 0]), to_numpy(x_pos_pred[pos, 1]), s=10, c='g', alpha=0.5)
+                    fig = plt.figure(figsize=(8, 8))
+                    plt.scatter(to_numpy(x[:, 1]),to_numpy(x[:, 2]),s=10, c='k')
+                pos = torch.argwhere(tracking_distance < distance_threshold)
+                if len(pos)>0:       # reduce dimension of latent space, the connected cell inherit the cell_id from the previous frame
+                    if bVisu:
+                        plt.scatter(to_numpy(x_pos_pred[pos, 0]), to_numpy(x_pos_pred[pos, 1]), s=10, c='g', alpha=0.5)
 
-                list_first = np.arange(len(x))[to_numpy(pos).astype(int)].squeeze()
-                list_next = to_numpy(min_index[to_numpy(pos).astype(int)]).squeeze()
-                list = np.concatenate((list_first[:,None], list_next[:,None]), axis=1)
+                    list_first = np.arange(len(x))[to_numpy(pos).astype(int)].squeeze()
+                    list_next = to_numpy(min_index[to_numpy(pos).astype(int)]).squeeze()
+                    list = np.concatenate((list_first[:,None], list_next[:,None]), axis=1)
 
-                node_id_first = to_numpy(x_list[1][k][list_first, -1])
-                node_id_next = to_numpy(x_list[1][k + 1][list_next, -1])
+                    node_id_first = to_numpy(x_list[1][k][list_first, -1])
+                    node_id_next = to_numpy(x_list[1][k + 1][list_next, -1])
 
-                with torch.no_grad():
-                    model.a[node_id_next] = model.a[node_id_first].clone().detach()
+                    with torch.no_grad():
+                        model.a[node_id_next] = model.a[node_id_first].clone().detach()
 
-                x_list[1][k + 1][list_next, -1] = x_list[1][k][list_first, -1].clone().detach()
-                if (model_config.prediction == '2nd_derivative'):
-                    new_velocity = (x_list[1][k + 1][list_next, 1:3].clone().detach() - x_list[1][k][list_first, 1:3].clone().detach()) / delta_t
-                    x_list[1][k + 1][list_next, 3:5] = new_velocity.clone().detach()
-                    
-            tracking_index_list.append(np.sum((first_cell_id==next_cell_id)*1.0) / len(x) * 100)
+                    x_list[1][k + 1][list_next, -1] = x_list[1][k][list_first, -1].clone().detach()
+                    if (model_config.prediction == '2nd_derivative'):
+                        new_velocity = (x_list[1][k + 1][list_next, 1:3].clone().detach() - x_list[1][k][list_first, 1:3].clone().detach()) / delta_t
+                        x_list[1][k + 1][list_next, 3:5] = new_velocity.clone().detach()
 
-            if bVisu:
-                pos = torch.argwhere(tracking_distance >= distance_threshold)
-                if len(pos)>0:
-                    plt.scatter(to_numpy(x_pos_pred[pos, 0]), to_numpy(x_pos_pred[pos, 1]), s=10, c='r', alpha=0.5)
-                for n in range(len(x)):
-                    plt.text(to_numpy(x[n, 1])+0.005, to_numpy(x[n, 2])-0.005, str(int(to_numpy(x_list[1][k][n,-1]))), fontsize=6)
-                plt.xlim([-0.2,1.2])
-                plt.ylim([-0.2,1.2])
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_recons/tracking_{epoch}_{k}.tif")
-                plt.close()
+                tracking_index_list.append(np.sum((first_cell_id==next_cell_id)*1.0) / len(x) * 100)
 
-            # fig = plt.figure(figsize=(8, 8))
-            # plt.scatter(to_numpy(x[:, 1]),to_numpy(x[:, 2]),s=10,c='k')
-            # plt.scatter(to_numpy(x_pos_next[:, 0]),to_numpy(x_pos_next[:, 1]),s=10,c='k',alpha=0.5)
-            # pos = np.argwhere(first_cell_id!=next_cell_id)
-            # plt.scatter(to_numpy(x[pos, 1]),to_numpy(x[pos, 2]),s=10,c='r',alpha=1)
-            # plt.scatter(to_numpy(x_pos_pred[pos, 0]),to_numpy(x_pos_pred[pos, 1]),s=10,c='r',alpha=0.5)
+                if bVisu:
+                    pos = torch.argwhere(tracking_distance >= distance_threshold)
+                    if len(pos)>0:
+                        plt.scatter(to_numpy(x_pos_pred[pos, 0]), to_numpy(x_pos_pred[pos, 1]), s=10, c='r', alpha=0.5)
+                    for n in range(len(x)):
+                        plt.text(to_numpy(x[n, 1])+0.005, to_numpy(x[n, 2])-0.005, str(int(to_numpy(x_list[1][k][n,-1]))), fontsize=6)
+                    plt.xlim([-0.2,1.2])
+                    plt.ylim([-0.2,1.2])
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/tmp_recons/tracking_{epoch}_{k}.tif")
+                    plt.close()
+
+                # fig = plt.figure(figsize=(8, 8))
+                # plt.scatter(to_numpy(x[:, 1]),to_numpy(x[:, 2]),s=10,c='k')
+                # plt.scatter(to_numpy(x_pos_next[:, 0]),to_numpy(x_pos_next[:, 1]),s=10,c='k',alpha=0.5)
+                # pos = np.argwhere(first_cell_id!=next_cell_id)
+                # plt.scatter(to_numpy(x[pos, 1]),to_numpy(x[pos, 2]),s=10,c='r',alpha=1)
+                # plt.scatter(to_numpy(x_pos_pred[pos, 0]),to_numpy(x_pos_pred[pos, 1]),s=10,c='r',alpha=0.5)
 
         fig = plt.figure(figsize=(22, 4))
 
@@ -3600,7 +3599,7 @@ def data_train_WBI(config, config_file, erase, best_model, device):
 
 
 
-def data_test(config=None, config_file=None, visualize=False, style='color frame', verbose=True, best_model=20, step=15, ratio=1, run=1, test_simulation=False, sample_embedding = False, device=[]):
+def data_test(config=None, config_file=None, visualize=False, style='color frame', verbose=True, best_model=20, step=15, ratio=1, run=1, plot_data=False, test_simulation=False, sample_embedding = False, device=[]):
     dataset_name = config.dataset
     simulation_config = config.simulation
     model_config = config.graph_model
@@ -3849,6 +3848,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         x0 = x_list[0][it].clone().detach()
         y0 = y_list[0][it].clone().detach()
 
+
         if 'PDE_N' in model_config.signal_model_name:
             rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 6:7] - x0[:, 6:7]) ** 2, axis=1)))
         elif model_config.mesh_model_name == 'WaveMesh':
@@ -3965,6 +3965,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
             x[:, 1:dimension + 1] = bc_pos(x[:, 1:dimension + 1] + x[:,dimension + 1:2*dimension+1] * delta_t)  # position update
 
+        if plot_data:
+            x = x0.clone().detach()
 
         if (it % step == 0) & (it >= 0) & visualize:
 
@@ -3973,6 +3975,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             if 'latex' in style:
                 plt.rcParams['text.usetex'] = True
                 rc('font', **{'family': 'serif', 'serif': ['Palatino']})
+
+            if 'black' in style:
+                plt.style.use('dark_background')
 
             fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
             ax.tick_params(axis='both', which='major', pad=15)
@@ -4030,7 +4035,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 cmap = plt.cm.viridis
                 edge_colors = cmap((edge_colors+1)/2)
                 nx.draw(G_first, pos=first_positions, with_labels=False, edge_color=edge_colors, node_size=0, alpha=0.1, cmap='bwr')
-                plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=40, c=to_numpy(x0[:, 6]), cmap='viridis', vmin=-10,vmax=10, edgecolors='None',alpha=1)
+                plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=40, c=to_numpy(x[:, 6]), cmap='viridis', vmin=-10,vmax=10, edgecolors='None',alpha=1)
                 plt.xticks([])
                 plt.yticks([])
                 plt.xlim([-1.03,1.03])
@@ -4073,8 +4078,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=170.7)
                 plt.close()
-
-
             elif do_tracking:
                 plt.scatter(to_numpy(x0[:, 2]), to_numpy(x0[:, 1]), s=20, c='k')
                 plt.scatter(to_numpy(x[:, 2]), to_numpy(x[:, 1]), s=20, c='r')
@@ -4086,14 +4089,18 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
-
             else:
-                s_p = 100
+                s_p = 25
                 if simulation_config.has_cell_division:
                     s_p = 25
+
                 for n in range(n_particle_types):
-                    plt.scatter(x[index_particles[n], 2].detach().cpu().numpy(),
-                                x[index_particles[n], 1].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
+                    if 'bw' in style:
+                        plt.scatter(x[index_particles[n], 2].detach().cpu().numpy(),
+                                    x[index_particles[n], 1].detach().cpu().numpy(), s=s_p, color='w')
+                    else:
+                        plt.scatter(x[index_particles[n], 2].detach().cpu().numpy(),
+                                    x[index_particles[n], 1].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
 
 
             if not('PDE_N' in model_config.signal_model_name):
@@ -4166,7 +4173,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     plt.yticks([])
 
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{num}.tif", dpi=170.7)
+                plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{num}.tif", dpi=80)
                 plt.close()
 
 

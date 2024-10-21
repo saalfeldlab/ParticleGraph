@@ -13,7 +13,7 @@ simulation:
   delta_t: 1.5E-5
   dpos_init: 1.0E-4
   boundary: 'periodic'
-  start_frame: 0
+  start_frame: -500
 
 graph_model:
   particle_model_name: 'PDE_E'
