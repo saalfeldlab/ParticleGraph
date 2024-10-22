@@ -42,7 +42,7 @@ plotting:
     arrow_length: 1
 
 training:
-    n_epochs: 20
+    n_epochs: 40
     recursive_loop: 1
     batch_size: 1
     small_init_batch_size: False
@@ -59,3 +59,4 @@ training:
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4
     coeff_diff: 100
+    coeff_L1: 1E-5

@@ -740,7 +740,6 @@ def data_train_cell(config, config_file, erase, best_model, device):
         config.simulation.n_particles_max = n_particles_max
         Initial_node_id = id_list
 
-
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
     if best_model!=None:
@@ -760,7 +759,6 @@ def data_train_cell(config, config_file, erase, best_model, device):
     logger.info(f"Total Trainable Params: {n_total_params}")
     logger.info(f'Learning rates: {lr}, {lr_embedding}')
     model.train()
-
 
     print(f'network: {net}')
     print(f'initial batch_size: {batch_size}')
@@ -796,7 +794,7 @@ def data_train_cell(config, config_file, erase, best_model, device):
         total_loss = 0
         Niter = n_frames * data_augmentation_loop // batch_size
 
-        for N in trange(Niter):
+        for N in range(Niter):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -980,40 +978,40 @@ def data_train_cell(config, config_file, erase, best_model, device):
                 # plt.scatter(to_numpy(x[pos, 1]),to_numpy(x[pos, 2]),s=10,c='r',alpha=1)
                 # plt.scatter(to_numpy(x_pos_pred[pos, 0]),to_numpy(x_pos_pred[pos, 1]),s=10,c='r',alpha=0.5)
 
-        fig = plt.figure(figsize=(22, 4))
+            fig = plt.figure(figsize=(22, 4))
 
-        ax = fig.add_subplot(1, 5, 1)
-        id_list = []
-        id_list_ = []
-        for k in range(0,n_frames + 1):
-            ids = x_list[1][k][:, -1]
-            id_list.append(ids)
-            if k == 0:
-                id_list_ = ids
-            else:
-                id_list_ = torch.cat((id_list_, ids), 0)
-            if k % 10 == 0:
-                for n in range(n_particle_types):
-                    pos = torch.argwhere(type_list[k] == n)
-                    if len(pos)>0:
-                        plt.scatter(to_numpy(model.a[to_numpy(ids[pos]), 0]), to_numpy(model.a[to_numpy(ids[pos]), 1]), s=5, color=cmap.color(n), alpha=0.5)
+            ax = fig.add_subplot(1, 5, 1)
+            id_list = []
+            id_list_ = []
+            for k in range(0,n_frames + 1):
+                ids = x_list[1][k][:, -1]
+                id_list.append(ids)
+                if k == 0:
+                    id_list_ = ids
+                else:
+                    id_list_ = torch.cat((id_list_, ids), 0)
+                if k % 10 == 0:
+                    for n in range(n_particle_types):
+                        pos = torch.argwhere(type_list[k] == n)
+                        if len(pos)>0:
+                            plt.scatter(to_numpy(model.a[to_numpy(ids[pos]), 0]), to_numpy(model.a[to_numpy(ids[pos]), 1]), s=5, color=cmap.color(n), alpha=0.5)
 
-        print(f'N tracks: {len(torch.unique(id_list_))}')
-        logger.info(f'N tracks: {len(torch.unique(id_list_))}')
+            print(f'N tracks: {len(torch.unique(id_list_))}')
+            logger.info(f'N tracks: {len(torch.unique(id_list_))}')
 
-        ax = fig.add_subplot(1, 5, 2)
-        func_list, true_type_list, short_model_a_list, proj_interaction = analyze_edge_function_state(rr=[],
-                                                                                                      config=config,
-                                                                                                      model=model,
-                                                                                                      id_list=id_list,
-                                                                                                      type_list=type_list,
-                                                                                                      ynorm=ynorm,
-                                                                                                      cmap=cmap,
-                                                                                                      visualize=True,
-                                                                                                      device=device)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
-        plt.close()
+            ax = fig.add_subplot(1, 5, 2)
+            func_list, true_type_list, short_model_a_list, proj_interaction = analyze_edge_function_state(rr=[],
+                                                                                                          config=config,
+                                                                                                          model=model,
+                                                                                                          id_list=id_list,
+                                                                                                          type_list=type_list,
+                                                                                                          ynorm=ynorm,
+                                                                                                          cmap=cmap,
+                                                                                                          visualize=True,
+                                                                                                          device=device)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
+            plt.close()
 
 
         # embedding = proj_interaction
