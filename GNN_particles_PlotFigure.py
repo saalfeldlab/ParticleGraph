@@ -4532,7 +4532,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                 for k in range(n_particle_types):
                     ax = fig.add_subplot(2, 2, k+1)
                     for n in range(n_particle_types):
-                        for m in range(200):
+                        for m in range(250):
                             pos0 = to_numpy(torch.argwhere(type_list == k).squeeze())
                             pos1 = to_numpy(torch.argwhere(type_list == n).squeeze())
                             n0 = np.random.randint(len(pos0))
@@ -4544,7 +4544,13 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                             in_features = torch.cat((rr[:,None],embedding0, embedding1), dim=1)
                             func = model.lin_edge(in_features.float()) * correction
                             plt.plot(to_numpy(rr), to_numpy(func), 2, color=cmap.color(k),linewidth=1, alpha=0.25)
-
+                    plt.ylabel(r'learned $\psi^*(a_i, a_j, x_i)$', fontsize=24)
+                    plt.xlabel(r'$x_i$', fontsize=24)
+                    plt.ylim([-1.5, 1.5])
+                    plt.xlim([-5, 5])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/learned_multiple_psi.tif", dpi=170.7)
+                plt.close()
 
 
 
@@ -5403,7 +5409,7 @@ if __name__ == '__main__':
     # config_list = ['signal_N2_a_r1','signal_N2_c_r1','signal_N2_d_r1','signal_N2_e_r1','signal_N2_f_r1',
     #                'signal_N2_i_r1','signal_N2_j_r1','signal_N2_k_r1','signal_N2_l_r1','signal_N2_m_r1','signal_N2_n_r1']
 
-    config_list = ['signal_N2_r1_Lorentz_l1']
+    config_list = ['signal_N2_r1_Lorentz_k4']
 
     # config_list = ['signal_N2_r1_Lorentz_a','signal_N2_r1_Lorentz_b','signal_N2_r1_Lorentz_d','signal_N2_r1_Lorentz_e',
     #                'signal_N2_r1_Lorentz_f','signal_N2_r1_Lorentz_g','signal_N2_r1_Lorentz_i','signal_N2_r1_Lorentz_j',
@@ -5417,7 +5423,7 @@ if __name__ == '__main__':
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['24_560000'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

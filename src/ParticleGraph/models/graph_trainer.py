@@ -671,7 +671,6 @@ def data_train_cell(config, config_file, erase, best_model, device):
 
     x_list = []
     y_list = []
-    T1_list = []
     edge_p_p_list = []
     vertices_pos_list = []
 
@@ -683,11 +682,9 @@ def data_train_cell(config, config_file, erase, best_model, device):
         if run>0:
             y = torch.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt', map_location=device)
             edge_p_p = np.load(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}.npz')
-            T1 = torch.load(f'graphs_data/graphs_{dataset_name}/T1_list_{run}.pt', map_location=device)
             x_list.append(x)
             y_list.append(y)
             edge_p_p_list.append(edge_p_p)
-            T1_list.append(T1)
             # if has_inert_model:
             #     vertices_pos = np.load(f'graphs_data/graphs_{dataset_name}/vertices_pos_list_{run}.npz')
             #     vertices_pos_list.append(vertices_pos)
@@ -697,10 +694,13 @@ def data_train_cell(config, config_file, erase, best_model, device):
             small_tensor = torch.zeros((1, 1), dtype=torch.float32, device=device)
             x_list.append(small_tensor)
             y_list.append(small_tensor)
-            T1_list.append(small_tensor)
             # vertices_pos_list.append(small_tensor)
             edge_p_p_list.append(to_numpy(small_tensor))
-    n_particles_max= int(to_numpy(n_particles_max))
+    type_list = torch.load(f'graphs_data/graphs_{dataset_name}/type_list_1.pt', map_location=device)
+    n_particles_max = int(to_numpy(n_particles_max))
+    n_particles = n_particles_max
+    config.simulation.n_particles = n_particles_max
+
     x = x_list[1][0].clone().detach()
     y = y_list[1][0].clone().detach()
     config.simulation.n_particles_max = n_particles_max
@@ -739,6 +739,13 @@ def data_train_cell(config, config_file, erase, best_model, device):
             x_list[1][k][:, 3:5] = 0
         config.simulation.n_particles_max = n_particles_max
         Initial_node_id = id_list
+    else:
+        for k in range(n_frames + 1):
+            type = x_list[1][k][:, 5]
+            if k==0:
+                type_stack = type
+            else:
+                type_stack = torch.cat((type_stack, type), 0)
 
     print('Create models ...')
     model, bc_pos, bc_dpos = choose_training_model(config, device)
@@ -770,10 +777,6 @@ def data_train_cell(config, config_file, erase, best_model, device):
     print('Update variables ...')
     # update variable if particle_dropout, cell_division, etc ...
     x = x_list[1][n_frames - 1].clone().detach()
-    n_particles = len(T1_list[1])
-    print(f'N particles: {config.simulation.n_particles} to {len(T1_list[1])} ')
-    logger.info(f'N particles: {config.simulation.n_particles} to {len(T1_list[1])} ')
-    config.simulation.n_particles = n_particles
 
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
@@ -794,7 +797,7 @@ def data_train_cell(config, config_file, erase, best_model, device):
         total_loss = 0
         Niter = n_frames * data_augmentation_loop // batch_size
 
-        for N in range(Niter):
+        for N in trange(200):
 
             phi = torch.randn(1, dtype=torch.float32, requires_grad=False, device=device) * np.pi * 2
             cos_phi = torch.cos(phi)
@@ -874,7 +877,7 @@ def data_train_cell(config, config_file, erase, best_model, device):
                                        type_list=type_list, type_stack=type_stack, ynorm=ynorm, cmap=cmap, device=device)
                 else:
                     plot_training_cell(config=config, dataset_name=dataset_name, log_dir=log_dir,
-                              epoch=epoch, N=N, model=model, n_particle_types=n_particle_types, type_list=T1_list[1], ynorm=ynorm, cmap=cmap, device=device)
+                              epoch=epoch, N=N, model=model, n_particle_types=n_particle_types, type_list=type_list, ynorm=ynorm, cmap=cmap, device=device)
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
@@ -2841,13 +2844,13 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     time.sleep(2)
     for epoch in range(start_epoch, n_epochs + 1):
 
-        if (epoch==0):
+        if (epoch<train_config.n_epochs_init):
             coeff_L1 = train_config.first_coeff_L1
             coeff_diff = train_config.coeff_diff
         else:
             coeff_L1 = train_config.coeff_L1
             coeff_diff = 0
-        logger.info(f'coeff_L1: {coeff_L1}')
+        logger.info(f'coeff_L1: {coeff_L1} coeff_diff: {coeff_diff}')
 
         batch_size = get_batch_size(epoch)
         logger.info(f'batch_size: {batch_size}')

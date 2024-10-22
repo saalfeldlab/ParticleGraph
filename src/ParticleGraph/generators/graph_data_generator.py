@@ -1284,7 +1284,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
         logger.info('interaction parameters')
         logger.info(to_numpy(model.p))
 
-
         index_particles = []
         for n in range(n_particle_types):
             pos = torch.argwhere(T1.squeeze() == n)
@@ -1292,6 +1291,9 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
             index_particles.append(pos)
         n_particles_alive = len(X1)
         n_particles_dead = 0
+
+        has_cell_division = True
+        has_cell_death = True
 
         time.sleep(0.5)
         for it in trange(simulation_config.start_frame, n_frames + 1):
@@ -1619,7 +1621,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                                 dpi=85.35)
                     plt.close()
 
-
                 # fig = plt.figure(figsize=(12, 12))
                 # ax = fig.add_subplot(2, 2, 1)
                 # plt.plot(current_loss)
@@ -1642,7 +1643,6 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
                 # plt.tight_layout()
                 # plt.savefig(f"graphs_data/graphs_{dataset_name}/gen_{run}.jpg", dpi=80)
                 # plt.close()
-
 
                 if 'voronoi' in style:
 
@@ -1734,24 +1734,23 @@ def data_generate_cell(config, visualize=True, run_vizualized=0, style='color', 
 
 
         # check consistency between man_track and x_list[0]
-
-        for n in range(man_track.shape[0]):
-            track_id = man_track[n, 0]
-            start=-1
-            end=-1
-            for i in range(len(x_list)):
-                if torch.argwhere(x_list[i][:, 0] == track_id-1).shape[0] > 0:
-                    if start ==-1:
-                        start = i
-                    end = i
-            if (int(start)!=int(man_track[n, 1])) | ((int(end)!=int(man_track[n, 2])) & (int(end)!=n_frames)):
-                print(f'pb *cell_id {n}  track_id-1 {int(track_id-1)}    x_list {int(start)} {int(end)}  man_track {int(man_track[n, 1])} {int(man_track[n, 2])}')
+        # for n in range(man_track.shape[0]):
+        #     track_id = man_track[n, 0]
+        #     start=-1
+        #     end=-1
+        #     for i in range(len(x_list)):
+        #         if torch.argwhere(x_list[i][:, 0] == track_id-1).shape[0] > 0:
+        #             if start ==-1:
+        #                 start = i
+        #             end = i
+        #     if (int(start)!=int(man_track[n, 1])) | ((int(end)!=int(man_track[n, 2])) & (int(end)!=n_frames)):
+        #         print(f'pb *cell_id {n}  track_id-1 {int(track_id-1)}    x_list {int(start)} {int(end)}  man_track {int(man_track[n, 1])} {int(man_track[n, 2])}')
 
 
         if bSave:
             torch.save(x_list, f'graphs_data/graphs_{dataset_name}/x_list_{run}.pt')
             torch.save(y_list, f'graphs_data/graphs_{dataset_name}/y_list_{run}.pt')
-            torch.save(T1_list, f'graphs_data/graphs_{dataset_name}/T1_list_{run}.pt')
+            torch.save(T1_list, f'graphs_data/graphs_{dataset_name}/type_list_{run}.pt')
             np.savez(f'graphs_data/graphs_{dataset_name}/edge_p_p_list_{run}', *edge_p_p_list)
             if has_inert_model:
                 np.savez(f'graphs_data/graphs_{dataset_name}/vertices_pos_list_{run}', *vertices_pos_list)

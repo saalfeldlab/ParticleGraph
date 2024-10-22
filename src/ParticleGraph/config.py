@@ -127,6 +127,7 @@ class TrainingConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     
     n_epochs: int = 20
+    n_epochs_init: int = 0
     batch_size: int = 1
     small_init_batch_size: bool = True
     large_range: bool = False
