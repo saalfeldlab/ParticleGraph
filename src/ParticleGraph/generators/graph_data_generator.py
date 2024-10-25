@@ -388,6 +388,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
     n_particle_types = simulation_config.n_particle_types
     n_particles = simulation_config.n_particles
+
     delta_t = simulation_config.delta_t
     n_frames = simulation_config.n_frames
     has_particle_dropout = training_config.particle_dropout > 0
@@ -396,6 +397,9 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     has_zarr = 'zarr' in simulation_config.connectivity_file
     excitation = simulation_config.excitation
     noise_level = training_config.noise_level
+    n_nodes = simulation_config.n_nodes
+    n_nodes_per_axis = int(np.sqrt(n_nodes))
+    field_type = model_config.field_type
 
     torch.random.fork_rng(devices=device)
     torch.random.manual_seed(training_config.seed)
@@ -438,7 +442,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         x_removed_list = []
 
     if 'adjacency.pt' in simulation_config.connectivity_file:
-
         adjacency = torch.load(simulation_config.connectivity_file, map_location=device)
 
     elif 'mat' in simulation_config.connectivity_file:
@@ -525,22 +528,9 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
     # create GNN
     if is_V2:
-        match config.simulation.excitation:
-            case 'none':
-                excitation = torch.zeros((n_particles, n_frames+1), device=device)
-            case 'constant':
-                excitation = torch.ones((n_particles, n_frames+1), device=device) * 0.5
-            case 'video':
-                im = imread(f"graphs_data/{simulation_config.excitation_value_map}")
-                excitation_video = np.zeros((im.shape[0], n_particles))
-                excitation_nframes = im.shape[0]
-                for it in range(im.shape[0]):
-                    im_ = im[it].squeeze()
-                    im_ = np.rot90(im_, 3)
-                    im_ = im_.flatten()
-                    excitation_video[it] = im_[0:n_particles]
-                excitation_video = torch.tensor(excitation_video, dtype=torch.float32, device=device)
-
+        if 'modulation' in model_config.field_type:
+            im = imread(f"graphs_data/{simulation_config.node_value_map}")
+            im_width = im.shape[2]
         match config.simulation.phi:
             case 'tanh':
                 model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, phi=torch.tanh, device=device)
@@ -559,12 +549,17 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         # initialize particle and graph states
         X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
 
-        x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
 
         if os.path.isfile(f'./graphs_data/graphs_{dataset_name}/X1.pt'):
             X1 = torch.load(f'./graphs_data/graphs_{dataset_name}/X1.pt', map_location=device)
 
-        # else:
+        if ('modulation' in field_type):
+            X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
+            X1 = X1_mesh
+
+        x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
+
+
         #     dataset = data.Data(x=x, pos=x[:, 1:3], edge_index=edge_index, edge_attr=edge_attr_adjacency)
         #     G = to_networkx(dataset, remove_self_loops=True, to_undirected=True)
         #     forceatlas2 = ForceAtlas2(
@@ -612,9 +607,16 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 sample = (sample < (1 / config.simulation.state_params[0])) * torch.randint(0, n_particle_types,(len(T1), 1), device=device)
                 T1 = (T1 + sample) % n_particle_types
 
+            if ('modulation' in field_type) & (it >= 0):
+                im_ = im[it].squeeze()
+                im_ = np.rot90(im_, 3)
+                im_ = np.reshape(im_, (n_nodes_per_axis * n_nodes_per_axis))
+                H1_mesh[:, 1:2] = torch.tensor(im_[:,None], dtype=torch.float32, device=device)
+
             x = torch.concatenate(
                 (N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                  H1.clone().detach(), A1.clone().detach()), 1)
+
 
             X[:, it] = H1[:, 0].clone().detach()
 
@@ -622,19 +624,10 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
             # model prediction
             with torch.no_grad():
-                if is_V2:
-                    if (config.simulation.excitation == 'video'):
-                        excitation = excitation_video[it//(n_frames//excitation_nframes+1)]
-                    elif (config.simulation.excitation == 'sine'):
-                        excitation = 5 * torch.sin(torch.tensor(it/50,dtype=torch.float32, device=device))
-                        excitation = excitation.repeat(n_particles, 1)
-                        excitation = excitation.squeeze()
-                    else:
-                        excitation = torch.zeros((n_particles, 1), device=device)
-                        excitation = excitation.squeeze()
-                    y, s_tanhu, msg = model(dataset, return_all=True, excitation=excitation)
+                if ('modulation' in field_type) & (it >= 0):
+                    y, s_tanhu, msg = model(dataset, return_all=True, field=True)
                 else:
-                    y, s_tanhu, msg = model(dataset, return_all=True)
+                    y, s_tanhu, msg = model(dataset, return_all=True, field=False)
 
             # append list
             if (it >= 0) & bSave:
@@ -2218,6 +2211,18 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
             x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                                    H1.clone().detach(), A1.clone().detach()), 1)
 
+            plt.scatter(to_numpy(X1_mesh[:, 0]), 1 - to_numpy(X1_mesh[:, 1]),
+                        c=to_numpy(H1_mesh[:, 0]), s=20, cmap='gray')
+
+            if it==0:
+                x = torch.load('/groups/saalfeld/home/allierc/Py/ParticleGraph/graphs_data/graphs_arbitrary_3_field_video_bison/x_list_1.pt')[0]
+                N1 = x[:, 0:1]
+                X1 = x[:, 1:3]
+                V1 = x[:, 3:5]
+                T1 = x[:, 5:6]
+                H1 = x[:, 6:8]
+                A1 = x[:, 8:9]
+
             index_particles = get_index_particles(x, n_particle_types, dimension)
 
             x_mesh = torch.concatenate(
@@ -2351,25 +2356,19 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     plt.close()
 
                 if 'bw' in style:
-
+                    plt.rcParams['text.usetex'] = False
+                    plt.rc('font', family='sans-serif')
+                    plt.rc('text', usetex=False)
                     matplotlib.rcParams['savefig.pad_inches'] = 0
-                    fig = plt.figure(figsize=(12, 12))
-                    ax = fig.add_subplot(1, 1, 1)
-                    s_p = 50
-                    if simulation_config.has_cell_division:
-                        s_p = 25
-                    if False:  # config.simulation.non_discrete_level>0:
-                        plt.scatter(to_numpy(x[:, 1]), to_numpy(x[:, 2]), s=s_p, color='k')
-                    else:
-                        for n in range(n_particle_types):
-                            plt.scatter(to_numpy(x[index_particles[n], 1]), to_numpy(x[index_particles[n], 2]),
-                                        s=s_p, color='k')
-                    if training_config.particle_dropout > 0:
-                        plt.scatter(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
-                                    x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), s=25, color='k',
-                                    alpha=0.75)
-                        plt.plot(x[inv_particle_dropout_mask, 1].detach().cpu().numpy(),
-                                 x[inv_particle_dropout_mask, 2].detach().cpu().numpy(), '+', color='w')
+
+                    plt.style.use('dark_background')
+
+                    fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
+                    # plt.xlabel(r'$x$', fontsize=48)
+                    # plt.ylabel(r'$y$', fontsize=48)
+                    for n in range(n_particle_types):
+                        plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
+                                    color=cmap.color(n), s=20)
                     plt.xlim([0, 1])
                     plt.ylim([0, 1])
                     plt.xticks([])
@@ -2377,6 +2376,24 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     plt.tight_layout()
                     plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Fig_{run}_{it}.jpg", dpi=170.7)
                     plt.close()
+
+                    if model_config.prediction == '2nd_derivative':
+                        V0_ = y0  * delta_t
+                        V1_ = y1  * delta_t
+                    else:
+                        V0_ = y0
+                        V1_ = y1
+                    fig = plt.figure(figsize=(12, 12))
+                    type_list = to_numpy(get_type_list(x, dimension))
+                    plt.scatter(to_numpy(x_mesh[0:n_nodes, 2]), to_numpy(x_mesh[0:n_nodes, 1]), c=to_numpy(x_mesh[0:n_nodes, 6]),cmap='grey',s=5)
+                    plt.xlim([0,1])
+                    plt.ylim([0,1])
+                    for n in range(n_particles):
+                        plt.arrow(x=to_numpy(x[n, 2]), y=to_numpy(x[n, 1]), dx=to_numpy(V1_[n,1])*4.25, dy=to_numpy(V1_[n,0])*4.25, color=cmap.color(type_list[n].astype(int)), head_width=0.004, length_includes_head=True)
+                        plt.xticks([])
+                        plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"graphs_data/graphs_{dataset_name}/Fig/Arrow_{run}_{it}.jpg", dpi=170.7)
 
                 if 'color' in style:
 
@@ -2398,7 +2415,7 @@ def data_generate_particle_field(config, visualize=True, run_vizualized=0, style
                     # ax.get_xaxis().set_visible(False)
                     # ax.get_yaxis().set_visible(False)
                     # plt.autoscale(tight=True)
-                    s_p = 50
+                    s_p = 20
                     for n in range(n_particle_types):
                             plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
                                         s=s_p, color=cmap.color(n))

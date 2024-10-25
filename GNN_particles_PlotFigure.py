@@ -2030,7 +2030,15 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
             print(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
             logger.info(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
+            plt.style.use('dark_background')
+            plt.rcParams['text.usetex'] = False
+            plt.rc('font', family='sans-serif')
+            plt.rc('text', usetex=False)
+            matplotlib.rcParams['savefig.pad_inches'] = 0
+
             fig, ax = fig_init(formatx='%.3f', formaty='%.0f')
+            params = {'mathtext.default': 'regular'}
+            plt.rcParams.update(params)
             p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
             rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
             rmserr_list = []
@@ -2049,7 +2057,8 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
                          to_numpy(func) * to_numpy(ynorm),
                          color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
             plt.xlabel(r'$d_{ij}$', fontsize=78)
-            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+            # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+            plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=78)
             plt.xlim([0, 0.02])
             plt.ylim([0, 0.5E6])
             ax.xaxis.set_major_formatter(FormatStrFormatter('%.3f'))
@@ -3365,253 +3374,424 @@ def plot_particle_field(config_file, epoch_list, log_dir, logger, cc, device):
         model_f.to(device=device)
         model_f.eval()
 
-    for epoch in epoch_list:
-        print(f'epoch: {epoch}')
 
-        net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
-        state_dict = torch.load(net, map_location=device)
-        model.load_state_dict(state_dict['model_state_dict'])
+    if epoch_list[0] == 'all':
 
-        if has_siren:
-            net = f'./log/try_{config_file}/models/best_model_f_with_1_graphs_{epoch}.pt'
+        plt.rcParams['text.usetex'] = False
+        plt.rc('font', family='sans-serif')
+        plt.rc('text', usetex=False)
+        matplotlib.rcParams['savefig.pad_inches'] = 0
+
+        files = glob.glob(f"./log/try_{config_file}/models/best_model_with_1_graphs_*.pt")
+
+        def sort_key(filename):
+            # Extract the numeric parts using regular expressions
+            if filename.split('_')[-2] == 'graphs':
+                return 0
+            else:
+                return 1E7 * int(filename.split('_')[-2]) + int(filename.split('_')[-1][:-3])
+
+        files.sort(key=sort_key)
+
+        flag = True
+        file_id = 0
+        while (flag):
+            if sort_key(files[file_id])//1E7 == 2:
+                flag = False
+            file_id += 1
+
+        file_id_list0 = np.arange(0,50)
+        file_id_list1 = np.arange(50,file_id,(file_id-50)//50)
+        file_id_list2 = np.arange(file_id, len(files), (len(files)-file_id) // 50)
+        file_id_list = np.concatenate((file_id_list0,file_id_list1, file_id_list2))
+
+        frame=64
+        x = x_list[0][frame].clone().detach()
+
+        for file_id_ in trange(0,len(file_id_list)):
+            file_id = file_id_list[file_id_]
+            if sort_key(files[file_id]) % 1E7 != 0:
+                epoch = files[file_id].split('graphs')[1][1:-3]
+                print(epoch)
+
+                net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
+                state_dict = torch.load(net, map_location=device)
+                model.load_state_dict(state_dict['model_state_dict'])
+                model.eval()
+
+                if has_siren:
+                    net = f'./log/try_{config_file}/models/best_model_f_with_1_graphs_{epoch}.pt'
+                    state_dict = torch.load(net, map_location=device)
+                    model_f.load_state_dict(state_dict['model_state_dict'])
+
+                plt.style.use('dark_background')
+
+                fig, ax = fig_init(fontsize=24)
+                params = {'mathtext.default': 'regular'}
+                plt.rcParams.update(params)
+
+                fig, ax = fig_init()
+                pred = model_f(time=file_id_ / n_frames) ** 2
+                pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
+                pred = to_numpy(torch.sqrt(pred))
+                pred = np.flipud(pred)
+                pred = np.rot90(pred, 1)
+                pred = np.fliplr(pred)
+                grey_values = np.reshape(pred, (n_nodes_per_axis * n_nodes_per_axis))
+                plt.scatter(to_numpy(x_mesh[:, 1]), 1 - to_numpy(x_mesh[:, 2]),
+                            c=grey_values, s=20, cmap='gray')
+                plt.xlim([0, 1])
+                plt.ylim([0, 1])
+                plt.xticks([])
+                plt.yticks([])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/all/field_{epoch}.tif", dpi=80)
+                plt.close()
+
+
+                fig, ax = fig_init(fontsize=24)
+                params = {'mathtext.default': 'regular'}
+                plt.rcParams.update(params)
+                embedding = get_embedding(model.a, 1)
+                for n in range(n_particle_types-1,-1,-1):
+                    pos = torch.argwhere(type_list == n)
+                    pos = to_numpy(pos)
+                    if len(pos) > 0:
+                        plt.scatter(embedding[pos, 0], embedding[pos, 1], color=cmap.color(n), s=100, alpha=0.1)
+                plt.xlabel(r'$a_{i0}$', fontsize=48)
+                plt.ylabel(r'$a_{i1}$', fontsize=48)
+                plt.xlim([0.2, 1.6])
+                plt.ylim([0.2, 1.6])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/all/embedding_{epoch}.tif", dpi=80)
+                plt.close()
+
+
+                fig, ax = fig_init(fontsize=24)
+                rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+                for n in range(int(n_particles * (1 - config.training.particle_dropout))):
+                    embedding_ = model.a[1,n] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                    in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                             rr[:, None] / max_radius, embedding_), dim=1)
+                    with torch.no_grad():
+                        func = model.lin_edge(in_features.float())
+                        func = func[:, 0]
+                    plt.plot(to_numpy(rr),
+                             to_numpy(func) * to_numpy(ynorm),
+                             color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
+                plt.xlabel('$d_{ij}$', fontsize=48)
+                plt.ylabel('$f(a_i, d_{ij})$', fontsize=48)
+                plt.xlim([0, max_radius])
+                plt.ylim(config.plotting.ylim)
+                plt.tight_layout()
+                match config.dataset:
+                    case 'arbitrary_3':
+                        plt.ylim([-0.04, 0.03])
+                    case 'arbitrary_16':
+                        plt.ylim([-0.1, 0.1])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/all/function_{epoch}.tif", dpi=80)
+                plt.close()
+    else:
+        for epoch in epoch_list:
+            print(f'epoch: {epoch}')
+
+            net = f"./log/try_{config_file}/models/best_model_with_1_graphs_{epoch}.pt"
             state_dict = torch.load(net, map_location=device)
-            model_f.load_state_dict(state_dict['model_state_dict'])
+            model.load_state_dict(state_dict['model_state_dict'])
 
-        model_a_first = model.a.clone().detach()
-        config.training.cluster_method = 'distance_plot'
-        config.training.cluster_distance_threshold = 0.01
-        alpha = 0.1
-        accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
-                                                                       cmap, index_particles, type_list,
-                                                                       n_particle_types, n_particles, ynorm, epoch,
-                                                                       log_dir, alpha, device)
-        print(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
-        logger.info(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+            if has_siren:
+                net = f'./log/try_{config_file}/models/best_model_f_with_1_graphs_{epoch}.pt'
+                state_dict = torch.load(net, map_location=device)
+                model_f.load_state_dict(state_dict['model_state_dict'])
 
-
-        fig, ax = fig_init()
-        p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
-        rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
-        rmserr_list = []
-        for n in range(int(n_particles * (1 - config.training.particle_dropout))):
-            embedding_ = model_a_first[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
-            in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                     rr[:, None] / max_radius, embedding_), dim=1)
-            with torch.no_grad():
-                func = model.lin_edge(in_features.float())
-                func = func[:, 0]
-            true_func = model.psi(rr, p[to_numpy(type_list[n]).astype(int)].squeeze(),
-                                  p[to_numpy(type_list[n]).astype(int)].squeeze())
-            rmserr_list.append(torch.sqrt(torch.mean((func * ynorm - true_func.squeeze()) ** 2)))
-            plt.plot(to_numpy(rr),
-                     to_numpy(func) * to_numpy(ynorm),
-                     color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=2, alpha=0.1)
-        plt.xlabel(r'$d_{ij}$', fontsize=78)
-        plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
-        plt.xlim([0, max_radius])
-        plt.ylim(config.plotting.ylim)
-        plt.tight_layout()
-        plt.savefig(f"./{log_dir}/results/func_all_{config_file}_{epoch}.tif", dpi=170.7)
-        rmserr_list = torch.stack(rmserr_list)
-        rmserr_list = to_numpy(rmserr_list)
-        print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
-        logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
-        plt.close()
+            model_a_first = model.a.clone().detach()
+            config.training.cluster_method = 'distance_plot'
+            config.training.cluster_distance_threshold = 0.01
+            alpha = 0.1
+            accuracy, n_clusters, new_labels = plot_embedding_func_cluster(model, config, config_file, embedding_cluster,
+                                                                           cmap, index_particles, type_list,
+                                                                           n_particle_types, n_particles, ynorm, epoch,
+                                                                           log_dir, alpha, device)
+            print(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
+            logger.info(f'result accuracy: {np.round(accuracy, 2)}    n_clusters: {n_clusters}    obtained with  method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
 
 
-        match config.graph_model.field_type:
+            fig, ax = fig_init()
+            p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
+            rr = torch.tensor(np.linspace(0, max_radius, 1000)).to(device)
+            rmserr_list = []
+            for n in range(int(n_particles * (1 - config.training.particle_dropout))):
+                embedding_ = model_a_first[1, n, :] * torch.ones((1000, config.graph_model.embedding_dim), device=device)
+                in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                         rr[:, None] / max_radius, embedding_), dim=1)
+                with torch.no_grad():
+                    func = model.lin_edge(in_features.float())
+                    func = func[:, 0]
+                true_func = model.psi(rr, p[to_numpy(type_list[n]).astype(int)].squeeze(),
+                                      p[to_numpy(type_list[n]).astype(int)].squeeze())
+                rmserr_list.append(torch.sqrt(torch.mean((func * ynorm - true_func.squeeze()) ** 2)))
+                plt.plot(to_numpy(rr),
+                         to_numpy(func) * to_numpy(ynorm),
+                         color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=2, alpha=0.1)
+            plt.xlabel(r'$d_{ij}$', fontsize=78)
+            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+            plt.xlim([0, max_radius])
+            plt.ylim(config.plotting.ylim)
+            plt.tight_layout()
+            plt.savefig(f"./{log_dir}/results/func_all_{config_file}_{epoch}.tif", dpi=170.7)
+            rmserr_list = torch.stack(rmserr_list)
+            rmserr_list = to_numpy(rmserr_list)
+            print("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+            logger.info("all function RMS error: {:.1e}+/-{:.1e}".format(np.mean(rmserr_list), np.std(rmserr_list)))
+            plt.close()
 
-            case 'siren_with_time' | 'siren':
 
-                os.makedirs(f"./{log_dir}/results/rotation", exist_ok=True)
-                os.makedirs(f"./{log_dir}/results/rotation/generated1", exist_ok=True)
-                os.makedirs(f"./{log_dir}/results/rotation/generated2", exist_ok=True)
-                os.makedirs(f"./{log_dir}/results/rotation/target", exist_ok=True)
-                os.makedirs(f"./{log_dir}/results/rotation/field", exist_ok=True)
-                s_p = 100
+            match config.graph_model.field_type:
 
-                x_mesh = x_mesh_list[0][0].clone().detach()
-                i0 = imread(f'graphs_data/{node_value_map}')
+                case 'siren_with_time' | 'siren':
 
-                print('Output per frame ...')
+                    os.makedirs(f"./{log_dir}/results/video", exist_ok=True)
+                    os.makedirs(f"./{log_dir}/results/video/generated1", exist_ok=True)
+                    os.makedirs(f"./{log_dir}/results/video/generated2", exist_ok=True)
+                    os.makedirs(f"./{log_dir}/results/video/target", exist_ok=True)
+                    os.makedirs(f"./{log_dir}/results/video/field", exist_ok=True)
+                    s_p = 100
 
-                RMSE_list = []
-                PSNR_list = []
-                SSIM_list = []
-                for frame in trange(0, n_frames):
-                    x = x_list[0][frame].clone().detach()
-                    fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
-                    plt.xlabel(r'$x$', fontsize=78)
-                    plt.ylabel(r'$y$', fontsize=78)
-                    for n in range(n_particle_types):
-                        plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
-                                    s=s_p/2,
-                                    color='k')
-                    plt.xlim([0, 1])
+                    x_mesh = x_mesh_list[0][0].clone().detach()
+                    i0 = imread(f'graphs_data/{node_value_map}')
+
+                    print('Output per frame ...')
+
+                    plt.rcParams['text.usetex'] = False
+                    plt.rc('font', family='sans-serif')
+                    plt.rc('text', usetex=False)
+                    matplotlib.rcParams['savefig.pad_inches'] = 0
+
+                    plt.style.use('dark_background')
+
+
+                    RMSE_list = []
+                    PSNR_list = []
+                    SSIM_list = []
+                    for frame in trange(0, n_frames):
+                        x = x_list[0][frame].clone().detach()
+                        fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
+                        # plt.xlabel(r'$x$', fontsize=48)
+                        # plt.ylabel(r'$y$', fontsize=48)
+                        for n in range(n_particle_types):
+                            plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
+                                        s=20,
+                                        color='w')
+                        plt.xlim([0, 1])
+                        plt.ylim([0, 1])
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"./{log_dir}/results/video/generated1/generated_1_{epoch}_{frame}.tif",
+                                    dpi=150)
+                        plt.close()
+
+                        fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
+                        # plt.xlabel(r'$x$', fontsize=48)
+                        # plt.ylabel(r'$y$', fontsize=48)
+                        for n in range(n_particle_types):
+                            plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
+                                        color=cmap.color(n), s=20)
+                        plt.xlim([0, 1])
+                        plt.ylim([0, 1])
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"./{log_dir}/results/video/generated2/generated_2_{epoch}_{frame}.tif",
+                                    dpi=150)
+                        plt.close()
+
+                        i0_ = i0[frame]
+                        y = i0_[(to_numpy(x_mesh[:, 2]) * 100).astype(int), (to_numpy(x_mesh[:, 1]) * 100).astype(int)]
+                        y = np.reshape(y, (n_nodes_per_axis, n_nodes_per_axis))
+                        # fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
+                        # plt.imshow(y, cmap=cc, vmin=0, vmax=vm)
+                        # # plt.xlabel(r'$x$', fontsize=48)
+                        # # plt.ylabel(r'$y$', fontsize=48)
+                        # fmtx = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
+                        # fmty = lambda x, pos: '{:.1f}'.format((100-x) / 100, pos)
+                        # ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmty))
+                        # ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmtx))
+                        # # plt.xlabel(r'$x$', fontsize=48)
+                        # # plt.ylabel(r'$y$', fontsize=48)
+                        # plt.xticks([])
+                        # plt.yticks([])
+                        # plt.tight_layout()
+                        # plt.savefig(f"./{log_dir}/results/video/target/target_field_{epoch}_{frame}.tif",
+                        #             dpi=150)
+                        # plt.close()
+
+                        fig, ax = fig_init()
+                        grey_values = np.reshape(i0_, (n_nodes_per_axis * n_nodes_per_axis))
+                        plt.scatter(to_numpy(x_mesh[:, 1]), 1-to_numpy(x_mesh[:, 2]),
+                                    c=grey_values, s=20, cmap='gray')
+                        plt.xlim([0, 1])
+                        plt.ylim([0, 1])
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"./{log_dir}/results/video/target/target_field_{epoch}_{frame}.tif",
+                                    dpi=150)
+                        plt.close()
+
+                        # pred = model_f(time=frame / n_frames) ** 2
+                        # pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
+                        # pred = to_numpy(torch.sqrt(pred))
+                        # pred = np.flipud(pred)
+                        # fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
+                        # pred = np.rot90(pred,1)
+                        # pred = np.fliplr(pred)
+                        # # pred = np.flipud(pred)
+                        # plt.imshow(pred, cmap=cc, vmin=0, vmax=vm)
+                        # # plt.xlabel(r'$x$', fontsize=78)
+                        # # plt.ylabel(r'$y$', fontsize=78)
+                        # fmtx = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
+                        # fmty = lambda x, pos: '{:.1f}'.format((100-x) / 100, pos)
+                        # ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmty))
+                        # ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmtx))
+                        # # plt.xlabel(r'$x$', fontsize=48)
+                        # # plt.ylabel(r'$y$', fontsize=48)
+                        # plt.xticks([])
+                        # plt.yticks([])
+                        # plt.tight_layout()
+                        # plt.savefig(f"./{log_dir}/results/video/field/reconstructed_field_{epoch}_{frame}.tif",
+                        #             dpi=150)
+                        # plt.close()
+
+                        fig, ax = fig_init()
+                        pred = model_f(time=frame / n_frames) ** 2
+                        pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
+                        pred = to_numpy(torch.sqrt(pred))
+                        pred = np.flipud(pred)
+                        pred = np.rot90(pred,1)
+                        pred = np.fliplr(pred)
+                        grey_values = np.reshape(pred, (n_nodes_per_axis * n_nodes_per_axis))
+                        plt.scatter(to_numpy(x_mesh[:, 1]), 1-to_numpy(x_mesh[:, 2]),
+                                    c=grey_values, s=20, cmap='gray')
+                        plt.xlim([0, 1])
+                        plt.ylim([0, 1])
+                        plt.xticks([])
+                        plt.yticks([])
+                        plt.tight_layout()
+                        plt.savefig(f"./{log_dir}/results/video/field/reconstructed_field_{epoch}_{frame}.tif",
+                                    dpi=150)
+                        plt.close()
+
+                        RMSE = np.sqrt(np.mean((y - pred) ** 2))
+                        RMSE_list = np.concatenate((RMSE_list, [RMSE]))
+                        PSNR = calculate_psnr(y, pred, max_value=np.max(y))
+                        PSNR_list = np.concatenate((PSNR_list, [PSNR]))
+                        SSIM = calculate_ssim(y, pred)
+                        SSIM_list = np.concatenate((SSIM_list, [SSIM]))
+                        if frame==0:
+                            y_list = [y]
+                            pred_list = [pred]
+                        else:
+                            y_list = np.concatenate((y_list, [y]))
+                            pred_list = np.concatenate((pred_list, [pred]))
+
+                    fig, ax = fig_init(formatx='%.2f', formaty='%.2f')
+                    plt.scatter(y_list, pred_list, color='w', s=0.1, alpha=0.01)
+                    plt.xlabel(r'True $b_i(t)$', fontsize=48)
+                    plt.ylabel(r'Recons. $b_i(t)$', fontsize=48)
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/cues_scatter_{epoch}.tif", dpi=170)
+                    plt.close()
+
+                    r, p_value = pearsonr(y_list.flatten(), pred_list.flatten())
+                    print(f"Pearson's r: {r:.4f}, p-value: {p_value:.6f}")
+                    logger.info(f"Pearson's r: {r:.4f}, p-value: {p_value:.6f}")
+
+
+                    fig, ax = fig_init()
+                    plt.scatter(np.linspace(0, n_frames, len(SSIM_list)), SSIM_list, color='k', linewidth=4)
+                    plt.xlabel(r'$Frame$', fontsize=78)
+                    plt.ylabel(r'$SSIM$', fontsize=78)
                     plt.ylim([0, 1])
                     plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/results/video/generated1/generated_1_{epoch}_{frame}.tif",
-                                dpi=150)
+                    plt.savefig(f"./{log_dir}/results/ssim_{epoch}.tif", dpi=150)
                     plt.close()
 
-                    fig, ax = fig_init(formatx='%.1f', formaty='%.1f')
-                    plt.xlabel(r'$x$', fontsize=78)
-                    plt.ylabel(r'$y$', fontsize=78)
-                    for n in range(n_particle_types):
-                        plt.scatter(to_numpy(x[index_particles[n], 2]), to_numpy(x[index_particles[n], 1]),
-                                    s=s_p)
-                    plt.xlim([0, 1])
+                    print(f'SSIM: {np.round(np.mean(SSIM_list), 3)}+/-{np.round(np.std(SSIM_list), 3)}')
+
+                    fig, ax = fig_init()
+                    plt.scatter(np.linspace(0, n_frames, len(SSIM_list)), RMSE_list, color='k', linewidth=4)
+                    plt.xlabel(r'$Frame$', fontsize=78)
+                    plt.ylabel(r'RMSE', fontsize=78)
                     plt.ylim([0, 1])
                     plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/results/video/generated2/generated_2_{epoch}_{frame}.tif",
-                                dpi=150)
+                    plt.savefig(f"./{log_dir}/results/rmse_{epoch}.tif", dpi=150)
                     plt.close()
 
-                    i0_ = i0[frame]
-                    y = i0_[(to_numpy(x_mesh[:, 2]) * 100).astype(int), (to_numpy(x_mesh[:, 1]) * 100).astype(int)]
-                    y = np.reshape(y, (n_nodes_per_axis, n_nodes_per_axis))
-                    fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
-                    plt.imshow(y, cmap=cc, vmin=0, vmax=vm)
-                    plt.xlabel(r'$x$', fontsize=78)
-                    plt.ylabel(r'$y$', fontsize=78)
+                    fig, ax = fig_init()
+                    plt.scatter(np.linspace(0, n_frames, len(SSIM_list)), PSNR_list, color='k', linewidth=4)
+                    plt.xlabel(r'$Frame$', fontsize=78)
+                    plt.ylabel(r'PSNR', fontsize=78)
+                    plt.ylim([0, 50])
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/psnr_{epoch}.tif", dpi=150)
+                    plt.close()
+
+                case 'tensor':
+
+                    fig, ax = fig_init()
+                    pts = to_numpy(torch.reshape(model.field[1], (100, 100)))
+                    pts = np.flipud(pts)
+                    plt.imshow(pts, cmap=cc)
                     fmtx = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
-                    fmty = lambda x, pos: '{:.1f}'.format((100-x) / 100, pos)
+                    fmty = lambda x, pos: '{:.1f}'.format((100 - x) / 100, pos)
                     ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmty))
                     ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmtx))
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/results/video/target/target_field_{epoch}_{frame}.tif",
-                                dpi=150)
-                    plt.close()
-
-                    pred = model_f(time=frame / n_frames) ** 2
-                    pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
-                    pred = to_numpy(torch.sqrt(pred))
-                    pred = np.flipud(pred)
-                    fig, ax = fig_init(formatx='%.0f', formaty='%.0f')
-                    pred = np.rot90(pred,1)
-                    pred = np.fliplr(pred)
-                    # pred = np.flipud(pred)
-                    plt.imshow(pred, cmap=cc, vmin=0, vmax=vm)
                     plt.xlabel(r'$x$', fontsize=78)
                     plt.ylabel(r'$y$', fontsize=78)
-                    fmtx = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
-                    fmty = lambda x, pos: '{:.1f}'.format((100-x) / 100, pos)
-                    ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmty))
-                    ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmtx))
+                    # cbar = plt.colorbar(shrink=0.5)
+                    # cbar.ax.tick_params(labelsize=32)
+                    # cbar.set_label(r'$Coupling$',fontsize=78)
                     plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/results/video/field/reconstructed_field_{epoch}_{frame}.tif",
-                                dpi=150)
+                    plt.savefig(f"./{log_dir}/results/field_{config_file}_{epoch}.tif", dpi=300)
+                    # np.save(f"./{log_dir}/results/embedding_{config_file}.npy", csv_)
+                    # csv_= np.reshape(csv_,(csv_.shape[0]*csv_.shape[1],2))
+                    # np.savetxt(f"./{log_dir}/results/embedding_{config_file}.txt", csv_)
                     plt.close()
+                    rmse = np.sqrt(np.mean((target - pts) ** 2))
+                    print(f'RMSE: {rmse}')
+                    logger.info(f'RMSE: {rmse}')
 
-                    RMSE = np.sqrt(np.mean((y - pred) ** 2))
-                    RMSE_list = np.concatenate((RMSE_list, [RMSE]))
-                    PSNR = calculate_psnr(y, pred, max_value=np.max(y))
-                    PSNR_list = np.concatenate((PSNR_list, [PSNR]))
-                    SSIM = calculate_ssim(y, pred)
-                    SSIM_list = np.concatenate((SSIM_list, [SSIM]))
-                    if frame==0:
-                        y_list = [y]
-                        pred_list = [pred]
-                    else:
-                        y_list = np.concatenate((y_list, [y]))
-                        pred_list = np.concatenate((pred_list, [pred]))
+                    fig, ax = fig_init()
+                    plt.scatter(target, pts, c='k', s=10, alpha=0.1)
+                    plt.xlabel(r'True $b_i$', fontsize=78)
+                    plt.ylabel(r'Recons. $b_i$', fontsize=78)
 
-                fig, ax = fig_init(formatx='%.2f', formaty='%.2f')
-                plt.scatter(y_list, pred_list, color='k', s=0.1, alpha=0.01)
-                plt.xlabel(r'True $b_i(t)$', fontsize=78)
-                plt.ylabel(r'Recons. $b_i(t)$', fontsize=78)
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/cues_scatter_{epoch}.tif", dpi=170)
-                plt.close()
+                    x_data = np.reshape(pts, (n_nodes))
+                    y_data = np.reshape(target, (n_nodes))
+                    threshold = 0.25
+                    relative_error = np.abs(y_data - x_data)
+                    print(f'outliers: {np.sum(relative_error > threshold)} / {n_particles}')
+                    pos = np.argwhere(relative_error < threshold)
 
-                r, p_value = pearsonr(y_list.flatten(), pred_list.flatten())
-                print(f"Pearson's r: {r:.4f}, p-value: {p_value:.6f}")
-                logger.info(f"Pearson's r: {r:.4f}, p-value: {p_value:.6f}")
+                    x_data_ = x_data[pos].squeeze()
+                    y_data_ = y_data[pos].squeeze()
 
+                    lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
+                    residuals = y_data_ - linear_model(x_data_, *lin_fit)
+                    ss_res = np.sum(residuals ** 2)
+                    ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
+                    r_squared = 1 - (ss_res / ss_tot)
 
-                fig, ax = fig_init()
-                plt.scatter(np.linspace(0, n_frames, len(SSIM_list)), SSIM_list, color='k', linewidth=4)
-                plt.xlabel(r'$Frame$', fontsize=78)
-                plt.ylabel(r'$SSIM$', fontsize=78)
-                plt.ylim([0, 1])
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/ssim_{epoch}.tif", dpi=150)
-                plt.close()
+                    plt.plot(x_data_, linear_model(x_data_, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
+                    plt.xlim([0, 2])
+                    plt.ylim([-0, 2])
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/field_scatter_{config_file}_{epoch}.tif", dpi=300)
 
-                print(f'SSIM: {np.round(np.mean(SSIM_list), 3)}+/-{np.round(np.std(SSIM_list), 3)}')
-
-                fig, ax = fig_init()
-                plt.scatter(np.linspace(0, n_frames, len(SSIM_list)), RMSE_list, color='k', linewidth=4)
-                plt.xlabel(r'$Frame$', fontsize=78)
-                plt.ylabel(r'RMSE', fontsize=78)
-                plt.ylim([0, 1])
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/rmse_{epoch}.tif", dpi=150)
-                plt.close()
-
-                fig, ax = fig_init()
-                plt.scatter(np.linspace(0, n_frames, len(SSIM_list)), PSNR_list, color='k', linewidth=4)
-                plt.xlabel(r'$Frame$', fontsize=78)
-                plt.ylabel(r'PSNR', fontsize=78)
-                plt.ylim([0, 50])
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/psnr_{epoch}.tif", dpi=150)
-                plt.close()
-
-            case 'tensor':
-
-                fig, ax = fig_init()
-                pts = to_numpy(torch.reshape(model.field[1], (100, 100)))
-                pts = np.flipud(pts)
-                plt.imshow(pts, cmap=cc)
-                fmtx = lambda x, pos: '{:.1f}'.format((x) / 100, pos)
-                fmty = lambda x, pos: '{:.1f}'.format((100 - x) / 100, pos)
-                ax.yaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmty))
-                ax.xaxis.set_major_formatter(mpl.ticker.FuncFormatter(fmtx))
-                plt.xlabel(r'$x$', fontsize=78)
-                plt.ylabel(r'$y$', fontsize=78)
-                # cbar = plt.colorbar(shrink=0.5)
-                # cbar.ax.tick_params(labelsize=32)
-                # cbar.set_label(r'$Coupling$',fontsize=78)
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/field_{config_file}_{epoch}.tif", dpi=300)
-                # np.save(f"./{log_dir}/results/embedding_{config_file}.npy", csv_)
-                # csv_= np.reshape(csv_,(csv_.shape[0]*csv_.shape[1],2))
-                # np.savetxt(f"./{log_dir}/results/embedding_{config_file}.txt", csv_)
-                plt.close()
-                rmse = np.sqrt(np.mean((target - pts) ** 2))
-                print(f'RMSE: {rmse}')
-                logger.info(f'RMSE: {rmse}')
-
-                fig, ax = fig_init()
-                plt.scatter(target, pts, c='k', s=10, alpha=0.1)
-                plt.xlabel(r'True $b_i$', fontsize=78)
-                plt.ylabel(r'Recons. $b_i$', fontsize=78)
-
-                x_data = np.reshape(pts, (n_nodes))
-                y_data = np.reshape(target, (n_nodes))
-                threshold = 0.25
-                relative_error = np.abs(y_data - x_data)
-                print(f'outliers: {np.sum(relative_error > threshold)} / {n_particles}')
-                pos = np.argwhere(relative_error < threshold)
-
-                x_data_ = x_data[pos].squeeze()
-                y_data_ = y_data[pos].squeeze()
-
-                lin_fit, lin_fitv = curve_fit(linear_model, x_data_, y_data_)
-                residuals = y_data_ - linear_model(x_data_, *lin_fit)
-                ss_res = np.sum(residuals ** 2)
-                ss_tot = np.sum((y_data - np.mean(y_data)) ** 2)
-                r_squared = 1 - (ss_res / ss_tot)
-
-                plt.plot(x_data_, linear_model(x_data_, lin_fit[0], lin_fit[1]), color='r', linewidth=4)
-                plt.xlim([0, 2])
-                plt.ylim([-0, 2])
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/results/field_scatter_{config_file}_{epoch}.tif", dpi=300)
-
-                print(f'R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}')
-                logger.info(f'R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}')
+                    print(f'R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}')
+                    logger.info(f'R^2$: {np.round(r_squared, 3)}  Slope: {np.round(lin_fit[0], 2)}')
 
 
 def plot_RD_RPS(config_file, epoch_list, log_dir, logger, cc, device):
@@ -4233,8 +4413,6 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
     delta_t = config.simulation.delta_t
     cmap = CustomColorMap(config=config)
     dimension = config.simulation.dimension
-    has_siren = 'siren' in config.graph_model.excitation_type
-    has_siren_time = 'siren_with_time' in config.graph_model.excitation_type
     max_radius = config.simulation.max_radius
 
 
@@ -4679,47 +4857,6 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
             plt.close()
 
 
-    if has_siren_time:
-
-        os.makedirs(f'./{log_dir}/results/NNR/', exist_ok=True)
-
-        im = imread(f"graphs_data/{simulation_config.excitation_value_map}")
-        image_width = im.shape[1]
-        if has_siren_time:
-            model_exc = Siren_Network(image_width=image_width, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
-                                        hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.)
-        else:
-            model_exc = Siren_Network(image_width=image_width, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
-                                        hidden_layers=3, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.)
-        model_exc.to(device=device)
-
-        net = f'{log_dir}/models/best_model_exc_with_9_graphs_{epoch}.pt'
-        state_dict = torch.load(net,map_location=device)
-        model_exc.load_state_dict(state_dict['model_state_dict'])
-
-        for k in trange(0,im.shape[0]):
-
-            fig = plt.figure(figsize=(16, 8))
-            plt.subplot(1, 2, 1)
-            plt.imshow(im[k], cmap='gray',vmin=0,vmax=2)
-            plt.xticks([])
-            plt.yticks([])
-            plt.title('true excitation',fontsize=18)
-            plt.subplot(1, 2, 2)
-            excitation = model_exc(time=k / im.shape[0]) ** 2
-            tmp = excitation.clone().detach()
-            tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
-            tmp = to_numpy(tmp)
-            tmp = np.rot90(tmp, k=1)
-            plt.imshow(tmp, cmap='grey',vmin=0,vmax=2)
-            plt.xticks([])
-            plt.yticks([])
-            plt.title('learned excitation',fontsize=18)
-            plt.tight_layout()
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/results/NNR/NNR_{10000 + k}.tif", dpi=70)
-            plt.close()
-
 
 def plot_agents(config_file, epoch_list, log_dir, logger, device):
 
@@ -5157,6 +5294,8 @@ def get_figures(index):
             config_list = ['arbitrary_3', 'arbitrary_3_continuous', 'arbitrary_3_3', 'arbitrary_16', 'arbitrary_32','arbitrary_64']
         case '4':
             config_list = ['arbitrary_3_field_video_bison_quad']
+        case '4_bis':
+            config_list = ['arbitrary_3_field_video_bison']
         case 'supp1':
             config_list = ['arbitrary_3']
             epoch_list= ['0_0', '0_200', '0_1000', '20']
@@ -5168,7 +5307,7 @@ def get_figures(index):
             config_list = ['arbitrary_3_field_boats']
         case 'supp7':
             config_list = ['gravity_16']
-            epoch_list= ['0_0', '0_5000', '1_0', '20']
+            epoch_list= ['20', '0_0', '0_5000', '1_0']
         case 'supp8':
             config_list = ['gravity_16', 'gravity_continuous', 'Coulomb_3_256']
         case 'supp9':
@@ -5197,7 +5336,7 @@ def get_figures(index):
 
 
     match index:
-        case '3' | '4' | 'supp4' | 'supp5' | 'supp6' | 'supp7' | 'supp8' | 'supp9' | 'supp10' | 'supp11' | 'supp12' | 'supp15' |'supp16' |'supp18':
+        case '3' | '4' |'4_bis' | 'supp4' | 'supp5' | 'supp6' | 'supp7' | 'supp8' | 'supp9' | 'supp10' | 'supp11' | 'supp12' | 'supp15' |'supp16' |'supp18':
             for config_file in config_list:
                 config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
                 data_plot(config=config, config_file=config_file, epoch_list=epoch_list, device=device)
@@ -5397,7 +5536,7 @@ if __name__ == '__main__':
     except:
         pass
 
-    # f_list = ['supp1']
+    # f_list = ['supp7']
     # for f in f_list:
     #     config_list,epoch_list = get_figures(f)
 
@@ -5409,7 +5548,7 @@ if __name__ == '__main__':
     # config_list = ['signal_N2_a_r1','signal_N2_c_r1','signal_N2_d_r1','signal_N2_e_r1','signal_N2_f_r1',
     #                'signal_N2_i_r1','signal_N2_j_r1','signal_N2_k_r1','signal_N2_l_r1','signal_N2_m_r1','signal_N2_n_r1']
 
-    config_list = ['signal_N2_r1_Lorentz_k4']
+    # config_list = ['arbitrary_3_field_video_bison']
 
     # config_list = ['signal_N2_r1_Lorentz_a','signal_N2_r1_Lorentz_b','signal_N2_r1_Lorentz_d','signal_N2_r1_Lorentz_e',
     #                'signal_N2_r1_Lorentz_f','signal_N2_r1_Lorentz_g','signal_N2_r1_Lorentz_i','signal_N2_r1_Lorentz_j',
@@ -5418,12 +5557,11 @@ if __name__ == '__main__':
     # config_list = ['gravity_16']
     # config_list = ['boids_16_256']
     # config_list = ['arbitrary_16']
-    # config_list = ['signal_N2_r1_Lorentz_a_N2','signal_N3_r1_Lorentz_b']
-    # config_list = ['signal_N3_r1_Lorentz_b']
+    config_list = ['signal_N2_r1_Lorentz_l']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['24_560000'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

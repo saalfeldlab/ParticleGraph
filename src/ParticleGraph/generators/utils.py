@@ -255,7 +255,6 @@ def init_particles(config=[], scenario='none', ratio=1, device=[]):
         type = torch.tensor(type, device=device)
         type = type[:, None]
     if 'uniform' in scenario :
-
         type = torch.ones(n_particles, device=device) * int(scenario.split()[-1])
         type =  type[:, None]
     if 'stripes' in scenario:

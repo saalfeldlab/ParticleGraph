@@ -43,7 +43,7 @@ plotting:
 
 training:
     n_epochs: 40
-    n_epochs_init: 2
+    n_epochs_init: 40
     recursive_loop: 1
     batch_size: 1
     small_init_batch_size: False

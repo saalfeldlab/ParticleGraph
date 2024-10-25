@@ -116,7 +116,7 @@ class PDE_N5(pyg.nn.MessagePassing):
         self.W = W
         self.phi = phi
 
-    def forward(self, data=[], return_all=False, excitation=[]):
+    def forward(self, data=[], return_all=False, field=False):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
         # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         particle_type = to_numpy(x[:, 5])
@@ -132,7 +132,7 @@ class PDE_N5(pyg.nn.MessagePassing):
         msg = self.propagate(edge_index, u=u, t=t, l=l)
         # msg_ = torch.matmul(self.W, self.phi(u))
 
-        du = -c * u + s * self.phi(u) + g * msg + excitation[:,None]
+        du = -c * u + s * self.phi(u) + g * msg
 
         if return_all:
             return du, s * self.phi(u), g * msg

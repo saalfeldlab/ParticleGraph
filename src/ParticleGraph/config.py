@@ -105,9 +105,7 @@ class GraphModelConfig(BaseModel):
     division_predictor_n_layers: int = 3
     division_predictor_output_size: int = 1
 
-    field_type: str = 'tensor'
-    excitation_type: Literal['none', 'tensor', 'siren_wo_time', 'siren_with_time'] = 'none'
-
+    field_type: str = ''
 
     # def get_instance(self, **kwargs):
     #     return GraphModel(**self.model_dump(), **kwargs)
