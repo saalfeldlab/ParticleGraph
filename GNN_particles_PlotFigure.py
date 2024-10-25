@@ -4732,11 +4732,6 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
 
 
 
-
-
-
-
-
             print('interaction functions ...')
             fig, ax = fig_init()
             func_list = []
@@ -4855,7 +4850,6 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
             plt.tight_layout()
             plt.savefig(f'./{log_dir}/results/learned connectivity.png', dpi=300)
             plt.close()
-
 
 
 def plot_agents(config_file, epoch_list, log_dir, logger, device):

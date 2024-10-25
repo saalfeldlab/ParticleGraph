@@ -66,7 +66,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         u = data.x[:, 6:7]
 
         if has_field:
-            field = x[:,7:8]
+            field = x[:, 8:9]
         else:
             field = torch.ones_like(x[:,6:7])
 

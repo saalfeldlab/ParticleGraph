@@ -397,9 +397,11 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     has_zarr = 'zarr' in simulation_config.connectivity_file
     excitation = simulation_config.excitation
     noise_level = training_config.noise_level
-    n_nodes = simulation_config.n_nodes
-    n_nodes_per_axis = int(np.sqrt(n_nodes))
+
     field_type = model_config.field_type
+    if field_type != '':
+        n_nodes = simulation_config.n_nodes
+        n_nodes_per_axis = int(np.sqrt(n_nodes))
 
     torch.random.fork_rng(devices=device)
     torch.random.manual_seed(training_config.seed)
@@ -477,7 +479,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             s = np.random.standard_cauchy(n_particles**2)
             s[(s < -25) | (s > 25)] = 0
 
-            if n_particles == 1000:
+            if n_particles < 2000:
                 s = s / n_particles**0.7
             elif n_particles == 2000:
                 s = s / n_particles**0.675
@@ -530,7 +532,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     if is_V2:
         if 'modulation' in model_config.field_type:
             im = imread(f"graphs_data/{simulation_config.node_value_map}")
-            im_width = im.shape[2]
         match config.simulation.phi:
             case 'tanh':
                 model, bc_pos, bc_dpos = choose_model(config=config, W=adjacency, phi=torch.tanh, device=device)
@@ -554,8 +555,9 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             X1 = torch.load(f'./graphs_data/graphs_{dataset_name}/X1.pt', map_location=device)
 
         if ('modulation' in field_type):
-            X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
-            X1 = X1_mesh
+            if run==0:
+                X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
+                X1 = X1_mesh
 
         x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
 
@@ -608,10 +610,12 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 T1 = (T1 + sample) % n_particle_types
 
             if ('modulation' in field_type) & (it >= 0):
-                im_ = im[it].squeeze()
+                im_ = im[int(it/n_frames*256)].squeeze()
                 im_ = np.rot90(im_, 3)
                 im_ = np.reshape(im_, (n_nodes_per_axis * n_nodes_per_axis))
-                H1_mesh[:, 1:2] = torch.tensor(im_[:,None], dtype=torch.float32, device=device)
+                A1[:,0:1]=torch.tensor(im_[:,None], dtype=torch.float32, device=device)
+
+                # plt.scatter(to_numpy(X1_mesh[:, 1]), to_numpy(X1_mesh[:, 0]), s=40, c=to_numpy(A1), cmap='grey', vmin=0,vmax=1)
 
             x = torch.concatenate(
                 (N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
@@ -625,9 +629,9 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             # model prediction
             with torch.no_grad():
                 if ('modulation' in field_type) & (it >= 0):
-                    y, s_tanhu, msg = model(dataset, return_all=True, field=True)
+                    y, s_tanhu, msg = model(dataset, return_all=True, has_field=True)
                 else:
-                    y, s_tanhu, msg = model(dataset, return_all=True, field=False)
+                    y, s_tanhu, msg = model(dataset, return_all=True, has_field=False)
 
             # append list
             if (it >= 0) & bSave:
@@ -648,8 +652,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             H1[:, 0] = H1[:, 0] + H1[:, 1] * delta_t
             if noise_level > 0:
                 H1[:, 0] = H1[:, 0] + torch.randn(n_particles, device=device) * noise_level
-
-            A1 = A1 + 1
 
             # output plots
             if visualize & (run ==0) & (it % step == 0) & (it >= 0):
@@ -757,7 +759,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                     # plt.title('g.msg')
 
 
-        if (is_V2) & (run==10000):
+        if (is_V2) & (run==0):
 
             plt.figure(figsize=(10, 3))
             plt.subplot(121)
@@ -953,7 +955,7 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
 
 
 def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2,
-                           ratio=1, scenario='none', device=None, bSave=True):
+                            ratio=1, scenario='none', device=None, bSave=True):
     simulation_config = config.simulation
     training_config = config.training
     model_config = config.graph_model

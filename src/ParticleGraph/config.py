@@ -125,7 +125,7 @@ class TrainingConfig(BaseModel):
     model_config = ConfigDict(extra='forbid')
     
     n_epochs: int = 20
-    n_epochs_init: int = 0
+    n_epochs_init: int = 2
     batch_size: int = 1
     small_init_batch_size: bool = True
     large_range: bool = False
@@ -150,6 +150,7 @@ class TrainingConfig(BaseModel):
     learning_rate_end: float = 0.0005
     learning_rate_embedding_start: float = 0.001
     learning_rate_embedding_end: float = 0.001
+    learning_rate_NNR: float = 0.00001
 
     learning_rate_NNR: float = 0.0001
 

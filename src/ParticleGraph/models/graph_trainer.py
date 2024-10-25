@@ -2719,7 +2719,13 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     embedding_cluster = EmbeddingCluster(config)
     cmap = CustomColorMap(config=config)
     n_runs = train_config.n_runs
-    has_field = False
+    field_type = model_config.field_type
+    if field_type != '':
+        n_nodes = simulation_config.n_nodes
+        n_nodes_per_axis = int(np.sqrt(n_nodes))
+        has_field = True
+    else:
+        has_field = False
 
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
@@ -2788,6 +2794,14 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
             supp = (torch.rand(adjacency.shape,device=device) < simulation_config.connectivity_filling_factor)*1.0
             model.mask = torch.max(model.mask,supp)
 
+    if has_field:
+        image_width = n_nodes_per_axis
+        model_f = Siren_Network(image_width=image_width, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
+                                        hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.)
+        model_f.to(device=device)
+        model_f.train()
+        optimizer_f = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_f.parameters())
+
     print("Start training ...")
     print(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
     logger.info(f'{n_frames * data_augmentation_loop // batch_size} iterations per epoch')
@@ -2825,6 +2839,8 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
             run = np.random.randint(n_runs)
             k = np.random.randint(n_frames - 5)
 
+            if has_field:
+                optimizer_f.zero_grad()
             optimizer.zero_grad()
 
             for batch in range(batch_size):
@@ -2841,8 +2857,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
                 elif model_config.signal_model_name == 'PDE_N5':
                     in_features = torch.zeros((n_particles, 2*dimension+1), device=device)
                     func_edge = model.lin_edge(in_features.float())
-                    rr = 2 * torch.rand((len(x), 1), device=device) - 1
-                    in_features = torch.cat((rr, model.a, model.a), dim=1)
+                    in_features = torch.cat((x[:, 6:7], model.a, model.a), dim=1)
                     in_features_next = torch.cat((rr + 0.1, model.a, model.a), dim=1)
                     diff = torch.relu(model.lin_edge(in_features) - model.lin_edge(in_features_next)).norm(2)
                 else:
@@ -2850,14 +2865,15 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
                     func_edge = model.lin_edge(in_features.float())
                     diff = torch.relu(model.lin_edge(x[:, 6:7]) - model.lin_edge(x[:, 6:7] + 0.1)).norm(2)
 
-                match recursive_loop:
+                if has_field:
+                    x[:, 8:9] = model_f(time=k / n_frames) ** 2
 
+                match recursive_loop:
                     case 1:
                         dataset = data.Data(x=x, edge_index=model.edges)
                         pred = model(dataset, data_id=run, has_field = has_field)
                         y = torch.tensor(y_list[run][k],device=device) / ynorm
                         loss = (pred - y).norm(2) + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * coeff_diff
-
                     case 2:
                         dataset = data.Data(x=x, edge_index=model.edges)
                         pred1 = model(dataset, data_id = run, has_field = has_field)
@@ -2868,7 +2884,6 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
                         y1 = torch.tensor(y_list[run][k],device=device) / ynorm
                         y2 = torch.tensor(y_list[run][k+1],device=device) / ynorm
                         loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * coeff_diff
-
                     case 3:
                         dataset = data.Data(x=x, edge_index=model.edges)
                         pred1 = model(dataset, data_id=run, has_field = has_field)
@@ -2880,12 +2895,10 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
                         x_[:, 6:7] += (pred1+pred2) * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
                         pred3 = model(dataset, data_id=run, has_field = has_field)
-
                         y1 = torch.tensor(y_list[run][k],device=device) / ynorm
                         y2 = torch.tensor(y_list[run][k+1],device=device) / ynorm
                         y3 = torch.tensor(y_list[run][k+2],device=device) / ynorm
                         loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2) + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * coeff_diff
-
                     case 5:
                         dataset = data.Data(x=x, edge_index=model.edges)
                         pred1 = model(dataset, data_id=run, has_field = has_field)
@@ -2905,7 +2918,6 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
                         x_[:, 6:7] += (pred1+pred2+pred3+pred4) * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
                         pred5 = model(dataset, data_id=run, has_field = has_field)
-
                         y1 = y_list[run][k].clone().detach()/ ynorm
                         y2 = y_list[run][k+1].clone().detach()/ ynorm
                         y3 = y_list[run][k+2].clone().detach()/ ynorm
@@ -2917,6 +2929,8 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
             loss.backward()
 
             optimizer.step()
+            if has_field:
+                optimizer_f.step()
 
             total_loss += loss.item()
 
@@ -2924,7 +2938,22 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
             if visualize_embedding & (((epoch < 30 ) & (N%(Niter//50) == 0)) | (N==0)):
                 plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, n_particles, n_particle_types, type_list, cmap, device)
                 torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+                if (has_field):
 
+                    tmp = torch.reshape(x[:, 8:9], (n_nodes_per_axis, n_nodes_per_axis))
+                    tmp = to_numpy(torch.sqrt(tmp))
+                    tmp = np.rot90(tmp, k=1)
+                    fig_ = plt.figure(figsize=(12, 12))
+                    axf = fig_.add_subplot(1, 1, 1)
+                    plt.imshow(tmp, cmap='grey')
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
+                    plt.close()
+                    torch.save({'model_state_dict': model_f.state_dict(),
+                                'optimizer_state_dict': optimizer_f.state_dict()},
+                               os.path.join(log_dir, 'models', f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
             check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 50,
                                    memory_percentage_threshold=0.6)
 
@@ -2933,11 +2962,11 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()},
                    os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
-        if has_siren:
+        if has_field:
             torch.save({'model_state_dict': model_f.state_dict(),
-                        'optimizer_state_dict': optimizer_exc.state_dict()},
+                        'optimizer_state_dict': optimizer_f.state_dict()},
                        os.path.join(log_dir, 'models', f'best_model_f_with_{n_runs - 1}_graphs_{epoch}.pt'))
-            list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
+        list_loss.append(total_loss / (N + 1) / n_particles / batch_size)
         torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
 
         fig = plt.figure(figsize=(20, 8))

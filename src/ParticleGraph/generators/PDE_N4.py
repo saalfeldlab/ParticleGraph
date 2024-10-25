@@ -116,7 +116,7 @@ class PDE_N4(pyg.nn.MessagePassing):
         self.W = W
         self.phi = phi
 
-    def forward(self, data=[], return_all=False, field=False):
+    def forward(self, data=[], return_all=False, has_field=False):
         x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
         # edge_index, _ = pyg_utils.remove_self_loops(edge_index)
         particle_type = to_numpy(x[:, 5])
@@ -128,7 +128,7 @@ class PDE_N4(pyg.nn.MessagePassing):
 
         u = x[:, 6:7]
         if has_field:
-            field = x[:, 7:8]
+            field = x[:, 8:9]
         else:
             field = torch.ones_like(x[:, 6:7])
 
