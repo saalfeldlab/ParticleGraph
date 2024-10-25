@@ -2394,25 +2394,7 @@ def data_train_synaptic(config, config_file, erase, best_model, device):
             run = 1 + np.random.randint(n_runs - 1)
             k = np.random.randint(n_frames - 6)
 
-            if has_siren:
-
-                k = np.random.randint(n_frames - 6)
-                excitation = model_f(time=k / n_frames) ** 2
-
-                # tmp = excitation.clone().detach()
-                # tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
-                # tmp = to_numpy(tmp)
-                # tmp = np.rot90(tmp, k=1)
-                # fig = plt.figure(figsize=(12, 12))
-                # plt.imshow(tmp, cmap='grey')
-                # plt.colorbar()
-
-                excitation = excitation[0:n_particles]
-                optimizer_exc.zero_grad()
-
-            else:
-
-                optimizer.zero_grad()
+            optimizer.zero_grad()
 
             for batch in range(batch_size):
 
@@ -2438,7 +2420,7 @@ def data_train_synaptic(config, config_file, erase, best_model, device):
                     case 1:
                         x = x_list[run][k].clone().detach()
                         dataset = data.Data(x=x, edge_index=model.edges)
-                        pred = model(dataset, data_id=run, excitation=excitation)
+                        pred = model(dataset, data_id=run, has_field = has_field)
                         y = y_list[run][k].clone().detach()
                         y = y / ynorm
 
@@ -2449,11 +2431,11 @@ def data_train_synaptic(config, config_file, erase, best_model, device):
                     case 2:
                         x = x_list[run][k].clone().detach()
                         dataset = data.Data(x=x, edge_index=model.edges)
-                        pred1 = model(dataset, data_id = run, excitation=excitation)
+                        pred1 = model(dataset, data_id = run, has_field = has_field)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += pred1 * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred2 = model(dataset, data_id = run, excitation=excitation)
+                        pred2 = model(dataset, data_id = run, has_field = has_field)
                         y1 = y_list[run][k].clone().detach() / ynorm
                         y2 = y_list[run][k + 1].clone().detach() / ynorm
 
@@ -2463,15 +2445,15 @@ def data_train_synaptic(config, config_file, erase, best_model, device):
                     case 3:
                         x = x_list[run][k].clone().detach()
                         dataset = data.Data(x=x, edge_index=model.edges)
-                        pred1 = model(dataset, data_id=run, excitation=excitation)
+                        pred1 = model(dataset, data_id=run, has_field = has_field)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += pred1 * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred2 = model(dataset, data_id=run, excitation=excitation)
+                        pred2 = model(dataset, data_id=run, has_field = has_field)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += (pred1+pred2) * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred3 = model(dataset, data_id=run, excitation=excitation)
+                        pred3 = model(dataset, data_id=run, has_field = has_field)
 
                         y1 = y_list[run][k].clone().detach()/ ynorm
                         y2 = y_list[run][k+1].clone().detach()/ ynorm
@@ -2484,23 +2466,23 @@ def data_train_synaptic(config, config_file, erase, best_model, device):
 
                         x = x_list[run][k].clone().detach()
                         dataset = data.Data(x=x, edge_index=model.edges)
-                        pred1 = model(dataset, data_id=run, excitation=excitation)
+                        pred1 = model(dataset, data_id=run, has_field = has_field)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += pred1 * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred2 = model(dataset, data_id=run, excitation=excitation)
+                        pred2 = model(dataset, data_id=run, has_field = has_field)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += (pred1+pred2) * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred3 = model(dataset, data_id=run, excitation=excitation)
+                        pred3 = model(dataset, data_id=run, has_field = has_field)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += (pred1+pred2+pred3) * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred4 = model(dataset, data_id=run, excitation=excitation)
+                        pred4 = model(dataset, data_id=run, has_field = has_field)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += (pred1+pred2+pred3+pred4) * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred5 = model(dataset, data_id=run, excitation=excitation)
+                        pred5 = model(dataset, data_id=run, has_field = has_field)
 
                         y1 = y_list[run][k].clone().detach()/ ynorm
                         y2 = y_list[run][k+1].clone().detach()/ ynorm
@@ -2511,9 +2493,6 @@ def data_train_synaptic(config, config_file, erase, best_model, device):
                         loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + (pred3 - y3).norm(2)+ (pred4 - y4).norm(2) + (pred5 - y5).norm(2) + model.W.norm(1) * train_config.coeff_L1 + func_f.norm(2)
 
             loss.backward()
-
-            if has_siren:
-                optimizer_exc.step()
 
             optimizer.step()
 
@@ -2740,11 +2719,10 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     embedding_cluster = EmbeddingCluster(config)
     cmap = CustomColorMap(config=config)
     n_runs = train_config.n_runs
+    has_field = False
 
     replace_with_cluster = 'replace' in train_config.sparsity
     sparsity_freq = train_config.sparsity_freq
-    has_siren = 'siren' in model_config.excitation_type
-    has_siren_time = 'siren_with_time' in model_config.excitation_type
 
     l_dir, log_dir, logger = create_log_dir(config, config_file,erase)
     print(f'Graph files N: {n_runs}')
@@ -2800,29 +2778,6 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     config.simulation.n_particles = n_particles
     type_list = torch.tensor(x[:, 1 + 2 * dimension:2 + 2 * dimension], device=device)
 
-    if has_siren:
-        im = imread(f"graphs_data/{simulation_config.excitation_value_map}")
-        image_width = im.shape[1]
-        if has_siren_time:
-            model_f = Siren_Network(image_width=image_width, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
-                                        hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.)
-        else:
-            model_f = Siren_Network(image_width=image_width, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
-                                        hidden_layers=3, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.)
-        model_f.to(device=device)
-        model_f.train()
-        optimizer_exc = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_f.parameters())
-
-        # net = f"./log/try_{config_file}/models/best_model_f_with_9_graphs_14.pt"
-        # state_dict = torch.load(net, map_location=device)
-        # model_f.load_state_dict(state_dict['model_state_dict'])
-
-        optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
-        logger.info(f'Learning rates: {lr}, {lr_embedding}')
-        print(f'has_siren, learning rates: {lr}, {lr_embedding}')
-    else:
-        model_f=[]
-
     adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency.pt', map_location=device)
     model.edges = torch.load(f'./graphs_data/graphs_{dataset_name}/edge_index.pt', map_location=device)
     print(to_numpy(torch.sum(model.edges)))
@@ -2870,21 +2825,6 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
             run = np.random.randint(n_runs)
             k = np.random.randint(n_frames - 5)
 
-            if has_siren:
-                k = np.random.randint(n_frames - 6)
-                excitation = model_f(time=k / n_frames) ** 2
-
-                # tmp = excitation.clone().detach()
-                # tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
-                # tmp = to_numpy(tmp)
-                # tmp = np.rot90(tmp, k=1)
-                # fig = plt.figure(figsize=(12, 12))
-                # plt.imshow(tmp, cmap='grey')
-                # plt.colorbar()
-
-                excitation = excitation[0:n_particles]
-                optimizer_exc.zero_grad()
-
             optimizer.zero_grad()
 
             for batch in range(batch_size):
@@ -2914,32 +2854,32 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
 
                     case 1:
                         dataset = data.Data(x=x, edge_index=model.edges)
-                        pred = model(dataset, data_id=run, excitation=excitation)
+                        pred = model(dataset, data_id=run, has_field = has_field)
                         y = torch.tensor(y_list[run][k],device=device) / ynorm
                         loss = (pred - y).norm(2) + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * coeff_diff
 
                     case 2:
                         dataset = data.Data(x=x, edge_index=model.edges)
-                        pred1 = model(dataset, data_id = run, excitation=excitation)
+                        pred1 = model(dataset, data_id = run, has_field = has_field)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += pred1 * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred2 = model(dataset, data_id = run, excitation=excitation)
+                        pred2 = model(dataset, data_id = run, has_field = has_field)
                         y1 = torch.tensor(y_list[run][k],device=device) / ynorm
                         y2 = torch.tensor(y_list[run][k+1],device=device) / ynorm
                         loss = (pred1 - y1).norm(2) + (pred2 - y2).norm(2) + model.W.norm(1) * coeff_L1 + func_phi.norm(2) + func_edge.norm(2) + diff * coeff_diff
 
                     case 3:
                         dataset = data.Data(x=x, edge_index=model.edges)
-                        pred1 = model(dataset, data_id=run, excitation=excitation)
+                        pred1 = model(dataset, data_id=run, has_field = has_field)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += pred1 * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred2 = model(dataset, data_id=run, excitation=excitation)
+                        pred2 = model(dataset, data_id=run, has_field = has_field)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += (pred1+pred2) * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred3 = model(dataset, data_id=run, excitation=excitation)
+                        pred3 = model(dataset, data_id=run, has_field = has_field)
 
                         y1 = torch.tensor(y_list[run][k],device=device) / ynorm
                         y2 = torch.tensor(y_list[run][k+1],device=device) / ynorm
@@ -2948,23 +2888,23 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
 
                     case 5:
                         dataset = data.Data(x=x, edge_index=model.edges)
-                        pred1 = model(dataset, data_id=run, excitation=excitation)
+                        pred1 = model(dataset, data_id=run, has_field = has_field)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += pred1 * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred2 = model(dataset, data_id=run, excitation=excitation)
+                        pred2 = model(dataset, data_id=run, has_field = has_field)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += (pred1+pred2) * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred3 = model(dataset, data_id=run, excitation=excitation)
+                        pred3 = model(dataset, data_id=run, has_field = has_field)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += (pred1+pred2+pred3) * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred4 = model(dataset, data_id=run, excitation=excitation)
+                        pred4 = model(dataset, data_id=run, has_field = has_field)
                         x_ = x.clone().detach()
                         x_[:, 6:7] += (pred1+pred2+pred3+pred4) * delta_t
                         dataset = data.Data(x=x_, edge_index=model.edges)
-                        pred5 = model(dataset, data_id=run, excitation=excitation)
+                        pred5 = model(dataset, data_id=run, has_field = has_field)
 
                         y1 = y_list[run][k].clone().detach()/ ynorm
                         y2 = y_list[run][k+1].clone().detach()/ ynorm
@@ -2976,16 +2916,13 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
 
             loss.backward()
 
-            if has_siren:
-                optimizer_exc.step()
-
             optimizer.step()
 
             total_loss += loss.item()
 
             visualize_embedding = True
             if visualize_embedding & (((epoch < 30 ) & (N%(Niter//50) == 0)) | (N==0)):
-                plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, n_particles, n_particle_types, type_list, cmap, has_siren, has_siren_time, model_f, n_frames, device)
+                plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, n_particles, n_particle_types, type_list, cmap, device)
                 torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
             check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 50,

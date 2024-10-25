@@ -81,32 +81,7 @@ def get_in_features(rr, embedding_, config_model, max_radius):
 
     return in_features
 
-def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, n_particles, n_particle_types, type_list, cmap, has_siren, has_siren_time, model_exc, n_frames, device):
-
-    if has_siren:
-        frame_list = [n_frames // 4, n_frames // 2, 3*n_frames // 4, n_frames - 1]
-
-        for frame in frame_list:
-
-            if has_siren_time:
-                with torch.no_grad():
-                    tmp = model_exc(time=frame / n_frames) ** 2
-            else:
-                with torch.no_grad():
-                    tmp = model_exc() ** 2
-            tmp = torch.reshape(tmp, (int(np.sqrt(len(tmp))), int(np.sqrt(len(tmp)))))
-            tmp = to_numpy(tmp)
-            if has_siren_time:
-                tmp = np.rot90(tmp, k=1)
-            fig_ = plt.figure(figsize=(12, 12))
-            axf = fig_.add_subplot(1, 1, 1)
-            plt.imshow(tmp, cmap='grey')
-            plt.colorbar()
-            plt.xticks([])
-            plt.yticks([])
-            plt.tight_layout()
-            plt.savefig(f"./{log_dir}/tmp_training/field/{epoch}_{N}_{frame}.tif", dpi=170.7)
-            plt.close()
+def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, n_particles, n_particle_types, type_list, cmap, device):
 
     fig = plt.figure(figsize=(8, 8))
     for n in range(n_particle_types):
@@ -115,7 +90,6 @@ def plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir,
             plt.scatter(to_numpy(model.a[1,pos, 0]), to_numpy(model.a[1,pos, 1]), s=20, color=cmap.color(n))
         else:
             plt.scatter(to_numpy(model.a[pos, 0]), to_numpy(model.a[pos, 1]), s=20, color=cmap.color(n))
-
 
     plt.xticks([])
     plt.yticks([])

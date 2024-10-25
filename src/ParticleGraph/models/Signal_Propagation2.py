@@ -59,32 +59,35 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         self.mask.fill_diagonal_(0)
 
 
-    def forward(self, data=[], data_id=[], return_all=False, excitation=None):
+    def forward(self, data=[], data_id=[], return_all=False, has_field=False):
         self.data_id = data_id
         x, edge_index = data.x, data.edge_index
 
         u = data.x[:, 6:7]
+
+        if has_field:
+            field = x[:,7:8]
+        else:
+            field = torch.ones_like(x[:,6:7])
+
         particle_id = to_numpy(x[:, 0])
         embedding = self.a[particle_id, :]
 
         in_features = torch.cat([u, embedding], dim=1)
 
         if (self.model=='PDE_N4') | (self.model=='PDE_N5'):
-            msg = self.propagate(edge_index, u=u, embedding=embedding)
+            msg = self.propagate(edge_index, u=u, embedding=embedding,field=field)
         else:
             msg = torch.matmul(self.W * self.mask, self.lin_edge(u))
 
-        if excitation == None:
-            pred = self.lin_phi(in_features) + msg
-        else:
-            pred = self.lin_phi(in_features) + msg + excitation
+        pred = self.lin_phi(in_features) + msg
 
         if return_all:
             return pred, msg
         else:
             return pred
 
-    def message(self, edge_index_i, edge_index_j, u_j, embedding_i, embedding_j):
+    def message(self, edge_index_i, edge_index_j, u_j, embedding_i, embedding_j, field_i):
 
         if (self.model=='PDE_N4'):
             in_features = torch.cat([u_j, embedding_i], dim=1)
@@ -97,7 +100,7 @@ class Signal_Propagation2(pyg.nn.MessagePassing):
         # mul = torch.sum(T[to_numpy(edge_index_i[pos]),to_numpy(edge_index_j[pos])][:,None] * self.lin_edge(u_j[pos]))
         # print(to_numpy(mul))
 
-        return T[to_numpy(edge_index_i),to_numpy(edge_index_j)][:,None] * self.lin_edge(in_features)
+        return T[to_numpy(edge_index_i),to_numpy(edge_index_j)][:,None] * self.lin_edge(in_features) * field_i
 
     def update(self, aggr_out):
         return aggr_out

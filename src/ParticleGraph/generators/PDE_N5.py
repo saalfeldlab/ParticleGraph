@@ -128,8 +128,12 @@ class PDE_N5(pyg.nn.MessagePassing):
         l = torch.log(parameters[:, 3:4])
 
         u = x[:, 6:7]
+        if has_field:
+            field = x[:, 7:8]
+        else:
+            field = torch.ones_like(x[:, 6:7])
 
-        msg = self.propagate(edge_index, u=u, t=t, l=l)
+        msg = self.propagate(edge_index, u=u, t=t, field=field)
         # msg_ = torch.matmul(self.W, self.phi(u))
 
         du = -c * u + s * self.phi(u) + g * msg
@@ -139,10 +143,10 @@ class PDE_N5(pyg.nn.MessagePassing):
         else:
             return du
 
-    def message(self, edge_index_i, edge_index_j, u_j, t_i, l_j):
+    def message(self, edge_index_i, edge_index_j, u_j, t_i, l_j, field_i):
 
         T = self.W
-        return T[to_numpy(edge_index_i), to_numpy(edge_index_j)][:, None]  * (self.phi(u_j/t_i) - u_j*l_j/50)
+        return T[to_numpy(edge_index_i), to_numpy(edge_index_j)][:, None]  * (self.phi(u_j/t_i) - u_j*l_j/50) * field_i
 
 
     def psi(self, r, p):
