@@ -2858,7 +2858,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
                     in_features = torch.zeros((n_particles, 2*dimension+1), device=device)
                     func_edge = model.lin_edge(in_features.float())
                     in_features = torch.cat((x[:, 6:7], model.a, model.a), dim=1)
-                    in_features_next = torch.cat((rr + 0.1, model.a, model.a), dim=1)
+                    in_features_next = torch.cat((x[:, 6:7] + 0.1, model.a, model.a), dim=1)
                     diff = torch.relu(model.lin_edge(in_features) - model.lin_edge(in_features_next)).norm(2)
                 else:
                     in_features = torch.zeros((n_particles, 1), device=device)

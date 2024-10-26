@@ -4414,6 +4414,13 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
     cmap = CustomColorMap(config=config)
     dimension = config.simulation.dimension
     max_radius = config.simulation.max_radius
+    field_type = model_config.field_type
+    if field_type != '':
+        n_nodes = simulation_config.n_nodes
+        n_nodes_per_axis = int(np.sqrt(n_nodes))
+        has_field = True
+    else:
+        has_field = False
 
 
     embedding_cluster = EmbeddingCluster(config)
@@ -4441,6 +4448,15 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
     activity = activity[:, :, 6:7].squeeze()
     distrib = to_numpy(activity.flatten())
     activity = activity.t()
+
+    if has_field:
+        image_width = n_nodes_per_axis
+        model_f = Siren_Network(image_width=image_width, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
+                                        hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.)
+        model_f.to(device=device)
+        model_f.train()
+        optimizer_f = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_f.parameters())
+
 
 
     if epoch_list[0] == 'all':
@@ -4634,6 +4650,32 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
             model.edges = edge_index
             print(f'net: {net}')
 
+            if has_field:
+                net = f'./log/try_{config_file}/models/best_model_f_with_9_graphs_{epoch}.pt'
+                state_dict = torch.load(net, map_location=device)
+                model_f.load_state_dict(state_dict['model_state_dict'])
+
+                os.makedirs(f"./{log_dir}/results/field", exist_ok=True)
+                x = x_list[0][0]
+
+                for frame in trange(0, n_frames, n_frames//250):
+                    pred = model_f(time=frame / n_frames) ** 2
+                    pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
+                    pred =to_numpy(pred)
+                    pred = np.flipud(pred)
+                    pred = np.rot90(pred, 1)
+                    pred = np.fliplr(pred)
+                    #grey_values = np.reshape(pred, (n_nodes_per_axis * n_nodes_per_axis))
+                    #plt.scatter(x[:, 1], 1 - x[:, 2], c=grey_values, s=20, cmap='gray')
+                    fig, ax = fig_init()
+                    plt.imshow(pred,cmap='gray',vmin=0,vmax=0.2)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/results/field/reconstructed_field_{epoch}_{frame}.tif",
+                                dpi=80)
+                    plt.close()
+
             fig, ax = fig_init()
             for n in range(n_particle_types):
                 pos = torch.argwhere(type_list == n).squeeze()
@@ -4729,8 +4771,6 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/results/learned_multiple_psi.tif", dpi=170.7)
                 plt.close()
-
-
 
             print('interaction functions ...')
             fig, ax = fig_init()
@@ -5551,11 +5591,11 @@ if __name__ == '__main__':
     # config_list = ['gravity_16']
     # config_list = ['boids_16_256']
     # config_list = ['arbitrary_16']
-    config_list = ['signal_N2_r1_Lorentz_l']
+    config_list = ['signal_N2_r1_Lorentz_m1']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['20'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['0_720000'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)
