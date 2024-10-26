@@ -4668,7 +4668,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                     #grey_values = np.reshape(pred, (n_nodes_per_axis * n_nodes_per_axis))
                     #plt.scatter(x[:, 1], 1 - x[:, 2], c=grey_values, s=20, cmap='gray')
                     fig, ax = fig_init()
-                    plt.imshow(pred,cmap='gray',vmin=0,vmax=0.2)
+                    plt.imshow(pred,cmap='gray',vmin=0,vmax=0.25)
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
@@ -5595,7 +5595,7 @@ if __name__ == '__main__':
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['0_720000'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['5_240000'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

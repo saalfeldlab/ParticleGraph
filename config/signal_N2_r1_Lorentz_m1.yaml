@@ -55,7 +55,7 @@ training:
     sparsity: 'none'
     data_augmentation: False
     data_augmentation_loop: 100
-    cluster_method: 'distance_embedding'
+    cluster_method: 'kmeans_auto_embedding'
     cluster_distance_threshold: 0.2
     fix_cluster_embedding: True
     device: 'auto'
