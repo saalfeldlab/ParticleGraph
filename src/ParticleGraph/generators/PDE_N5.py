@@ -133,7 +133,7 @@ class PDE_N5(pyg.nn.MessagePassing):
         else:
             field = torch.ones_like(x[:, 6:7])
 
-        msg = self.propagate(edge_index, u=u, t=t, field=field)
+        msg = self.propagate(edge_index, u=u, t=t, l=l, field=field)
         # msg_ = torch.matmul(self.W, self.phi(u))
 
         du = -c * u + s * self.phi(u) + g * msg

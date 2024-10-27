@@ -294,6 +294,14 @@ class Mesh_RPS_extract(MessagePassing):
         return p * r
 
 
+def sort_key(filename):
+            # Extract the numeric parts using regular expressions
+            if filename.split('_')[-2] == 'graphs':
+                return 0
+            else:
+                return 1E7 * int(filename.split('_')[-2]) + int(filename.split('_')[-1][:-3])
+
+
 def load_training_data(dataset_name, n_runs, log_dir, device):
     x_list = []
     y_list = []
@@ -1187,14 +1195,6 @@ def plot_attraction_repulsion(config_file, epoch_list, log_dir, logger, device):
         matplotlib.rcParams['savefig.pad_inches'] = 0
 
         files = glob.glob(f"./log/try_{config_file}/models/best_model_with_1_graphs_*.pt")
-
-        def sort_key(filename):
-            # Extract the numeric parts using regular expressions
-            if filename.split('_')[-2] == 'graphs':
-                return 0
-            else:
-                return 1E7 * int(filename.split('_')[-2]) + int(filename.split('_')[-1][:-3])
-
         files.sort(key=sort_key)
 
         flag = True
@@ -1911,14 +1911,6 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
 
 
         files = glob.glob(f"./log/try_{config_file}/models/best_model_with_1_graphs_*.pt")
-
-        def sort_key(filename):
-            # Extract the numeric parts using regular expressions
-            if filename.split('_')[-2] == 'graphs':
-                return 0
-            else:
-                return 1E7 * int(filename.split('_')[-2]) + int(filename.split('_')[-1][:-3])
-
         files.sort(key=sort_key)
 
         flag = True
@@ -2757,14 +2749,6 @@ def plot_boids(config_file, epoch_list, log_dir, logger, device):
         matplotlib.rcParams['savefig.pad_inches'] = 0
 
         files = glob.glob(f"./log/try_{config_file}/models/best_model_with_1_graphs_*.pt")
-
-        def sort_key(filename):
-            # Extract the numeric parts using regular expressions
-            if filename.split('_')[-2] == 'graphs':
-                return 0
-            else:
-                return 1E7 * int(filename.split('_')[-2]) + int(filename.split('_')[-1][:-3])
-
         files.sort(key=sort_key)
 
         flag = True
@@ -3383,14 +3367,6 @@ def plot_particle_field(config_file, epoch_list, log_dir, logger, cc, device):
         matplotlib.rcParams['savefig.pad_inches'] = 0
 
         files = glob.glob(f"./log/try_{config_file}/models/best_model_with_1_graphs_*.pt")
-
-        def sort_key(filename):
-            # Extract the numeric parts using regular expressions
-            if filename.split('_')[-2] == 'graphs':
-                return 0
-            else:
-                return 1E7 * int(filename.split('_')[-2]) + int(filename.split('_')[-1][:-3])
-
         files.sort(key=sort_key)
 
         flag = True
@@ -4472,14 +4448,6 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
         matplotlib.rcParams['savefig.pad_inches'] = 0
 
         files = glob.glob(f"./log/try_{config_file}/models/best_model_with_9_graphs_*.pt")
-
-        def sort_key(filename):
-            # Extract the numeric parts using regular expressions
-            if filename.split('_')[-2] == 'graphs':
-                return 0
-            else:
-                return 1E7 * int(filename.split('_')[-2]) + int(filename.split('_')[-1][:-3])
-
         files.sort(key=sort_key)
 
         flag = True
@@ -4651,7 +4619,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
             print(f'net: {net}')
 
             if has_field:
-                net = f'./log/try_{config_file}/models/best_model_f_with_9_graphs_{epoch}.pt'
+                net = f'./log/try_{config_file}/models/best_model_f_with_{n_runs-1}_graphs_{epoch}.pt'
                 state_dict = torch.load(net, map_location=device)
                 model_f.load_state_dict(state_dict['model_state_dict'])
 
@@ -5243,6 +5211,18 @@ def data_plot(config, config_file, epoch_list, device):
     for f in files:
         os.remove(f)
 
+    if epoch_list==['best']:
+        files = glob.glob(f"{log_dir}/models/*")
+        files.sort(key=sort_key)
+        filename = files[-1]
+        filename = filename.split('/')[-1]
+        filename = filename.split('graphs')[-1][1:-3]
+
+        epoch_list=[filename]
+        print(f'best model: {epoch_list}')
+        logger.info(f'best model: {epoch_list}')
+
+
     if config.training.sparsity != 'none':
         print(
             f'GNN trained with simulation {config.graph_model.particle_model_name} ({config.simulation.n_particle_types} types), with cluster method: {config.training.cluster_method}   threshold: {config.training.cluster_distance_threshold}')
@@ -5591,11 +5571,11 @@ if __name__ == '__main__':
     # config_list = ['gravity_16']
     # config_list = ['boids_16_256']
     # config_list = ['arbitrary_16']
-    config_list = ['signal_N2_r1_Lorentz_m1']
+    config_list = ['signal_N2_r1_Lorentz_l3'] #'signal_N2_r1_Lorentz_m1','signal_N2_r1_Lorentz_m2','signal_N2_r1_Lorentz_m3','signal_N2_r1_Lorentz_k5',]
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
-        data_plot(config=config, config_file=config_file, epoch_list=['5_240000'], device=device)
+        data_plot(config=config, config_file=config_file, epoch_list=['best'], device=device)
 
         # plot_generated(config=config, run=0, style='color', step = 2, device=device)
         # plot_focused_on_cell(config=config, run=0, style='color', cell_id=175, step = 5, device=device)

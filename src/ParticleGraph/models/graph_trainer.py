@@ -2832,9 +2832,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
         print(f'Niter = {Niter}')
         logger.info(f'Niter = {Niter}')
 
-        excitation = torch.zeros((n_particles, 1), device=device)
-
-        for N in trange(Niter):
+        for N in trange(2): # Niter):
 
             run = np.random.randint(n_runs)
             k = np.random.randint(n_frames - 5)
@@ -2943,8 +2941,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
                     tmp = torch.reshape(x[:, 8:9], (n_nodes_per_axis, n_nodes_per_axis))
                     tmp = to_numpy(torch.sqrt(tmp))
                     tmp = np.rot90(tmp, k=1)
-                    fig_ = plt.figure(figsize=(12, 12))
-                    axf = fig_.add_subplot(1, 1, 1)
+                    fig = plt.figure(figsize=(12, 12))
                     plt.imshow(tmp, cmap='grey')
                     plt.xticks([])
                     plt.yticks([])
@@ -2954,8 +2951,8 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
                     torch.save({'model_state_dict': model_f.state_dict(),
                                 'optimizer_state_dict': optimizer_f.state_dict()},
                                os.path.join(log_dir, 'models', f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
-            check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 50,
-                                   memory_percentage_threshold=0.6)
+
+            # check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 50, memory_percentage_threshold=0.6)
 
         print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
         logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) / n_particles / batch_size))
@@ -2988,13 +2985,11 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
 
         ax = fig.add_subplot(2, 5, 3)
         ax = sns.heatmap(to_numpy(adjacency),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046}, vmin=-0.001, vmax=0.001)
-        # ax.invert_yaxis()
         plt.title('True connectivity matrix',fontsize=12)
         plt.xticks([0,n_particles-1],[1,n_particles],fontsize=8)
         plt.yticks([0,n_particles-1],[1,n_particles],fontsize=8)
         ax = fig.add_subplot(2, 5, 4)
         ax = sns.heatmap(to_numpy(A),center=0,square=True,cmap='bwr',cbar_kws={'fraction':0.046}, vmin=-1, vmax=1)
-        # ax.invert_yaxis()
         plt.title('Learned connectivity matrix',fontsize=12)
         plt.xticks([0,n_particles-1],[1,n_particles],fontsize=8)
         plt.yticks([0,n_particles-1],[1,n_particles],fontsize=8)
@@ -3068,9 +3063,6 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
         plt.ylabel('ai1', fontsize=12)
         plt.xticks(fontsize=10.0)
         plt.yticks(fontsize=10.0)
-
-        # ax = fig.add_subplot(2, 5, 9)
-        # plt.hist(np.abs(to_numpy(A)),bins = 100)
 
         if (replace_with_cluster) & (epoch % sparsity_freq == sparsity_freq - 1) & (epoch < n_epochs - sparsity_freq):
             # Constrain embedding domain
