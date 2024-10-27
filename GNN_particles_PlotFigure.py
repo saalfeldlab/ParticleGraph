@@ -4619,6 +4619,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
             print(f'net: {net}')
 
             if has_field:
+
                 net = f'./log/try_{config_file}/models/best_model_f_with_{n_runs-1}_graphs_{epoch}.pt'
                 state_dict = torch.load(net, map_location=device)
                 model_f.load_state_dict(state_dict['model_state_dict'])
@@ -4636,13 +4637,21 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                     #grey_values = np.reshape(pred, (n_nodes_per_axis * n_nodes_per_axis))
                     #plt.scatter(x[:, 1], 1 - x[:, 2], c=grey_values, s=20, cmap='gray')
                     fig, ax = fig_init()
-                    plt.imshow(pred,cmap='gray',vmin=0,vmax=0.25)
+
+                    if frame==0:
+                        vmin = min(0,np.min(pred))
+                        vmax = np.max(pred)
+                        field_correction = 1 / np.mean(pred)
+
+                    plt.imshow(pred,cmap='gray',vmin=vmin,vmax=vmax)
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
                     plt.savefig(f"./{log_dir}/results/field/reconstructed_field_{epoch}_{frame}.tif",
                                 dpi=80)
                     plt.close()
+            else:
+                field_correction = 1
 
             fig, ax = fig_init()
             for n in range(n_particle_types):
@@ -4813,10 +4822,12 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
             A = model.W.clone().detach() / correction
             A[i, i] = 0
 
+            field_correction
+
             fig, ax = fig_init()
             gt_weight = to_numpy(adjacency)
             pred_weight = to_numpy(A)
-            plt.scatter(gt_weight, pred_weight / 10, s=0.1, c='k', alpha=0.1)
+            plt.scatter(gt_weight, pred_weight / 10 / field_correction, s=0.1, c='k', alpha=0.1)
             plt.xlabel(r'true $W_{ij}$', fontsize=78)
             plt.ylabel(r'learned $W_{ij}$', fontsize=78)
             if n_particles == 8000:
@@ -5210,6 +5221,10 @@ def data_plot(config, config_file, epoch_list, device):
     files = glob.glob(f"{log_dir}/results/all/*")
     for f in files:
         os.remove(f)
+    os.makedirs(f"./{log_dir}/results/field", exist_ok=True)
+    files = glob.glob(f"{log_dir}/results/field/*")
+    for f in files:
+        os.remove(f)
 
     if epoch_list==['best']:
         files = glob.glob(f"{log_dir}/models/*")
@@ -5571,7 +5586,7 @@ if __name__ == '__main__':
     # config_list = ['gravity_16']
     # config_list = ['boids_16_256']
     # config_list = ['arbitrary_16']
-    config_list = ['signal_N2_r1_Lorentz_l3'] #'signal_N2_r1_Lorentz_m1','signal_N2_r1_Lorentz_m2','signal_N2_r1_Lorentz_m3','signal_N2_r1_Lorentz_k5',]
+    config_list = ['signal_N2_r1_Lorentz_m1','signal_N2_r1_Lorentz_m3','signal_N2_r1_Lorentz_m4'] #,'signal_N2_r1_Lorentz_k5','signal_N2_r1_Lorentz_l3','signal_N2_r1_Lorentz_l4']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')

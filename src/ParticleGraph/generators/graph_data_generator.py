@@ -550,7 +550,6 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         # initialize particle and graph states
         X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
 
-
         if os.path.isfile(f'./graphs_data/graphs_{dataset_name}/X1.pt'):
             X1 = torch.load(f'./graphs_data/graphs_{dataset_name}/X1.pt', map_location=device)
 
