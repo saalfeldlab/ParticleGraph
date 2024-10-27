@@ -2832,7 +2832,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
         print(f'Niter = {Niter}')
         logger.info(f'Niter = {Niter}')
 
-        for N in trange(2): # Niter):
+        for N in trange(Niter):
 
             run = np.random.randint(n_runs)
             k = np.random.randint(n_frames - 5)
