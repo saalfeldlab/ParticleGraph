@@ -20,7 +20,7 @@ simulation:
     dpos_init:  0
     boundary: 'no'
     start_frame: -1000
-    node_value_map: 'video_bisons_32.tif'
+    node_value_map: 'video_bisons_32_2.tif'
 
 graph_model:
     field_type: 'visual_a'
