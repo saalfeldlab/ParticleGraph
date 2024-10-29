@@ -3644,7 +3644,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     else:
         x_list = []
         y_list = []
-        if 'PDE_N2' in model_config.signal_model_name:
+        if model_config.signal_model_name !='PDE_N2':
             x = np.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy')
             y = np.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy')
             x_list.append(torch.tensor(x,device=device))

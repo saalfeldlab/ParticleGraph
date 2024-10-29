@@ -294,14 +294,6 @@ class Mesh_RPS_extract(MessagePassing):
         return p * r
 
 
-def sort_key(filename):
-            # Extract the numeric parts using regular expressions
-            if filename.split('_')[-2] == 'graphs':
-                return 0
-            else:
-                return 1E7 * int(filename.split('_')[-2]) + int(filename.split('_')[-1][:-3])
-
-
 def load_training_data(dataset_name, n_runs, log_dir, device):
     x_list = []
     y_list = []
@@ -5595,7 +5587,7 @@ if __name__ == '__main__':
     # config_list = ['gravity_16']
     # config_list = ['boids_16_256']
     # config_list = ['arbitrary_16']
-    config_list = ['signal_N2_r1_Lorentz_m3','signal_N2_r1_Lorentz_m4', 'signal_N2_r1_Lorentz_k5','signal_N2_r1_Lorentz_l3','signal_N2_r1_Lorentz_l4']
+    config_list = ['signal_N2_r1_Lorentz_v1', 'signal_N2_r1_Lorentz_v2', 'signal_N2_r1_Lorentz_m4', 'signal_N2_r1_Lorentz_k5','signal_N2_r1_Lorentz_l3','signal_N2_r1_Lorentz_l4']
     # config_list = ['boids_16_256']
 
     for config_file in config_list:

@@ -13,6 +13,15 @@ from torch_geometric.data import Data
 from torchvision.transforms import CenterCrop
 import gc
 
+
+def sort_key(filename):
+            # Extract the numeric parts using regular expressions
+            if filename.split('_')[-2] == 'graphs':
+                return 0
+            else:
+                return 1E7 * int(filename.split('_')[-2]) + int(filename.split('_')[-1][:-3])
+
+
 def to_numpy(tensor: torch.Tensor) -> np.ndarray:
     """
     Convert a PyTorch tensor to a NumPy array.
