@@ -2048,9 +2048,9 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
                 plt.plot(to_numpy(rr),
                          to_numpy(func) * to_numpy(ynorm),
                          color=cmap.color(to_numpy(type_list[n]).astype(int)), linewidth=8, alpha=0.1)
-            plt.xlabel(r'$d_{ij}$', fontsize=78)
+            plt.xlabel(r'$d_{ij}$', fontsize=64)
             # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
-            plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=78)
+            plt.ylabel(r'$f(a_i, d_{ij})$', fontsize=64)
             plt.xlim([0, 0.02])
             plt.ylim([0, 0.5E6])
             ax.xaxis.set_major_formatter(FormatStrFormatter('%.3f'))
@@ -2072,7 +2072,7 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
             plt.xlim([0, 0.02])
             plt.ylim([0, 0.5E6])
             plt.xlabel(r'$d_{ij}$', fontsize=78)
-            plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
+            # plt.ylabel(r'$f(\ensuremath{\mathbf{a}}_i, d_{ij})$', fontsize=78)
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/true_func_{config_file}.tif", dpi=170.7)
             plt.close()
@@ -2122,15 +2122,15 @@ def plot_gravity(config_file, epoch_list, log_dir, logger, device):
                     csv_ = []
                     csv_.append(p_list)
                     csv_.append(popt_list[:, 0])
-                    plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='k', linewidth=4, alpha=0.5)
-                    plt.scatter(p_list, popt_list[:, 0], color='k', s=100, alpha=0.5)
+                    plt.plot(p_list, linear_model(x_data, lin_fit[0], lin_fit[1]), color='w', linewidth=4, alpha=0.5)
+                    plt.scatter(p_list, popt_list[:, 0], color='w', s=100, alpha=0.5)
                     plt.scatter(p_list[pos_outliers[:, 0]], popt_list[pos_outliers[:, 0], 0], color='r', s=50)
-                    plt.xlabel(r'True mass ', fontsize=64)
-                    plt.ylabel(r'Learned mass ', fontsize=64)
+                    plt.xlabel(r'true mass ', fontsize=64)
+                    plt.ylabel(r'learned mass ', fontsize=64)
                     plt.xlim([0, 5.5])
                     plt.ylim([0, 5.5])
                     plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/results/mass_{config_file}.tif", dpi=170)
+                    plt.savefig(f"./{log_dir}/results/mass_{config_file}.tif", dpi=170.7)
                     # csv_ = np.array(csv_)
                     # np.save(f"./{log_dir}/results/mass_{config_file}.npy", csv_)
                     # np.savetxt(f"./{log_dir}/results/mass_{config_file}.txt", csv_)
@@ -2847,6 +2847,15 @@ def plot_boids(config_file, epoch_list, log_dir, logger, device):
 
             p = torch.load(f'graphs_data/graphs_{dataset_name}/model_p.pt', map_location=device)
             model_B = PDE_B_extract(aggr_type=config.graph_model.aggr_type, p=torch.squeeze(p), bc_dpos=bc_dpos)
+
+
+            plt.style.use('dark_background')
+            plt.rcParams['text.usetex'] = False
+            plt.rc('font', family='sans-serif')
+            plt.rc('text', usetex=False)
+            matplotlib.rcParams['savefig.pad_inches'] = 0
+
+
 
             fig, ax = fig_init()
             rr = torch.tensor(np.linspace(-max_radius, max_radius, 1000)).to(device)
@@ -4643,7 +4652,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                         vmax = np.max(pred)
                         field_correction = 1 / np.mean(pred)
 
-                    plt.imshow(pred,cmap='gray',vmin=vmin,vmax=vmax)
+                    plt.imshow(pred,cmap='gray',vmin=vmin,vmax=vmax*1.5)
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
@@ -5586,7 +5595,8 @@ if __name__ == '__main__':
     # config_list = ['gravity_16']
     # config_list = ['boids_16_256']
     # config_list = ['arbitrary_16']
-    config_list = ['signal_N2_r1_Lorentz_m1','signal_N2_r1_Lorentz_m3','signal_N2_r1_Lorentz_m4'] #,'signal_N2_r1_Lorentz_k5','signal_N2_r1_Lorentz_l3','signal_N2_r1_Lorentz_l4']
+    config_list = ['signal_N2_r1_Lorentz_m3','signal_N2_r1_Lorentz_m4', 'signal_N2_r1_Lorentz_k5','signal_N2_r1_Lorentz_l3','signal_N2_r1_Lorentz_l4']
+    # config_list = ['boids_16_256']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
