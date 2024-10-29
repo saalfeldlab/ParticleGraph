@@ -4399,7 +4399,6 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
     else:
         has_field = False
 
-
     embedding_cluster = EmbeddingCluster(config)
 
     x_list = []
@@ -4433,8 +4432,6 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
         model_f.to(device=device)
         model_f.train()
         optimizer_f = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_f.parameters())
-
-
 
     if epoch_list[0] == 'all':
 

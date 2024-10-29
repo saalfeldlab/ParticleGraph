@@ -2866,7 +2866,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
                 if has_field:
                     if 'visual' in field_type:
                         x[:n_nodes, 8:9] = model_f(time=k / n_frames) ** 2
-                        x[:n_nodes, 8:9] = 1
+                        x[n_nodes:n_particles, 8:9] = 1
                     else:
                         x[:, 8:9] = model_f(time=k / n_frames) ** 2
 
