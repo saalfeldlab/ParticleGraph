@@ -2864,7 +2864,11 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
                     diff = torch.relu(model.lin_edge(x[:, 6:7]) - model.lin_edge(x[:, 6:7] + 0.1)).norm(2)
 
                 if has_field:
-                    x[:, 8:9] = model_f(time=k / n_frames) ** 2
+                    if 'visual' in field_type:
+                        x[:n_nodes, 8:9] = model_f(time=k / n_frames) ** 2
+                        x[:n_nodes, 8:9] = 1
+                    else:
+                        x[:, 8:9] = model_f(time=k / n_frames) ** 2
 
                 match recursive_loop:
                     case 1:
@@ -2937,8 +2941,10 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
                 plot_training_signal(config, dataset_name, model, adjacency, ynorm, log_dir, epoch, N, n_particles, n_particle_types, type_list, cmap, device)
                 torch.save({'model_state_dict': model.state_dict(), 'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
                 if (has_field):
-
-                    tmp = torch.reshape(x[:, 8:9], (n_nodes_per_axis, n_nodes_per_axis))
+                    if 'visual' in field_type:
+                        tmp = torch.reshape(x[:n_nodes, 8:9], (n_nodes_per_axis, n_nodes_per_axis))
+                    else:
+                        tmp = torch.reshape(x[:, 8:9], (n_nodes_per_axis, n_nodes_per_axis))
                     tmp = to_numpy(torch.sqrt(tmp))
                     tmp = np.rot90(tmp, k=1)
                     fig = plt.figure(figsize=(12, 12))
