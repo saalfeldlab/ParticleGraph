@@ -561,8 +561,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             if run==0:
                 X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
                 X1 = torch.load(f'./graphs_data/graphs_signal_N2_Lorentz_c/X1.pt', map_location=device) / 10000
-                X1[:,0] = X1[:,0] + 2.2
-                X1[:, 1] = X1[:, 1] + 0.5
+                X1[:,1] = X1[:,1] + 2.2
+                X1[:, 0] = X1[:, 0] + 0.5
                 X1 = torch.cat((X1_mesh,X1[0:n_particles-n_nodes]), 0)
 
                 # plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=10)
@@ -694,6 +694,12 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                         num = f"{it:06}"
                         plt.savefig(f"graphs_data/graphs_{dataset_name}/Signal/Signal_{run}_{num}.tif", dpi=70)
                         plt.close()
+                    elif 'visual' in field_type:
+                        fig = plt.figure(figsize=(12, 4))
+                        plt.subplot(121)
+                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=8, c=to_numpy(A1[:, 0]), cmap='viridis', vmin=0,vmax=2)
+                        plt.subplot(122)
+                        plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=8, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-10,vmax=10)
                     else:
                         fig = plt.figure(figsize=(8, 8))
                         plt.scatter(to_numpy(X1[:, 1]), to_numpy(X1[:, 0]), s=80, c=to_numpy(H1[:, 0]), cmap='viridis', vmin=-10,vmax=10)
