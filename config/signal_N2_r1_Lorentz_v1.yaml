@@ -1,4 +1,4 @@
-description: 'synaptic network random matrix cluster embedding distance 0.2 1000 neurons 4 types phi neuron dependent lorentz std 0.03 20 runs with semi visual input'
+description: 'synaptic network random matrix cluster embedding distance 0.2 2048 neurons 4 types phi neuron dependent lorentz std 0.03 20 runs modulation on 1024 neurons'
 dataset: 'signal_N2_Lorentz_v1'
 
 simulation:
