@@ -3135,7 +3135,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
             logger.info(f'coeff_L1: {coeff_L1}')
 
         plt.tight_layout()
-        plt.savefig(f"./{log_dir}/tmp_training/Fig_{dataset_name}_{epoch}.tif")
+        plt.savefig(f"./{log_dir}/tmp_training/Fig_{epoch}.tif")
         plt.close()
 
 
