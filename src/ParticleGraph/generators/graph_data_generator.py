@@ -481,9 +481,9 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
             if n_particles < 2000:
                 s = s / n_particles**0.7
-            elif n_particles == 2000:
+            elif n_particles <4000:
                 s = s / n_particles**0.675
-            elif n_particles == 4000:
+            elif n_particles < 8000:
                 s = s / n_particles**0.67
             elif n_particles == 8000:
                 s = s / n_particles**0.66
@@ -530,7 +530,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
     # create GNN
     if is_V2:
-        if 'modulation' in model_config.field_type:
+        if ('modulation' in model_config.field_type) | ('visual' in model_config.field_type):
             im = imread(f"graphs_data/{simulation_config.node_value_map}")
         match config.simulation.phi:
             case 'tanh':
@@ -557,6 +557,16 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             if run==0:
                 X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
                 X1 = X1_mesh
+        elif ('visual' in field_type):
+            if run==0:
+                X1_mesh, V1_mesh, T1_mesh, H1_mesh, A1_mesh, N1_mesh, mesh_data = init_mesh(config, device=device)
+                X1 = torch.load(f'./graphs_data/graphs_signal_N2_Lorentz_c/X1.pt', map_location=device) / 10000
+                X1[:,0] = X1[:,0] + 2.2
+                X1[:, 1] = X1[:, 1] + 0.5
+                X1 = torch.cat((X1_mesh,X1[0:n_particles-n_nodes]), 0)
+
+                # plt.scatter(to_numpy(X1[:, 0]), to_numpy(X1[:, 1]), s=10)
+                # plt.scatter(to_numpy(X1_mesh[:, 0]), to_numpy(X1_mesh[:, 1]), s=10)
 
         x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(), H1.clone().detach(), A1.clone().detach()), 1)
         check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
@@ -570,11 +580,17 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
                 sample = (sample < (1 / config.simulation.state_params[0])) * torch.randint(0, n_particle_types,(len(T1), 1), device=device)
                 T1 = (T1 + sample) % n_particle_types
 
-            if ('modulation' in field_type) & (it >= 0):
+            if ('modulation' in field_type)  & (it >= 0):
                 im_ = im[int(it/n_frames*256)].squeeze()
                 im_ = np.rot90(im_, 3)
                 im_ = np.reshape(im_, (n_nodes_per_axis * n_nodes_per_axis))
                 A1[:,0:1]=torch.tensor(im_[:,None], dtype=torch.float32, device=device)
+            if ('visual' in field_type) & (it >= 0):
+                im_ = im[int(it / n_frames * 256)].squeeze()
+                im_ = np.rot90(im_, 3)
+                im_ = np.reshape(im_, (n_nodes_per_axis * n_nodes_per_axis))
+                A1[:n_nodes, 0:1] = torch.tensor(im_[:, None], dtype=torch.float32, device=device)
+                A1[n_nodes:n_particles, 0:1] = 1
 
                 # plt.scatter(to_numpy(X1_mesh[:, 1]), to_numpy(X1_mesh[:, 0]), s=40, c=to_numpy(A1), cmap='grey', vmin=0,vmax=1)
 

@@ -52,7 +52,7 @@ if __name__ == '__main__':
     else:
         action = 'generate'
         best_model = '1'
-        config_list = ["signal_N2_r1_Lorentz_l3"]
+        config_list = ["signal_N2_r1_Lorentz_v1"]
         # config_list = ["arbitrary_3_field_video_bison_bis"]
 
     for config_file in config_list:
