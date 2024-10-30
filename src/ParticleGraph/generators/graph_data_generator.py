@@ -607,6 +607,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             with torch.no_grad():
                 if ('modulation' in field_type) & (it >= 0):
                     y, s_tanhu, msg = model(dataset, return_all=True, has_field=True)
+                elif ('visual' in field_type) & (it >= 0):
+                    y, s_tanhu, msg = model(dataset, return_all=True, has_field=True)
                 else:
                     y, s_tanhu, msg = model(dataset, return_all=True, has_field=False)
 
