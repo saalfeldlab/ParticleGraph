@@ -55,6 +55,8 @@ class Siren_Network(nn.Module):
 
         self.device = device 
         self.image_width = image_width
+        
+        print('omega: ',first_omega_0, hidden_omega_0)
 
         self.net = []
         self.net.append(SineLayer(in_features, hidden_features, 
@@ -79,6 +81,8 @@ class Siren_Network(nn.Module):
 
         self.net = self.net.to(device)
 
+        self.coords = None
+
     @property
     def values(self):
         # Call forward method
@@ -91,22 +95,35 @@ class Siren_Network(nn.Module):
         xy_grid = torch.tensor(xy_grid).unsqueeze(0).permute(0, 3, 1, 2).float().contiguous().to(self.device)
         return xy_grid
     
-    def get_mgrid(self, sidelen, dim=2):
+    def get_mgrid(self, sidelen, dim=2, enlarge=False):
         '''Generates a flattened grid of (x,y,...) coordinates in a range of -1 to 1.
         sidelen: int
         dim: int'''
-        tensors = tuple(dim * [torch.linspace(0, 1, steps=sidelen)])
+        if enlarge:
+            tensors = tuple(dim * [torch.linspace(-0.2, 1.2, steps=sidelen*20)])
+        else:
+            tensors = tuple(dim * [torch.linspace(0, 1, steps=sidelen)])
+
         mgrid = torch.stack(torch.meshgrid(*tensors), dim=-1)
         mgrid = mgrid.reshape(-1, dim)
         return mgrid
 
-    def forward(self, coords=None, time=None):
-        if coords is None:
-            coords = self.get_mgrid(self.image_width, dim=2).to(self.device)
-            if time != None:
-               coords = torch.cat((coords, time * torch.ones_like(coords[:, 0:1])), 1)
+    def forward(self, coords=None, time=None, enlarge=False):
 
-        coords = coords.clone().detach().requires_grad_(True) # allows to take derivative w.r.t. input
+        if self.coords is None:
+            coords = self.get_mgrid(self.image_width, dim=2, enlarge=enlarge).to(self.device)
+            coords = torch.cat((coords, torch.ones_like(coords[:, 0:1])), 1)
+            self.coords = coords
+        else:
+            coords = self.coords
+
+        if time != None:
+           coords[:,2] = coords[:,2] * time
+
+        print(time)
+
+        coords = coords.clone().detach() #.requires_grad_(True) # allows to take derivative w.r.t. input
+
         output = self.net(coords)
         return output
 

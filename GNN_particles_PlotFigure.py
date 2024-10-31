@@ -4625,10 +4625,11 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                 os.makedirs(f"./{log_dir}/results/field", exist_ok=True)
                 x = x_list[0][0]
 
-                for frame in trange(0, n_frames, n_frames//250):
-                    pred = model_f(time=frame / n_frames) ** 2
+                for frame in trange(-500, n_frames + 500, n_frames//2500):
+                    pred = model_f(time=frame / n_frames, enlarge=False) ** 2
                     pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
-                    pred =to_numpy(pred)
+                    # pred = torch.reshape(pred, (640, 640))
+                    pred = to_numpy(pred)
                     pred = np.flipud(pred)
                     pred = np.rot90(pred, 1)
                     pred = np.fliplr(pred)
@@ -4636,17 +4637,17 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                     #plt.scatter(x[:, 1], 1 - x[:, 2], c=grey_values, s=20, cmap='gray')
                     fig, ax = fig_init()
 
-                    if frame==0:
+                    if frame==-500:
                         vmin = min(0,np.min(pred))
                         vmax = np.max(pred)
                         field_correction = 1 / np.mean(pred)
 
-                    plt.imshow(pred,cmap='gray',vmin=vmin,vmax=vmax*1.5)
+                    plt.imshow(pred,cmap='gray',vmin=vmin,vmax=vmax)
                     plt.xticks([])
                     plt.yticks([])
                     plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/results/field/reconstructed_field_{epoch}_{frame}.tif",
-                                dpi=80)
+                    plt.savefig(f"./{log_dir}/results/field/reconstructed_field_{epoch}_{frame + 500}.tif",
+                                dpi=40)
                     plt.close()
             else:
                 field_correction = 1
@@ -5584,7 +5585,7 @@ if __name__ == '__main__':
     # config_list = ['gravity_16']
     # config_list = ['boids_16_256']
     # config_list = ['arbitrary_16']
-    config_list = ['signal_N2_r1_Lorentz_v1', 'signal_N2_r1_Lorentz_v2', 'signal_N2_r1_Lorentz_v3', 'signal_N2_r1_Lorentz_m4', 'signal_N2_r1_Lorentz_k5','signal_N2_r1_Lorentz_l3','signal_N2_r1_Lorentz_l4']
+    config_list = ['signal_N2_r1_Lorentz_m4'] #, 'signal_N2_r1_Lorentz_v2', 'signal_N2_r1_Lorentz_v3', 'signal_N2_r1_Lorentz_m4', 'signal_N2_r1_Lorentz_k5','signal_N2_r1_Lorentz_l3','signal_N2_r1_Lorentz_l4']
     # config_list = ['boids_16_256']
 
     for config_file in config_list:

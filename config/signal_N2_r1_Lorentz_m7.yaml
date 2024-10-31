@@ -1,4 +1,4 @@
-description: 'synaptic network random matrix cluster embedding distance 0.2 1000 neurons 4 types phi neuron dependent lorentz std 0.03 20 runs omega 10'
+description: 'synaptic network random matrix cluster embedding distance 0.2 1000 neurons 4 types phi neuron dependent lorentz std 0.03 20 runs omega 50'
 dataset: 'signal_N2_Lorentz_m3'
 
 simulation:
@@ -38,7 +38,7 @@ graph_model:
     aggr_type: 'add'
     embedding_dim: 2
     update_type: 'none'
-    omega:  10.0
+    omega:  50.0
 
 
 plotting:

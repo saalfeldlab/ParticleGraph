@@ -1,5 +1,5 @@
-description: 'synaptic network random matrix cluster embedding distance 0.2 144 neurons 4 types phi neuron dependent lorentz std 0.03 20 runs'
-dataset: 'signal_N2_Lorentz_m6'
+description: 'synaptic network random matrix cluster embedding distance 0.2 1000 neurons 4 types phi neuron dependent lorentz std 0.03 20 runs omega 30'
+dataset: 'signal_N2_Lorentz_m3'
 
 simulation:
     connectivity_file: 'random'
@@ -11,8 +11,8 @@ simulation:
     tau: 1.0
     min_radius: 1.0
     max_radius: 1.0E6
-    n_particles: 144
-    n_nodes: 144
+    n_particles: 1024
+    n_nodes: 1024
     n_particle_types: 4
     n_interactions: 4
     n_frames: 10000
@@ -20,7 +20,7 @@ simulation:
     dpos_init:  0
     boundary: 'no'
     start_frame: -1000
-    node_value_map: 'video_bisons_12.tif'
+    node_value_map: 'video_bisons_32.tif'
 
 graph_model:
     field_type: 'modulation_a'
@@ -38,6 +38,7 @@ graph_model:
     aggr_type: 'add'
     embedding_dim: 2
     update_type: 'none'
+    omega:  30.0
 
 
 plotting:

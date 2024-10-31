@@ -99,6 +99,7 @@ class GraphModelConfig(BaseModel):
     n_layers_nnr: int = 5
     hidden_dim_nnr: int = 128
     output_size_nnr: int = 1
+    omega : float = 80.0
 
     division_predictor_input_size: int = 3
     division_predictor_hidden_dim: int = 64

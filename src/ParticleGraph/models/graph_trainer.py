@@ -2708,6 +2708,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     dataset_name = config.dataset
     n_frames = simulation_config.n_frames
     data_augmentation_loop = train_config.data_augmentation_loop
+    omega = model_config.omega
     recursive_loop = train_config.recursive_loop
     target_batch_size = train_config.batch_size
     delta_t = simulation_config.delta_t
@@ -2797,7 +2798,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     if has_field:
         image_width = n_nodes_per_axis
         model_f = Siren_Network(image_width=image_width, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
-                                        hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.)
+                                        hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device, first_omega_0=omega, hidden_omega_0=omega)
         model_f.to(device=device)
         model_f.train()
         optimizer_f = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_f.parameters())
