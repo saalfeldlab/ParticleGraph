@@ -4388,6 +4388,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
     n_runs = config.training.n_runs
     n_particle_types = config.simulation.n_particle_types
     delta_t = config.simulation.delta_t
+    omega = model_config.omega
     cmap = CustomColorMap(config=config)
     dimension = config.simulation.dimension
     max_radius = config.simulation.max_radius
@@ -4627,7 +4628,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
 
                 for frame in trange(-500, n_frames + 500, n_frames//600):
 
-                    pred = model_f(time=k / n_frames, enlarge=True) ** 2
+                    pred = model_f(time=frame / n_frames, enlarge=True) ** 2
                     # pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
                     pred = torch.reshape(pred, (640, 640))
                     pred = to_numpy(pred)
@@ -5587,9 +5588,9 @@ if __name__ == '__main__':
     # config_list = ['boids_16_256']
     # config_list = ['arbitrary_16']
     # config_list = ['signal_N2_r1_Lorentz_v1', 'signal_N2_r1_Lorentz_v2',
-    #                'signal_N2_r1_Lorentz_m5', 'signal_N2_r1_Lorentz_m6','signal_N2_r1_Lorentz_m7',
-    #                'signal_N2_r1_Lorentz_m8', 'signal_N2_r1_Lorentz_m9',
-    #                'signal_N2_r1_Lorentz_l3','signal_N2_r1_Lorentz_l4']
+    config_list = ['signal_N2_r1_Lorentz_m5', 'signal_N2_r1_Lorentz_m6','signal_N2_r1_Lorentz_m7',
+                   'signal_N2_r1_Lorentz_m8', 'signal_N2_r1_Lorentz_m9',
+                   'signal_N2_r1_Lorentz_l3','signal_N2_r1_Lorentz_l4']
     # config_list = ['boids_16_256']
 
     config_list = ['signal_N2_r1_Lorentz_m7']
