@@ -110,19 +110,31 @@ class Siren_Network(nn.Module):
 
     def forward(self, coords=None, time=None, enlarge=False):
 
-        if self.coords is None:
+        # if self.coords is None:
+        #     coords = self.get_mgrid(self.image_width, dim=2, enlarge=enlarge).to(self.device)
+        #     coords = torch.cat((coords, torch.ones_like(coords[:, 0:1])), 1)
+        #     self.coords = coords
+        # else:
+        #     coords = self.coords
+        #
+        # if time != None:
+        #    coords[:,2] = coords[:,2] * time
+        #
+        # print(time)
+        #
+        # coords = coords.clone().detach() #.requires_grad_(True) # allows to take derivative w.r.t. input
+
+
+        if coords is None:
             coords = self.get_mgrid(self.image_width, dim=2, enlarge=enlarge).to(self.device)
-            coords = torch.cat((coords, torch.ones_like(coords[:, 0:1])), 1)
-            self.coords = coords
-        else:
-            coords = self.coords
+            if time != None:
+               coords = torch.cat((coords, time * torch.ones_like(coords[:, 0:1])), 1)
 
-        if time != None:
-           coords[:,2] = coords[:,2] * time
+        coords = coords.clone().detach().requires_grad_(True) # allows to take derivative w.r.t. input
+        output = self.net(coords)
+        return output
 
-        print(time)
 
-        coords = coords.clone().detach() #.requires_grad_(True) # allows to take derivative w.r.t. input
 
         output = self.net(coords)
         return output

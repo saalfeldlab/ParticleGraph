@@ -4626,9 +4626,9 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                 x = x_list[0][0]
 
                 for frame in trange(-500, n_frames + 500, n_frames//2500):
-                    pred = model_f(time=frame / n_frames, enlarge=False) ** 2
-                    pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
-                    # pred = torch.reshape(pred, (640, 640))
+                    pred = model_f(time=frame / n_frames, enlarge=True) ** 2
+                    # pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
+                    pred = torch.reshape(pred, (640, 640))
                     pred = to_numpy(pred)
                     pred = np.flipud(pred)
                     pred = np.rot90(pred, 1)
