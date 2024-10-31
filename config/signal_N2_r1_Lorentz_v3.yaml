@@ -15,7 +15,7 @@ simulation:
     n_nodes: 1024
     n_particle_types: 4
     n_interactions: 4
-    n_frames: 10000
+    n_frames: 200000
     delta_t: 0.01
     dpos_init:  0
     boundary: 'no'
@@ -50,7 +50,7 @@ training:
     recursive_loop: 1
     batch_size: 1
     small_init_batch_size: False
-    n_runs: 20
+    n_runs: 1
     large_range: False
     sparsity: 'none'
     data_augmentation: False
@@ -64,4 +64,4 @@ training:
     learning_rate_start: 1.0E-4
     learning_rate_embedding_start: 1.0E-4
     coeff_diff: 100
-    learning_rate_NNR: 1.0E-5
+    learning_rate_NNR: 1.0E-6

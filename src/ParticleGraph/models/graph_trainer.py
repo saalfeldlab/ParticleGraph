@@ -2760,6 +2760,12 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
         start_epoch=int(best_model.split('_')[0])
         print(f'best_model: {best_model}  start_epoch: {start_epoch}')
         logger.info(f'best_model: {best_model}  start_epoch: {start_epoch}')
+
+        net = f'./log/try_{config_file}/models/best_model_f_with_{n_runs - 1}_graphs_{best_model}.pt'
+        state_dict = torch.load(net, map_location=device)
+        model_f.load_state_dict(state_dict['model_state_dict'])
+
+
     else:
         start_epoch=0
 
@@ -2956,8 +2962,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
                     plt.savefig(f"./{log_dir}/tmp_training/field/field_{epoch}_{N}.tif", dpi=80)
                     plt.close()
                     torch.save({'model_state_dict': model_f.state_dict(),
-                                'optimizer_state_dict': optimizer_f.state_dict()},
-                               os.path.join(log_dir, 'models', f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
+                                'optimizer_state_dict': optimizer_f.state_dict()}, os.path.join(log_dir, 'models', f'best_model_f_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
             # check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 50, memory_percentage_threshold=0.6)
 

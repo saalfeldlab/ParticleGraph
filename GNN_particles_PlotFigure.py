@@ -4428,7 +4428,7 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
     if has_field:
         image_width = n_nodes_per_axis
         model_f = Siren_Network(image_width=image_width, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
-                                        hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device, first_omega_0=80, hidden_omega_0=80.)
+                                        hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device, first_omega_0=omega, hidden_omega_0=omega)
         model_f.to(device=device)
         model_f.train()
         optimizer_f = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_f.parameters())
@@ -4625,8 +4625,9 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                 os.makedirs(f"./{log_dir}/results/field", exist_ok=True)
                 x = x_list[0][0]
 
-                for frame in trange(-500, n_frames + 500, n_frames//2500):
-                    pred = model_f(time=frame / n_frames, enlarge=True) ** 2
+                for frame in trange(-500, n_frames + 500, n_frames//600):
+
+                    pred = model_f(time=k / n_frames, enlarge=True) ** 2
                     # pred = torch.reshape(pred, (n_nodes_per_axis, n_nodes_per_axis))
                     pred = torch.reshape(pred, (640, 640))
                     pred = to_numpy(pred)
@@ -5585,8 +5586,13 @@ if __name__ == '__main__':
     # config_list = ['gravity_16']
     # config_list = ['boids_16_256']
     # config_list = ['arbitrary_16']
-    config_list = ['signal_N2_r1_Lorentz_m4'] #, 'signal_N2_r1_Lorentz_v2', 'signal_N2_r1_Lorentz_v3', 'signal_N2_r1_Lorentz_m4', 'signal_N2_r1_Lorentz_k5','signal_N2_r1_Lorentz_l3','signal_N2_r1_Lorentz_l4']
+    # config_list = ['signal_N2_r1_Lorentz_v1', 'signal_N2_r1_Lorentz_v2',
+    #                'signal_N2_r1_Lorentz_m5', 'signal_N2_r1_Lorentz_m6','signal_N2_r1_Lorentz_m7',
+    #                'signal_N2_r1_Lorentz_m8', 'signal_N2_r1_Lorentz_m9',
+    #                'signal_N2_r1_Lorentz_l3','signal_N2_r1_Lorentz_l4']
     # config_list = ['boids_16_256']
+
+    config_list = ['signal_N2_r1_Lorentz_m7']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
