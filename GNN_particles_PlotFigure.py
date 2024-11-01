@@ -5587,13 +5587,13 @@ if __name__ == '__main__':
     # config_list = ['gravity_16']
     # config_list = ['boids_16_256']
     # config_list = ['arbitrary_16']
-    # config_list = ['signal_N2_r1_Lorentz_v1', 'signal_N2_r1_Lorentz_v2',
-    config_list = ['signal_N2_r1_Lorentz_m5', 'signal_N2_r1_Lorentz_m6','signal_N2_r1_Lorentz_m7',
-                   'signal_N2_r1_Lorentz_m8', 'signal_N2_r1_Lorentz_m9',
-                   'signal_N2_r1_Lorentz_l3','signal_N2_r1_Lorentz_l4']
+    config_list = ['signal_N2_r1_Lorentz_v1', 'signal_N2_r1_Lorentz_v2', 'signal_N2_r1_Lorentz_v4', 'signal_N2_r1_Lorentz_v5']
+    # config_list = ['signal_N2_r1_Lorentz_m5', 'signal_N2_r1_Lorentz_m6','signal_N2_r1_Lorentz_m7',
+    #                'signal_N2_r1_Lorentz_m8', 'signal_N2_r1_Lorentz_m9',
+    #                'signal_N2_r1_Lorentz_l3','signal_N2_r1_Lorentz_l4']
     # config_list = ['boids_16_256']
 
-    config_list = ['signal_N2_r1_Lorentz_m7']
+    # config_list = ['signal_N2_r1_Lorentz_m4']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
