@@ -3570,7 +3570,6 @@ def data_train_WBI(config, config_file, erase, best_model, device):
         plt.xlabel('Epochs', fontsize=12)
 
 
-
 def data_test(config=None, config_file=None, visualize=False, style='color frame', verbose=True, best_model=20, step=15, ratio=1, run=1, plot_data=False, test_simulation=False, sample_embedding = False, device=[]):
     dataset_name = config.dataset
     simulation_config = config.simulation

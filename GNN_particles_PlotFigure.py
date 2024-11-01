@@ -4432,7 +4432,6 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
                                         hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device, first_omega_0=omega, hidden_omega_0=omega)
         model_f.to(device=device)
         model_f.train()
-        optimizer_f = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_f.parameters())
 
     if epoch_list[0] == 'all':
 
@@ -4605,8 +4604,8 @@ def plot_synaptic2(config_file, epoch_list, log_dir, logger, cc, device):
         plt.xticks([])
         plt.yticks([])
         plt.tight_layout()
-
         plt.savefig(f'./{log_dir}/results/true connectivity.png', dpi=300)
+        plt.close()
 
         for epoch in epoch_list:
 
@@ -5587,13 +5586,13 @@ if __name__ == '__main__':
     # config_list = ['gravity_16']
     # config_list = ['boids_16_256']
     # config_list = ['arbitrary_16']
-    config_list = ['signal_N2_r1_Lorentz_v1', 'signal_N2_r1_Lorentz_v2', 'signal_N2_r1_Lorentz_v4', 'signal_N2_r1_Lorentz_v5']
+    # config_list = ['signal_N2_r1_Lorentz_v1', 'signal_N2_r1_Lorentz_v2', 'signal_N2_r1_Lorentz_v4', 'signal_N2_r1_Lorentz_v5']
     # config_list = ['signal_N2_r1_Lorentz_m5', 'signal_N2_r1_Lorentz_m6','signal_N2_r1_Lorentz_m7',
     #                'signal_N2_r1_Lorentz_m8', 'signal_N2_r1_Lorentz_m9',
     #                'signal_N2_r1_Lorentz_l3','signal_N2_r1_Lorentz_l4']
     # config_list = ['boids_16_256']
 
-    # config_list = ['signal_N2_r1_Lorentz_m4']
+    config_list = ['signal_N2_r1_Lorentz_v1_shuffle']
 
     for config_file in config_list:
         config = ParticleGraphConfig.from_yaml(f'./config/{config_file}.yaml')
