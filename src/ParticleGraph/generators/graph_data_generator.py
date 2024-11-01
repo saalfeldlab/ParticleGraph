@@ -540,6 +540,8 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
     else:
         model, bc_pos, bc_dpos = choose_model(config=config, device=device)
 
+    first_T1 = None
+
     for run in range(config.training.n_runs):
 
         X = torch.zeros((n_particles, n_frames + 1), device=device)
@@ -549,6 +551,14 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
 
         # initialize particle and graph states
         X1, V1, T1, H1, A1, N1 = init_particles(config=config, scenario=scenario, ratio=ratio, device=device)
+
+        if simulation_config.shuffle_particle_types:
+            if first_T1 != None:
+                T1 = first_T1.clone().detach()
+            else:
+                index = torch.randperm(n_particles)
+                T1 = T1[index]
+
 
         if os.path.isfile(f'./graphs_data/graphs_{dataset_name}/X1.pt'):
             X1 = torch.load(f'./graphs_data/graphs_{dataset_name}/X1.pt', map_location=device)

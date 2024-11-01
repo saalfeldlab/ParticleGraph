@@ -38,6 +38,7 @@ graph_model:
     aggr_type: 'add'
     embedding_dim: 2
     update_type: 'none'
+    omega: 30.0
 
 plotting:
     colormap: 'tab10'
