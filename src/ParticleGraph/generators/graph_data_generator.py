@@ -25,6 +25,9 @@ from torch_geometric.utils import dense_to_sparse
 def data_generate(config, visualize=True, run_vizualized=0, style='color', erase=False, step=5, alpha=0.2, ratio=1,
                   scenario='none', device=None, bSave=True):
 
+
+
+
     has_particle_field = ('PDE_ParticleField' in config.graph_model.particle_model_name)
     has_signal = ('PDE_N' in config.graph_model.signal_model_name)
     has_mesh = (config.graph_model.mesh_model_name != '')
@@ -36,6 +39,11 @@ def data_generate(config, visualize=True, run_vizualized=0, style='color', erase
 
     print('')
     print(f'dataset_name: {dataset_name}')
+
+    if (os.path.isfile(f'./graphs_data/graphs_{dataset_name}/x_list_0.npy')) | (os.path.isfile(f'./graphs_data/graphs_{dataset_name}/x_list_0.pt')):
+        print('Data already generated')
+        return
+
 
     if has_mouse_city:
         data_generate_mouse_city(config, visualize=visualize, run_vizualized=run_vizualized, style=style, erase=erase, step=step,
@@ -1003,7 +1011,6 @@ def data_generate_WBI(config, visualize=True, run_vizualized=0, style='color', e
     print(f'Loading data ...')
     filename = simulation_config.fluo_path
     dff = pd.read_hdf(filename, key="data")
-
 
     if 'subdata' in simulation_config.fluo_path:
         X1 = pd.read_hdf(filename, key="coords").values
