@@ -2742,7 +2742,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
         y = np.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy')
         x_list.append(x)
         y_list.append(y)
-    x = x_list[1][n_frames - 1]
+    x = x_list[0][n_frames - 1]
     n_particles = x.shape[0]
     print(f'N particles: {n_particles}')
     logger.info(f'N particles: {n_particles}')
