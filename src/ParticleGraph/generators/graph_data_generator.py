@@ -558,6 +558,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
             else:
                 index = torch.randperm(n_particles)
                 T1 = T1[index]
+                first_T1 = T1.clone().detach()
 
 
         if os.path.isfile(f'./graphs_data/graphs_{dataset_name}/X1.pt'):
@@ -582,7 +583,7 @@ def data_generate_synaptic(config, visualize=True, run_vizualized=0, style='colo
         check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
         
         time.sleep(0.5)
-        for it in range(simulation_config.start_frame, n_frames + 1):
+        for it in trange(simulation_config.start_frame, n_frames + 1):
 
             # calculate type change
             if simulation_config.state_type == 'sequence':
