@@ -2700,7 +2700,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     train_config = config.training
     model_config = config.graph_model
 
-    print(f'Training data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
+    print(f'Training with data {model_config.particle_model_name} {model_config.mesh_model_name}')
 
     dimension = simulation_config.dimension
     n_epochs = train_config.n_epochs
@@ -2732,7 +2732,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     sparsity_freq = train_config.sparsity_freq
 
     l_dir, log_dir, logger = create_log_dir(config, config_file,erase)
-    print(f'Graph files N: {n_runs}')
+    print(f'Loading graph files N: {n_runs} ...')
     logger.info(f'Graph files N: {n_runs}')
 
     x_list = []
@@ -2742,6 +2742,12 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
         y = np.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy')
         x_list.append(x)
         y_list.append(y)
+    x = x_list[1][n_frames - 1]
+    n_particles = x.shape[0]
+    print(f'N particles: {n_particles}')
+    logger.info(f'N particles: {n_particles}')
+    config.simulation.n_particles = n_particles
+    type_list = torch.tensor(x[:, 1 + 2 * dimension:2 + 2 * dimension], device=device)
     vnorm = torch.tensor(1.0, device=device)
     ynorm = torch.tensor(1.0, device=device)
     torch.save(vnorm, os.path.join(log_dir, 'vnorm.pt'))
@@ -2754,8 +2760,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     model, bc_pos, bc_dpos = choose_training_model(config, device)
 
     if has_field:
-        image_width = n_nodes_per_axis
-        model_f = Siren_Network(image_width=image_width, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
+        model_f = Siren_Network(image_width=n_nodes_per_axis, in_features=model_config.input_size_nnr, out_features=model_config.output_size_nnr, hidden_features=model_config.hidden_dim_nnr,
                                         hidden_layers=model_config.n_layers_nnr, outermost_linear=True, device=device, first_omega_0=omega, hidden_omega_0=omega)
         model_f.to(device=device)
 
@@ -2771,8 +2776,7 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
             net = f'./log/try_{config_file}/models/best_model_f_with_{n_runs - 1}_graphs_{best_model}.pt'
             state_dict = torch.load(net, map_location=device)
             model_f.load_state_dict(state_dict['model_state_dict'])
-            optimizer_f = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_f.parameters())
-            model_f.train()
+
     else:
         start_epoch=0
 
@@ -2780,6 +2784,10 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     lr_embedding = train_config.learning_rate_embedding_start
     optimizer, n_total_params = set_trainable_parameters(model, lr_embedding, lr)
     model.train()
+
+    if has_field:
+        optimizer_f = torch.optim.Adam(lr=train_config.learning_rate_NNR, params=model_f.parameters())
+        model_f.train()
 
     net = f"./log/try_{config_file}/models/best_model_with_{n_runs - 1}_graphs.pt"
     print(f'network: {net}')
@@ -2789,17 +2797,9 @@ def data_train_synaptic2(config, config_file, erase, best_model, device):
     logger.info(f'N epochs: {n_epochs}')
     logger.info(f'initial batch_size: {batch_size}')
 
-    print('Update variables ...')
-    x = x_list[1][n_frames - 1]
-    n_particles = x.shape[0]
-    print(f'N particles: {n_particles}')
-    logger.info(f'N particles: {n_particles}')
-    config.simulation.n_particles = n_particles
-    type_list = torch.tensor(x[:, 1 + 2 * dimension:2 + 2 * dimension], device=device)
-
     adjacency = torch.load(f'./graphs_data/graphs_{dataset_name}/adjacency.pt', map_location=device)
     model.edges = torch.load(f'./graphs_data/graphs_{dataset_name}/edge_index.pt', map_location=device)
-    print(to_numpy(torch.sum(model.edges)))
+    print(f'{to_numpy(torch.sum(model.edges))} edges')
 
     if simulation_config.connectivity_mask:
         model.mask = model.mask * (adjacency!=0)*1.0

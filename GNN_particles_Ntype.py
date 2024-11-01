@@ -51,8 +51,8 @@ if __name__ == '__main__':
             best_model = None
     else:
         action = 'train'
-        best_model = '1_1600000'
-        config_list = ["signal_N2_r1_Lorentz_m7"]
+        best_model = None
+        config_list = ["signal_N2_r1_Lorentz_v6"]
         # config_list = ["arbitrary_3_field_video_bison_bis"]
 
     for config_file in config_list:

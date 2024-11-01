@@ -41,6 +41,7 @@ class SimulationConfig(BaseModel):
     n_particles: int = 1000
     n_particles_max: int = 20000
     n_particle_types: int = 5
+    shuffle_particle_types: bool = False
     n_interactions: int = 5
     has_cell_state: bool = False
     state_type: Literal['discrete', 'sequence', 'continuous'] = 'discrete'
