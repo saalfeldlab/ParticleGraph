@@ -3612,6 +3612,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         index = np.arange(n_particles * n // n_particle_types, n_particles * (n + 1) // n_particle_types)
         first_cell_id_particles.append(index)
 
+    print('Load data ...')
     if only_mesh:
         vnorm = torch.tensor(1.0, device=device)
         ynorm = torch.tensor(1.0, device=device)
@@ -3647,7 +3648,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     else:
         x_list = []
         y_list = []
-        if model_config.signal_model_name !='PDE_N2':
+        if model_config.signal_model_name !='PDE_N':
             x = np.load(f'graphs_data/graphs_{dataset_name}/x_list_{run}.npy')
             y = np.load(f'graphs_data/graphs_{dataset_name}/y_list_{run}.npy')
             x_list.append(torch.tensor(x,device=device))
@@ -4005,8 +4006,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 edge_colors = np.maximum(-1, edge_colors)
                 cmap = plt.cm.viridis
                 edge_colors = cmap((edge_colors+1)/2)
-                nx.draw(G_first, pos=first_positions, with_labels=False, edge_color=edge_colors, node_size=0, alpha=0.1, cmap='bwr')
-                plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=40, c=to_numpy(x[:, 6]), cmap='viridis', vmin=-10,vmax=10, edgecolors='None',alpha=1)
+                nx.draw(G_first, pos=first_positions, with_labels=False, edge_color=edge_colors, node_size=0, alpha=0.5, cmap='bwr')
+                # plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=200, c=to_numpy(x[:, 6]), cmap='viridis', vmin=-10,vmax=10, edgecolors='None',alpha=0.9)
                 plt.xticks([])
                 plt.yticks([])
                 plt.xlim([-1.03,1.03])
@@ -4023,11 +4024,11 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_recons/Edges_{config_file}_{num}.tif", dpi=170.7)
+                plt.savefig(f"./{log_dir}/tmp_recons/Edges_{config_file}_{num}.tif", dpi=80)
                 plt.close()
 
                 plt.figure(figsize=(10, 10))
-                plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=40, c=to_numpy(x0[:, 6]), cmap='viridis', vmin=-10,vmax=10, edgecolors='k',alpha=1)
+                plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=70, c=to_numpy(x0[:, 6]), cmap='viridis', vmin=-10,vmax=10, edgecolors='k',alpha=1)
                 ax = plt.gca()
                 ax.axis('off')
                 plt.xticks([])
@@ -4047,7 +4048,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.xticks([])
                 plt.yticks([])
                 plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=170.7)
+                plt.savefig(f"./{log_dir}/tmp_recons/Nodes_{config_file}_{num}.tif", dpi=80)
                 plt.close()
             elif do_tracking:
                 plt.scatter(to_numpy(x0[:, 2]), to_numpy(x0[:, 1]), s=20, c='k')

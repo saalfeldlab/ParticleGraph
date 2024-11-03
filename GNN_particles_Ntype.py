@@ -50,9 +50,9 @@ if __name__ == '__main__':
         else:
             best_model = None
     else:
-        action = 'generate'
+        action = 'test'
         best_model = None
-        config_list = ["signal_N2_r1_Lorentz_v8"]
+        config_list = ["signal_N2_r1_Lorentz_d"]
         # config_list = ["arbitrary_3_field_video_bison_bis"]
 
     for config_file in config_list:
