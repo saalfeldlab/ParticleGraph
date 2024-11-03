@@ -3748,6 +3748,9 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         for node, pos in first_positions.items():
             X1_first[node,:] = torch.tensor([pos[0],pos[1]], device=device)
         print('done ...')
+        neuron_index = torch.randint(0, n_particles, (6,))
+        neuron_gt_list = []
+        neuron_pred_list=[]
 
     if verbose:
         print(f'Test data ... {model_config.particle_model_name} {model_config.mesh_model_name}')
@@ -3815,7 +3818,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
     gloss = SamplesLoss(loss="sinkhorn", p=2, blur=.05)
     geomloss_list=[]
     time.sleep(1)
-    for it in trange(n_frames):
+    for it in trange(n_frames-1):
 
         x0 = x_list[0][it].clone().detach()
         y0 = y_list[0][it].clone().detach()
@@ -3823,6 +3826,8 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
         if 'PDE_N' in model_config.signal_model_name:
             rmserr = torch.sqrt(torch.mean(torch.sum(bc_dpos(x[:, 6:7] - x0[:, 6:7]) ** 2, axis=1)))
+            neuron_gt_list.append(x0[neuron_index, 6:7])
+            neuron_pred_list.append(x[neuron_index, 6:7])
         elif model_config.mesh_model_name == 'WaveMesh':
             rmserr = torch.sqrt(torch.mean((x[mask_mesh.squeeze(), 6:7] - x0[mask_mesh.squeeze(), 6:7]) ** 2))
         elif model_config.mesh_model_name == 'RD_RPS_Mesh':
@@ -3995,40 +4000,39 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
 
                 plt.close()
 
-                y,msg  = y = model(dataset, data_id=1, return_all=True)
-
                 plt.style.use('dark_background')
                 matplotlib.rcParams['savefig.pad_inches'] = 0
 
-                plt.figure(figsize=(10, 10))
-                edge_colors = to_numpy(msg) / 10
-                edge_colors = np.minimum(1, edge_colors)
-                edge_colors = np.maximum(-1, edge_colors)
-                cmap = plt.cm.viridis
-                edge_colors = cmap((edge_colors+1)/2)
-                nx.draw(G_first, pos=first_positions, with_labels=False, edge_color=edge_colors, node_size=0, alpha=0.5, cmap='bwr')
-                # plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=200, c=to_numpy(x[:, 6]), cmap='viridis', vmin=-10,vmax=10, edgecolors='None',alpha=0.9)
-                plt.xticks([])
-                plt.yticks([])
-                plt.xlim([-1.03,1.03])
-                plt.ylim([-1.03,1.03])
-                plt.savefig(f"./{log_dir}/tmp_recons/Edges_{config_file}_{num}.tif", dpi=170.7)
-                plt.close()
-                im = imread(f"./{log_dir}/tmp_recons/Edges_{config_file}_{num}.tif")
-                plt.figure(figsize=(10, 10))
-                plt.imshow(im)
-                plt.xticks([])
-                plt.yticks([])
-                plt.subplot(3, 3, 1)
-                plt.imshow(im[800:1000, 800:1000, :])
-                plt.xticks([])
-                plt.yticks([])
-                plt.tight_layout()
-                plt.savefig(f"./{log_dir}/tmp_recons/Edges_{config_file}_{num}.tif", dpi=80)
-                plt.close()
+                if False: #plot_data:
+                    plt.figure(figsize=(10, 10))
+                    edge_colors = to_numpy(msg) / 10
+                    edge_colors = np.minimum(1, edge_colors)
+                    edge_colors = np.maximum(-1, edge_colors)
+                    cmap = plt.cm.viridis
+                    edge_colors = cmap((edge_colors+1)/2)
+                    nx.draw(G_first, pos=first_positions, with_labels=False, edge_color=edge_colors, node_size=0, alpha=0.5, cmap='bwr')
+                    # plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=200, c=to_numpy(x[:, 6]), cmap='viridis', vmin=-10,vmax=10, edgecolors='None',alpha=0.9)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.xlim([-1.03,1.03])
+                    plt.ylim([-1.03,1.03])
+                    plt.savefig(f"./{log_dir}/tmp_recons/Edges_{config_file}_{num}.tif", dpi=170.7)
+                    plt.close()
+                    im = imread(f"./{log_dir}/tmp_recons/Edges_{config_file}_{num}.tif")
+                    plt.figure(figsize=(10, 10))
+                    plt.imshow(im)
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.subplot(3, 3, 1)
+                    plt.imshow(im[800:1000, 800:1000, :])
+                    plt.xticks([])
+                    plt.yticks([])
+                    plt.tight_layout()
+                    plt.savefig(f"./{log_dir}/tmp_recons/Edges_{config_file}_{num}.tif", dpi=80)
+                    plt.close()
 
                 plt.figure(figsize=(10, 10))
-                plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=70, c=to_numpy(x0[:, 6]), cmap='viridis', vmin=-10,vmax=10, edgecolors='k',alpha=1)
+                plt.scatter(to_numpy(X1_first[:, 0]), to_numpy(X1_first[:, 1]), s=70, c=to_numpy(x[:, 6]), cmap='viridis', vmin=-10,vmax=10, edgecolors='k',alpha=1)
                 ax = plt.gca()
                 ax.axis('off')
                 plt.xticks([])
@@ -4073,7 +4077,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                     else:
                         plt.scatter(x[index_particles[n], 2].detach().cpu().numpy(),
                                     x[index_particles[n], 1].detach().cpu().numpy(), s=s_p, color=cmap.color(n))
-
 
             if not('PDE_N' in model_config.signal_model_name):
 
@@ -4147,7 +4150,6 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.tight_layout()
                 plt.savefig(f"./{log_dir}/tmp_recons/Fig_{config_file}_{num}.tif", dpi=80)
                 plt.close()
-
 
             if has_ghost:
 
@@ -4234,7 +4236,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
         print(h.shape)
         print('average u {:.3e}+/-{:.3e}'.format(np.mean(h), np.std(h)))
 
-    elif not ('PDE_N' in model_config.signal_model_name):
+    if not ('PDE_N' in model_config.signal_model_name):
 
         r = [np.mean(rmserr_list), np.std(rmserr_list), np.mean(geomloss_list), np.std(geomloss_list)]
         print('average rollout Sinkhorn div. {:.3e}+/-{:.3e}'.format(np.mean(geomloss_list), np.std(geomloss_list)))
@@ -4312,4 +4314,30 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
             plt.tight_layout()
             plt.savefig(f"./{log_dir}/results/GT_{config_file}_{it}.tif", dpi=170.7)
             plt.close()
+
+    if 'PDE_N' in model_config.signal_model_name:
+        neuron_gt_list = torch.cat(neuron_gt_list, 0)
+        neuron_pred_list = torch.cat(neuron_pred_list, 0)
+
+        neuron_gt_list = torch.reshape(neuron_gt_list, (n_frames-1, 6))
+        neuron_pred_list = torch.reshape(neuron_pred_list, (n_frames-1, 6))
+
+        plt.style.use('dark_background')
+        matplotlib.rcParams['savefig.pad_inches'] = 0
+
+        plt.figure(figsize=(10, 10))
+        plt.plot(neuron_gt_list[:,0].detach().cpu().numpy(), c='w', linewidth=8, label='original', alpha=0.5)
+        plt.plot(neuron_pred_list[:,0].detach().cpu().numpy(), linewidth=4, c='w', label='prediction')
+        plt.legend(fontsize=24)
+        plt.plot(neuron_gt_list[:,1:6].detach().cpu().numpy(), c='w', linewidth=8, alpha=0.5)
+        plt.plot(neuron_pred_list[:,1:6].detach().cpu().numpy(), linewidth=4)
+        plt.xlim([0,500])
+        plt.xlabel('time index', fontsize=48)
+        plt.ylabel(r'$x_i$', fontsize=48)
+        plt.xticks(fontsize=24)
+        plt.yticks(fontsize=24)
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/results/neuron_signals.tif", dpi=170.7)
+        plt.close()
+
 
