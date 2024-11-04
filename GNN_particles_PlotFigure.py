@@ -2512,7 +2512,6 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
         indexes = np.random.randint(0, edges.shape[1], 5000)
         edges = edges[:, indexes]
 
-
         files = glob.glob(f"./log/try_{config_file}/models/best_model_with_1_graphs_*.pt")
         files.sort(key=sort_key)
 
@@ -2538,16 +2537,15 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
                 model.eval()
 
                 plt.style.use('dark_background')
-
-                amax = torch.max(model.a, dim=0).values
-                amin = torch.min(model.a, dim=0).values
-                model_a = (model.a - amin) / (amax - amin)
+                amax = torch.max(model.a[1], dim=0).values
+                amin = torch.min(model.a[1], dim=0).values
+                model_a = to_numpy((model.a[1] - amin) / (amax - amin))
 
                 fig, ax = fig_init(fontsize=24)
                 for n in range(n_particle_types - 1, -1, -1):
                     pos = torch.argwhere(type_list.squeeze() == n)
-                    plt.scatter(to_numpy(model_a[pos, 0]), to_numpy(model_a[pos, 1]), s=100, color=cmap.color(n),
-                                alpha=0.5)
+                    pos = to_numpy(pos)
+                    plt.scatter(model_a[pos, 0], model_a[pos, 1], s=100, color=cmap.color(n), alpha=0.5)
                 plt.xlabel(r'$a_{i0}$', fontsize=78)
                 plt.ylabel(r'$a_{i1}$', fontsize=78)
                 plt.xlim([-0.1, 1.1])
@@ -2557,39 +2555,38 @@ def plot_Coulomb(config_file, epoch_list, log_dir, logger, device):
                 plt.savefig(f"./{log_dir}/results/all/embedding_{epoch}.tif", dpi=80)
                 plt.close()
 
-                if False:
-                    fig, ax = fig_init(formatx='%.3f', formaty='%.0f')
-                    func_list = []
-                    rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
-                    table_qiqj = np.zeros((10, 1))
-                    tmp = np.array([-2, -1, 1, 2, 4])
-                    table_qiqj[tmp.astype(int) + 2] = np.arange(5)[:, None]
-                    qiqj_list = []
-                    for n in range(edges.shape[1]):
-                        embedding_1 = model.a[1, edges[0, n], :] * torch.ones((1000, config.graph_model.embedding_dim),
-                                                                              device=device)
-                        embedding_2 = model.a[1, edges[1, n], :] * torch.ones((1000, config.graph_model.embedding_dim),
-                                                                              device=device)
-                        qiqj = p[type_list[to_numpy(edges[0, n])].astype(int).squeeze()] * p[
-                            type_list[to_numpy(edges[1, n])].astype(int).squeeze()]
-                        qiqj_list.append(qiqj)
-                        type = table_qiqj[qiqj + 2].astype(int).squeeze()
-                        in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
-                                                 rr[:, None] / max_radius, embedding_1, embedding_2), dim=1)
-                        with torch.no_grad():
-                            func = model.lin_edge(in_features.float())
-                        func = func[:, 0]
-                        func_list.append(func * ynorm)
-                        plt.plot(to_numpy(rr),
-                                 to_numpy(func) * to_numpy(ynorm),
-                                 color=cmap.color(type), linewidth=8, alpha=0.1)
-                    plt.xlabel('$d_{ij}$', fontsize=48)
-                    plt.ylabel('$f(a_i, d_{ij})$', fontsize=48)
-                    plt.xlim([0, 0.02])
-                    plt.ylim([-0.5E6, 0.5E6])
-                    plt.tight_layout()
-                    plt.savefig(f"./{log_dir}/results/all/function_{epoch}.tif", dpi=80)
-                    plt.close()
+                fig, ax = fig_init(formatx='%.3f', formaty='%.0f')
+                func_list = []
+                rr = torch.tensor(np.linspace(min_radius, max_radius, 1000)).to(device)
+                table_qiqj = np.zeros((10, 1))
+                tmp = np.array([-2, -1, 1, 2, 4])
+                table_qiqj[tmp.astype(int) + 2] = np.arange(5)[:, None]
+                qiqj_list = []
+                for n in range(edges.shape[1]):
+                    embedding_1 = model.a[1, edges[0, n], :] * torch.ones((1000, config.graph_model.embedding_dim),
+                                                                          device=device)
+                    embedding_2 = model.a[1, edges[1, n], :] * torch.ones((1000, config.graph_model.embedding_dim),
+                                                                          device=device)
+                    qiqj = p[to_numpy(type_list[to_numpy(edges[0, n])]).astype(int).squeeze()] * p[
+                        to_numpy(type_list[to_numpy(edges[1, n])]).astype(int).squeeze()]
+                    qiqj_list.append(qiqj)
+                    type = table_qiqj[qiqj + 2].astype(int).squeeze()
+                    in_features = torch.cat((rr[:, None] / max_radius, 0 * rr[:, None],
+                                             rr[:, None] / max_radius, embedding_1, embedding_2), dim=1)
+                    with torch.no_grad():
+                        func = model.lin_edge(in_features.float())
+                    func = func[:, 0]
+                    func_list.append(func * ynorm)
+                    plt.plot(to_numpy(rr),
+                             to_numpy(func) * to_numpy(ynorm),
+                             color=cmap.color(type), linewidth=8, alpha=0.1)
+                plt.xlabel('$d_{ij}$', fontsize=48)
+                plt.ylabel('$f(a_i, d_{ij})$', fontsize=48)
+                plt.xlim([0, 0.02])
+                plt.ylim([-0.5E6, 0.5E6])
+                plt.tight_layout()
+                plt.savefig(f"./{log_dir}/results/all/function_{epoch}.tif", dpi=80)
+                plt.close()
 
     else:
         for epoch in epoch_list:
