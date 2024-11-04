@@ -58,7 +58,7 @@ training:
   do_tracking: True
 
   learning_rate_start: 1.0E-4
-  learning_rate_embedding_start: 1.0E-7
+  learning_rate_embedding_start: 1.0E-5
 
 
 

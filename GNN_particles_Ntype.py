@@ -52,7 +52,7 @@ if __name__ == '__main__':
     else:
         action = 'train'
         best_model = None
-        config_list = ["mouse_city_b"]
+        config_list = ["mouse_city_b5"]
         # config_list = ["arbitrary_3_field_video_bison"]
 
     for config_file in config_list:

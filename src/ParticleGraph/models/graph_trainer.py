@@ -1060,6 +1060,8 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
     logger.info(f'Graph files N: {n_runs}')
     time.sleep(0.5)
 
+    os.makedirs(f'./{log_dir}/tmp_training/loss', exist_ok=True)
+
     x_list = []
     x = torch.load(f'graphs_data/graphs_{dataset_name}/x_list_0.pt', map_location=device)
     x_list.append(x)
@@ -1122,6 +1124,7 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
 
     check_and_clear_memory(device=device, iteration_number=0, every_n_iterations=1, memory_percentage_threshold=0.6)
 
+    total_list_loss = []
 
     time.sleep(1)
     for epoch in range(0, n_epochs + 1):
@@ -1174,7 +1177,7 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
             loss.backward()
             optimizer.step()
 
-            total_loss += loss.item()
+            total_loss += loss.item() / 1E5 / 6 / Niter
             list_loss.append(loss.item() / 1E5 / 6)
             list_frame.append(k)
 
@@ -1190,23 +1193,33 @@ def data_train_mouse_city(config, config_file, erase, best_model, device):
 
                 fig = plt.figure(figsize=(5, 5))
                 ax = fig.add_subplot(1, 1, 1)
-                loss_ = np.array(list_loss)
-                frame_ = np.array(list_frame)
-                plt.scatter(frame_, loss_, s=5, c='k',alpha=0.02)
+                plt.scatter(np.array(list_frame),  np.array(list_loss), s=5, c='k',alpha=0.07, edgecolors='none')
                 ax.set_yscale('log')
-                plt.savefig(f"./{log_dir}/tmp_training/Loss_{epoch}.tif")
+                plt.savefig(f"./{log_dir}/tmp_training/loss/loss_{epoch}.tif")
+                plt.close()
+
+
                 torch.save({'model_state_dict': model.state_dict(),
                             'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}_{N}.pt'))
 
             check_and_clear_memory(device=device, iteration_number=N, every_n_iterations=Niter // 20,
                                    memory_percentage_threshold=0.6)
 
-        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) ))
-        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss / (N + 1) ))
+        print("Epoch {}. Loss: {:.6f}".format(epoch, total_loss ))
+        logger.info("Epoch {}. Loss: {:.6f}".format(epoch, total_loss  ))
         torch.save({'model_state_dict': model.state_dict(),
                     'optimizer_state_dict': optimizer.state_dict()}, os.path.join(log_dir, 'models', f'best_model_with_{n_runs - 1}_graphs_{epoch}.pt'))
 
-        torch.save(list_loss, os.path.join(log_dir, 'loss.pt'))
+        total_list_loss.append(total_loss)
+        fig = plt.figure(figsize=(5, 5))
+        ax = fig.add_subplot(1, 1, 1)
+        plt.plot(total_list_loss, color='k')
+        plt.xlim([0, n_epochs])
+        plt.tight_layout()
+        plt.savefig(f"./{log_dir}/Loss.tif")
+        plt.close()
+
+        torch.save(total_list_loss, os.path.join(log_dir, 'loss.pt'))
 
 
 def data_train_mesh(config, config_file, erase, best_model, device):
