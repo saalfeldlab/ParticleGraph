@@ -4059,7 +4059,7 @@ def data_test(config=None, config_file=None, visualize=False, style='color frame
                 plt.style.use('dark_background')
                 matplotlib.rcParams['savefig.pad_inches'] = 0
 
-                if plot_data:
+                if False: # plot_data:
                     plt.figure(figsize=(10, 10))
                     edge_colors = to_numpy(msg) / 10
                     edge_colors = np.minimum(1, edge_colors)

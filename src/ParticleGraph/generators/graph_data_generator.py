@@ -840,6 +840,7 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
 
     n_particles = simulation_config.n_particles
     delta_t = simulation_config.delta_t
+    time_step = simulation_config.time_step
     n_frames = simulation_config.n_frames
     has_particle_dropout = training_config.particle_dropout > 0
     dataset_name = config.dataset
@@ -876,6 +877,9 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
 
     torch.save(x_mesh, f'graphs_data/graphs_{dataset_name}/x_mesh.pt')
 
+    if time_step >1:
+        files = files[::time_step]
+
     for it, f in enumerate(files):
 
         if (it%100 == 0):
@@ -899,8 +903,6 @@ def data_generate_mouse_city(config, visualize=True, run_vizualized=0, style='co
 
         x = torch.concatenate((N1.clone().detach(), X1.clone().detach(), V1.clone().detach(), T1.clone().detach(),
                                H1.clone().detach(), ID1.clone().detach()), 1)
-
-        x_particle_field = torch.concatenate((x_mesh, x), dim=0)
 
         # compute connectivity rules
         edge_index = torch.sum((x[:, None, 1:dimension + 1] - x_mesh[None, :, 1:dimension + 1]) ** 2, dim=2)
